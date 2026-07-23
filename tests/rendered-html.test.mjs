@@ -565,3 +565,24 @@ test("adiciona o pacote de eventos de drama com filtros de carreira", async () =
   }
   assert.ok((drama.match(/luck: \{/g) ?? []).length >= 6, "precisa manter escolhas de sorte");
 });
+
+test("adiciona central estatística, empréstimos, rivais, personagens, agente livre e traits", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /CENTRAL ESTATÍSTICA/);
+  assert.match(page, /function createCareerRivals/);
+  assert.match(page, /DYNAMIC_RIVAL_EVENT_ID/);
+  assert.match(page, /SETTINGS_KEY = "futbobo:settings:v1"/);
+  assert.match(page, /function addCustomCharacter/);
+  assert.match(page, /function becomeFreeAgent/);
+  assert.match(page, /loanParentClubId/);
+  assert.match(page, /selectCareerTraits/);
+  assert.match(page, /SPECIAL_TRAITS/);
+  assert.match(gameData, /loan\?: boolean/);
+  assert.match(styles, /\.statistics-screen/);
+  assert.match(styles, /\.update-notice/);
+  assert.match(styles, /\.settings-sheet/);
+  assert.match(styles, /grid-template-columns: repeat\(5, 1fr\)/);
+});

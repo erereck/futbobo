@@ -97,6 +97,8 @@ export type Effect = {
   injuryRisk?: number;
   transfer?: boolean;
   transferAbroad?: boolean;
+  loan?: boolean;
+  rivalRespect?: number;
   retire?: boolean;
   discipline?: number;
   contractYears?: number;
@@ -957,7 +959,7 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Focar no trabalho", hint: "OVR ↑ · moral ↓", result: "Você empurra a saudade para depois da temporada.", effect: { ovr: 1, morale: -6 } },
   ]},
   { id: "loan-spell", icon: "⇄", tag: "EUROPA", title: "Um empréstimo pode salvar sua temporada", description: "Sem espaço no elenco principal, o clube sugere sair para jogar de verdade em outro lugar da Europa.", needsAbroad: true, maxOvr: 82, minAge: 20, choices: [
-    { label: "Aceitar um projeto menor", hint: "Minutos ↑↑ · mudança na Europa", result: "Você troca o banco por protagonismo em outro campeonato europeu.", effect: { transfer: true, transferAbroad: true, minutes: 12, reputation: 2 } },
+    { label: "Aceitar um projeto menor", hint: "Empréstimo · minutos ↑↑", result: "Você sai por empréstimo: troca o banco por protagonismo sem romper com o clube.", effect: { transfer: true, transferAbroad: true, loan: true, minutes: 12, reputation: 2 } },
     { label: "Brigar pelo seu espaço", hint: "OVR ↑ · risco", result: "Ficar é uma aposta em você mesmo.", effect: { ovr: 1, fitness: -8, minutes: 3 } },
   ]},
   { id: "european-exit", icon: "↩", tag: "EUROPA", title: "A Europa não deu certo como sonhado", description: "Meses depois da mudança, a adaptação ainda não veio e o telefone toca com uma saída para o Brasil.", needsAbroad: true, minAge: 21, choices: [

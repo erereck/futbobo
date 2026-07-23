@@ -416,7 +416,7 @@ export const MEGA_EVENTS: GameEvent[] = [
     { label: "Recusar e manter o foco", hint: "Moral ↑", result: "Você prefere não misturar o presente com promessas incertas.", effect: { morale: 5, adaptation: 4 } },
   ]},
   { id: "mega-emprestimo-conversa-informal", icon: "⇄", tag: "BASTIDORES", title: "Uma conversa de corredor sobre empréstimo", description: "Sem espaço no time principal, o diretor esportivo comenta de forma informal sobre um possível empréstimo para outro clube da Europa.", needsAbroad: true, maxOvr: 83, choices: [
-    { label: "Topar a ideia", hint: "Minutos ↑↑ · nova camisa europeia", result: "Você prefere jogar de verdade em outro lugar a esquentar o banco.", effect: { transfer: true, transferAbroad: true, minutes: 10, adaptation: -3 } },
+    { label: "Topar a ideia", hint: "Empréstimo · nova camisa europeia", result: "Você prefere jogar de verdade em outro lugar a esquentar o banco.", effect: { transfer: true, transferAbroad: true, loan: true, minutes: 10, adaptation: -3 } },
     { label: "Pedir mais tempo no elenco atual", hint: "OVR ↑ · risco de continuar reserva", result: "Você aposta que a paciência ainda pode virar o jogo.", effect: { ovr: 1, fitness: -6, minutes: 2 } },
   ]},
   { id: "mega-marca-global-europa", icon: "$", tag: "PATROCÍNIO", title: "Uma marca global bate à porta", description: "Um contrato internacional de patrocínio pode colocar seu nome em vitrines de vários países ao mesmo tempo.", needsAbroad: true, minOvr: 74, oneTime: true, choices: [
@@ -449,7 +449,7 @@ export const MEGA_EVENTS: GameEvent[] = [
     { label: "Jogar por trás, no contra-ataque", hint: "Título ↑ · seguro", result: "Você prefere deixar o adversário se expor primeiro.", effect: { titleBoost: 8, leadership: 5 } },
   ]},
   { id: "mega-empresta-para-time-menor", icon: "⇄", tag: "MERCADO", title: "Um empréstimo para voltar a jogar", description: "Sem espaço no elenco principal no Brasil, o clube sugere um empréstimo informal para outra equipe da elite nacional só para você recuperar ritmo de jogo.", maxOvr: 78, minAge: 19, needsDomestic: true, choices: [
-    { label: "Aceitar o empréstimo", hint: "Minutos ↑↑ · transferência temporária", result: "Você troca o banco por bola rolando de verdade em outro time.", effect: { transfer: true, minutes: 12, reputation: 1 } },
+    { label: "Aceitar o empréstimo", hint: "Minutos ↑↑ · transferência temporária", result: "Você troca o banco por bola rolando de verdade em outro time.", effect: { transfer: true, loan: true, minutes: 12, reputation: 1 } },
     { label: "Brigar pelo seu espaço", hint: "OVR ↑ · risco", result: "Você aposta que ainda pode reconquistar o lugar no time atual.", effect: { ovr: 1, fitness: -7, minutes: 2 } },
   ]},
   { id: "mega-sub17-mundial", icon: "★", tag: "SUB-17", title: "A Copa do Mundo da categoria", description: "Sua seleção de base embarca para o Mundial Sub-17, com câmeras do planeta inteiro observando os garotos.", needsNationalYouth: true, seasonParity: "odd", minAge: 16, maxAge: 17, oneTime: true, choices: [

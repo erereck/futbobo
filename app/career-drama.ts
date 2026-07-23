@@ -86,7 +86,7 @@ export const CAREER_DRAMA_EVENTS: GameEvent[] = [
     { label: "Responder às críticas nas redes", hint: "Exposição ↑ · risco", result: "Você decide não deixar barato quem duvida de você.", effect: { reputation: 3, morale: -4 } },
   ]},
   { id: "drama-reserve-role-frustration", icon: "▰", tag: "ELENCO", title: "Reserva de novo, sem nem entrar no segundo tempo", description: "Mais uma rodada no banco enquanto o titular da sua posição segue intocável.", needsSquadRoles: ["reserva"], choices: [
-    { label: "Pedir empréstimo para jogar de verdade", hint: "Minutos ↑↑ · nova casa", result: "Você prefere ser protagonista em outro lugar a esperar aqui.", effect: { transfer: true, minutes: 10, morale: 4 } },
+    { label: "Pedir empréstimo para jogar de verdade", hint: "Minutos ↑↑ · nova casa", result: "Você prefere ser protagonista em outro lugar a esperar aqui.", effect: { transfer: true, loan: true, minutes: 10, morale: 4 } },
     { label: "Continuar treinando no limite", hint: "48% · chance vira reserva permanente ou oportunidade real", result: "Você aposta que a paciência ainda vai virar minutos.", effect: {}, luck: { chance: 48, successText: "Uma lesão do titular abre a porta e você não desperdiça a chance.", failureText: "A oportunidade não vem e o rótulo de eterno reserva começa a colar.", successEffect: { ovr: 2, minutes: 12, reputation: 8, morale: 8 }, failureEffect: { morale: -10, reputation: -3, minutes: -2 } } },
   ]},
   { id: "drama-rotation-role-acceptance", icon: "↔", tag: "ELENCO", title: "Nem titular, nem reserva: você é peça de rodízio", description: "O técnico usa você em jogos alternados, conforme o desgaste do time pede.", needsSquadRoles: ["rotacao"], choices: [
