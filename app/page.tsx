@@ -581,8 +581,7 @@ function marketValue(overall: number, age: number, club: Club, reputation = 0, f
 }
 
 function competitiveStrength(club: Club) {
-  const league = leagueById(club.leagueId);
-  return club.strength ?? clamp(Math.round(52 + club.reputation * 7 + league.prestige * 1.8), 62, 94);
+  return club.strength;
 }
 
 function seasonPerformanceScore(positionKey: PositionKey, record?: Partial<SeasonRecord> | null) {
@@ -1993,7 +1992,7 @@ export default function Home() {
             {hasSave && <button className="secondary-button" onClick={continueSave}>Continuar carreira salva</button>}
           </div>
           <div className="welcome-features">
-            <span>◉ 58 clubes</span><span>✦ 12 posições</span><span>🏆 8 ligas</span><span>★ 10 seleções</span>
+            <span>◉ 252 clubes</span><span>✦ 12 posições</span><span>🏆 17 ligas</span><span>★ 17 seleções</span>
           </div>
         </section>
       )}

@@ -267,7 +267,10 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
   const clubIds = clubEntries.map((match) => match[1]);
 
   assert.equal(new Set(clubIds).size, clubIds.length, "IDs de clubes precisam ser únicos");
-  assert.ok(clubEntries.length >= 200, "a base deve manter pelo menos 200 clubes");
+  assert.ok(clubEntries.length >= 252, "a base deve manter pelo menos 252 clubes");
+  const clubsWithStrength = [...data.matchAll(/\{ id: "[^"]+", name: "[^"]+", shortName: "[^"]+", abbr: "[^"]+", city: "[^"]+"[^}]*countryId: "[^"]+", leagueId: "[^"]+"[^}]*reputation: \d[^}]*strength: \d+/g)];
+  assert.equal(clubsWithStrength.length, clubEntries.length, "todo clube precisa ter strength explícito");
+  assert.match(data, /export type Club = \{[\s\S]*?strength: number;/);
   const clubCountByLeague = new Map();
   const modestClubCountByLeague = new Map();
   for (const match of clubEntries) {
@@ -286,6 +289,30 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
   for (const [, clubId, countryId, leagueId] of clubEntries) {
     assert.ok(countryIds.has(countryId), `país ausente no clube ${clubId}`);
     assert.ok(leagueIds.has(leagueId), `liga ausente no clube ${clubId}`);
+  }
+
+  const completeEuropeanLeagues = new Map([
+    ["premier", 20],
+    ["laliga", 20],
+    ["seriea", 20],
+    ["bundesliga", 18],
+    ["ligue1", 18],
+    ["primeira", 18],
+    ["eredivisie", 18],
+  ]);
+  for (const [leagueId, officialSize] of completeEuropeanLeagues) {
+    assert.ok((clubCountByLeague.get(leagueId) ?? 0) >= officialSize, `${leagueId} precisa ter a liga completa`);
+  }
+  for (const clubId of [
+    "coventry",
+    "malaga",
+    "frosinone",
+    "elversberg",
+    "le-mans",
+    "academico-viseu",
+    "ado-den-haag",
+  ]) {
+    assert.ok(clubIds.includes(clubId), `expansão europeia precisa manter ${clubId}`);
   }
 });
 
