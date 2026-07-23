@@ -86,6 +86,13 @@ export type GameEvent = {
     hint: string;
     result: string;
     effect: Effect;
+    luck?: {
+      chance: number;
+      successText: string;
+      failureText: string;
+      successEffect: Effect;
+      failureEffect: Effect;
+    };
   }>;
 };
 
@@ -133,7 +140,7 @@ export const FORMATIONS: Formation[] = [
   { id: "artista", icon: "✦", title: "Bola no pé", subtitle: "Técnica acima de tudo", description: "Mais drible, passe e criatividade. O físico demora um pouco mais.", technical: 9, physical: 1, mental: 4, risk: 2, archetype: "O Artista" },
   { id: "guerreiro", icon: "⚡", title: "Corpo de atleta", subtitle: "Explosão e resistência", description: "Você cresce forte, aguenta a pancada e evolui rápido nos treinos.", technical: 2, physical: 9, mental: 3, risk: 4, archetype: "O Guerreiro" },
   { id: "estudioso", icon: "◫", title: "Estudar o jogo", subtitle: "Tática e cabeça fria", description: "Evolução segura, boas decisões e confiança dos treinadores.", technical: 4, physical: 2, mental: 9, risk: 1, archetype: "O Estudioso" },
-  { id: "prodigio", icon: "★", title: "Quero ser o melhor", subtitle: "Ambição sem freio", description: "Potencial máximo e mais visibilidade, com pressão e risco maiores.", technical: 7, physical: 5, mental: 5, risk: 8, archetype: "O Prodígio" },
+  { id: "prodigio", icon: "★", title: "Quero ser o melhor", subtitle: "Ambição sem freio", description: "Treino no limite e mais visibilidade, com pressão e risco maiores.", technical: 7, physical: 5, mental: 5, risk: 8, archetype: "O Prodígio" },
 ];
 
 export const YOUTH_EVENTS = [
@@ -167,7 +174,7 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Esperar o momento", hint: "Moral ↓ · grupo ↑", result: "O vestiário reconhece sua postura profissional.", effect: { morale: -3, leadership: 3 } },
   ]},
   { id: "mentor", icon: "◎", tag: "VESTIÁRIO", title: "Conselho de quem já ganhou", description: "Um veterano chama você depois do treino e oferece ajuda para sobreviver à pressão.", maxAge: 25, oneTime: true, choices: [
-    { label: "Aprender os atalhos", hint: "Potencial ↑", result: "O jogo parece um pouco mais lento depois da conversa.", effect: { potential: 2, ovr: 1 } },
+    { label: "Aprender os atalhos", hint: "Evolução futura ↑", result: "O jogo parece um pouco mais lento depois da conversa.", effect: { potential: 2, ovr: 1 } },
     { label: "Aprender sobre a carreira", hint: "Longevidade ↑", result: "Você começa a cuidar melhor do corpo e da cabeça.", effect: { fitness: 8, morale: 4 } },
   ]},
   { id: "derby", icon: "⚔", tag: "CLÁSSICO", title: "A cidade para por noventa minutos", description: "Clássico lotado. Uma boa atuação muda a forma como a torcida olha para você.", minOvr: 64, choices: [
@@ -211,7 +218,7 @@ export const PRO_EVENTS: GameEvent[] = [
   { id: "sponsorship", icon: "$", tag: "FORA DE CAMPO", title: "Sua primeira campanha", description: "Duas marcas querem associar a imagem ao seu momento.", minOvr: 70, oneTime: true, choices: [
     { label: "Marca nacional", hint: "Dinheiro ↑↑ · exposição ↑", result: "Seu rosto aparece por todo o país.", effect: { money: 14, reputation: 7, morale: -2 } },
     { label: "Marca da sua cidade", hint: "Torcida ↑ · dinheiro ↑", result: "A campanha parece uma homenagem às suas raízes.", effect: { money: 7, reputation: 8, morale: 4 } },
-    { label: "Focar só no futebol", hint: "Potencial ↑", result: "A decisão surpreende e abre espaço para treinar.", effect: { potential: 2, fitness: 5 } },
+    { label: "Focar só no futebol", hint: "Evolução futura ↑", result: "A decisão surpreende e abre espaço para treinar.", effect: { potential: 2, fitness: 5 } },
   ]},
   { id: "rumor", icon: "?", tag: "MÍDIA", title: "Seu nome domina a janela", description: "Um perfil grande publica que sua saída está acertada. Ninguém falou com você.", minOvr: 72, choices: [
     { label: "Responder nas redes", hint: "Exposição ↑", result: "A postagem vira notícia antes do treino acabar.", effect: { reputation: 5, morale: -3 } },
@@ -220,7 +227,7 @@ export const PRO_EVENTS: GameEvent[] = [
   ]},
   { id: "senior-national", icon: "BR", tag: "SELEÇÃO", title: "Convocado para a Seleção Brasileira", description: "O telefone toca durante o almoço. Você está na lista principal.", minOvr: 78, oneTime: true, choices: [
     { label: "Chegar para disputar vaga", hint: "Reputação ↑↑ · pressão", result: "Você pisa na Granja com os olhos de quem quer ficar.", effect: { reputation: 16, morale: 5, fitness: -7, nationalBoost: 20 } },
-    { label: "Aprender com o grupo", hint: "Potencial ↑ · seguro", result: "A primeira convocação vira uma aula de alto nível.", effect: { potential: 3, reputation: 10, nationalBoost: 12 } },
+    { label: "Aprender com o grupo", hint: "Evolução futura ↑ · seguro", result: "A primeira convocação vira uma aula de alto nível.", effect: { potential: 3, reputation: 10, nationalBoost: 12 } },
   ]},
   { id: "divided-locker", icon: "╱", tag: "CRISE", title: "O vestiário se dividiu", description: "Resultados ruins criaram dois lados. Todos querem saber onde você está.", minAge: 23, choices: [
     { label: "Tentar unir o grupo", hint: "Liderança ↑↑", result: "A conversa não resolve tudo, mas muda o tom.", effect: { leadership: 10, morale: 5 } },
@@ -286,8 +293,8 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Parar agora", hint: "Encerrar carreira", result: "Você escolhe o momento em vez de esperar por ele.", effect: { retire: true, reputation: 8 } },
   ]},
   { id: "decisive-penalty", icon: "◎", tag: "MOMENTO DECISIVO", title: "A bola está na marca", description: "Último minuto. O estádio inteiro prende a respiração.", minOvr: 72, choices: [
-    { label: "Bater no canto", hint: "Técnica", result: "Você escolhe o canto antes de começar a corrida.", effect: { reputation: 7, morale: 5, titleBoost: 5 } },
-    { label: "Esperar o goleiro", hint: "Frieza", result: "Um segundo parece durar uma temporada inteira.", effect: { leadership: 5, reputation: 5, titleBoost: 7 } },
+    { label: "Tentar uma cavadinha", hint: "42% · OVR +3 ou −3", result: "Você escolhe transformar um pênalti em memória.", effect: {}, luck: { chance: 42, successText: "A bola sobe devagar, o goleiro cai e o estádio explode. Nasceu um lance para sempre.", failureText: "O goleiro fica parado e encaixa. O silêncio parece não acabar.", successEffect: { ovr: 3, morale: 18, reputation: 15, titleBoost: 18, fans: 16 }, failureEffect: { ovr: -3, morale: -20, reputation: -10, titleBoost: -12, fans: -15 } } },
+    { label: "Esperar o goleiro", hint: "67% · ganho menor", result: "Um segundo parece durar uma temporada inteira.", effect: {}, luck: { chance: 67, successText: "Você espera até o limite e desloca o goleiro com frieza.", failureText: "A hesitação entrega o canto e o goleiro alcança.", successEffect: { leadership: 6, reputation: 7, titleBoost: 9, morale: 6 }, failureEffect: { morale: -9, reputation: -3, titleBoost: -4 } } },
     { label: "Entregar ao capitão", hint: "Coletivo · seguro", result: "A responsabilidade muda de pé, não de peso.", effect: { morale: 4, leadership: 2, titleBoost: 3 } },
   ]},
   { id: "mysterious", icon: "?", tag: "RISCO", title: "O suplemento sem rótulo", description: "Alguém garante que todo mundo usa. Ninguém quer colocar o nome na embalagem.", minAge: 20, maxAge: 32, oneTime: true, choices: [
@@ -342,6 +349,46 @@ export const PRO_EVENTS: GameEvent[] = [
   { id: "penalty-dispute", icon: "◎", tag: "VESTIÁRIO", title: "Dois jogadores, uma cobrança", description: "O batedor oficial segura a bola. A torcida grita seu nome.", minOvr: 74, choices: [
     { label: "Pedir a bola", hint: "Protagonismo · torcida ↑", result: "Você chama a responsabilidade diante de todo mundo.", effect: { reputation: 7, fans: 8, titleBoost: 5, morale: 4 } },
     { label: "Respeitar a hierarquia", hint: "Grupo ↑ · liderança ↑", result: "O gesto é pequeno para a arquibancada e enorme no elenco.", effect: { leadership: 7, morale: 6 } },
+  ]},
+  { id: "experimental-surgery", icon: "+", tag: "APOSTA MÉDICA", title: "Um procedimento pode mudar seu corpo", description: "O especialista promete uma recuperação acima do normal, mas o método ainda divide opiniões.", minAge: 22, maxAge: 31, oneTime: true, choices: [
+    { label: "Aceitar o procedimento", hint: "55% · renascer ou piorar muito", result: "Você assina sabendo que não existe garantia.", effect: { money: -5 }, luck: { chance: 55, successText: "A recuperação surpreende até os médicos. Seu corpo volta mais forte e sem medo.", failureText: "A resposta do corpo é ruim. Meses de tratamento viram um passo doloroso para trás.", successEffect: { ovr: 3, fitness: 28, potential: 2, morale: 12 }, failureEffect: { ovr: -5, fitness: -25, morale: -18, reputation: -4 } } },
+    { label: "Seguir o tratamento tradicional", hint: "Seguro · recuperação lenta", result: "Você troca o atalho por um caminho conhecido.", effect: { fitness: 13, morale: 3, minutes: -4 } },
+  ]},
+  { id: "position-reinvention", icon: "↝", tag: "REINVENÇÃO", title: "Uma posição pode salvar sua carreira", description: "O treinador vê uma função inesperada para você. A mudança pode abrir um novo teto ou tirar seu espaço.", minAge: 24, choices: [
+    { label: "Mudar completamente", hint: "50% · OVR +4 ou −3", result: "Você começa do zero em detalhes que pareciam automáticos.", effect: {}, luck: { chance: 50, successText: "A função encaixa como se sempre tivesse sido sua. O time passa a girar ao seu redor.", failureText: "A adaptação nunca chega. Você perde confiança e minutos importantes.", successEffect: { ovr: 4, potential: 2, minutes: 10, reputation: 9 }, failureEffect: { ovr: -3, minutes: -12, morale: -14, reputation: -4 } } },
+    { label: "Ajustar só alguns movimentos", hint: "Evolução pequena · seguro", result: "Você amplia o repertório sem abandonar sua identidade.", effect: { potential: 1, minutes: 3, leadership: 2 } },
+  ]},
+  { id: "play-through-pain", icon: "⚡", tag: "SACRIFÍCIO", title: "A dor antes do jogo decisivo", description: "O exame não proíbe sua entrada, mas também não promete que você terminará inteiro.", minOvr: 74, choices: [
+    { label: "Tomar a infiltração e jogar", hint: "46% · herói ou lesão grave", result: "Você esconde a dor sob a meia e entra.", effect: { titleBoost: 5 }, luck: { chance: 46, successText: "O corpo aguenta e você decide a partida no limite. A torcida nunca esquecerá.", failureText: "A perna trava cedo. O sacrifício vira uma lesão que atravessa a temporada.", successEffect: { ovr: 2, titleBoost: 20, fans: 18, reputation: 12, morale: 10 }, failureEffect: { ovr: -4, fitness: -30, injuryRisk: 25, morale: -16, titleBoost: -9 } } },
+    { label: "Ficar fora e tratar", hint: "Protege a carreira · moral ↓", result: "Você assiste do banco e escolhe preservar os próximos anos.", effect: { fitness: 17, morale: -5, minutes: -7 } },
+  ]},
+  { id: "viral-dribble", icon: "▶", tag: "FAMA", title: "O drible que pode rodar o mundo", description: "No fim do treino, um produtor desafia você a repetir um lance absurdo diante das câmeras.", minAge: 18, maxAge: 29, choices: [
+    { label: "Tentar diante das câmeras", hint: "40% · fama ou vexame", result: "A gravação começa e não há segunda tomada.", effect: {}, luck: { chance: 40, successText: "O lance sai perfeito e invade milhões de telas. Seu nome deixa de ser só futebol.", failureText: "A tentativa dá errado de um jeito impossível de esconder. A internet não perdoa.", successEffect: { reputation: 15, fans: 14, money: 10, morale: 8 }, failureEffect: { reputation: -8, fans: -9, morale: -13 } } },
+    { label: "Recusar e voltar ao treino", hint: "Foco · condição ↑", result: "Você deixa a câmera esperando e termina a sessão.", effect: { fitness: 7, leadership: 2 } },
+  ]},
+  { id: "radical-bulk", icon: "◆", tag: "PREPARAÇÃO", title: "Um plano físico radical", description: "O preparador propõe ganhar força em poucas semanas. A explosão pode vir acompanhada de perda de mobilidade.", maxAge: 29, choices: [
+    { label: "Seguir o plano completo", hint: "54% · OVR +3 ou −2", result: "Dieta, carga e sono passam a controlar sua rotina.", effect: { morale: -3 }, luck: { chance: 54, successText: "A potência aparece sem roubar velocidade. Você volta irreconhecível.", failureText: "O peso novo trava seus movimentos e sobrecarrega o corpo.", successEffect: { ovr: 3, fitness: 14, potential: 1 }, failureEffect: { ovr: -2, fitness: -18, injuryRisk: 12, morale: -8 } } },
+    { label: "Evoluir aos poucos", hint: "Condição ↑ · seguro", result: "O progresso é discreto, mas o corpo acompanha.", effect: { fitness: 9, potential: 1 } },
+  ]},
+  { id: "lib-final-gamble", icon: "LIB", tag: "FINAL DA LIBERTADORES", title: "Uma troca pode decidir a América", description: "O treinador pergunta se você aceita atuar no limite, fora da zona de conforto, durante a final.", minOvr: 78, needsLibertadores: true, choices: [
+    { label: "Aceitar a missão impossível", hint: "34% · noite histórica ou desastre", result: "O plano inteiro passa por sua coragem.", effect: {}, luck: { chance: 34, successText: "A mudança desmonta o adversário. Sua atuação entra para a história da Libertadores.", failureText: "O rival encontra o espaço deixado por você. A final escapa diante do continente.", successEffect: { ovr: 4, titleBoost: 28, reputation: 18, fans: 20, morale: 14 }, failureEffect: { ovr: -3, titleBoost: -18, morale: -19, reputation: -7, fans: -8 } } },
+    { label: "Manter sua função", hint: "Libertadores ↑ · seguro", result: "Você escolhe fazer muito bem aquilo que trouxe o time até aqui.", effect: { titleBoost: 10, leadership: 5, morale: 5 } },
+  ]},
+  { id: "world-final-gamble", icon: "MUN", tag: "MUNDIAL", title: "O último ataque contra o mundo", description: "O gigante europeu recua. O treinador oferece a você a bola e uma liberdade que pode custar o jogo.", minOvr: 82, needsWorld: true, choices: [
+    { label: "Ir para tudo ou nada", hint: "22% · glória máxima ou queda", result: "Você avança deixando o medo e a defesa para trás.", effect: {}, luck: { chance: 22, successText: "O impossível acontece. Seu lance derruba o favorito e muda o tamanho da sua carreira.", failureText: "A bola é perdida, o contra-ataque vem e o sonho termina do outro lado do campo.", successEffect: { ovr: 5, titleBoost: 35, reputation: 22, fans: 25, morale: 18 }, failureEffect: { ovr: -3, titleBoost: -20, reputation: -8, fans: -10, morale: -18 } } },
+    { label: "Levar o jogo até o fim", hint: "Mundial ↑ · mais seguro", result: "O time fecha os espaços e espera uma chance menos cruel.", effect: { titleBoost: 12, leadership: 8, fitness: -6 } },
+  ]},
+  { id: "agent-ultimatum", icon: "§", tag: "EMPRESÁRIO", title: "Uma promessa grande demais", description: "Seu agente diz que pode dobrar seu valor e abrir o mercado, mas exige controle total sobre a carreira.", minAge: 21, choices: [
+    { label: "Entregar a carreira ao agente", hint: "45% · mercado explode ou some", result: "Você assina uma procuração que parece pequena demais para tanto poder.", effect: { money: -4 }, luck: { chance: 45, successText: "As portas se abrem. Clubes, marcas e imprensa passam a disputar sua atenção.", failureText: "As promessas evaporam e você descobre cláusulas que afastam interessados.", successEffect: { transfer: true, money: 18, reputation: 12, morale: 5 }, failureEffect: { money: -10, reputation: -9, morale: -15, fans: -5 } } },
+    { label: "Manter o controle", hint: "Estabilidade · liderança ↑", result: "Você recusa o brilho rápido e preserva a própria voz.", effect: { leadership: 6, morale: 5, fans: 3 } },
+  ]},
+  { id: "captain-guarantee", icon: "C", tag: "PROMESSA", title: "A promessa impossível no túnel", description: "Antes de uma sequência brutal, o elenco pede uma frase. Você pode prometer algo que talvez ninguém consiga cumprir.", minAge: 24, choices: [
+    { label: "Prometer o título", hint: "38% · impacto enorme", result: "Você coloca a própria palavra no centro da temporada.", effect: {}, luck: { chance: 38, successText: "A promessa vira combustível e o grupo acredita até o último minuto.", failureText: "A sequência desmorona e suas palavras voltam como cobrança.", successEffect: { titleBoost: 24, leadership: 14, fans: 12, morale: 13 }, failureEffect: { titleBoost: -13, leadership: -6, fans: -14, morale: -16, reputation: -7 } } },
+    { label: "Pedir trabalho, não promessa", hint: "Liderança ↑ · seguro", result: "O discurso não vira manchete, mas organiza o vestiário.", effect: { leadership: 7, morale: 6, titleBoost: 5 } },
+  ]},
+  { id: "solo-training-camp", icon: "⌁", tag: "ENTRETEMPORADA", title: "Trinta dias longe do clube", description: "Uma equipe particular oferece um ciclo secreto de treino. Você voltaria diferente — para melhor ou pior.", minAge: 19, maxAge: 28, oneTime: true, choices: [
+    { label: "Sumir por um mês e apostar", hint: "48% · salto ou regressão", result: "Você troca as férias por um laboratório de futebol.", effect: { money: -6, morale: -4 }, luck: { chance: 48, successText: "O método destrava movimentos e decisões que pareciam inalcançáveis.", failureText: "A carga é errada, o corpo chega pesado e os fundamentos perdem naturalidade.", successEffect: { ovr: 4, potential: 2, fitness: 8 }, failureEffect: { ovr: -4, potential: -2, fitness: -14, morale: -10 } } },
+    { label: "Treinar com o clube", hint: "Condição ↑ · sem surpresa", result: "Você escolhe estrutura conhecida e progresso controlado.", effect: { fitness: 10, morale: 3 } },
   ]},
   { id: "short-vacation", icon: "⌛", tag: "CALENDÁRIO", title: "Doze dias até a reapresentação", description: "A temporada foi longa e o próximo ano já bate na porta.", choices: [
     { label: "Descansar de verdade", hint: "Físico ↑↑ · OVR estável", result: "Você desliga o telefone e deixa o corpo respirar.", effect: { fitness: 16, morale: 8 } },

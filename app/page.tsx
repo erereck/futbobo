@@ -46,6 +46,7 @@ type ChoiceConsequence = {
   headline: string;
   resultText: string;
   changes: string[];
+  luckOutcome: "success" | "failure" | null;
 };
 
 type TransferStatus = {
@@ -86,10 +87,11 @@ type SeasonResult = SeasonRecord & {
   development: number;
   marketValue: number;
   calledUp: boolean;
+  twist: string | null;
 };
 
 type GameState = {
-  version: 2;
+  version: 3;
   phase: Phase;
   seed: number;
   name: string;
@@ -119,6 +121,9 @@ type GameState = {
   trophies: number;
   trophyCabinet: TrophyCabinet;
   awards: number;
+  awardCabinet: Record<string, number>;
+  setbacks: number;
+  luckyBreaks: number;
   libertadoresQualified: boolean;
   worldQualifiedSeason: number;
   worldQualifiedClubId: string;
@@ -148,7 +153,7 @@ const EMPTY_STATS: PlayerStats = {
 
 function initialState(): GameState {
   return {
-    version: 2,
+    version: 3,
     phase: "welcome",
     seed: Date.now() % 2147483647,
     name: "",
@@ -178,6 +183,9 @@ function initialState(): GameState {
     trophies: 0,
     trophyCabinet: { brasileirao: 0, copaBrasil: 0, libertadores: 0, mundial: 0 },
     awards: 0,
+    awardCabinet: {},
+    setbacks: 0,
+    luckyBreaks: 0,
     libertadoresQualified: false,
     worldQualifiedSeason: 0,
     worldQualifiedClubId: "",
@@ -204,12 +212,13 @@ function normalizeSave(value: unknown): GameState {
   return {
     ...base,
     ...saved,
-    version: 2,
+    version: 3,
     trophyCabinet: {
       ...base.trophyCabinet,
       ...saved.trophyCabinet,
       brasileirao: oldBrasileirao,
     },
+    awardCabinet: { ...base.awardCabinet, ...saved.awardCabinet },
     history: (saved.history ?? []).map((record) => ({
       appearances: record.appearances ?? 0,
       goals: record.goals ?? 0,
@@ -229,6 +238,11 @@ function normalizeSave(value: unknown): GameState {
       ...saved.lastResult,
       competitions: saved.lastResult.competitions ?? [],
       awards: saved.lastResult.awards ?? [],
+      twist: saved.lastResult.twist ?? null,
+    } : null,
+    lastConsequence: saved.lastConsequence ? {
+      ...saved.lastConsequence,
+      luckOutcome: saved.lastConsequence.luckOutcome ?? null,
     } : null,
   };
 }
@@ -285,7 +299,7 @@ function describeEffects(effect: Effect) {
     changes.push(`${value > 0 ? "+" : ""}${value} ${label}`);
   };
   add("OVR", effect.ovr);
-  add("potencial", effect.potential);
+  if (effect.potential) changes.push(effect.potential > 0 ? "Margem futura melhorou" : "Margem futura piorou");
   add("moral", effect.morale);
   add("físico", effect.fitness);
   add("prestígio", effect.reputation);
@@ -298,6 +312,37 @@ function describeEffects(effect: Effect) {
   if (effect.injuryRisk) changes.push(`+${effect.injuryRisk} risco físico`);
   if (effect.retire) changes.push("Despedida anunciada");
   return changes.length ? changes : ["Sua escolha mudou o rumo da temporada"];
+}
+
+function mergeEffects(base: Effect, extra: Effect): Effect {
+  return {
+    ovr: (base.ovr ?? 0) + (extra.ovr ?? 0),
+    potential: (base.potential ?? 0) + (extra.potential ?? 0),
+    morale: (base.morale ?? 0) + (extra.morale ?? 0),
+    fitness: (base.fitness ?? 0) + (extra.fitness ?? 0),
+    reputation: (base.reputation ?? 0) + (extra.reputation ?? 0),
+    leadership: (base.leadership ?? 0) + (extra.leadership ?? 0),
+    money: (base.money ?? 0) + (extra.money ?? 0),
+    minutes: (base.minutes ?? 0) + (extra.minutes ?? 0),
+    titleBoost: (base.titleBoost ?? 0) + (extra.titleBoost ?? 0),
+    nationalBoost: (base.nationalBoost ?? 0) + (extra.nationalBoost ?? 0),
+    injuryRisk: (base.injuryRisk ?? 0) + (extra.injuryRisk ?? 0),
+    fans: (base.fans ?? 0) + (extra.fans ?? 0),
+    transfer: Boolean(base.transfer || extra.transfer),
+    retire: Boolean(base.retire || extra.retire),
+  };
+}
+
+function careerTrend(history: SeasonRecord[]) {
+  const latest = history.at(-1)?.overall;
+  const previous = history.at(-2)?.overall;
+  if (latest === undefined) return "Em avaliação";
+  if (previous === undefined) return "Primeiros passos";
+  if (latest >= previous + 2) return "Explodindo";
+  if (latest > previous) return "Em ascensão";
+  if (latest < previous - 1) return "Em queda";
+  if (latest < previous) return "Perdendo ritmo";
+  return "Estável";
 }
 
 function fanMood(value: number) {
@@ -354,8 +399,19 @@ function createYouthJourney(state: GameState, formationId: string) {
     formation.risk * seeded(state.seed, 17);
   const score = clamp(Math.round(rawScore), 45, 98);
   const revealAge = score >= 82 ? 16 : score >= 67 ? 17 : 18;
-  const overall = clamp(Math.round(45 + score * 0.27 + seeded(state.seed, 22) * 4), 55, 72);
-  const potential = clamp(Math.round(69 + score * 0.25 + seeded(state.seed, 23) * 5), overall + 5, 96);
+  const overall = clamp(Math.round(42 + score * 0.25 + seeded(state.seed, 22) * 4), 54, 69);
+  const fateRoll = seeded(state.seed, 701);
+  const ceilingRoll = seeded(state.seed, 709);
+  const hiddenCeiling = fateRoll < 0.25
+    ? 61 + Math.floor(ceilingRoll * 11)
+    : fateRoll < 0.85
+      ? 70 + Math.floor(ceilingRoll * 13)
+      : fateRoll < 0.97
+        ? 82 + Math.floor(ceilingRoll * 7)
+        : fateRoll < 0.99
+          ? 89 + Math.floor(ceilingRoll * 6)
+          : 95 + Math.floor(ceilingRoll * 5);
+  const potential = clamp(hiddenCeiling, overall + 1, 99);
   const used = new Set<number>();
   const youthYears: YouthYear[] = [];
   for (let age = 12; age <= revealAge; age += 1) {
@@ -385,10 +441,11 @@ function createYouthJourney(state: GameState, formationId: string) {
 }
 
 function applyEffect(state: GameState, effect: Effect) {
+  const overall = clamp(state.overall + (effect.ovr ?? 0), 40, 99);
   return {
     ...state,
-    overall: clamp(state.overall + (effect.ovr ?? 0), 40, 99),
-    potential: clamp(state.potential + (effect.potential ?? 0), state.overall + 1, 99),
+    overall,
+    potential: clamp(state.potential + (effect.potential ?? 0), 45, 99),
     morale: clamp(state.morale + (effect.morale ?? 0)),
     fitness: clamp(state.fitness + (effect.fitness ?? 0)),
     reputation: clamp(state.reputation + (effect.reputation ?? 0), 0, 100),
@@ -399,7 +456,7 @@ function applyEffect(state: GameState, effect: Effect) {
   };
 }
 
-function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choiceLabel: string, resultText: string): GameState {
+function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choiceLabel: string, resultText: string, luckOutcome: "success" | "failure" | null = null): GameState {
   const affected = applyEffect(state, effect);
   const club = clubById(affected.currentClubId);
   const position = positionByKey(affected.position);
@@ -416,12 +473,12 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const seasonStats = { appearances, goals, assists, cleanSheets, goalsConceded };
 
   const boost = effect.titleBoost ?? 0;
-  const brasilChance = clamp(2 + club.reputation * 4.5 + Math.max(0, affected.overall - 70) * 0.7 + boost + affected.fanSupport / 18, 2, 58);
-  const copaChance = clamp(2 + club.reputation * 3.4 + Math.max(0, affected.overall - 70) * 0.55 + boost * 0.7, 2, 44);
+  const brasilChance = clamp(2 + club.reputation * 3.5 + Math.max(0, affected.overall - 70) * 0.55 + boost + affected.fanSupport / 25, 2, 48);
+  const copaChance = clamp(2 + club.reputation * 2.6 + Math.max(0, affected.overall - 70) * 0.45 + boost * 0.65, 2, 34);
   const playsLibertadores = affected.libertadoresQualified;
   const playsWorld = affected.worldQualifiedSeason === affected.season && affected.worldQualifiedClubId === club.id;
-  const libChance = clamp(1 + club.reputation * 2.8 + Math.max(0, affected.overall - 72) * 0.6 + boost * 0.55, 1, 36);
-  const worldChance = clamp(5 + club.reputation * 2.2 + Math.max(0, affected.overall - 74) * 0.65 + boost * 0.35, 5, 32);
+  const libChance = clamp(1 + club.reputation * 2.2 + Math.max(0, affected.overall - 72) * 0.48 + boost * 0.5, 1, 28);
+  const worldChance = clamp(3 + club.reputation * 1.7 + Math.max(0, affected.overall - 74) * 0.5 + boost * 0.3, 3, 24);
 
   const brasileiraoChampion = seeded(state.seed, state.season * 17) * 100 < brasilChance;
   const copaChampion = seeded(state.seed, state.season * 41) * 100 < copaChance;
@@ -437,39 +494,81 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (playsWorld) competitions.push({ id: "mundial", name: "Mundial de Clubes", icon: "MUN", stage: knockoutStage(71, mundialChampion, ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"]), champion: mundialChampion });
   const titleCount = competitions.filter((competition) => competition.champion).length;
 
+  const growthRoll = seeded(state.seed, state.season * 19);
   let development = 0;
-  if (affected.age <= 20) development = 2 + Math.floor(seeded(state.seed, state.season * 19) * 3);
-  else if (affected.age <= 24) development = 1 + Math.floor(seeded(state.seed, state.season * 19) * 3);
-  else if (affected.age <= 28) development = Math.floor(seeded(state.seed, state.season * 19) * 2);
-  else if (affected.age <= 31) development = seeded(state.seed, state.season * 19) > 0.62 ? 1 : 0;
-  else development = -(1 + Math.floor(seeded(state.seed, state.season * 19) * Math.max(1, (affected.age - 29) / 3)));
+  if (affected.age <= 19) development = growthRoll < 0.1 ? -1 : growthRoll < 0.43 ? 0 : growthRoll < 0.8 ? 1 : growthRoll < 0.96 ? 2 : 3;
+  else if (affected.age <= 23) development = growthRoll < 0.12 ? -1 : growthRoll < 0.52 ? 0 : growthRoll < 0.86 ? 1 : growthRoll < 0.98 ? 2 : 3;
+  else if (affected.age <= 27) development = growthRoll < 0.16 ? -1 : growthRoll < 0.66 ? 0 : growthRoll < 0.95 ? 1 : 2;
+  else if (affected.age <= 29) development = growthRoll < 0.14 ? -2 : growthRoll < 0.44 ? -1 : growthRoll < 0.92 ? 0 : 1;
+  else if (affected.age <= 31) development = growthRoll < 0.2 ? -2 : growthRoll < 0.67 ? -1 : growthRoll < 0.97 ? 0 : 1;
+  else if (affected.age <= 34) development = growthRoll < 0.15 ? -3 : growthRoll < 0.52 ? -2 : growthRoll < 0.91 ? -1 : 0;
+  else development = growthRoll < 0.2 ? -4 : growthRoll < 0.55 ? -3 : growthRoll < 0.9 ? -2 : -1;
+  if (appearances < 15 && seeded(state.seed, state.season * 79) > 0.48) development -= 1;
   if (affected.overall >= affected.potential && development > 0) development = 0;
-  if ((effect.injuryRisk ?? 0) + (100 - affected.fitness) > seeded(state.seed, state.season * 23) * 180) development -= 1;
+  if (development > 0) development = Math.min(development, affected.potential - affected.overall);
 
-  const nextOverall = clamp(affected.overall + development, 42, affected.potential);
+  let twist: string | null = null;
+  let twistFitness = 0;
+  let twistMorale = 0;
+  let setbackDelta = 0;
+  let luckyDelta = 0;
+  const twistRoll = seeded(state.seed, state.season * 83);
+  const seriousInjuryChance = 0.045 + Math.max(0, 65 - affected.fitness) / 450 + (effect.injuryRisk ?? 0) / 500;
+  if (twistRoll < seriousInjuryChance) {
+    development -= 3;
+    twistFitness = -24;
+    twistMorale = -10;
+    setbackDelta = 1;
+    twist = "Uma lesão séria interrompeu sua temporada e mudou o ritmo da carreira.";
+  } else if (twistRoll < seriousInjuryChance + 0.11) {
+    development -= 1;
+    twistMorale = -13;
+    setbackDelta = 1;
+    twist = "A confiança desapareceu por meses. Nem toda fase ruim tem uma explicação simples.";
+  } else if (twistRoll > 0.955 && affected.age <= 29 && affected.overall < affected.potential) {
+    development += Math.min(2, affected.potential - affected.overall);
+    twistMorale = 10;
+    luckyDelta = 1;
+    twist = "Uma sequência improvável virou sua temporada e acelerou sua evolução.";
+  }
+
+  const nextOverall = clamp(affected.overall + development, 42, Math.max(affected.potential, affected.overall));
   const nextAge = affected.age + 1;
-  const calledUp = affected.nationalLevel >= 25 || (nextOverall >= 80 && seeded(state.seed, state.season * 31) > 0.42);
+  const calledUp = affected.nationalLevel >= 28 || (nextOverall >= 82 && seeded(state.seed, state.season * 31) > 0.62);
   const awards: string[] = [];
-  if (!isKeeper && goals >= 20) awards.push("Artilheiro do Brasil");
-  if (isKeeper && cleanSheets >= 15) awards.push("Luva de Ouro");
-  if (nextOverall >= 84 && appearances >= 28 && seeded(state.seed, state.season * 73) > 0.48) awards.push("Craque da temporada");
-  if (affected.age <= 21 && nextOverall >= 75) awards.push("Revelação do ano");
+  const awardRoll = seeded(state.seed, state.season * 73);
+  if (affected.age <= 21 && appearances >= 22 && nextOverall >= 74 && awardRoll > 0.38) awards.push("Revelação do Brasileirão");
+  if (!isKeeper && goals >= 18) awards.push("Artilheiro do Brasileirão");
+  if (!isKeeper && assists >= 12) awards.push("Rei das Assistências");
+  if (isKeeper && cleanSheets >= 14) awards.push("Luva de Ouro");
+  if (position.zone === "defesa" && appearances >= 28 && nextOverall >= 80 && leaguePosition <= 6) awards.push("Melhor Defensor");
+  if (nextOverall >= 82 && appearances >= 28 && awardRoll > 0.45) awards.push(`Seleção do Brasileirão — ${position.name}`);
+  if (nextOverall >= 86 && appearances >= 30 && leaguePosition <= 3 && awardRoll > 0.58) awards.push("Craque do Brasileirão");
+  if (affected.age <= 23 && playsLibertadores && nextOverall >= 82 && seeded(state.seed, state.season * 89) > 0.5) awards.push("Melhor Jovem da América");
+  if (libertadoresChampion && nextOverall >= 86 && seeded(state.seed, state.season * 97) > 0.38) awards.push("MVP da Libertadores");
+  if (libertadoresChampion && nextOverall >= 89 && seeded(state.seed, state.season * 101) > 0.7) awards.push("Rei da América");
+  if (!isKeeper && goals >= 8 && nextOverall >= 82 && seeded(state.seed, state.season * 103) > 0.94) awards.push("Prêmio Puskás");
+  if (affected.leadership >= 82 && seeded(state.seed, state.season * 107) > 0.82) awards.push("Prêmio Fair Play");
+  if (affected.fanSupport >= 92 && titleCount > 0) awards.push("Ídolo da Torcida");
+  if (mundialChampion && affected.trophyCabinet.libertadores > 0 && nextOverall >= 95 && affected.reputation >= 94 && seeded(state.seed, state.season * 109) > 0.92) awards.push("Bola de Ouro");
   const title = titleCount > 0;
   const record: SeasonRecord = { ...seasonStats, age: affected.age, season: affected.season, clubId: club.id, overall: nextOverall, title, eventTitle: event.title, competitions, awards };
-  const result: SeasonResult = { ...record, resultText, development, marketValue: marketValue(nextOverall, nextAge), calledUp };
+  const result: SeasonResult = { ...record, resultText, development, marketValue: marketValue(nextOverall, nextAge), calledUp, twist };
   const seenEvents = event.oneTime || event.id === FIRST_MATCH_EVENT.id ? Array.from(new Set([...affected.seenEvents, event.id])) : affected.seenEvents;
   const nextCabinet = { ...affected.trophyCabinet };
   competitions.forEach((competition) => { if (competition.champion) nextCabinet[competition.id] += 1; });
   const nextWorldQualifiedSeason = libertadoresChampion ? affected.season + 1 : affected.worldQualifiedSeason === affected.season ? 0 : affected.worldQualifiedSeason;
   const nextWorldQualifiedClubId = libertadoresChampion ? club.id : affected.worldQualifiedSeason === affected.season ? "" : affected.worldQualifiedClubId;
+  const nextAwardCabinet = { ...affected.awardCabinet };
+  awards.forEach((award) => { nextAwardCabinet[award] = (nextAwardCabinet[award] ?? 0) + 1; });
   const nextBase: GameState = {
     ...affected,
     phase: "consequence",
     age: nextAge,
     season: affected.season + 1,
     overall: nextOverall,
-    fitness: clamp(affected.fitness + 18 - Math.max(0, appearances - 30)),
-    morale: clamp(affected.morale + titleCount * 8 + 1),
+    fitness: clamp(affected.fitness + 14 - Math.max(0, appearances - 28) + twistFitness),
+    morale: clamp(affected.morale + titleCount * 8 + twistMorale),
     reputation: clamp(affected.reputation + Math.round(appearances / 12) + titleCount * 7),
     fanSupport: clamp(affected.fanSupport + titleCount * 13 + Math.round(appearances / 14)),
     nationalLevel: clamp(calledUp ? Math.max(affected.nationalLevel, 32) : affected.nationalLevel),
@@ -477,12 +576,15 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     trophies: affected.trophies + titleCount,
     trophyCabinet: nextCabinet,
     awards: affected.awards + awards.length,
+    awardCabinet: nextAwardCabinet,
+    setbacks: affected.setbacks + setbackDelta,
+    luckyBreaks: affected.luckyBreaks + luckyDelta,
     libertadoresQualified: brasileiraoChampion || copaChampion || leaguePosition <= 6,
     worldQualifiedSeason: nextWorldQualifiedSeason,
     worldQualifiedClubId: nextWorldQualifiedClubId,
     history: [...affected.history, record],
     lastResult: result,
-    lastConsequence: { choice: choiceLabel, headline: "Sua decisão teve peso", resultText, changes: describeEffects(effect) },
+    lastConsequence: { choice: choiceLabel, headline: luckOutcome === "success" ? "A aposta deu certo" : luckOutcome === "failure" ? "A aposta deu errado" : "Sua decisão teve peso", resultText, changes: describeEffects(effect), luckOutcome },
     retireAfterSeason: Boolean(effect.retire || nextAge >= 40),
     seenEvents,
     nextEventId: "",
@@ -528,6 +630,7 @@ export default function Home() {
   const [game, setGame] = useState<GameState>(() => initialState());
   const [hasSave, setHasSave] = useState(false);
   const [youthStep, setYouthStep] = useState(0);
+  const [youthFinished, setYouthFinished] = useState(false);
   const [activeTab, setActiveTab] = useState<"event" | "history" | "profile">("event");
   const [toast, setToast] = useState("");
 
@@ -536,7 +639,7 @@ export default function Home() {
       const saved = localStorage.getItem(SAVE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as { version?: number; phase?: Phase };
-        if (parsed.version === 1 || parsed.version === 2) {
+        if (parsed.version === 1 || parsed.version === 2 || parsed.version === 3) {
           queueMicrotask(() => setHasSave(parsed.phase !== "welcome"));
         }
       }
@@ -556,7 +659,7 @@ export default function Home() {
       window.setTimeout(() => setYouthStep(index + 1), 350 + index * 340),
     );
     const finish = window.setTimeout(
-      () => setGame((current) => ({ ...current, phase: "youth-complete" })),
+      () => setYouthFinished(true),
       900 + game.youthYears.length * 340,
     );
     return () => {
@@ -605,6 +708,7 @@ export default function Home() {
   function selectFormation(formationId: string) {
     const journey = createYouthJourney(game, formationId);
     setYouthStep(0);
+    setYouthFinished(false);
     setGame((current) => ({
       ...current,
       phase: "youth",
@@ -643,7 +747,19 @@ export default function Home() {
   function chooseEvent(choiceIndex: number) {
     const choice = currentEvent.choices[choiceIndex];
     if (!choice) return;
-    setGame((current) => simulateSeason(current, currentEvent, choice.effect, choice.label, choice.result));
+    setGame((current) => {
+      if (!choice.luck) return simulateSeason(current, currentEvent, choice.effect, choice.label, choice.result);
+      const succeeded = seeded(current.seed, current.season * 127 + choiceIndex * 17 + current.history.length) < choice.luck.chance / 100;
+      const luckEffect = succeeded ? choice.luck.successEffect : choice.luck.failureEffect;
+      return simulateSeason(
+        current,
+        currentEvent,
+        mergeEffects(choice.effect, luckEffect),
+        choice.label,
+        succeeded ? choice.luck.successText : choice.luck.failureText,
+        succeeded ? "success" : "failure",
+      );
+    });
     vibrate();
   }
 
@@ -874,7 +990,14 @@ export default function Home() {
               </article>
             ))}
           </div>
-          <p className="simulating-label"><span /> Simulando sua formação...</p>
+          {!youthFinished ? (
+            <p className="simulating-label"><span /> Simulando sua formação...</p>
+          ) : (
+            <div className="youth-continue">
+              <span>A simulação terminou. Leia sua trajetória com calma.</span>
+              <button className="primary-button" onClick={() => setGame((current) => ({ ...current, phase: "youth-complete" }))}>Continuar <b>→</b></button>
+            </div>
+          )}
         </section>
       )}
 
@@ -888,7 +1011,7 @@ export default function Home() {
           <div className="youth-recap">
             <Metric label="Idade" value={`${game.revealAge} anos`} />
             <Metric label="OVR" value={game.overall} tone="gold" />
-            <Metric label="Potencial" value={game.potential} tone="green" />
+            <Metric label="Perfil" value={position.style} tone="green" />
           </div>
           <div className="last-youth-note"><span>{game.youthYears.at(-1)?.age}</span><div><strong>{game.youthYears.at(-1)?.title}</strong><p>{game.youthYears.at(-1)?.text}</p></div></div>
           <button className="primary-button" onClick={() => setGame((current) => ({ ...current, phase: "revelation" }))}>Ver propostas profissionais <span>→</span></button>
@@ -903,7 +1026,7 @@ export default function Home() {
             <ClubBadge club={clubById(game.academyClubId)} size="lg" />
             <div className="reveal-overall"><span>OVR</span><strong>{game.overall}</strong></div>
             <div className="reveal-name"><small>{game.archetype}</small><h1>{game.name}</h1><span>#{game.number} · {position.name} · {game.foot}</span></div>
-            <div className="reveal-stats"><Metric label="Revelado aos" value={`${game.revealAge} anos`} /><Metric label="Potencial" value={game.potential} tone="gold" /><Metric label="Estilo" value={position.style} /></div>
+            <div className="reveal-stats"><Metric label="Revelado aos" value={`${game.revealAge} anos`} /><Metric label="Momento" value="Em avaliação" tone="gold" /><Metric label="Estilo" value={position.style} /></div>
           </div>
           <div className="contract-section"><div className="section-heading"><div><span>PRIMEIRO CONTRATO</span><h2>Quem aposta em você?</h2></div></div>
             <div className="offer-list">
@@ -944,7 +1067,7 @@ export default function Home() {
           )}
 
           {game.phase === "consequence" && game.lastConsequence && (
-            <div className="consequence-stage screen-enter">
+            <div className={`consequence-stage screen-enter ${game.lastConsequence.luckOutcome ? `luck-${game.lastConsequence.luckOutcome}` : ""}`}>
               <span className="result-kicker">CONSEQUÊNCIAS DA ESCOLHA</span>
               <div className="consequence-symbol">↯</div>
               <small>VOCÊ ESCOLHEU</small>
@@ -973,6 +1096,7 @@ export default function Home() {
               <div className="competition-grid">
                 {game.lastResult.competitions.map((competition) => <article key={competition.id} className={competition.champion ? "competition-card champion" : "competition-card"}><span>{competition.icon}</span><div><strong>{competition.name}</strong><small>{competition.stage}</small></div>{competition.champion && <b>★</b>}</article>)}
               </div>
+              {game.lastResult.twist && <div className={`season-twist ${game.lastResult.development < 0 ? "negative" : "positive"}`}><span>O IMPREVISTO DA TEMPORADA</span><p>{game.lastResult.twist}</p></div>}
               {game.lastResult.awards.length > 0 && <div className="season-awards">{game.lastResult.awards.map((award) => <span key={award}>✦ {award}</span>)}</div>}
               <div className="result-details"><span>Valor de mercado <strong>{formatMoney(game.lastResult.marketValue)}</strong></span>{game.lastResult.calledUp && <span className="callup-badge">★ No radar da Seleção</span>}</div>
               <button className="primary-button" onClick={continueAfterResult}>{game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"} <span>→</span></button>
@@ -1013,11 +1137,20 @@ export default function Home() {
           {activeTab === "profile" && game.phase === "career" && (
             <div className="panel-screen screen-enter">
               <div className="profile-hero"><div className="academy-avatar"><span>{game.number}</span><small>{game.position}</small></div><div><span>{game.archetype}</span><h2>{game.name}</h2><p>{position.style} · {game.foot}</p></div></div>
-              <div className="profile-metrics"><Metric label="OVR" value={game.overall} tone="gold" /><Metric label="Potencial" value={game.potential} /><Metric label="Valor" value={formatMoney(marketValue(game.overall, game.age))} /></div>
+              <div className="profile-metrics"><Metric label="OVR" value={game.overall} tone="gold" /><Metric label="Momento" value={careerTrend(game.history)} /><Metric label="Valor" value={formatMoney(marketValue(game.overall, game.age))} /></div>
               <div className="supporter-card"><span>RELAÇÃO COM A TORCIDA</span><strong style={{ color: supporterMood.color }}>{supporterMood.label}</strong><p>{game.fanSupport < 38 ? "Cada toque pode virar vaia. Títulos e entrega reconquistam a arquibancada." : game.fanSupport >= 82 ? "Seu nome já faz parte da identidade do clube." : "A arquibancada ainda está decidindo que história contará sobre você."}</p></div>
               <div className="attribute-card"><Progress label="Moral" value={game.morale} color="#2ca8ff" /><Progress label="Condição" value={game.fitness} color="#63e36b" /><Progress label="Prestígio" value={game.reputation} color="#ffc72c" /><Progress label="Liderança" value={game.leadership} color="#a675ff" /><Progress label="Seleção" value={game.nationalLevel} color="#f5f7f2" /><Progress label="Torcida" value={game.fanSupport} color={supporterMood.color} /></div>
               <div className="career-total-card"><span>TOTAIS DA CARREIRA</span><div><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label="Títulos" value={game.trophies} tone="gold" /></div></div>
               <div className="trophy-cabinet"><span>SALA DE TROFÉUS</span><div><Metric label="Brasileirão" value={game.trophyCabinet.brasileirao} tone="gold" /><Metric label="Copa do Brasil" value={game.trophyCabinet.copaBrasil} /><Metric label="Libertadores" value={game.trophyCabinet.libertadores} tone="gold" /><Metric label="Mundial" value={game.trophyCabinet.mundial} tone="green" /></div><small>✦ {game.awards} prêmio(s) individual(is)</small></div>
+              <div className="career-fortune"><span>TRAJETÓRIA</span><div><Metric label="Baques" value={game.setbacks} tone="danger" /><Metric label="Viradas de sorte" value={game.luckyBreaks} tone="green" /></div></div>
+              <div className="award-cabinet">
+                <span>PRÊMIOS INDIVIDUAIS</span>
+                {Object.keys(game.awardCabinet).length === 0 ? (
+                  <p>Os prêmios agora são raros. Quando um vier, vai significar alguma coisa.</p>
+                ) : (
+                  <div>{Object.entries(game.awardCabinet).sort((a, b) => b[1] - a[1]).map(([award, count]) => <article className={award === "Bola de Ouro" ? "legendary" : ""} key={award}><span>{award === "Bola de Ouro" ? "◉" : "✦"}</span><strong>{award}</strong><b>{count}×</b></article>)}</div>
+                )}
+              </div>
             </div>
           )}
 

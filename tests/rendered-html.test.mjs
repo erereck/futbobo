@@ -19,7 +19,7 @@ test("exporta uma página estática pronta para o GitHub Pages", async () => {
   assert.match(html, /Futbobo/);
   assert.match(html, /Sua carreira começa na base/i);
   assert.match(html, /manifest\.webmanifest/);
-  assert.match(html, /og-v2\.png/);
+  assert.match(html, /og-v3\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
