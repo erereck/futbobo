@@ -778,8 +778,6 @@ function careerHallEntry(game: GameState): CareerHallEntry {
   };
 }
 
-const DOMESTIC_CLUBS = CLUBS.filter((club) => club.countryId === "brasil");
-
 function randomClubSelection(pool: Club[], count: number, seed: number, salt: number, excludedIds: string[] = []) {
   return pool
     .filter((club) => !excludedIds.includes(club.id))
@@ -789,8 +787,101 @@ function randomClubSelection(pool: Club[], count: number, seed: number, salt: nu
     .map(({ club }) => club);
 }
 
-function randomAcademyClubs(seed: number) {
-  return randomClubSelection(DOMESTIC_CLUBS, 4, seed, 1709);
+const REGIONAL_ACADEMY_ROUTES: Record<string, string[]> = {
+  bolivia: ["argentina", "chile", "peru"],
+  venezuela: ["colombia", "equador"],
+  canada: ["eua"],
+  "costa-rica": ["eua", "mexico"],
+  jamaica: ["eua", "mexico"],
+  panama: ["eua", "mexico"],
+  belgica: ["holanda", "franca"],
+  croacia: ["italia", "alemanha"],
+  dinamarca: ["alemanha", "holanda"],
+  noruega: ["alemanha", "holanda"],
+  suecia: ["alemanha", "holanda"],
+  suica: ["alemanha", "franca", "italia"],
+  austria: ["alemanha", "italia"],
+  polonia: ["alemanha"],
+  servia: ["italia", "alemanha"],
+  turquia: ["italia", "alemanha"],
+  ucrania: ["alemanha", "italia"],
+  "republica-tcheca": ["alemanha"],
+  escocia: ["inglaterra"],
+  "pais-de-gales": ["inglaterra"],
+  irlanda: ["inglaterra"],
+  grecia: ["italia"],
+  romenia: ["italia", "alemanha"],
+  hungria: ["alemanha", "italia"],
+  islandia: ["holanda", "inglaterra"],
+  georgia: ["alemanha", "italia"],
+};
+
+function academyClubPool(countryId: string) {
+  const localClubs = CLUBS.filter((club) => club.countryId === countryId);
+  if (localClubs.length >= 4) return localClubs;
+  const regionalCountries = REGIONAL_ACADEMY_ROUTES[countryId] ?? [];
+  if (regionalCountries.length) {
+    return CLUBS.filter((club) =>
+      regionalCountries.includes(club.countryId) &&
+      club.reputation <= 3 &&
+      club.strength <= 78,
+    );
+  }
+  return CLUBS.filter((club) =>
+    countryById(club.countryId).confederation === "EUROPE" &&
+    club.reputation <= 3 &&
+    club.strength <= 78,
+  );
+}
+
+function hasLocalAcademyRoute(countryId: string) {
+  return CLUBS.filter((club) => club.countryId === countryId).length >= 4;
+}
+
+function randomAcademyClubs(seed: number, countryId: string) {
+  return randomClubSelection(academyClubPool(countryId), 4, seed, 1709 + countryId.length * 41);
+}
+
+function academyRouteCopy(countryId: string) {
+  const country = countryById(countryId);
+  if (hasLocalAcademyRoute(countryId)) {
+    return {
+      label: `BASE NACIONAL · ${country.abbr}`,
+      title: `Seu futebol começa em ${country.name}`,
+      text: `As quatro portas sorteadas pertencem à liga de ${country.name}. Você cresce perto da sua cultura antes de decidir se quer cruzar fronteiras.`,
+    };
+  }
+  const regionalCountries = REGIONAL_ACADEMY_ROUTES[countryId] ?? [];
+  if (regionalCountries.length) {
+    const destinations = regionalCountries.map((id) => countryById(id).name).join(" ou ");
+    return {
+      label: `ROTA REGIONAL · ${country.abbr}`,
+      title: "Uma liga próxima abriu a porta",
+      text: `${country.name} ainda não tem liga jogável. Sua base começa em clubes menores de ${destinations}, preservando uma rota geográfica natural para a carreira.`,
+    };
+  }
+  return {
+    label: `ROTA INTERNACIONAL · ${country.abbr}`,
+    title: "Um pequeno clube europeu abriu a porta",
+    text: `${country.name} ainda não tem liga jogável. Aos 12 anos, você entra numa rota de formação europeia com clubes menores dispostos a apostar em talentos estrangeiros.`,
+  };
+}
+
+function continentalNationalTournament(country: Country) {
+  if (country.confederation === "EUROPE") return "Eurocopa";
+  if (country.confederation === "NORTH_AMERICA") return "Copa Ouro";
+  if (country.confederation === "ASIA") return "Copa da Ásia";
+  if (country.confederation === "AFRICA") return "Copa Africana";
+  if (country.confederation === "OCEANIA") return "Copa das Nações da OFC";
+  return "Copa América";
+}
+
+function revelationOfferPool(state: GameState) {
+  if (hasLocalAcademyRoute(state.nationality)) return academyClubPool(state.nationality);
+  const academyCountryId = clubById(state.academyClubId).countryId;
+  const sameCountry = CLUBS.filter((club) => club.countryId === academyCountryId && club.reputation <= 4);
+  const routePool = academyClubPool(state.nationality);
+  return Array.from(new Map([...sameCountry, ...routePool].map((club) => [club.id, club])).values());
 }
 
 function isAbroad(club: Club) {
@@ -1303,6 +1394,17 @@ const NEARBY_NATIONAL_TEAMS: Record<string, string[]> = {
   alemanha: ["holanda", "franca", "italia"],
   italia: ["franca", "alemanha"],
   holanda: ["alemanha", "franca", "inglaterra"],
+  japao: ["coreia-do-sul", "australia"],
+  "coreia-do-sul": ["japao", "australia"],
+  uzbequistao: ["ira", "iraque", "arabia-saudita"],
+  australia: ["nova-zelandia", "japao", "coreia-do-sul"],
+  "arabia-saudita": ["catar", "iraque", "ira"],
+  marrocos: ["argelia", "tunisia", "senegal"],
+  senegal: ["mali", "gana", "costa-do-marfim"],
+  nigeria: ["camaroes", "gana", "costa-do-marfim"],
+  egito: ["tunisia", "argelia", "marrocos"],
+  "costa-do-marfim": ["gana", "mali", "senegal"],
+  "nova-zelandia": ["australia"],
 };
 
 // Convite raro de outra seleção: tenta primeiro vizinhos e só então amplia para a região.
@@ -1316,7 +1418,7 @@ function pickNationalitySwitchTarget(state: GameState, salt: number): string | n
     if (country.id === state.nationality) return false;
     if (originCountry.confederation === "SOUTH_AMERICA") return country.confederation === "SOUTH_AMERICA";
     if (originCountry.confederation === "NORTH_AMERICA") return country.confederation === "NORTH_AMERICA" || country.confederation === "SOUTH_AMERICA";
-    return country.confederation === "EUROPE";
+    return country.confederation === originCountry.confederation;
   });
   const candidates = nearbyCandidates.length && seeded(state.seed, salt + 19) < 0.82
     ? nearbyCandidates
@@ -1411,7 +1513,7 @@ function createYouthJourney(state: GameState, formationId: string) {
     previousOverall = yearOverall;
   }
   const otherOffers = randomClubSelection(
-    DOMESTIC_CLUBS,
+    revelationOfferPool(state),
     2,
     state.seed,
     2467 + revealAge,
@@ -1734,6 +1836,9 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
         else if (nation.confederation === "EUROPE" && seasonYear % 4 === 0) tournament = { name: "Eurocopa", icon: "EURO", scope: "euro" };
         else if (nation.confederation === "SOUTH_AMERICA" && seasonYear % 4 === 0) tournament = { name: "Copa América", icon: "CA", scope: "copaAmerica" };
         else if (nation.confederation === "NORTH_AMERICA" && seasonYear % 4 === 0) tournament = { name: "Copa Ouro", icon: "GOLD", scope: "goldCup" };
+        else if (nation.confederation === "ASIA" && seasonYear % 4 === 0) tournament = { name: "Copa da Ásia", icon: "ASI", scope: "asiaCup" };
+        else if (nation.confederation === "AFRICA" && seasonYear % 4 === 0) tournament = { name: "Copa Africana de Nações", icon: "CAN", scope: "afcon" };
+        else if (nation.confederation === "OCEANIA" && seasonYear % 4 === 0) tournament = { name: "Copa das Nações da OFC", icon: "OFC", scope: "ofc" };
         else if (seasonYear % 4 === 3) tournament = { name: "Eliminatórias", icon: "ELIM", scope: "qualifiers" };
       } else if (nationalTier === "olympic" && seasonYear % 4 === 0) {
         tournament = { name: "Jogos Olímpicos", icon: "JO", scope: "olympics" };
@@ -1754,8 +1859,8 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
           qualifiedNextMajor = true;
         } else {
           const titleBoostN = effect.nationalTitleBoost ?? 0;
-          const baseChance = tournament.scope === "world" ? nation.strength * 3.4 : tournament.scope === "euro" || tournament.scope === "copaAmerica" ? nation.strength * 4.1 : nation.strength * 3.8;
-          const chanceCeiling = tournament.scope === "world" ? 28 : tournament.scope === "euro" || tournament.scope === "copaAmerica" ? 32 : 34;
+          const baseChance = tournament.scope === "world" ? nation.strength * 3.4 : tournament.scope === "euro" || tournament.scope === "copaAmerica" || tournament.scope === "asiaCup" || tournament.scope === "afcon" ? nation.strength * 4.1 : nation.strength * 3.8;
+          const chanceCeiling = tournament.scope === "world" ? 28 : tournament.scope === "euro" || tournament.scope === "copaAmerica" || tournament.scope === "asiaCup" || tournament.scope === "afcon" ? 32 : 34;
           const majorChance = clamp(baseChance + Math.max(0, affected.overall - 78) * 0.7 + titleBoostN * 0.7 + affected.luckyBreaks * 0.35, 2, chanceCeiling);
           const champion = seeded(state.seed, state.season * 151) * 100 < majorChance;
           const stage = champion ? "CAMPEÃO" : knockoutStage(157, false, ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"]);
@@ -1817,7 +1922,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (affected.fanSupport >= 92 && titleCount > 0) awards.push("Ídolo da Torcida");
   const majorNationalTitle = Boolean(
     nationalHistoryAdd?.champion &&
-    ["Copa do Mundo", "Eurocopa", "Copa América", "Copa Ouro"].includes(nationalHistoryAdd.name),
+    ["Copa do Mundo", "Eurocopa", "Copa América", "Copa Ouro", "Copa da Ásia", "Copa Africana de Nações", "Copa das Nações da OFC"].includes(nationalHistoryAdd.name),
   );
   if (majorNationalTitle && nextOverall >= 86 && performanceScore >= 80) awards.push(`Craque da ${nationalHistoryAdd?.name}`);
   const europeanBallonEligible =
@@ -2200,7 +2305,7 @@ function completeSimulationTransfer(state: GameState, clubId: string | null): Ga
 function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarloCareerSummary {
   const chosenPosition = pick(POSITIONS, seed, 701 + careerIndex).key;
   const chosenNationality = pick(COUNTRIES, seed, 709 + careerIndex).id;
-  const academyClub = pick(randomAcademyClubs(seed), seed, 719 + careerIndex);
+  const academyClub = pick(randomAcademyClubs(seed, chosenNationality), seed, 719 + careerIndex);
   const formation = pick(FORMATIONS, seed, 727 + careerIndex);
   let state: GameState = {
     ...initialState(),
@@ -2495,6 +2600,7 @@ export default function Home() {
   const [positionChangeOpen, setPositionChangeOpen] = useState(false);
   const [positionChangeTarget, setPositionChangeTarget] = useState<PositionKey | null>(null);
   const [positionChangeFeedback, setPositionChangeFeedback] = useState<{ success: boolean; headline: string; text: string } | null>(null);
+  const [nationalitySearch, setNationalitySearch] = useState("");
   const [monteCarloReport, setMonteCarloReport] = useState<MonteCarloReport | null>(null);
   const [hallOfFame, setHallOfFame] = useState<CareerHallEntry[]>([]);
 
@@ -2605,7 +2711,15 @@ export default function Home() {
   }, [game.phase]);
 
   const currentClub = useMemo(() => clubById(game.currentClubId || game.academyClubId), [game.currentClubId, game.academyClubId]);
-  const academyClubs = useMemo(() => randomAcademyClubs(game.seed), [game.seed]);
+  const academyClubs = useMemo(() => randomAcademyClubs(game.seed, game.nationality), [game.seed, game.nationality]);
+  const academyRoute = useMemo(() => academyRouteCopy(game.nationality), [game.nationality]);
+  const filteredCountries = useMemo(() => {
+    const query = nationalitySearch.trim().toLocaleLowerCase("pt-BR");
+    if (!query) return COUNTRIES;
+    return COUNTRIES.filter((country) =>
+      `${country.name} ${country.demonym} ${country.abbr}`.toLocaleLowerCase("pt-BR").includes(query),
+    );
+  }, [nationalitySearch]);
   const nationCountry = useMemo(() => countryById(game.nationality), [game.nationality]);
   const position = useMemo(() => positionByKey(game.position), [game.position]);
   const supporterMood = useMemo(() => fanMood(game.fanSupport), [game.fanSupport]);
@@ -3092,7 +3206,7 @@ export default function Home() {
             </div>
           )}
           <div className="welcome-features">
-            <span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 17 ligas</span><span>★ 17 seleções</span>
+            <span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 17 ligas</span><span>★ {COUNTRIES.length} seleções</span>
           </div>
         </section>
       )}
@@ -3143,12 +3257,16 @@ export default function Home() {
             <div className="step-count">02</div>
           </header>
           <div className="setup-content">
-            <div className="intro-card"><span className="intro-icon">◇</span><div><strong>Sua Seleção vai te acompanhar a carreira toda.</strong><p>A nacionalidade define a trilha de base (Sub-17, Sub-20, Olímpica) e se você disputará a Eurocopa, a Copa América ou a Copa Ouro com a Seleção principal.</p></div></div>
+            <div className="intro-card"><span className="intro-icon">◇</span><div><strong>Sua Seleção vai te acompanhar a carreira toda.</strong><p>A nacionalidade define sua rota de base, as categorias Sub-17, Sub-20 e Olímpica, além da Copa do Mundo e do torneio continental da sua região.</p></div></div>
+            <label className="nation-search">
+              <span>BUSCAR ENTRE {COUNTRIES.length} SELEÇÕES</span>
+              <input value={nationalitySearch} onChange={(event) => setNationalitySearch(event.target.value)} placeholder="Ex.: Uzbequistão, Canadá, França..." />
+            </label>
             <div className="nation-grid">
-              {COUNTRIES.map((country) => (
-                <button key={country.id} aria-pressed={game.nationality === country.id} className={`nation-choice ${game.nationality === country.id ? "selected" : ""}`} onClick={() => setGame((current) => ({ ...current, nationality: country.id }))}>
+              {filteredCountries.map((country) => (
+                <button key={country.id} aria-pressed={game.nationality === country.id} className={`nation-choice ${game.nationality === country.id ? "selected" : ""}`} onClick={() => setGame((current) => ({ ...current, nationality: country.id, academyClubId: "" }))}>
                   <NationBadge country={country} size="md" />
-                  <span><strong>{country.name}</strong><small>{country.confederation === "EUROPE" ? "Eurocopa" : country.confederation === "NORTH_AMERICA" ? "Copa Ouro" : "Copa América"}</small></span>
+                  <span><strong>{country.name}</strong><small>{continentalNationalTournament(country)}</small></span>
                 </button>
               ))}
             </div>
@@ -3165,12 +3283,12 @@ export default function Home() {
             <div className="step-count">03</div>
           </header>
           <div className="setup-content">
-            <div className="intro-card"><span className="intro-icon">⌂</span><div><strong>Quatro portas sorteadas para esta carreira.</strong><p>Os clubes mudam a cada novo jogador. Escolha uma das quatro bases que o destino colocou no seu caminho.</p></div></div>
+            <div className={`intro-card academy-route-card ${hasLocalAcademyRoute(game.nationality) ? "local" : "international"}`}><NationBadge country={nationCountry} size="sm" /><div><small>{academyRoute.label}</small><strong>{academyRoute.title}</strong><p>{academyRoute.text}</p></div></div>
             <div className="club-grid">
               {academyClubs.map((club) => (
                 <button key={club.id} className={`club-choice ${game.academyClubId === club.id ? "selected" : ""}`} onClick={() => setGame((current) => ({ ...current, academyClubId: club.id }))}>
                   <ClubBadge club={club} size="md" />
-                  <span><strong>{club.shortName}</strong><small>{club.city} · {club.state}</small></span>
+                  <span><strong>{club.shortName}</strong><small>{club.city} · {countryById(club.countryId).name}</small></span>
                   <span className="academy-stars">{"★".repeat(club.academy ?? 3)}{"☆".repeat(5 - (club.academy ?? 3))}</span>
                 </button>
               ))}
@@ -3755,6 +3873,7 @@ export default function Home() {
                 </article>
               ))}
             </div>
+            {filteredCountries.length === 0 && <div className="empty-panel">Nenhuma seleção encontrada.</div>}
           </section>
           <div className="summary-actions"><button className="primary-button" onClick={shareCareer}>Compartilhar carreira <span>↗</span></button><button className="secondary-button" onClick={startNew}>Jogar novamente</button></div>
         </section>

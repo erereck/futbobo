@@ -488,9 +488,9 @@ test("integra o novo campo de posições, base sorteada, roleta e simulação po
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /function randomAcademyClubs\(seed: number\)/);
-  assert.match(page, /randomClubSelection\(DOMESTIC_CLUBS, 4/);
-  assert.match(page, /randomClubSelection\([\s\S]*DOMESTIC_CLUBS,[\s\S]*2,[\s\S]*\[state\.academyClubId\]/);
+  assert.match(page, /function randomAcademyClubs\(seed: number, countryId: string\)/);
+  assert.match(page, /randomClubSelection\(academyClubPool\(countryId\), 4/);
+  assert.match(page, /randomClubSelection\([\s\S]*revelationOfferPool\(state\),[\s\S]*2,[\s\S]*\[state\.academyClubId\]/);
   assert.match(page, /POSITION_FIELD_SPOTS/);
   assert.match(styles, /\.position-grid \{[\s\S]*grid-template-columns: repeat\(5/);
   assert.match(page, /const inSeasonMeritApps/);
@@ -504,6 +504,30 @@ test("integra o novo campo de posições, base sorteada, roleta e simulação po
   assert.match(page, /positionChangeCooldownSeason/);
   assert.match(styles, /\.club-badge\.has-image/);
   assert.match(styles, /\.nation-badge\.has-image/);
+});
+
+test("liga a nacionalidade à base local, regional ou europeia", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(data, /id: "uzbequistao"[\s\S]*confederation: "ASIA"/);
+  assert.match(data, /id: "canada"[\s\S]*confederation: "NORTH_AMERICA"/);
+  assert.match(data, /export type Confederation = "SOUTH_AMERICA" \| "EUROPE" \| "NORTH_AMERICA" \| "ASIA" \| "AFRICA" \| "OCEANIA"/);
+  assert.match(page, /const REGIONAL_ACADEMY_ROUTES/);
+  assert.match(page, /canada: \["eua"\]/);
+  assert.match(page, /if \(localClubs\.length >= 4\) return localClubs/);
+  assert.match(page, /countryById\(club\.countryId\)\.confederation === "EUROPE"/);
+  assert.match(page, /club\.reputation <= 3/);
+  assert.match(page, /academyClubId: ""/);
+  assert.match(page, /Uma liga próxima abriu a porta/);
+  assert.match(page, /Um pequeno clube europeu abriu a porta/);
+  assert.match(page, /Copa da Ásia/);
+  assert.match(page, /Copa Africana de Nações/);
+  assert.match(page, /BUSCAR ENTRE \{COUNTRIES\.length\} SELEÇÕES/);
+  assert.match(page, /filteredCountries\.map/);
+  assert.match(styles, /\.academy-route-card\.international/);
+  assert.match(styles, /\.nation-search/);
 });
 
 test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da carreira", async () => {

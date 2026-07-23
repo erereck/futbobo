@@ -23,7 +23,7 @@ export type Position = {
   assists: number;
 };
 
-export type Confederation = "SOUTH_AMERICA" | "EUROPE" | "NORTH_AMERICA";
+export type Confederation = "SOUTH_AMERICA" | "EUROPE" | "NORTH_AMERICA" | "ASIA" | "AFRICA" | "OCEANIA";
 
 export type Country = {
   id: string;
@@ -184,6 +184,52 @@ export const COUNTRIES: Country[] = [
   { id: "alemanha", name: "Alemanha", demonym: "alemão", abbr: "ALE", confederation: "EUROPE", strength: 5, primary: "#111111", secondary: "#d71920" },
   { id: "italia", name: "Itália", demonym: "italiano", abbr: "ITA", confederation: "EUROPE", strength: 4, primary: "#08783e", secondary: "#f5f5f5" },
   { id: "holanda", name: "Holanda", demonym: "holandês", abbr: "HOL", confederation: "EUROPE", strength: 3, primary: "#ff7a1a", secondary: "#274b9f" },
+  { id: "bolivia", name: "Bolívia", demonym: "boliviano", abbr: "BOL", confederation: "SOUTH_AMERICA", strength: 2, primary: "#d52b1e", secondary: "#007934" },
+  { id: "venezuela", name: "Venezuela", demonym: "venezuelano", abbr: "VEN", confederation: "SOUTH_AMERICA", strength: 2, primary: "#8c1b3f", secondary: "#f5c400" },
+  { id: "canada", name: "Canadá", demonym: "canadense", abbr: "CAN", confederation: "NORTH_AMERICA", strength: 3, primary: "#d80621", secondary: "#ffffff" },
+  { id: "costa-rica", name: "Costa Rica", demonym: "costarriquenho", abbr: "CRC", confederation: "NORTH_AMERICA", strength: 2, primary: "#d71920", secondary: "#274b9f" },
+  { id: "jamaica", name: "Jamaica", demonym: "jamaicano", abbr: "JAM", confederation: "NORTH_AMERICA", strength: 2, primary: "#009b3a", secondary: "#fed100" },
+  { id: "panama", name: "Panamá", demonym: "panamenho", abbr: "PAN", confederation: "NORTH_AMERICA", strength: 2, primary: "#d21034", secondary: "#005293" },
+  { id: "belgica", name: "Bélgica", demonym: "belga", abbr: "BEL", confederation: "EUROPE", strength: 4, primary: "#111111", secondary: "#ef3340" },
+  { id: "croacia", name: "Croácia", demonym: "croata", abbr: "CRO", confederation: "EUROPE", strength: 4, primary: "#ff0000", secondary: "#ffffff" },
+  { id: "dinamarca", name: "Dinamarca", demonym: "dinamarquês", abbr: "DIN", confederation: "EUROPE", strength: 3, primary: "#c60c30", secondary: "#ffffff" },
+  { id: "noruega", name: "Noruega", demonym: "norueguês", abbr: "NOR", confederation: "EUROPE", strength: 3, primary: "#ba0c2f", secondary: "#00205b" },
+  { id: "suecia", name: "Suécia", demonym: "sueco", abbr: "SUE", confederation: "EUROPE", strength: 3, primary: "#006aa7", secondary: "#fecc02" },
+  { id: "suica", name: "Suíça", demonym: "suíço", abbr: "SUI", confederation: "EUROPE", strength: 4, primary: "#d52b1e", secondary: "#ffffff" },
+  { id: "austria", name: "Áustria", demonym: "austríaco", abbr: "AUT", confederation: "EUROPE", strength: 3, primary: "#ed2939", secondary: "#ffffff" },
+  { id: "polonia", name: "Polônia", demonym: "polonês", abbr: "POL", confederation: "EUROPE", strength: 3, primary: "#dc143c", secondary: "#ffffff" },
+  { id: "servia", name: "Sérvia", demonym: "sérvio", abbr: "SER", confederation: "EUROPE", strength: 3, primary: "#c6363c", secondary: "#0c4076" },
+  { id: "turquia", name: "Turquia", demonym: "turco", abbr: "TUR", confederation: "EUROPE", strength: 3, primary: "#e30a17", secondary: "#ffffff" },
+  { id: "ucrania", name: "Ucrânia", demonym: "ucraniano", abbr: "UCR", confederation: "EUROPE", strength: 3, primary: "#0057b7", secondary: "#ffd700" },
+  { id: "republica-tcheca", name: "República Tcheca", demonym: "tcheco", abbr: "TCH", confederation: "EUROPE", strength: 3, primary: "#d7141a", secondary: "#11457e" },
+  { id: "escocia", name: "Escócia", demonym: "escocês", abbr: "ESC", confederation: "EUROPE", strength: 3, primary: "#0065bd", secondary: "#ffffff" },
+  { id: "pais-de-gales", name: "País de Gales", demonym: "galês", abbr: "GAL", confederation: "EUROPE", strength: 3, primary: "#d30731", secondary: "#00ad36" },
+  { id: "irlanda", name: "Irlanda", demonym: "irlandês", abbr: "IRL", confederation: "EUROPE", strength: 2, primary: "#169b62", secondary: "#ff883e" },
+  { id: "grecia", name: "Grécia", demonym: "grego", abbr: "GRE", confederation: "EUROPE", strength: 2, primary: "#0d5eaf", secondary: "#ffffff" },
+  { id: "romenia", name: "Romênia", demonym: "romeno", abbr: "ROM", confederation: "EUROPE", strength: 2, primary: "#002b7f", secondary: "#fcd116" },
+  { id: "hungria", name: "Hungria", demonym: "húngaro", abbr: "HUN", confederation: "EUROPE", strength: 3, primary: "#ce2939", secondary: "#477050" },
+  { id: "islandia", name: "Islândia", demonym: "islandês", abbr: "ISL", confederation: "EUROPE", strength: 2, primary: "#02529c", secondary: "#dc1e35" },
+  { id: "georgia", name: "Geórgia", demonym: "georgiano", abbr: "GEO", confederation: "EUROPE", strength: 2, primary: "#ff0000", secondary: "#ffffff" },
+  { id: "japao", name: "Japão", demonym: "japonês", abbr: "JAP", confederation: "ASIA", strength: 4, primary: "#ffffff", secondary: "#bc002d" },
+  { id: "coreia-do-sul", name: "Coreia do Sul", demonym: "sul-coreano", abbr: "COR", confederation: "ASIA", strength: 4, primary: "#ffffff", secondary: "#cd2e3a" },
+  { id: "uzbequistao", name: "Uzbequistão", demonym: "uzbeque", abbr: "UZB", confederation: "ASIA", strength: 2, primary: "#1eb53a", secondary: "#0099b5" },
+  { id: "australia", name: "Austrália", demonym: "australiano", abbr: "AUS", confederation: "ASIA", strength: 3, primary: "#012169", secondary: "#ffcd00" },
+  { id: "arabia-saudita", name: "Arábia Saudita", demonym: "saudita", abbr: "ARS", confederation: "ASIA", strength: 3, primary: "#006c35", secondary: "#ffffff" },
+  { id: "ira", name: "Irã", demonym: "iraniano", abbr: "IRA", confederation: "ASIA", strength: 3, primary: "#239f40", secondary: "#da0000" },
+  { id: "catar", name: "Catar", demonym: "catari", abbr: "CAT", confederation: "ASIA", strength: 2, primary: "#8a1538", secondary: "#ffffff" },
+  { id: "iraque", name: "Iraque", demonym: "iraquiano", abbr: "IRQ", confederation: "ASIA", strength: 2, primary: "#ce1126", secondary: "#007a3d" },
+  { id: "marrocos", name: "Marrocos", demonym: "marroquino", abbr: "MAR", confederation: "AFRICA", strength: 4, primary: "#c1272d", secondary: "#006233" },
+  { id: "senegal", name: "Senegal", demonym: "senegalês", abbr: "SEN", confederation: "AFRICA", strength: 4, primary: "#00853f", secondary: "#fdef42" },
+  { id: "nigeria", name: "Nigéria", demonym: "nigeriano", abbr: "NIG", confederation: "AFRICA", strength: 4, primary: "#008751", secondary: "#ffffff" },
+  { id: "egito", name: "Egito", demonym: "egípcio", abbr: "EGI", confederation: "AFRICA", strength: 3, primary: "#ce1126", secondary: "#000000" },
+  { id: "argelia", name: "Argélia", demonym: "argelino", abbr: "AGL", confederation: "AFRICA", strength: 3, primary: "#006233", secondary: "#d21034" },
+  { id: "gana", name: "Gana", demonym: "ganês", abbr: "GAN", confederation: "AFRICA", strength: 3, primary: "#ce1126", secondary: "#fcd116" },
+  { id: "costa-do-marfim", name: "Costa do Marfim", demonym: "marfinense", abbr: "CIV", confederation: "AFRICA", strength: 4, primary: "#f77f00", secondary: "#009e60" },
+  { id: "africa-do-sul", name: "África do Sul", demonym: "sul-africano", abbr: "AFS", confederation: "AFRICA", strength: 2, primary: "#007749", secondary: "#ffb81c" },
+  { id: "camaroes", name: "Camarões", demonym: "camaronês", abbr: "CAM", confederation: "AFRICA", strength: 3, primary: "#007a5e", secondary: "#ce1126" },
+  { id: "tunisia", name: "Tunísia", demonym: "tunisiano", abbr: "TUN", confederation: "AFRICA", strength: 3, primary: "#e70013", secondary: "#ffffff" },
+  { id: "mali", name: "Mali", demonym: "maliano", abbr: "MAL", confederation: "AFRICA", strength: 2, primary: "#14b53a", secondary: "#fcd116" },
+  { id: "nova-zelandia", name: "Nova Zelândia", demonym: "neozelandês", abbr: "NZL", confederation: "OCEANIA", strength: 2, primary: "#00247d", secondary: "#ffffff" },
 ];
 
 export function countryById(id: string): Country {
