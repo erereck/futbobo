@@ -41,6 +41,8 @@ import {
   findRivalry,
   getUnlockedAchievements,
 } from "./mega-expansion";
+import { CAREER_DRAMA_EVENTS } from "./career-drama";
+import { VERIFIED_CLUB_ASSET_IDS } from "./verified-club-assets";
 
 type Phase =
   | "welcome"
@@ -331,7 +333,7 @@ declare global {
 
 const SAVE_KEY = "futbobo:career:v1";
 const HALL_OF_FAME_KEY = "futbobo:hall-of-fame:v1";
-const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS];
+const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS];
 const FICTIONAL_FINALISTS = [
   "Mateo Alcázar",
   "Noah van Dijk",
@@ -1066,6 +1068,12 @@ function eligibleEvents(state: GameState) {
     if (event.nationalWindow === "continental" && state.season % 4 !== 0) return false;
     if (event.nationalWindow === "olympics" && state.season % 4 !== 0) return false;
     if (event.nationalWindow === "qualifiers" && state.season % 4 !== 3) return false;
+    if (event.needsConfederation && clubConfederation(club) !== event.needsConfederation) return false;
+    if (event.needsPositionZone && positionByKey(state.position).zone !== event.needsPositionZone) return false;
+    if (event.needsSquadRoles && !event.needsSquadRoles.includes(state.squadRole)) return false;
+    if (event.needsCaptainRole === "club" && !state.clubCaptain) return false;
+    if (event.needsCaptainRole === "national" && !state.nationalCaptain) return false;
+    if (event.needsCaptainRole === "any" && !(state.clubCaptain || state.nationalCaptain)) return false;
     if (event.oneTime && state.seenEvents.includes(event.id)) return false;
     return true;
   });
@@ -2089,7 +2097,7 @@ function ClubBadge({ club, size = "md" }: { club: Club; size?: "sm" | "md" | "lg
       aria-hidden="true"
     >
       <span className="badge-fallback">{club.abbr}</span>
-      <LocalBadgeImage path={`/assets/clubs/${club.id}.png`} kind="club" onAvailabilityChange={(available) => setLoadedClubId(available ? club.id : "")} />
+      {VERIFIED_CLUB_ASSET_IDS.has(club.id) && <LocalBadgeImage path={`/assets/clubs/${club.id}.png`} kind="club" onAvailabilityChange={(available) => setLoadedClubId(available ? club.id : "")} />}
     </span>
   );
 }

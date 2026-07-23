@@ -382,6 +382,7 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
 
   assert.match(page, /LocalBadgeImage/);
   assert.match(page, /assets\/clubs\/\$\{club\.id\}\.png/);
+  assert.match(page, /VERIFIED_CLUB_ASSET_IDS\.has\(club\.id\)/);
   assert.match(page, /assets\/flags\/\$\{country\.id\}\.png/);
   assert.match(page, /function CompetitionBadge/);
   assert.match(styles, /\.badge-image-club/);
@@ -472,4 +473,27 @@ test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da
   assert.match(page, /params\.get\("montecarlo"\)/);
   assert.match(page, /data-testid="monte-carlo-report"/);
   assert.match(styles, /\.monte-carlo-shell/);
+});
+
+test("adiciona o pacote de eventos de drama com filtros de carreira", async () => {
+  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const drama = await readFile(new URL("../app/career-drama.ts", import.meta.url), "utf8");
+
+  assert.match(gameData, /needsConfederation\?: Confederation/);
+  assert.match(gameData, /needsPositionZone\?: Position\["zone"\]/);
+  assert.match(gameData, /needsSquadRoles\?: Array<"promessa" \| "reserva" \| "rotacao" \| "titular" \| "estrela">/);
+  assert.match(gameData, /needsCaptainRole\?: "club" \| "national" \| "any"/);
+  assert.match(page, /CAREER_DRAMA_EVENTS/);
+  assert.match(page, /event\.needsConfederation && clubConfederation\(club\) !== event\.needsConfederation/);
+  assert.match(page, /event\.needsPositionZone && positionByKey\(state\.position\)\.zone !== event\.needsPositionZone/);
+  assert.match(page, /event\.needsSquadRoles && !event\.needsSquadRoles\.includes\(state\.squadRole\)/);
+
+  const dramaEventIds = [...drama.matchAll(/id: "(drama-[^"]+)"/g)].map((match) => match[1]);
+  assert.ok(dramaEventIds.length >= 45, "o pacote de drama precisa ter ao menos 45 eventos");
+  assert.equal(new Set(dramaEventIds).size, dramaEventIds.length, "IDs de drama precisam ser únicos");
+  for (const tag of ["IDADE", "POSIÇÃO", "REGIÃO", "ELENCO", "CAPITÃO", "SELEÇÃO", "LESÃO", "IMPRENSA", "FAMÍLIA", "EMPRESÁRIO", "APOSENTADORIA"]) {
+    assert.match(drama, new RegExp(`tag: "${tag}"`));
+  }
+  assert.ok((drama.match(/luck: \{/g) ?? []).length >= 6, "precisa manter escolhas de sorte");
 });

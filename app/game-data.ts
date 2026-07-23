@@ -129,6 +129,10 @@ export type GameEvent = {
   maxContractYears?: number;
   seasonParity?: "even" | "odd";
   oneTime?: boolean;
+  needsConfederation?: Confederation;
+  needsPositionZone?: Position["zone"];
+  needsSquadRoles?: Array<"promessa" | "reserva" | "rotacao" | "titular" | "estrela">;
+  needsCaptainRole?: "club" | "national" | "any";
   choices: Array<{
     label: string;
     hint: string;
@@ -474,7 +478,7 @@ const COLOMBIA_CLUBS: Club[] = [
   { id: "cucuta-deportivo", name: "Cúcuta Deportivo Fútbol Club", shortName: "Cúcuta Deportivo", abbr: "CUC", city: "Cúcuta", countryId: "colombia", leagueId: "liga-colombiana", primary: "#d71920", secondary: "#111111", reputation: 1, strength: 59 },
   { id: "fortaleza-ceif", name: "Fortaleza CEIF", shortName: "Fortaleza CEIF", abbr: "FOR", city: "Bogotá", countryId: "colombia", leagueId: "liga-colombiana", primary: "#274b9f", secondary: "#d71920", reputation: 1, strength: 61 },
   { id: "jaguares-cordoba", name: "Jaguares de Córdoba Fútbol Club", shortName: "Jaguares", abbr: "JAG", city: "Montería", countryId: "colombia", leagueId: "liga-colombiana", primary: "#4a9fd6", secondary: "#08783e", reputation: 1, strength: 56 },
-  { id: "la-equidad", name: "Club Deportivo La Equidad", shortName: "La Equidad", abbr: "EQU", city: "Bogotá", countryId: "colombia", leagueId: "liga-colombiana", primary: "#08783e", secondary: "#f5f5f5", reputation: 1, strength: 59 },
+  { id: "la-equidad", name: "Internacional de Bogotá", shortName: "Internacional Bogotá", abbr: "IBO", city: "Bogotá", countryId: "colombia", leagueId: "liga-colombiana", primary: "#08783e", secondary: "#f5f5f5", reputation: 1, strength: 59 },
   { id: "llaneros", name: "Llaneros Fútbol Club", shortName: "Llaneros", abbr: "LLA", city: "Villavicencio", countryId: "colombia", leagueId: "liga-colombiana", primary: "#f2b705", secondary: "#274b9f", reputation: 1, strength: 55 },
   { id: "aguilas-doradas", name: "Águilas Doradas", shortName: "Águilas Doradas", abbr: "AGD", city: "Rionegro", countryId: "colombia", leagueId: "liga-colombiana", primary: "#f2b705", secondary: "#111111", reputation: 1, strength: 61 },
   { id: "union-magdalena", name: "Unión Magdalena", shortName: "Unión Magdalena", abbr: "UMA", city: "Santa Marta", countryId: "colombia", leagueId: "liga-colombiana", primary: "#274b9f", secondary: "#d71920", reputation: 1, strength: 55 },

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T16:01:45.453Z",
+  "generatedAt": "2026-07-23T18:27:55.145Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -1199,6 +1199,336 @@
       "providerId": "134149",
       "providerName": "Seattle Sounders",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/2dy5cx1706711036.png"
+    },
+    "aldosivi": {
+      "providerId": "135150",
+      "providerName": "Aldosivi",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/nqrjqb1517767667.png"
+    },
+    "deportivo-riestra": {
+      "providerId": "137782",
+      "providerName": "Deportivo Riestra",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/332h0l1578824392.png"
+    },
+    "instituto": {
+      "providerId": "137786",
+      "providerName": "Instituto",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/jup59w1578825794.png"
+    },
+    "union-santa-fe": {
+      "providerId": "135178",
+      "providerName": "Unión",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/btnx6q1734587495.png"
+    },
+    "platense": {
+      "providerId": "137775",
+      "providerName": "Platense",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/lbs14n1769317149.png"
+    },
+    "gimnasia-mendoza": {
+      "providerId": "137778",
+      "providerName": "Gimnasia y Esgrima de Mendoza",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/h11mlf1677636958.png"
+    },
+    "barracas-central": {
+      "providerId": "137771",
+      "providerName": "Barracas Central",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rbkjba1707458543.png"
+    },
+    "belgrano": {
+      "providerId": "135155",
+      "providerName": "Belgrano",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0twgzi1517768087.png"
+    },
+    "tigre": {
+      "providerId": "135177",
+      "providerName": "Tigre",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/krryg71765858882.png"
+    },
+    "argentinos-juniors": {
+      "providerId": "135151",
+      "providerName": "Argentinos Juniors",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uqfjuo1769234850.png"
+    },
+    "sarmiento-junin": {
+      "providerId": "135175",
+      "providerName": "Sarmiento",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xxofu71677634191.png"
+    },
+    "banfield": {
+      "providerId": "135154",
+      "providerName": "Banfield",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/c2ea011775756104.png"
+    },
+    "huracan": {
+      "providerId": "135163",
+      "providerName": "Huracán",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/kppi2b1775776550.png"
+    },
+    "independiente-rivadavia": {
+      "providerId": "137777",
+      "providerName": "Independiente Rivadavia",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qgzi2b1769406125.png"
+    },
+    "atletico-tucuman": {
+      "providerId": "135681",
+      "providerName": "Atlético Tucumán",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/m5i2q21775755577.png"
+    },
+    "cerro-uru": {
+      "providerId": "135363",
+      "providerName": "Cerro",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wtuxsq1464887392.png"
+    },
+    "miramar-misiones": {
+      "providerId": "145844",
+      "providerName": "Miramar Misiones",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7dvfx11647976997.png"
+    },
+    "montevideo-city-torque": {
+      "providerId": "138818",
+      "providerName": "Montevideo City Torque",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/v7urjn1580234584.png"
+    },
+    "progreso": {
+      "providerId": "138815",
+      "providerName": "Progreso",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/oh4ksb1621865842.png"
+    },
+    "ohiggins": {
+      "providerId": "137731",
+      "providerName": "O'Higgins",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/g44b1l1756095484.png"
+    },
+    "coquimbo-unido": {
+      "providerId": "137725",
+      "providerName": "Coquimbo Unido",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/b2cnht1602186172.png"
+    },
+    "union-la-calera": {
+      "providerId": "137734",
+      "providerName": "Unión La Calera",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vadt5t1769834071.png"
+    },
+    "deportes-la-serena": {
+      "providerId": "139473",
+      "providerName": "Deportes La Serena",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vs7mxv1677600646.png"
+    },
+    "deportes-limache": {
+      "providerId": "148082",
+      "providerName": "Deportes Limache",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1bd0ws1706521384.png"
+    },
+    "deportes-concepcion": {
+      "providerId": "148528",
+      "providerName": "Deportes Concepción",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/bn8l9d1719394347.png"
+    },
+    "atletico-bucaramanga": {
+      "providerId": "137606",
+      "providerName": "Atlético Bucaramanga",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rtjs411576157184.png"
+    },
+    "boyaca-chico": {
+      "providerId": "137622",
+      "providerName": "Boyacá Chicó",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/boe8tv1677602771.png"
+    },
+    "cucuta-deportivo": {
+      "providerId": "137608",
+      "providerName": "Cúcuta Deportivo",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/petg3h1778087075.png"
+    },
+    "fortaleza-ceif": {
+      "providerId": "141065",
+      "providerName": "Fortaleza FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/w1c6ix1769101721.png"
+    },
+    "la-equidad": {
+      "providerId": "137616",
+      "providerName": "Internacional de Bogotá",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/jujchi1767716318.png"
+    },
+    "llaneros": {
+      "providerId": "141067",
+      "providerName": "Llaneros",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/q1w56m1615832197.png"
+    },
+    "aguilas-doradas": {
+      "providerId": "137620",
+      "providerName": "Rionegro Águilas",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/6d7qas1703002070.png"
+    },
+    "union-magdalena": {
+      "providerId": "139042",
+      "providerName": "Unión Magdalena",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/i1fl6p1677602554.png"
+    },
+    "deportivo-recoleta": {
+      "providerId": "147065",
+      "providerName": "Recoleta",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/v68cg01735661603.png"
+    },
+    "atletico-tembetary": {
+      "providerId": "149487",
+      "providerName": "Atlético Tembetary",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xinof51730664653.png"
+    },
+    "macara": {
+      "providerId": "138228",
+      "providerName": "Macará",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/bretri1579959665.png"
+    },
+    "tecnico-universitario": {
+      "providerId": "138232",
+      "providerName": "Técnico Universitario",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/nrubzr1737648563.png"
+    },
+    "delfin": {
+      "providerId": "138220",
+      "providerName": "Delfín",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/drhsv91579961166.png"
+    },
+    "manta-fc": {
+      "providerId": "140792",
+      "providerName": "Manta",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mwnqej1614891525.png"
+    },
+    "vinotinto-ecuador": {
+      "providerId": "147318",
+      "providerName": "Vinotinto Ecuador",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yc19kg1736990630.png"
+    },
+    "adt-tarma": {
+      "providerId": "144717",
+      "providerName": "ADT",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gliwig1768234286.png"
+    },
+    "atletico-grau": {
+      "providerId": "138313",
+      "providerName": "Atlético Grau",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ksemw91678411736.png"
+    },
+    "comerciantes-unidos": {
+      "providerId": "141812",
+      "providerName": "Comerciantes Unidos",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/umrof11768234590.png"
+    },
+    "juan-pablo-ii": {
+      "providerId": "149506",
+      "providerName": "Juan Pablo II College",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zj9efi1730672606.png"
+    },
+    "los-chankas": {
+      "providerId": "141813",
+      "providerName": "Los Chankas",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rc0rvv1706347088.png"
+    },
+    "utc-cajamarca": {
+      "providerId": "138330",
+      "providerName": "Universidad Técnica de Cajamarca",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ea4ez01580040095.png"
+    },
+    "ayacucho-fc": {
+      "providerId": "138314",
+      "providerName": "Ayacucho",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/j3hqce1736221181.png"
+    },
+    "alianza-universidad": {
+      "providerId": "138312",
+      "providerName": "Alianza Universidad",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/z3nftr1681318889.png"
+    },
+    "atlas": {
+      "providerId": "134195",
+      "providerName": "Atlas",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/svvyvw1473541813.png"
+    },
+    "atletico-san-luis": {
+      "providerId": "136856",
+      "providerName": "Atlético de San Luis",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9kgjme1593448412.png"
+    },
+    "fc-juarez": {
+      "providerId": "136855",
+      "providerName": "Juárez",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/b4oy071567446336.png"
+    },
+    "mazatlan": {
+      "providerId": "139995",
+      "providerName": "Mazatlán",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/fgpobf1593446489.png"
+    },
+    "necaxa": {
+      "providerId": "135662",
+      "providerName": "Necaxa",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tqdk9e1779772432.png"
+    },
+    "tijuana": {
+      "providerId": "134202",
+      "providerName": "Tijuana",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/b0mky81779772352.png"
+    },
+    "charlotte-fc": {
+      "providerId": "140078",
+      "providerName": "Charlotte FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/b6p4uz1595434047.png"
+    },
+    "chicago-fire": {
+      "providerId": "134154",
+      "providerName": "Chicago Fire",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/8xuc781639493166.png"
+    },
+    "dc-united": {
+      "providerId": "134145",
+      "providerName": "DC United",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uwvsyt1467462609.png"
+    },
+    "nashville-sc": {
+      "providerId": "137700",
+      "providerName": "Nashville SC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/znrwt71602103062.png"
+    },
+    "orlando-city": {
+      "providerId": "135292",
+      "providerName": "Orlando City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qyppxw1423832326.png"
+    },
+    "philadelphia-union": {
+      "providerId": "134142",
+      "providerName": "Philadelphia Union",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gyznyo1602103682.png"
+    },
+    "colorado-rapids": {
+      "providerId": "134794",
+      "providerName": "Colorado Rapids",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uppupv1473536412.png"
+    },
+    "fc-dallas": {
+      "providerId": "134146",
+      "providerName": "FC Dallas",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vxy8xy1602103187.png"
+    },
+    "houston-dynamo": {
+      "providerId": "134144",
+      "providerName": "Houston Dynamo",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yvz9dq1707631352.png"
+    },
+    "minnesota-united": {
+      "providerId": "135852",
+      "providerName": "Minnesota United",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vl67t41492453433.png"
+    },
+    "real-salt-lake": {
+      "providerId": "134158",
+      "providerName": "Real Salt Lake",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/kkjlfa1556488022.png"
+    },
+    "san-diego-fc": {
+      "providerId": "150261",
+      "providerName": "San Diego FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7ka2xd1734621068.png"
     }
   },
   "flags": {
