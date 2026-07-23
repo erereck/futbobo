@@ -163,7 +163,8 @@ test("prioriza clubes europeus quando a carreira já está na Europa", async () 
   assert.match(page, /isEuropeanClub\(current\) && !opts\.forceDomestic/);
   assert.match(page, /clubConfederation\(club\) === "EUROPE"/);
   assert.match(page, /forceForeign: true/);
-  assert.match(page, /brazilReturnChance = state\.age >= 34 \? 0\.16 : state\.age >= 30 \? 0\.09 : 0\.04/);
+  assert.match(page, /brazilReturnChance = state\.age >= 34 \? 0\.78 : state\.age >= 30 \? 0\.12 : 0\.035/);
+  assert.match(page, /const brazilCount = state\.age >= 34 \? 2 : 1/);
   assert.match(page, /isEuropeanClub\(current\) && confederation !== "EUROPE"/);
   assert.match(page, /MERCADO EUROPEU/);
   assert.match(page, /Retorno raro ao Brasil/);
@@ -176,7 +177,7 @@ test("mostra de cinco a dez propostas na janela de transferências", async () =>
 
   assert.match(page, /performanceScore >= 90 \? 5/);
   assert.match(page, /selectOffers\(state, 5, salt/);
-  assert.match(page, /return \[\.\.\.baseOffers, \.\.\.foreignPool\]\.slice\(0, 10\)/);
+  assert.match(page, /const expandedOffers = Array\.from\(new Set\(\[\.\.\.baseOffers, \.\.\.foreignPool\]\)\)\.slice\(0, 10\)/);
   assert.match(page, /expandedOfferCount: Math\.max\(0, game\.transferOffers\.length - 5\)/);
   assert.match(page, /index >= 5 \? "DESTAQUE ABRIU ESTA PORTA"/);
 });
@@ -345,8 +346,10 @@ test("prioriza destinos sul-americanos e norte-americanos por proximidade geogr�
 
   assert.match(page, /function regionAffinity/);
   assert.match(page, /originConfederation === "SOUTH_AMERICA"/);
-  assert.match(page, /targetConfederation === "SOUTH_AMERICA"\) return -6/);
-  assert.match(page, /targetConfederation === "NORTH_AMERICA"\) return -2/);
+  assert.match(page, /club\.countryId === originCountryId\) return -12/);
+  assert.match(page, /targetConfederation === "SOUTH_AMERICA"\) return -3/);
+  assert.match(page, /targetConfederation === "NORTH_AMERICA"\) return -1/);
+  assert.match(page, /function prioritizeCurrentCountry/);
   assert.match(page, /confederation === "NORTH_AMERICA"\) requirement -= state\.age >= 29 \? 10 : 4/);
 });
 
@@ -381,4 +384,26 @@ test("convites raros de outras seleções respeitam proximidade geográfica e nu
   assert.match(page, /currentEventId: pendingCareerEventId \|\| selectNextEvent/);
   assert.match(page, /Não é possível voltar atrás/);
   assert.match(page, /nationalitySwitched: affected\.nationalitySwitched \|\| Boolean\(nationalitySwitchRecord\)/);
+});
+
+test("integra o novo campo de posições, base sorteada, roleta e simulação por mérito", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /function randomAcademyClubs\(seed: number\)/);
+  assert.match(page, /randomClubSelection\(DOMESTIC_CLUBS, 4/);
+  assert.match(page, /randomClubSelection\([\s\S]*DOMESTIC_CLUBS,[\s\S]*2,[\s\S]*\[state\.academyClubId\]/);
+  assert.match(page, /POSITION_FIELD_SPOTS/);
+  assert.match(styles, /\.position-grid \{[\s\S]*grid-template-columns: repeat\(5/);
+  assert.match(page, /const inSeasonMeritApps/);
+  assert.match(page, /previousFormApps/);
+  assert.match(page, /Math\.round\(baseApps[\s\S]*inSeasonMeritApps \+ previousFormApps/);
+  assert.match(page, /const nextFitness = clamp\(/);
+  assert.match(page, /const nextMorale = clamp\(/);
+  assert.match(page, /setLuckSpin\(\{ event: currentEvent, choiceIndex, succeeded \}\)/);
+  assert.match(styles, /@keyframes roulette-spin/);
+  assert.match(page, /function attemptPositionChange/);
+  assert.match(page, /positionChangeCooldownSeason/);
+  assert.match(styles, /\.club-badge\.has-image/);
+  assert.match(styles, /\.nation-badge\.has-image/);
 });

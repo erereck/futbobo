@@ -147,11 +147,13 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 8px 0 13px; }
 .section-heading h2 { margin: 4px 0 0; font: 900 20px/1.1 var(--display); letter-spacing: -.035em; }
 .selected-pill { display: grid; min-width: 43px; height: 29px; place-items: center; border: 1px solid rgba(255,199,44,.25); border-radius: 999px; background: rgba(255,199,44,.09); color: var(--gold) !important; font-size: 10px !important; }
-.position-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.position-button { display: flex; min-width: 0; min-height: 82px; flex-direction: column; align-items: center; justify-content: center; padding: 7px 3px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); cursor: pointer; }
-.position-button > span { color: var(--position-color); font-size: 16px; font-weight: 900; }
-.position-button strong { margin: 3px 0 1px; font-size: 12px; }
-.position-button small { width: 100%; overflow: hidden; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.position-grid { position: relative; display: grid; height: 390px; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(6, 1fr); gap: 5px; padding: 16px 9px; overflow: hidden; border: 1px solid rgba(255,255,255,.13); border-radius: 22px; background: repeating-linear-gradient(90deg, rgba(99,227,107,.055) 0 20%, rgba(99,227,107,.095) 20% 40%), linear-gradient(180deg, #174b32, #0e3825); box-shadow: inset 0 0 35px rgba(0,0,0,.2); }
+.position-grid::before { content: ""; position: absolute; inset: 15px 10px; border: 1px solid rgba(255,255,255,.22); border-radius: 3px; background: linear-gradient(90deg, transparent calc(50% - .5px), rgba(255,255,255,.2) 50%, transparent calc(50% + .5px)); pointer-events: none; }
+.position-grid::after { content: ""; position: absolute; top: 50%; left: 50%; width: 82px; height: 82px; border: 1px solid rgba(255,255,255,.2); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+.position-button { z-index: 1; display: flex; min-width: 0; min-height: 50px; flex-direction: column; align-items: center; justify-content: center; padding: 4px 2px; border: 1px solid rgba(255,255,255,.18); border-radius: 13px; background: rgba(8,31,21,.88); color: var(--text); box-shadow: 0 4px 11px rgba(0,0,0,.2); cursor: pointer; backdrop-filter: blur(5px); }
+.position-button > span { color: var(--position-color); font-size: 13px; font-weight: 900; }
+.position-button strong { margin: 1px 0; font-size: 11px; }
+.position-button small { width: 100%; overflow: hidden; color: var(--muted); font-size: 6px; text-overflow: ellipsis; white-space: nowrap; }
 .position-button.selected { border-color: var(--position-color); background: color-mix(in srgb, var(--position-color) 13%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--position-color) 42%, transparent); transform: translateY(-2px); }
 .sticky-action { position: fixed; z-index: 30; bottom: 0; left: 50%; width: min(540px, 100%); padding: 12px 16px calc(env(safe-area-inset-bottom) + 12px); transform: translateX(-50%); border-top: 1px solid var(--line); background: linear-gradient(180deg, rgba(8,26,19,.72), rgba(8,26,19,.98) 28%); backdrop-filter: blur(15px); }
 
@@ -168,15 +170,19 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .academy-stars { grid-column: 1 / -1; color: var(--gold); font-size: 9px; letter-spacing: 2px; }
 .club-choice.selected { border-color: var(--gold); background: linear-gradient(135deg, rgba(255,199,44,.11), var(--surface)); box-shadow: inset 0 0 0 1px rgba(255,199,44,.28); }
 
-.club-badge { position: relative; display: inline-grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 2px solid rgba(255,255,255,.28); border-radius: 50% 50% 46% 46% / 42% 42% 58% 58%; background: linear-gradient(135deg, var(--club-primary) 0 52%, var(--club-secondary) 52%); box-shadow: 0 5px 12px rgba(0,0,0,.25), inset 0 0 0 3px rgba(0,0,0,.12); }
+.club-badge { position: relative; display: inline-grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 2px solid rgba(255,255,255,.28); border-radius: 50%; background: linear-gradient(135deg, var(--club-primary) 0 52%, var(--club-secondary) 52%); box-shadow: 0 5px 12px rgba(0,0,0,.25), inset 0 0 0 3px rgba(0,0,0,.12); }
 .club-badge::before { content: ""; position: absolute; inset: 8%; border: 1px solid rgba(255,255,255,.28); border-radius: inherit; }
 .club-badge .badge-fallback { position: relative; z-index: 1; padding: 3px; border-radius: 4px; background: rgba(0,0,0,.55); color: #fff; font: 900 8px var(--sans); letter-spacing: -.03em; }
-.club-badge-sm { width: 37px; height: 41px; }
-.club-badge-md { width: 50px; height: 56px; }
-.club-badge-lg { width: 76px; height: 85px; }
+.club-badge-sm { width: 40px; height: 40px; }
+.club-badge-md { width: 52px; height: 52px; }
+.club-badge-lg { width: 80px; height: 80px; }
 .club-badge-lg .badge-fallback { font-size: 11px; }
 .badge-image { z-index: 2; user-select: none; }
 .badge-image-club { padding: 3px; object-fit: contain; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
+.club-badge.has-image { overflow: visible; border: 0; background: transparent; box-shadow: none; }
+.club-badge.has-image::before { display: none; }
+.club-badge.has-image .badge-fallback { visibility: hidden; }
+.club-badge.has-image .badge-image-club { inset: -7% !important; width: 114% !important; height: 114% !important; padding: 0; }
 .setup-lead { margin: -3px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .formation-list { display: grid; gap: 10px; }
 .formation-card { display: grid; grid-template-columns: 48px 1fr 24px; align-items: center; gap: 12px; min-height: 115px; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(135deg, var(--surface-2), var(--surface)); color: var(--text); text-align: left; cursor: pointer; }
@@ -567,6 +573,9 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .nation-badge-lg { width: 68px; height: 50px; }
 .nation-badge-lg .badge-fallback { font-size: 11px; }
 .badge-image-flag { object-fit: cover; }
+.nation-badge.has-image { border: 0; background: transparent; box-shadow: 0 3px 8px rgba(0,0,0,.2); }
+.nation-badge.has-image::before { display: none; }
+.nation-badge.has-image .badge-fallback { visibility: hidden; }
 
 .nation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .nation-choice { display: grid; min-width: 0; min-height: 74px; grid-template-columns: 48px 1fr; align-items: center; gap: 9px; padding: 12px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
@@ -574,6 +583,33 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .nation-choice strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .nation-choice small { margin-top: 3px; color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .06em; }
 .nation-choice.selected { border-color: var(--gold); background: linear-gradient(135deg, rgba(255,199,44,.11), var(--surface)); box-shadow: inset 0 0 0 1px rgba(255,199,44,.28); }
+
+.luck-roulette-overlay { position: fixed; z-index: 90; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(3,15,10,.78); backdrop-filter: blur(9px); }
+.luck-roulette-card { width: min(360px, 100%); padding: 25px 20px 22px; border: 1px solid rgba(255,199,44,.34); border-radius: 25px; background: radial-gradient(circle at 50% 20%, rgba(255,199,44,.13), transparent 43%), #10291d; box-shadow: 0 24px 70px rgba(0,0,0,.55); text-align: center; }
+.luck-roulette-card h2 { margin: 15px 0 7px; font: 900 24px var(--display); }
+.luck-roulette-card p { margin: 0; color: var(--muted); font-size: 11px; }
+.roulette-wheel { position: relative; width: 126px; height: 126px; margin: 20px auto 0; border: 5px solid #193c2b; border-radius: 50%; background: conic-gradient(#ffc72c 0 12.5%, #ff675c 12.5% 25%, #63e36b 25% 37.5%, #2ca8ff 37.5% 50%, #ffc72c 50% 62.5%, #ff675c 62.5% 75%, #63e36b 75% 87.5%, #2ca8ff 87.5%); box-shadow: 0 0 0 2px rgba(255,255,255,.2), 0 13px 30px rgba(0,0,0,.38); animation: roulette-spin 1.55s cubic-bezier(.12,.64,.08,1) both; }
+.roulette-wheel::before { content: ""; position: absolute; z-index: 2; top: -13px; left: 50%; width: 0; height: 0; transform: translateX(-50%); border-right: 9px solid transparent; border-left: 9px solid transparent; border-top: 20px solid #f5f7f2; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+.roulette-wheel i { position: absolute; inset: 19px; border: 2px solid rgba(255,255,255,.4); border-radius: 50%; background: #0c2418; }
+.roulette-wheel b { position: absolute; z-index: 3; inset: 0; display: grid; place-items: center; color: var(--gold); font-size: 22px; }
+@keyframes roulette-spin { from { transform: rotate(0); } to { transform: rotate(1430deg); } }
+
+.position-change-card { display: grid; gap: 10px; margin: 10px 0; padding: 15px; border: 1px solid rgba(44,168,255,.2); border-radius: 18px; background: linear-gradient(145deg, rgba(44,168,255,.07), var(--surface)); }
+.position-change-card > div:first-child > span { color: var(--blue); font-size: 8px; font-weight: 900; letter-spacing: .13em; }
+.position-change-card > div:first-child > strong { display: block; margin-top: 5px; font-size: 14px; }
+.position-change-card p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.position-change-card > .secondary-button { min-height: 42px; margin: 0; font-size: 10px; }
+.position-change-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-top: 3px; }
+.position-change-picker > button:not(.primary-button) { display: flex; min-width: 0; min-height: 55px; flex-direction: column; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.025); color: var(--text); cursor: pointer; }
+.position-change-picker > button:not(.primary-button) span { font-size: 12px; }
+.position-change-picker > button:not(.primary-button) strong { margin: 1px 0; font-size: 9px; }
+.position-change-picker > button:not(.primary-button) small { max-width: 100%; overflow: hidden; color: var(--muted); font-size: 6px; text-overflow: ellipsis; white-space: nowrap; }
+.position-change-picker > button.selected { border-color: var(--gold); background: rgba(255,199,44,.09); }
+.position-change-confirm { grid-column: 1 / -1; min-height: 44px; margin-top: 2px; font-size: 11px; }
+.position-change-feedback { padding: 10px 11px; border: 1px solid rgba(99,227,107,.24); border-radius: 12px; background: rgba(99,227,107,.06); }
+.position-change-feedback.failure { border-color: rgba(255,90,78,.28); background: rgba(255,90,78,.06); }
+.position-change-feedback strong { color: var(--green); font-size: 10px; }
+.position-change-feedback.failure strong { color: #ff786e; }
 
 .reveal-nation { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--muted) !important; font-size: 10px !important; font-weight: 700 !important; }
 
@@ -863,7 +899,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .european-market-card { margin-top: 9px; padding: 8px 10px; }
   .transfer-offers { gap: 6px; margin-top: 10px; }
   .transfer-offers .offer-card { min-height: 64px; grid-template-columns: 43px 1fr 20px; gap: 8px; padding: 7px 9px; border-radius: 14px; }
-  .transfer-offers .club-badge-md { width: 41px; height: 46px; }
+  .transfer-offers .club-badge-md { width: 43px; height: 43px; }
   .transfer-offers .offer-card strong { margin: 2px 0; font-size: 12px; }
   .transfer-offers .offer-card small { font-size: 7px; }
   .transfer-offers .offer-card em { font-size: 8px; }
@@ -871,7 +907,6 @@ button:active:not(:disabled) { transform: scale(0.975); }
 }
 
 @media (max-width: 365px) {
-  .position-grid { grid-template-columns: repeat(3, 1fr); }
   .club-grid { grid-template-columns: 1fr; }
   .season-stat-grid { grid-template-columns: 1fr 1fr; }
   .welcome-features { gap: 8px; font-size: 9px; }
