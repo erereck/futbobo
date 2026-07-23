@@ -148,6 +148,7 @@ type SeasonResult = SeasonRecord & {
   performanceScore: number;
   europeanSpotlight: number;
   europeanDevelopmentBonus: number;
+  breakoutBonus: number;
   marketValue: number;
   calledUp: boolean;
   twist: string | null;
@@ -430,6 +431,7 @@ function normalizeSave(value: unknown): GameState {
       performanceScore: saved.lastResult.performanceScore ?? 0,
       europeanSpotlight: saved.lastResult.europeanSpotlight ?? 0,
       europeanDevelopmentBonus: saved.lastResult.europeanDevelopmentBonus ?? 0,
+      breakoutBonus: saved.lastResult.breakoutBonus ?? 0,
     } : null,
     lastConsequence: saved.lastConsequence ? {
       ...saved.lastConsequence,
@@ -900,12 +902,13 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
 
   const growthRoll = seeded(state.seed, state.season * 19);
   let development = 0;
-  if (affected.age <= 19) development = growthRoll < 0.07 ? -1 : growthRoll < 0.38 ? 0 : growthRoll < 0.8 ? 1 : growthRoll < 0.96 ? 2 : 3;
-  else if (affected.age <= 23) development = growthRoll < 0.08 ? -1 : growthRoll < 0.42 ? 0 : growthRoll < 0.82 ? 1 : growthRoll < 0.97 ? 2 : 3;
-  else if (affected.age <= 27) development = growthRoll < 0.11 ? -1 : growthRoll < 0.59 ? 0 : growthRoll < 0.94 ? 1 : 2;
-  else if (affected.age <= 29) development = growthRoll < 0.14 ? -2 : growthRoll < 0.44 ? -1 : growthRoll < 0.92 ? 0 : 1;
-  else if (affected.age <= 31) development = growthRoll < 0.2 ? -2 : growthRoll < 0.67 ? -1 : growthRoll < 0.97 ? 0 : 1;
-  else if (affected.age <= 34) development = growthRoll < 0.15 ? -3 : growthRoll < 0.52 ? -2 : growthRoll < 0.91 ? -1 : 0;
+  if (affected.age <= 19) development = growthRoll < 0.32 ? 0 : growthRoll < 0.78 ? 1 : growthRoll < 0.96 ? 2 : 3;
+  else if (affected.age <= 23) development = growthRoll < 0.36 ? 0 : growthRoll < 0.8 ? 1 : growthRoll < 0.96 ? 2 : 3;
+  else if (affected.age <= 27) development = growthRoll < 0.52 ? 0 : growthRoll < 0.92 ? 1 : 2;
+  else if (affected.age <= 29) development = growthRoll < 0.58 ? 0 : growthRoll < 0.94 ? 1 : 2;
+  else if (affected.age <= 31) development = growthRoll < 0.03 ? -1 : growthRoll < 0.6 ? 0 : growthRoll < 0.94 ? 1 : 2;
+  else if (affected.age <= 33) development = growthRoll < 0.08 ? -2 : growthRoll < 0.38 ? -1 : growthRoll < 0.92 ? 0 : 1;
+  else if (affected.age <= 35) development = growthRoll < 0.12 ? -3 : growthRoll < 0.42 ? -2 : growthRoll < 0.88 ? -1 : 0;
   else development = growthRoll < 0.2 ? -4 : growthRoll < 0.55 ? -3 : growthRoll < 0.9 ? -2 : -1;
   if (affected.age <= 22) {
     const catchUp = affected.overall < 56 ? 4 : affected.overall < 61 ? 3 : affected.overall < 66 ? 2 : affected.overall < 70 ? 1 : 0;
@@ -929,8 +932,6 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
       : 0;
   development += europeanDevelopmentBonus;
   if (appearances < 15 && seeded(state.seed, state.season * 79) > 0.48) development -= 1;
-  if (affected.overall >= affected.potential && development > 0) development = 0;
-  if (development > 0) development = Math.min(development, affected.potential - affected.overall);
 
   let twist: string | null = null;
   let twistFitness = 0;
@@ -957,6 +958,30 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     twist = "Uma sequência improvável virou sua temporada e acelerou sua evolução.";
   }
 
+  if (affected.age <= 31 && development < 0) {
+    const rareEarlyDeclineChance = affected.age <= 29 ? 0.015 : 0.04;
+    development = seeded(state.seed, state.season * 197) < rareEarlyDeclineChance ? -1 : 0;
+  }
+
+  const breakoutThreshold = isKeeper ? 70 : position.zone === "defesa" ? 72 : position.zone === "meio" ? 84 : 88;
+  const breakoutMargin = performanceScore - breakoutThreshold;
+  const breakoutChance = clamp(12 + Math.max(0, breakoutMargin) * 2.2 + titleCount * 3, 12, 55);
+  let breakoutBonus = 0;
+  if (
+    affected.age <= 29 &&
+    performanceScore >= breakoutThreshold &&
+    affected.potential - (affected.overall + development) >= 3 &&
+    setbackDelta === 0 &&
+    seeded(state.seed, state.season * 199) * 100 < breakoutChance
+  ) {
+    const hugeBreakout = breakoutMargin >= 15 || performanceScore >= 96;
+    const rolledBonus = (hugeBreakout ? 5 : 3) + Math.floor(seeded(state.seed, state.season * 211 + 17) * 3);
+    breakoutBonus = Math.min(rolledBonus, affected.potential - (affected.overall + development));
+    development += breakoutBonus;
+  }
+
+  if (affected.overall >= affected.potential && development > 0) development = 0;
+  if (development > 0) development = Math.min(development, affected.potential - affected.overall);
   const nextOverall = clamp(affected.overall + development, 42, Math.max(affected.potential, affected.overall));
   const nextAge = affected.age + 1;
   // Seleção nacional: convocação real, categorias e grandes torneios.
@@ -1087,7 +1112,8 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const trustDelta =
     (objectiveResult.completed ? seasonObjective.reward : -seasonObjective.penalty) +
     (appearances >= 28 ? 4 : appearances < 12 ? -5 : 0) +
-    titleCount * 3 -
+    titleCount * 3 +
+    breakoutBonus * 2 -
     redCards * 5;
   const nextTrust = clamp(affected.managerTrust + trustDelta);
   const nextDiscipline = clamp(affected.discipline + (yellowCards <= 4 ? 2 : -2) - redCards * 8);
@@ -1100,6 +1126,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     performanceScore,
     europeanSpotlight,
     europeanDevelopmentBonus,
+    breakoutBonus,
     marketValue: marketValue(nextOverall, nextAge, club, affected.reputation, seasonStats),
     calledUp,
     twist,
@@ -1130,8 +1157,8 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     overall: nextOverall,
     fitness: clamp(affected.fitness + 14 - Math.max(0, appearances - 28) + twistFitness),
     morale: clamp(affected.morale + titleCount * 8 + twistMorale),
-    reputation: clamp(affected.reputation + Math.round(appearances / 12) + titleCount * 7 + europeanSpotlight),
-    fanSupport: clamp(affected.fanSupport + titleCount * 13 + Math.round(appearances / 14)),
+    reputation: clamp(affected.reputation + Math.round(appearances / 12) + titleCount * 7 + europeanSpotlight + breakoutBonus * 2),
+    fanSupport: clamp(affected.fanSupport + titleCount * 13 + Math.round(appearances / 14) + breakoutBonus * 2),
     managerTrust: nextTrust,
     discipline: nextDiscipline,
     suspensionMatches: redCards * 2 + (yellowCards >= 8 ? 2 : yellowCards >= 5 ? 1 : 0),
@@ -1221,7 +1248,9 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const newlyUnlocked = achievementCandidates.filter((achievement) =>
     nextBase.disciplineHistoryReliable || (achievement.id !== "ficha-limpa" && achievement.id !== "disciplinado-em-campo"),
   );
-  const newsCategory = titleCount > 0
+  const newsCategory = breakoutBonus > 0
+    ? "milestone"
+    : titleCount > 0
     ? "title"
     : luckyDelta > 0
       ? "milestone"
@@ -1912,9 +1941,9 @@ export default function Home() {
           {game.phase === "season-result" && game.lastResult && (
             <div className="result-stage screen-enter">
               <span className="result-kicker">TEMPORADA {game.lastResult.season}</span>
-              <div className={`result-symbol ${game.lastResult.title ? "winner" : ""}`}>{game.lastResult.title ? "🏆" : game.lastResult.development > 0 ? "↗" : game.lastResult.development < 0 ? "↘" : "→"}</div>
-              <h1>{game.lastResult.title ? "Temporada de campeão!" : game.lastResult.development > 0 ? "Você subiu de nível" : game.lastResult.development < 0 ? "Uma temporada dura" : "Mais um ano de estrada"}</h1>
-              <p>{game.lastResult.title ? "Seu nome agora está gravado em uma taça." : "A temporada terminou e a carreira ganhou mais um capítulo."}</p>
+              <div className={`result-symbol ${game.lastResult.title ? "winner" : game.lastResult.breakoutBonus > 0 ? "breakout" : ""}`}>{game.lastResult.title ? "🏆" : game.lastResult.breakoutBonus > 0 ? "⚡" : game.lastResult.development > 0 ? "↗" : game.lastResult.development < 0 ? "↘" : "→"}</div>
+              <h1>{game.lastResult.title ? "Temporada de campeão!" : game.lastResult.breakoutBonus > 0 ? "Você explodiu de vez!" : game.lastResult.development > 0 ? "Você subiu de nível" : game.lastResult.development < 0 ? "Uma temporada dura" : "Mais um ano de estrada"}</h1>
+              <p>{game.lastResult.title ? "Seu nome agora está gravado em uma taça." : game.lastResult.breakoutBonus > 0 ? "Uma temporada absurda acelerou sua carreira como poucas vezes acontece." : "A temporada terminou e a carreira ganhou mais um capítulo."}</p>
               <div className="season-stat-grid">
                 <Metric label="Jogos" value={game.lastResult.appearances} />
                 <Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.lastResult.cleanSheets : game.lastResult.goals} tone="green" />
@@ -1926,6 +1955,12 @@ export default function Home() {
                 <strong>{game.lastResult.development > 0 ? "+" : ""}{game.lastResult.development} OVR</strong>
                 <small>{game.lastResult.development > 2 ? "Você está alcançando o nível profissional rapidamente." : game.lastResult.development > 0 ? "Mais um passo na direção da elite." : game.lastResult.development === 0 ? "Seu nível se manteve." : "A carreira também cobra seus anos difíceis."}</small>
               </div>
+              {game.lastResult.breakoutBonus > 0 && (
+                <div className="breakout-result">
+                  <div><span>⚡ EXPLOSÃO DE TALENTO</span><strong>Temporada fora da curva</strong><p>Você jogou tão bem que rompeu a evolução normal da carreira.</p></div>
+                  <b>+{game.lastResult.breakoutBonus}<small>OVR EXTRA</small></b>
+                </div>
+              )}
               {game.lastResult.europeanSpotlight > 0 && (
                 <div className="european-spotlight">
                   <span>VITRINE EUROPEIA</span>

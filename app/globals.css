@@ -319,6 +319,8 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .result-stage { align-items: center; justify-content: flex-start; text-align: center; }
 .result-symbol { display: grid; width: 94px; height: 94px; place-items: center; margin: 20px 0 16px; border: 1px solid rgba(99,227,107,.28); border-radius: 31px 31px 31px 10px; background: rgba(99,227,107,.09); color: var(--green); font: 900 48px var(--display); box-shadow: 0 17px 45px rgba(0,0,0,.3); }
 .result-symbol.winner { border-color: rgba(255,199,44,.3); background: rgba(255,199,44,.1); }
+.result-symbol.breakout { border-color: rgba(255,199,44,.55); background: radial-gradient(circle, rgba(255,199,44,.22), rgba(166,117,255,.11)); color: var(--gold); box-shadow: 0 0 34px rgba(255,199,44,.18), 0 17px 45px rgba(0,0,0,.3); animation: breakout-glow 1.2s ease-in-out 2; }
+@keyframes breakout-glow { 50% { transform: scale(1.06) rotate(-2deg); filter: brightness(1.18); } }
 .result-stage h1, .transfer-stage h1 { margin: 0 0 8px; font: 900 28px/1.02 var(--display); letter-spacing: -.04em; }
 .result-stage > p, .transfer-stage > p { max-width: 410px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .season-stat-grid { display: grid; width: 100%; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 7px; margin: 22px 0 13px; text-align: left; }
@@ -332,6 +334,13 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .season-development.up > strong { color: var(--green); }
 .season-development.down { border-color: rgba(255,90,78,.25); background: rgba(255,90,78,.055); }
 .season-development.down > strong { color: var(--red); }
+.breakout-result { display: grid; width: 100%; grid-template-columns: 1fr auto; align-items: center; gap: 10px; margin-bottom: 10px; padding: 13px; overflow: hidden; border: 1px solid rgba(255,199,44,.42); border-radius: 15px; background: radial-gradient(circle at 90% 20%, rgba(255,199,44,.2), transparent 34%), linear-gradient(125deg, rgba(255,199,44,.1), rgba(166,117,255,.1)); text-align: left; box-shadow: inset 0 1px rgba(255,255,255,.08), 0 10px 28px rgba(0,0,0,.18); }
+.breakout-result > div { min-width: 0; }
+.breakout-result span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .13em; }
+.breakout-result strong { display: block; margin-top: 4px; font: 900 15px var(--display); }
+.breakout-result p { margin: 4px 0 0; color: var(--muted); font-size: 8px; line-height: 1.4; }
+.breakout-result > b { color: var(--gold); font: 900 31px/.8 var(--display); text-align: center; text-shadow: 0 0 20px rgba(255,199,44,.24); }
+.breakout-result > b small { display: block; margin-top: 7px; color: var(--text); font: 900 7px var(--sans); letter-spacing: .1em; }
 .european-spotlight { width: 100%; margin-bottom: 10px; padding: 12px 13px; border: 1px solid rgba(44,168,255,.28); border-radius: 14px; background: linear-gradient(120deg, rgba(44,168,255,.11), rgba(166,117,255,.055)); text-align: left; }
 .european-spotlight > span { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .13em; }
 .european-spotlight > strong { display: block; margin-top: 4px; color: #b9ddff; font: 900 17px var(--display); }
@@ -707,6 +716,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .season-stat-grid .metric { min-height: 52px; padding: 7px; }
   .season-stat-grid .metric strong { font-size: 15px; }
   .season-development,
+  .breakout-result,
   .european-spotlight,
   .discipline-result,
   .objective-result,
@@ -717,6 +727,8 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .season-awards { margin-bottom: 7px; }
   .season-development { padding: 8px 10px; }
   .season-development > strong { font-size: 18px; }
+  .breakout-result { padding: 10px; }
+  .breakout-result > b { font-size: 27px; }
   .competition-card { min-height: 49px; padding: 7px; }
   .result-details { margin-bottom: 4px; }
 

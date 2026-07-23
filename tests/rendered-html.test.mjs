@@ -106,7 +106,7 @@ test("aplica o equilíbrio levemente mais favorável sem liberar títulos fácei
 
   assert.match(page, /fateRoll < 0\.18/);
   assert.match(page, /roleScore >= 5 \? 33[\s\S]*roleScore >= -5 \? 19 : 11/);
-  assert.match(page, /growthRoll < 0\.07 \? -1/);
+  assert.match(page, /affected\.age <= 19\) development = growthRoll < 0\.32 \? 0/);
   assert.match(page, /seriousInjuryChance = 0\.038/);
   assert.match(page, /playerImpact \* 0\.36/);
   assert.match(page, /,\s*1,\s*27,/);
@@ -133,4 +133,19 @@ test("prende a rolagem no resultado e deixa o imprevisto passar pelo rodapé", a
   assert.match(styles, /-webkit-overflow-scrolling: touch/);
   assert.match(styles, /\.result-stage \{[\s\S]*padding-bottom: calc\(env\(safe-area-inset-bottom\) \+ 150px\)/);
   assert.match(styles, /max\(9px, min\(env\(safe-area-inset-bottom\), 34px\)\)/);
+});
+
+test("protege o OVR jovem e permite explosões raras de talento", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /affected\.age <= 29\) development = growthRoll < 0\.58 \? 0/);
+  assert.match(page, /rareEarlyDeclineChance = affected\.age <= 29 \? 0\.015 : 0\.04/);
+  assert.match(page, /affected\.age <= 33\) development = growthRoll < 0\.08 \? -2/);
+  assert.match(page, /const breakoutThreshold = isKeeper \? 70/);
+  assert.match(page, /const breakoutChance = clamp\(12[\s\S]*12, 55\)/);
+  assert.match(page, /hugeBreakout \? 5 : 3/);
+  assert.match(page, /EXPLOSÃO DE TALENTO/);
+  assert.match(styles, /\.breakout-result/);
+  assert.match(styles, /@keyframes breakout-glow/);
 });
