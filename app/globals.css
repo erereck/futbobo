@@ -1160,6 +1160,19 @@ button:active:not(:disabled) { transform: scale(0.975); }
   }
   .panel-screen .section-heading { margin-top: 0; }
 
+  .career-tab-stats > .statistics-screen {
+    align-content: start;
+    grid-auto-rows: max-content;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 92px);
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom) + 92px);
+  }
+
+  .career-tab-stats > .statistics-screen > * {
+    min-height: max-content;
+  }
+
   .result-stage,
   .transfer-stage,
   .consequence-stage,

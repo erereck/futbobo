@@ -587,6 +587,15 @@ test("adiciona central estatística, empréstimos, rivais, personagens, agente l
   assert.match(styles, /grid-template-columns: repeat\(6, 1fr\)/);
 });
 
+test("mantem os cards da Central inteiros e libera rolagem no celular", async () => {
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(styles, /\.career-tab-stats > \.statistics-screen\s*\{[^}]*grid-auto-rows: max-content/);
+  assert.match(styles, /\.career-tab-stats > \.statistics-screen\s*\{[^}]*overflow-y: auto/);
+  assert.match(styles, /\.career-tab-stats > \.statistics-screen > \*\s*\{[^}]*min-height: max-content/);
+  assert.match(styles, /scroll-padding-bottom: calc\(env\(safe-area-inset-bottom\) \+ 92px\)/);
+});
+
 test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
