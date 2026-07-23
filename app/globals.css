@@ -115,7 +115,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .primary-button:hover { filter: brightness(1.05); }
 .primary-button:disabled { cursor: not-allowed; opacity: .35; }
 .secondary-button { border: 1px solid var(--line); background: rgba(255,255,255,.035); color: var(--text); }
-.welcome-features { display: flex; justify-content: center; gap: 14px; margin-top: 18px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.welcome-features { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 14px; margin-top: 18px; color: var(--muted); font-size: 10px; font-weight: 700; }
 
 .setup-screen { min-height: 100dvh; padding-bottom: 96px; }
 .step-header { position: sticky; z-index: 20; top: 0; display: grid; grid-template-columns: 43px 1fr 42px; align-items: center; gap: 11px; min-height: 78px; padding: calc(env(safe-area-inset-top) + 9px) 16px 9px; border-bottom: 1px solid var(--line); background: rgba(8,26,19,.9); backdrop-filter: blur(18px); }
@@ -204,7 +204,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .youth-feed-item > span { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: rgba(255,199,44,.1); color: var(--gold); font: 900 14px var(--display); }
 .youth-feed-item div { min-width: 0; }
 .youth-feed-item strong { display: block; font-size: 11px; }
-.youth-feed-item p { margin: 2px 0 0; overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.youth-feed-item p { margin: 3px 0 0; color: var(--muted); font-size: 9px; line-height: 1.4; white-space: normal; }
 .youth-feed-item em { color: var(--green); font-size: 10px; font-style: normal; font-weight: 900; }
 .simulating-label { display: flex; align-items: center; gap: 8px; margin: 18px 0 0; color: var(--muted); font-size: 10px; }
 .simulating-label span { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); animation: pulse 1s infinite; }
@@ -418,6 +418,43 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .share-path > span { color: var(--muted); font-size: 8px; font-weight: 900; }
 .share-path > div { min-width: 8px; height: 1px; flex: 1; background: rgba(255,255,255,.18); }
 .share-url { position: relative; z-index: 1; display: block; margin-top: 15px; color: var(--muted); font-size: 8px; text-align: right; }
+
+.nation-badge { position: relative; display: inline-grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 2px solid rgba(255,255,255,.28); border-radius: 8px; background: linear-gradient(135deg, var(--nation-primary) 0 52%, var(--nation-secondary) 52%); box-shadow: 0 5px 12px rgba(0,0,0,.25), inset 0 0 0 3px rgba(0,0,0,.12); }
+.nation-badge::before { content: ""; position: absolute; inset: 8%; border: 1px solid rgba(255,255,255,.28); border-radius: 4px; }
+.nation-badge span { position: relative; z-index: 1; padding: 3px; border-radius: 4px; background: rgba(0,0,0,.55); color: #fff; font: 900 8px var(--sans); letter-spacing: -.03em; }
+.nation-badge-sm { width: 34px; height: 26px; }
+.nation-badge-md { width: 48px; height: 36px; }
+.nation-badge-lg { width: 68px; height: 50px; }
+.nation-badge-lg span { font-size: 11px; }
+
+.nation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.nation-choice { display: grid; min-width: 0; min-height: 74px; grid-template-columns: 48px 1fr; align-items: center; gap: 9px; padding: 12px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
+.nation-choice > span { display: flex; min-width: 0; flex-direction: column; }
+.nation-choice strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.nation-choice small { margin-top: 3px; color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .06em; }
+.nation-choice.selected { border-color: var(--gold); background: linear-gradient(135deg, rgba(255,199,44,.11), var(--surface)); box-shadow: inset 0 0 0 1px rgba(255,199,44,.28); }
+
+.reveal-nation { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--muted) !important; font-size: 10px !important; font-weight: 700 !important; }
+
+.offer-abroad-tag { display: block; margin-top: 3px; color: var(--blue) !important; }
+
+.season-national-note { display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 12px; padding: 11px 12px; border: 1px solid rgba(255,199,44,.22); border-radius: 14px; background: rgba(255,199,44,.05); text-align: left; }
+.season-national-note p { margin: 0; color: var(--text); font-size: 10px; line-height: 1.4; }
+
+.national-team-card { margin-top: 10px; padding: 15px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.national-team-card > span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .13em; }
+.national-team-head { display: flex; align-items: center; gap: 11px; margin: 10px 0; }
+.national-team-head strong { display: block; font-size: 13px; }
+.national-team-head small { color: var(--muted); font-size: 9px; }
+.national-team-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.national-team-card > p { margin: 10px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.national-history-list { display: grid; gap: 6px; margin-top: 10px; }
+.national-history-list article { display: grid; grid-template-columns: 34px 1fr 22px; align-items: center; gap: 8px; min-height: 40px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); }
+.national-history-list span { color: var(--muted); font: 900 9px var(--sans); }
+.national-history-list div { min-width: 0; }
+.national-history-list strong { display: block; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.national-history-list small { margin-top: 2px; color: var(--muted); font-size: 8px; }
+.national-history-list b { font-size: 13px; text-align: right; }
 
 @media (min-width: 541px) {
   body { padding: 18px 0; }

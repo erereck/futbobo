@@ -17,9 +17,9 @@ test("exporta uma página estática pronta para o GitHub Pages", async () => {
   const html = await readFile(new URL("index.html", outputRoot), "utf8");
   assert.match(html, /<html lang="pt-BR"/);
   assert.match(html, /Futbobo/);
-  assert.match(html, /Sua carreira começa na base/i);
+  assert.match(html, /Do Brasil ao mundo/i);
   assert.match(html, /manifest\.webmanifest/);
-  assert.match(html, /og-v3\.png/);
+  assert.match(html, /og-v4\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
@@ -40,6 +40,16 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
     "Copa do Brasil",
     "Libertadores",
     "Mundial de Clubes",
+    "Premier League",
+    "Real Madrid",
+    "Champions League",
+    "Europa League",
+    "Conference League",
+    "Copa do Mundo",
+    "Copa América",
+    "Eurocopa",
+    "Jogos Olímpicos",
+    "CENTRAL DA SELEÇÃO",
     "Pedir transferência",
     "CONSEQUÊNCIAS DA ESCOLHA",
     "Ver propostas profissionais",

@@ -3,12 +3,17 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   CLUBS,
+  COUNTRIES,
   FIRST_MATCH_EVENT,
   FORMATIONS,
   POSITIONS,
   PRO_EVENTS,
   YOUTH_EVENTS,
+  countryById,
+  leagueById,
   type Club,
+  type ContinentalSlot,
+  type Country,
   type Effect,
   type GameEvent,
   type PositionKey,
@@ -17,6 +22,7 @@ import {
 type Phase =
   | "welcome"
   | "identity"
+  | "nationality"
   | "academy"
   | "formation"
   | "youth"
@@ -29,7 +35,14 @@ type Phase =
   | "transfer-denied"
   | "summary";
 
-type CompetitionId = "brasileirao" | "copaBrasil" | "libertadores" | "mundial";
+type CompetitionId =
+  | "domesticLeague"
+  | "domesticCup"
+  | "libertadores"
+  | "mundial"
+  | "championsLeague"
+  | "europaLeague"
+  | "conferenceLeague";
 
 type CompetitionResult = {
   id: CompetitionId;
@@ -39,7 +52,26 @@ type CompetitionResult = {
   champion: boolean;
 };
 
-type TrophyCabinet = Record<CompetitionId, number>;
+type TrophyCabinet = {
+  domesticLeague: number;
+  domesticCup: number;
+  libertadores: number;
+  mundial: number;
+  championsLeague: number;
+  europaLeague: number;
+  conferenceLeague: number;
+};
+
+type NationalTier = "none" | "sub17" | "sub20" | "olympic" | "main";
+
+type NationalRecord = {
+  season: number;
+  tier: NationalTier;
+  name: string;
+  icon: string;
+  stage: string;
+  champion: boolean;
+};
 
 type ChoiceConsequence = {
   choice: string;
@@ -88,16 +120,18 @@ type SeasonResult = SeasonRecord & {
   marketValue: number;
   calledUp: boolean;
   twist: string | null;
+  nationalNote: string | null;
 };
 
 type GameState = {
-  version: 3;
+  version: 4;
   phase: Phase;
   seed: number;
   name: string;
   number: number;
   foot: "Direita" | "Esquerda";
   position: PositionKey;
+  nationality: string;
   academyClubId: string;
   formationId: string;
   archetype: string;
@@ -124,9 +158,19 @@ type GameState = {
   awardCabinet: Record<string, number>;
   setbacks: number;
   luckyBreaks: number;
-  libertadoresQualified: boolean;
+  continentalSlot: ContinentalSlot | null;
   worldQualifiedSeason: number;
   worldQualifiedClubId: string;
+  adaptation: number;
+  abroadSeasons: number;
+  nationalCategory: NationalTier;
+  nationalCaps: number;
+  nationalGoals: number;
+  nationalAssists: number;
+  nationalCaptain: boolean;
+  nationalTrophies: number;
+  nationalHistory: NationalRecord[];
+  qualifiedNextMajor: boolean;
   currentEventId: string;
   nextEventId: string;
   seenEvents: string[];
@@ -153,13 +197,14 @@ const EMPTY_STATS: PlayerStats = {
 
 function initialState(): GameState {
   return {
-    version: 3,
+    version: 4,
     phase: "welcome",
     seed: Date.now() % 2147483647,
     name: "",
     number: 10,
     foot: "Direita",
     position: "MEI",
+    nationality: "brasil",
     academyClubId: "",
     formationId: "",
     archetype: "",
@@ -181,14 +226,24 @@ function initialState(): GameState {
     fanSupport: 55,
     stats: { ...EMPTY_STATS },
     trophies: 0,
-    trophyCabinet: { brasileirao: 0, copaBrasil: 0, libertadores: 0, mundial: 0 },
+    trophyCabinet: { domesticLeague: 0, domesticCup: 0, libertadores: 0, mundial: 0, championsLeague: 0, europaLeague: 0, conferenceLeague: 0 },
     awards: 0,
     awardCabinet: {},
     setbacks: 0,
     luckyBreaks: 0,
-    libertadoresQualified: false,
+    continentalSlot: null,
     worldQualifiedSeason: 0,
     worldQualifiedClubId: "",
+    adaptation: 100,
+    abroadSeasons: 0,
+    nationalCategory: "none",
+    nationalCaps: 0,
+    nationalGoals: 0,
+    nationalAssists: 0,
+    nationalCaptain: false,
+    nationalTrophies: 0,
+    nationalHistory: [],
+    qualifiedNextMajor: true,
     currentEventId: FIRST_MATCH_EVENT.id,
     nextEventId: "",
     seenEvents: [],
@@ -207,16 +262,44 @@ function initialState(): GameState {
 function normalizeSave(value: unknown): GameState {
   const base = initialState();
   if (!value || typeof value !== "object") return base;
-  const saved = value as Partial<GameState> & { version?: number; history?: Array<Partial<SeasonRecord>> };
-  const oldBrasileirao = saved.trophyCabinet?.brasileirao ?? saved.trophies ?? 0;
+  const saved = value as Partial<GameState> & {
+    version?: number;
+    history?: Array<Partial<SeasonRecord>>;
+    libertadoresQualified?: boolean;
+    trophyCabinet?: Partial<Record<string, number>>;
+  };
+  const oldDomesticLeague = saved.trophyCabinet?.domesticLeague ?? saved.trophyCabinet?.brasileirao ?? saved.trophies ?? 0;
+  const oldDomesticCup = saved.trophyCabinet?.domesticCup ?? saved.trophyCabinet?.copaBrasil ?? 0;
+  const continentalSlot: ContinentalSlot | null =
+    saved.continentalSlot !== undefined
+      ? (saved.continentalSlot as ContinentalSlot | null)
+      : saved.libertadoresQualified
+        ? "libertadores"
+        : null;
   return {
     ...base,
     ...saved,
-    version: 3,
+    version: 4,
+    nationality: saved.nationality ?? "brasil",
+    continentalSlot,
+    adaptation: saved.adaptation ?? 100,
+    abroadSeasons: saved.abroadSeasons ?? 0,
+    nationalCategory: saved.nationalCategory ?? "none",
+    nationalCaps: saved.nationalCaps ?? 0,
+    nationalGoals: saved.nationalGoals ?? 0,
+    nationalAssists: saved.nationalAssists ?? 0,
+    nationalCaptain: saved.nationalCaptain ?? false,
+    nationalTrophies: saved.nationalTrophies ?? 0,
+    nationalHistory: saved.nationalHistory ?? [],
+    qualifiedNextMajor: saved.qualifiedNextMajor ?? true,
     trophyCabinet: {
-      ...base.trophyCabinet,
-      ...saved.trophyCabinet,
-      brasileirao: oldBrasileirao,
+      domesticLeague: oldDomesticLeague,
+      domesticCup: oldDomesticCup,
+      libertadores: saved.trophyCabinet?.libertadores ?? 0,
+      mundial: saved.trophyCabinet?.mundial ?? 0,
+      championsLeague: saved.trophyCabinet?.championsLeague ?? 0,
+      europaLeague: saved.trophyCabinet?.europaLeague ?? 0,
+      conferenceLeague: saved.trophyCabinet?.conferenceLeague ?? 0,
     },
     awardCabinet: { ...base.awardCabinet, ...saved.awardCabinet },
     history: (saved.history ?? []).map((record) => ({
@@ -239,6 +322,7 @@ function normalizeSave(value: unknown): GameState {
       competitions: saved.lastResult.competitions ?? [],
       awards: saved.lastResult.awards ?? [],
       twist: saved.lastResult.twist ?? null,
+      nationalNote: saved.lastResult.nationalNote ?? null,
     } : null,
     lastConsequence: saved.lastConsequence ? {
       ...saved.lastConsequence,
@@ -265,6 +349,34 @@ function pick<T>(items: T[], seed: number, salt = 0): T {
 
 function clubById(id: string) {
   return CLUBS.find((club) => club.id === id) ?? CLUBS[0];
+}
+
+const DOMESTIC_CLUBS = CLUBS.filter((club) => club.countryId === "brasil");
+
+function isAbroad(club: Club) {
+  return club.countryId !== "brasil";
+}
+
+function initialContinentalSlot(club: Club): ContinentalSlot | null {
+  if (club.countryId === "brasil") return club.reputation >= 4 ? "libertadores" : null;
+  if (club.reputation >= 5) return "champions";
+  if (club.reputation >= 4) return "europa";
+  return null;
+}
+
+function initialAdaptation(countryId: string) {
+  if (countryId === "brasil") return 100;
+  if (countryId === "portugal") return 62;
+  if (countryId === "espanha" || countryId === "italia") return 48;
+  return 34;
+}
+
+function foreignEligible(state: GameState, club: Club) {
+  if (!isAbroad(club)) return false;
+  if (state.age > 33) return false;
+  const league = leagueById(club.leagueId);
+  const requirement = 58 + league.prestige * 5 + club.reputation * 3 - Math.min(10, state.reputation / 12) - Math.min(6, state.nationalLevel / 18);
+  return state.overall >= requirement;
 }
 
 function positionByKey(key: PositionKey) {
@@ -308,7 +420,12 @@ function describeEffects(effect: Effect) {
   add("minutos", effect.minutes);
   add("chance de título", effect.titleBoost);
   add("Seleção", effect.nationalBoost);
+  add("chance de título na Seleção", effect.nationalTitleBoost);
+  add("adaptação", effect.adaptation);
+  if (effect.nationalCall) changes.push("Convocação garantida");
+  if (effect.nationalCaptain) changes.push("Braçadeira da Seleção");
   if (effect.transfer) changes.push("Mercado aberto");
+  if (effect.transferAbroad) changes.push("Ofertas apenas da Europa");
   if (effect.injuryRisk) changes.push(`+${effect.injuryRisk} risco físico`);
   if (effect.retire) changes.push("Despedida anunciada");
   return changes.length ? changes : ["Sua escolha mudou o rumo da temporada"];
@@ -326,9 +443,14 @@ function mergeEffects(base: Effect, extra: Effect): Effect {
     minutes: (base.minutes ?? 0) + (extra.minutes ?? 0),
     titleBoost: (base.titleBoost ?? 0) + (extra.titleBoost ?? 0),
     nationalBoost: (base.nationalBoost ?? 0) + (extra.nationalBoost ?? 0),
+    nationalTitleBoost: (base.nationalTitleBoost ?? 0) + (extra.nationalTitleBoost ?? 0),
+    nationalCall: Boolean(base.nationalCall || extra.nationalCall),
+    nationalCaptain: Boolean(base.nationalCaptain || extra.nationalCaptain),
+    adaptation: (base.adaptation ?? 0) + (extra.adaptation ?? 0),
     injuryRisk: (base.injuryRisk ?? 0) + (extra.injuryRisk ?? 0),
     fans: (base.fans ?? 0) + (extra.fans ?? 0),
     transfer: Boolean(base.transfer || extra.transfer),
+    transferAbroad: Boolean(base.transferAbroad || extra.transferAbroad),
     retire: Boolean(base.retire || extra.retire),
   };
 }
@@ -353,11 +475,21 @@ function fanMood(value: number) {
   return { label: "Ídolo", color: "#ffc72c" };
 }
 
-function selectOffers(state: GameState, count: number, salt: number) {
+function selectOffers(state: GameState, count: number, salt: number, opts: { includeForeign?: boolean; forceDomestic?: boolean; forceForeign?: boolean } = {}) {
   const current = state.currentClubId || state.academyClubId;
   const currentRep = current ? clubById(current).reputation : 3;
   const targetRep = clamp(Math.round((state.overall - 56) / 6), 2, 5);
-  const candidates = CLUBS.filter((club) => club.id !== current).sort((a, b) => {
+  let pool = CLUBS.filter((club) => club.id !== current);
+  if (opts.forceForeign) {
+    pool = pool.filter((club) => isAbroad(club) && (foreignEligible(state, club) || club.reputation <= Math.max(3, currentRep - 1)));
+  } else if (opts.forceDomestic) {
+    pool = pool.filter((club) => !isAbroad(club));
+  } else if (!opts.includeForeign) {
+    pool = pool.filter((club) => !isAbroad(club));
+  } else {
+    pool = pool.filter((club) => !isAbroad(club) || foreignEligible(state, club));
+  }
+  const candidates = pool.sort((a, b) => {
     const scoreA = Math.abs(a.reputation - Math.max(currentRep, targetRep)) + seeded(state.seed, salt + CLUBS.indexOf(a));
     const scoreB = Math.abs(b.reputation - Math.max(currentRep, targetRep)) + seeded(state.seed, salt + CLUBS.indexOf(b));
     return scoreA - scoreB;
@@ -366,6 +498,7 @@ function selectOffers(state: GameState, count: number, salt: number) {
 }
 
 function eligibleEvents(state: GameState) {
+  const club = clubById(state.currentClubId || state.academyClubId);
   return PRO_EVENTS.filter((event) => {
     if (event.minAge !== undefined && state.age < event.minAge) return false;
     if (event.maxAge !== undefined && state.age > event.maxAge) return false;
@@ -373,8 +506,16 @@ function eligibleEvents(state: GameState) {
     if (event.maxOvr !== undefined && state.overall > event.maxOvr) return false;
     if (event.needsLowFitness && state.fitness > 67) return false;
     if (event.needsNational && state.nationalLevel < 1) return false;
-    if (event.needsLibertadores && !state.libertadoresQualified) return false;
+    if (event.needsLibertadores && state.continentalSlot !== "libertadores") return false;
+    if (event.needsContinental && state.continentalSlot !== event.needsContinental) return false;
     if (event.needsWorld && (state.worldQualifiedSeason !== state.season || state.worldQualifiedClubId !== state.currentClubId)) return false;
+    if (event.needsAbroad && !isAbroad(club)) return false;
+    if (event.needsNationalMain && state.nationalCategory !== "main") return false;
+    if (event.needsNationalYouth && state.nationalCategory !== "sub17" && state.nationalCategory !== "sub20" && state.nationalCategory !== "olympic") return false;
+    if (event.nationalWindow === "major" && state.season % 4 !== 0 && state.season % 4 !== 2) return false;
+    if (event.nationalWindow === "continental" && state.season % 4 !== 0) return false;
+    if (event.nationalWindow === "olympics" && state.season % 4 !== 0) return false;
+    if (event.nationalWindow === "qualifiers" && state.season % 4 !== 3) return false;
     if (event.oneTime && state.seenEvents.includes(event.id)) return false;
     return true;
   });
@@ -391,7 +532,7 @@ function createYouthJourney(state: GameState, formationId: string) {
   const club = clubById(state.academyClubId);
   const rawScore =
     41 +
-    club.academy * 5 +
+    (club.academy ?? 3) * 5 +
     formation.technical * 1.2 +
     formation.physical * 0.8 +
     formation.mental +
@@ -428,7 +569,7 @@ function createYouthJourney(state: GameState, formationId: string) {
     });
   }
   const offerBase: GameState = { ...state, overall };
-  const otherOffers = selectOffers(offerBase, 2, 41);
+  const otherOffers = selectOffers(offerBase, 2, 41, { forceDomestic: true });
   return {
     formation,
     score,
@@ -453,15 +594,20 @@ function applyEffect(state: GameState, effect: Effect) {
     money: Math.max(0, state.money + (effect.money ?? 0)),
     nationalLevel: clamp(state.nationalLevel + (effect.nationalBoost ?? 0), 0, 100),
     fanSupport: clamp(state.fanSupport + (effect.fans ?? 0), 0, 100),
+    adaptation: clamp(state.adaptation + (effect.adaptation ?? 0), 0, 100),
   };
 }
 
 function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choiceLabel: string, resultText: string, luckOutcome: "success" | "failure" | null = null): GameState {
   const affected = applyEffect(state, effect);
   const club = clubById(affected.currentClubId);
+  const league = leagueById(club.leagueId);
+  const country = countryById(club.countryId);
+  const abroad = isAbroad(club);
   const position = positionByKey(affected.position);
-  const requirement = 55 + club.reputation * 5;
-  const roleScore = affected.overall - requirement + (effect.minutes ?? 0);
+  const adaptationPenalty = abroad ? Math.max(0, (72 - affected.adaptation) / 8) : 0;
+  const requirement = 55 + club.reputation * 5 + (abroad ? league.prestige * 3 : 0);
+  const roleScore = affected.overall - requirement + (effect.minutes ?? 0) - adaptationPenalty;
   const baseApps = roleScore >= 5 ? 32 : roleScore >= 0 ? 25 : roleScore >= -5 ? 17 : 9;
   const appearances = clamp(Math.round(baseApps + seeded(state.seed, state.season * 3) * 8), 3, 38);
   const quality = clamp((affected.overall - 48) / 35, 0.45, 1.5);
@@ -473,24 +619,34 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const seasonStats = { appearances, goals, assists, cleanSheets, goalsConceded };
 
   const boost = effect.titleBoost ?? 0;
-  const brasilChance = clamp(2 + club.reputation * 3.5 + Math.max(0, affected.overall - 70) * 0.55 + boost + affected.fanSupport / 25, 2, 48);
-  const copaChance = clamp(2 + club.reputation * 2.6 + Math.max(0, affected.overall - 70) * 0.45 + boost * 0.65, 2, 34);
-  const playsLibertadores = affected.libertadoresQualified;
+  const leagueChance = clamp(2 + club.reputation * 3.5 + Math.max(0, affected.overall - 70) * 0.55 + boost + affected.fanSupport / 25 - (abroad ? league.prestige * 1.5 : 0), 2, 48);
+  const cupChance = clamp(2 + club.reputation * 2.6 + Math.max(0, affected.overall - 70) * 0.45 + boost * 0.65, 2, 34);
+  const playsContinental = affected.continentalSlot;
   const playsWorld = affected.worldQualifiedSeason === affected.season && affected.worldQualifiedClubId === club.id;
-  const libChance = clamp(1 + club.reputation * 2.2 + Math.max(0, affected.overall - 72) * 0.48 + boost * 0.5, 1, 28);
+  const continentalTier = playsContinental === "champions" ? -6 : playsContinental === "libertadores" ? 0 : playsContinental === "europa" ? -2 : 2;
+  const continentalChance = clamp(1 + club.reputation * 2.2 + Math.max(0, affected.overall - 72) * 0.48 + boost * 0.5 + continentalTier, 1, 30);
   const worldChance = clamp(3 + club.reputation * 1.7 + Math.max(0, affected.overall - 74) * 0.5 + boost * 0.3, 3, 24);
 
-  const brasileiraoChampion = seeded(state.seed, state.season * 17) * 100 < brasilChance;
-  const copaChampion = seeded(state.seed, state.season * 41) * 100 < copaChance;
-  const libertadoresChampion = playsLibertadores && seeded(state.seed, state.season * 47) * 100 < libChance;
+  const leagueChampion = seeded(state.seed, state.season * 17) * 100 < leagueChance;
+  const cupChampion = seeded(state.seed, state.season * 41) * 100 < cupChance;
+  const continentalChampion = Boolean(playsContinental) && seeded(state.seed, state.season * 47) * 100 < continentalChance;
   const mundialChampion = playsWorld && seeded(state.seed, state.season * 53) * 100 < worldChance;
-  const leaguePosition = brasileiraoChampion ? 1 : clamp(Math.round(19 - brasilChance / 4 + seeded(state.seed, state.season * 59) * 8), 2, 20);
+  const leaguePosition = leagueChampion ? 1 : clamp(Math.round(19 - leagueChance / 4 + seeded(state.seed, state.season * 59) * 8), 2, 20);
   const knockoutStage = (salt: number, champion: boolean, stages: string[]) => champion ? "CAMPEÃO" : stages[Math.floor(seeded(state.seed, state.season * salt) * stages.length)];
   const competitions: CompetitionResult[] = [
-    { id: "brasileirao", name: "Brasileirão", icon: "BR", stage: brasileiraoChampion ? "CAMPEÃO" : `${leaguePosition}º lugar`, champion: brasileiraoChampion },
-    { id: "copaBrasil", name: "Copa do Brasil", icon: "CB", stage: knockoutStage(61, copaChampion, ["2ª fase", "Oitavas", "Quartas", "Semifinal", "Vice"]), champion: copaChampion },
+    { id: "domesticLeague", name: league.name, icon: country.abbr, stage: leagueChampion ? "CAMPEÃO" : `${leaguePosition}º lugar`, champion: leagueChampion },
+    { id: "domesticCup", name: league.cupName, icon: country.abbr, stage: knockoutStage(61, cupChampion, ["2ª fase", "Oitavas", "Quartas", "Semifinal", "Vice"]), champion: cupChampion },
   ];
-  if (playsLibertadores) competitions.push({ id: "libertadores", name: "Libertadores", icon: "LIB", stage: knockoutStage(67, libertadoresChampion, ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"]), champion: libertadoresChampion });
+  const continentalNames: Record<ContinentalSlot, { id: CompetitionId; name: string; icon: string }> = {
+    libertadores: { id: "libertadores", name: "Libertadores", icon: "LIB" },
+    champions: { id: "championsLeague", name: "Champions League", icon: "UCL" },
+    europa: { id: "europaLeague", name: "Europa League", icon: "UEL" },
+    conference: { id: "conferenceLeague", name: "Conference League", icon: "UECL" },
+  };
+  if (playsContinental) {
+    const info = continentalNames[playsContinental];
+    competitions.push({ id: info.id, name: info.name, icon: info.icon, stage: knockoutStage(67, continentalChampion, ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"]), champion: continentalChampion });
+  }
   if (playsWorld) competitions.push({ id: "mundial", name: "Mundial de Clubes", icon: "MUN", stage: knockoutStage(71, mundialChampion, ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"]), champion: mundialChampion });
   const titleCount = competitions.filter((competition) => competition.champion).length;
 
@@ -534,33 +690,149 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
 
   const nextOverall = clamp(affected.overall + development, 42, Math.max(affected.potential, affected.overall));
   const nextAge = affected.age + 1;
-  const calledUp = affected.nationalLevel >= 28 || (nextOverall >= 82 && seeded(state.seed, state.season * 31) > 0.62);
+  // Seleção nacional: convocação real, categorias e grandes torneios.
+  const nation = countryById(affected.nationality);
+  const ageTier: NationalTier = affected.age <= 14 ? "none" : affected.age <= 17 ? "sub17" : affected.age <= 20 ? "sub20" : affected.age <= 23 ? "olympic" : "main";
+  const seniorThreshold = 78 + Math.max(0, nation.strength - 3) * 2 - Math.min(7, Math.floor(affected.reputation / 14));
+  const seniorEligible = affected.age >= 17 && affected.overall >= seniorThreshold;
+  const nationalTier: NationalTier = ageTier !== "none" && ageTier !== "main" && seniorEligible ? "main" : ageTier;
+  let nationalCaps = affected.nationalCaps;
+  let nationalGoals = affected.nationalGoals;
+  let nationalAssists = affected.nationalAssists;
+  let nationalCaptain = Boolean(affected.nationalCaptain || effect.nationalCaptain);
+  let nationalTrophiesCount = affected.nationalTrophies;
+  let nationalHistoryAdd: NationalRecord | null = null;
+  let qualifiedNextMajor = affected.qualifiedNextMajor;
+  let nationalNote: string | null = null;
+  let nationalCalled = false;
+  if (nationalTier !== "none") {
+    const strengthDifficulty = nationalTier === "main" ? Math.max(0, nation.strength - 3) * 2 : Math.max(0, nation.strength - 3);
+    const tierRequirement = (nationalTier === "main" ? 74 : nationalTier === "olympic" ? 70 : nationalTier === "sub20" ? 64 : 58) + strengthDifficulty;
+    const callChance = clamp(
+      6 +
+      (affected.overall - tierRequirement) * 3 +
+      affected.nationalLevel * 0.3 +
+      affected.reputation * 0.12 +
+      Math.max(0, appearances - 12) * 0.45 +
+      (affected.morale - 50) * 0.1 -
+      Math.max(0, 60 - affected.fitness) * 0.3,
+      2,
+      92,
+    );
+    const called = Boolean(effect.nationalCall || effect.nationalCaptain) || seeded(state.seed, state.season * 131 + 7) * 100 < callChance;
+    nationalCalled = called;
+    if (called) {
+      const capsGain = Math.round(3 + seeded(state.seed, state.season * 137) * 5);
+      const nationalQuality = clamp((affected.overall - 50) / 35, 0.4, 1.5);
+      const goalsGain = isKeeper ? 0 : Math.max(0, Math.round(capsGain * position.goals * nationalQuality * 1.3));
+      const assistsGain = isKeeper ? 0 : Math.max(0, Math.round(capsGain * position.assists * nationalQuality * 1.3));
+      nationalCaps += capsGain;
+      nationalGoals += goalsGain;
+      nationalAssists += assistsGain;
+      if (nationalTier === "main" && nationalCaps >= 30 && affected.leadership >= 78 && !nationalCaptain && seeded(state.seed, state.season * 139) > 0.7) nationalCaptain = true;
+
+      const seasonYear = affected.season;
+      let tournament: { name: string; icon: string; scope: string } | null = null;
+      if (nationalTier === "main") {
+        if (seasonYear % 4 === 2) tournament = { name: "Copa do Mundo", icon: "MUN", scope: "world" };
+        else if (nation.confederation === "EUROPE" && seasonYear % 4 === 0) tournament = { name: "Eurocopa", icon: "EURO", scope: "euro" };
+        else if (nation.confederation === "SOUTH_AMERICA" && seasonYear % 4 === 0) tournament = { name: "Copa América", icon: "CA", scope: "copaAmerica" };
+        else if (seasonYear % 4 === 3) tournament = { name: "Eliminatórias", icon: "ELIM", scope: "qualifiers" };
+      } else if (nationalTier === "olympic" && seasonYear % 4 === 0) {
+        tournament = { name: "Jogos Olímpicos", icon: "JO", scope: "olympics" };
+      } else if (nationalTier === "sub20" && seasonYear % 2 === 0) {
+        tournament = { name: "Mundial Sub-20", icon: "S20", scope: "u20" };
+      } else if (nationalTier === "sub17" && seasonYear % 2 === 1) {
+        tournament = { name: "Mundial Sub-17", icon: "S17", scope: "u17" };
+      }
+
+      if (tournament?.scope === "qualifiers") {
+        const qualifyChance = clamp(40 + nation.strength * 8 + (effect.nationalTitleBoost ?? 0) * 0.7 + Math.max(0, affected.overall - 78) * 0.4, 38, 95);
+        const qualified = seeded(state.seed, state.season * 149) * 100 < qualifyChance;
+        qualifiedNextMajor = qualified;
+        nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage: qualified ? "Classificado" : "Eliminado", champion: false };
+      } else if (tournament) {
+        if (tournament.scope === "world" && !affected.qualifiedNextMajor) {
+          nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage: "Não classificado", champion: false };
+          qualifiedNextMajor = true;
+        } else {
+          const titleBoostN = effect.nationalTitleBoost ?? 0;
+          const baseChance = tournament.scope === "world" ? nation.strength * 3.4 : tournament.scope === "euro" || tournament.scope === "copaAmerica" ? nation.strength * 4.1 : nation.strength * 3.8;
+          const chanceCeiling = tournament.scope === "world" ? 28 : tournament.scope === "euro" || tournament.scope === "copaAmerica" ? 32 : 34;
+          const majorChance = clamp(baseChance + Math.max(0, affected.overall - 78) * 0.7 + titleBoostN * 0.7 + affected.luckyBreaks * 0.35, 2, chanceCeiling);
+          const champion = seeded(state.seed, state.season * 151) * 100 < majorChance;
+          const stage = champion ? "CAMPEÃO" : knockoutStage(157, false, ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"]);
+          nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage, champion };
+          if (champion) nationalTrophiesCount += 1;
+          if (tournament.scope === "world") qualifiedNextMajor = true;
+        }
+      }
+      if (nationalHistoryAdd) nationalNote = `${nationalHistoryAdd.name}: ${nationalHistoryAdd.stage}`;
+    } else if (nationalTier === "main" && affected.season % 4 === 3) {
+      const qualifyChance = clamp(40 + nation.strength * 8, 38, 92);
+      qualifiedNextMajor = seeded(state.seed, state.season * 149) * 100 < qualifyChance;
+      nationalNote = `Fora da lista, você viu ${nation.name} ${qualifiedNextMajor ? "garantir vaga no Mundial" : "cair nas Eliminatórias"}.`;
+    } else if (affected.nationalCaps > 0 && nationalTier === "main" && seeded(state.seed, state.season * 163) > 0.7) {
+      nationalNote = "Corte doloroso: seu nome ficou de fora da lista da Seleção pela primeira vez em um bom tempo.";
+    }
+  }
+  if (!nationalCalled) nationalCaptain = false;
+  const nextAgeTier: NationalTier = nextAge <= 14 ? "none" : nextAge <= 17 ? "sub17" : nextAge <= 20 ? "sub20" : nextAge <= 23 ? "olympic" : "main";
+  const graduatesWithinYouth =
+    (nationalTier === "sub17" && nextAgeTier === "sub20") ||
+    (nationalTier === "sub20" && nextAgeTier === "olympic");
+  const nextNationalCategory: NationalTier = !nationalCalled
+    ? "none"
+    : nationalTier === "main" || nationalTier === nextAgeTier
+      ? nationalTier
+      : graduatesWithinYouth
+        ? nextAgeTier
+        : "none";
+  const calledUp = nationalCalled;
+
   const awards: string[] = [];
   const awardRoll = seeded(state.seed, state.season * 73);
-  if (affected.age <= 21 && appearances >= 22 && nextOverall >= 74 && awardRoll > 0.38) awards.push("Revelação do Brasileirão");
-  if (!isKeeper && goals >= 18) awards.push("Artilheiro do Brasileirão");
+  const leagueLabel = abroad ? league.name : "Brasileirão";
+  if (affected.age <= 21 && appearances >= 22 && nextOverall >= 74 && awardRoll > 0.38) awards.push(`Revelação do ${leagueLabel}`);
+  if (!isKeeper && goals >= 18) awards.push(`Artilheiro do ${leagueLabel}`);
   if (!isKeeper && assists >= 12) awards.push("Rei das Assistências");
   if (isKeeper && cleanSheets >= 14) awards.push("Luva de Ouro");
   if (position.zone === "defesa" && appearances >= 28 && nextOverall >= 80 && leaguePosition <= 6) awards.push("Melhor Defensor");
-  if (nextOverall >= 82 && appearances >= 28 && awardRoll > 0.45) awards.push(`Seleção do Brasileirão — ${position.name}`);
-  if (nextOverall >= 86 && appearances >= 30 && leaguePosition <= 3 && awardRoll > 0.58) awards.push("Craque do Brasileirão");
-  if (affected.age <= 23 && playsLibertadores && nextOverall >= 82 && seeded(state.seed, state.season * 89) > 0.5) awards.push("Melhor Jovem da América");
-  if (libertadoresChampion && nextOverall >= 86 && seeded(state.seed, state.season * 97) > 0.38) awards.push("MVP da Libertadores");
-  if (libertadoresChampion && nextOverall >= 89 && seeded(state.seed, state.season * 101) > 0.7) awards.push("Rei da América");
+  if (nextOverall >= 82 && appearances >= 28 && awardRoll > 0.45) awards.push(`Seleção do ${leagueLabel} — ${position.name}`);
+  if (nextOverall >= 86 && appearances >= 30 && leaguePosition <= 3 && awardRoll > 0.58) awards.push(`Craque do ${leagueLabel}`);
+  if (affected.age <= 23 && playsContinental === "libertadores" && nextOverall >= 82 && seeded(state.seed, state.season * 89) > 0.5) awards.push("Melhor Jovem da América");
+  if (playsContinental === "libertadores" && continentalChampion && nextOverall >= 86 && seeded(state.seed, state.season * 97) > 0.38) awards.push("MVP da Libertadores");
+  if (playsContinental === "libertadores" && continentalChampion && nextOverall >= 89 && seeded(state.seed, state.season * 101) > 0.7) awards.push("Rei da América");
+  if (abroad && affected.age <= 21 && nextOverall >= 80 && appearances >= 18 && seeded(state.seed, state.season * 167) > 0.55) awards.push("Golden Boy");
+  if (abroad && affected.age <= 21 && playsContinental && nextOverall >= 82 && seeded(state.seed, state.season * 173) > 0.65) awards.push("Troféu Kopa");
+  if (abroad && isKeeper && cleanSheets >= 16 && nextOverall >= 85 && seeded(state.seed, state.season * 179) > 0.7) awards.push("Troféu Yashin");
+  if (abroad && !isKeeper && goals >= 22 && league.prestige >= 4 && seeded(state.seed, state.season * 181) > 0.65) awards.push("Chuteira de Ouro Europeia");
+  if (abroad && playsContinental === "champions" && continentalChampion && nextOverall >= 88 && seeded(state.seed, state.season * 191) > 0.55) awards.push("Melhor da UEFA");
   if (!isKeeper && goals >= 8 && nextOverall >= 82 && seeded(state.seed, state.season * 103) > 0.94) awards.push("Prêmio Puskás");
   if (affected.leadership >= 82 && seeded(state.seed, state.season * 107) > 0.82) awards.push("Prêmio Fair Play");
   if (affected.fanSupport >= 92 && titleCount > 0) awards.push("Ídolo da Torcida");
-  if (mundialChampion && affected.trophyCabinet.libertadores > 0 && nextOverall >= 95 && affected.reputation >= 94 && seeded(state.seed, state.season * 109) > 0.92) awards.push("Bola de Ouro");
+  const majorClubTitle = (mundialChampion) || (abroad && playsContinental === "champions" && continentalChampion);
+  if (majorClubTitle && nextOverall >= 93 && affected.reputation >= 90 && seeded(state.seed, state.season * 109) > 0.9) awards.push("Bola de Ouro");
   const title = titleCount > 0;
   const record: SeasonRecord = { ...seasonStats, age: affected.age, season: affected.season, clubId: club.id, overall: nextOverall, title, eventTitle: event.title, competitions, awards };
-  const result: SeasonResult = { ...record, resultText, development, marketValue: marketValue(nextOverall, nextAge), calledUp, twist };
+  const result: SeasonResult = { ...record, resultText, development, marketValue: marketValue(nextOverall, nextAge), calledUp, twist, nationalNote };
   const seenEvents = event.oneTime || event.id === FIRST_MATCH_EVENT.id ? Array.from(new Set([...affected.seenEvents, event.id])) : affected.seenEvents;
   const nextCabinet = { ...affected.trophyCabinet };
   competitions.forEach((competition) => { if (competition.champion) nextCabinet[competition.id] += 1; });
-  const nextWorldQualifiedSeason = libertadoresChampion ? affected.season + 1 : affected.worldQualifiedSeason === affected.season ? 0 : affected.worldQualifiedSeason;
-  const nextWorldQualifiedClubId = libertadoresChampion ? club.id : affected.worldQualifiedSeason === affected.season ? "" : affected.worldQualifiedClubId;
+  const wonContinentalForWorld = continentalChampion && (playsContinental === "libertadores" || playsContinental === "champions");
+  const nextWorldQualifiedSeason = wonContinentalForWorld ? affected.season + 1 : affected.worldQualifiedSeason === affected.season ? 0 : affected.worldQualifiedSeason;
+  const nextWorldQualifiedClubId = wonContinentalForWorld ? club.id : affected.worldQualifiedSeason === affected.season ? "" : affected.worldQualifiedClubId;
   const nextAwardCabinet = { ...affected.awardCabinet };
   awards.forEach((award) => { nextAwardCabinet[award] = (nextAwardCabinet[award] ?? 0) + 1; });
+  const nextContinentalSlot: ContinentalSlot | null = !abroad
+    ? (leagueChampion || cupChampion || leaguePosition <= 6 ? "libertadores" : null)
+    : (leagueChampion || leaguePosition <= league.championsPlaces
+        ? "champions"
+        : cupChampion || leaguePosition <= league.europaPlaces
+          ? "europa"
+          : leaguePosition <= league.conferencePlaces
+            ? "conference"
+            : null);
   const nextBase: GameState = {
     ...affected,
     phase: "consequence",
@@ -571,7 +843,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     morale: clamp(affected.morale + titleCount * 8 + twistMorale),
     reputation: clamp(affected.reputation + Math.round(appearances / 12) + titleCount * 7),
     fanSupport: clamp(affected.fanSupport + titleCount * 13 + Math.round(appearances / 14)),
-    nationalLevel: clamp(calledUp ? Math.max(affected.nationalLevel, 32) : affected.nationalLevel),
+    nationalLevel: clamp(nationalCalled ? Math.max(affected.nationalLevel + 4, 18) : affected.nationalLevel - 2),
     stats: addStats(affected.stats, seasonStats),
     trophies: affected.trophies + titleCount,
     trophyCabinet: nextCabinet,
@@ -579,9 +851,19 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     awardCabinet: nextAwardCabinet,
     setbacks: affected.setbacks + setbackDelta,
     luckyBreaks: affected.luckyBreaks + luckyDelta,
-    libertadoresQualified: brasileiraoChampion || copaChampion || leaguePosition <= 6,
+    continentalSlot: nextContinentalSlot,
     worldQualifiedSeason: nextWorldQualifiedSeason,
     worldQualifiedClubId: nextWorldQualifiedClubId,
+    adaptation: abroad ? clamp(affected.adaptation + 10, 0, 100) : 100,
+    abroadSeasons: abroad ? affected.abroadSeasons + 1 : 0,
+    nationalCategory: nextNationalCategory,
+    nationalCaps,
+    nationalGoals,
+    nationalAssists,
+    nationalCaptain,
+    nationalTrophies: nationalTrophiesCount,
+    nationalHistory: nationalHistoryAdd ? [...affected.nationalHistory, nationalHistoryAdd] : affected.nationalHistory,
+    qualifiedNextMajor,
     history: [...affected.history, record],
     lastResult: result,
     lastConsequence: { choice: choiceLabel, headline: luckOutcome === "success" ? "A aposta deu certo" : luckOutcome === "failure" ? "A aposta deu errado" : "Sua decisão teve peso", resultText, changes: describeEffects(effect), luckOutcome },
@@ -589,10 +871,17 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     seenEvents,
     nextEventId: "",
   };
+  const wantsDomesticReturn = event.id === "european-exit" || event.id === "return-home";
+  let transferOffers = effect.transfer
+    ? selectOffers(nextBase, 3, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad })
+    : [];
+  if (effect.transfer && event.id === "return-home" && nextBase.academyClubId) {
+    transferOffers = [nextBase.academyClubId, ...transferOffers.filter((clubId) => clubId !== nextBase.academyClubId)].slice(0, 3);
+  }
   return {
     ...nextBase,
     nextEventId: selectNextEvent(nextBase, affected.season * 37),
-    transferOffers: effect.transfer ? selectOffers(nextBase, 3, affected.season * 43) : [],
+    transferOffers,
   };
 }
 
@@ -604,6 +893,18 @@ function ClubBadge({ club, size = "md" }: { club: Club; size?: "sm" | "md" | "lg
       aria-hidden="true"
     >
       <span>{club.abbr}</span>
+    </span>
+  );
+}
+
+function NationBadge({ country, size = "md" }: { country: Country; size?: "sm" | "md" | "lg" }) {
+  return (
+    <span
+      className={`nation-badge nation-badge-${size}`}
+      style={{ "--nation-primary": country.primary, "--nation-secondary": country.secondary } as CSSProperties}
+      aria-hidden="true"
+    >
+      <span>{country.abbr}</span>
     </span>
   );
 }
@@ -639,7 +940,7 @@ export default function Home() {
       const saved = localStorage.getItem(SAVE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as { version?: number; phase?: Phase };
-        if (parsed.version === 1 || parsed.version === 2 || parsed.version === 3) {
+        if (parsed.version === 1 || parsed.version === 2 || parsed.version === 3 || parsed.version === 4) {
           queueMicrotask(() => setHasSave(parsed.phase !== "welcome"));
         }
       }
@@ -675,6 +976,7 @@ export default function Home() {
   }, [toast]);
 
   const currentClub = useMemo(() => clubById(game.currentClubId || game.academyClubId), [game.currentClubId, game.academyClubId]);
+  const nationCountry = useMemo(() => countryById(game.nationality), [game.nationality]);
   const position = useMemo(() => positionByKey(game.position), [game.position]);
   const supporterMood = useMemo(() => fanMood(game.fanSupport), [game.fanSupport]);
   const currentEvent = useMemo(() => {
@@ -683,6 +985,7 @@ export default function Home() {
   }, [game.currentEventId]);
   const headerSeason = game.phase === "consequence" || game.phase === "season-result" ? game.lastResult?.season ?? game.season : game.season;
   const headerAge = game.phase === "consequence" || game.phase === "season-result" ? game.lastResult?.age ?? game.age : game.age;
+  const nationalTierLabel: Record<NationalTier, string> = { none: "Fora dos planos", sub17: "Seleção Sub-17", sub20: "Seleção Sub-20", olympic: "Seleção Olímpica", main: "Seleção Principal" };
 
   function vibrate() {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(18);
@@ -737,7 +1040,7 @@ export default function Home() {
       nextEventId: "",
       reputation: clubId === current.academyClubId ? 8 : 4,
       fanSupport: clubId === current.academyClubId ? 68 : 50,
-      libertadoresQualified: clubById(clubId).reputation >= 4,
+      continentalSlot: initialContinentalSlot(clubById(clubId)),
       money: 1,
     }));
     setActiveTab("event");
@@ -786,20 +1089,28 @@ export default function Home() {
   }
 
   function chooseTransfer(clubId: string | null) {
-    setGame((current) => ({
-      ...current,
-      phase: "career",
-      currentClubId: clubId ?? current.currentClubId,
-      currentEventId: current.nextEventId || "extra-training",
-      lastResult: null,
-      lastConsequence: null,
-      transferOffers: [],
-      morale: clamp(current.morale + (clubId ? 5 : 2)),
-      fanSupport: clubId ? 52 : clamp(current.fanSupport + (current.transferRequested ? -8 : 3)),
-      libertadoresQualified: clubId ? clubById(clubId).reputation >= 4 : current.libertadoresQualified,
-      transferStatus: null,
-      transferRequested: false,
-    }));
+    setGame((current) => {
+      const newClub = clubId ? clubById(clubId) : null;
+      const movingAbroad = Boolean(newClub && isAbroad(newClub));
+      const transferred: GameState = {
+        ...current,
+        phase: "career",
+        currentClubId: clubId ?? current.currentClubId,
+        currentEventId: "",
+        nextEventId: "",
+        lastResult: null,
+        lastConsequence: null,
+        transferOffers: [],
+        morale: clamp(current.morale + (clubId ? 5 : 2)),
+        fanSupport: clubId ? 52 : clamp(current.fanSupport + (current.transferRequested ? -8 : 3)),
+        continentalSlot: newClub ? initialContinentalSlot(newClub) : current.continentalSlot,
+        adaptation: newClub ? (movingAbroad ? initialAdaptation(newClub.countryId) : 100) : current.adaptation,
+        abroadSeasons: newClub ? 0 : current.abroadSeasons,
+        transferStatus: null,
+        transferRequested: false,
+      };
+      return { ...transferred, currentEventId: selectNextEvent(transferred, current.season * 47) };
+    });
     setActiveTab("event");
     vibrate();
   }
@@ -815,7 +1126,7 @@ export default function Home() {
         return {
           ...current,
           phase: "transfer",
-          transferOffers: selectOffers(current, 3, current.season * 101),
+          transferOffers: selectOffers(current, 3, current.season * 101, { includeForeign: true }),
           transferRequests: current.transferRequests + 1,
           transferCooldownSeason: current.season,
           transferRequested: true,
@@ -844,7 +1155,7 @@ export default function Home() {
   }
 
   async function shareCareer() {
-    const text = `Minha carreira no Futbobo: ${game.name}, ${position.name}, ${game.stats.appearances} jogos, ${game.stats.goals} gols, ${game.trophies} título(s) e pico de ${Math.max(game.overall, ...game.history.map((item) => item.overall), 0)} OVR. Você faria melhor?`;
+    const text = `Minha carreira no Futbobo: ${game.name}, ${position.name} de ${nationCountry.name}, ${game.stats.appearances} jogos, ${game.stats.goals} gols, ${game.trophies + game.nationalTrophies} taça(s) e pico de ${Math.max(game.overall, ...game.history.map((item) => item.overall), 0)} OVR. Você faria melhor?`;
     try {
       if (navigator.share) await navigator.share({ title: "Minha carreira no Futbobo", text, url: window.location.href });
       else await navigator.clipboard.writeText(`${text} ${window.location.href}`);
@@ -879,15 +1190,15 @@ export default function Home() {
           </div>
           <div className="welcome-copy">
             <span className="eyebrow">SUA HISTÓRIA. SUAS ESCOLHAS.</span>
-            <h1>Da base ao topo do Brasil.</h1>
-            <p>Comece aos 12, conquiste seu espaço e leve sua carreira do Brasileirão ao Mundial.</p>
+            <h1>Da base do Brasil à elite da Europa.</h1>
+            <p>Comece aos 12, conquiste seu espaço e leve sua carreira do Brasileirão à Champions League e à Seleção.</p>
           </div>
           <div className="welcome-actions">
             <button className="primary-button" onClick={startNew}>Começar nova carreira <span>→</span></button>
             {hasSave && <button className="secondary-button" onClick={continueSave}>Continuar carreira salva</button>}
           </div>
           <div className="welcome-features">
-            <span>◉ 20 clubes</span><span>✦ 12 posições</span><span>🏆 4 grandes taças</span>
+            <span>◉ 58 clubes</span><span>✦ 12 posições</span><span>🏆 8 ligas</span><span>★ 10 seleções</span>
           </div>
         </section>
       )}
@@ -926,25 +1237,47 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <div className="sticky-action"><button className="primary-button" disabled={!game.name.trim()} onClick={() => setGame((current) => ({ ...current, name: current.name.trim(), phase: "academy" }))}>Escolher clube de base <span>→</span></button></div>
+          <div className="sticky-action"><button className="primary-button" disabled={!game.name.trim()} onClick={() => setGame((current) => ({ ...current, name: current.name.trim(), phase: "nationality" }))}>Escolher nacionalidade <span>→</span></button></div>
+        </section>
+      )}
+
+      {game.phase === "nationality" && (
+        <section className="setup-screen screen-enter">
+          <header className="step-header">
+            <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "identity" }))} aria-label="Voltar">←</button>
+            <div><span>PASSO 2 DE 4</span><strong>Por qual país você vai jogar?</strong></div>
+            <div className="step-count">02</div>
+          </header>
+          <div className="setup-content">
+            <div className="intro-card"><span className="intro-icon">◇</span><div><strong>Sua Seleção vai te acompanhar a carreira toda.</strong><p>A nacionalidade define a trilha de base (Sub-17, Sub-20, Olímpica) e se você disputará a Eurocopa ou a Copa América com a Seleção principal.</p></div></div>
+            <div className="nation-grid">
+              {COUNTRIES.map((country) => (
+                <button key={country.id} aria-pressed={game.nationality === country.id} className={`nation-choice ${game.nationality === country.id ? "selected" : ""}`} onClick={() => setGame((current) => ({ ...current, nationality: country.id }))}>
+                  <NationBadge country={country} size="md" />
+                  <span><strong>{country.name}</strong><small>{country.confederation === "EUROPE" ? "Eurocopa" : "Copa América"}</small></span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="sticky-action"><button className="primary-button" onClick={() => setGame((current) => ({ ...current, phase: "academy" }))}>Escolher clube de base <span>→</span></button></div>
         </section>
       )}
 
       {game.phase === "academy" && (
         <section className="setup-screen screen-enter">
           <header className="step-header">
-            <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "identity" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 2 DE 4</span><strong>Escolha sua base</strong></div>
-            <div className="step-count">02</div>
+            <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "nationality" }))} aria-label="Voltar">←</button>
+            <div><span>PASSO 3 DE 4</span><strong>Escolha sua base</strong></div>
+            <div className="step-count">03</div>
           </header>
           <div className="setup-content">
             <div className="intro-card"><span className="intro-icon">⌂</span><div><strong>20 portas. Uma primeira camisa.</strong><p>A estrutura da base acelera seu desenvolvimento, mas toda escolha pode virar uma grande história.</p></div></div>
             <div className="club-grid">
-              {CLUBS.map((club) => (
+              {DOMESTIC_CLUBS.map((club) => (
                 <button key={club.id} className={`club-choice ${game.academyClubId === club.id ? "selected" : ""}`} onClick={() => setGame((current) => ({ ...current, academyClubId: club.id }))}>
                   <ClubBadge club={club} size="md" />
                   <span><strong>{club.shortName}</strong><small>{club.city} · {club.state}</small></span>
-                  <span className="academy-stars">{"★".repeat(club.academy)}{"☆".repeat(5 - club.academy)}</span>
+                  <span className="academy-stars">{"★".repeat(club.academy ?? 3)}{"☆".repeat(5 - (club.academy ?? 3))}</span>
                 </button>
               ))}
             </div>
@@ -957,8 +1290,8 @@ export default function Home() {
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "academy" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 3 DE 4</span><strong>Que jogador você será?</strong></div>
-            <div className="step-count">03</div>
+            <div><span>PASSO 4 DE 4</span><strong>Que jogador você será?</strong></div>
+            <div className="step-count">04</div>
           </header>
           <div className="setup-content">
             <div className="section-heading"><div><span>PRIMEIRA DECISÃO</span><h2>Seu foco até virar profissional</h2></div></div>
@@ -1025,7 +1358,7 @@ export default function Home() {
           <div className="reveal-card">
             <ClubBadge club={clubById(game.academyClubId)} size="lg" />
             <div className="reveal-overall"><span>OVR</span><strong>{game.overall}</strong></div>
-            <div className="reveal-name"><small>{game.archetype}</small><h1>{game.name}</h1><span>#{game.number} · {position.name} · {game.foot}</span></div>
+            <div className="reveal-name"><small>{game.archetype}</small><h1>{game.name}</h1><span>#{game.number} · {position.name} · {game.foot}</span><span className="reveal-nation"><NationBadge country={nationCountry} size="sm" />{nationCountry.name}</span></div>
             <div className="reveal-stats"><Metric label="Revelado aos" value={`${game.revealAge} anos`} /><Metric label="Momento" value="Em avaliação" tone="gold" /><Metric label="Estilo" value={position.style} /></div>
           </div>
           <div className="contract-section"><div className="section-heading"><div><span>PRIMEIRO CONTRATO</span><h2>Quem aposta em você?</h2></div></div>
@@ -1097,8 +1430,9 @@ export default function Home() {
                 {game.lastResult.competitions.map((competition) => <article key={competition.id} className={competition.champion ? "competition-card champion" : "competition-card"}><span>{competition.icon}</span><div><strong>{competition.name}</strong><small>{competition.stage}</small></div>{competition.champion && <b>★</b>}</article>)}
               </div>
               {game.lastResult.twist && <div className={`season-twist ${game.lastResult.development < 0 ? "negative" : "positive"}`}><span>O IMPREVISTO DA TEMPORADA</span><p>{game.lastResult.twist}</p></div>}
+              {game.lastResult.nationalNote && <div className="season-national-note"><NationBadge country={nationCountry} size="sm" /><p>{game.lastResult.nationalNote}</p></div>}
               {game.lastResult.awards.length > 0 && <div className="season-awards">{game.lastResult.awards.map((award) => <span key={award}>✦ {award}</span>)}</div>}
-              <div className="result-details"><span>Valor de mercado <strong>{formatMoney(game.lastResult.marketValue)}</strong></span>{game.lastResult.calledUp && <span className="callup-badge">★ No radar da Seleção</span>}</div>
+              <div className="result-details"><span>Valor de mercado <strong>{formatMoney(game.lastResult.marketValue)}</strong></span>{game.lastResult.calledUp && <span className="callup-badge">★ Convocado pela Seleção</span>}</div>
               <button className="primary-button" onClick={continueAfterResult}>{game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"} <span>→</span></button>
             </div>
           )}
@@ -1107,7 +1441,23 @@ export default function Home() {
             <div className="transfer-stage screen-enter">
               <span className="eyebrow">JANELA DE TRANSFERÊNCIAS</span><h1>{game.transferStatus?.success ? game.transferStatus.headline : "Seu próximo passo"}</h1><p>{game.transferStatus?.text ?? "Três clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui."}</p>
               <div className="offer-list transfer-offers">
-                {game.transferOffers.map((clubId, index) => { const club = clubById(clubId); return <button className="offer-card" key={clubId} onClick={() => chooseTransfer(clubId)}><ClubBadge club={club} /><span><small>{index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small><strong>{club.shortName}</strong><em>{club.city} · reputação {club.reputation}/5</em></span><b>→</b></button>; })}
+                {game.transferOffers.map((clubId, index) => {
+                  const club = clubById(clubId);
+                  const league = leagueById(club.leagueId);
+                  const abroad = isAbroad(club);
+                  return (
+                    <button className="offer-card" key={clubId} onClick={() => chooseTransfer(clubId)}>
+                      <ClubBadge club={club} />
+                      <span>
+                        <small>{index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
+                        <strong>{club.shortName}</strong>
+                        <em>{club.city} · {league.name} · reputação {club.reputation}/5</em>
+                        {abroad && <em className="offer-abroad-tag">◇ Aventura no exterior — adaptação começa do zero</em>}
+                      </span>
+                      <b>→</b>
+                    </button>
+                  );
+                })}
                 <button className="offer-card stay-card" onClick={() => chooseTransfer(null)}><ClubBadge club={currentClub} /><span><small>CONTINUAR O PROJETO</small><strong>Ficar no {currentClub.shortName}</strong><em>Manter seu espaço e sua história</em></span><b>✓</b></button>
               </div>
             </div>
@@ -1139,9 +1489,51 @@ export default function Home() {
               <div className="profile-hero"><div className="academy-avatar"><span>{game.number}</span><small>{game.position}</small></div><div><span>{game.archetype}</span><h2>{game.name}</h2><p>{position.style} · {game.foot}</p></div></div>
               <div className="profile-metrics"><Metric label="OVR" value={game.overall} tone="gold" /><Metric label="Momento" value={careerTrend(game.history)} /><Metric label="Valor" value={formatMoney(marketValue(game.overall, game.age))} /></div>
               <div className="supporter-card"><span>RELAÇÃO COM A TORCIDA</span><strong style={{ color: supporterMood.color }}>{supporterMood.label}</strong><p>{game.fanSupport < 38 ? "Cada toque pode virar vaia. Títulos e entrega reconquistam a arquibancada." : game.fanSupport >= 82 ? "Seu nome já faz parte da identidade do clube." : "A arquibancada ainda está decidindo que história contará sobre você."}</p></div>
-              <div className="attribute-card"><Progress label="Moral" value={game.morale} color="#2ca8ff" /><Progress label="Condição" value={game.fitness} color="#63e36b" /><Progress label="Prestígio" value={game.reputation} color="#ffc72c" /><Progress label="Liderança" value={game.leadership} color="#a675ff" /><Progress label="Seleção" value={game.nationalLevel} color="#f5f7f2" /><Progress label="Torcida" value={game.fanSupport} color={supporterMood.color} /></div>
-              <div className="career-total-card"><span>TOTAIS DA CARREIRA</span><div><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label="Títulos" value={game.trophies} tone="gold" /></div></div>
-              <div className="trophy-cabinet"><span>SALA DE TROFÉUS</span><div><Metric label="Brasileirão" value={game.trophyCabinet.brasileirao} tone="gold" /><Metric label="Copa do Brasil" value={game.trophyCabinet.copaBrasil} /><Metric label="Libertadores" value={game.trophyCabinet.libertadores} tone="gold" /><Metric label="Mundial" value={game.trophyCabinet.mundial} tone="green" /></div><small>✦ {game.awards} prêmio(s) individual(is)</small></div>
+              <div className="attribute-card">
+                <Progress label="Moral" value={game.morale} color="#2ca8ff" />
+                <Progress label="Condição" value={game.fitness} color="#63e36b" />
+                <Progress label="Prestígio" value={game.reputation} color="#ffc72c" />
+                <Progress label="Liderança" value={game.leadership} color="#a675ff" />
+                <Progress label="Seleção" value={game.nationalLevel} color="#f5f7f2" />
+                <Progress label="Torcida" value={game.fanSupport} color={supporterMood.color} />
+                {isAbroad(currentClub) && <Progress label="Adaptação" value={game.adaptation} color="#2ca8ff" />}
+              </div>
+              <div className="career-total-card"><span>TOTAIS DA CARREIRA</span><div><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label="Taças" value={game.trophies + game.nationalTrophies} tone="gold" /></div></div>
+              <div className="trophy-cabinet">
+                <span>SALA DE TROFÉUS</span>
+                <div>
+                  <Metric label="Ligas nacionais" value={game.trophyCabinet.domesticLeague} tone="gold" />
+                  <Metric label="Copas nacionais" value={game.trophyCabinet.domesticCup} />
+                  <Metric label="Libertadores" value={game.trophyCabinet.libertadores} tone="gold" />
+                  <Metric label="Mundial" value={game.trophyCabinet.mundial} tone="green" />
+                  {game.trophyCabinet.championsLeague > 0 && <Metric label="Champions" value={game.trophyCabinet.championsLeague} tone="gold" />}
+                  {game.trophyCabinet.europaLeague > 0 && <Metric label="Europa League" value={game.trophyCabinet.europaLeague} />}
+                  {game.trophyCabinet.conferenceLeague > 0 && <Metric label="Conference" value={game.trophyCabinet.conferenceLeague} />}
+                </div>
+                <small>✦ {game.awards} prêmio(s) individual(is)</small>
+              </div>
+              <div className="national-team-card">
+                <span>CENTRAL DA SELEÇÃO</span>
+                <div className="national-team-head">
+                  <NationBadge country={nationCountry} size="md" />
+                  <div><strong>{nationCountry.name}</strong><small>{nationalTierLabel[game.nationalCategory]}{game.nationalCaptain ? " · Capitão" : ""}</small></div>
+                </div>
+                <div className="national-team-metrics">
+                  <Metric label="Jogos" value={game.nationalCaps} />
+                  <Metric label="Gols" value={game.nationalGoals} />
+                  <Metric label="Assistências" value={game.nationalAssists} />
+                  <Metric label="Taças" value={game.nationalTrophies} tone="gold" />
+                </div>
+                {game.nationalHistory.length === 0 ? (
+                  <p>Ainda sem convocações. Bons números no clube abrem a porta da Seleção.</p>
+                ) : (
+                  <div className="national-history-list">
+                    {[...game.nationalHistory].reverse().slice(0, 4).map((entry) => (
+                      <article key={`${entry.season}-${entry.name}`}><span>{entry.season}</span><div><strong>{entry.name}</strong><small>{entry.stage}</small></div>{entry.champion && <b>🏆</b>}</article>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="career-fortune"><span>TRAJETÓRIA</span><div><Metric label="Baques" value={game.setbacks} tone="danger" /><Metric label="Viradas de sorte" value={game.luckyBreaks} tone="green" /></div></div>
               <div className="award-cabinet">
                 <span>PRÊMIOS INDIVIDUAIS</span>
@@ -1171,9 +1563,9 @@ export default function Home() {
           <h1>Uma história que só você viveu.</h1>
           <div className="share-card">
             <div className="share-brand"><span className="brand-ball">F</span><strong>FUTBOBO</strong><small>MINHA CARREIRA</small></div>
-            <div className="share-player"><ClubBadge club={currentClub} size="lg" /><div><span>{game.archetype}</span><h2>{game.name}</h2><p>#{game.number} · {position.name}</p></div><strong>{Math.max(game.overall, ...game.history.map((item) => item.overall), 0)}<small>PICO OVR</small></strong></div>
-            <div className="share-numbers"><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label="Taças" value={game.trophies} tone="gold" /></div>
-            <div className="share-trophies"><span>BR {game.trophyCabinet.brasileirao}</span><span>CB {game.trophyCabinet.copaBrasil}</span><span>LIB {game.trophyCabinet.libertadores}</span><span>MUN {game.trophyCabinet.mundial}</span></div>
+            <div className="share-player"><ClubBadge club={currentClub} size="lg" /><div><span>{game.archetype}</span><h2>{game.name}</h2><p>#{game.number} · {position.name} · {nationCountry.abbr}</p></div><strong>{Math.max(game.overall, ...game.history.map((item) => item.overall), 0)}<small>PICO OVR</small></strong></div>
+            <div className="share-numbers"><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label="Taças" value={game.trophies + game.nationalTrophies} tone="gold" /></div>
+            <div className="share-trophies"><span>LIGA {game.trophyCabinet.domesticLeague}</span><span>COPA {game.trophyCabinet.domesticCup}</span><span>LIB {game.trophyCabinet.libertadores}</span><span>MUN {game.trophyCabinet.mundial}</span><span>UCL {game.trophyCabinet.championsLeague}</span><span>SEL {game.nationalTrophies}</span></div>
             <div className="share-path"><span>12</span><div />{Array.from(new Set(game.history.map((item) => item.clubId))).map((clubId) => <ClubBadge key={clubId} club={clubById(clubId)} size="sm" />)}<div /><span>{game.age}</span></div>
             <small className="share-url">erereck.github.io/futbobo</small>
           </div>

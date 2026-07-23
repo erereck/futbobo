@@ -23,17 +23,45 @@ export type Position = {
   assists: number;
 };
 
+export type Confederation = "SOUTH_AMERICA" | "EUROPE";
+
+export type Country = {
+  id: string;
+  name: string;
+  demonym: string;
+  abbr: string;
+  confederation: Confederation;
+  strength: number;
+  primary: string;
+  secondary: string;
+};
+
+export type League = {
+  id: string;
+  countryId: string;
+  name: string;
+  cupName: string;
+  prestige: number;
+  championsPlaces: number;
+  europaPlaces: number;
+  conferencePlaces: number;
+};
+
+export type ContinentalSlot = "libertadores" | "champions" | "europa" | "conference";
+
 export type Club = {
   id: string;
   name: string;
   shortName: string;
   abbr: string;
   city: string;
-  state: string;
+  state?: string;
+  countryId: string;
+  leagueId: string;
   primary: string;
   secondary: string;
   reputation: number;
-  academy: number;
+  academy?: number;
 };
 
 export type Formation = {
@@ -60,9 +88,14 @@ export type Effect = {
   minutes?: number;
   titleBoost?: number;
   nationalBoost?: number;
+  nationalTitleBoost?: number;
+  nationalCall?: boolean;
+  nationalCaptain?: boolean;
+  adaptation?: number;
   fans?: number;
   injuryRisk?: number;
   transfer?: boolean;
+  transferAbroad?: boolean;
   retire?: boolean;
 };
 
@@ -80,6 +113,11 @@ export type GameEvent = {
   needsNational?: boolean;
   needsLibertadores?: boolean;
   needsWorld?: boolean;
+  needsAbroad?: boolean;
+  needsContinental?: ContinentalSlot;
+  needsNationalMain?: boolean;
+  needsNationalYouth?: boolean;
+  nationalWindow?: "major" | "continental" | "olympics" | "qualifiers";
   oneTime?: boolean;
   choices: Array<{
     label: string;
@@ -111,30 +149,115 @@ export const POSITIONS: Position[] = [
   { key: "CA", name: "Centroavante", zone: "ataque", style: "Matador de área", icon: "◎", color: "#ff7a45", goals: 0.34, assists: 0.08 },
 ];
 
+// Nações disponíveis para nacionalidade do jogador (Seleção) e para sediar ligas de clubes.
+export const COUNTRIES: Country[] = [
+  { id: "brasil", name: "Brasil", demonym: "brasileiro", abbr: "BRA", confederation: "SOUTH_AMERICA", strength: 5, primary: "#08783e", secondary: "#f2b705" },
+  { id: "argentina", name: "Argentina", demonym: "argentino", abbr: "ARG", confederation: "SOUTH_AMERICA", strength: 5, primary: "#6cabe0", secondary: "#f5f5f5" },
+  { id: "uruguai", name: "Uruguai", demonym: "uruguaio", abbr: "URU", confederation: "SOUTH_AMERICA", strength: 3, primary: "#4a9fd6", secondary: "#111111" },
+  { id: "portugal", name: "Portugal", demonym: "português", abbr: "POR", confederation: "EUROPE", strength: 4, primary: "#08783e", secondary: "#d71920" },
+  { id: "espanha", name: "Espanha", demonym: "espanhol", abbr: "ESP", confederation: "EUROPE", strength: 5, primary: "#d71920", secondary: "#f2b705" },
+  { id: "franca", name: "França", demonym: "francês", abbr: "FRA", confederation: "EUROPE", strength: 5, primary: "#274b9f", secondary: "#d71920" },
+  { id: "inglaterra", name: "Inglaterra", demonym: "inglês", abbr: "ING", confederation: "EUROPE", strength: 4, primary: "#d71920", secondary: "#f5f5f5" },
+  { id: "alemanha", name: "Alemanha", demonym: "alemão", abbr: "ALE", confederation: "EUROPE", strength: 5, primary: "#111111", secondary: "#d71920" },
+  { id: "italia", name: "Itália", demonym: "italiano", abbr: "ITA", confederation: "EUROPE", strength: 4, primary: "#08783e", secondary: "#f5f5f5" },
+  { id: "holanda", name: "Holanda", demonym: "holandês", abbr: "HOL", confederation: "EUROPE", strength: 3, primary: "#ff7a1a", secondary: "#274b9f" },
+];
+
+export function countryById(id: string): Country {
+  return COUNTRIES.find((country) => country.id === id) ?? COUNTRIES[0];
+}
+
+// Ligas de clubes simuladas de forma compacta: força/prestígio importam mais que a tabela completa.
+export const LEAGUES: League[] = [
+  { id: "brasileirao", countryId: "brasil", name: "Brasileirão", cupName: "Copa do Brasil", prestige: 4, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "premier", countryId: "inglaterra", name: "Premier League", cupName: "FA Cup", prestige: 5, championsPlaces: 4, europaPlaces: 6, conferencePlaces: 8 },
+  { id: "laliga", countryId: "espanha", name: "La Liga", cupName: "Copa del Rey", prestige: 5, championsPlaces: 4, europaPlaces: 6, conferencePlaces: 7 },
+  { id: "seriea", countryId: "italia", name: "Serie A", cupName: "Coppa Italia", prestige: 4, championsPlaces: 4, europaPlaces: 6, conferencePlaces: 7 },
+  { id: "bundesliga", countryId: "alemanha", name: "Bundesliga", cupName: "DFB-Pokal", prestige: 4, championsPlaces: 4, europaPlaces: 6, conferencePlaces: 7 },
+  { id: "ligue1", countryId: "franca", name: "Ligue 1", cupName: "Coupe de France", prestige: 3, championsPlaces: 3, europaPlaces: 5, conferencePlaces: 6 },
+  { id: "primeira", countryId: "portugal", name: "Primeira Liga", cupName: "Taça de Portugal", prestige: 3, championsPlaces: 2, europaPlaces: 4, conferencePlaces: 5 },
+  { id: "eredivisie", countryId: "holanda", name: "Eredivisie", cupName: "KNVB Beker", prestige: 3, championsPlaces: 2, europaPlaces: 4, conferencePlaces: 5 },
+];
+
+export function leagueById(id: string): League {
+  return LEAGUES.find((league) => league.id === id) ?? LEAGUES[0];
+}
+
 // Série A 2026, conforme a relação oficial da CBF. Os escudos serão substituídos
 // por uma fonte de dados licenciada; nesta demo cada clube recebe um monograma.
-export const CLUBS: Club[] = [
-  { id: "athletico", name: "Athletico Paranaense", shortName: "Athletico-PR", abbr: "CAP", city: "Curitiba", state: "PR", primary: "#d71920", secondary: "#111111", reputation: 4, academy: 4 },
-  { id: "atletico-mg", name: "Atlético Mineiro", shortName: "Atlético-MG", abbr: "CAM", city: "Belo Horizonte", state: "MG", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 4 },
-  { id: "bahia", name: "Esporte Clube Bahia", shortName: "Bahia", abbr: "BAH", city: "Salvador", state: "BA", primary: "#0057a8", secondary: "#e32636", reputation: 4, academy: 4 },
-  { id: "botafogo", name: "Botafogo de Futebol e Regatas", shortName: "Botafogo", abbr: "BOT", city: "Rio de Janeiro", state: "RJ", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 4 },
-  { id: "chapecoense", name: "Associação Chapecoense de Futebol", shortName: "Chapecoense", abbr: "CHA", city: "Chapecó", state: "SC", primary: "#08783e", secondary: "#f5f5f5", reputation: 2, academy: 3 },
-  { id: "corinthians", name: "Sport Club Corinthians Paulista", shortName: "Corinthians", abbr: "COR", city: "São Paulo", state: "SP", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 5 },
-  { id: "coritiba", name: "Coritiba Foot Ball Club", shortName: "Coritiba", abbr: "CFC", city: "Curitiba", state: "PR", primary: "#08783e", secondary: "#f5f5f5", reputation: 3, academy: 3 },
-  { id: "cruzeiro", name: "Cruzeiro Esporte Clube", shortName: "Cruzeiro", abbr: "CRU", city: "Belo Horizonte", state: "MG", primary: "#164194", secondary: "#f5f5f5", reputation: 5, academy: 5 },
-  { id: "flamengo", name: "Clube de Regatas do Flamengo", shortName: "Flamengo", abbr: "FLA", city: "Rio de Janeiro", state: "RJ", primary: "#d71920", secondary: "#111111", reputation: 5, academy: 5 },
-  { id: "fluminense", name: "Fluminense Football Club", shortName: "Fluminense", abbr: "FLU", city: "Rio de Janeiro", state: "RJ", primary: "#7a1538", secondary: "#007a4d", reputation: 5, academy: 5 },
-  { id: "gremio", name: "Grêmio Foot-Ball Porto Alegrense", shortName: "Grêmio", abbr: "GRE", city: "Porto Alegre", state: "RS", primary: "#2a9fd6", secondary: "#111111", reputation: 5, academy: 5 },
-  { id: "internacional", name: "Sport Club Internacional", shortName: "Internacional", abbr: "INT", city: "Porto Alegre", state: "RS", primary: "#d71920", secondary: "#f5f5f5", reputation: 5, academy: 5 },
-  { id: "mirassol", name: "Mirassol Futebol Clube", shortName: "Mirassol", abbr: "MIR", city: "Mirassol", state: "SP", primary: "#f2b705", secondary: "#0a7a3d", reputation: 2, academy: 3 },
-  { id: "palmeiras", name: "Sociedade Esportiva Palmeiras", shortName: "Palmeiras", abbr: "PAL", city: "São Paulo", state: "SP", primary: "#08783e", secondary: "#f5f5f5", reputation: 5, academy: 5 },
-  { id: "bragantino", name: "Red Bull Bragantino", shortName: "Bragantino", abbr: "RBB", city: "Bragança Paulista", state: "SP", primary: "#f5f5f5", secondary: "#d71920", reputation: 4, academy: 5 },
-  { id: "remo", name: "Clube do Remo", shortName: "Remo", abbr: "REM", city: "Belém", state: "PA", primary: "#162c6c", secondary: "#f5f5f5", reputation: 2, academy: 3 },
-  { id: "santos", name: "Santos Futebol Clube", shortName: "Santos", abbr: "SAN", city: "Santos", state: "SP", primary: "#f5f5f5", secondary: "#111111", reputation: 5, academy: 5 },
-  { id: "sao-paulo", name: "São Paulo Futebol Clube", shortName: "São Paulo", abbr: "SAO", city: "São Paulo", state: "SP", primary: "#f5f5f5", secondary: "#d71920", reputation: 5, academy: 5 },
-  { id: "vasco", name: "Club de Regatas Vasco da Gama", shortName: "Vasco", abbr: "VAS", city: "Rio de Janeiro", state: "RJ", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 5 },
-  { id: "vitoria", name: "Esporte Clube Vitória", shortName: "Vitória", abbr: "VIT", city: "Salvador", state: "BA", primary: "#d71920", secondary: "#111111", reputation: 3, academy: 4 },
+const BRAZIL_CLUBS: Club[] = [
+  { id: "athletico", name: "Athletico Paranaense", shortName: "Athletico-PR", abbr: "CAP", city: "Curitiba", state: "PR", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#111111", reputation: 4, academy: 4 },
+  { id: "atletico-mg", name: "Atlético Mineiro", shortName: "Atlético-MG", abbr: "CAM", city: "Belo Horizonte", state: "MG", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 4 },
+  { id: "bahia", name: "Esporte Clube Bahia", shortName: "Bahia", abbr: "BAH", city: "Salvador", state: "BA", countryId: "brasil", leagueId: "brasileirao", primary: "#0057a8", secondary: "#e32636", reputation: 4, academy: 4 },
+  { id: "botafogo", name: "Botafogo de Futebol e Regatas", shortName: "Botafogo", abbr: "BOT", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 4 },
+  { id: "chapecoense", name: "Associação Chapecoense de Futebol", shortName: "Chapecoense", abbr: "CHA", city: "Chapecó", state: "SC", countryId: "brasil", leagueId: "brasileirao", primary: "#08783e", secondary: "#f5f5f5", reputation: 2, academy: 3 },
+  { id: "corinthians", name: "Sport Club Corinthians Paulista", shortName: "Corinthians", abbr: "COR", city: "São Paulo", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 5 },
+  { id: "coritiba", name: "Coritiba Foot Ball Club", shortName: "Coritiba", abbr: "CFC", city: "Curitiba", state: "PR", countryId: "brasil", leagueId: "brasileirao", primary: "#08783e", secondary: "#f5f5f5", reputation: 3, academy: 3 },
+  { id: "cruzeiro", name: "Cruzeiro Esporte Clube", shortName: "Cruzeiro", abbr: "CRU", city: "Belo Horizonte", state: "MG", countryId: "brasil", leagueId: "brasileirao", primary: "#164194", secondary: "#f5f5f5", reputation: 5, academy: 5 },
+  { id: "flamengo", name: "Clube de Regatas do Flamengo", shortName: "Flamengo", abbr: "FLA", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#111111", reputation: 5, academy: 5 },
+  { id: "fluminense", name: "Fluminense Football Club", shortName: "Fluminense", abbr: "FLU", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#7a1538", secondary: "#007a4d", reputation: 5, academy: 5 },
+  { id: "gremio", name: "Grêmio Foot-Ball Porto Alegrense", shortName: "Grêmio", abbr: "GRE", city: "Porto Alegre", state: "RS", countryId: "brasil", leagueId: "brasileirao", primary: "#2a9fd6", secondary: "#111111", reputation: 5, academy: 5 },
+  { id: "internacional", name: "Sport Club Internacional", shortName: "Internacional", abbr: "INT", city: "Porto Alegre", state: "RS", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#f5f5f5", reputation: 5, academy: 5 },
+  { id: "mirassol", name: "Mirassol Futebol Clube", shortName: "Mirassol", abbr: "MIR", city: "Mirassol", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f2b705", secondary: "#0a7a3d", reputation: 2, academy: 3 },
+  { id: "palmeiras", name: "Sociedade Esportiva Palmeiras", shortName: "Palmeiras", abbr: "PAL", city: "São Paulo", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#08783e", secondary: "#f5f5f5", reputation: 5, academy: 5 },
+  { id: "bragantino", name: "Red Bull Bragantino", shortName: "Bragantino", abbr: "RBB", city: "Bragança Paulista", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f5f5f5", secondary: "#d71920", reputation: 4, academy: 5 },
+  { id: "remo", name: "Clube do Remo", shortName: "Remo", abbr: "REM", city: "Belém", state: "PA", countryId: "brasil", leagueId: "brasileirao", primary: "#162c6c", secondary: "#f5f5f5", reputation: 2, academy: 3 },
+  { id: "santos", name: "Santos Futebol Clube", shortName: "Santos", abbr: "SAN", city: "Santos", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f5f5f5", secondary: "#111111", reputation: 5, academy: 5 },
+  { id: "sao-paulo", name: "São Paulo Futebol Clube", shortName: "São Paulo", abbr: "SAO", city: "São Paulo", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f5f5f5", secondary: "#d71920", reputation: 5, academy: 5 },
+  { id: "vasco", name: "Club de Regatas Vasco da Gama", shortName: "Vasco", abbr: "VAS", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 5 },
+  { id: "vitoria", name: "Esporte Clube Vitória", shortName: "Vitória", abbr: "VIT", city: "Salvador", state: "BA", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#111111", reputation: 3, academy: 4 },
 ];
+
+// Clubes europeus: nomes reais, sem uso de logos — escudo é sempre o monograma tipográfico do clube.
+const EUROPE_CLUBS: Club[] = [
+  // Inglaterra — Premier League
+  { id: "man-city", name: "Manchester City Football Club", shortName: "Manchester City", abbr: "MCI", city: "Manchester", countryId: "inglaterra", leagueId: "premier", primary: "#6cabe0", secondary: "#f5f5f5", reputation: 5 },
+  { id: "liverpool", name: "Liverpool Football Club", shortName: "Liverpool", abbr: "LIV", city: "Liverpool", countryId: "inglaterra", leagueId: "premier", primary: "#d71920", secondary: "#f5f5f5", reputation: 5 },
+  { id: "arsenal", name: "Arsenal Football Club", shortName: "Arsenal", abbr: "ARS", city: "Londres", countryId: "inglaterra", leagueId: "premier", primary: "#d71920", secondary: "#111111", reputation: 5 },
+  { id: "man-utd", name: "Manchester United Football Club", shortName: "Manchester United", abbr: "MUN", city: "Manchester", countryId: "inglaterra", leagueId: "premier", primary: "#d71920", secondary: "#f2b705", reputation: 4 },
+  { id: "chelsea", name: "Chelsea Football Club", shortName: "Chelsea", abbr: "CHE", city: "Londres", countryId: "inglaterra", leagueId: "premier", primary: "#274b9f", secondary: "#f5f5f5", reputation: 4 },
+  { id: "tottenham", name: "Tottenham Hotspur Football Club", shortName: "Tottenham", abbr: "TOT", city: "Londres", countryId: "inglaterra", leagueId: "premier", primary: "#f5f5f5", secondary: "#111111", reputation: 4 },
+  { id: "newcastle", name: "Newcastle United Football Club", shortName: "Newcastle", abbr: "NEW", city: "Newcastle", countryId: "inglaterra", leagueId: "premier", primary: "#111111", secondary: "#f5f5f5", reputation: 3 },
+  { id: "aston-villa", name: "Aston Villa Football Club", shortName: "Aston Villa", abbr: "AVL", city: "Birmingham", countryId: "inglaterra", leagueId: "premier", primary: "#7a1538", secondary: "#4a9fd6", reputation: 3 },
+  // Espanha — La Liga
+  { id: "real-madrid", name: "Real Madrid Club de Fútbol", shortName: "Real Madrid", abbr: "RMA", city: "Madri", countryId: "espanha", leagueId: "laliga", primary: "#f5f5f5", secondary: "#f2b705", reputation: 5 },
+  { id: "barcelona", name: "Futbol Club Barcelona", shortName: "Barcelona", abbr: "BAR", city: "Barcelona", countryId: "espanha", leagueId: "laliga", primary: "#274b9f", secondary: "#d71920", reputation: 5 },
+  { id: "atletico-madrid", name: "Club Atlético de Madrid", shortName: "Atlético de Madrid", abbr: "ATM", city: "Madri", countryId: "espanha", leagueId: "laliga", primary: "#d71920", secondary: "#274b9f", reputation: 4 },
+  { id: "real-sociedad", name: "Real Sociedad de Fútbol", shortName: "Real Sociedad", abbr: "RSO", city: "San Sebastián", countryId: "espanha", leagueId: "laliga", primary: "#111111", secondary: "#4a9fd6", reputation: 3 },
+  { id: "sevilla", name: "Sevilla Fútbol Club", shortName: "Sevilla", abbr: "SEV", city: "Sevilha", countryId: "espanha", leagueId: "laliga", primary: "#f5f5f5", secondary: "#d71920", reputation: 3 },
+  { id: "athletic-bilbao", name: "Athletic Club", shortName: "Athletic Bilbao", abbr: "ATH", city: "Bilbao", countryId: "espanha", leagueId: "laliga", primary: "#d71920", secondary: "#f5f5f5", reputation: 3 },
+  { id: "real-betis", name: "Real Betis Balompié", shortName: "Real Betis", abbr: "BET", city: "Sevilha", countryId: "espanha", leagueId: "laliga", primary: "#08783e", secondary: "#f5f5f5", reputation: 3 },
+  // Itália — Serie A
+  { id: "inter", name: "Football Club Internazionale Milano", shortName: "Inter de Milão", abbr: "IMI", city: "Milão", countryId: "italia", leagueId: "seriea", primary: "#274b9f", secondary: "#111111", reputation: 5 },
+  { id: "milan", name: "Associazione Calcio Milan", shortName: "Milan", abbr: "MIL", city: "Milão", countryId: "italia", leagueId: "seriea", primary: "#d71920", secondary: "#111111", reputation: 4 },
+  { id: "juventus", name: "Juventus Football Club", shortName: "Juventus", abbr: "JUV", city: "Turim", countryId: "italia", leagueId: "seriea", primary: "#111111", secondary: "#f5f5f5", reputation: 4 },
+  { id: "napoli", name: "Società Sportiva Calcio Napoli", shortName: "Napoli", abbr: "NAP", city: "Nápoles", countryId: "italia", leagueId: "seriea", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 4 },
+  { id: "roma", name: "Associazione Sportiva Roma", shortName: "Roma", abbr: "ROM", city: "Roma", countryId: "italia", leagueId: "seriea", primary: "#7a1538", secondary: "#f2b705", reputation: 3 },
+  { id: "atalanta", name: "Atalanta Bergamasca Calcio", shortName: "Atalanta", abbr: "ATA", city: "Bérgamo", countryId: "italia", leagueId: "seriea", primary: "#111111", secondary: "#4a9fd6", reputation: 3 },
+  // Alemanha — Bundesliga
+  { id: "bayern", name: "Fußball-Club Bayern München", shortName: "Bayern de Munique", abbr: "BAY", city: "Munique", countryId: "alemanha", leagueId: "bundesliga", primary: "#d71920", secondary: "#f5f5f5", reputation: 5 },
+  { id: "dortmund", name: "Borussia Dortmund", shortName: "Borussia Dortmund", abbr: "BVB", city: "Dortmund", countryId: "alemanha", leagueId: "bundesliga", primary: "#f2b705", secondary: "#111111", reputation: 4 },
+  { id: "leipzig", name: "RasenBallsport Leipzig", shortName: "RB Leipzig", abbr: "RBL", city: "Leipzig", countryId: "alemanha", leagueId: "bundesliga", primary: "#f5f5f5", secondary: "#111111", reputation: 4 },
+  { id: "leverkusen", name: "Bayer 04 Leverkusen", shortName: "Bayer Leverkusen", abbr: "B04", city: "Leverkusen", countryId: "alemanha", leagueId: "bundesliga", primary: "#d71920", secondary: "#111111", reputation: 4 },
+  { id: "frankfurt", name: "Eintracht Frankfurt", shortName: "Eintracht Frankfurt", abbr: "SGE", city: "Frankfurt", countryId: "alemanha", leagueId: "bundesliga", primary: "#111111", secondary: "#d71920", reputation: 3 },
+  // França — Ligue 1
+  { id: "psg", name: "Paris Saint-Germain Football Club", shortName: "Paris Saint-Germain", abbr: "PSG", city: "Paris", countryId: "franca", leagueId: "ligue1", primary: "#274b9f", secondary: "#d71920", reputation: 5 },
+  { id: "marseille", name: "Olympique de Marseille", shortName: "Olympique de Marselha", abbr: "OM", city: "Marselha", countryId: "franca", leagueId: "ligue1", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 3 },
+  { id: "lyon", name: "Olympique Lyonnais", shortName: "Olympique de Lyon", abbr: "OL", city: "Lyon", countryId: "franca", leagueId: "ligue1", primary: "#274b9f", secondary: "#d71920", reputation: 3 },
+  { id: "monaco", name: "Association Sportive de Monaco", shortName: "AS Monaco", abbr: "ASM", city: "Mônaco", countryId: "franca", leagueId: "ligue1", primary: "#d71920", secondary: "#f5f5f5", reputation: 3 },
+  { id: "lille", name: "Lille Olympique Sporting Club", shortName: "Lille", abbr: "LIL", city: "Lille", countryId: "franca", leagueId: "ligue1", primary: "#d71920", secondary: "#4a9fd6", reputation: 3 },
+  // Portugal — Primeira Liga
+  { id: "benfica", name: "Sport Lisboa e Benfica", shortName: "Benfica", abbr: "BEN", city: "Lisboa", countryId: "portugal", leagueId: "primeira", primary: "#d71920", secondary: "#f5f5f5", reputation: 4 },
+  { id: "porto", name: "Futebol Clube do Porto", shortName: "Porto", abbr: "FCP", city: "Porto", countryId: "portugal", leagueId: "primeira", primary: "#4a9fd6", secondary: "#111111", reputation: 4 },
+  { id: "sporting", name: "Sporting Clube de Portugal", shortName: "Sporting", abbr: "SCP", city: "Lisboa", countryId: "portugal", leagueId: "primeira", primary: "#08783e", secondary: "#f5f5f5", reputation: 4 },
+  { id: "braga", name: "Sporting Clube de Braga", shortName: "Braga", abbr: "SCB", city: "Braga", countryId: "portugal", leagueId: "primeira", primary: "#d71920", secondary: "#f5f5f5", reputation: 3 },
+  // Holanda — Eredivisie
+  { id: "ajax", name: "Amsterdamsche Football Club Ajax", shortName: "Ajax", abbr: "AJA", city: "Amsterdã", countryId: "holanda", leagueId: "eredivisie", primary: "#f5f5f5", secondary: "#d71920", reputation: 3 },
+  { id: "psv", name: "Philips Sport Vereniging", shortName: "PSV Eindhoven", abbr: "PSV", city: "Eindhoven", countryId: "holanda", leagueId: "eredivisie", primary: "#d71920", secondary: "#f5f5f5", reputation: 3 },
+  { id: "feyenoord", name: "Feyenoord Rotterdam", shortName: "Feyenoord", abbr: "FEY", city: "Roterdã", countryId: "holanda", leagueId: "eredivisie", primary: "#d71920", secondary: "#f5f5f5", reputation: 3 },
+];
+
+export const CLUBS: Club[] = [...BRAZIL_CLUBS, ...EUROPE_CLUBS];
 
 export const FORMATIONS: Formation[] = [
   { id: "artista", icon: "✦", title: "Bola no pé", subtitle: "Técnica acima de tudo", description: "Mais drible, passe e criatividade. O físico demora um pouco mais.", technical: 9, physical: 1, mental: 4, risk: 2, archetype: "O Artista" },
@@ -196,8 +319,8 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Tratar até zerar a dor", hint: "Tempo fora · recuperação segura", result: "Você volta sem medo de acelerar.", effect: { fitness: 18, ovr: -1, morale: -2 } },
     { label: "Acelerar o retorno", hint: "Minutos agora · risco de recaída", result: "Você volta cedo, ainda ouvindo o corpo reclamar.", effect: { fitness: 5, minutes: 5, injuryRisk: 12 } },
   ]},
-  { id: "national-u20", icon: "★", tag: "SELEÇÃO", title: "A amarelinha chamou", description: "Seu nome apareceu na convocação da Seleção Sub-20.", minOvr: 68, maxAge: 20, oneTime: true, choices: [
-    { label: "Representar o Brasil", hint: "Reputação ↑↑ · cansaço", result: "O hino arrepia e seu nome ganha o país.", effect: { reputation: 10, fitness: -9, nationalBoost: 12 } },
+  { id: "national-u20", icon: "★", tag: "SELEÇÃO", title: "A Seleção Sub-20 chamou", description: "Seu nome apareceu na convocação da categoria de base do seu país.", minOvr: 68, maxAge: 20, oneTime: true, choices: [
+    { label: "Representar seu país", hint: "Convocado · reputação ↑↑", result: "O hino arrepia e seu nome ganha o país.", effect: { reputation: 10, fitness: -9, nationalBoost: 12, nationalCall: true } },
     { label: "Ficar no clube", hint: "Condição ↑ · seleção ↓", result: "Você ganha fôlego no clube e perde espaço no radar.", effect: { fitness: 12, nationalBoost: -8 } },
   ]},
   { id: "renewal", icon: "✎", tag: "CONTRATO", title: "A caneta está na mesa", description: "Seu contrato entra no último ano e o clube quer uma resposta.", minAge: 20, choices: [
@@ -225,16 +348,16 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Deixar o clube falar", hint: "Profissionalismo ↑", result: "A nota oficial esfria o assunto.", effect: { leadership: 3, reputation: 2 } },
     { label: "Pedir reunião", hint: "Controle ↑ · mercado", result: "Agora você sabe exatamente quem está interessado.", effect: { transfer: true, morale: 3 } },
   ]},
-  { id: "senior-national", icon: "BR", tag: "SELEÇÃO", title: "Convocado para a Seleção Brasileira", description: "O telefone toca durante o almoço. Você está na lista principal.", minOvr: 78, oneTime: true, choices: [
-    { label: "Chegar para disputar vaga", hint: "Reputação ↑↑ · pressão", result: "Você pisa na Granja com os olhos de quem quer ficar.", effect: { reputation: 16, morale: 5, fitness: -7, nationalBoost: 20 } },
-    { label: "Aprender com o grupo", hint: "Evolução futura ↑ · seguro", result: "A primeira convocação vira uma aula de alto nível.", effect: { potential: 3, reputation: 10, nationalBoost: 12 } },
+  { id: "senior-national", icon: "SEL", tag: "SELEÇÃO", title: "Convocado para a Seleção principal", description: "O telefone toca durante o almoço. Você está na lista principal do seu país.", minOvr: 78, oneTime: true, choices: [
+    { label: "Chegar para disputar vaga", hint: "Convocado · reputação ↑↑", result: "Você chega à concentração com os olhos de quem quer ficar.", effect: { reputation: 16, morale: 5, fitness: -7, nationalBoost: 20, nationalCall: true } },
+    { label: "Aprender com o grupo", hint: "Convocado · evolução futura", result: "A primeira convocação vira uma aula de alto nível.", effect: { potential: 3, reputation: 10, nationalBoost: 12, nationalCall: true } },
   ]},
   { id: "divided-locker", icon: "╱", tag: "CRISE", title: "O vestiário se dividiu", description: "Resultados ruins criaram dois lados. Todos querem saber onde você está.", minAge: 23, choices: [
     { label: "Tentar unir o grupo", hint: "Liderança ↑↑", result: "A conversa não resolve tudo, mas muda o tom.", effect: { leadership: 10, morale: 5 } },
     { label: "Focar apenas no campo", hint: "OVR ↑ · grupo ↓", result: "Seu futebol cresce enquanto o silêncio pesa.", effect: { ovr: 1, morale: -5 } },
     { label: "Apoiar o treinador", hint: "Minutos ↑ · risco", result: "O técnico agradece. Parte do elenco não esquece.", effect: { minutes: 8, morale: -6 } },
   ]},
-  { id: "title-run", icon: "🏆", tag: "RETA FINAL", title: "O Brasileirão está ao alcance", description: "Quatro rodadas. Três pontos de diferença. O país inteiro acompanha cada passo.", minOvr: 76, choices: [
+  { id: "title-run", icon: "🏆", tag: "RETA FINAL", title: "A liga está ao alcance", description: "Quatro rodadas. Três pontos de diferença. O campeonato inteiro acompanha cada passo.", minOvr: 76, choices: [
     { label: "Assumir a responsabilidade", hint: "Título ↑ · cansaço ↑", result: "A bola passa por você quando o jogo aperta.", effect: { titleBoost: 18, fitness: -12, reputation: 8 } },
     { label: "Confiar no coletivo", hint: "Título ↑ · grupo ↑", result: "O time joga leve e todo mundo entrega um pouco mais.", effect: { titleBoost: 10, morale: 10, leadership: 5 } },
     { label: "Tirar o peso do discurso", hint: "Condição ↑ · pressão ↓", result: "Você transforma a ansiedade em rotina.", effect: { titleBoost: 5, fitness: 8, morale: 6 } },
@@ -244,7 +367,7 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Ficar em silêncio", hint: "Neutro", result: "Você espera o próximo capítulo sem alimentar manchetes.", effect: { morale: 1 } },
     { label: "Conversar com o novo técnico", hint: "Minutos ↑", result: "Você sai da sala sabendo o que precisa entregar.", effect: { minutes: 7, potential: 1 } },
   ]},
-  { id: "big-club", icon: "↑", tag: "MERCADO", title: "Um gigante brasileiro quer você", description: "O projeto oferece títulos, salário e uma disputa pesada por posição.", minOvr: 76, choices: [
+  { id: "big-club", icon: "↑", tag: "MERCADO", title: "Um gigante quer você", description: "O projeto oferece títulos, salário e uma disputa pesada por posição.", minOvr: 76, choices: [
     { label: "Aceitar o desafio", hint: "Transferência · pressão ↑", result: "A carreira ganha uma nova camisa e outro peso.", effect: { transfer: true, money: 12, reputation: 6, minutes: -5 } },
     { label: "Virar referência onde está", hint: "Torcida ↑↑ · liderança ↑", result: "Você escolhe construir algo que tenha seu rosto.", effect: { reputation: 12, leadership: 8, morale: 6 } },
   ]},
@@ -321,11 +444,11 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Dosar o ritmo", hint: "Seguro · físico ↑", result: "Você escolhe os momentos e termina inteiro.", effect: { fitness: 7, titleBoost: 5 } },
     { label: "Pressionar desde o início", hint: "Título ↑↑ · risco físico", result: "O time surpreende antes que o pulmão cobre a conta.", effect: { titleBoost: 14, fitness: -15, injuryRisk: 8 } },
   ]},
-  { id: "world-stage", icon: "MUN", tag: "MUNDIAL", title: "O planeta está olhando", description: "Depois da América, chegou a camisa que domina outro continente.", needsWorld: true, choices: [
+  { id: "world-stage", icon: "MUN", tag: "MUNDIAL", title: "O planeta está olhando", description: "Depois do título continental, chegou a camisa que domina o outro lado do mundo.", needsWorld: true, choices: [
     { label: "Jogar sem complexo", hint: "Mundial ↑↑ · reputação ↑", result: "O primeiro duelo mostra que o escudo não entra sozinho em campo.", effect: { titleBoost: 18, reputation: 12, fans: 10, fitness: -8 } },
     { label: "Fechar espaços e sobreviver", hint: "Mundial ↑ · seguro", result: "Cada minuto vivo aumenta a crença do time.", effect: { titleBoost: 11, leadership: 7, morale: 5 } },
   ]},
-  { id: "cup-semi", icon: "CB", tag: "COPA DO BRASIL", title: "Uma noite de mata-mata", description: "O primeiro jogo deixou tudo aberto. Um lance pode valer calendário e milhões.", choices: [
+  { id: "cup-semi", icon: "COPA", tag: "COPA NACIONAL", title: "Uma noite de mata-mata", description: "O primeiro jogo deixou tudo aberto. Um lance pode valer calendário e milhões.", choices: [
     { label: "Atacar a vaga", hint: "Copa ↑↑ · risco ↑", result: "Você joga a partida como se não existisse amanhã.", effect: { titleBoost: 14, fitness: -10, injuryRisk: 5, fans: 6 } },
     { label: "Controlar a eliminatória", hint: "Liderança ↑ · Copa ↑", result: "A ansiedade fica na arquibancada; dentro do campo, você dita o ritmo.", effect: { titleBoost: 8, leadership: 6 } },
   ]},
@@ -394,6 +517,94 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Descansar de verdade", hint: "Físico ↑↑ · OVR estável", result: "Você desliga o telefone e deixa o corpo respirar.", effect: { fitness: 16, morale: 8 } },
     { label: "Treinar nas férias", hint: "OVR ↑ · desgaste", result: "Você volta na frente — mas sem ter parado.", effect: { ovr: 1, fitness: -8, potential: 1 } },
     { label: "Viajar com o elenco", hint: "Grupo ↑ · físico ↑", result: "A amizade também sustenta temporadas difíceis.", effect: { morale: 10, fitness: 6, leadership: 3 } },
+  ]},
+  { id: "new-language", icon: "☰", tag: "EUROPA", title: "Uma língua nova todos os dias", description: "As instruções do treinador ainda soam estranhas. O elenco espera você se virar sozinho.", needsAbroad: true, oneTime: true, choices: [
+    { label: "Contratar aulas particulares", hint: "Adaptação ↑↑ · dinheiro ↓", result: "Cada treino fica um pouco mais claro.", effect: { adaptation: 18, money: -3 } },
+    { label: "Aprender no dia a dia", hint: "Adaptação ↑ · mais lento", result: "Você entende primeiro pelos gestos, depois pelas palavras.", effect: { adaptation: 8, morale: 2 } },
+  ]},
+  { id: "cold-weather", icon: "❄", tag: "EUROPA", title: "O inverno que o corpo não conhecia", description: "Treinar sob zero graus é uma novidade que ninguém avisou.", needsAbroad: true, choices: [
+    { label: "Ajustar a rotina ao clima", hint: "Adaptação ↑ · físico ↑", result: "Aquecimento mais longo, roupas certas, corpo protegido.", effect: { adaptation: 10, fitness: 5 } },
+    { label: "Treinar igual sempre treinou", hint: "Risco de lesão", result: "O orgulho ignora o termômetro — o corpo cobra depois.", effect: { fitness: -8, injuryRisk: 6 } },
+  ]},
+  { id: "bench-abroad", icon: "▰", tag: "EUROPA", title: "O banco também tem sotaque", description: "A concorrência por posição na Europa é outro nível. Seu nome não sai da lista de reservas.", needsAbroad: true, maxOvr: 84, choices: [
+    { label: "Insistir no dia a dia", hint: "Chance de minutos", result: "Cada treino vira uma audição silenciosa.", effect: { reputation: 1, minutes: 6, fitness: -4 } },
+    { label: "Pedir um projeto menor na Europa", hint: "Minutos ↑ · novo clube europeu", result: "Você troca a vitrine por bola rolando de verdade em outra equipe.", effect: { transfer: true, transferAbroad: true, minutes: 10, reputation: -2 } },
+  ]},
+  { id: "eu-passport", icon: "◇", tag: "EUROPA", title: "O passaporte que facilita tudo", description: "Depois de meses de papelada, o documento europeu finalmente sai.", needsAbroad: true, oneTime: true, choices: [
+    { label: "Comemorar o novo status", hint: "Adaptação ↑ · burocracia a menos", result: "Viagens, contratos e a vida diária ficam mais simples.", effect: { adaptation: 12, morale: 5 } },
+  ]},
+  { id: "european-press", icon: "●", tag: "EUROPA", title: "A imprensa local não perdoa", description: "Um jornal publica que você não vale o que custou. A resposta vem em campo ou fora dele.", needsAbroad: true, minAge: 20, choices: [
+    { label: "Responder com atuação", hint: "OVR ↑ · pressão", result: "O silêncio da bola calou o texto.", effect: { ovr: 1, reputation: 5, fitness: -6 } },
+    { label: "Ignorar e focar no grupo", hint: "Moral ↑", result: "Você aprende que nem toda manchete merece resposta.", effect: { morale: 6, adaptation: 4 } },
+  ]},
+  { id: "euro-derby", icon: "⚔", tag: "EUROPA", title: "Seu primeiro clássico europeu", description: "A cidade inteira muda de cor. Você nunca viu uma rivalidade tão antiga de tão perto.", needsAbroad: true, minOvr: 70, choices: [
+    { label: "Abraçar a rivalidade", hint: "Torcida ↑↑ · físico ↓", result: "Você entende, em noventa minutos, séculos de história.", effect: { fans: 10, reputation: 6, fitness: -6 } },
+    { label: "Tratar como um jogo normal", hint: "Seguro", result: "A frieza rende uma boa atuação e pouca conexão com a torcida.", effect: { reputation: 3, adaptation: 5 } },
+  ]},
+  { id: "champions-debut", icon: "★", tag: "CHAMPIONS", title: "As luzes da Champions acendem", description: "O hino toca antes do jogo e o peito aperta de um jeito diferente.", needsAbroad: true, needsContinental: "champions", oneTime: true, choices: [
+    { label: "Jogar sem medo do palco", hint: "Reputação ↑↑ · risco", result: "Você decide não guardar nada para depois.", effect: { titleBoost: 10, reputation: 10, fitness: -6 } },
+    { label: "Jogar dentro do combinado", hint: "Seguro · confiança do técnico", result: "Fazer o simples bem feito também é vencer a noite.", effect: { titleBoost: 6, leadership: 4 } },
+  ]},
+  { id: "europa-league-night", icon: "UEL", tag: "EUROPA LEAGUE", title: "Uma quinta-feira que vale uma temporada", description: "A viagem é longa, o estádio é hostil e a Europa League virou o caminho mais curto para mudar de patamar.", needsAbroad: true, needsContinental: "europa", choices: [
+    { label: "Tratar como a grande chance", hint: "Título ↑↑ · desgaste", result: "Você joga como se não existisse competição menor.", effect: { titleBoost: 12, reputation: 7, fitness: -8 } },
+    { label: "Controlar o calendário", hint: "Título ↑ · físico preservado", result: "O time avança sem transformar cada partida em desespero.", effect: { titleBoost: 6, fitness: 5, leadership: 3 } },
+  ]},
+  { id: "conference-breakthrough", icon: "UECL", tag: "CONFERENCE", title: "A Europa começa por uma porta menor", description: "A Conference League não traz o maior holofote, mas pode entregar a primeira taça continental da sua carreira.", needsAbroad: true, needsContinental: "conference", maxOvr: 84, choices: [
+    { label: "Caçar a primeira taça", hint: "Título ↑↑ · torcida ↑", result: "Você abraça a competição e puxa o elenco junto.", effect: { titleBoost: 14, fans: 8, fitness: -7 } },
+    { label: "Usar os jogos para evoluir", hint: "Minutos ↑ · evolução futura", result: "Cada viagem vira experiência e espaço no time.", effect: { minutes: 8, potential: 1, reputation: 3 } },
+  ]},
+  { id: "homesickness", icon: "⌂", tag: "EUROPA", title: "A saudade que ninguém vê no campo", description: "As ligações para casa ficam mais longas e o fuso horário nunca ajuda.", needsAbroad: true, choices: [
+    { label: "Trazer a família para perto", hint: "Moral ↑↑ · dinheiro ↓", result: "A casa nova finalmente parece uma casa.", effect: { morale: 14, adaptation: 8, money: -4 } },
+    { label: "Visitar casa na pausa", hint: "Moral ↑ · adaptação ↓", result: "Duas semanas recarregam o coração e atrasam a rotina nova.", effect: { morale: 9, adaptation: -4 } },
+    { label: "Focar no trabalho", hint: "OVR ↑ · moral ↓", result: "Você empurra a saudade para depois da temporada.", effect: { ovr: 1, morale: -6 } },
+  ]},
+  { id: "loan-spell", icon: "⇄", tag: "EUROPA", title: "Um empréstimo pode salvar sua temporada", description: "Sem espaço no elenco principal, o clube sugere sair para jogar de verdade em outro lugar da Europa.", needsAbroad: true, maxOvr: 82, minAge: 20, choices: [
+    { label: "Aceitar um projeto menor", hint: "Minutos ↑↑ · mudança na Europa", result: "Você troca o banco por protagonismo em outro campeonato europeu.", effect: { transfer: true, transferAbroad: true, minutes: 12, reputation: 2 } },
+    { label: "Brigar pelo seu espaço", hint: "OVR ↑ · risco", result: "Ficar é uma aposta em você mesmo.", effect: { ovr: 1, fitness: -8, minutes: 3 } },
+  ]},
+  { id: "european-exit", icon: "↩", tag: "EUROPA", title: "A Europa não deu certo como sonhado", description: "Meses depois da mudança, a adaptação ainda não veio e o telefone toca com uma saída para o Brasil.", needsAbroad: true, minAge: 21, choices: [
+    { label: "Voltar para o Brasil", hint: "Transferência · moral ↑", result: "Nem toda aventura precisa terminar em taça para valer a pena.", effect: { transfer: true, morale: 8, reputation: -3 } },
+    { label: "Insistir mais uma temporada", hint: "Adaptação ↑ · paciência", result: "Você aposta que o próximo ano é diferente.", effect: { adaptation: 15, morale: -2 } },
+  ]},
+  { id: "youth-or-club", icon: "★", tag: "SELEÇÃO", title: "O clube pede para poupar você da base da Seleção", description: "O departamento médico do clube sugere recusar a convocação de base para preservar sua temporada.", needsNationalYouth: true, choices: [
+    { label: "Defender a Seleção mesmo assim", hint: "Convocado · físico ↓", result: "Vestir a camisa da base pesa mais que qualquer planilha de carga.", effect: { nationalBoost: 12, fitness: -8, reputation: 4, nationalCall: true } },
+    { label: "Seguir o pedido do clube", hint: "Físico ↑ · Seleção ↓", result: "O clube agradece; a comissão técnica da Seleção anota a ausência.", effect: { fitness: 10, nationalBoost: -8 } },
+  ]},
+  { id: "olympics-call", icon: "◎", tag: "OLIMPÍADAS", title: "Uma vaga na lista olímpica", description: "Os Jogos Olímpicos caem no meio da pré-temporada. Nem todo clube libera de bom grado.", needsNationalYouth: true, nationalWindow: "olympics", minAge: 21, oneTime: true, choices: [
+    { label: "Aceitar disputar os Jogos", hint: "Convocado · título ↑↑", result: "Uma medalha olímpica não aparece duas vezes na vida.", effect: { nationalTitleBoost: 14, nationalBoost: 10, fitness: -10, nationalCall: true } },
+    { label: "Priorizar a pré-temporada", hint: "Físico ↑ · Seleção ↓", result: "O ciclo olímpico segue sem o seu nome desta vez.", effect: { fitness: 10, nationalBoost: -6 } },
+  ]},
+  { id: "injured-for-country", icon: "+", tag: "SELEÇÃO", title: "Jogar mesmo sentindo dor", description: "A convocação chegou, mas o corpo avisa que algo não está bem antes da viagem.", needsNationalMain: true, needsLowFitness: true, choices: [
+    { label: "Viajar e jogar assim mesmo", hint: "Seleção ↑↑ · lesão ↑↑", result: "A camisa da Seleção pesa mais que a dor no momento da escolha.", effect: { nationalTitleBoost: 12, fitness: -18, injuryRisk: 15, reputation: 6 } },
+    { label: "Comunicar o departamento médico", hint: "Seguro · desfalque", result: "Você entrega a vaga a outro companheiro e cuida do corpo.", effect: { fitness: 14, nationalBoost: -4 } },
+  ]},
+  { id: "national-penalty", icon: "◎", tag: "SELEÇÃO", title: "Pênaltis pela Seleção", description: "O jogo termina empatado e o técnico monta a lista de batedores. Seu nome está nela.", needsNationalMain: true, nationalWindow: "major", minOvr: 76, choices: [
+    { label: "Bater com confiança", hint: "38% · herói ou vilão nacional", result: "Você pede a bola sabendo o tamanho do momento.", effect: { nationalCall: true }, luck: { chance: 38, successText: "A cobrança entra e o país inteiro celebra o seu nome.", failureText: "O goleiro adivinha o canto. O silêncio do país dói mais que qualquer vaia de clube.", successEffect: { reputation: 16, nationalTitleBoost: 22, fans: 10, morale: 12 }, failureEffect: { reputation: -10, nationalTitleBoost: -16, morale: -18 } } },
+    { label: "Pedir para não bater", hint: "Convocado · sem protagonismo", result: "Você entrega a responsabilidade a um companheiro mais experiente.", effect: { leadership: 4, morale: 2, nationalCall: true } },
+  ]},
+  { id: "continental-final", icon: "★", tag: "FINAL CONTINENTAL", title: "A final que o continente inteiro assiste", description: "Depois de semanas de torneio, sua Seleção chegou à decisão.", needsNationalMain: true, nationalWindow: "continental", minOvr: 78, choices: [
+    { label: "Assumir o protagonismo", hint: "Título da Seleção ↑↑ · cansaço", result: "Você quer a bola nos momentos que decidem histórias.", effect: { nationalTitleBoost: 20, fitness: -12, reputation: 10, nationalCall: true } },
+    { label: "Jogar pelo coletivo", hint: "Título da Seleção ↑ · seguro", result: "Onze jogando juntos pesa mais que um nome só.", effect: { nationalTitleBoost: 12, leadership: 6, nationalCall: true } },
+  ]},
+  { id: "qualifiers-pressure", icon: "ELIM", tag: "ELIMINATÓRIAS", title: "A vaga no Mundial não vem fácil", description: "As eliminatórias estão apertadas e cada convocação pesa mais que o normal.", needsNationalMain: true, nationalWindow: "qualifiers", choices: [
+    { label: "Assumir a responsabilidade em campo", hint: "Classificação ↑ · físico ↓", result: "Você entende que essas partidas valem mais do que os noventa minutos mostram.", effect: { nationalTitleBoost: 10, fitness: -8, reputation: 4, nationalCall: true } },
+    { label: "Confiar no trabalho da comissão técnica", hint: "Convocado · abordagem segura", result: "Você faz sua parte sem carregar o peso do grupo inteiro.", effect: { nationalTitleBoost: 5, morale: 3, nationalCall: true } },
+  ]},
+  { id: "surprise-call", icon: "?", tag: "SELEÇÃO", title: "Uma convocação que ninguém esperava", description: "Seu nome aparece numa lista que parecia distante demais para esta fase da carreira.", minAge: 17, maxAge: 29, oneTime: true, choices: [
+    { label: "Abraçar a surpresa", hint: "Convocado · pressão ↑", result: "Você decide aproveitar cada segundo dessa chance inesperada.", effect: { nationalBoost: 16, reputation: 8, morale: 6, nationalCall: true } },
+    { label: "Manter os pés no chão", hint: "Convocado · postura segura", result: "Você trata a convocação como trabalho, não como troféu.", effect: { nationalBoost: 10, leadership: 3, nationalCall: true } },
+  ]},
+  { id: "painful-cut", icon: "×", tag: "SELEÇÃO", title: "Fora da lista pela primeira vez em anos", description: "Depois de temporadas como presença certa, seu nome não aparece na convocação mais recente.", needsNationalMain: true, minAge: 26, choices: [
+    { label: "Cobrar uma resposta de si mesmo", hint: "OVR ↑ · moral ↓", result: "O corte dói, mas vira combustível para o próximo ciclo.", effect: { ovr: 1, morale: -8, fitness: -3 } },
+    { label: "Aceitar o momento com calma", hint: "Moral ↑ · Seleção ↓", result: "Nem toda carreira de Seleção é uma linha reta para cima.", effect: { morale: 4, nationalBoost: -6 } },
+  ]},
+  { id: "generation-change", icon: "↔", tag: "SELEÇÃO", title: "A nova geração bate na porta", description: "A comissão técnica começa a testar nomes mais jovens na sua posição.", needsNationalMain: true, minAge: 30, choices: [
+    { label: "Virar referência para os novatos", hint: "Liderança ↑↑ · minutos ↓", result: "Você ensina o que nenhuma camisa traz escrito.", effect: { leadership: 12, nationalBoost: -5, reputation: 6 } },
+    { label: "Disputar cada convocação", hint: "OVR ↑ · físico ↓", result: "Você decide que a idade não vai escolher por você.", effect: { ovr: 1, fitness: -10, nationalBoost: 4 } },
+  ]},
+  { id: "national-captain", icon: "C", tag: "SELEÇÃO", title: "A braçadeira da Seleção", description: "O técnico anuncia você como capitão para o próximo ciclo de convocações.", needsNationalMain: true, minAge: 25, minOvr: 80, oneTime: true, choices: [
+    { label: "Aceitar a braçadeira", hint: "Capitão · liderança ↑↑", result: "Vestir a faixa da Seleção muda o peso de cada jogo.", effect: { leadership: 16, reputation: 14, nationalBoost: 10, nationalCaptain: true } },
+    { label: "Indicar um companheiro mais velho", hint: "Convocado · humildade", result: "Sua escolha fortalece o vestiário da Seleção.", effect: { morale: 8, leadership: 6, nationalCall: true } },
   ]},
 ];
 

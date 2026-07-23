@@ -1,7 +1,7 @@
 {
-  "name": "Futbobo — Sua carreira começa na base",
+  "name": "Futbobo — A carreira agora é mundial",
   "short_name": "Futbobo",
-  "description": "Construa uma carreira no futebol brasileiro dos 12 anos à aposentadoria.",
+  "description": "Construa uma carreira dos 12 anos à aposentadoria, jogue em oito ligas e defenda sua Seleção.",
   "start_url": "/futbobo/",
   "scope": "/futbobo/",
   "display": "standalone",

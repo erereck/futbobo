@@ -3,28 +3,28 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://erereck.github.io/futbobo/"),
-  title: "Futbobo — Sua carreira começa na base",
+  title: "Futbobo — Do Brasil ao mundo",
   description:
-    "Construa uma carreira no futebol brasileiro dos 12 anos à aposentadoria e dispute as maiores taças do continente.",
+    "Construa uma carreira dos 12 anos à aposentadoria, atravesse oito ligas e defenda sua Seleção nas maiores competições do mundo.",
   icons: {
     icon: "favicon.svg",
     shortcut: "favicon.svg",
   },
   manifest: "manifest.webmanifest",
   openGraph: {
-    title: "Futbobo — Sua carreira começa na base",
+    title: "Futbobo — A carreira agora é mundial",
     description:
-      "Escolha um clube, conquiste seu espaço e escreva sua história no Brasil, na Libertadores e no Mundial.",
+      "Comece na base brasileira, conquiste a Europa e dispute Copa do Mundo, Eurocopa ou Copa América por sua Seleção.",
     type: "website",
     url: "https://erereck.github.io/futbobo/",
     siteName: "Futbobo",
-    images: [{ url: "og-v3.png", width: 1200, height: 630, alt: "Futbobo — Nem toda carreira vira lenda" }],
+    images: [{ url: "og-v4.png", width: 1200, height: 630, alt: "Futbobo — A carreira agora é mundial" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Futbobo — Sua carreira começa na base",
-    description: "Dos 12 anos ao topo do futebol brasileiro.",
-    images: ["og-v3.png"],
+    title: "Futbobo — A carreira agora é mundial",
+    description: "Oito ligas, 58 clubes e dez Seleções. Sua carreira ficou global.",
+    images: ["og-v4.png"],
   },
 };
 
