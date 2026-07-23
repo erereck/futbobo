@@ -123,16 +123,18 @@ test("mantém o gramado contínuo atrás da meta do treinador", async () => {
   assert.match(styles, /\.event-stage \.market-strip \{[^}]*background: rgba\(7,23,16,.9\)/);
 });
 
-test("prende a rolagem no resultado e deixa o imprevisto passar pelo rodapé", async () => {
+test("deixa o fim de temporada rolar sem o rodapé cobrir o conteúdo", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /futbobo-viewport-locked/);
+  assert.match(page, /game\.phase === "consequence" \|\|\s+game\.phase === "transfer"/);
   assert.match(page, /window\.scrollTo\(0, 0\)/);
   assert.match(styles, /body\.futbobo-viewport-locked[\s\S]*position: fixed/);
-  assert.match(styles, /-webkit-overflow-scrolling: touch/);
-  assert.match(styles, /\.result-stage \{[\s\S]*padding-bottom: calc\(env\(safe-area-inset-bottom\) \+ 150px\)/);
-  assert.match(styles, /max\(9px, min\(env\(safe-area-inset-bottom\), 34px\)\)/);
+  assert.match(styles, /\.app-shell-season-result \{[\s\S]*height: auto;[\s\S]*overflow: visible;/);
+  assert.match(styles, /\.career-shell\.career-phase-season-result \{[\s\S]*min-height: 100dvh;[\s\S]*overflow: visible;/);
+  assert.match(styles, /\.career-phase-season-result > \.result-stage \{[\s\S]*overflow: visible;/);
+  assert.match(styles, /\.career-phase-season-result \.mobile-action-dock \{[\s\S]*position: static;/);
 });
 
 test("protege o OVR jovem e permite explosões raras de talento", async () => {

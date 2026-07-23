@@ -607,7 +607,6 @@ button:active:not(:disabled) { transform: scale(0.975); }
 
   .app-shell-career,
   .app-shell-consequence,
-  .app-shell-season-result,
   .app-shell-transfer,
   .app-shell-transfer-denied,
   .app-shell-retirement-confirm {
@@ -736,6 +735,64 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .breakout-result > b { font-size: 27px; }
   .competition-card { min-height: 49px; padding: 7px; }
   .result-details { margin-bottom: 4px; }
+
+  .app-shell-season-result {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+  .career-shell.career-phase-season-result {
+    display: block;
+    height: auto;
+    min-height: 100dvh;
+    padding-bottom: 0;
+    overflow: visible;
+  }
+  .career-phase-season-result > .result-stage {
+    min-height: 0;
+    padding: 28px 17px calc(env(safe-area-inset-bottom) + 28px);
+    overflow: visible;
+    overscroll-behavior: auto;
+    touch-action: auto;
+  }
+  .career-phase-season-result .result-symbol {
+    width: 94px;
+    height: 94px;
+    margin: 20px 0 16px;
+    border-radius: 31px 31px 31px 10px;
+    font-size: 48px;
+  }
+  .career-phase-season-result .result-stage h1 { margin-bottom: 8px; font-size: 28px; }
+  .career-phase-season-result .result-stage > p { font-size: 12px; line-height: 1.5; }
+  .career-phase-season-result .season-stat-grid { gap: 7px; margin: 22px 0 13px; }
+  .career-phase-season-result .season-stat-grid .metric { min-height: 61px; padding: 10px; }
+  .career-phase-season-result .season-stat-grid .metric strong { font-size: 18px; }
+  .career-phase-season-result .season-development,
+  .career-phase-season-result .breakout-result,
+  .career-phase-season-result .european-spotlight,
+  .career-phase-season-result .discipline-result { margin-bottom: 10px; }
+  .career-phase-season-result .objective-result,
+  .career-phase-season-result .contract-expired,
+  .career-phase-season-result .competition-grid,
+  .career-phase-season-result .season-twist,
+  .career-phase-season-result .season-national-note,
+  .career-phase-season-result .season-awards { margin-bottom: 12px; }
+  .career-phase-season-result .season-development { padding: 11px 12px; }
+  .career-phase-season-result .season-development > strong { font-size: 21px; }
+  .career-phase-season-result .breakout-result { padding: 13px; }
+  .career-phase-season-result .breakout-result > b { font-size: 31px; }
+  .career-phase-season-result .competition-card { min-height: 56px; padding: 9px; }
+  .career-phase-season-result .result-details { margin-bottom: 0; }
+  .career-phase-season-result .mobile-action-dock {
+    position: static;
+    width: 100%;
+    margin-top: 18px;
+    padding: 0;
+    transform: none;
+    border-top: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
 
   .mobile-action-dock {
     position: fixed;

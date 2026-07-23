@@ -1368,7 +1368,6 @@ export default function Home() {
     const locksViewport =
       game.phase === "career" ||
       game.phase === "consequence" ||
-      game.phase === "season-result" ||
       game.phase === "transfer" ||
       game.phase === "transfer-denied" ||
       game.phase === "retirement-confirm";
