@@ -178,3 +178,15 @@ test("gera temporadas com mais gols e assistências sem igualar todas as posiç�
   assert.match(data, /key: "MEI"[\s\S]*goals: 0\.22, assists: 0\.3/);
   assert.match(data, /key: "PD"[\s\S]*goals: 0\.28, assists: 0\.22/);
 });
+
+test("impede ficar no clube depois de um pedido de transferência aceito", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /if \(!clubId && current\.transferRequested\) return current/);
+  assert.match(page, /\{!game\.transferRequested && <button className="offer-card stay-card"/);
+  assert.match(page, /SAÍDA SEM VOLTA/);
+  assert.match(page, /Seu pedido foi aceito — não há volta/);
+  assert.match(page, /transferStatus: null, transferRequested: false/);
+  assert.match(styles, /\.transfer-lock-card/);
+});

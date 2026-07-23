@@ -407,6 +407,10 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .market-expansion-card > span { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
 .market-expansion-card strong { display: block; margin-top: 4px; font-size: 11px; }
 .market-expansion-card p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.transfer-lock-card { width: 100%; margin-top: 15px; padding: 12px 13px; border: 1px solid rgba(255,199,44,.34); border-radius: 15px; background: linear-gradient(120deg, rgba(255,199,44,.1), rgba(255,90,78,.06)); }
+.transfer-lock-card > span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.transfer-lock-card strong { display: block; margin-top: 4px; font-size: 11px; }
+.transfer-lock-card p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
 .european-market-card { width: 100%; margin-top: 15px; padding: 12px 13px; border: 1px solid rgba(166,117,255,.3); border-radius: 15px; background: linear-gradient(120deg, rgba(44,168,255,.08), rgba(166,117,255,.08)); }
 .european-market-card > span { color: #cbb4ff; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
 .european-market-card strong { display: block; margin-top: 4px; font-size: 11px; }
@@ -845,6 +849,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
   }
   .transfer-stage > .eyebrow { margin-bottom: 4px; }
   .market-expansion-card { margin-top: 9px; padding: 8px 10px; }
+  .transfer-lock-card { margin-top: 9px; padding: 8px 10px; }
   .european-market-card { margin-top: 9px; padding: 8px 10px; }
   .transfer-offers { gap: 6px; margin-top: 10px; }
   .transfer-offers .offer-card { min-height: 64px; grid-template-columns: 43px 1fr 20px; gap: 8px; padding: 7px 9px; border-radius: 14px; }

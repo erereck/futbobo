@@ -1562,6 +1562,7 @@ export default function Home() {
 
   function chooseTransfer(clubId: string | null) {
     setGame((current) => {
+      if (!clubId && current.transferRequested) return current;
       const newClub = clubId ? clubById(clubId) : null;
       const oldClub = clubById(current.currentClubId);
       const targetClub = newClub ?? oldClub;
@@ -1639,7 +1640,7 @@ export default function Home() {
           transferCooldownSeason: current.season,
           transferRequested: true,
           managerTrust: clamp(current.managerTrust - 8),
-          transferStatus: { success: true, chance, headline: "A diretoria abriu a porta", text: `Seu pedido foi aceito. O empresário encontrou ${transferOffers.length} projetos para a próxima camisa.` },
+          transferStatus: { success: true, chance, headline: "A diretoria abriu a porta", text: `Seu pedido foi aceito — não há volta. O empresário encontrou ${transferOffers.length} projetos e agora você precisa escolher a próxima camisa.` },
         };
       }
       return {
@@ -1686,7 +1687,7 @@ export default function Home() {
   }
 
   function continueAfterDeniedTransfer() {
-    setGame((current) => ({ ...current, phase: "career", transferStatus: null }));
+    setGame((current) => ({ ...current, phase: "career", transferStatus: null, transferRequested: false }));
     setActiveTab("event");
     vibrate();
   }
@@ -2013,6 +2014,7 @@ export default function Home() {
           {game.phase === "transfer" && (
             <div className="transfer-stage screen-enter">
               <span className="eyebrow">JANELA DE TRANSFERÊNCIAS</span><h1>{game.transferStatus?.success ? game.transferStatus.headline : "Seu próximo passo"}</h1><p>{game.transferStatus?.text ?? `${game.transferOffers.length} clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui.`}</p>
+              {game.transferRequested && <div className="transfer-lock-card"><span>SAÍDA SEM VOLTA</span><strong>Escolha seu próximo clube</strong><p>Depois que a diretoria aceita seu pedido, permanecer no time atual deixa de ser uma opção.</p></div>}
               {transferWindowProfile.isEuropeanWindow && <div className="european-market-card"><span>MERCADO EUROPEU</span><strong>{transferWindowProfile.europeanOffers} clube{transferWindowProfile.europeanOffers > 1 ? "s europeus querem" : " europeu quer"} você</strong><p>{transferWindowProfile.brazilianOffers > 0 ? "Uma proposta rara de retorno ao Brasil também atravessou o Atlântico." : "Jogando na Europa, seu empresário prioriza projetos europeus de nível compatível."}</p></div>}
               {transferWindowProfile.expandedOfferCount > 0 && <div className="market-expansion-card"><span>DESEMPENHO ABRIU PORTAS</span><strong>{marketProfile.label} · nota {marketProfile.performanceScore}</strong><p>{transferWindowProfile.expandedOfferCount} clube{transferWindowProfile.expandedOfferCount > 1 ? "s europeus extras apareceram" : " europeu extra apareceu"} em um nível compatível com sua fase.</p></div>}
               <div className="offer-list transfer-offers">
@@ -2040,7 +2042,7 @@ export default function Home() {
                     </button>
                   );
                 })}
-                <button className="offer-card stay-card" onClick={() => chooseTransfer(null)}><ClubBadge club={currentClub} /><span><small>{game.contractYears === 0 ? "PROPOSTA DE RENOVAÇÃO" : "CONTINUAR O PROJETO"}</small><strong>{game.contractYears === 0 ? `Renovar com o ${currentClub.shortName}` : `Ficar no ${currentClub.shortName}`}</strong><em>{game.contractYears === 0 ? "Novo vínculo e salário recalculado" : `Manter o contrato atual de ${game.contractYears} ano(s)`}</em></span><b>✓</b></button>
+                {!game.transferRequested && <button className="offer-card stay-card" onClick={() => chooseTransfer(null)}><ClubBadge club={currentClub} /><span><small>{game.contractYears === 0 ? "PROPOSTA DE RENOVAÇÃO" : "CONTINUAR O PROJETO"}</small><strong>{game.contractYears === 0 ? `Renovar com o ${currentClub.shortName}` : `Ficar no ${currentClub.shortName}`}</strong><em>{game.contractYears === 0 ? "Novo vínculo e salário recalculado" : `Manter o contrato atual de ${game.contractYears} ano(s)`}</em></span><b>✓</b></button>}
               </div>
             </div>
           )}
