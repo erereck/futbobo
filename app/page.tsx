@@ -241,6 +241,40 @@ type GameState = {
   newsFeed: string[];
 };
 
+type MonteCarloCareerSummary = {
+  career: number;
+  seed: number;
+  name: string;
+  nationality: string;
+  position: PositionKey;
+  seasons: number;
+  clubs: number;
+  peakOverall: number;
+  appearances: number;
+  goals: number;
+  assists: number;
+  trophies: number;
+  ballonDor: number;
+};
+
+type MonteCarloReport = {
+  runs: number;
+  seedBase: number;
+  totalSeasons: number;
+  careersWithBallonDor: number;
+  totalBallonDor: number;
+  careerChancePercent: number;
+  awardChancePerSeasonPercent: number;
+  winners: MonteCarloCareerSummary[];
+  bestCareer: MonteCarloCareerSummary;
+};
+
+declare global {
+  interface Window {
+    __FUTBOBO_MONTE_CARLO__?: (runs: number, seedBase?: number) => MonteCarloReport;
+  }
+}
+
 const SAVE_KEY = "futbobo:career:v1";
 const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS];
 
@@ -1684,6 +1718,195 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   };
 }
 
+function eventForState(state: GameState) {
+  if (state.currentEventId === FIRST_MATCH_EVENT.id) return FIRST_MATCH_EVENT;
+  if (state.currentEventId === NATIONALITY_SWITCH_EVENT_ID && state.pendingNationalitySwitchTarget) {
+    return buildNationalitySwitchEvent(countryById(state.nationality), countryById(state.pendingNationalitySwitchTarget));
+  }
+  return ALL_PRO_EVENTS.find((event) => event.id === state.currentEventId) ?? ALL_PRO_EVENTS[0];
+}
+
+function signProfessionalForSimulation(state: GameState, clubId: string): GameState {
+  const club = clubById(clubId);
+  const league = leagueById(club.leagueId);
+  const managerTrust = clubId === state.academyClubId ? 58 : 44;
+  const squadRole = calculateSquadRole(state.overall, club, league.prestige, managerTrust, state.age);
+  const contract = createContract(state.overall, state.age, club, state.seed);
+  return {
+    ...state,
+    phase: "career",
+    currentClubId: clubId,
+    currentEventId: FIRST_MATCH_EVENT.id,
+    nextEventId: "",
+    reputation: clubId === state.academyClubId ? 8 : 4,
+    fanSupport: clubId === state.academyClubId ? 68 : 50,
+    continentalSlot: initialContinentalSlot(club),
+    money: 0,
+    managerTrust,
+    squadRole,
+    contractYears: contract.years,
+    annualSalary: contract.annualSalary,
+    currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed),
+    newsFeed: [`${state.season}: primeiro contrato assinado com o ${club.shortName}.`],
+  };
+}
+
+function completeSimulationTransfer(state: GameState, clubId: string | null): GameState {
+  const newClub = clubId ? clubById(clubId) : null;
+  const oldClub = clubById(state.currentClubId);
+  const targetClub = newClub ?? oldClub;
+  const targetLeague = leagueById(targetClub.leagueId);
+  const offerIndex = Math.max(0, state.transferOffers.indexOf(clubId ?? ""));
+  const signingContract = Boolean(newClub || state.contractYears === 0);
+  const generatedContract = createContract(state.overall, state.age, targetClub, state.seed + state.season + offerIndex);
+  const contract = signingContract ? generatedContract : { years: state.contractYears, annualSalary: state.annualSalary };
+  const changingCountry = Boolean(newClub && newClub.countryId !== oldClub.countryId);
+  const managerTrust = newClub ? 50 : clamp(state.managerTrust + 5);
+  const squadRole = calculateSquadRole(state.overall, targetClub, targetLeague.prestige, managerTrust, state.age);
+  const transferred: GameState = {
+    ...state,
+    phase: "career",
+    currentClubId: clubId ?? state.currentClubId,
+    currentEventId: "",
+    nextEventId: "",
+    lastResult: null,
+    lastConsequence: null,
+    transferOffers: [],
+    morale: clamp(state.morale + (clubId ? 5 : 2)),
+    fanSupport: clubId ? 52 : clamp(state.fanSupport + 3),
+    continentalSlot: newClub ? initialContinentalSlot(newClub) : state.continentalSlot,
+    adaptation: newClub ? (changingCountry ? initialAdaptation(oldClub.countryId, newClub.countryId) : state.adaptation) : state.adaptation,
+    abroadSeasons: changingCountry ? 0 : state.abroadSeasons,
+    transferStatus: null,
+    transferRequested: false,
+    renewalDenied: false,
+    managerTrust,
+    squadRole,
+    contractYears: contract.years,
+    annualSalary: contract.annualSalary,
+    clubCaptain: newClub ? false : state.clubCaptain,
+    currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed + state.season),
+  };
+  return {
+    ...transferred,
+    currentEventId: state.nextEventId || selectNextEvent(transferred, state.season * 47),
+  };
+}
+
+function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarloCareerSummary {
+  const chosenPosition = pick(POSITIONS, seed, 701 + careerIndex).key;
+  const chosenNationality = pick(COUNTRIES, seed, 709 + careerIndex).id;
+  const academyClub = pick(randomAcademyClubs(seed), seed, 719 + careerIndex);
+  const formation = pick(FORMATIONS, seed, 727 + careerIndex);
+  let state: GameState = {
+    ...initialState(),
+    seed,
+    name: `Simulação ${careerIndex + 1}`,
+    position: chosenPosition,
+    nationality: chosenNationality,
+    academyClubId: academyClub.id,
+  };
+  const journey = createYouthJourney(state, formation.id);
+  state = {
+    ...state,
+    formationId: formation.id,
+    archetype: journey.formation.archetype,
+    revealAge: journey.revealAge,
+    youthScore: journey.score,
+    youthYears: journey.youthYears,
+    proOffers: journey.offers,
+    age: journey.revealAge,
+    season: state.season + journey.revealAge - 12,
+    overall: journey.overall,
+    potential: journey.potential,
+    morale: clamp(68 + Math.round(journey.score / 4)),
+    fitness: 94,
+  };
+  const firstClubId = pick(journey.offers, seed, 733 + careerIndex);
+  state = signProfessionalForSimulation(state, firstClubId);
+
+  let seasons = 0;
+  while (state.age < 40 && seasons < 30) {
+    const event = eventForState(state);
+    const choiceIndex = Math.floor(seeded(seed, state.season * 401 + seasons * 17) * event.choices.length);
+    const choice = event.choices[choiceIndex] ?? event.choices[0];
+    let effect = choice.effect;
+    let resultText = choice.result;
+    let luckOutcome: "success" | "failure" | null = null;
+    if (choice.luck) {
+      const succeeded = seeded(state.seed, state.season * 127 + choiceIndex * 17 + state.history.length) < choice.luck.chance / 100;
+      effect = mergeEffects(choice.effect, succeeded ? choice.luck.successEffect : choice.luck.failureEffect);
+      resultText = succeeded ? choice.luck.successText : choice.luck.failureText;
+      luckOutcome = succeeded ? "success" : "failure";
+    }
+    state = simulateSeason(state, event, effect, choice.label, resultText, luckOutcome);
+    seasons += 1;
+    if (state.retireAfterSeason) break;
+
+    if (state.transferOffers.length) {
+      const mustMove = state.renewalDenied || state.transferRequested;
+      const movesClub = mustMove || seeded(seed, state.season * 419 + seasons) < 0.55;
+      const destination = movesClub
+        ? pick(state.transferOffers, seed, state.season * 431 + seasons)
+        : null;
+      state = completeSimulationTransfer(state, destination);
+    } else {
+      state = {
+        ...state,
+        phase: "career",
+        currentEventId: state.nextEventId || "extra-training",
+        lastResult: null,
+        lastConsequence: null,
+        transferRequested: false,
+        renewalDenied: false,
+      };
+    }
+  }
+
+  return {
+    career: careerIndex + 1,
+    seed,
+    name: state.name,
+    nationality: countryById(state.nationality).name,
+    position: state.position,
+    seasons,
+    clubs: new Set(state.history.map((record) => record.clubId)).size,
+    peakOverall: Math.max(state.overall, ...state.history.map((record) => record.overall), 0),
+    appearances: state.stats.appearances,
+    goals: state.stats.goals,
+    assists: state.stats.assists,
+    trophies: state.trophies + state.nationalTrophies,
+    ballonDor: state.awardCabinet["Bola de Ouro"] ?? 0,
+  };
+}
+
+function runMonteCarloCareers(runs: number, seedBase = 20260723): MonteCarloReport {
+  const safeRuns = clamp(Math.floor(runs), 1, 10_000);
+  const careers = Array.from({ length: safeRuns }, (_, index) =>
+    simulateMonteCarloCareer((seedBase + index * 104729) % 2147483647, index),
+  );
+  const winners = careers.filter((career) => career.ballonDor > 0);
+  const totalBallonDor = winners.reduce((total, career) => total + career.ballonDor, 0);
+  const totalSeasons = careers.reduce((total, career) => total + career.seasons, 0);
+  const bestCareer = [...careers].sort((a, b) =>
+    b.ballonDor - a.ballonDor ||
+    b.peakOverall - a.peakOverall ||
+    b.trophies - a.trophies ||
+    b.goals + b.assists - (a.goals + a.assists),
+  )[0];
+  return {
+    runs: safeRuns,
+    seedBase,
+    totalSeasons,
+    careersWithBallonDor: winners.length,
+    totalBallonDor,
+    careerChancePercent: Number(((winners.length / safeRuns) * 100).toFixed(2)),
+    awardChancePerSeasonPercent: Number(((totalBallonDor / Math.max(1, totalSeasons)) * 100).toFixed(3)),
+    winners,
+    bestCareer,
+  };
+}
+
 function LocalBadgeImage({
   path,
   kind,
@@ -1790,6 +2013,7 @@ export default function Home() {
   const [positionChangeOpen, setPositionChangeOpen] = useState(false);
   const [positionChangeTarget, setPositionChangeTarget] = useState<PositionKey | null>(null);
   const [positionChangeFeedback, setPositionChangeFeedback] = useState<{ success: boolean; headline: string; text: string } | null>(null);
+  const [monteCarloReport, setMonteCarloReport] = useState<MonteCarloReport | null>(null);
 
   useEffect(() => {
     try {
@@ -1803,6 +2027,19 @@ export default function Home() {
     } catch {
       localStorage.removeItem(SAVE_KEY);
     }
+  }, []);
+
+  useEffect(() => {
+    window.__FUTBOBO_MONTE_CARLO__ = runMonteCarloCareers;
+    const params = new URLSearchParams(window.location.search);
+    const requestedRuns = Number(params.get("montecarlo") ?? 0);
+    if (requestedRuns > 0) {
+      const requestedSeed = Number(params.get("seed") ?? 20260723);
+      queueMicrotask(() => setMonteCarloReport(runMonteCarloCareers(requestedRuns, requestedSeed)));
+    }
+    return () => {
+      delete window.__FUTBOBO_MONTE_CARLO__;
+    };
   }, []);
 
   useEffect(() => {
@@ -1881,13 +2118,7 @@ export default function Home() {
       expandedOfferCount: Math.max(0, game.transferOffers.length - 5),
     };
   }, [game.transferOffers, currentClub]);
-  const currentEvent = useMemo(() => {
-    if (game.currentEventId === FIRST_MATCH_EVENT.id) return FIRST_MATCH_EVENT;
-    if (game.currentEventId === NATIONALITY_SWITCH_EVENT_ID && game.pendingNationalitySwitchTarget) {
-      return buildNationalitySwitchEvent(countryById(game.nationality), countryById(game.pendingNationalitySwitchTarget));
-    }
-    return ALL_PRO_EVENTS.find((event) => event.id === game.currentEventId) ?? ALL_PRO_EVENTS[0];
-  }, [game.currentEventId, game.nationality, game.pendingNationalitySwitchTarget]);
+  const currentEvent = eventForState(game);
 
   useEffect(() => {
     if (!luckSpin) return;
@@ -2217,6 +2448,35 @@ export default function Home() {
   }
 
   const shellClass = `app-shell app-shell-${game.phase}${game.phase === "welcome" ? " app-shell-welcome" : ""}`;
+
+  if (monteCarloReport) {
+    return (
+      <main className="app-shell monte-carlo-shell" data-testid="monte-carlo-report" data-report={JSON.stringify(monteCarloReport)}>
+        <section>
+          <span className="eyebrow">LABORATÓRIO DE BALANCEAMENTO</span>
+          <h1>{monteCarloReport.runs} carreiras simuladas</h1>
+          <div className="monte-carlo-grid">
+            <Metric label="Bolas de Ouro" value={monteCarloReport.totalBallonDor} tone="gold" />
+            <Metric label="Carreiras vencedoras" value={monteCarloReport.careersWithBallonDor} tone="green" />
+            <Metric label="Chance por carreira" value={`${monteCarloReport.careerChancePercent}%`} />
+            <Metric label="Temporadas processadas" value={monteCarloReport.totalSeasons} />
+          </div>
+          <article className="monte-carlo-best">
+            <span>MELHOR CARREIRA DO LOTE</span>
+            <strong>{monteCarloReport.bestCareer.name} · {monteCarloReport.bestCareer.position}</strong>
+            <p>{monteCarloReport.bestCareer.peakOverall} OVR de pico · {monteCarloReport.bestCareer.trophies} títulos · {monteCarloReport.bestCareer.goals} gols · {monteCarloReport.bestCareer.ballonDor} Bola(s) de Ouro</p>
+          </article>
+          {monteCarloReport.winners.length > 0 ? (
+            <div className="monte-carlo-winners">
+              {monteCarloReport.winners.map((winner) => <span key={winner.career}>#{winner.career} · {winner.position} · {winner.peakOverall} OVR · {winner.ballonDor}×</span>)}
+            </div>
+          ) : (
+            <p className="monte-carlo-empty">Nenhuma carreira conquistou a Bola de Ouro neste lote.</p>
+          )}
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className={shellClass}>

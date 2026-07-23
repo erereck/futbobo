@@ -13,6 +13,16 @@ npm run dev
 
 Abra `http://localhost:3000`.
 
+## Laboratório Monte Carlo
+
+O jogo possui um simulador headless para medir o balanceamento de carreiras completas. Com o servidor local aberto, use:
+
+```text
+http://localhost:3000/?montecarlo=100&seed=20260723
+```
+
+O parâmetro `montecarlo` define a quantidade de carreiras e `seed` torna o lote reproduzível. O simulador reutiliza os eventos, a evolução, o mercado, as transferências e as regras de premiação do jogo.
+
 ## Verificações
 
 ```bash

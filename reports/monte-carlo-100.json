@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-07-23",
+  "runs": 100,
+  "seedBase": 20260723,
+  "strategy": {
+    "positions": "aleatorias",
+    "nationalities": "aleatorias",
+    "academy": "uma das quatro bases sorteadas",
+    "eventChoices": "aleatorias",
+    "transferBehavior": "55% de chance de mudar quando a permanencia e permitida"
+  },
+  "totalSeasons": 2366,
+  "careersWithBallonDor": 0,
+  "totalBallonDor": 0,
+  "careerChancePercent": 0,
+  "awardChancePerSeasonPercent": 0,
+  "bestCareer": {
+    "career": 99,
+    "seed": 30524165,
+    "nationality": "Franca",
+    "position": "PE",
+    "seasons": 24,
+    "clubs": 6,
+    "peakOverall": 96,
+    "appearances": 920,
+    "goals": 525,
+    "assists": 365,
+    "trophies": 9,
+    "ballonDor": 0
+  }
+}

@@ -407,3 +407,16 @@ test("integra o novo campo de posições, base sorteada, roleta e simulação po
   assert.match(styles, /\.club-badge\.has-image/);
   assert.match(styles, /\.nation-badge\.has-image/);
 });
+
+test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da carreira", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /function simulateMonteCarloCareer/);
+  assert.match(page, /function runMonteCarloCareers/);
+  assert.match(page, /state = simulateSeason\(state, event, effect, choice\.label, resultText, luckOutcome\)/);
+  assert.match(page, /__FUTBOBO_MONTE_CARLO__/);
+  assert.match(page, /params\.get\("montecarlo"\)/);
+  assert.match(page, /data-testid="monte-carlo-report"/);
+  assert.match(styles, /\.monte-carlo-shell/);
+});

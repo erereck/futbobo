@@ -611,6 +611,17 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .position-change-feedback strong { color: var(--green); font-size: 10px; }
 .position-change-feedback.failure strong { color: #ff786e; }
 
+.monte-carlo-shell { display: grid; min-height: 100dvh; place-items: center; padding: 22px; background: radial-gradient(circle at 50% 18%, rgba(255,199,44,.13), transparent 34%), var(--bg); }
+.monte-carlo-shell > section { width: 100%; padding: 22px; border: 1px solid rgba(255,199,44,.24); border-radius: 24px; background: var(--surface); }
+.monte-carlo-shell h1 { margin: 8px 0 18px; font: 900 30px/1 var(--display); }
+.monte-carlo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.monte-carlo-best { margin-top: 12px; padding: 14px; border: 1px solid rgba(255,199,44,.2); border-radius: 16px; background: rgba(255,199,44,.055); }
+.monte-carlo-best span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .12em; }
+.monte-carlo-best strong { display: block; margin-top: 6px; font-size: 13px; }
+.monte-carlo-best p, .monte-carlo-empty { margin: 5px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.monte-carlo-winners { display: grid; gap: 5px; margin-top: 10px; }
+.monte-carlo-winners span { padding: 8px 10px; border-radius: 10px; background: rgba(99,227,107,.06); color: var(--green); font-size: 9px; font-weight: 800; }
+
 .reveal-nation { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--muted) !important; font-size: 10px !important; font-weight: 700 !important; }
 
 .offer-abroad-tag { display: block; margin-top: 3px; color: var(--blue) !important; }
