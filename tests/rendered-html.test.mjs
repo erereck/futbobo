@@ -162,6 +162,13 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
   assert.match(systems, /Carreira anônima/);
 });
 
+test("reserva espaço real para os escudos no Hall da Fama mobile", async () => {
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(styles, /\.hall-ranking > article \{[^}]*grid-template-columns: 24px 52px minmax\(0,1fr\) auto/);
+  assert.match(styles, /\.hall-ranking > article > \.club-badge \{ justify-self: center; \}/);
+});
+
 test("mantém o gramado contínuo atrás da meta do treinador", async () => {
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
