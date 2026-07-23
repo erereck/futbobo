@@ -145,17 +145,17 @@ export type GameEvent = {
 
 export const POSITIONS: Position[] = [
   { key: "GOL", name: "Goleiro", zone: "gol", style: "Muralha", icon: "🧤", color: "#f2b705", goals: 0.001, assists: 0.01 },
-  { key: "LD", name: "Lateral direito", zone: "defesa", style: "Ala incansável", icon: "↗", color: "#2ca8ff", goals: 0.025, assists: 0.13 },
-  { key: "ZAG", name: "Zagueiro", zone: "defesa", style: "Pilar defensivo", icon: "◆", color: "#2ca8ff", goals: 0.035, assists: 0.02 },
-  { key: "LE", name: "Lateral esquerdo", zone: "defesa", style: "Apoio por fora", icon: "↖", color: "#2ca8ff", goals: 0.025, assists: 0.13 },
-  { key: "VOL", name: "Volante", zone: "meio", style: "Escudo do time", icon: "⬡", color: "#63e36b", goals: 0.04, assists: 0.08 },
-  { key: "MC", name: "Meio-campista", zone: "meio", style: "Motor do time", icon: "●", color: "#63e36b", goals: 0.09, assists: 0.16 },
-  { key: "MEI", name: "Meia ofensivo", zone: "meio", style: "Maestro", icon: "✦", color: "#63e36b", goals: 0.17, assists: 0.23 },
-  { key: "MD", name: "Meia direita", zone: "meio", style: "Construtor aberto", icon: "›", color: "#63e36b", goals: 0.12, assists: 0.19 },
-  { key: "ME", name: "Meia esquerda", zone: "meio", style: "Criador pelo lado", icon: "‹", color: "#63e36b", goals: 0.12, assists: 0.19 },
-  { key: "PD", name: "Ponta direita", zone: "ataque", style: "Driblador", icon: "⚡", color: "#ff7a45", goals: 0.21, assists: 0.17 },
-  { key: "PE", name: "Ponta esquerda", zone: "ataque", style: "Pé invertido", icon: "⚡", color: "#ff7a45", goals: 0.21, assists: 0.17 },
-  { key: "CA", name: "Centroavante", zone: "ataque", style: "Matador de área", icon: "◎", color: "#ff7a45", goals: 0.34, assists: 0.08 },
+  { key: "LD", name: "Lateral direito", zone: "defesa", style: "Ala incansável", icon: "↗", color: "#2ca8ff", goals: 0.03, assists: 0.17 },
+  { key: "ZAG", name: "Zagueiro", zone: "defesa", style: "Pilar defensivo", icon: "◆", color: "#2ca8ff", goals: 0.045, assists: 0.03 },
+  { key: "LE", name: "Lateral esquerdo", zone: "defesa", style: "Apoio por fora", icon: "↖", color: "#2ca8ff", goals: 0.03, assists: 0.17 },
+  { key: "VOL", name: "Volante", zone: "meio", style: "Escudo do time", icon: "⬡", color: "#63e36b", goals: 0.055, assists: 0.11 },
+  { key: "MC", name: "Meio-campista", zone: "meio", style: "Motor do time", icon: "●", color: "#63e36b", goals: 0.12, assists: 0.21 },
+  { key: "MEI", name: "Meia ofensivo", zone: "meio", style: "Maestro", icon: "✦", color: "#63e36b", goals: 0.22, assists: 0.3 },
+  { key: "MD", name: "Meia direita", zone: "meio", style: "Construtor aberto", icon: "›", color: "#63e36b", goals: 0.16, assists: 0.25 },
+  { key: "ME", name: "Meia esquerda", zone: "meio", style: "Criador pelo lado", icon: "‹", color: "#63e36b", goals: 0.16, assists: 0.25 },
+  { key: "PD", name: "Ponta direita", zone: "ataque", style: "Driblador", icon: "⚡", color: "#ff7a45", goals: 0.28, assists: 0.22 },
+  { key: "PE", name: "Ponta esquerda", zone: "ataque", style: "Pé invertido", icon: "⚡", color: "#ff7a45", goals: 0.28, assists: 0.22 },
+  { key: "CA", name: "Centroavante", zone: "ataque", style: "Matador de área", icon: "◎", color: "#ff7a45", goals: 0.43, assists: 0.11 },
 ];
 
 // Nações disponíveis para nacionalidade do jogador (Seleção) e para sediar ligas de clubes.

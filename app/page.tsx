@@ -854,8 +854,14 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const appearances = clamp(Math.round(baseApps + seeded(state.seed, state.season * 3) * 8 - suspensionPenalty), 3, 38);
   const quality = clamp((affected.overall - 48) / 35, 0.45, 1.5);
   const isKeeper = position.key === "GOL";
-  const goals = isKeeper ? (seeded(state.seed, state.season * 5) > 0.992 ? 1 : 0) : Math.max(0, Math.round(appearances * position.goals * quality * (0.65 + seeded(state.seed, state.season * 7) * 0.8)));
-  const assists = isKeeper ? Math.round(seeded(state.seed, state.season * 11) * 2) : Math.max(0, Math.round(appearances * position.assists * quality * (0.65 + seeded(state.seed, state.season * 13) * 0.8)));
+  const roleProductionBonus = seasonRole === "estrela" ? 0.12 : seasonRole === "titular" ? 0.07 : seasonRole === "rotacao" ? 0.02 : seasonRole === "reserva" ? -0.03 : 0;
+  const productionMomentum = clamp(
+    1.1 + roleProductionBonus + (affected.morale - 50) / 250 + (affected.managerTrust - 50) / 300 + (affected.fitness - 70) / 500,
+    0.9,
+    1.45,
+  );
+  const goals = isKeeper ? (seeded(state.seed, state.season * 5) > 0.992 ? 1 : 0) : Math.max(0, Math.round(appearances * position.goals * quality * productionMomentum * (0.72 + seeded(state.seed, state.season * 7) * 0.88)));
+  const assists = isKeeper ? Math.round(seeded(state.seed, state.season * 11) * 2) : Math.max(0, Math.round(appearances * position.assists * quality * productionMomentum * (0.72 + seeded(state.seed, state.season * 13) * 0.88)));
   const cleanSheets = isKeeper ? Math.round(appearances * (0.18 + club.reputation * 0.035 + affected.overall / 500)) : 0;
   const goalsConceded = isKeeper ? Math.max(4, Math.round(appearances * (1.55 - club.reputation * 0.1 - affected.overall / 180))) : 0;
   const positionCardWeight = position.zone === "defesa" ? 1.35 : position.zone === "meio" ? 1 : 0.65;

@@ -163,3 +163,16 @@ test("prioriza clubes europeus quando a carreira já está na Europa", async () 
   assert.match(styles, /\.european-market-card/);
   assert.match(styles, /\.offer-homecoming-tag/);
 });
+
+test("gera temporadas com mais gols e assistências sem igualar todas as posições", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+
+  assert.match(page, /const productionMomentum = clamp\(/);
+  assert.match(page, /roleProductionBonus/);
+  assert.match(page, /position\.goals \* quality \* productionMomentum/);
+  assert.match(page, /position\.assists \* quality \* productionMomentum/);
+  assert.match(data, /key: "CA"[\s\S]*goals: 0\.43, assists: 0\.11/);
+  assert.match(data, /key: "MEI"[\s\S]*goals: 0\.22, assists: 0\.3/);
+  assert.match(data, /key: "PD"[\s\S]*goals: 0\.28, assists: 0\.22/);
+});
