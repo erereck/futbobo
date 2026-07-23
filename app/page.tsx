@@ -1628,7 +1628,7 @@ export default function Home() {
     }
   }
 
-  const shellClass = game.phase === "welcome" ? "app-shell app-shell-welcome" : "app-shell";
+  const shellClass = `app-shell app-shell-${game.phase}${game.phase === "welcome" ? " app-shell-welcome" : ""}`;
 
   return (
     <main className={shellClass}>
@@ -1836,7 +1836,7 @@ export default function Home() {
       )}
 
       {(game.phase === "career" || game.phase === "consequence" || game.phase === "season-result" || game.phase === "transfer" || game.phase === "transfer-denied" || game.phase === "retirement-confirm") && (
-        <section className="career-shell screen-enter">
+        <section className={`career-shell career-phase-${game.phase} career-tab-${activeTab} screen-enter`}>
           <header className="career-header">
             <div className="club-identity"><ClubBadge club={currentClub} size="sm" /><span><small>{headerSeason}</small><strong>{currentClub.shortName}</strong></span></div>
             <div className="career-age"><strong>{headerAge}</strong><span>ANOS</span></div>
@@ -1880,10 +1880,12 @@ export default function Home() {
                 {game.lastConsequence.changes.map((change) => <span key={change} className={isNegativeConsequence(change) ? "negative" : "positive"}>{change}</span>)}
               </div>
               <div className="consequence-note"><strong>{game.lastConsequence.headline}</strong><span>Agora veja como essa decisão atravessou a temporada.</span></div>
-              <button className="primary-button" onClick={continueAfterConsequence}>{game.retireAfterSeason ? "Ver o fim da carreira" : "Ver resultado da temporada"} <span>→</span></button>
-              <div className="consequence-autoplay" aria-live="polite">
-                <span>Avançando automaticamente em 5 segundos</span>
-                <div><i /></div>
+              <div className="mobile-action-dock consequence-action-dock">
+                <button className="primary-button" onClick={continueAfterConsequence}>{game.retireAfterSeason ? "Ver o fim da carreira" : "Ver resultado da temporada"} <span>→</span></button>
+                <div className="consequence-autoplay" aria-live="polite">
+                  <span>Avançando automaticamente em 5 segundos</span>
+                  <div><i /></div>
+                </div>
               </div>
             </div>
           )}
@@ -1922,7 +1924,9 @@ export default function Home() {
               {game.lastResult.nationalNote && <div className="season-national-note"><NationBadge country={nationCountry} size="sm" /><p>{game.lastResult.nationalNote}</p></div>}
               {game.lastResult.awards.length > 0 && <div className="season-awards">{game.lastResult.awards.map((award) => <span key={award}>✦ {award}</span>)}</div>}
               <div className="result-details"><span>Valor de mercado <strong>{formatMoney(game.lastResult.marketValue)}</strong></span>{game.lastResult.calledUp && <span className="callup-badge">★ Convocado pela Seleção</span>}</div>
-              <button className="primary-button" onClick={continueAfterResult}>{game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"} <span>→</span></button>
+              <div className="mobile-action-dock">
+                <button className="primary-button" onClick={continueAfterResult}>{game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"} <span>→</span></button>
+              </div>
             </div>
           )}
 
@@ -1966,7 +1970,9 @@ export default function Home() {
               <h1>{game.transferStatus.headline}</h1>
               <p>{game.transferStatus.text}</p>
               <div className="fan-backlash"><span>REAÇÃO DA TORCIDA</span><strong>{supporterMood.label}</strong><div><i style={{ width: `${game.fanSupport}%` }} /></div><small>Relação destruída · −12 moral · −7 prestígio</small></div>
-              <button className="primary-button" onClick={continueAfterDeniedTransfer}>Encarar a temporada <span>→</span></button>
+              <div className="mobile-action-dock">
+                <button className="primary-button" onClick={continueAfterDeniedTransfer}>Encarar a temporada <span>→</span></button>
+              </div>
             </div>
           )}
 
@@ -1982,7 +1988,7 @@ export default function Home() {
                 <Metric label="OVR atual" value={game.overall} tone="gold" />
                 <Metric label="Legado" value={game.legacyPoints} tone="green" />
               </div>
-              <div className="retirement-actions">
+              <div className="retirement-actions mobile-action-dock">
                 <button className="danger-button" onClick={confirmRetirement}>Confirmar aposentadoria <span>→</span></button>
                 <button className="secondary-button" onClick={cancelRetirement}>Ainda não</button>
               </div>

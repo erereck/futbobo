@@ -87,3 +87,15 @@ test("mantém o novo equilíbrio de progressão, mercado e clubes brasileiros", 
   assert.match(page, /europeanDevelopmentBonus/);
   assert.match(page, /retirement-confirm/);
 });
+
+test("mantém a carreira encaixada na tela mobile com ações fixas", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /mobile-action-dock/);
+  assert.match(page, /career-phase-\$\{game\.phase\}/);
+  assert.match(styles, /@media \(max-width: 540px\)/);
+  assert.match(styles, /\.career-shell \{[\s\S]*height: 100%/);
+  assert.match(styles, /\.mobile-action-dock \{[\s\S]*position: fixed/);
+  assert.match(styles, /\.event-card \{[\s\S]*position: absolute/);
+});

@@ -405,6 +405,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .retirement-recap .metric strong { font-size: 15px; }
 .retirement-actions { display: grid; width: 100%; gap: 9px; }
 .danger-button { display: flex; min-height: 56px; align-items: center; justify-content: space-between; padding: 0 17px; border: 1px solid rgba(255,90,78,.42); border-radius: 15px; background: linear-gradient(135deg, #c83d34, #8f2822); color: #fff; font-size: 11px; font-weight: 900; cursor: pointer; box-shadow: 0 13px 28px rgba(120,30,25,.25); }
+.mobile-action-dock { width: 100%; }
 
 .bottom-nav { position: fixed; z-index: 40; bottom: 0; left: 50%; display: grid; width: min(540px, 100%); grid-template-columns: repeat(4, 1fr); padding: 7px 10px calc(env(safe-area-inset-bottom) + 7px); transform: translateX(-50%); border-top: 1px solid var(--line); background: rgba(7,23,16,.94); backdrop-filter: blur(18px); }
 .bottom-nav button { display: flex; min-height: 50px; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 12px; background: transparent; color: #6f8878; font-size: 8px; font-weight: 800; cursor: pointer; }
@@ -569,6 +570,190 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .welcome-screen, .setup-screen, .youth-screen, .youth-complete-screen, .revelation-screen, .career-shell, .summary-screen { min-height: calc(100dvh - 38px); }
   .sticky-action, .bottom-nav { bottom: 18px; border-radius: 0 0 28px 28px; }
   .career-header, .step-header { border-radius: 28px 28px 0 0; }
+}
+
+@media (max-width: 540px) {
+  .app-shell-career,
+  .app-shell-consequence,
+  .app-shell-season-result,
+  .app-shell-transfer,
+  .app-shell-transfer-denied,
+  .app-shell-retirement-confirm {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .career-shell {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+
+  .career-header {
+    position: relative;
+    flex: 0 0 auto;
+    min-height: 58px;
+    padding: calc(env(safe-area-inset-top) + 5px) 11px 6px;
+  }
+
+  .career-age strong { font-size: 23px; }
+  .mini-avatar { width: 34px; height: 34px; }
+  .career-bars { flex: 0 0 auto; gap: 6px; padding: 7px 10px; }
+  .career-status-strip { flex: 0 0 auto; }
+  .career-status-strip > span { padding: 6px 7px; }
+  .career-status-strip small { font-size: 7px; }
+  .career-status-strip strong { font-size: 8px; }
+  .retirement-trigger { min-height: 36px; padding: 5px 7px; }
+
+  .career-shell > .event-stage,
+  .career-shell > .result-stage,
+  .career-shell > .transfer-stage,
+  .career-shell > .consequence-stage,
+  .career-shell > .transfer-denied-stage,
+  .career-shell > .retirement-stage,
+  .career-shell > .panel-screen {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+
+  .event-stage {
+    position: relative;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 68px);
+    overflow: hidden !important;
+  }
+
+  .event-stage .market-strip { min-height: 44px; padding: 5px 10px; }
+  .event-stage .market-strip button { min-height: 36px; }
+  .event-stage .objective-card { margin: 7px 10px 0; padding: 9px 11px; }
+  .event-stage .objective-card p { display: none; }
+  .event-art { height: 100%; min-height: 180px; border-bottom: 0; }
+  .event-card {
+    position: absolute;
+    right: 10px;
+    bottom: calc(env(safe-area-inset-bottom) + 68px);
+    left: 10px;
+    z-index: 24;
+    max-height: min(58dvh, 390px, calc(100% - env(safe-area-inset-bottom) - 78px));
+    margin: 0;
+    padding: 14px 13px 12px;
+    overflow-y: auto;
+    border-radius: 20px;
+    box-shadow: 0 18px 42px rgba(0,0,0,.48);
+  }
+  .event-heading h1 { margin: 4px 0 6px; font-size: 22px; }
+  .event-heading p { font-size: 10px; line-height: 1.4; }
+  .choice-list { gap: 6px; margin-top: 11px; }
+  .decision-button { min-height: 51px; padding: 8px 10px; }
+  .decision-button strong { font-size: 11px; }
+  .decision-button small { font-size: 7px; }
+
+  .bottom-nav {
+    padding: 4px 8px calc(env(safe-area-inset-bottom) + 4px);
+  }
+  .bottom-nav button { min-height: 48px; }
+  .bottom-nav button span { font-size: 13px; }
+
+  .panel-screen {
+    padding: 13px 12px calc(env(safe-area-inset-bottom) + 70px);
+  }
+  .panel-screen .section-heading { margin-top: 0; }
+
+  .result-stage,
+  .transfer-stage,
+  .consequence-stage,
+  .transfer-denied-stage,
+  .retirement-stage {
+    min-height: 0;
+    padding: 14px 13px calc(env(safe-area-inset-bottom) + 88px);
+  }
+
+  .result-stage { justify-content: flex-start; }
+  .result-symbol { width: 66px; height: 66px; margin: 10px 0 9px; border-radius: 22px 22px 22px 8px; font-size: 33px; }
+  .result-stage h1, .transfer-stage h1 { margin-bottom: 5px; font-size: 23px; }
+  .result-stage > p, .transfer-stage > p { font-size: 10px; line-height: 1.4; }
+  .season-stat-grid { gap: 5px; margin: 12px 0 8px; }
+  .season-stat-grid .metric { min-height: 52px; padding: 7px; }
+  .season-stat-grid .metric strong { font-size: 15px; }
+  .season-development,
+  .european-spotlight,
+  .discipline-result,
+  .objective-result,
+  .contract-expired,
+  .competition-grid,
+  .season-twist,
+  .season-national-note,
+  .season-awards { margin-bottom: 7px; }
+  .season-development { padding: 8px 10px; }
+  .season-development > strong { font-size: 18px; }
+  .competition-card { min-height: 49px; padding: 7px; }
+  .result-details { margin-bottom: 4px; }
+
+  .mobile-action-dock {
+    position: fixed;
+    z-index: 45;
+    right: 0;
+    bottom: 0;
+    left: 50%;
+    width: min(540px, 100%);
+    padding: 9px 13px calc(env(safe-area-inset-bottom) + 9px);
+    transform: translateX(-50%);
+    border-top: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(8,26,19,.76), rgba(8,26,19,.98) 26%);
+    backdrop-filter: blur(18px);
+  }
+  .mobile-action-dock .primary-button,
+  .mobile-action-dock .danger-button,
+  .mobile-action-dock .secondary-button { min-height: 48px; }
+  .consequence-action-dock { padding-top: 7px; }
+  .consequence-action-dock .consequence-autoplay { margin-top: 6px; }
+  .consequence-action-dock .consequence-autoplay > span { display: none; }
+  .consequence-action-dock .consequence-autoplay > div { margin-top: 0; }
+
+  .consequence-stage,
+  .transfer-denied-stage,
+  .retirement-stage {
+    justify-content: flex-start;
+    padding-top: 16px;
+  }
+  .consequence-symbol,
+  .denied-symbol,
+  .retirement-symbol { width: 64px; height: 64px; margin: 11px 0 9px; border-radius: 22px 22px 22px 8px; font-size: 31px; }
+  .consequence-stage h1,
+  .transfer-denied-stage h1,
+  .retirement-stage h1 { margin: 4px 0 6px; font-size: 23px; }
+  .consequence-stage > p,
+  .transfer-denied-stage > p,
+  .retirement-stage > p { font-size: 10px; line-height: 1.4; }
+  .consequence-list { gap: 5px; margin: 12px 0 8px; }
+  .consequence-list span { padding: 6px 8px; font-size: 8px; }
+  .consequence-note { margin-bottom: 5px; padding: 10px; }
+  .fan-backlash { margin: 14px 0 5px; padding: 12px; }
+  .retirement-recap { gap: 5px; margin: 14px 0 5px; }
+  .retirement-recap .metric { min-height: 54px; padding: 7px; }
+  .retirement-stage { padding-bottom: calc(env(safe-area-inset-bottom) + 126px); }
+  .retirement-actions { gap: 6px; }
+
+  .transfer-stage {
+    justify-content: flex-start;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 14px);
+  }
+  .transfer-stage > .eyebrow { margin-bottom: 4px; }
+  .market-expansion-card { margin-top: 9px; padding: 8px 10px; }
+  .transfer-offers { gap: 6px; margin-top: 10px; }
+  .transfer-offers .offer-card { min-height: 64px; grid-template-columns: 43px 1fr 20px; gap: 8px; padding: 7px 9px; border-radius: 14px; }
+  .transfer-offers .club-badge-md { width: 41px; height: 46px; }
+  .transfer-offers .offer-card strong { margin: 2px 0; font-size: 12px; }
+  .transfer-offers .offer-card small { font-size: 7px; }
+  .transfer-offers .offer-card em { font-size: 8px; }
+  .transfer-offers .offer-market-value { display: none; }
 }
 
 @media (max-width: 365px) {
