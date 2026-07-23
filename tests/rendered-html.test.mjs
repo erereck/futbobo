@@ -62,3 +62,20 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
     assert.match(bundle, new RegExp(content, "i"));
   }
 });
+
+test("mantém o novo equilíbrio de progressão, mercado e clubes brasileiros", async () => {
+  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const brazilBlock = gameData.slice(
+    gameData.indexOf("const BRAZIL_CLUBS"),
+    gameData.indexOf("const EUROPE_CLUBS"),
+  );
+
+  assert.equal((brazilBlock.match(/reputation: 5/g) ?? []).length, 2);
+  assert.equal((brazilBlock.match(/strength: \d+/g) ?? []).length, 20);
+  assert.match(page, /brasileirao: 0\.42/);
+  assert.match(page, /cupLoadFactor/);
+  assert.match(page, /continentalLoadFactor/);
+  assert.match(page, /}, 5000\);/);
+  assert.match(page, /overall - 1/);
+});

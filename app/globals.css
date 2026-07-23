@@ -314,6 +314,14 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .season-stat-grid { display: grid; width: 100%; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 7px; margin: 22px 0 13px; text-align: left; }
 .season-stat-grid .metric { min-height: 61px; }
 .season-stat-grid .metric strong { font-size: 18px; }
+.season-development { display: grid; width: 100%; grid-template-columns: 1fr auto; align-items: center; gap: 3px 10px; margin-bottom: 10px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); text-align: left; }
+.season-development > span { color: var(--muted); font-size: 7px; font-weight: 900; letter-spacing: .1em; }
+.season-development > strong { grid-row: 1 / span 2; grid-column: 2; color: var(--muted); font: 900 21px var(--display); }
+.season-development > small { color: var(--muted); font-size: 8px; }
+.season-development.up { border-color: rgba(99,227,107,.25); background: rgba(99,227,107,.055); }
+.season-development.up > strong { color: var(--green); }
+.season-development.down { border-color: rgba(255,90,78,.25); background: rgba(255,90,78,.055); }
+.season-development.down > strong { color: var(--red); }
 .discipline-result { display: flex; width: 100%; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; }
 .discipline-result > span { color: var(--muted); }
 .discipline-result > strong { font-size: 9px; }
@@ -357,6 +365,11 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .consequence-stage.luck-failure .consequence-symbol { border-color: rgba(255,90,78,.3); background: rgba(255,90,78,.09); color: var(--red); }
 .consequence-stage.luck-success .consequence-note { border-color: rgba(99,227,107,.22); }
 .consequence-stage.luck-failure .consequence-note { border-color: rgba(255,90,78,.22); }
+.consequence-autoplay { width: 100%; margin-top: 12px; }
+.consequence-autoplay > span { color: var(--muted); font-size: 8px; font-weight: 800; }
+.consequence-autoplay > div { height: 5px; margin-top: 7px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.08); }
+.consequence-autoplay i { display: block; width: 100%; height: 100%; transform-origin: left; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--gold)); animation: consequence-countdown 5s linear forwards; }
+@keyframes consequence-countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 .denied-symbol { border-color: rgba(255,90,78,.3); background: rgba(255,90,78,.1); color: var(--red); }
 .fan-backlash { width: 100%; margin: 22px 0; padding: 15px; border: 1px solid rgba(255,90,78,.24); border-radius: 17px; background: rgba(255,90,78,.06); text-align: left; }
 .fan-backlash > span { color: var(--muted); font-size: 8px; font-weight: 900; letter-spacing: .12em; }
@@ -368,6 +381,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .transfer-stage > .eyebrow { margin-bottom: 7px; }
 .transfer-offers { width: 100%; margin-top: 22px; }
 .offer-contract { color: var(--green) !important; font-weight: 800 !important; }
+.offer-market-value { color: var(--gold) !important; font-weight: 800 !important; }
 .offer-rivalry { color: var(--red) !important; font-weight: 900 !important; }
 .stay-card { border-style: dashed; background: rgba(255,255,255,.02); }
 
@@ -393,6 +407,9 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .profile-metrics { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px; margin: 10px 0; }
 .profile-metrics .metric { padding: 12px; }
 .profile-metrics strong { font-size: 17px; }
+.market-context { margin: -1px 0 10px; padding: 11px 13px; border: 1px solid rgba(255,199,44,.18); border-radius: 14px; background: rgba(255,199,44,.045); }
+.market-context span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.market-context p { margin: 4px 0 0; color: var(--muted); font-size: 8px; line-height: 1.45; }
 .contract-card, .discipline-card { margin: 10px 0; padding: 15px; border: 1px solid rgba(166,117,255,.2); border-radius: 18px; background: linear-gradient(135deg, rgba(166,117,255,.06), var(--surface)); }
 .contract-card > span, .discipline-card > span { color: #cbb4ff; font-size: 8px; font-weight: 900; letter-spacing: .12em; }
 .contract-card > div { display: flex; flex-direction: column; margin: 9px 0 12px; }

@@ -61,6 +61,7 @@ export type Club = {
   primary: string;
   secondary: string;
   reputation: number;
+  strength?: number;
   academy?: number;
 };
 
@@ -194,26 +195,26 @@ export function leagueById(id: string): League {
 // Série A 2026, conforme a relação oficial da CBF. Os escudos serão substituídos
 // por uma fonte de dados licenciada; nesta demo cada clube recebe um monograma.
 const BRAZIL_CLUBS: Club[] = [
-  { id: "athletico", name: "Athletico Paranaense", shortName: "Athletico-PR", abbr: "CAP", city: "Curitiba", state: "PR", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#111111", reputation: 4, academy: 4 },
-  { id: "atletico-mg", name: "Atlético Mineiro", shortName: "Atlético-MG", abbr: "CAM", city: "Belo Horizonte", state: "MG", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 4 },
-  { id: "bahia", name: "Esporte Clube Bahia", shortName: "Bahia", abbr: "BAH", city: "Salvador", state: "BA", countryId: "brasil", leagueId: "brasileirao", primary: "#0057a8", secondary: "#e32636", reputation: 4, academy: 4 },
-  { id: "botafogo", name: "Botafogo de Futebol e Regatas", shortName: "Botafogo", abbr: "BOT", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 4 },
-  { id: "chapecoense", name: "Associação Chapecoense de Futebol", shortName: "Chapecoense", abbr: "CHA", city: "Chapecó", state: "SC", countryId: "brasil", leagueId: "brasileirao", primary: "#08783e", secondary: "#f5f5f5", reputation: 2, academy: 3 },
-  { id: "corinthians", name: "Sport Club Corinthians Paulista", shortName: "Corinthians", abbr: "COR", city: "São Paulo", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 5 },
-  { id: "coritiba", name: "Coritiba Foot Ball Club", shortName: "Coritiba", abbr: "CFC", city: "Curitiba", state: "PR", countryId: "brasil", leagueId: "brasileirao", primary: "#08783e", secondary: "#f5f5f5", reputation: 3, academy: 3 },
-  { id: "cruzeiro", name: "Cruzeiro Esporte Clube", shortName: "Cruzeiro", abbr: "CRU", city: "Belo Horizonte", state: "MG", countryId: "brasil", leagueId: "brasileirao", primary: "#164194", secondary: "#f5f5f5", reputation: 5, academy: 5 },
-  { id: "flamengo", name: "Clube de Regatas do Flamengo", shortName: "Flamengo", abbr: "FLA", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#111111", reputation: 5, academy: 5 },
-  { id: "fluminense", name: "Fluminense Football Club", shortName: "Fluminense", abbr: "FLU", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#7a1538", secondary: "#007a4d", reputation: 5, academy: 5 },
-  { id: "gremio", name: "Grêmio Foot-Ball Porto Alegrense", shortName: "Grêmio", abbr: "GRE", city: "Porto Alegre", state: "RS", countryId: "brasil", leagueId: "brasileirao", primary: "#2a9fd6", secondary: "#111111", reputation: 5, academy: 5 },
-  { id: "internacional", name: "Sport Club Internacional", shortName: "Internacional", abbr: "INT", city: "Porto Alegre", state: "RS", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#f5f5f5", reputation: 5, academy: 5 },
-  { id: "mirassol", name: "Mirassol Futebol Clube", shortName: "Mirassol", abbr: "MIR", city: "Mirassol", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f2b705", secondary: "#0a7a3d", reputation: 2, academy: 3 },
-  { id: "palmeiras", name: "Sociedade Esportiva Palmeiras", shortName: "Palmeiras", abbr: "PAL", city: "São Paulo", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#08783e", secondary: "#f5f5f5", reputation: 5, academy: 5 },
-  { id: "bragantino", name: "Red Bull Bragantino", shortName: "Bragantino", abbr: "RBB", city: "Bragança Paulista", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f5f5f5", secondary: "#d71920", reputation: 4, academy: 5 },
-  { id: "remo", name: "Clube do Remo", shortName: "Remo", abbr: "REM", city: "Belém", state: "PA", countryId: "brasil", leagueId: "brasileirao", primary: "#162c6c", secondary: "#f5f5f5", reputation: 2, academy: 3 },
-  { id: "santos", name: "Santos Futebol Clube", shortName: "Santos", abbr: "SAN", city: "Santos", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f5f5f5", secondary: "#111111", reputation: 5, academy: 5 },
-  { id: "sao-paulo", name: "São Paulo Futebol Clube", shortName: "São Paulo", abbr: "SAO", city: "São Paulo", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f5f5f5", secondary: "#d71920", reputation: 5, academy: 5 },
-  { id: "vasco", name: "Club de Regatas Vasco da Gama", shortName: "Vasco", abbr: "VAS", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 5, academy: 5 },
-  { id: "vitoria", name: "Esporte Clube Vitória", shortName: "Vitória", abbr: "VIT", city: "Salvador", state: "BA", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#111111", reputation: 3, academy: 4 },
+  { id: "athletico", name: "Athletico Paranaense", shortName: "Athletico-PR", abbr: "CAP", city: "Curitiba", state: "PR", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#111111", reputation: 4, strength: 76, academy: 4 },
+  { id: "atletico-mg", name: "Atlético Mineiro", shortName: "Atlético-MG", abbr: "CAM", city: "Belo Horizonte", state: "MG", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 4, strength: 82, academy: 4 },
+  { id: "bahia", name: "Esporte Clube Bahia", shortName: "Bahia", abbr: "BAH", city: "Salvador", state: "BA", countryId: "brasil", leagueId: "brasileirao", primary: "#0057a8", secondary: "#e32636", reputation: 4, strength: 80, academy: 4 },
+  { id: "botafogo", name: "Botafogo de Futebol e Regatas", shortName: "Botafogo", abbr: "BOT", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 4, strength: 83, academy: 4 },
+  { id: "chapecoense", name: "Associação Chapecoense de Futebol", shortName: "Chapecoense", abbr: "CHA", city: "Chapecó", state: "SC", countryId: "brasil", leagueId: "brasileirao", primary: "#08783e", secondary: "#f5f5f5", reputation: 2, strength: 68, academy: 3 },
+  { id: "corinthians", name: "Sport Club Corinthians Paulista", shortName: "Corinthians", abbr: "COR", city: "São Paulo", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 4, strength: 78, academy: 5 },
+  { id: "coritiba", name: "Coritiba Foot Ball Club", shortName: "Coritiba", abbr: "CFC", city: "Curitiba", state: "PR", countryId: "brasil", leagueId: "brasileirao", primary: "#08783e", secondary: "#f5f5f5", reputation: 2, strength: 69, academy: 3 },
+  { id: "cruzeiro", name: "Cruzeiro Esporte Clube", shortName: "Cruzeiro", abbr: "CRU", city: "Belo Horizonte", state: "MG", countryId: "brasil", leagueId: "brasileirao", primary: "#164194", secondary: "#f5f5f5", reputation: 4, strength: 81, academy: 5 },
+  { id: "flamengo", name: "Clube de Regatas do Flamengo", shortName: "Flamengo", abbr: "FLA", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#111111", reputation: 5, strength: 88, academy: 5 },
+  { id: "fluminense", name: "Fluminense Football Club", shortName: "Fluminense", abbr: "FLU", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#7a1538", secondary: "#007a4d", reputation: 4, strength: 79, academy: 5 },
+  { id: "gremio", name: "Grêmio Foot-Ball Porto Alegrense", shortName: "Grêmio", abbr: "GRE", city: "Porto Alegre", state: "RS", countryId: "brasil", leagueId: "brasileirao", primary: "#2a9fd6", secondary: "#111111", reputation: 4, strength: 76, academy: 5 },
+  { id: "internacional", name: "Sport Club Internacional", shortName: "Internacional", abbr: "INT", city: "Porto Alegre", state: "RS", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#f5f5f5", reputation: 4, strength: 78, academy: 5 },
+  { id: "mirassol", name: "Mirassol Futebol Clube", shortName: "Mirassol", abbr: "MIR", city: "Mirassol", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f2b705", secondary: "#0a7a3d", reputation: 3, strength: 74, academy: 3 },
+  { id: "palmeiras", name: "Sociedade Esportiva Palmeiras", shortName: "Palmeiras", abbr: "PAL", city: "São Paulo", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#08783e", secondary: "#f5f5f5", reputation: 5, strength: 87, academy: 5 },
+  { id: "bragantino", name: "Red Bull Bragantino", shortName: "Bragantino", abbr: "RBB", city: "Bragança Paulista", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f5f5f5", secondary: "#d71920", reputation: 3, strength: 77, academy: 5 },
+  { id: "remo", name: "Clube do Remo", shortName: "Remo", abbr: "REM", city: "Belém", state: "PA", countryId: "brasil", leagueId: "brasileirao", primary: "#162c6c", secondary: "#f5f5f5", reputation: 1, strength: 66, academy: 3 },
+  { id: "santos", name: "Santos Futebol Clube", shortName: "Santos", abbr: "SAN", city: "Santos", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f5f5f5", secondary: "#111111", reputation: 4, strength: 75, academy: 5 },
+  { id: "sao-paulo", name: "São Paulo Futebol Clube", shortName: "São Paulo", abbr: "SAO", city: "São Paulo", state: "SP", countryId: "brasil", leagueId: "brasileirao", primary: "#f5f5f5", secondary: "#d71920", reputation: 4, strength: 78, academy: 5 },
+  { id: "vasco", name: "Club de Regatas Vasco da Gama", shortName: "Vasco", abbr: "VAS", city: "Rio de Janeiro", state: "RJ", countryId: "brasil", leagueId: "brasileirao", primary: "#111111", secondary: "#f5f5f5", reputation: 3, strength: 74, academy: 5 },
+  { id: "vitoria", name: "Esporte Clube Vitória", shortName: "Vitória", abbr: "VIT", city: "Salvador", state: "BA", countryId: "brasil", leagueId: "brasileirao", primary: "#d71920", secondary: "#111111", reputation: 3, strength: 72, academy: 4 },
 ];
 
 // Clubes europeus: nomes reais, sem uso de logos — escudo é sempre o monograma tipográfico do clube.
