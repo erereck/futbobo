@@ -19,7 +19,7 @@ test("exporta uma página estática pronta para o GitHub Pages", async () => {
   assert.match(html, /Futbobo/);
   assert.match(html, /Sua carreira começa na base/i);
   assert.match(html, /manifest\.webmanifest/);
-  assert.match(html, /og\.png/);
+  assert.match(html, /og-v2\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
@@ -37,6 +37,12 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
     "Centroavante",
     "Escolha sua base",
     "Brasileirão",
+    "Copa do Brasil",
+    "Libertadores",
+    "Mundial de Clubes",
+    "Pedir transferência",
+    "CONSEQUÊNCIAS DA ESCOLHA",
+    "Ver propostas profissionais",
   ]) {
     assert.match(bundle, new RegExp(content, "i"));
   }

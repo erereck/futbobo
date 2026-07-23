@@ -60,6 +60,7 @@ export type Effect = {
   minutes?: number;
   titleBoost?: number;
   nationalBoost?: number;
+  fans?: number;
   injuryRisk?: number;
   transfer?: boolean;
   retire?: boolean;
@@ -77,6 +78,8 @@ export type GameEvent = {
   maxOvr?: number;
   needsLowFitness?: boolean;
   needsNational?: boolean;
+  needsLibertadores?: boolean;
+  needsWorld?: boolean;
   oneTime?: boolean;
   choices: Array<{
     label: string;
@@ -302,6 +305,48 @@ export const PRO_EVENTS: GameEvent[] = [
   { id: "young-prospect", icon: "★", tag: "ELENCO", title: "Chegou uma promessa para sua posição", description: "O clube apresenta um garoto que lembra muito você alguns anos atrás.", minAge: 26, choices: [
     { label: "Virar mentor", hint: "Liderança ↑↑ · minutos ↓", result: "Você ensina o que ninguém colocou em contrato.", effect: { leadership: 12, minutes: -5, reputation: 5 } },
     { label: "Competir por cada minuto", hint: "OVR ↑ · físico ↓", result: "O treino ganha intensidade de jogo grande.", effect: { ovr: 1, fitness: -10, minutes: 4 } },
+  ]},
+  { id: "libertadores-away", icon: "LIB", tag: "LIBERTADORES", title: "Noventa minutos contra um continente", description: "O estádio ferve, o gramado prende e cada dividida parece valer uma taça.", needsLibertadores: true, choices: [
+    { label: "Esfriar o jogo", hint: "Liderança ↑ · título ↑", result: "Você transforma barulho em relógio e conduz o time para fora da pressão.", effect: { leadership: 6, titleBoost: 9, fans: 4 } },
+    { label: "Responder na intensidade", hint: "Torcida ↑↑ · físico ↓", result: "A atuação vira daqueles vídeos que a torcida revê por anos.", effect: { titleBoost: 12, fitness: -12, reputation: 7, fans: 9 } },
+  ]},
+  { id: "altitude", icon: "▲", tag: "LIBERTADORES", title: "A bola corre onde falta ar", description: "A viagem para a altitude muda o corpo, o passe e o plano do treinador.", needsLibertadores: true, choices: [
+    { label: "Dosar o ritmo", hint: "Seguro · físico ↑", result: "Você escolhe os momentos e termina inteiro.", effect: { fitness: 7, titleBoost: 5 } },
+    { label: "Pressionar desde o início", hint: "Título ↑↑ · risco físico", result: "O time surpreende antes que o pulmão cobre a conta.", effect: { titleBoost: 14, fitness: -15, injuryRisk: 8 } },
+  ]},
+  { id: "world-stage", icon: "MUN", tag: "MUNDIAL", title: "O planeta está olhando", description: "Depois da América, chegou a camisa que domina outro continente.", needsWorld: true, choices: [
+    { label: "Jogar sem complexo", hint: "Mundial ↑↑ · reputação ↑", result: "O primeiro duelo mostra que o escudo não entra sozinho em campo.", effect: { titleBoost: 18, reputation: 12, fans: 10, fitness: -8 } },
+    { label: "Fechar espaços e sobreviver", hint: "Mundial ↑ · seguro", result: "Cada minuto vivo aumenta a crença do time.", effect: { titleBoost: 11, leadership: 7, morale: 5 } },
+  ]},
+  { id: "cup-semi", icon: "CB", tag: "COPA DO BRASIL", title: "Uma noite de mata-mata", description: "O primeiro jogo deixou tudo aberto. Um lance pode valer calendário e milhões.", choices: [
+    { label: "Atacar a vaga", hint: "Copa ↑↑ · risco ↑", result: "Você joga a partida como se não existisse amanhã.", effect: { titleBoost: 14, fitness: -10, injuryRisk: 5, fans: 6 } },
+    { label: "Controlar a eliminatória", hint: "Liderança ↑ · Copa ↑", result: "A ansiedade fica na arquibancada; dentro do campo, você dita o ritmo.", effect: { titleBoost: 8, leadership: 6 } },
+  ]},
+  { id: "supporters-meeting", icon: "▥", tag: "TORCIDA", title: "A organizada pediu conversa", description: "A fase pesa e três representantes esperam o elenco depois do treino.", choices: [
+    { label: "Falar de frente", hint: "Torcida ↑↑ · pressão", result: "Você não promete taça, promete que ninguém vai se esconder.", effect: { fans: 12, leadership: 8, morale: -3 } },
+    { label: "Deixar a diretoria responder", hint: "Seguro · torcida ↓", result: "A reunião acaba sem sua voz e a distância aumenta.", effect: { fans: -7, morale: 2 } },
+  ]},
+  { id: "community-project", icon: "♡", tag: "LEGADO", title: "Um campo novo no seu bairro", description: "Uma ONG quer seu nome e sua presença num projeto para crianças.", minAge: 21, oneTime: true, choices: [
+    { label: "Financiar e participar", hint: "Dinheiro ↓ · torcida ↑↑", result: "A inauguração lembra por que o sonho começou.", effect: { money: -6, fans: 16, reputation: 8, morale: 8 } },
+    { label: "Apenas divulgar", hint: "Torcida ↑ · exposição", result: "A campanha cresce, mesmo com você vendo tudo de longe.", effect: { fans: 6, reputation: 4 } },
+  ]},
+  { id: "new-agent", icon: "§", tag: "CARREIRA", title: "Um empresário promete o próximo nível", description: "Ele fala em salário, exposição e uma lista de clubes interessados.", minAge: 20, choices: [
+    { label: "Trocar de empresário", hint: "Mercado ↑ · dinheiro ↓", result: "O telefone toca mais; a comissão também pesa.", effect: { transfer: true, money: -4, reputation: 4 } },
+    { label: "Manter quem veio com você", hint: "Lealdade · torcida ↑", result: "A carreira segue com menos holofote e mais confiança.", effect: { morale: 7, fans: 5, leadership: 3 } },
+  ]},
+  { id: "documentary", icon: "▶", tag: "MÍDIA", title: "Uma série quer filmar sua temporada", description: "Câmeras no treino, em casa e no vestiário podem transformar você em personagem nacional.", minOvr: 76, choices: [
+    { label: "Abrir todas as portas", hint: "Fama ↑↑ · privacidade ↓", result: "O país conhece sua rotina — e começa a opinar sobre ela.", effect: { reputation: 13, money: 8, morale: -6, fans: 5 } },
+    { label: "Mostrar só o campo", hint: "Reputação ↑ · foco", result: "A série encontra drama no futebol, não na sua casa.", effect: { reputation: 6, morale: 3 } },
+    { label: "Recusar", hint: "Foco ↑ · dinheiro ↓", result: "As câmeras vão embora e o treino volta a ser só treino.", effect: { fitness: 5, potential: 1 } },
+  ]},
+  { id: "penalty-dispute", icon: "◎", tag: "VESTIÁRIO", title: "Dois jogadores, uma cobrança", description: "O batedor oficial segura a bola. A torcida grita seu nome.", minOvr: 74, choices: [
+    { label: "Pedir a bola", hint: "Protagonismo · torcida ↑", result: "Você chama a responsabilidade diante de todo mundo.", effect: { reputation: 7, fans: 8, titleBoost: 5, morale: 4 } },
+    { label: "Respeitar a hierarquia", hint: "Grupo ↑ · liderança ↑", result: "O gesto é pequeno para a arquibancada e enorme no elenco.", effect: { leadership: 7, morale: 6 } },
+  ]},
+  { id: "short-vacation", icon: "⌛", tag: "CALENDÁRIO", title: "Doze dias até a reapresentação", description: "A temporada foi longa e o próximo ano já bate na porta.", choices: [
+    { label: "Descansar de verdade", hint: "Físico ↑↑ · OVR estável", result: "Você desliga o telefone e deixa o corpo respirar.", effect: { fitness: 16, morale: 8 } },
+    { label: "Treinar nas férias", hint: "OVR ↑ · desgaste", result: "Você volta na frente — mas sem ter parado.", effect: { ovr: 1, fitness: -8, potential: 1 } },
+    { label: "Viajar com o elenco", hint: "Grupo ↑ · físico ↑", result: "A amizade também sustenta temporadas difíceis.", effect: { morale: 10, fitness: 6, leadership: 3 } },
   ]},
 ];
 

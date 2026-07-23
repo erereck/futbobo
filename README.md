@@ -28,4 +28,8 @@ O projeto usa Next.js com exportação estática e é publicado automaticamente 
 - 12 posições e quatro caminhos de formação.
 - Os 20 clubes da Série A de 2026, com escudos temporários gerados em CSS.
 - Dezenas de eventos de carreira, evolução, transferências, Seleção, lesões e aposentadoria.
+- Brasileirão, Copa do Brasil, Libertadores e Mundial de Clubes.
+- Pedido de transferência com negociação, chance de recusa e reação da torcida.
+- Consequências visíveis para cada decisão antes do resultado da temporada.
+- Relação com a torcida, prêmios individuais e sala de troféus.
 - Salvamento automático no navegador e cartão final compartilhável.
