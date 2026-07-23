@@ -1,0 +1,12 @@
+{
+  "description": "Calibração dos prêmios individuais após o rebalanceamento da Bola de Ouro.",
+  "seedBase": 20260723,
+  "runs": 1000,
+  "totalSeasons": 23687,
+  "careersWithBallonDor": 28,
+  "totalBallonDor": 57,
+  "careerChancePercent": 2.8,
+  "awardChancePerSeasonPercent": 0.241,
+  "averageIndividualAwardsPerCareer": 14.48,
+  "interpretation": "A Bola de Ouro continua especial, mas agora aparece em aproximadamente uma de cada 36 carreiras simuladas."
+}

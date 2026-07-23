@@ -377,8 +377,31 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .competition-card b { color: var(--gold); }
 .competition-card.champion { border-color: rgba(255,199,44,.32); background: rgba(255,199,44,.07); }
 .competition-card.champion > span { background: rgba(255,199,44,.12); color: var(--gold); }
-.season-awards { display: flex; width: 100%; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.season-awards span { padding: 6px 8px; border-radius: 999px; background: rgba(166,117,255,.1); color: #cbb4ff; font-size: 8px; font-weight: 900; }
+.season-awards-showcase { position: relative; width: 100%; margin-bottom: 12px; padding: 16px; overflow: hidden; border: 1px solid rgba(166,117,255,.28); border-radius: 20px; background: radial-gradient(circle at 100% 0, rgba(166,117,255,.16), transparent 40%), linear-gradient(145deg, #183628, #10281d); }
+.season-awards-showcase::after { content: "✦"; position: absolute; top: -32px; right: -8px; color: rgba(255,255,255,.035); font: 900 130px var(--display); pointer-events: none; }
+.season-awards-showcase.has-ballon-dor { border-color: rgba(255,199,44,.52); background: radial-gradient(circle at 85% 0, rgba(255,199,44,.24), transparent 42%), linear-gradient(145deg, #352e13, #14291d 68%); box-shadow: 0 0 35px rgba(255,199,44,.08); }
+.season-awards-heading { position: relative; z-index: 1; }
+.season-awards-heading > span { color: #cbb4ff; font-size: 8px; font-weight: 900; letter-spacing: .15em; }
+.has-ballon-dor .season-awards-heading > span { color: var(--gold); }
+.season-awards-heading > strong { display: block; margin-top: 5px; font: 900 19px var(--display); }
+.season-awards-heading > p { margin: 3px 0 0; color: var(--muted); font-size: 9px; }
+.season-awards-list { position: relative; z-index: 1; display: grid; gap: 8px; margin-top: 13px; }
+.award-reveal-card { display: grid; min-width: 0; grid-template-columns: 45px 1fr auto; align-items: center; gap: 10px; padding: 11px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.035); animation: award-rise 520ms cubic-bezier(.2,.8,.2,1) both; }
+.award-reveal-icon { display: grid; width: 45px; height: 45px; place-items: center; border-radius: 14px; background: rgba(166,117,255,.12); color: #d7c3ff; font-size: 20px; box-shadow: inset 0 0 0 1px rgba(166,117,255,.18); }
+.award-reveal-card > div { min-width: 0; }
+.award-reveal-card small { color: #cbb4ff; font-size: 6px; font-weight: 900; letter-spacing: .1em; }
+.award-reveal-card strong { display: block; margin-top: 2px; font-size: 11px; }
+.award-reveal-card p { margin: 2px 0 0; color: var(--muted); font-size: 7px; line-height: 1.35; }
+.award-reveal-card > b { align-self: start; padding: 5px 6px; border-radius: 999px; background: rgba(166,117,255,.1); color: #cbb4ff; font-size: 6px; }
+.award-reveal-card.award-elite { border-color: rgba(166,117,255,.3); background: linear-gradient(120deg, rgba(166,117,255,.1), rgba(255,255,255,.025)); }
+.award-reveal-card.award-legendary { grid-template-columns: 58px 1fr; padding: 14px; border-color: rgba(255,199,44,.52); background: radial-gradient(circle at 0 50%, rgba(255,199,44,.2), transparent 38%), rgba(255,199,44,.06); box-shadow: inset 0 0 25px rgba(255,199,44,.045); animation: award-rise 520ms cubic-bezier(.2,.8,.2,1) both, legendary-glow 1.8s ease-in-out infinite alternate; }
+.award-reveal-card.award-legendary .award-reveal-icon { width: 58px; height: 58px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3ad, #ffc72c 42%, #9b6711); color: #503300; font-size: 29px; box-shadow: 0 0 24px rgba(255,199,44,.28); }
+.award-reveal-card.award-legendary small, .award-reveal-card.award-legendary > b { color: var(--gold); }
+.award-reveal-card.award-legendary strong { color: #fff4bf; font: 900 18px var(--display); }
+.award-reveal-card.award-legendary p { font-size: 8px; }
+.award-reveal-card.award-legendary > b { grid-column: 1 / -1; justify-self: stretch; padding: 7px; border: 1px solid rgba(255,199,44,.2); background: rgba(255,199,44,.08); text-align: center; letter-spacing: .12em; }
+@keyframes award-rise { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes legendary-glow { from { box-shadow: 0 0 8px rgba(255,199,44,.05), inset 0 0 20px rgba(255,199,44,.035); } to { box-shadow: 0 0 24px rgba(255,199,44,.16), inset 0 0 28px rgba(255,199,44,.08); } }
 .season-twist { width: 100%; margin: 0 0 12px; padding: 12px 13px; border: 1px solid rgba(255,90,78,.22); border-radius: 14px; background: rgba(255,90,78,.06); text-align: left; }
 .season-twist > span { color: var(--red); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
 .season-twist p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
@@ -480,7 +503,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .attribute-card .progress-label { font-size: 9px; }
 .attribute-card .progress-track { height: 6px; }
 .supporter-card { margin: 10px 0; padding: 15px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
-.supporter-card > span, .trophy-cabinet > span, .career-fortune > span, .award-cabinet > span { color: var(--muted); font-size: 8px; font-weight: 900; letter-spacing: .12em; }
+.supporter-card > span, .trophy-cabinet > span, .career-fortune > span { color: var(--muted); font-size: 8px; font-weight: 900; letter-spacing: .12em; }
 .supporter-card > strong { display: block; margin-top: 4px; font: 900 22px var(--display); }
 .supporter-card p { margin: 5px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
 .career-total-card { margin-top: 10px; padding: 15px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
@@ -491,15 +514,35 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .trophy-cabinet > small { display: block; margin-top: 9px; color: #cbb4ff; font-size: 8px; font-weight: 900; }
 .career-fortune, .award-cabinet { margin-top: 10px; padding: 15px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
 .career-fortune > div { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
-.award-cabinet { margin-bottom: 12px; }
+.award-cabinet { margin-bottom: 12px; background: radial-gradient(circle at 100% 0, rgba(166,117,255,.1), transparent 35%), var(--surface); }
 .award-cabinet > p { margin: 9px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
-.award-cabinet > div { display: grid; gap: 6px; margin-top: 10px; }
-.award-cabinet article { display: grid; grid-template-columns: 25px 1fr 28px; align-items: center; gap: 7px; min-height: 41px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); }
-.award-cabinet article > span { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 8px; background: rgba(166,117,255,.1); color: #cbb4ff; font-size: 10px; }
-.award-cabinet article strong { font-size: 9px; }
-.award-cabinet article b { color: var(--muted); font-size: 9px; text-align: right; }
-.award-cabinet article.legendary { border-color: rgba(255,199,44,.35); background: linear-gradient(120deg, rgba(255,199,44,.12), rgba(255,255,255,.025)); }
-.award-cabinet article.legendary > span, .award-cabinet article.legendary b { color: var(--gold); }
+.award-cabinet-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.award-cabinet-title > div { display: flex; flex-direction: column; }
+.award-cabinet-title span { color: #cbb4ff; font-size: 8px; font-weight: 900; letter-spacing: .12em; }
+.award-cabinet-title strong { margin-top: 3px; font: 900 18px var(--display); }
+.award-cabinet-title > b { display: flex; flex-direction: column; align-items: center; color: var(--gold); font: 900 25px var(--display); }
+.award-cabinet-title > b small { color: var(--muted); font: 800 6px var(--sans); letter-spacing: .08em; }
+.award-cabinet-feature { display: grid; grid-template-columns: 48px 1fr 30px; align-items: center; gap: 10px; margin-top: 12px; padding: 12px; border: 1px solid rgba(166,117,255,.28); border-radius: 15px; background: linear-gradient(120deg, rgba(166,117,255,.1), rgba(255,255,255,.025)); }
+.award-cabinet-feature > span { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 15px; background: rgba(166,117,255,.14); color: #cbb4ff; font-size: 20px; }
+.award-cabinet-feature > div { min-width: 0; }
+.award-cabinet-feature small { color: #cbb4ff; font-size: 6px; font-weight: 900; letter-spacing: .1em; }
+.award-cabinet-feature strong { display: block; margin-top: 2px; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.award-cabinet-feature p { margin: 2px 0 0; color: var(--muted); font-size: 7px; }
+.award-cabinet-feature > b { color: #cbb4ff; font-size: 11px; text-align: right; }
+.award-cabinet-feature.award-legendary { border-color: rgba(255,199,44,.45); background: radial-gradient(circle at 0 50%, rgba(255,199,44,.16), transparent 42%), rgba(255,199,44,.045); }
+.award-cabinet-feature.award-legendary > span { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3ad, #ffc72c 42%, #9b6711); color: #503300; box-shadow: 0 0 20px rgba(255,199,44,.22); }
+.award-cabinet-feature.award-legendary small, .award-cabinet-feature.award-legendary > b { color: var(--gold); }
+.award-cabinet-list { display: grid; gap: 6px; margin-top: 8px; }
+.award-cabinet-list article { display: grid; grid-template-columns: 32px 1fr 28px; align-items: center; gap: 8px; min-height: 49px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); }
+.award-cabinet-list article > span { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 10px; background: rgba(166,117,255,.1); color: #cbb4ff; font-size: 12px; }
+.award-cabinet-list article > div { display: flex; min-width: 0; flex-direction: column; }
+.award-cabinet-list article strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.award-cabinet-list article small { margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 6px; text-overflow: ellipsis; white-space: nowrap; }
+.award-cabinet-list article > b { color: var(--muted); font-size: 9px; text-align: right; }
+.award-cabinet-list article.award-elite { border-color: rgba(166,117,255,.24); }
+.award-cabinet-list article.award-legendary { border-color: rgba(255,199,44,.36); background: rgba(255,199,44,.055); }
+.award-cabinet-list article.award-legendary > span { border-radius: 50%; background: rgba(255,199,44,.15); color: var(--gold); }
+.award-cabinet-list article.award-legendary > b { color: var(--gold); }
 
 .legacy-screen { display: grid; gap: 10px; }
 .legacy-hero { padding: 22px 18px; border: 1px solid rgba(255,199,44,.25); border-radius: 22px; background: radial-gradient(circle at 85% 0, rgba(255,199,44,.16), transparent 42%), linear-gradient(145deg, #193d2c, #0e281c); }
@@ -789,7 +832,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .competition-grid,
   .season-twist,
   .season-national-note,
-  .season-awards { margin-bottom: 7px; }
+  .season-awards-showcase { margin-bottom: 7px; }
   .season-development { padding: 8px 10px; }
   .season-development > strong { font-size: 18px; }
   .breakout-result { padding: 10px; }
@@ -837,7 +880,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .career-phase-season-result .competition-grid,
   .career-phase-season-result .season-twist,
   .career-phase-season-result .season-national-note,
-  .career-phase-season-result .season-awards { margin-bottom: 12px; }
+  .career-phase-season-result .season-awards-showcase { margin-bottom: 12px; }
   .career-phase-season-result .season-development { padding: 11px 12px; }
   .career-phase-season-result .season-development > strong { font-size: 21px; }
   .career-phase-season-result .breakout-result { padding: 13px; }

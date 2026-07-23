@@ -254,6 +254,7 @@ type MonteCarloCareerSummary = {
   goals: number;
   assists: number;
   trophies: number;
+  individualAwards: number;
   ballonDor: number;
 };
 
@@ -261,6 +262,8 @@ type MonteCarloReport = {
   runs: number;
   seedBase: number;
   totalSeasons: number;
+  totalIndividualAwards: number;
+  averageIndividualAwards: number;
   careersWithBallonDor: number;
   totalBallonDor: number;
   careerChancePercent: number;
@@ -268,6 +271,39 @@ type MonteCarloReport = {
   winners: MonteCarloCareerSummary[];
   bestCareer: MonteCarloCareerSummary;
 };
+
+type AwardTier = "regular" | "elite" | "legendary";
+
+type AwardPresentation = {
+  icon: string;
+  tier: AwardTier;
+  kicker: string;
+  description: string;
+};
+
+function awardPresentation(award: string): AwardPresentation {
+  if (award === "Bola de Ouro") return { icon: "◉", tier: "legendary", kicker: "MAIOR PRÊMIO DO FUTEBOL", description: "Você foi eleito o melhor jogador do mundo." };
+  if (award.includes("UEFA") || award.includes("Champions") || award === "Rei da América" || award.includes("Mundial")) {
+    return { icon: "♛", tier: "elite", kicker: "PRÊMIO CONTINENTAL", description: "Uma temporada que atravessou fronteiras." };
+  }
+  if (award.includes("Golden Boy") || award.includes("Kopa") || award.includes("Jovem") || award.includes("Revelação")) {
+    return { icon: "★", tier: "elite", kicker: "TALENTO GERACIONAL", description: "Seu nome liderou a nova geração." };
+  }
+  if (award.includes("Artilheiro") || award.includes("Chuteira")) return { icon: "◎", tier: "regular", kicker: "DESTAQUE OFENSIVO", description: "Ninguém marcou mais que você." };
+  if (award.includes("Assistências") || award.includes("Meio-Campista")) return { icon: "✦", tier: "regular", kicker: "MESTRE DA CRIAÇÃO", description: "A temporada passou pelos seus pés." };
+  if (award.includes("Yashin") || award.includes("Luva")) return { icon: "◆", tier: "elite", kicker: "PAREDE DA TEMPORADA", description: "Você dominou a área e decidiu jogos." };
+  if (award.includes("Defensor")) return { icon: "⬡", tier: "regular", kicker: "PILAR DEFENSIVO", description: "Sua segurança mudou o nível da equipe." };
+  if (award.includes("Puskás")) return { icon: "↗", tier: "elite", kicker: "GOL DO ANO", description: "Um lance para ser lembrado por décadas." };
+  if (award.includes("Jogador do Ano") || award.includes("Craque") || award.includes("MVP") || award.includes("FIFPRO")) {
+    return { icon: "✪", tier: "elite", kicker: "TEMPORADA CONSAGRADORA", description: "Você foi o rosto da competição." };
+  }
+  return { icon: "✦", tier: "regular", kicker: "PRÊMIO INDIVIDUAL", description: "Seu desempenho recebeu reconhecimento." };
+}
+
+function awardTierWeight(award: string) {
+  const tier = awardPresentation(award).tier;
+  return tier === "legendary" ? 3 : tier === "elite" ? 2 : 1;
+}
 
 declare global {
   interface Window {
@@ -1472,8 +1508,11 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (!isKeeper && assists >= 12) awards.push("Rei das Assistências");
   if (isKeeper && cleanSheets >= 14) awards.push("Luva de Ouro");
   if (position.zone === "defesa" && appearances >= 28 && nextOverall >= 80 && leaguePosition <= 6) awards.push("Melhor Defensor");
+  if (position.zone === "meio" && appearances >= 26 && goals + assists >= 16 && performanceScore >= 72 && awardRoll > 0.32) awards.push(`Melhor Meio-Campista do ${leagueLabel}`);
+  if (position.zone === "ataque" && appearances >= 26 && goals >= 20 && performanceScore >= 74 && awardRoll > 0.3) awards.push(`Melhor Atacante do ${leagueLabel}`);
   if (nextOverall >= 82 && appearances >= 28 && awardRoll > 0.45) awards.push(`Seleção do ${leagueLabel} — ${position.name}`);
   if (nextOverall >= 86 && appearances >= 30 && leaguePosition <= 3 && awardRoll > 0.58) awards.push(`Craque do ${leagueLabel}`);
+  if (performanceScore >= 84 && nextOverall >= 84 && appearances >= 28 && awardRoll > 0.36) awards.push(`Jogador do Ano do ${leagueLabel}`);
   if (affected.age <= 23 && playsContinental === "libertadores" && nextOverall >= 82 && seeded(state.seed, state.season * 89) > 0.5) awards.push("Melhor Jovem da América");
   if (playsContinental === "libertadores" && continentalChampion && nextOverall >= 86 && seeded(state.seed, state.season * 97) > 0.38) awards.push("MVP da Libertadores");
   if (playsContinental === "libertadores" && continentalChampion && nextOverall >= 89 && seeded(state.seed, state.season * 101) > 0.7) awards.push("Rei da América");
@@ -1482,11 +1521,42 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (inEurope && isKeeper && cleanSheets >= 16 && nextOverall >= 85 && seeded(state.seed, state.season * 179) > 0.7) awards.push("Troféu Yashin");
   if (inEurope && !isKeeper && goals >= 22 && league.prestige >= 4 && seeded(state.seed, state.season * 181) > 0.65) awards.push("Chuteira de Ouro Europeia");
   if (inEurope && playsContinental === "champions" && continentalChampion && nextOverall >= 88 && seeded(state.seed, state.season * 191) > 0.55) awards.push("Melhor da UEFA");
+  if (inEurope && playsContinental === "champions" && continentalChampion && performanceScore >= 84 && seeded(state.seed, state.season * 193) > 0.38) awards.push("MVP da Champions League");
+  if (inEurope && nextOverall >= 87 && performanceScore >= 86 && appearances >= 28 && seeded(state.seed, state.season * 197 + 13) > 0.48) awards.push("FIFPRO World XI");
   if (!isKeeper && goals >= 8 && nextOverall >= 82 && seeded(state.seed, state.season * 103) > 0.94) awards.push("Prêmio Puskás");
   if (affected.leadership >= 82 && seeded(state.seed, state.season * 107) > 0.82) awards.push("Prêmio Fair Play");
   if (affected.fanSupport >= 92 && titleCount > 0) awards.push("Ídolo da Torcida");
-  const majorClubTitle = mundialChampion || (inEurope && playsContinental === "champions" && continentalChampion);
-  if (majorClubTitle && nextOverall >= 93 && affected.reputation >= 90 && seeded(state.seed, state.season * 109) > 0.9) awards.push("Bola de Ouro");
+  const majorNationalTitle = Boolean(
+    nationalHistoryAdd?.champion &&
+    ["Copa do Mundo", "Eurocopa", "Copa América", "Copa Ouro"].includes(nationalHistoryAdd.name),
+  );
+  if (majorNationalTitle && nextOverall >= 86 && performanceScore >= 80) awards.push(`Craque da ${nationalHistoryAdd?.name}`);
+  const europeanBallonEligible =
+    inEurope &&
+    nextOverall >= 87 &&
+    performanceScore >= 79 &&
+    affected.reputation >= 68 &&
+    appearances >= 24;
+  const americanBallonEligible =
+    !inEurope &&
+    nextOverall >= 91 &&
+    performanceScore >= 88 &&
+    affected.reputation >= 82 &&
+    (mundialChampion || continentalChampion);
+  const ballonScore =
+    performanceScore * 0.35 +
+    nextOverall * 0.35 +
+    affected.reputation * 0.2 +
+    titleCount * 2.5 +
+    (playsContinental === "champions" && continentalChampion ? 9 : 0) +
+    (mundialChampion ? 12 : 0) +
+    (majorNationalTitle ? 8 : 0);
+  const ballonChance = clamp(8 + Math.max(0, ballonScore - 80) * 1.8, 8, 45);
+  if (
+    (europeanBallonEligible || americanBallonEligible) &&
+    ballonScore >= 79 &&
+    seeded(state.seed, state.season * 109) * 100 < ballonChance
+  ) awards.push("Bola de Ouro");
   const title = titleCount > 0;
   const seasonObjective = affected.currentObjective ?? createSeasonObjective(position, seasonRole, affected.season, affected.seed);
   const objectiveResult = evaluateObjective(seasonObjective, seasonStats, titleCount);
@@ -1876,6 +1946,7 @@ function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarlo
     goals: state.stats.goals,
     assists: state.stats.assists,
     trophies: state.trophies + state.nationalTrophies,
+    individualAwards: state.awards,
     ballonDor: state.awardCabinet["Bola de Ouro"] ?? 0,
   };
 }
@@ -1888,6 +1959,7 @@ function runMonteCarloCareers(runs: number, seedBase = 20260723): MonteCarloRepo
   const winners = careers.filter((career) => career.ballonDor > 0);
   const totalBallonDor = winners.reduce((total, career) => total + career.ballonDor, 0);
   const totalSeasons = careers.reduce((total, career) => total + career.seasons, 0);
+  const totalIndividualAwards = careers.reduce((total, career) => total + career.individualAwards, 0);
   const bestCareer = [...careers].sort((a, b) =>
     b.ballonDor - a.ballonDor ||
     b.peakOverall - a.peakOverall ||
@@ -1898,6 +1970,8 @@ function runMonteCarloCareers(runs: number, seedBase = 20260723): MonteCarloRepo
     runs: safeRuns,
     seedBase,
     totalSeasons,
+    totalIndividualAwards,
+    averageIndividualAwards: Number((totalIndividualAwards / safeRuns).toFixed(2)),
     careersWithBallonDor: winners.length,
     totalBallonDor,
     careerChancePercent: Number(((winners.length / safeRuns) * 100).toFixed(2)),
@@ -1990,6 +2064,21 @@ function Metric({ label, value, tone = "default" }: { label: string; value: stri
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function AwardReveal({ award }: { award: string }) {
+  const presentation = awardPresentation(award);
+  return (
+    <article className={`award-reveal-card award-${presentation.tier}`}>
+      <span className="award-reveal-icon">{presentation.icon}</span>
+      <div>
+        <small>{presentation.kicker}</small>
+        <strong>{award}</strong>
+        <p>{presentation.description}</p>
+      </div>
+      <b>{presentation.tier === "legendary" ? "MELHOR DO MUNDO" : "CONQUISTADO"}</b>
+    </article>
   );
 }
 
@@ -2105,6 +2194,18 @@ export default function Home() {
   const supporterMood = useMemo(() => fanMood(game.fanSupport), [game.fanSupport]);
   const legacyStanding = useMemo(() => legacyTier(game.legacyPoints), [game.legacyPoints]);
   const marketProfile = useMemo(() => transferMarketProfile(game), [game]);
+  const awardEntries = useMemo(
+    () => Object.entries(game.awardCabinet).sort((a, b) =>
+      awardTierWeight(b[0]) - awardTierWeight(a[0]) ||
+      b[1] - a[1] ||
+      a[0].localeCompare(b[0], "pt-BR"),
+    ),
+    [game.awardCabinet],
+  );
+  const totalIndividualAwards = useMemo(
+    () => awardEntries.reduce((total, [, count]) => total + count, 0),
+    [awardEntries],
+  );
   const transferWindowProfile = useMemo(() => {
     const foreignOfferClubs = game.transferOffers.map(clubById).filter(isAbroad);
     const europeanOffers = foreignOfferClubs.filter(isEuropeanClub).length;
@@ -2459,6 +2560,7 @@ export default function Home() {
             <Metric label="Bolas de Ouro" value={monteCarloReport.totalBallonDor} tone="gold" />
             <Metric label="Carreiras vencedoras" value={monteCarloReport.careersWithBallonDor} tone="green" />
             <Metric label="Chance por carreira" value={`${monteCarloReport.careerChancePercent}%`} />
+            <Metric label="Prêmios por carreira" value={monteCarloReport.averageIndividualAwards} />
             <Metric label="Temporadas processadas" value={monteCarloReport.totalSeasons} />
           </div>
           <article className="monte-carlo-best">
@@ -2793,7 +2895,20 @@ export default function Home() {
               </div>
               {game.lastResult.twist && <div className={`season-twist ${game.lastResult.twist.includes("improvável") ? "positive" : "negative"}`}><span>O IMPREVISTO DA TEMPORADA</span><p>{game.lastResult.twist}</p></div>}
               {game.lastResult.nationalNote && <div className="season-national-note"><NationBadge country={nationCountry} size="sm" /><p>{game.lastResult.nationalNote}</p></div>}
-              {game.lastResult.awards.length > 0 && <div className="season-awards">{game.lastResult.awards.map((award) => <span key={award}>✦ {award}</span>)}</div>}
+              {game.lastResult.awards.length > 0 && (
+                <section className={`season-awards-showcase ${game.lastResult.awards.includes("Bola de Ouro") ? "has-ballon-dor" : ""}`}>
+                  <div className="season-awards-heading">
+                    <span>NOITE DE PREMIAÇÃO</span>
+                    <strong>{game.lastResult.awards.length === 1 ? "Seu nome foi chamado" : `${game.lastResult.awards.length} prêmios na mesma temporada`}</strong>
+                    <p>Seu desempenho individual ganhou reconhecimento.</p>
+                  </div>
+                  <div className="season-awards-list">
+                    {[...game.lastResult.awards]
+                      .sort((a, b) => awardTierWeight(b) - awardTierWeight(a))
+                      .map((award) => <AwardReveal key={award} award={award} />)}
+                  </div>
+                </section>
+              )}
               <div className="result-details"><span>Valor de mercado <strong>{formatMoney(game.lastResult.marketValue)}</strong></span>{game.lastResult.calledUp && <span className="callup-badge">★ Convocado pela Seleção</span>}</div>
               <div className="mobile-action-dock">
                 <button className="primary-button" onClick={continueAfterResult}>{game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"} <span>→</span></button>
@@ -2971,11 +3086,33 @@ export default function Home() {
               <div className="career-fortune"><span>TRAJETÓRIA</span><div><Metric label="Baques" value={game.setbacks} tone="danger" /><Metric label="Viradas de sorte" value={game.luckyBreaks} tone="green" /></div></div>
               <div className="discipline-card"><span>HISTÓRICO DISCIPLINAR</span><div><Metric label="Amarelos" value={game.stats.yellowCards} /><Metric label="Vermelhos" value={game.stats.redCards} tone="danger" /><Metric label="Suspensão" value={`${game.suspensionMatches}J`} tone={game.suspensionMatches ? "danger" : "default"} /><Metric label="Metas" value={`${game.objectivesCompleted}/${game.objectivesCompleted + game.objectivesFailed}`} tone="green" /></div></div>
               <div className="award-cabinet">
-                <span>PRÊMIOS INDIVIDUAIS</span>
-                {Object.keys(game.awardCabinet).length === 0 ? (
-                  <p>Os prêmios agora são raros. Quando um vier, vai significar alguma coisa.</p>
+                <div className="award-cabinet-title">
+                  <div><span>PRÊMIOS INDIVIDUAIS</span><strong>Sua galeria pessoal</strong></div>
+                  <b>{totalIndividualAwards}<small>CONQUISTAS</small></b>
+                </div>
+                {awardEntries.length === 0 ? (
+                  <p>O primeiro prêmio ainda está por vir. Grandes temporadas, números decisivos e títulos colocam seu nome entre os candidatos.</p>
                 ) : (
-                  <div>{Object.entries(game.awardCabinet).sort((a, b) => b[1] - a[1]).map(([award, count]) => <article className={award === "Bola de Ouro" ? "legendary" : ""} key={award}><span>{award === "Bola de Ouro" ? "◉" : "✦"}</span><strong>{award}</strong><b>{count}×</b></article>)}</div>
+                  <>
+                    <div className={`award-cabinet-feature award-${awardPresentation(awardEntries[0][0]).tier}`}>
+                      <span>{awardPresentation(awardEntries[0][0]).icon}</span>
+                      <div><small>MAIOR HONRARIA</small><strong>{awardEntries[0][0]}</strong><p>{awardPresentation(awardEntries[0][0]).description}</p></div>
+                      <b>{awardEntries[0][1]}×</b>
+                    </div>
+                    <div className="award-cabinet-list">
+                      {awardEntries.map(([award, count]) => {
+                        const presentation = awardPresentation(award);
+                        const seasonsWon = game.history.filter((record) => record.awards.includes(award)).map((record) => record.season);
+                        return (
+                          <article className={`award-${presentation.tier}`} key={award}>
+                            <span>{presentation.icon}</span>
+                            <div><strong>{award}</strong><small>{presentation.kicker}{seasonsWon.length ? ` · ${seasonsWon.slice(-3).join(", ")}` : ""}</small></div>
+                            <b>{count}×</b>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
             </div>

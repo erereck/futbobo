@@ -119,6 +119,22 @@ test("aplica o equilíbrio levemente mais favorável sem liberar títulos fácei
   assert.match(page, /Bola de Ouro/);
 });
 
+test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcançável", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 87[\s\S]*performanceScore >= 79/);
+  assert.match(page, /const ballonChance = clamp\(8 \+ Math\.max\(0, ballonScore - 80\) \* 1\.8, 8, 45\)/);
+  assert.match(page, /Jogador do Ano do \$\{leagueLabel\}/);
+  assert.match(page, /MVP da Champions League/);
+  assert.match(page, /FIFPRO World XI/);
+  assert.match(page, /function AwardReveal/);
+  assert.match(page, /season-awards-showcase/);
+  assert.match(page, /award-cabinet-feature/);
+  assert.match(styles, /\.award-reveal-card\.award-legendary/);
+  assert.match(styles, /\.award-cabinet-feature\.award-legendary/);
+});
+
 test("mantém o gramado contínuo atrás da meta do treinador", async () => {
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
