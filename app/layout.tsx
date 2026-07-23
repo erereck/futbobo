@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://erereck.github.io/futbobo/"),
   title: "Futbobo — Sua carreira, seu legado",
   description:
-    "Construa uma carreira dos 12 anos à aposentadoria: contratos, metas, rivalidades, 252 clubes, 17 ligas e as maiores competições do mundo.",
+    "Construa uma carreira dos 12 anos à aposentadoria: contratos, metas, rivalidades, 332 clubes, 17 ligas e as maiores competições do mundo.",
   icons: {
     icon: "favicon.svg",
     shortcut: "favicon.svg",

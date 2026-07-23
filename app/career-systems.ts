@@ -157,9 +157,15 @@ export function calculateLegacyScore(metrics: {
 }
 
 export function legacyTier(score: number) {
-  if (score >= 1800) return { label: "Lenda mundial", color: "#ffc72c" };
-  if (score >= 1100) return { label: "Ícone de uma geração", color: "#a675ff" };
-  if (score >= 650) return { label: "Craque consagrado", color: "#63e36b" };
-  if (score >= 300) return { label: "Nome respeitado", color: "#2ca8ff" };
-  return { label: "Carreira em construção", color: "#f5f7f2" };
+  if (score >= 3000) return { label: "O Imortal", color: "#fff1a6", rank: 11, description: "Uma carreira que virou a medida para todas as outras." };
+  if (score >= 2400) return { label: "No debate do GOAT", color: "#ffc72c", rank: 10, description: "Seu nome entrou na conversa sobre o maior de todos." };
+  if (score >= 1900) return { label: "Top 10 da história", color: "#ffc72c", rank: 9, description: "Pouquíssimos jogadores chegaram a este patamar." };
+  if (score >= 1500) return { label: "Lenda mundial", color: "#d7b5ff", rank: 8, description: "Você marcou uma era em escala global." };
+  if (score >= 1150) return { label: "Ícone de uma geração", color: "#a675ff", rank: 7, description: "Uma geração inteira vai lembrar do seu futebol." };
+  if (score >= 850) return { label: "Lenda continental", color: "#77d6ff", rank: 6, description: "Seu impacto atravessou fronteiras." };
+  if (score >= 620) return { label: "Craque consagrado", color: "#63e36b", rank: 5, description: "Você se firmou entre os grandes da sua época." };
+  if (score >= 430) return { label: "Estrela nacional", color: "#45c987", rank: 4, description: "Seu nome virou referência dentro do país." };
+  if (score >= 270) return { label: "Ídolo local", color: "#2ca8ff", rank: 3, description: "Uma torcida adotou você para sempre." };
+  if (score >= 140) return { label: "Profissional respeitado", color: "#8eb4c8", rank: 2, description: "Uma carreira honesta que conquistou respeito." };
+  return { label: "Carreira anônima", color: "#f5f7f2", rank: 1, description: "Nem toda história termina sob os holofotes." };
 }

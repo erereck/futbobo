@@ -116,6 +116,16 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .primary-button:disabled { cursor: not-allowed; opacity: .35; }
 .secondary-button { border: 1px solid var(--line); background: rgba(255,255,255,.035); color: var(--text); }
 .welcome-features { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 14px; margin-top: 18px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.welcome-hall { display: grid; gap: 6px; margin-top: 14px; padding: 12px; border: 1px solid rgba(255,199,44,.18); border-radius: 17px; background: rgba(255,199,44,.035); }
+.welcome-hall > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.welcome-hall > div span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .13em; }
+.welcome-hall > div strong { font-size: 9px; }
+.welcome-hall article { display: grid; grid-template-columns: 22px 28px 1fr auto; align-items: center; gap: 7px; min-width: 0; padding: 6px 7px; border-radius: 10px; background: rgba(255,255,255,.03); }
+.welcome-hall article > b { color: var(--gold); font-size: 8px; }
+.welcome-hall article > span { display: flex; min-width: 0; flex-direction: column; }
+.welcome-hall article > span strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.welcome-hall article > span small { margin-top: 1px; overflow: hidden; color: var(--muted); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.welcome-hall article > em { color: var(--gold); font: 900 10px var(--display); font-style: normal; }
 
 .setup-screen { min-height: 100dvh; padding-bottom: 96px; }
 .step-header { position: sticky; z-index: 20; top: 0; display: grid; grid-template-columns: 43px 1fr 42px; align-items: center; gap: 11px; min-height: 78px; padding: calc(env(safe-area-inset-top) + 9px) 16px 9px; border-bottom: 1px solid var(--line); background: rgba(8,26,19,.9); backdrop-filter: blur(18px); }
@@ -400,6 +410,28 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .award-reveal-card.award-legendary strong { color: #fff4bf; font: 900 18px var(--display); }
 .award-reveal-card.award-legendary p { font-size: 8px; }
 .award-reveal-card.award-legendary > b { grid-column: 1 / -1; justify-self: stretch; padding: 7px; border: 1px solid rgba(255,199,44,.2); background: rgba(255,199,44,.08); text-align: center; letter-spacing: .12em; }
+.award-ceremony { padding: 13px; border: 1px solid rgba(166,117,255,.34); border-radius: 17px; background: linear-gradient(145deg, rgba(166,117,255,.1), rgba(4,17,12,.38)); }
+.award-ceremony.award-legendary { border-color: rgba(255,199,44,.48); background: radial-gradient(circle at 85% 0, rgba(255,199,44,.18), transparent 40%), rgba(21,25,13,.72); }
+.award-ceremony-top { display: grid; grid-template-columns: 39px 1fr; align-items: center; gap: 9px; }
+.award-ceremony-top > span { display: grid; width: 39px; height: 39px; place-items: center; border-radius: 12px; background: rgba(166,117,255,.13); color: #d7c3ff; font-size: 17px; }
+.award-ceremony.award-legendary .award-ceremony-top > span { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3ad, #ffc72c 45%, #9b6711); color: #503300; }
+.award-ceremony-top div { display: flex; min-width: 0; flex-direction: column; }
+.award-ceremony-top small, .award-winner-reveal > small { color: #cbb4ff; font-size: 6px; font-weight: 900; letter-spacing: .13em; }
+.award-ceremony.award-legendary .award-ceremony-top small, .award-ceremony.award-legendary .award-winner-reveal > small { color: var(--gold); }
+.award-ceremony-top strong { margin-top: 2px; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.award-finalists { display: grid; gap: 5px; margin-top: 11px; }
+.award-finalists > div { display: grid; grid-template-columns: 23px 1fr auto; align-items: center; gap: 7px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.025); }
+.award-finalists > div.is-player { border-color: rgba(255,199,44,.32); background: rgba(255,199,44,.055); }
+.award-finalists b { color: var(--muted); font-size: 7px; }
+.award-finalists span { font-size: 9px; font-weight: 800; }
+.award-finalists small { color: var(--gold); font-size: 6px; font-weight: 900; letter-spacing: .1em; }
+.award-ceremony > p { margin: 9px 0; color: var(--muted); font-size: 8px; text-align: center; }
+.award-ceremony > button { display: flex; width: 100%; min-height: 39px; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 11px; background: #d7c3ff; color: #211637; font-size: 9px; font-weight: 900; cursor: pointer; }
+.award-ceremony.award-legendary > button { background: var(--gold); color: #261c05; }
+.award-ceremony > button span { font-size: 14px; }
+.award-winner-reveal { display: grid; justify-items: center; margin-top: 12px; animation: award-rise 420ms cubic-bezier(.2,.8,.2,1) both; }
+.award-winner-reveal > strong { margin: 5px 0 11px; color: #fff4bf; font: 900 22px var(--display); text-align: center; text-transform: uppercase; }
+.award-winner-reveal .award-reveal-card { width: 100%; }
 @keyframes award-rise { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
 @keyframes legendary-glow { from { box-shadow: 0 0 8px rgba(255,199,44,.05), inset 0 0 20px rgba(255,199,44,.035); } to { box-shadow: 0 0 24px rgba(255,199,44,.16), inset 0 0 28px rgba(255,199,44,.08); } }
 .season-twist { width: 100%; margin: 0 0 12px; padding: 12px 13px; border: 1px solid rgba(255,90,78,.22); border-radius: 14px; background: rgba(255,90,78,.06); text-align: left; }
@@ -582,7 +614,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .achievement-gallery article.unlocked.rarity-lendário { border-color: rgba(255,199,44,.35); background: rgba(255,199,44,.07); }
 .achievement-gallery article.unlocked.rarity-lendário > b { color: var(--gold); }
 
-.summary-screen { position: relative; min-height: 100dvh; justify-content: center; padding-top: calc(env(safe-area-inset-top) + 30px); background: radial-gradient(circle at 50% 18%, rgba(255,199,44,.15), transparent 32%), var(--bg); }
+.summary-screen { position: relative; min-height: 100dvh; height: auto; justify-content: flex-start; overflow: visible; padding-top: calc(env(safe-area-inset-top) + 30px); background: radial-gradient(circle at 50% 12%, rgba(255,199,44,.15), transparent 26%), var(--bg); }
 .summary-confetti { position: absolute; top: 7%; left: 50%; width: 100%; transform: translateX(-50%); color: rgba(255,199,44,.35); font-size: 26px; letter-spacing: 16px; text-align: center; }
 .summary-screen > h1 { margin-bottom: 20px; font-size: 34px; }
 .share-card { position: relative; padding: 16px; overflow: hidden; border: 1px solid rgba(255,199,44,.3); border-radius: 24px; background: linear-gradient(145deg, #214a36, #0d261b 68%); box-shadow: 0 24px 60px rgba(0,0,0,.38); }
@@ -607,6 +639,28 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .share-path > span { color: var(--muted); font-size: 8px; font-weight: 900; }
 .share-path > div { min-width: 8px; height: 1px; flex: 1; background: rgba(255,255,255,.18); }
 .share-url { position: relative; z-index: 1; display: block; margin-top: 15px; color: var(--muted); font-size: 8px; text-align: right; }
+.career-club-summary, .final-hall-of-fame { width: 100%; margin-top: 14px; padding: 15px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
+.summary-section-heading { display: flex; flex-direction: column; margin-bottom: 10px; }
+.summary-section-heading span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .14em; }
+.summary-section-heading strong { margin-top: 3px; font: 900 15px var(--display); }
+.career-club-list, .hall-ranking { display: grid; gap: 7px; }
+.career-club-list > article { display: grid; grid-template-columns: 42px minmax(84px,1fr) auto; align-items: center; gap: 9px; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.025); }
+.club-summary-copy { display: flex; min-width: 0; flex-direction: column; }
+.club-summary-copy strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.club-summary-copy small { margin-top: 2px; color: var(--muted); font-size: 7px; }
+.club-summary-numbers { display: grid; grid-template-columns: repeat(4, minmax(22px, 1fr)); gap: 3px; }
+.club-summary-numbers span { display: flex; min-width: 24px; flex-direction: column; align-items: center; color: var(--muted); font-size: 6px; font-weight: 800; }
+.club-summary-numbers b { color: var(--text); font-size: 9px; }
+.final-hall-of-fame { background: radial-gradient(circle at 100% 0, rgba(255,199,44,.1), transparent 35%), var(--surface); }
+.hall-ranking > article { display: grid; grid-template-columns: 24px 28px 1fr auto; align-items: center; gap: 8px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); }
+.hall-ranking > article.current-career { border-color: rgba(255,199,44,.36); background: rgba(255,199,44,.065); }
+.hall-ranking > article > b { color: var(--gold); font-size: 8px; text-align: center; }
+.hall-ranking > article > div { display: flex; min-width: 0; flex-direction: column; }
+.hall-ranking > article > div strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.hall-ranking > article > div small { margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.hall-ranking > article > span { display: flex; flex-direction: column; align-items: flex-end; color: var(--gold); font: 900 11px var(--display); }
+.hall-ranking > article > span small { color: var(--muted); font: 800 5px var(--sans); letter-spacing: .1em; }
+.summary-screen .summary-actions { width: 100%; margin-bottom: calc(env(safe-area-inset-bottom) + 10px); }
 
 .nation-badge { position: relative; display: inline-grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 2px solid rgba(255,255,255,.28); border-radius: 8px; background: linear-gradient(135deg, var(--nation-primary) 0 52%, var(--nation-secondary) 52%); box-shadow: 0 5px 12px rgba(0,0,0,.25), inset 0 0 0 3px rgba(0,0,0,.12); }
 .nation-badge::before { content: ""; position: absolute; inset: 8%; border: 1px solid rgba(255,255,255,.28); border-radius: 4px; }

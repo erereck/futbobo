@@ -1,6 +1,6 @@
 # Futbobo
 
-Um jogo rápido de carreira no futebol brasileiro, feito primeiro para celular. Você começa aos 12 anos, escolhe posição, clube de base e foco de formação, é revelado entre 16 e 18 e constrói uma carreira inteira no Brasileirão.
+Um jogo rápido de carreira no futebol, feito primeiro para celular. Você começa aos 12 anos, escolhe posição e foco de formação, é revelado entre 16 e 18 e constrói uma carreira que pode atravessar as Américas e a Europa.
 
 ## Rodar localmente
 
@@ -36,13 +36,19 @@ O projeto usa Next.js com exportação estática e é publicado automaticamente 
 
 - Categorias de base dos 12 aos 16–18 anos.
 - 12 posições e quatro caminhos de formação.
-- 252 clubes de 17 ligas, com escudos reais e fallback visual gerado em CSS.
+- 332 clubes de 17 ligas completas, com escudos reais e fallback visual gerado em CSS.
 - Dezenas de eventos de carreira, evolução, transferências, Seleção, lesões e aposentadoria.
 - Brasileirão, Copa do Brasil, Libertadores e Mundial de Clubes.
 - Pedido de transferência com negociação, chance de recusa e reação da torcida.
 - Consequências visíveis para cada decisão antes do resultado da temporada.
-- Relação com a torcida, prêmios individuais e sala de troféus.
-- Salvamento automático no navegador e cartão final compartilhável.
+- Relação com a torcida, cerimônias de prêmios com finalistas fictícios e sala de troféus.
+- Salvamento automático, retrospecto por clube, Hall da Fama local e cartão final compartilhável.
+
+## Onde editar os clubes
+
+Todos os clubes, ligas, países, posições e parâmetros básicos ficam em
+[`app/game-data.ts`](app/game-data.ts). Cada clube precisa de `id`, nomes,
+abreviação, cidade, país, liga, duas cores, reputação e `strength`.
 
 ## Créditos visuais
 

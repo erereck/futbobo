@@ -281,6 +281,24 @@ type AwardPresentation = {
   description: string;
 };
 
+type CareerHallEntry = {
+  id: string;
+  name: string;
+  position: PositionKey;
+  nationality: string;
+  finalClubId: string;
+  seasons: number;
+  peakOverall: number;
+  legacyPoints: number;
+  legacyLabel: string;
+  trophies: number;
+  awards: number;
+  ballonDor: number;
+  goals: number;
+  assists: number;
+  finishedAt: number;
+};
+
 function awardPresentation(award: string): AwardPresentation {
   if (award === "Bola de Ouro") return { icon: "◉", tier: "legendary", kicker: "MAIOR PRÊMIO DO FUTEBOL", description: "Você foi eleito o melhor jogador do mundo." };
   if (award.includes("UEFA") || award.includes("Champions") || award === "Rei da América" || award.includes("Mundial")) {
@@ -312,7 +330,22 @@ declare global {
 }
 
 const SAVE_KEY = "futbobo:career:v1";
+const HALL_OF_FAME_KEY = "futbobo:hall-of-fame:v1";
 const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS];
+const FICTIONAL_FINALISTS = [
+  "Mateo Alcázar",
+  "Noah van Dijk",
+  "Luca Bellandi",
+  "Amadou Keïta",
+  "Thiago Montiel",
+  "Elias Kronberg",
+  "Rayan Bensaïd",
+  "Santiago Ferreyra",
+  "Enzo Moretti",
+  "Malik Okafor",
+  "João Vilar",
+  "Kenji Sakamoto",
+];
 
 const EMPTY_STATS: PlayerStats = {
   appearances: 0,
@@ -550,6 +583,39 @@ function pick<T>(items: T[], seed: number, salt = 0): T {
 
 function clubById(id: string) {
   return CLUBS.find((club) => club.id === id) ?? CLUBS[0];
+}
+
+function awardFinalists(playerName: string, award: string, seed: number, season: number) {
+  const rivals = FICTIONAL_FINALISTS
+    .map((name, index) => ({ name, order: seeded(seed, season * 101 + award.length * 17 + index * 43) }))
+    .sort((a, b) => a.order - b.order)
+    .slice(0, 2)
+    .map(({ name }) => name);
+  return [playerName || "Você", ...rivals]
+    .map((name, index) => ({ name, order: seeded(seed, season * 211 + award.length * 31 + index * 71) }))
+    .sort((a, b) => a.order - b.order)
+    .map(({ name }) => name);
+}
+
+function careerHallEntry(game: GameState): CareerHallEntry {
+  const peakOverall = Math.max(game.overall, ...game.history.map((item) => item.overall), 0);
+  return {
+    id: `${game.seed}-${game.name}-${game.history.length}`,
+    name: game.name || "Sem nome",
+    position: game.position,
+    nationality: game.nationality,
+    finalClubId: game.currentClubId,
+    seasons: game.history.length,
+    peakOverall,
+    legacyPoints: game.legacyPoints,
+    legacyLabel: legacyTier(game.legacyPoints).label,
+    trophies: game.trophies + game.nationalTrophies,
+    awards: game.awards,
+    ballonDor: game.awardCabinet["Bola de Ouro"] ?? 0,
+    goals: game.stats.goals,
+    assists: game.stats.assists,
+    finishedAt: Date.now(),
+  };
 }
 
 const DOMESTIC_CLUBS = CLUBS.filter((club) => club.countryId === "brasil");
@@ -2082,6 +2148,40 @@ function AwardReveal({ award }: { award: string }) {
   );
 }
 
+function AwardCeremony({ award, playerName, seed, season }: { award: string; playerName: string; seed: number; season: number }) {
+  const [revealed, setRevealed] = useState(false);
+  const presentation = awardPresentation(award);
+  const finalists = useMemo(() => awardFinalists(playerName, award, seed, season), [playerName, award, seed, season]);
+
+  return (
+    <article className={`award-ceremony award-${presentation.tier} ${revealed ? "revealed" : ""}`}>
+      <div className="award-ceremony-top">
+        <span>{presentation.icon}</span>
+        <div><small>OS TRÊS FINALISTAS</small><strong>{award}</strong></div>
+      </div>
+      {!revealed ? (
+        <>
+          <div className="award-finalists">
+            {finalists.map((name, index) => (
+              <div className={name === playerName ? "is-player" : ""} key={name}>
+                <b>0{index + 1}</b><span>{name}</span>{name === playerName && <small>VOCÊ</small>}
+              </div>
+            ))}
+          </div>
+          <p>O envelope está nas mãos do apresentador.</p>
+          <button type="button" onClick={() => setRevealed(true)}>Revelar vencedor <span>→</span></button>
+        </>
+      ) : (
+        <div className="award-winner-reveal">
+          <small>O VENCEDOR É...</small>
+          <strong>{playerName}</strong>
+          <AwardReveal award={award} />
+        </div>
+      )}
+    </article>
+  );
+}
+
 function Progress({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div className="progress-stat">
@@ -2103,6 +2203,7 @@ export default function Home() {
   const [positionChangeTarget, setPositionChangeTarget] = useState<PositionKey | null>(null);
   const [positionChangeFeedback, setPositionChangeFeedback] = useState<{ success: boolean; headline: string; text: string } | null>(null);
   const [monteCarloReport, setMonteCarloReport] = useState<MonteCarloReport | null>(null);
+  const [hallOfFame, setHallOfFame] = useState<CareerHallEntry[]>([]);
 
   useEffect(() => {
     try {
@@ -2112,6 +2213,15 @@ export default function Home() {
         if (parsed.version && parsed.version >= 1 && parsed.version <= 5) {
           queueMicrotask(() => setHasSave(parsed.phase !== "welcome"));
         }
+      }
+      const storedHall = JSON.parse(localStorage.getItem(HALL_OF_FAME_KEY) ?? "[]") as unknown;
+      if (Array.isArray(storedHall)) {
+        queueMicrotask(() => setHallOfFame(
+          (storedHall as CareerHallEntry[])
+            .filter((entry) => entry && typeof entry.legacyPoints === "number" && typeof entry.name === "string")
+            .sort((a, b) => b.legacyPoints - a.legacyPoints || b.peakOverall - a.peakOverall)
+            .slice(0, 10),
+        ));
       }
     } catch {
       localStorage.removeItem(SAVE_KEY);
@@ -2134,6 +2244,20 @@ export default function Home() {
   useEffect(() => {
     if (game.phase === "welcome") return;
     localStorage.setItem(SAVE_KEY, JSON.stringify(game));
+  }, [game]);
+
+  useEffect(() => {
+    if (game.phase !== "summary" || game.history.length === 0) return;
+    const entry = careerHallEntry(game);
+    queueMicrotask(() => {
+      setHallOfFame((current) => {
+        const next = [entry, ...current.filter((item) => item.id !== entry.id)]
+          .sort((a, b) => b.legacyPoints - a.legacyPoints || b.peakOverall - a.peakOverall || b.finishedAt - a.finishedAt)
+          .slice(0, 10);
+        localStorage.setItem(HALL_OF_FAME_KEY, JSON.stringify(next));
+        return next;
+      });
+    });
   }, [game]);
 
   useEffect(() => {
@@ -2206,6 +2330,51 @@ export default function Home() {
     () => awardEntries.reduce((total, [, count]) => total + count, 0),
     [awardEntries],
   );
+  const seasonCeremonyAward = useMemo(
+    () => [...(game.lastResult?.awards ?? [])]
+      .sort((a, b) => awardTierWeight(b) - awardTierWeight(a))
+      .find((award) => awardPresentation(award).tier !== "regular") ?? null,
+    [game.lastResult],
+  );
+  const clubCareerSummary = useMemo(() => {
+    const byClub = new Map<string, {
+      clubId: string;
+      seasons: number;
+      appearances: number;
+      goals: number;
+      assists: number;
+      cleanSheets: number;
+      trophies: number;
+      awards: number;
+      firstSeason: number;
+      lastSeason: number;
+    }>();
+    for (const record of game.history) {
+      const current = byClub.get(record.clubId) ?? {
+        clubId: record.clubId,
+        seasons: 0,
+        appearances: 0,
+        goals: 0,
+        assists: 0,
+        cleanSheets: 0,
+        trophies: 0,
+        awards: 0,
+        firstSeason: record.season,
+        lastSeason: record.season,
+      };
+      current.seasons += 1;
+      current.appearances += record.appearances;
+      current.goals += record.goals;
+      current.assists += record.assists;
+      current.cleanSheets += record.cleanSheets;
+      current.trophies += record.competitions.filter((competition) => competition.champion).length;
+      current.awards += record.awards.length;
+      current.firstSeason = Math.min(current.firstSeason, record.season);
+      current.lastSeason = Math.max(current.lastSeason, record.season);
+      byClub.set(record.clubId, current);
+    }
+    return [...byClub.values()].sort((a, b) => b.appearances - a.appearances || b.trophies - a.trophies);
+  }, [game.history]);
   const transferWindowProfile = useMemo(() => {
     const foreignOfferClubs = game.transferOffers.map(clubById).filter(isAbroad);
     const europeanOffers = foreignOfferClubs.filter(isEuropeanClub).length;
@@ -2610,8 +2779,21 @@ export default function Home() {
             <button className="primary-button" onClick={startNew}>Começar nova carreira <span>→</span></button>
             {hasSave && <button className="secondary-button" onClick={continueSave}>Continuar carreira salva</button>}
           </div>
+          {hallOfFame.length > 0 && (
+            <div className="welcome-hall">
+              <div><span>HALL DA FAMA LOCAL</span><strong>Suas melhores carreiras</strong></div>
+              {hallOfFame.slice(0, 3).map((entry, index) => (
+                <article key={entry.id}>
+                  <b>#{index + 1}</b>
+                  <ClubBadge club={clubById(entry.finalClubId)} size="sm" />
+                  <span><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.peakOverall} OVR</small></span>
+                  <em>{entry.legacyPoints}</em>
+                </article>
+              ))}
+            </div>
+          )}
           <div className="welcome-features">
-            <span>◉ 252 clubes</span><span>✦ 12 posições</span><span>🏆 17 ligas</span><span>★ 17 seleções</span>
+            <span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 17 ligas</span><span>★ 17 seleções</span>
           </div>
         </section>
       )}
@@ -2903,8 +3085,18 @@ export default function Home() {
                     <p>Seu desempenho individual ganhou reconhecimento.</p>
                   </div>
                   <div className="season-awards-list">
+                    {seasonCeremonyAward && (
+                      <AwardCeremony
+                        key={`${seasonCeremonyAward}-${game.lastResult.season}`}
+                        award={seasonCeremonyAward}
+                        playerName={game.name}
+                        seed={game.seed}
+                        season={game.lastResult.season}
+                      />
+                    )}
                     {[...game.lastResult.awards]
                       .sort((a, b) => awardTierWeight(b) - awardTierWeight(a))
+                      .filter((award) => award !== seasonCeremonyAward)
                       .map((award) => <AwardReveal key={award} award={award} />)}
                   </div>
                 </section>
@@ -3180,6 +3372,42 @@ export default function Home() {
             <div className="share-path"><span>12</span><div />{Array.from(new Set(game.history.map((item) => item.clubId))).map((clubId) => <ClubBadge key={clubId} club={clubById(clubId)} size="sm" />)}<div /><span>{game.age}</span></div>
             <small className="share-url">erereck.github.io/futbobo</small>
           </div>
+          <section className="career-club-summary">
+            <div className="summary-section-heading"><span>PASSAGEM POR CLUBES</span><strong>Onde sua história aconteceu</strong></div>
+            <div className="career-club-list">
+              {clubCareerSummary.map((entry) => {
+                const club = clubById(entry.clubId);
+                return (
+                  <article key={entry.clubId}>
+                    <ClubBadge club={club} size="md" />
+                    <div className="club-summary-copy">
+                      <strong>{club.shortName}</strong>
+                      <small>{entry.firstSeason === entry.lastSeason ? entry.firstSeason : `${entry.firstSeason}–${entry.lastSeason}`} · {entry.seasons} temporada{entry.seasons > 1 ? "s" : ""}</small>
+                    </div>
+                    <div className="club-summary-numbers">
+                      <span><b>{entry.appearances}</b>J</span>
+                      <span><b>{game.position === "GOL" ? entry.cleanSheets : entry.goals}</b>{game.position === "GOL" ? "SG" : "G"}</span>
+                      <span><b>{entry.assists}</b>A</span>
+                      <span><b>{entry.trophies}</b>🏆</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+          <section className="final-hall-of-fame">
+            <div className="summary-section-heading"><span>HALL DA FAMA</span><strong>As maiores carreiras deste aparelho</strong></div>
+            <div className="hall-ranking">
+              {hallOfFame.slice(0, 10).map((entry, index) => (
+                <article className={entry.id === `${game.seed}-${game.name}-${game.history.length}` ? "current-career" : ""} key={entry.id}>
+                  <b>#{index + 1}</b>
+                  <ClubBadge club={clubById(entry.finalClubId)} size="sm" />
+                  <div><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.trophies} taças · {entry.ballonDor}× Bola de Ouro</small></div>
+                  <span>{entry.legacyPoints}<small>PTS</small></span>
+                </article>
+              ))}
+            </div>
+          </section>
           <div className="summary-actions"><button className="primary-button" onClick={shareCareer}>Compartilhar carreira <span>↗</span></button><button className="secondary-button" onClick={startNew}>Jogar novamente</button></div>
         </section>
       )}

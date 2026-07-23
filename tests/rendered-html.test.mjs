@@ -129,10 +129,32 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   assert.match(page, /MVP da Champions League/);
   assert.match(page, /FIFPRO World XI/);
   assert.match(page, /function AwardReveal/);
+  assert.match(page, /function AwardCeremony/);
+  assert.match(page, /OS TRÊS FINALISTAS/);
+  assert.match(page, /Revelar vencedor/);
   assert.match(page, /season-awards-showcase/);
   assert.match(page, /award-cabinet-feature/);
+  assert.match(styles, /\.award-finalists/);
   assert.match(styles, /\.award-reveal-card\.award-legendary/);
   assert.match(styles, /\.award-cabinet-feature\.award-legendary/);
+});
+
+test("registra o Hall da Fama local e resume a carreira por clube", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /HALL_OF_FAME_KEY/);
+  assert.match(page, /futbobo:hall-of-fame:v1/);
+  assert.match(page, /careerHallEntry/);
+  assert.match(page, /clubCareerSummary/);
+  assert.match(page, /PASSAGEM POR CLUBES/);
+  assert.match(page, /HALL DA FAMA LOCAL/);
+  assert.match(styles, /\.career-club-summary/);
+  assert.match(styles, /\.hall-ranking/);
+  assert.match(systems, /O Imortal/);
+  assert.match(systems, /No debate do GOAT/);
+  assert.match(systems, /Carreira anônima/);
 });
 
 test("mantém o gramado contínuo atrás da meta do treinador", async () => {
@@ -284,7 +306,7 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
   const clubIds = clubEntries.map((match) => match[1]);
 
   assert.equal(new Set(clubIds).size, clubIds.length, "IDs de clubes precisam ser únicos");
-  assert.ok(clubEntries.length >= 252, "a base deve manter pelo menos 252 clubes");
+  assert.ok(clubEntries.length >= 332, "a base deve manter pelo menos 332 clubes");
   const clubsWithStrength = [...data.matchAll(/\{ id: "[^"]+", name: "[^"]+", shortName: "[^"]+", abbr: "[^"]+", city: "[^"]+"[^}]*countryId: "[^"]+", leagueId: "[^"]+"[^}]*reputation: \d[^}]*strength: \d+/g)];
   assert.equal(clubsWithStrength.length, clubEntries.length, "todo clube precisa ter strength explícito");
   assert.match(data, /export type Club = \{[\s\S]*?strength: number;/);
@@ -318,6 +340,21 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
     ["eredivisie", 18],
   ]);
   for (const [leagueId, officialSize] of completeEuropeanLeagues) {
+    assert.ok((clubCountByLeague.get(leagueId) ?? 0) >= officialSize, `${leagueId} precisa ter a liga completa`);
+  }
+  const completeAmericanLeagues = new Map([
+    ["brasileirao", 20],
+    ["liga-argentina", 30],
+    ["liga-uruguaia", 16],
+    ["liga-chilena", 16],
+    ["liga-colombiana", 20],
+    ["liga-paraguaia", 12],
+    ["liga-equatoriana", 16],
+    ["liga-peruana", 18],
+    ["liga-mx", 18],
+    ["mls", 30],
+  ]);
+  for (const [leagueId, officialSize] of completeAmericanLeagues) {
     assert.ok((clubCountByLeague.get(leagueId) ?? 0) >= officialSize, `${leagueId} precisa ter a liga completa`);
   }
   for (const clubId of [
