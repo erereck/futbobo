@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   basePath: isGitHubPages ? "/futbobo" : "",
   assetPrefix: isGitHubPages ? "/futbobo/" : "",
+  env: { NEXT_PUBLIC_BASE_PATH: isGitHubPages ? "/futbobo" : "" },
   turbopack: { root: process.cwd() },
 };
 

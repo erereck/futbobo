@@ -26,10 +26,17 @@ O projeto usa Next.js com exportação estática e é publicado automaticamente 
 
 - Categorias de base dos 12 aos 16–18 anos.
 - 12 posições e quatro caminhos de formação.
-- Os 20 clubes da Série A de 2026, com escudos temporários gerados em CSS.
+- 252 clubes de 17 ligas, com escudos reais e fallback visual gerado em CSS.
 - Dezenas de eventos de carreira, evolução, transferências, Seleção, lesões e aposentadoria.
 - Brasileirão, Copa do Brasil, Libertadores e Mundial de Clubes.
 - Pedido de transferência com negociação, chance de recusa e reação da torcida.
 - Consequências visíveis para cada decisão antes do resultado da temporada.
 - Relação com a torcida, prêmios individuais e sala de troféus.
 - Salvamento automático no navegador e cartão final compartilhável.
+
+## Créditos visuais
+
+Os escudos e emblemas de competições são sincronizados pela API do
+[TheSportsDB](https://www.thesportsdb.com/) e usados sem alteração. As
+bandeiras são fornecidas pelo [FlagCDN](https://flagcdn.com/). As marcas e os
+escudos pertencem aos seus respectivos titulares.

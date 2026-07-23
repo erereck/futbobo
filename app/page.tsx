@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   CLUBS,
@@ -1540,6 +1541,26 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   };
 }
 
+function LocalBadgeImage({ path, kind }: { path: string; kind: "club" | "flag" | "competition" }) {
+  const [failedSource, setFailedSource] = useState("");
+  const source = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
+
+  if (failedSource === source) return null;
+
+  return (
+    <Image
+      className={`badge-image badge-image-${kind}`}
+      src={source}
+      alt=""
+      fill
+      sizes={kind === "club" ? "85px" : kind === "flag" ? "68px" : "34px"}
+      unoptimized
+      draggable={false}
+      onError={() => setFailedSource(source)}
+    />
+  );
+}
+
 function ClubBadge({ club, size = "md" }: { club: Club; size?: "sm" | "md" | "lg" }) {
   return (
     <span
@@ -1547,7 +1568,8 @@ function ClubBadge({ club, size = "md" }: { club: Club; size?: "sm" | "md" | "lg
       style={{ "--club-primary": club.primary, "--club-secondary": club.secondary } as CSSProperties}
       aria-hidden="true"
     >
-      <span>{club.abbr}</span>
+      <span className="badge-fallback">{club.abbr}</span>
+      <LocalBadgeImage path={`/assets/clubs/${club.id}.png`} kind="club" />
     </span>
   );
 }
@@ -1559,7 +1581,23 @@ function NationBadge({ country, size = "md" }: { country: Country; size?: "sm" |
       style={{ "--nation-primary": country.primary, "--nation-secondary": country.secondary } as CSSProperties}
       aria-hidden="true"
     >
-      <span>{country.abbr}</span>
+      <span className="badge-fallback">{country.abbr}</span>
+      <LocalBadgeImage path={`/assets/flags/${country.id}.png`} kind="flag" />
+    </span>
+  );
+}
+
+function CompetitionBadge({ competition, leagueId }: { competition: CompetitionResult; leagueId: string }) {
+  const path = competition.id === "domesticLeague"
+    ? `/assets/competitions/leagues/${leagueId}.png`
+    : competition.id === "domesticCup"
+      ? `/assets/competitions/cups/${leagueId}.png`
+      : `/assets/competitions/${competition.id}.png`;
+
+  return (
+    <span className="competition-emblem" aria-hidden="true">
+      <b>{competition.icon}</b>
+      <LocalBadgeImage path={path} kind="competition" />
     </span>
   );
 }
@@ -2261,7 +2299,7 @@ export default function Home() {
                 </div>
               )}
               <div className="competition-grid">
-                {game.lastResult.competitions.map((competition) => <article key={competition.id} className={competition.champion ? "competition-card champion" : "competition-card"}><span>{competition.icon}</span><div><strong>{competition.name}</strong><small>{competition.stage}</small></div>{competition.champion && <b>★</b>}</article>)}
+                {game.lastResult.competitions.map((competition) => <article key={competition.id} className={competition.champion ? "competition-card champion" : "competition-card"}><CompetitionBadge competition={competition} leagueId={currentClub.leagueId} /><div><strong>{competition.name}</strong><small>{competition.stage}</small></div>{competition.champion && <b>★</b>}</article>)}
               </div>
               {game.lastResult.twist && <div className={`season-twist ${game.lastResult.twist.includes("improvável") ? "positive" : "negative"}`}><span>O IMPREVISTO DA TEMPORADA</span><p>{game.lastResult.twist}</p></div>}
               {game.lastResult.nationalNote && <div className="season-national-note"><NationBadge country={nationCountry} size="sm" /><p>{game.lastResult.nationalNote}</p></div>}
@@ -2348,7 +2386,7 @@ export default function Home() {
               <div className="section-heading"><div><span>LINHA DO TEMPO</span><h2>Sua carreira até aqui</h2></div></div>
               <div className="timeline-list">
                 {game.history.length === 0 && <div className="empty-panel">Sua estreia será o primeiro capítulo desta história.</div>}
-                {[...game.history].reverse().map((record) => { const club = clubById(record.clubId); const titles = record.competitions.filter((competition) => competition.champion); return <article className="timeline-row" key={`${record.season}-${record.clubId}`}><span className="timeline-year">{record.season}</span><ClubBadge club={club} size="sm" /><div><strong>{club.shortName}</strong><small>{record.appearances}J · {game.position === "GOL" ? `${record.cleanSheets}SG` : `${record.goals}G · ${record.assists}A`}</small>{titles.length > 0 && <em>{titles.map((title) => title.icon).join(" · ")}</em>}</div><span className="timeline-ovr">{record.overall}</span>{record.title && <span className="timeline-trophy">🏆</span>}</article>; })}
+                {[...game.history].reverse().map((record) => { const club = clubById(record.clubId); const titles = record.competitions.filter((competition) => competition.champion); return <article className="timeline-row" key={`${record.season}-${record.clubId}`}><span className="timeline-year">{record.season}</span><ClubBadge club={club} size="sm" /><div><strong>{club.shortName}</strong><small>{record.appearances}J · {game.position === "GOL" ? `${record.cleanSheets}SG` : `${record.goals}G · ${record.assists}A`}</small>{titles.length > 0 && <em className="timeline-title-badges">{titles.map((title) => <CompetitionBadge key={title.id} competition={title} leagueId={club.leagueId} />)}</em>}</div><span className="timeline-ovr">{record.overall}</span>{record.title && <span className="timeline-trophy">🏆</span>}</article>; })}
               </div>
             </div>
           )}

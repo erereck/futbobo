@@ -316,6 +316,30 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
   }
 });
 
+test("usa escudos, bandeiras e emblemas locais com fallback visual", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const clubAssets = await readdir(new URL("../public/assets/clubs/", import.meta.url));
+  const flagAssets = await readdir(new URL("../public/assets/flags/", import.meta.url));
+  const competitionAssets = await walk(new URL("../public/assets/competitions/", import.meta.url));
+  const assetManifest = JSON.parse(await readFile(new URL("../public/assets/football-assets.json", import.meta.url), "utf8"));
+  const mappedClubs = Object.values(assetManifest.clubs);
+  const providerIds = mappedClubs.map((club) => club.providerId);
+
+  assert.match(page, /LocalBadgeImage/);
+  assert.match(page, /assets\/clubs\/\$\{club\.id\}\.png/);
+  assert.match(page, /assets\/flags\/\$\{country\.id\}\.png/);
+  assert.match(page, /function CompetitionBadge/);
+  assert.match(styles, /\.badge-image-club/);
+  assert.match(styles, /\.badge-image-flag/);
+  assert.match(styles, /\.badge-image-competition/);
+  assert.ok(clubAssets.filter((name) => name.endsWith(".png")).length >= 150, "a maioria dos clubes precisa ter escudo local");
+  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 17, "todas as seleções precisam ter bandeira");
+  assert.ok(competitionAssets.filter((file) => file.pathname.endsWith(".png")).length >= 12, "as principais competições precisam ter emblema");
+  assert.equal(new Set(providerIds).size, providerIds.length, "um mesmo escudo não pode representar clubes diferentes");
+  assert.ok(mappedClubs.every((club) => !/women|femin|u-?\d\d|under-?\d\d/i.test(club.providerName)), "escudos precisam representar equipes principais masculinas");
+});
+
 test("prioriza destinos sul-americanos e norte-americanos por proximidade geográfica", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 

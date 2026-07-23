@@ -170,11 +170,13 @@ button:active:not(:disabled) { transform: scale(0.975); }
 
 .club-badge { position: relative; display: inline-grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 2px solid rgba(255,255,255,.28); border-radius: 50% 50% 46% 46% / 42% 42% 58% 58%; background: linear-gradient(135deg, var(--club-primary) 0 52%, var(--club-secondary) 52%); box-shadow: 0 5px 12px rgba(0,0,0,.25), inset 0 0 0 3px rgba(0,0,0,.12); }
 .club-badge::before { content: ""; position: absolute; inset: 8%; border: 1px solid rgba(255,255,255,.28); border-radius: inherit; }
-.club-badge span { position: relative; z-index: 1; padding: 3px; border-radius: 4px; background: rgba(0,0,0,.55); color: #fff; font: 900 8px var(--sans); letter-spacing: -.03em; }
+.club-badge .badge-fallback { position: relative; z-index: 1; padding: 3px; border-radius: 4px; background: rgba(0,0,0,.55); color: #fff; font: 900 8px var(--sans); letter-spacing: -.03em; }
 .club-badge-sm { width: 37px; height: 41px; }
 .club-badge-md { width: 50px; height: 56px; }
 .club-badge-lg { width: 76px; height: 85px; }
-.club-badge-lg span { font-size: 11px; }
+.club-badge-lg .badge-fallback { font-size: 11px; }
+.badge-image { z-index: 2; user-select: none; }
+.badge-image-club { padding: 3px; object-fit: contain; filter: drop-shadow(0 3px 4px rgba(0,0,0,.35)); }
 .setup-lead { margin: -3px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .formation-list { display: grid; gap: 10px; }
 .formation-card { display: grid; grid-template-columns: 48px 1fr 24px; align-items: center; gap: 12px; min-height: 115px; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(135deg, var(--surface-2), var(--surface)); color: var(--text); text-align: left; cursor: pointer; }
@@ -360,6 +362,9 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .competition-grid { display: grid; width: 100%; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 12px; text-align: left; }
 .competition-card { display: grid; grid-template-columns: 34px 1fr 18px; align-items: center; gap: 8px; min-height: 56px; padding: 9px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 .competition-card > span { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px; background: rgba(255,255,255,.05); color: var(--muted); font-size: 8px; font-weight: 900; }
+.competition-emblem { position: relative; overflow: hidden; }
+.competition-emblem > b { position: relative; z-index: 1; font-size: 8px; }
+.badge-image-competition { padding: 4px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
 .competition-card > div { display: flex; min-width: 0; flex-direction: column; }
 .competition-card strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .competition-card small { margin-top: 3px; color: var(--muted); font-size: 8px; }
@@ -445,6 +450,9 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .timeline-row > div em { margin-top: 3px; color: var(--gold); font-size: 7px; font-style: normal; font-weight: 900; }
 .timeline-ovr { font: 900 16px var(--display); }
 .timeline-trophy { font-size: 14px; }
+.timeline-title-badges { display: flex; gap: 3px; margin-top: 4px; }
+.timeline-title-badges .competition-emblem { width: 22px; height: 22px; border-radius: 7px; background: rgba(255,199,44,.08); }
+.timeline-title-badges .badge-image-competition { padding: 3px; }
 .empty-panel { padding: 35px 20px; border: 1px dashed var(--line); border-radius: 16px; color: var(--muted); font-size: 12px; text-align: center; }
 .profile-hero { display: flex; align-items: center; gap: 14px; padding: 18px; border: 1px solid var(--line); border-radius: 20px; background: linear-gradient(135deg, var(--surface-2), var(--surface)); }
 .profile-hero > div:last-child { min-width: 0; }
@@ -553,11 +561,12 @@ button:active:not(:disabled) { transform: scale(0.975); }
 
 .nation-badge { position: relative; display: inline-grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 2px solid rgba(255,255,255,.28); border-radius: 8px; background: linear-gradient(135deg, var(--nation-primary) 0 52%, var(--nation-secondary) 52%); box-shadow: 0 5px 12px rgba(0,0,0,.25), inset 0 0 0 3px rgba(0,0,0,.12); }
 .nation-badge::before { content: ""; position: absolute; inset: 8%; border: 1px solid rgba(255,255,255,.28); border-radius: 4px; }
-.nation-badge span { position: relative; z-index: 1; padding: 3px; border-radius: 4px; background: rgba(0,0,0,.55); color: #fff; font: 900 8px var(--sans); letter-spacing: -.03em; }
+.nation-badge .badge-fallback { position: relative; z-index: 1; padding: 3px; border-radius: 4px; background: rgba(0,0,0,.55); color: #fff; font: 900 8px var(--sans); letter-spacing: -.03em; }
 .nation-badge-sm { width: 34px; height: 26px; }
 .nation-badge-md { width: 48px; height: 36px; }
 .nation-badge-lg { width: 68px; height: 50px; }
-.nation-badge-lg span { font-size: 11px; }
+.nation-badge-lg .badge-fallback { font-size: 11px; }
+.badge-image-flag { object-fit: cover; }
 
 .nation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .nation-choice { display: grid; min-width: 0; min-height: 74px; grid-template-columns: 48px 1fr; align-items: center; gap: 9px; padding: 12px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }

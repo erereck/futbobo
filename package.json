@@ -9,6 +9,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "sync:assets": "node scripts/sync-football-assets.mjs && node scripts/optimize-football-assets.mjs",
+    "sync:assets:missing": "node scripts/sync-football-assets.mjs --missing && node scripts/optimize-football-assets.mjs",
+    "sync:assets:repair": "node scripts/sync-football-assets.mjs --repair && node scripts/optimize-football-assets.mjs",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint app next.config.ts tests eslint.config.mjs"
   },
