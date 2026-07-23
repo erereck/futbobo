@@ -87,7 +87,7 @@ test("mantém o novo equilíbrio de progressão, mercado e clubes brasileiros", 
   assert.match(page, /}, 5000\);/);
   assert.match(page, /overall - 1/);
   assert.match(page, /function selectTransferOffers/);
-  assert.match(page, /extraEuropeanOffers/);
+  assert.match(page, /extraMarketOffers/);
   assert.match(page, /europeanDevelopmentBonus/);
   assert.match(page, /retirement-confirm/);
 });
@@ -169,6 +169,16 @@ test("prioriza clubes europeus quando a carreira já está na Europa", async () 
   assert.match(page, /Retorno raro ao Brasil/);
   assert.match(styles, /\.european-market-card/);
   assert.match(styles, /\.offer-homecoming-tag/);
+});
+
+test("mostra de cinco a dez propostas na janela de transferências", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /performanceScore >= 90 \? 5/);
+  assert.match(page, /selectOffers\(state, 5, salt/);
+  assert.match(page, /return \[\.\.\.baseOffers, \.\.\.foreignPool\]\.slice\(0, 10\)/);
+  assert.match(page, /expandedOfferCount: Math\.max\(0, game\.transferOffers\.length - 5\)/);
+  assert.match(page, /index >= 5 \? "DESTAQUE ABRIU ESTA PORTA"/);
 });
 
 test("gera temporadas com mais gols e assistências sem igualar todas as posições", async () => {

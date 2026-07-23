@@ -609,10 +609,16 @@ function seasonPerformanceScore(positionKey: PositionKey, record?: Partial<Seaso
 function transferMarketProfile(state: GameState) {
   const latest = state.lastResult ?? state.history.at(-1);
   const performanceScore = seasonPerformanceScore(state.position, latest);
-  const extraEuropeanOffers = performanceScore >= 82 ? 2 : performanceScore >= 62 ? 1 : 0;
+  const extraMarketOffers =
+    performanceScore >= 90 ? 5 :
+    performanceScore >= 82 ? 4 :
+    performanceScore >= 74 ? 3 :
+    performanceScore >= 66 ? 2 :
+    performanceScore >= 58 ? 1 :
+    0;
   return {
     performanceScore,
-    extraEuropeanOffers,
+    extraMarketOffers,
     label: performanceScore >= 82 ? "Temporada excepcional" : performanceScore >= 62 ? "Boa temporada" : "Mercado regular",
   };
 }
@@ -740,8 +746,8 @@ function selectOffers(state: GameState, count: number, salt: number, opts: { inc
 function selectTransferOffers(state: GameState, salt: number, opts: { includeForeign?: boolean; forceDomestic?: boolean; forceForeign?: boolean } = {}) {
   const current = clubById(state.currentClubId || state.academyClubId);
   let baseOffers = isEuropeanClub(current) && !opts.forceDomestic
-    ? selectOffers(state, 3, salt, { ...opts, includeForeign: true, forceForeign: true })
-    : selectOffers(state, 3, salt, opts);
+    ? selectOffers(state, 5, salt, { ...opts, includeForeign: true, forceForeign: true })
+    : selectOffers(state, 5, salt, opts);
   if (opts.forceDomestic) return baseOffers;
 
   if (isEuropeanClub(current) && !opts.forceForeign) {
@@ -753,7 +759,7 @@ function selectTransferOffers(state: GameState, salt: number, opts: { includeFor
   }
 
   const profile = transferMarketProfile(state);
-  if (!profile.extraEuropeanOffers) return baseOffers;
+  if (!profile.extraMarketOffers) return baseOffers;
 
   const targetStrength = clamp(
     Math.round(competitiveStrength(current) + (profile.performanceScore - 62) / 10),
@@ -779,10 +785,10 @@ function selectTransferOffers(state: GameState, salt: number, opts: { includeFor
       const distanceB = Math.abs(competitiveStrength(b) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(b)) * 3 + regionAffinity(current.countryId, b);
       return distanceA - distanceB;
     })
-    .slice(0, profile.extraEuropeanOffers)
+    .slice(0, profile.extraMarketOffers)
     .map((club) => club.id);
 
-  return [...baseOffers, ...foreignPool].slice(0, 5);
+  return [...baseOffers, ...foreignPool].slice(0, 10);
 }
 
 function eligibleEvents(state: GameState) {
@@ -1412,7 +1418,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     ? selectTransferOffers(nextBase, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad })
     : [];
   if (effect.transfer && event.id === "return-home" && nextBase.academyClubId) {
-    transferOffers = [nextBase.academyClubId, ...transferOffers.filter((clubId) => clubId !== nextBase.academyClubId)].slice(0, 3);
+    transferOffers = [nextBase.academyClubId, ...transferOffers.filter((clubId) => clubId !== nextBase.academyClubId)].slice(0, 5);
   }
   if (effect.transfer && event.id === "rival-offer") {
     const rivalIds = RIVALRIES
@@ -1420,7 +1426,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
       .map((rivalry) => rivalry.clubIds.find((clubId) => clubId !== club.id))
       .filter((clubId): clubId is string => Boolean(clubId));
     const rivalOffer = pick(rivalIds, nextBase.seed, affected.season);
-    if (rivalOffer) transferOffers = [rivalOffer, ...transferOffers.filter((clubId) => clubId !== rivalOffer)].slice(0, Math.max(3, transferOffers.length));
+    if (rivalOffer) transferOffers = [rivalOffer, ...transferOffers.filter((clubId) => clubId !== rivalOffer)].slice(0, Math.max(5, transferOffers.length));
   }
   const legacyPoints = calculateLegacyScore({
     appearances: nextBase.stats.appearances,
@@ -1629,7 +1635,7 @@ export default function Home() {
       isEuropeanWindow: isEuropeanClub(currentClub) && europeanOffers > 0,
       foreignMarketLabel: allForeignAreEurope ? "MERCADO EUROPEU" : "MERCADO INTERNACIONAL",
       foreignMarketAdjective: allForeignAreEurope ? "europeu" : "internacional",
-      expandedOfferCount: Math.max(0, game.transferOffers.length - 3),
+      expandedOfferCount: Math.max(0, game.transferOffers.length - 5),
     };
   }, [game.transferOffers, currentClub]);
   const currentEvent = useMemo(() => {
@@ -2246,7 +2252,7 @@ export default function Home() {
                     <button className="offer-card" key={clubId} onClick={() => chooseTransfer(clubId)}>
                       <ClubBadge club={club} />
                       <span>
-                        <small>{rareBrazilReturn ? "RETORNO IMPROVÁVEL" : index >= 3 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
+                        <small>{rareBrazilReturn ? "RETORNO IMPROVÁVEL" : index >= 5 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
                         <strong>{club.shortName}</strong>
                         <em>{club.city} · {league.name} · reputação {club.reputation}/5</em>
                         <em className="offer-contract">{ROLE_LABELS[offerRole]} · {offerContract.years} anos · {formatMoney(offerContract.annualSalary)}/ano</em>
