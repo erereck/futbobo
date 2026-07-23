@@ -579,6 +579,18 @@ button:active:not(:disabled) { transform: scale(0.975); }
 }
 
 @media (max-width: 540px) {
+  html.futbobo-viewport-locked,
+  body.futbobo-viewport-locked {
+    width: 100%;
+    height: 100%;
+    overflow: hidden !important;
+    overscroll-behavior: none;
+  }
+  body.futbobo-viewport-locked {
+    position: fixed;
+    inset: 0;
+  }
+
   .app-shell-career,
   .app-shell-consequence,
   .app-shell-season-result,
@@ -626,8 +638,10 @@ button:active:not(:disabled) { transform: scale(0.975); }
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior: none;
     scrollbar-width: thin;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
   }
 
   .event-stage {
@@ -681,7 +695,11 @@ button:active:not(:disabled) { transform: scale(0.975); }
     padding: 14px 13px calc(env(safe-area-inset-bottom) + 88px);
   }
 
-  .result-stage { justify-content: flex-start; }
+  .result-stage {
+    justify-content: flex-start;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 150px);
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom) + 150px);
+  }
   .result-symbol { width: 66px; height: 66px; margin: 10px 0 9px; border-radius: 22px 22px 22px 8px; font-size: 33px; }
   .result-stage h1, .transfer-stage h1 { margin-bottom: 5px; font-size: 23px; }
   .result-stage > p, .transfer-stage > p { font-size: 10px; line-height: 1.4; }
@@ -709,7 +727,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
     bottom: 0;
     left: 50%;
     width: min(540px, 100%);
-    padding: 9px 13px calc(env(safe-area-inset-bottom) + 9px);
+    padding: 9px 13px max(9px, min(env(safe-area-inset-bottom), 34px));
     transform: translateX(-50%);
     border-top: 1px solid var(--line);
     background: linear-gradient(180deg, rgba(8,26,19,.76), rgba(8,26,19,.98) 26%);

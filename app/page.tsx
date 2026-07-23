@@ -1320,6 +1320,25 @@ export default function Home() {
   }, [game]);
 
   useEffect(() => {
+    const locksViewport =
+      game.phase === "career" ||
+      game.phase === "consequence" ||
+      game.phase === "season-result" ||
+      game.phase === "transfer" ||
+      game.phase === "transfer-denied" ||
+      game.phase === "retirement-confirm";
+    if (!locksViewport) return;
+
+    document.documentElement.classList.add("futbobo-viewport-locked");
+    document.body.classList.add("futbobo-viewport-locked");
+    window.scrollTo(0, 0);
+    return () => {
+      document.documentElement.classList.remove("futbobo-viewport-locked");
+      document.body.classList.remove("futbobo-viewport-locked");
+    };
+  }, [game.phase]);
+
+  useEffect(() => {
     if (game.phase !== "youth") return;
     const timers = game.youthYears.map((_, index) =>
       window.setTimeout(() => setYouthStep(index + 1), 350 + index * 340),

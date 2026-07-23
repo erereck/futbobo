@@ -122,3 +122,15 @@ test("mantém o gramado contínuo atrás da meta do treinador", async () => {
   assert.match(styles, /\.event-art \{[^}]*background: transparent/);
   assert.match(styles, /\.event-stage \.market-strip \{[^}]*background: rgba\(7,23,16,.9\)/);
 });
+
+test("prende a rolagem no resultado e deixa o imprevisto passar pelo rodapé", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /futbobo-viewport-locked/);
+  assert.match(page, /window\.scrollTo\(0, 0\)/);
+  assert.match(styles, /body\.futbobo-viewport-locked[\s\S]*position: fixed/);
+  assert.match(styles, /-webkit-overflow-scrolling: touch/);
+  assert.match(styles, /\.result-stage \{[\s\S]*padding-bottom: calc\(env\(safe-area-inset-bottom\) \+ 150px\)/);
+  assert.match(styles, /max\(9px, min\(env\(safe-area-inset-bottom\), 34px\)\)/);
+});
