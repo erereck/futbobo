@@ -99,6 +99,14 @@ export type Effect = {
   transferAbroad?: boolean;
   loan?: boolean;
   rivalRespect?: number;
+  followers?: number;
+  socialSentiment?: number;
+  mediaRelation?: number;
+  lifeBalance?: number;
+  charity?: number;
+  sponsorBrand?: string;
+  sponsorYears?: number;
+  sponsorValue?: number;
   retire?: boolean;
   discipline?: number;
   contractYears?: number;

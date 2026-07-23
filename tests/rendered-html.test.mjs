@@ -584,5 +584,33 @@ test("adiciona central estatística, empréstimos, rivais, personagens, agente l
   assert.match(styles, /\.statistics-screen/);
   assert.match(styles, /\.update-notice/);
   assert.match(styles, /\.settings-sheet/);
-  assert.match(styles, /grid-template-columns: repeat\(5, 1fr\)/);
+  assert.match(styles, /grid-template-columns: repeat\(6, 1fr\)/);
+});
+
+test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  for (const brand of ["Nike", "adidas", "Puma", "New Balance", "Under Armour", "Mizuno", "Umbro"]) {
+    assert.match(page, new RegExp(`name: "${brand}"`));
+  }
+  assert.match(page, /type SponsorDeal/);
+  assert.match(page, /type SocialPost/);
+  assert.match(page, /function sponsorOfferPool/);
+  assert.match(page, /function buildSponsorEvent/);
+  assert.match(page, /function buildSponsorDutyEvent/);
+  assert.match(page, /function buildSocialEvent/);
+  assert.match(page, /function buildLifeEvent/);
+  assert.match(page, /activeSponsor: sponsorExpired \? null : affected\.activeSponsor/);
+  assert.match(page, /money: affected\.money \+ affected\.annualSalary \+ sponsorIncome/);
+  assert.match(page, /socialFeed: \[\.\.\.milestonePosts, seasonSocialPost/);
+  assert.match(page, /VIDA FORA DO CAMPO/);
+  assert.match(page, /PATROCINADOR PESSOAL/);
+  assert.match(page, /LINHA DO TEMPO/);
+  assert.match(gameData, /followers\?: number/);
+  assert.match(gameData, /sponsorBrand\?: string/);
+  assert.match(styles, /\.life-screen/);
+  assert.match(styles, /\.sponsor-hub/);
+  assert.match(styles, /\.social-post-list/);
 });

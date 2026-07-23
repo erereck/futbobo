@@ -158,6 +158,26 @@ type AwardNomination = {
 
 type TransferMode = "permanent" | "loan";
 
+type SocialPost = {
+  id: string;
+  season: number;
+  source: "player" | "fans" | "press" | "sponsor";
+  author: string;
+  text: string;
+  likes: number;
+  tone: "positive" | "neutral" | "negative";
+};
+
+type SponsorDeal = {
+  id: string;
+  brand: string;
+  startSeason: number;
+  endSeason: number;
+  annualValue: number;
+  signedAtFollowers: number;
+  status: "active" | "completed" | "terminated";
+};
+
 type SpecialTraitId =
   | "clinical-finisher"
   | "playmaker"
@@ -221,6 +241,8 @@ type SeasonRecord = PlayerStats & {
   performanceScore?: number;
   marketValue?: number;
   development?: number;
+  followers?: number;
+  socialSentiment?: number;
 };
 
 type SeasonResult = SeasonRecord & {
@@ -319,6 +341,15 @@ type GameState = {
   freeAgentSinceSeason: number;
   traits: SpecialTraitId[];
   rivals: CareerRival[];
+  followers: number;
+  socialSentiment: number;
+  mediaRelation: number;
+  lifeBalance: number;
+  charityReputation: number;
+  activeSponsor: SponsorDeal | null;
+  sponsorHistory: SponsorDeal[];
+  socialFeed: SocialPost[];
+  offFieldMilestones: string[];
   nationalitySwitched: boolean;
   nationalitySwitchInviteUsed: boolean;
   pendingNationalitySwitchTarget: string;
@@ -461,6 +492,20 @@ const SPECIAL_TRAITS: Record<SpecialTraitId, { icon: string; name: string; descr
   inconsistent: { icon: "≈", name: "Inconstante", description: "Pode alternar temporadas mágicas e apagadas.", tone: "volatile" },
   "injury-prone": { icon: "+", name: "Corpo frágil", description: "Tem maior risco de lesões e temporadas interrompidas.", tone: "volatile" },
 };
+
+const SPONSOR_BRANDS = [
+  { name: "Nike", tier: 5, minReputation: 72, baseValue: 1_800_000 },
+  { name: "adidas", tier: 5, minReputation: 70, baseValue: 1_700_000 },
+  { name: "Puma", tier: 4, minReputation: 58, baseValue: 1_150_000 },
+  { name: "New Balance", tier: 4, minReputation: 53, baseValue: 920_000 },
+  { name: "Under Armour", tier: 3, minReputation: 45, baseValue: 680_000 },
+  { name: "Mizuno", tier: 3, minReputation: 39, baseValue: 520_000 },
+  { name: "ASICS", tier: 3, minReputation: 36, baseValue: 470_000 },
+  { name: "Umbro", tier: 2, minReputation: 27, baseValue: 310_000 },
+  { name: "Kappa", tier: 2, minReputation: 23, baseValue: 260_000 },
+  { name: "Diadora", tier: 2, minReputation: 18, baseValue: 210_000 },
+  { name: "Lotto", tier: 1, minReputation: 10, baseValue: 140_000 },
+] as const;
 
 const TRAITS_BY_POSITION: Record<PositionKey, SpecialTraitId[]> = {
   GOL: ["ironman", "leader", "big-game", "inconsistent"],
@@ -679,6 +724,15 @@ function initialState(): GameState {
     freeAgentSinceSeason: 0,
     traits: [],
     rivals: [],
+    followers: 0,
+    socialSentiment: 62,
+    mediaRelation: 52,
+    lifeBalance: 76,
+    charityReputation: 0,
+    activeSponsor: null,
+    sponsorHistory: [],
+    socialFeed: [],
+    offFieldMilestones: [],
     nationalitySwitched: false,
     nationalitySwitchInviteUsed: false,
     pendingNationalitySwitchTarget: "",
@@ -751,6 +805,15 @@ function normalizeSave(value: unknown): GameState {
     })) : saved.currentClubId
       ? createCareerRivals(saved.seed ?? base.seed, saved.age ?? 18, saved.overall ?? 60, [])
       : [],
+    followers: saved.followers ?? (saved.currentClubId ? Math.max(2_500, (saved.reputation ?? 0) * 12_000 + (saved.stats?.goals ?? 0) * 1_200) : 0),
+    socialSentiment: saved.socialSentiment ?? 62,
+    mediaRelation: saved.mediaRelation ?? 52,
+    lifeBalance: saved.lifeBalance ?? 76,
+    charityReputation: saved.charityReputation ?? 0,
+    activeSponsor: saved.activeSponsor ?? null,
+    sponsorHistory: Array.isArray(saved.sponsorHistory) ? saved.sponsorHistory : [],
+    socialFeed: Array.isArray(saved.socialFeed) ? saved.socialFeed.slice(0, 24) : [],
+    offFieldMilestones: Array.isArray(saved.offFieldMilestones) ? saved.offFieldMilestones : [],
     nationalitySwitched: saved.nationalitySwitched ?? false,
     nationalitySwitchInviteUsed: saved.nationalitySwitchInviteUsed ?? false,
     pendingNationalitySwitchTarget: saved.pendingNationalitySwitchTarget ?? "",
@@ -828,6 +891,8 @@ function normalizeSave(value: unknown): GameState {
       performanceScore: record.performanceScore ?? 0,
       marketValue: record.marketValue ?? 0,
       development: record.development ?? 0,
+      followers: record.followers ?? 0,
+      socialSentiment: record.socialSentiment ?? 50,
     })),
     lastResult: saved.lastResult ? {
       ...saved.lastResult,
@@ -1311,6 +1376,46 @@ function formatMoney(value: number) {
   return `€${Math.round(value / 1000)}K`;
 }
 
+function formatFollowers(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)} mi`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(value >= 100_000 ? 0 : 1)} mil`;
+  return String(Math.max(0, Math.round(value)));
+}
+
+function publicImageProfile(state: GameState) {
+  const score = state.socialSentiment * 0.36 + state.mediaRelation * 0.24 + state.charityReputation * 0.18 + state.reputation * 0.22;
+  if (score >= 82) return { label: "Ícone global", color: "#ffc72c", description: "Seu nome atravessou o futebol e virou uma marca mundial." };
+  if (score >= 68) return { label: "Queridinho do público", color: "#63e36b", description: "Torcedores, imprensa e marcas enxergam valor no que você representa." };
+  if (score >= 52) return { label: "Figura em ascensão", color: "#2ca8ff", description: "Sua imagem cresce, mas cada postagem ainda pode mudar a narrativa." };
+  if (score >= 36) return { label: "Imagem polarizada", color: "#ff8c5a", description: "Você chama atenção — e divide opiniões quase na mesma medida." };
+  return { label: "Crise de imagem", color: "#ff5a4e", description: "Patrocinadores e imprensa acompanham cada passo com desconfiança." };
+}
+
+function sponsorOfferPool(state: GameState, salt: number) {
+  const reachBoost = Math.min(22, Math.log10(Math.max(1_000, state.followers)) * 3.3);
+  const effectiveReputation = state.reputation + reachBoost + state.charityReputation * 0.08;
+  const previousBrands = new Set(state.sponsorHistory.map((deal) => deal.brand));
+  const eligible = SPONSOR_BRANDS
+    .filter((brand) => effectiveReputation >= brand.minReputation - 8)
+    .map((brand, index) => ({
+      brand,
+      order:
+        Math.abs(brand.minReputation - effectiveReputation) * 0.2 +
+        (previousBrands.has(brand.name) ? 2.5 : 0) +
+        seeded(state.seed, salt + index * 37) * 4,
+    }))
+    .sort((a, b) => a.order - b.order)
+    .slice(0, 3)
+    .map(({ brand }, index) => {
+      const years = 2 + Math.floor(seeded(state.seed, salt + 401 + index * 13) * 3);
+      const reachMultiplier = 0.72 + Math.min(1.8, Math.log10(Math.max(1_000, state.followers)) / 5);
+      const reputationMultiplier = 0.65 + state.reputation / 120;
+      const annualValue = Math.round(brand.baseValue * reachMultiplier * reputationMultiplier / 10_000) * 10_000;
+      return { ...brand, years, annualValue };
+    });
+  return eligible.length ? eligible : [{ ...SPONSOR_BRANDS.at(-1)!, years: 2, annualValue: 100_000 }];
+}
+
 function addStats(a: PlayerStats, b: PlayerStats): PlayerStats {
   return {
     appearances: a.appearances + b.appearances,
@@ -1342,6 +1447,12 @@ function describeEffects(effect: Effect) {
   add("chance de título na Seleção", effect.nationalTitleBoost);
   add("adaptação", effect.adaptation);
   add("disciplina", effect.discipline);
+  add("humor das redes", effect.socialSentiment);
+  add("relação com a imprensa", effect.mediaRelation);
+  add("equilíbrio pessoal", effect.lifeBalance);
+  add("impacto social", effect.charity);
+  if (effect.followers) changes.push(`${effect.followers > 0 ? "+" : ""}${formatFollowers(effect.followers)} seguidores`);
+  if (effect.sponsorBrand) changes.push(`Contrato com ${effect.sponsorBrand}`);
   if (effect.money) changes.push(`${effect.money > 0 ? "+" : ""}${formatMoney(effect.money * 10_000)} patrimônio`);
   if (effect.contractYears) changes.push(`Contrato +${effect.contractYears} anos`);
   if (effect.salaryBoost) changes.push(`Salário +${effect.salaryBoost}%`);
@@ -1380,6 +1491,14 @@ function mergeEffects(base: Effect, extra: Effect): Effect {
     transferAbroad: Boolean(base.transferAbroad || extra.transferAbroad),
     loan: Boolean(base.loan || extra.loan),
     rivalRespect: (base.rivalRespect ?? 0) + (extra.rivalRespect ?? 0),
+    followers: (base.followers ?? 0) + (extra.followers ?? 0),
+    socialSentiment: (base.socialSentiment ?? 0) + (extra.socialSentiment ?? 0),
+    mediaRelation: (base.mediaRelation ?? 0) + (extra.mediaRelation ?? 0),
+    lifeBalance: (base.lifeBalance ?? 0) + (extra.lifeBalance ?? 0),
+    charity: (base.charity ?? 0) + (extra.charity ?? 0),
+    sponsorBrand: extra.sponsorBrand ?? base.sponsorBrand,
+    sponsorYears: extra.sponsorYears ?? base.sponsorYears,
+    sponsorValue: extra.sponsorValue ?? base.sponsorValue,
     retire: Boolean(base.retire || extra.retire),
     discipline: (base.discipline ?? 0) + (extra.discipline ?? 0),
     contractYears: (base.contractYears ?? 0) + (extra.contractYears ?? 0),
@@ -1598,6 +1717,13 @@ function eligibleEvents(state: GameState) {
 }
 
 function selectNextEvent(state: GameState, salt: number) {
+  const offFieldRoll = seeded(state.seed, state.season * 1237 + salt);
+  if (!state.activeSponsor && state.age >= 16 && state.reputation >= 10 && offFieldRoll < 0.34) {
+    return DYNAMIC_SPONSOR_EVENT_ID;
+  }
+  if (state.activeSponsor && offFieldRoll < 0.1) return DYNAMIC_SPONSOR_DUTY_EVENT_ID;
+  if (offFieldRoll < 0.24) return DYNAMIC_SOCIAL_EVENT_ID;
+  if (offFieldRoll < 0.36) return DYNAMIC_LIFE_EVENT_ID;
   if (state.rivals.some((rival) => rival.active) && seeded(state.seed, state.season * 991 + salt) < 0.14) {
     return DYNAMIC_RIVAL_EVENT_ID;
   }
@@ -1610,6 +1736,172 @@ function selectNextEvent(state: GameState, salt: number) {
 
 const NATIONALITY_SWITCH_EVENT_ID = "dynamic-nationality-switch";
 const DYNAMIC_RIVAL_EVENT_ID = "dynamic-career-rival";
+const DYNAMIC_SPONSOR_EVENT_ID = "dynamic-sponsor-offer";
+const DYNAMIC_SPONSOR_DUTY_EVENT_ID = "dynamic-sponsor-duty";
+const DYNAMIC_SOCIAL_EVENT_ID = "dynamic-social-media";
+const DYNAMIC_LIFE_EVENT_ID = "dynamic-off-field-life";
+
+function buildSponsorEvent(state: GameState): GameEvent {
+  const offers = sponsorOfferPool(state, state.season * 1301);
+  return {
+    id: DYNAMIC_SPONSOR_EVENT_ID,
+    icon: "◇",
+    tag: "PATROCÍNIO",
+    title: "As marcas querem colocar seu nome em uma chuteira",
+    description: `${formatFollowers(state.followers)} seguidores e seu momento em campo chamaram atenção. Cada contrato paga por ano e acompanha você mesmo se trocar de clube.`,
+    choices: offers.map((offer, index) => ({
+      label: `Assinar com ${offer.name}`,
+      hint: `${offer.years} anos · ${formatMoney(offer.annualValue)}/ano${index === 0 ? " · maior projeto" : ""}`,
+      result: `${offer.name} anuncia você como novo atleta da marca. A parceria agora faz parte da sua carreira.`,
+      effect: {
+        sponsorBrand: offer.name,
+        sponsorYears: offer.years,
+        sponsorValue: offer.annualValue,
+        reputation: offer.tier,
+        followers: 8_000 * offer.tier,
+        socialSentiment: 2,
+      },
+    })),
+  };
+}
+
+function buildSponsorDutyEvent(state: GameState): GameEvent {
+  const sponsor = state.activeSponsor;
+  const brand = sponsor?.brand ?? "a marca";
+  const annualValue = sponsor?.annualValue ?? 100_000;
+  return {
+    id: DYNAMIC_SPONSOR_DUTY_EVENT_ID,
+    icon: "◆",
+    tag: brand.toLocaleUpperCase("pt-BR"),
+    title: `${brand} marcou uma campanha no pior dia possível`,
+    description: "A gravação atravessa seu dia de descanso antes de uma sequência pesada. O contrato pede presença, mas você decide como cumprir.",
+    choices: [
+      {
+        label: "Entregar a campanha completa",
+        hint: `Seguidores ↑↑ · físico ↓ · bônus ${formatMoney(annualValue * 0.18)}`,
+        result: `A campanha da ${brand} domina as redes e rende um bônus. Seu corpo, porém, sente o dia sem descanso.`,
+        effect: { followers: 75_000, socialSentiment: 5, fitness: -7, lifeBalance: -5, money: Math.round(annualValue * 0.18 / 10_000) },
+      },
+      {
+        label: "Reduzir a agenda e priorizar o jogo",
+        hint: "Físico ↑ · relação comercial ↓",
+        result: `${brand} aceita uma ação menor. A parceria esfria um pouco, mas você chega inteiro ao campo.`,
+        effect: { fitness: 8, lifeBalance: 4, reputation: -2, mediaRelation: -2 },
+      },
+      {
+        label: "Transformar a campanha em ação social",
+        hint: "Impacto social ↑↑ · público ↑",
+        result: `Você convence ${brand} a levar a produção para um projeto comunitário. A ação ganha um significado que nenhuma publicidade compraria.`,
+        effect: { charity: 12, followers: 45_000, socialSentiment: 9, leadership: 4 },
+      },
+    ],
+  };
+}
+
+function buildSocialEvent(state: GameState): GameEvent {
+  const scenario = Math.floor(seeded(state.seed, state.season * 1321) * 4);
+  if (scenario === 0) {
+    return {
+      id: DYNAMIC_SOCIAL_EVENT_ID,
+      icon: "@",
+      tag: "REDES SOCIAIS",
+      title: "Uma resposta sua virou assunto nacional",
+      description: "Um torcedor criticou sua fase e seu comentário impulsivo recebeu milhares de compartilhamentos antes que você pudesse apagar.",
+      choices: [
+        { label: "Dobrar a aposta", hint: "Seguidores ↑↑ · imagem polariza", result: "Você sustenta cada palavra. Muita gente aplaude a personalidade; outra parte passa a torcer contra.", effect: { followers: 110_000, socialSentiment: -9, mediaRelation: -6, morale: 5 } },
+        { label: "Pedir desculpas sem roteiro", hint: "Imagem ↑ · liderança ↑", result: "O vídeo é curto e direto. Assumir o erro desarma boa parte da crise.", effect: { socialSentiment: 10, mediaRelation: 7, leadership: 4, followers: 25_000 } },
+        { label: "Entregar as redes à assessoria", hint: "Seguro · autenticidade ↓", result: "A crise desaparece, mas seu perfil passa a parecer uma coletiva de imprensa.", effect: { socialSentiment: 3, mediaRelation: 5, lifeBalance: 3, followers: -8_000 } },
+      ],
+    };
+  }
+  if (scenario === 1) {
+    return {
+      id: DYNAMIC_SOCIAL_EVENT_ID,
+      icon: "●",
+      tag: "VIRAL",
+      title: "Sua comemoração virou tendência",
+      description: "Crianças, jogadores e artistas repetem seu gesto. A internet quer saber se você vai transformar o momento em algo maior.",
+      choices: [
+        { label: "Criar um desafio oficial", hint: "Seguidores ↑↑↑ · desgaste leve", result: "O desafio atravessa fronteiras e seu perfil explode durante a semana.", effect: { followers: 260_000, socialSentiment: 10, fitness: -3, reputation: 5 } },
+        { label: "Ligar o viral a uma campanha solidária", hint: "Impacto social ↑↑ · seguidores ↑", result: "Cada reprodução passa a divulgar uma causa. O gesto deixa de ser só seu.", effect: { followers: 145_000, charity: 14, socialSentiment: 12, leadership: 3 } },
+        { label: "Deixar a torcida carregar o momento", hint: "Moral ↑ · crescimento natural", result: "Você não força uma campanha. A comemoração cresce de forma espontânea.", effect: { followers: 70_000, socialSentiment: 6, morale: 5 } },
+      ],
+    };
+  }
+  if (scenario === 2) {
+    return {
+      id: DYNAMIC_SOCIAL_EVENT_ID,
+      icon: "!",
+      tag: "ARQUIVO DA INTERNET",
+      title: "Uma postagem antiga reapareceu",
+      description: "Uma frase escrita quando você era adolescente volta sem contexto e abre uma crise que parece maior a cada minuto.",
+      choices: [
+        { label: "Explicar como você mudou", hint: "Imprensa ↑ · imagem ↑", result: "Você não tenta apagar o passado. A entrevista madura muda o centro da conversa.", effect: { mediaRelation: 10, socialSentiment: 8, leadership: 5, lifeBalance: -3 } },
+        { label: "Apagar tudo e ficar em silêncio", hint: "Crise curta · público ↓", result: "A história perde força, mas o silêncio deixa uma sombra difícil de medir.", effect: { followers: -35_000, socialSentiment: -5, mediaRelation: -4, morale: -4 } },
+        { label: "Responder com ironia", hint: "50% · viral ou desastre", result: "Você escolhe humor para enfrentar a crise.", effect: {}, luck: { chance: 50, successText: "A resposta é afiada na medida certa e a internet vira a seu favor.", failureText: "A ironia parece arrogância. O problema dobra de tamanho em poucas horas.", successEffect: { followers: 180_000, socialSentiment: 10, morale: 7 }, failureEffect: { followers: 55_000, socialSentiment: -16, mediaRelation: -10, morale: -9 } } },
+      ],
+    };
+  }
+  return {
+    id: DYNAMIC_SOCIAL_EVENT_ID,
+    icon: "▶",
+    tag: "TRANSMISSÃO AO VIVO",
+    title: "Uma live mostra um lado seu que ninguém conhecia",
+    description: "Sem coletiva e sem roteiro, milhares de pessoas acompanham você jogando videogame e conversando sobre a carreira.",
+    choices: [
+      { label: "Falar abertamente sobre a pressão", hint: "Público ↑↑ · equilíbrio ↑", result: "A sinceridade aproxima torcedores que nunca tinham pensado no peso de uma carreira.", effect: { followers: 130_000, socialSentiment: 11, lifeBalance: 8, mediaRelation: 4 } },
+      { label: "Provocar rivais durante a live", hint: "Seguidores ↑↑ · rivalidade ↑", result: "Os cortes viralizam e chegam rapidamente aos vestiários adversários.", effect: { followers: 170_000, socialSentiment: -3, reputation: 6, fans: 6 } },
+      { label: "Transformar a live em quadro semanal", hint: "Seguidores ↑↑↑ · descanso ↓", result: "O quadro vira sucesso, mas agora existe mais uma agenda entre treinos e jogos.", effect: { followers: 240_000, lifeBalance: -9, fitness: -4, money: 8 } },
+    ],
+  };
+}
+
+function buildLifeEvent(state: GameState): GameEvent {
+  const scenario = Math.floor(seeded(state.seed, state.season * 1361) * 5);
+  const scenarios: GameEvent[] = [
+    {
+      id: DYNAMIC_LIFE_EVENT_ID, icon: "☾", tag: "NOITE LIVRE", title: "Seus amigos marcaram uma festa antes do clássico", description: "A folga existe no papel, mas o jogo mais comentado do mês está a poucos dias.",
+      choices: [
+        { label: "Ir e sair cedo", hint: "Equilíbrio ↑ · risco pequeno", result: "Você aparece, ri e vai embora antes da noite cobrar seu preço.", effect: { lifeBalance: 8, morale: 6, fitness: -3 } },
+        { label: "Virar a noite", hint: "Moral ↑↑ · físico ↓↓ · risco", result: "A noite é inesquecível. O treino seguinte também, pelos motivos errados.", effect: { morale: 13, fitness: -15, discipline: -8, socialSentiment: -4, injuryRisk: 5 } },
+        { label: "Ficar em casa e estudar o rival", hint: "Jogo grande ↑ · vida pessoal ↓", result: "A preparação rende confiança, mas a carreira ocupa até o espaço da folga.", effect: { titleBoost: 8, lifeBalance: -7, fitness: 5 } },
+      ],
+    },
+    {
+      id: DYNAMIC_LIFE_EVENT_ID, icon: "♥", tag: "IMPACTO SOCIAL", title: "A chance de criar sua própria fundação", description: "Um projeto local pede algo maior que uma visita: seu nome, tempo e compromisso por anos.",
+      choices: [
+        { label: "Fundar o projeto agora", hint: "Impacto social ↑↑↑ · dinheiro ↓", result: "A fundação nasce pequena, mas começa a mudar vidas antes da primeira manchete.", effect: { charity: 20, leadership: 7, money: -14, followers: 60_000, socialSentiment: 9 } },
+        { label: "Financiar sem aparecer", hint: "Impacto social ↑↑ · discrição", result: "O dinheiro chega sem câmera. Meses depois, a história acaba descoberta.", effect: { charity: 14, money: -9, socialSentiment: 5, lifeBalance: 4 } },
+        { label: "Deixar para uma fase mais estável", hint: "Patrimônio preservado", result: "Você ajuda pontualmente, mas evita assumir uma estrutura que ainda não consegue carregar.", effect: { charity: 3, money: -2, lifeBalance: 3 } },
+      ],
+    },
+    {
+      id: DYNAMIC_LIFE_EVENT_ID, icon: "▣", tag: "DOCUMENTÁRIO", title: "Uma produtora quer acesso total à sua temporada", description: "Câmeras em casa, no carro e nos bastidores. A proposta paga bem, mas transforma privacidade em conteúdo.",
+      choices: [
+        { label: "Abrir todas as portas", hint: "Seguidores ↑↑↑ · dinheiro ↑↑ · equilíbrio ↓", result: "O documentário vira um fenômeno e seu cotidiano deixa de ser completamente seu.", effect: { followers: 340_000, money: 18, mediaRelation: 8, lifeBalance: -13 } },
+        { label: "Mostrar apenas o futebol", hint: "Imprensa ↑ · exposição controlada", result: "A série fica menos explosiva, mas preserva quem vive ao seu redor.", effect: { followers: 110_000, mediaRelation: 7, lifeBalance: 3, money: 7 } },
+        { label: "Recusar a produção", hint: "Privacidade ↑ · oportunidade perdida", result: "A câmera vai embora. Sua casa volta a ser apenas sua casa.", effect: { lifeBalance: 12, followers: -5_000, morale: 5 } },
+      ],
+    },
+    {
+      id: DYNAMIC_LIFE_EVENT_ID, icon: "⌂", tag: "CÍRCULO PESSOAL", title: "Seu entorno começou a crescer rápido demais", description: "Novos amigos, pedidos de dinheiro e gente opinando na carreira. É difícil separar apoio de interesse.",
+      choices: [
+        { label: "Contratar uma equipe profissional", hint: "Equilíbrio ↑↑ · dinheiro ↓", result: "Agenda, finanças e exposição passam a ter limites claros.", effect: { lifeBalance: 13, money: -8, mediaRelation: 5, morale: 4 } },
+        { label: "Confiar apenas nos amigos antigos", hint: "Moral ↑ · risco financeiro", result: "A lealdade conforta, mas nem todo amigo está preparado para administrar uma carreira.", effect: { morale: 8, lifeBalance: 4, money: -4 } },
+        { label: "Afastar todo mundo", hint: "Foco ↑ · isolamento", result: "O ruído desaparece. O silêncio também pesa.", effect: { fitness: 7, morale: -10, lifeBalance: -8 } },
+      ],
+    },
+    {
+      id: DYNAMIC_LIFE_EVENT_ID, icon: "◉", tag: "SAÚDE MENTAL", title: "A pressão começou a invadir os dias de folga", description: "Você dorme pensando no próximo jogo e acorda revendo o último erro. Fingir que não existe também virou cansativo.",
+      choices: [
+        { label: "Começar acompanhamento psicológico", hint: "Equilíbrio ↑↑↑ · consistência", result: "A pressão não some, mas deixa de comandar cada pensamento.", effect: { lifeBalance: 18, morale: 10, mediaRelation: 2 } },
+        { label: "Conversar com o capitão", hint: "Liderança ↑ · moral ↑", result: "Ouvir alguém que já atravessou essa fase muda a forma como você enxerga o problema.", effect: { lifeBalance: 9, morale: 7, leadership: 5 } },
+        { label: "Guardar tudo e treinar mais", hint: "OVR ↑ · equilíbrio ↓↓", result: "O treino oferece controle por algumas horas, mas não resolve o que acontece fora dele.", effect: { ovr: 1, fitness: -8, lifeBalance: -15, morale: -5 } },
+      ],
+    },
+  ];
+  return scenarios[scenario];
+}
 
 function buildRivalEvent(state: GameState): GameEvent {
   const activeRivals = state.rivals.filter((rival) => rival.active);
@@ -1800,6 +2092,17 @@ function createYouthJourney(state: GameState, formationId: string) {
 
 function applyEffect(state: GameState, effect: Effect) {
   const overall = clamp(state.overall + (effect.ovr ?? 0), 40, 99);
+  const signedSponsor: SponsorDeal | null = effect.sponsorBrand
+    ? {
+        id: `${state.seed}-${state.season}-${effect.sponsorBrand}`,
+        brand: effect.sponsorBrand,
+        startSeason: state.season,
+        endSeason: state.season + Math.max(1, effect.sponsorYears ?? 2),
+        annualValue: Math.max(50_000, effect.sponsorValue ?? 100_000),
+        signedAtFollowers: state.followers,
+        status: "active",
+      }
+    : null;
   return {
     ...state,
     overall,
@@ -1818,6 +2121,12 @@ function applyEffect(state: GameState, effect: Effect) {
     contractYears: Math.max(0, state.contractYears + (effect.contractYears ?? 0)),
     annualSalary: Math.round(state.annualSalary * (1 + (effect.salaryBoost ?? 0) / 100)),
     clubCaptain: Boolean(state.clubCaptain || effect.clubCaptain),
+    followers: Math.max(0, state.followers + (effect.followers ?? 0)),
+    socialSentiment: clamp(state.socialSentiment + (effect.socialSentiment ?? 0)),
+    mediaRelation: clamp(state.mediaRelation + (effect.mediaRelation ?? 0)),
+    lifeBalance: clamp(state.lifeBalance + (effect.lifeBalance ?? 0)),
+    charityReputation: clamp(state.charityReputation + (effect.charity ?? 0)),
+    activeSponsor: signedSponsor ?? state.activeSponsor,
   };
 }
 
@@ -1868,7 +2177,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const quality = clamp((affected.overall - 48) / 35, 0.45, 1.5);
   const roleProductionBonus = seasonRole === "estrela" ? 0.12 : seasonRole === "titular" ? 0.07 : seasonRole === "rotacao" ? 0.02 : seasonRole === "reserva" ? -0.03 : 0;
   const productionMomentum = clamp(
-    1.1 + roleProductionBonus + (affected.morale - 50) / 250 + (affected.managerTrust - 50) / 300 + (affected.fitness - 70) / 500,
+    1.1 + roleProductionBonus + (affected.morale - 50) / 250 + (affected.managerTrust - 50) / 300 + (affected.fitness - 70) / 500 + (affected.lifeBalance - 55) / 620,
     0.9,
     1.45,
   ) * consistencySwing;
@@ -2008,7 +2317,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   let luckyDelta = 0;
   const twistRoll = seeded(state.seed, state.season * 83);
   const injuryTraitFactor = hasTrait("ironman") ? 0.52 : hasTrait("injury-prone") ? 1.75 : 1;
-  const seriousInjuryChance = 0.038 + Math.max(0, 65 - affected.fitness) / 450 + (effect.injuryRisk ?? 0) / 500;
+  const seriousInjuryChance = 0.038 + Math.max(0, 65 - affected.fitness) / 450 + Math.max(0, 45 - affected.lifeBalance) / 650 + (effect.injuryRisk ?? 0) / 500;
   const effectiveSeriousInjuryChance = seriousInjuryChance * injuryTraitFactor;
   if (twistRoll < effectiveSeriousInjuryChance) {
     development -= 3;
@@ -2373,6 +2682,72 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     24,
     98,
   );
+  const organicFollowerGain = Math.max(500, Math.round(
+    (
+      1_200 +
+      performanceScore * performanceScore * 34 +
+      titleCount * 85_000 +
+      awards.length * 48_000 +
+      europeanSpotlight * 14_000 +
+      (calledUp ? 26_000 : 0)
+    ) *
+    (0.62 + affected.reputation / 125) *
+    (affected.socialSentiment < 35 ? 0.55 : affected.socialSentiment > 75 ? 1.18 : 1),
+  ));
+  const nextFollowers = affected.followers + organicFollowerGain;
+  const nextSocialSentiment = clamp(Math.round(affected.socialSentiment * 0.72 + (52 + performanceScore * 0.28 + titleCount * 4) * 0.28), 12, 98);
+  record.followers = nextFollowers;
+  record.socialSentiment = nextSocialSentiment;
+  const followerMilestones = [
+    { threshold: 10_000, label: "10 mil seguidores" },
+    { threshold: 100_000, label: "100 mil seguidores" },
+    { threshold: 1_000_000, label: "1 milhão de seguidores" },
+    { threshold: 10_000_000, label: "10 milhões de seguidores" },
+    { threshold: 50_000_000, label: "50 milhões de seguidores" },
+  ];
+  const newOffFieldMilestones = followerMilestones
+    .filter((milestone) => affected.followers < milestone.threshold && nextFollowers >= milestone.threshold)
+    .map((milestone) => `${affected.season}: ${milestone.label}`);
+  const sponsorIncome = affected.activeSponsor?.annualValue ?? 0;
+  const sponsorExpired = Boolean(affected.activeSponsor && affected.season + 1 >= affected.activeSponsor.endSeason);
+  const completedSponsor = sponsorExpired && affected.activeSponsor
+    ? { ...affected.activeSponsor, status: "completed" as const }
+    : null;
+  const socialTone: SocialPost["tone"] = (effect.socialSentiment ?? 0) < -3
+    ? "negative"
+    : performanceScore >= 72 || (effect.socialSentiment ?? 0) > 3
+      ? "positive"
+      : "neutral";
+  const socialSource: SocialPost["source"] = event.id === DYNAMIC_SPONSOR_EVENT_ID || event.id === DYNAMIC_SPONSOR_DUTY_EVENT_ID
+    ? "sponsor"
+    : event.id === DYNAMIC_SOCIAL_EVENT_ID || event.id === DYNAMIC_LIFE_EVENT_ID
+      ? "player"
+      : "press";
+  const socialAuthor = socialSource === "sponsor"
+    ? effect.sponsorBrand ?? affected.activeSponsor?.brand ?? "Parceiro comercial"
+    : socialSource === "player"
+      ? `@${(affected.name || "jogador").toLocaleLowerCase("pt-BR").replace(/\s+/g, "")}`
+      : "Central do Futebol";
+  const seasonSocialPost: SocialPost = {
+    id: `${affected.seed}-${affected.season}-${event.id}`,
+    season: affected.season,
+    source: socialSource,
+    author: socialAuthor,
+    text: socialSource === "press"
+      ? `${affected.name} fecha ${affected.season} com ${appearances} jogos, ${goals} gols, ${assists} assistências${titleCount ? ` e ${titleCount} título(s)` : ""}.`
+      : resultText,
+    likes: Math.max(120, Math.round(nextFollowers * (0.018 + seeded(affected.seed, affected.season * 1423) * 0.065))),
+    tone: socialTone,
+  };
+  const milestonePosts: SocialPost[] = newOffFieldMilestones.map((milestone, index) => ({
+    id: `${affected.seed}-${affected.season}-milestone-${index}`,
+    season: affected.season,
+    source: "fans",
+    author: "Arquibancada",
+    text: `${affected.name} alcançou ${milestone.split(": ")[1]}. A carreira também cresce fora das quatro linhas.`,
+    likes: Math.max(1_000, Math.round(nextFollowers * 0.09)),
+    tone: "positive",
+  }));
   const nextBase: GameState = {
     ...affected,
     phase: "consequence",
@@ -2389,7 +2764,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     suspensionMatches: redCards * 2 + (yellowCards >= 8 ? 2 : yellowCards >= 5 ? 1 : 0),
     squadRole: nextRole,
     contractYears: Math.max(0, affected.contractYears - 1),
-    money: affected.money + affected.annualSalary,
+    money: affected.money + affected.annualSalary + sponsorIncome,
     currentObjective: createSeasonObjective(position, nextRole, affected.season + 1, affected.seed + affected.history.length * 31),
     objectivesCompleted: affected.objectivesCompleted + (objectiveResult.completed ? 1 : 0),
     objectivesFailed: affected.objectivesFailed + (objectiveResult.completed ? 0 : 1),
@@ -2436,6 +2811,14 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
         ? { ...rival, relationship: clamp(rival.relationship + (effect.rivalRespect ?? 0)) }
         : rival,
     ),
+    followers: nextFollowers,
+    socialSentiment: nextSocialSentiment,
+    mediaRelation: clamp(Math.round(affected.mediaRelation * 0.86 + (58 + (objectiveResult.completed ? 4 : -3)) * 0.14), 15, 97),
+    lifeBalance: clamp(Math.round(affected.lifeBalance * 0.68 + (74 - Math.max(0, appearances - 28) * 0.7) * 0.32), 18, 98),
+    activeSponsor: sponsorExpired ? null : affected.activeSponsor,
+    sponsorHistory: completedSponsor ? [completedSponsor, ...affected.sponsorHistory] : affected.sponsorHistory,
+    socialFeed: [...milestonePosts, seasonSocialPost, ...affected.socialFeed].slice(0, 24),
+    offFieldMilestones: [...affected.offFieldMilestones, ...newOffFieldMilestones],
     nationalitySwitched: affected.nationalitySwitched || Boolean(nationalitySwitchRecord),
     pendingNationalitySwitchTarget: "",
   };
@@ -2475,7 +2858,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     nationalCaps: nextBase.nationalCaps,
     peakOverall: Math.max(nextBase.overall, ...nextBase.history.map((item) => item.overall)),
     setbacks: nextBase.setbacks,
-  });
+  }) + Math.round(Math.log10(Math.max(1, nextBase.followers)) * 4 + nextBase.charityReputation * 0.22);
   const achievementCandidates = getUnlockedAchievements({
     appearances: nextBase.stats.appearances,
     goals: nextBase.stats.goals,
@@ -2521,6 +2904,11 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     competition: competitions.find((item) => item.champion)?.name ?? league.name,
   });
   const achievementNews = newlyUnlocked.map((achievement) => `Conquista desbloqueada: ${achievement.title}.`);
+  const offFieldNews = [
+    ...(effect.sponsorBrand ? [`${affected.season}: ${affected.name} assina contrato pessoal com ${effect.sponsorBrand}.`] : []),
+    ...(completedSponsor ? [`${affected.season}: parceria com ${completedSponsor.brand} chega ao fim após ${completedSponsor.endSeason - completedSponsor.startSeason} temporada(s).`] : []),
+    ...newOffFieldMilestones,
+  ];
   const nationalitySwitchTarget = maybeOfferNationalitySwitch(nextBase, affected.season * 71);
   return {
     ...nextBase,
@@ -2530,12 +2918,16 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     transferOffers,
     legacyPoints,
     unlockedAchievements: [...nextBase.unlockedAchievements, ...newlyUnlocked.map((achievement) => achievement.id)],
-    newsFeed: [...achievementNews, seasonHeadline, ...nextBase.newsFeed].slice(0, 16),
+    newsFeed: [...achievementNews, ...offFieldNews, seasonHeadline, ...nextBase.newsFeed].slice(0, 16),
   };
 }
 
 function eventForState(state: GameState) {
   if (state.currentEventId === FIRST_MATCH_EVENT.id) return FIRST_MATCH_EVENT;
+  if (state.currentEventId === DYNAMIC_SPONSOR_EVENT_ID) return buildSponsorEvent(state);
+  if (state.currentEventId === DYNAMIC_SPONSOR_DUTY_EVENT_ID) return buildSponsorDutyEvent(state);
+  if (state.currentEventId === DYNAMIC_SOCIAL_EVENT_ID) return buildSocialEvent(state);
+  if (state.currentEventId === DYNAMIC_LIFE_EVENT_ID) return buildLifeEvent(state);
   if (state.currentEventId === DYNAMIC_RIVAL_EVENT_ID && state.rivals.some((rival) => rival.active)) {
     return buildRivalEvent(state);
   }
@@ -2566,6 +2958,16 @@ function signProfessionalForSimulation(state: GameState, clubId: string): GameSt
     contractYears: contract.years,
     annualSalary: contract.annualSalary,
     currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed),
+    followers: 1_200 + club.reputation * 900,
+    socialFeed: [{
+      id: `${state.seed}-${state.season}-first-contract`,
+      season: state.season,
+      source: "press",
+      author: "Central do Futebol",
+      text: `${state.name} assinou o primeiro contrato profissional com o ${club.shortName}.`,
+      likes: 340 + club.reputation * 120,
+      tone: "positive",
+    }],
     newsFeed: [`${state.season}: primeiro contrato assinado com o ${club.shortName}.`],
   };
 }
@@ -2927,7 +3329,7 @@ export default function Home() {
   const [hasSave, setHasSave] = useState(false);
   const [youthStep, setYouthStep] = useState(0);
   const [youthFinished, setYouthFinished] = useState(false);
-  const [activeTab, setActiveTab] = useState<"event" | "history" | "profile" | "stats" | "legacy">("event");
+  const [activeTab, setActiveTab] = useState<"event" | "history" | "profile" | "life" | "stats" | "legacy">("event");
   const [toast, setToast] = useState("");
   const [luckSpin, setLuckSpin] = useState<{ event: GameEvent; choiceIndex: number; succeeded: boolean } | null>(null);
   const [positionChangeOpen, setPositionChangeOpen] = useState(false);
@@ -3074,6 +3476,19 @@ export default function Home() {
   const nationCountry = useMemo(() => countryById(game.nationality), [game.nationality]);
   const position = useMemo(() => positionByKey(game.position), [game.position]);
   const supporterMood = useMemo(() => fanMood(game.fanSupport), [game.fanSupport]);
+  const publicImage = useMemo(() => publicImageProfile(game), [game]);
+  const sponsorCareerValue = useMemo(
+    () => [
+      ...game.sponsorHistory,
+      ...(game.activeSponsor ? [game.activeSponsor] : []),
+    ].reduce((total, deal) => {
+      const elapsedSeasons = deal.status === "active"
+        ? Math.max(1, game.season - deal.startSeason)
+        : Math.max(1, deal.endSeason - deal.startSeason);
+      return total + deal.annualValue * elapsedSeasons;
+    }, 0),
+    [game.sponsorHistory, game.activeSponsor, game.season],
+  );
   const legacyStanding = useMemo(() => legacyTier(game.legacyPoints), [game.legacyPoints]);
   const marketProfile = useMemo(() => transferMarketProfile(game), [game]);
   const awardEntries = useMemo(
@@ -3199,7 +3614,7 @@ export default function Home() {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(18);
   }
 
-  function changeTab(tab: "event" | "history" | "profile" | "stats" | "legacy") {
+  function changeTab(tab: "event" | "history" | "profile" | "life" | "stats" | "legacy") {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
     vibrate();
@@ -3291,6 +3706,16 @@ export default function Home() {
         contractYears: contract.years,
         annualSalary: contract.annualSalary,
         currentObjective: createSeasonObjective(positionByKey(current.position), squadRole, current.season, current.seed),
+        followers: 1_200 + club.reputation * 900,
+        socialFeed: [{
+          id: `${current.seed}-${current.season}-first-contract`,
+          season: current.season,
+          source: "press",
+          author: "Central do Futebol",
+          text: `${current.name} assinou o primeiro contrato profissional com o ${club.shortName}.`,
+          likes: 340 + club.reputation * 120,
+          tone: "positive",
+        }],
         newsFeed: [`${current.season}: primeiro contrato assinado com o ${club.shortName}.`],
       };
     });
@@ -3622,15 +4047,15 @@ export default function Home() {
       {updateNoticeOpen && (
         <div className="modal-backdrop update-backdrop" role="presentation">
           <section className="update-notice" role="dialog" aria-modal="true" aria-labelledby="update-title">
-            <span className="update-version">NOVO UPDATE · MUNDO VIVO</span>
+            <span className="update-version">NOVO UPDATE · FORA DAS QUATRO LINHAS</span>
             <div className="update-symbol">✦</div>
-            <h1 id="update-title">Sua carreira ganhou memória, rivais e novos caminhos.</h1>
-            <p>Agora cada temporada alimenta uma central completa — e nem todo personagem do seu universo vai torcer por você.</p>
+            <h1 id="update-title">Agora você também precisa sobreviver à fama.</h1>
+            <p>Redes sociais, vida pessoal, imprensa e patrocinadores persistentes transformam tudo que acontece longe do estádio.</p>
             <div className="update-grid">
-              <article><b>▥</b><span><strong>Central Estatística</strong><small>Gráficos, recordes e melhores temporadas</small></span></article>
-              <article><b>⇄</b><span><strong>Empréstimos reais</strong><small>Saia, jogue e volte ao clube de origem</small></span></article>
-              <article><b>⚔</b><span><strong>Rivais e personagens</strong><small>Adversários que crescem junto com você</small></span></article>
-              <article><b>◇</b><span><strong>Traits e agência livre</strong><small>Identidade própria dentro e fora de campo</small></span></article>
+              <article><b>@</b><span><strong>Redes sociais vivas</strong><small>Seguidores, virais, crises e sentimento do público</small></span></article>
+              <article><b>◇</b><span><strong>Patrocinadores reais</strong><small>Contratos plurianuais que acompanham sua carreira</small></span></article>
+              <article><b>☾</b><span><strong>Vida pessoal</strong><small>Festas, privacidade, documentários e saúde mental</small></span></article>
+              <article><b>♥</b><span><strong>Impacto social</strong><small>Use sua fama para construir algo além do futebol</small></span></article>
             </div>
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
           </section>
@@ -4269,6 +4694,97 @@ export default function Home() {
             </div>
           )}
 
+          {activeTab === "life" && game.phase === "career" && (
+            <div className="panel-screen life-screen screen-enter">
+              <header className="life-hero">
+                <div className="life-network-icon">@</div>
+                <div><span>VIDA FORA DO CAMPO</span><strong>{formatFollowers(game.followers)}</strong><small>SEGUIDORES</small></div>
+                <aside><small>IMAGEM PÚBLICA</small><strong style={{ color: publicImage.color }}>{publicImage.label}</strong></aside>
+                <p>{publicImage.description}</p>
+              </header>
+
+              <section className="public-life-dashboard">
+                <Progress label="Humor das redes" value={game.socialSentiment} color={game.socialSentiment < 40 ? "#ff5a4e" : "#63e36b"} />
+                <Progress label="Relação com a imprensa" value={game.mediaRelation} color="#2ca8ff" />
+                <Progress label="Equilíbrio pessoal" value={game.lifeBalance} color={game.lifeBalance < 40 ? "#ff8c5a" : "#a675ff"} />
+                <Progress label="Impacto social" value={game.charityReputation} color="#ffc72c" />
+              </section>
+
+              {game.history.some((record) => (record.followers ?? 0) > 0) && (
+                <section className="audience-growth-card">
+                  <div><span>CRESCIMENTO DE AUDIÊNCIA</span><strong>Seu alcance por temporada</strong></div>
+                  <div className="audience-bars">
+                    {game.history.slice(-10).map((record) => {
+                      const recentRecords = game.history.slice(-10);
+                      const highestReach = Math.max(...recentRecords.map((item) => item.followers ?? 0), 1);
+                      return (
+                        <article key={`audience-${record.season}`}>
+                          <b>{formatFollowers(record.followers ?? 0)}</b>
+                          <i><em style={{ height: `${clamp(((record.followers ?? 0) / highestReach) * 100, 7, 100)}%` }} /></i>
+                          <small>{String(record.season).slice(-2)}</small>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              <section className={`sponsor-hub ${game.activeSponsor ? "has-deal" : "no-deal"}`}>
+                <div className="sponsor-heading"><div><span>PATROCINADOR PESSOAL</span><strong>{game.activeSponsor ? "Contrato ativo" : "Sua chuteira ainda está livre"}</strong></div><b>◇</b></div>
+                {game.activeSponsor ? (
+                  <>
+                    <article className="active-sponsor-card">
+                      <div className="sponsor-wordmark">{game.activeSponsor.brand}</div>
+                      <div><small>PARCERIA PERSISTENTE</small><strong>{formatMoney(game.activeSponsor.annualValue)}<em>/ano</em></strong><p>{Math.max(0, game.activeSponsor.endSeason - game.season)} temporada(s) restante(s) · acompanha qualquer transferência</p></div>
+                    </article>
+                    <div className="sponsor-contract-progress"><span><i style={{ width: `${clamp(((game.season - game.activeSponsor.startSeason) / Math.max(1, game.activeSponsor.endSeason - game.activeSponsor.startSeason)) * 100)}%` }} /></span><small>{game.activeSponsor.startSeason}</small><small>{game.activeSponsor.endSeason}</small></div>
+                  </>
+                ) : (
+                  <div className="sponsor-empty"><strong>Grandes temporadas atraem grandes marcas.</strong><p>Prestígio, seguidores, boa imagem e impacto social aumentam o nível e o valor das propostas.</p></div>
+                )}
+                <footer><span>VALOR GERADO NA CARREIRA</span><strong>{formatMoney(sponsorCareerValue)}</strong><small>Simulação fictícia, sem vínculo com as marcas citadas.</small></footer>
+              </section>
+
+              {game.sponsorHistory.length > 0 && (
+                <section className="sponsor-history-card">
+                  <div><span>HISTÓRICO COMERCIAL</span><strong>Marcas que passaram pela carreira</strong></div>
+                  <section>
+                    {game.sponsorHistory.map((deal) => (
+                      <article key={deal.id}><div className="sponsor-wordmark small">{deal.brand}</div><div><strong>{deal.startSeason}–{deal.endSeason}</strong><small>{formatMoney(deal.annualValue)}/ano · contrato concluído</small></div><b>✓</b></article>
+                    ))}
+                  </section>
+                </section>
+              )}
+
+              <section className="social-feed-card">
+                <div className="social-feed-heading"><div><span>LINHA DO TEMPO</span><strong>O que estão falando</strong></div><b>AO VIVO</b></div>
+                {game.socialFeed.length === 0 ? (
+                  <div className="social-empty"><span>@</span><strong>O primeiro post ainda está por vir</strong><p>Assine seu contrato profissional e comece a construir uma audiência.</p></div>
+                ) : (
+                  <section className="social-post-list">
+                    {game.socialFeed.map((post) => (
+                      <article className={`post-${post.tone}`} key={post.id}>
+                        <div className={`social-avatar source-${post.source}`}>{post.source === "player" ? game.number : post.source === "sponsor" ? "◇" : post.source === "fans" ? "♥" : "●"}</div>
+                        <div><strong>{post.author}</strong><small>{post.source === "player" ? "JOGADOR" : post.source === "sponsor" ? "PUBLICIDADE" : post.source === "fans" ? "TORCIDA" : "IMPRENSA"} · {post.season}</small><p>{post.text}</p><footer><span>♥ {formatFollowers(post.likes)}</span><span>↗ compartilhar</span></footer></div>
+                      </article>
+                    ))}
+                  </section>
+                )}
+              </section>
+
+              <section className="life-advisor-card">
+                <div><span>TERMÔMETRO PESSOAL</span><strong>O que merece atenção</strong></div>
+                <section>
+                  <article className={game.lifeBalance < 45 ? "warning" : "good"}><b>{game.lifeBalance < 45 ? "!" : "✓"}</b><div><strong>{game.lifeBalance < 45 ? "A carreira está ocupando tudo" : "Rotina sob controle"}</strong><small>{game.lifeBalance < 45 ? "Baixo equilíbrio reduz rendimento e aumenta o risco físico." : "Descanso e vida pessoal ajudam sua consistência em campo."}</small></div></article>
+                  <article className={game.socialSentiment < 40 ? "warning" : "good"}><b>{game.socialSentiment < 40 ? "!" : "✓"}</b><div><strong>{game.socialSentiment < 40 ? "As redes viraram contra você" : "Comunidade saudável"}</strong><small>{game.socialSentiment < 40 ? "Uma resposta ruim pode afastar público e patrocinadores." : "Seu alcance cresce com uma base de torcedores favorável."}</small></div></article>
+                  <article className={game.mediaRelation < 38 ? "warning" : "good"}><b>{game.mediaRelation < 38 ? "!" : "✓"}</b><div><strong>{game.mediaRelation < 38 ? "Relação hostil com a imprensa" : "Narrativa bem administrada"}</strong><small>{game.mediaRelation < 38 ? "Entrevistas e manchetes terão menos boa vontade." : "Sua versão dos fatos encontra espaço nas manchetes."}</small></div></article>
+                </section>
+              </section>
+
+              {game.offFieldMilestones.length > 0 && <div className="life-milestones"><span>MARCOS DIGITAIS</span>{[...game.offFieldMilestones].reverse().slice(0, 6).map((milestone) => <strong key={milestone}>✦ {milestone}</strong>)}</div>}
+            </div>
+          )}
+
           {activeTab === "stats" && game.phase === "career" && (
             <div className="panel-screen statistics-screen screen-enter">
               <header className="statistics-hero">
@@ -4408,6 +4924,7 @@ export default function Home() {
               <button aria-pressed={activeTab === "event"} className={activeTab === "event" ? "selected" : ""} onClick={() => changeTab("event")}><span>◆</span>Carreira</button>
               <button aria-pressed={activeTab === "history"} className={activeTab === "history" ? "selected" : ""} onClick={() => changeTab("history")}><span>≡</span>Histórico</button>
               <button aria-pressed={activeTab === "profile"} className={activeTab === "profile" ? "selected" : ""} onClick={() => changeTab("profile")}><span>●</span>Jogador</button>
+              <button aria-pressed={activeTab === "life"} className={activeTab === "life" ? "selected" : ""} onClick={() => changeTab("life")}><span>@</span>Vida</button>
               <button aria-pressed={activeTab === "stats"} className={activeTab === "stats" ? "selected" : ""} onClick={() => changeTab("stats")}><span>▥</span>Central</button>
               <button aria-pressed={activeTab === "legacy"} className={activeTab === "legacy" ? "selected" : ""} onClick={() => changeTab("legacy")}><span>★</span>Legado</button>
             </nav>
@@ -4429,6 +4946,16 @@ export default function Home() {
             <div className="share-path"><span>12</span><div />{Array.from(new Set(game.history.map((item) => item.clubId))).map((clubId) => <ClubBadge key={clubId} club={clubById(clubId)} size="sm" />)}<div /><span>{game.age}</span></div>
             <small className="share-url">erereck.github.io/futbobo</small>
           </div>
+          <section className="final-public-life">
+            <div className="summary-section-heading"><span>FORA DAS QUATRO LINHAS</span><strong>A marca que você deixou no mundo</strong></div>
+            <div className="final-public-grid">
+              <Metric label="Seguidores" value={formatFollowers(game.followers)} tone="gold" />
+              <Metric label="Imagem" value={publicImage.label} tone="green" />
+              <Metric label="Patrocínios" value={game.sponsorHistory.length + (game.activeSponsor ? 1 : 0)} />
+              <Metric label="Impacto social" value={game.charityReputation} />
+            </div>
+            {game.activeSponsor && <article><div className="sponsor-wordmark small">{game.activeSponsor.brand}</div><div><small>PARCERIA NA APOSENTADORIA</small><strong>{formatMoney(game.activeSponsor.annualValue)}/ano</strong></div></article>}
+          </section>
           <section className="final-individual-awards">
             <div className="summary-section-heading final-awards-heading">
               <div><span>PRÊMIOS INDIVIDUAIS</span><strong>Sua galeria de glórias</strong></div>
