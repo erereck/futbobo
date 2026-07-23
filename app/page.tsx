@@ -3380,6 +3380,28 @@ export default function Home() {
             <div className="share-path"><span>12</span><div />{Array.from(new Set(game.history.map((item) => item.clubId))).map((clubId) => <ClubBadge key={clubId} club={clubById(clubId)} size="sm" />)}<div /><span>{game.age}</span></div>
             <small className="share-url">erereck.github.io/futbobo</small>
           </div>
+          <section className="final-individual-awards">
+            <div className="summary-section-heading final-awards-heading">
+              <div><span>PRÊMIOS INDIVIDUAIS</span><strong>Sua galeria de glórias</strong></div>
+              <b>{totalIndividualAwards}<small>PRÊMIOS</small></b>
+            </div>
+            {awardEntries.length > 0 ? (
+              <div className="final-awards-list">
+                {awardEntries.map(([award, count]) => {
+                  const presentation = awardPresentation(award);
+                  return (
+                    <article className={`award-${presentation.tier}`} key={award}>
+                      <span>{presentation.icon}</span>
+                      <div><small>{presentation.kicker}</small><strong>{award}</strong><p>{presentation.description}</p></div>
+                      <b>{count}<small>×</small></b>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="final-awards-empty"><span>◇</span><strong>Uma carreira sem prêmio não é uma carreira sem história.</strong><p>Seu legado foi construído de outras formas.</p></div>
+            )}
+          </section>
           <section className="career-club-summary">
             <div className="summary-section-heading"><span>PASSAGEM POR CLUBES</span><strong>Onde sua história aconteceu</strong></div>
             <div className="career-club-list">

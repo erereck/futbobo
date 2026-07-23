@@ -639,12 +639,35 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .share-path > span { color: var(--muted); font-size: 8px; font-weight: 900; }
 .share-path > div { min-width: 8px; height: 1px; flex: 1; background: rgba(255,255,255,.18); }
 .share-url { position: relative; z-index: 1; display: block; margin-top: 15px; color: var(--muted); font-size: 8px; text-align: right; }
-.career-club-summary, .final-hall-of-fame { width: 100%; margin-top: 14px; padding: 15px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
+.career-club-summary, .final-hall-of-fame, .final-individual-awards { width: 100%; margin-top: 14px; padding: 15px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
 .summary-section-heading { display: flex; flex-direction: column; margin-bottom: 10px; }
 .summary-section-heading span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .14em; }
 .summary-section-heading strong { margin-top: 3px; font: 900 15px var(--display); }
+.final-individual-awards { background: radial-gradient(circle at 100% 0, rgba(166,117,255,.15), transparent 38%), var(--surface); }
+.final-awards-heading { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.final-awards-heading > div { display: flex; flex-direction: column; }
+.final-awards-heading > b { display: flex; flex-direction: column; align-items: center; color: #d7c3ff; font: 900 26px/.85 var(--display); }
+.final-awards-heading > b small { margin-top: 4px; color: var(--muted); font: 800 6px var(--sans); letter-spacing: .1em; }
+.final-awards-list { display: grid; gap: 7px; }
+.final-awards-list > article { display: grid; min-width: 0; grid-template-columns: 42px minmax(0,1fr) 30px; align-items: center; gap: 9px; padding: 10px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.025); }
+.final-awards-list > article > span { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 13px; background: rgba(166,117,255,.12); color: #d7c3ff; font-size: 18px; }
+.final-awards-list > article > div { display: flex; min-width: 0; flex-direction: column; }
+.final-awards-list > article > div small { color: #cbb4ff; font-size: 6px; font-weight: 900; letter-spacing: .1em; }
+.final-awards-list > article > div strong { margin-top: 2px; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.final-awards-list > article > div p { margin: 2px 0 0; color: var(--muted); font-size: 7px; line-height: 1.35; }
+.final-awards-list > article > b { display: flex; align-items: baseline; justify-content: flex-end; color: #d7c3ff; font: 900 16px var(--display); }
+.final-awards-list > article > b small { margin-left: 1px; font: 800 7px var(--sans); }
+.final-awards-list > article.award-legendary { border-color: rgba(255,199,44,.45); background: radial-gradient(circle at 0 50%, rgba(255,199,44,.15), transparent 40%), rgba(255,199,44,.05); }
+.final-awards-list > article.award-legendary > span { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3ad, #ffc72c 45%, #9b6711); color: #503300; box-shadow: 0 0 18px rgba(255,199,44,.2); }
+.final-awards-list > article.award-legendary > div small, .final-awards-list > article.award-legendary > b { color: var(--gold); }
+.final-awards-list > article.award-elite { border-color: rgba(166,117,255,.3); }
+.final-awards-empty { display: grid; justify-items: center; padding: 18px 12px; border: 1px dashed var(--line); border-radius: 13px; text-align: center; }
+.final-awards-empty > span { color: var(--muted); font-size: 24px; }
+.final-awards-empty > strong { margin-top: 7px; font-size: 10px; }
+.final-awards-empty > p { margin: 3px 0 0; color: var(--muted); font-size: 8px; }
 .career-club-list, .hall-ranking { display: grid; gap: 7px; }
-.career-club-list > article { display: grid; grid-template-columns: 42px minmax(84px,1fr) auto; align-items: center; gap: 9px; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.025); }
+.career-club-list > article { display: grid; grid-template-columns: 64px minmax(84px,1fr) minmax(112px,auto); align-items: center; gap: 9px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.025); }
+.career-club-list > article > .club-badge { justify-self: center; }
 .club-summary-copy { display: flex; min-width: 0; flex-direction: column; }
 .club-summary-copy strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .club-summary-copy small { margin-top: 2px; color: var(--muted); font-size: 7px; }
@@ -661,6 +684,13 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .hall-ranking > article > span { display: flex; flex-direction: column; align-items: flex-end; color: var(--gold); font: 900 11px var(--display); }
 .hall-ranking > article > span small { color: var(--muted); font: 800 5px var(--sans); letter-spacing: .1em; }
 .summary-screen .summary-actions { width: 100%; margin-bottom: calc(env(safe-area-inset-bottom) + 10px); }
+
+@media (max-width: 420px) {
+  .career-club-list > article { grid-template-columns: 58px minmax(0,1fr); align-items: center; }
+  .career-club-list > article > .club-badge { grid-row: 1 / 3; }
+  .club-summary-copy { align-self: end; padding-left: 2px; }
+  .club-summary-numbers { grid-column: 2; align-self: start; width: min(100%, 180px); padding: 5px 2px 0; }
+}
 
 .nation-badge { position: relative; display: inline-grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 2px solid rgba(255,255,255,.28); border-radius: 8px; background: linear-gradient(135deg, var(--nation-primary) 0 52%, var(--nation-secondary) 52%); box-shadow: 0 5px 12px rgba(0,0,0,.25), inset 0 0 0 3px rgba(0,0,0,.12); }
 .nation-badge::before { content: ""; position: absolute; inset: 8%; border: 1px solid rgba(255,255,255,.28); border-radius: 4px; }

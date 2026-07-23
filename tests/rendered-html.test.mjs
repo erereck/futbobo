@@ -149,8 +149,13 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
   assert.match(page, /careerHallEntry/);
   assert.match(page, /clubCareerSummary/);
   assert.match(page, /PASSAGEM POR CLUBES/);
+  assert.match(page, /PRÊMIOS INDIVIDUAIS/);
+  assert.match(page, /final-individual-awards/);
   assert.match(page, /HALL DA FAMA LOCAL/);
   assert.match(styles, /\.career-club-summary/);
+  assert.match(styles, /\.final-awards-list/);
+  assert.match(styles, /grid-template-columns: 64px minmax\(84px,1fr\) minmax\(112px,auto\)/);
+  assert.match(styles, /@media \(max-width: 420px\)[\s\S]*\.career-club-list > article/);
   assert.match(styles, /\.hall-ranking/);
   assert.match(systems, /O Imortal/);
   assert.match(systems, /No debate do GOAT/);
