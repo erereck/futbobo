@@ -3085,7 +3085,7 @@ export default function Home() {
                 <article key={entry.id}>
                   <b>#{index + 1}</b>
                   <ClubBadge club={clubById(entry.finalClubId)} size="sm" />
-                  <span><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.peakOverall} OVR</small></span>
+                  <div className="welcome-hall-copy"><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.peakOverall} OVR</small></div>
                   <em>{entry.legacyPoints}</em>
                 </article>
               ))}

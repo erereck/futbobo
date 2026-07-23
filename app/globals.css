@@ -120,11 +120,12 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .welcome-hall > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
 .welcome-hall > div span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .13em; }
 .welcome-hall > div strong { font-size: 9px; }
-.welcome-hall article { display: grid; grid-template-columns: 22px 28px 1fr auto; align-items: center; gap: 7px; min-width: 0; padding: 6px 7px; border-radius: 10px; background: rgba(255,255,255,.03); }
+.welcome-hall article { display: grid; grid-template-columns: 22px 58px minmax(0,1fr) auto; align-items: center; column-gap: 9px; min-width: 0; padding: 6px 7px; border-radius: 10px; background: rgba(255,255,255,.03); }
 .welcome-hall article > b { color: var(--gold); font-size: 8px; }
-.welcome-hall article > span { display: flex; min-width: 0; flex-direction: column; }
-.welcome-hall article > span strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.welcome-hall article > span small { margin-top: 1px; overflow: hidden; color: var(--muted); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.welcome-hall article > .club-badge { justify-self: center; }
+.welcome-hall-copy { display: flex; min-width: 0; flex-direction: column; padding-left: 3px; }
+.welcome-hall-copy strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.welcome-hall-copy small { margin-top: 1px; overflow: hidden; color: var(--muted); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
 .welcome-hall article > em { color: var(--gold); font: 900 10px var(--display); font-style: normal; }
 
 .setup-screen { min-height: 100dvh; padding-bottom: 96px; }

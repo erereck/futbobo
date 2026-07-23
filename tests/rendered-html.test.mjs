@@ -170,6 +170,9 @@ test("reserva espaço real para os escudos no Hall da Fama mobile", async () => 
   assert.match(styles, /\.hall-ranking > article > \.club-badge \{ justify-self: center; \}/);
   assert.match(page, /className="hall-score"/);
   assert.doesNotMatch(styles, /\.hall-ranking > article > span \{/);
+  assert.match(styles, /\.welcome-hall article \{[^}]*grid-template-columns: 22px 58px minmax\(0,1fr\) auto/);
+  assert.match(page, /className="welcome-hall-copy"/);
+  assert.doesNotMatch(styles, /\.welcome-hall article > span \{/);
 });
 
 test("mantém o gramado contínuo atrás da meta do treinador", async () => {
