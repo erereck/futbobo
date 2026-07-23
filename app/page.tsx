@@ -671,13 +671,23 @@ function selectOffers(state: GameState, count: number, salt: number, opts: { inc
 }
 
 function selectTransferOffers(state: GameState, salt: number, opts: { includeForeign?: boolean; forceDomestic?: boolean; forceForeign?: boolean } = {}) {
-  const baseOffers = selectOffers(state, 3, salt, opts);
+  const current = clubById(state.currentClubId || state.academyClubId);
+  let baseOffers = isAbroad(current) && !opts.forceDomestic
+    ? selectOffers(state, 3, salt, { ...opts, includeForeign: true, forceForeign: true })
+    : selectOffers(state, 3, salt, opts);
   if (opts.forceDomestic) return baseOffers;
+
+  if (isAbroad(current) && !opts.forceForeign) {
+    const brazilReturnChance = state.age >= 34 ? 0.16 : state.age >= 30 ? 0.09 : 0.04;
+    if (seeded(state.seed, salt + 887) < brazilReturnChance) {
+      const rareBrazilOffer = selectOffers(state, 1, salt + 907, { forceDomestic: true })[0];
+      if (rareBrazilOffer && !baseOffers.includes(rareBrazilOffer)) baseOffers = [...baseOffers, rareBrazilOffer];
+    }
+  }
 
   const profile = transferMarketProfile(state);
   if (!profile.extraEuropeanOffers) return baseOffers;
 
-  const current = clubById(state.currentClubId || state.academyClubId);
   const targetStrength = clamp(
     Math.round(competitiveStrength(current) + (profile.performanceScore - 62) / 10),
     66,
@@ -1406,6 +1416,17 @@ export default function Home() {
   const supporterMood = useMemo(() => fanMood(game.fanSupport), [game.fanSupport]);
   const legacyStanding = useMemo(() => legacyTier(game.legacyPoints), [game.legacyPoints]);
   const marketProfile = useMemo(() => transferMarketProfile(game), [game]);
+  const transferWindowProfile = useMemo(() => {
+    const europeanOffers = game.transferOffers.filter((clubId) => isAbroad(clubById(clubId))).length;
+    return {
+      europeanOffers,
+      brazilianOffers: game.transferOffers.length - europeanOffers,
+      isEuropeanWindow: isAbroad(currentClub) && europeanOffers > 0,
+      expandedOfferCount: isAbroad(currentClub)
+        ? Math.max(0, europeanOffers - 3)
+        : Math.max(0, game.transferOffers.length - 3),
+    };
+  }, [game.transferOffers, currentClub]);
   const currentEvent = useMemo(() => {
     if (game.currentEventId === FIRST_MATCH_EVENT.id) return FIRST_MATCH_EVENT;
     return ALL_PRO_EVENTS.find((event) => event.id === game.currentEventId) ?? ALL_PRO_EVENTS[0];
@@ -1987,7 +2008,8 @@ export default function Home() {
           {game.phase === "transfer" && (
             <div className="transfer-stage screen-enter">
               <span className="eyebrow">JANELA DE TRANSFERÊNCIAS</span><h1>{game.transferStatus?.success ? game.transferStatus.headline : "Seu próximo passo"}</h1><p>{game.transferStatus?.text ?? `${game.transferOffers.length} clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui.`}</p>
-              {game.transferOffers.length > 3 && <div className="market-expansion-card"><span>DESEMPENHO ABRIU PORTAS</span><strong>{marketProfile.label} · nota {marketProfile.performanceScore}</strong><p>{game.transferOffers.length - 3} clube{game.transferOffers.length - 3 > 1 ? "s europeus extras apareceram" : " europeu extra apareceu"} em um nível compatível com sua fase.</p></div>}
+              {transferWindowProfile.isEuropeanWindow && <div className="european-market-card"><span>MERCADO EUROPEU</span><strong>{transferWindowProfile.europeanOffers} clube{transferWindowProfile.europeanOffers > 1 ? "s europeus querem" : " europeu quer"} você</strong><p>{transferWindowProfile.brazilianOffers > 0 ? "Uma proposta rara de retorno ao Brasil também atravessou o Atlântico." : "Jogando na Europa, seu empresário prioriza projetos europeus de nível compatível."}</p></div>}
+              {transferWindowProfile.expandedOfferCount > 0 && <div className="market-expansion-card"><span>DESEMPENHO ABRIU PORTAS</span><strong>{marketProfile.label} · nota {marketProfile.performanceScore}</strong><p>{transferWindowProfile.expandedOfferCount} clube{transferWindowProfile.expandedOfferCount > 1 ? "s europeus extras apareceram" : " europeu extra apareceu"} em um nível compatível com sua fase.</p></div>}
               <div className="offer-list transfer-offers">
                 {game.transferOffers.map((clubId, index) => {
                   const club = clubById(clubId);
@@ -1996,17 +2018,18 @@ export default function Home() {
                   const offerContract = createContract(game.overall, game.age, club, game.seed + game.season + index);
                   const offerRole = calculateSquadRole(game.overall, club, league.prestige, 50, game.age);
                   const rivalry = findRivalry(currentClub.id, club.id);
+                  const rareBrazilReturn = isAbroad(currentClub) && club.countryId === "brasil" && transferWindowProfile.europeanOffers > 0;
                   return (
                     <button className="offer-card" key={clubId} onClick={() => chooseTransfer(clubId)}>
                       <ClubBadge club={club} />
                       <span>
-                        <small>{index >= 3 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
+                        <small>{rareBrazilReturn ? "RETORNO IMPROVÁVEL" : index >= 3 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
                         <strong>{club.shortName}</strong>
                         <em>{club.city} · {league.name} · reputação {club.reputation}/5</em>
                         <em className="offer-contract">{ROLE_LABELS[offerRole]} · {offerContract.years} anos · {formatMoney(offerContract.annualSalary)}/ano</em>
                         <em className="offer-market-value">Valor estimado na liga: {formatMoney(marketValue(game.overall, game.age, club, game.reputation, game.lastResult ?? undefined))}</em>
                         {rivalry && <em className="offer-rivalry">⚔ Transferência explosiva: {rivalry.nickname}</em>}
-                        {changesCountry && <em className="offer-abroad-tag">◇ Novo país — uma fase de adaptação começa</em>}
+                        {rareBrazilReturn ? <em className="offer-homecoming-tag">⌂ Retorno raro ao Brasil — oportunidade inesperada</em> : changesCountry && <em className="offer-abroad-tag">◇ Novo país — uma fase de adaptação começa</em>}
                       </span>
                       <b>→</b>
                     </button>

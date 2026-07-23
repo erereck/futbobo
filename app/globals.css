@@ -407,9 +407,14 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .market-expansion-card > span { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
 .market-expansion-card strong { display: block; margin-top: 4px; font-size: 11px; }
 .market-expansion-card p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.european-market-card { width: 100%; margin-top: 15px; padding: 12px 13px; border: 1px solid rgba(166,117,255,.3); border-radius: 15px; background: linear-gradient(120deg, rgba(44,168,255,.08), rgba(166,117,255,.08)); }
+.european-market-card > span { color: #cbb4ff; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.european-market-card strong { display: block; margin-top: 4px; font-size: 11px; }
+.european-market-card p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
 .offer-contract { color: var(--green) !important; font-weight: 800 !important; }
 .offer-market-value { color: var(--gold) !important; font-weight: 800 !important; }
 .offer-rivalry { color: var(--red) !important; font-weight: 900 !important; }
+.offer-homecoming-tag { color: #cbb4ff !important; font-weight: 900 !important; }
 .stay-card { border-style: dashed; background: rgba(255,255,255,.02); }
 .retirement-stage { align-items: center; justify-content: center; text-align: center; }
 .retirement-symbol { display: grid; width: 92px; height: 92px; place-items: center; margin: 21px 0 16px; border: 1px solid rgba(255,90,78,.28); border-radius: 31px 31px 31px 10px; background: rgba(255,90,78,.075); font-size: 42px; }
@@ -783,6 +788,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
   }
   .transfer-stage > .eyebrow { margin-bottom: 4px; }
   .market-expansion-card { margin-top: 9px; padding: 8px 10px; }
+  .european-market-card { margin-top: 9px; padding: 8px 10px; }
   .transfer-offers { gap: 6px; margin-top: 10px; }
   .transfer-offers .offer-card { min-height: 64px; grid-template-columns: 43px 1fr 20px; gap: 8px; padding: 7px 9px; border-radius: 14px; }
   .transfer-offers .club-badge-md { width: 41px; height: 46px; }

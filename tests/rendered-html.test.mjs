@@ -149,3 +149,17 @@ test("protege o OVR jovem e permite explosões raras de talento", async () => {
   assert.match(styles, /\.breakout-result/);
   assert.match(styles, /@keyframes breakout-glow/);
 });
+
+test("prioriza clubes europeus quando a carreira já está na Europa", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /isAbroad\(current\) && !opts\.forceDomestic/);
+  assert.match(page, /forceForeign: true/);
+  assert.match(page, /brazilReturnChance = state\.age >= 34 \? 0\.16 : state\.age >= 30 \? 0\.09 : 0\.04/);
+  assert.match(page, /Math\.max\(0, europeanOffers - 3\)/);
+  assert.match(page, /MERCADO EUROPEU/);
+  assert.match(page, /Retorno raro ao Brasil/);
+  assert.match(styles, /\.european-market-card/);
+  assert.match(styles, /\.offer-homecoming-tag/);
+});
