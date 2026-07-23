@@ -114,3 +114,11 @@ test("aplica o equilíbrio levemente mais favorável sem liberar títulos fácei
   assert.match(systems, /penalty: role === "promessa" \? 3 : 6/);
   assert.match(page, /Bola de Ouro/);
 });
+
+test("mantém o gramado contínuo atrás da meta do treinador", async () => {
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(styles, /\.event-stage \{[\s\S]*repeating-linear-gradient/);
+  assert.match(styles, /\.event-art \{[^}]*background: transparent/);
+  assert.match(styles, /\.event-stage \.market-strip \{[^}]*background: rgba\(7,23,16,.9\)/);
+});

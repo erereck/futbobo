@@ -281,7 +281,13 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .progress-label strong { color: var(--text); font-size: 8px; }
 .progress-track { height: 4px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.08); }
 .progress-track span { display: block; height: 100%; border-radius: inherit; transition: width 450ms ease-out; }
-.event-stage { min-height: calc(100dvh - 188px); }
+.event-stage {
+  min-height: calc(100dvh - 188px);
+  background:
+    radial-gradient(circle at 70% 35%, rgba(255,199,44,.16), transparent 22%),
+    repeating-linear-gradient(115deg, rgba(78,145,98,.08) 0 22px, transparent 22px 43px),
+    linear-gradient(155deg, #1b4933, #0c2419);
+}
 .market-strip { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 13px; border-bottom: 1px solid var(--line); background: rgba(44,168,255,.045); }
 .market-strip > span { display: flex; min-width: 0; flex-direction: column; }
 .market-strip small { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
@@ -293,7 +299,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .objective-card > strong, .objective-result > strong, .contract-expired > strong { display: block; margin-top: 4px; font-size: 12px; }
 .objective-card p, .objective-result p, .contract-expired p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
 .objective-card > small { display: block; margin-top: 7px; color: #cbb4ff; font-size: 7px; }
-.event-art { position: relative; display: flex; height: min(31dvh, 250px); align-items: flex-start; justify-content: flex-start; padding: 16px; overflow: hidden; border-bottom: 1px solid var(--line); background: radial-gradient(circle at 70% 35%, rgba(255,199,44,.16), transparent 22%), repeating-linear-gradient(115deg, rgba(78,145,98,.08) 0 22px, transparent 22px 43px), linear-gradient(155deg, #1b4933, #0c2419); }
+.event-art { position: relative; display: flex; height: min(31dvh, 250px); align-items: flex-start; justify-content: flex-start; padding: 16px; overflow: hidden; border-bottom: 1px solid var(--line); background: transparent; }
 .event-art::before { content: ""; position: absolute; width: 250px; height: 250px; right: -60px; bottom: -130px; border: 32px solid rgba(255,255,255,.045); border-radius: 50%; }
 .event-watermark { position: absolute; right: 20px; bottom: -16px; color: rgba(255,255,255,.14); font: 900 clamp(76px, 27vw, 140px)/1 var(--display); text-shadow: 0 10px 30px rgba(0,0,0,.28); transform: rotate(-5deg); }
 .event-tag, .result-kicker { position: relative; z-index: 1; padding: 6px 9px; border: 1px solid rgba(255,199,44,.25); border-radius: 999px; background: rgba(7,23,16,.72); color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .13em; }
@@ -630,7 +636,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
     overflow: hidden !important;
   }
 
-  .event-stage .market-strip { min-height: 44px; padding: 5px 10px; }
+  .event-stage .market-strip { min-height: 44px; padding: 5px 10px; background: rgba(7,23,16,.9); backdrop-filter: blur(12px); }
   .event-stage .market-strip button { min-height: 36px; }
   .event-stage .objective-card { margin: 7px 10px 0; padding: 9px 11px; }
   .event-stage .objective-card p { display: none; }
