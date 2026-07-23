@@ -123,8 +123,8 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 87[\s\S]*performanceScore >= 79/);
-  assert.match(page, /const ballonChance = clamp\(8 \+ Math\.max\(0, ballonScore - 80\) \* 1\.8, 8, 45\)/);
+  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 84[\s\S]*performanceScore >= 75/);
+  assert.match(page, /const ballonChance = clamp\(20 \+ Math\.max\(0, ballonScore - 76\) \* 4, 20, 85\)/);
   assert.match(page, /Jogador do Ano do \$\{leagueLabel\}/);
   assert.match(page, /MVP da Champions League/);
   assert.match(page, /FIFPRO World XI/);

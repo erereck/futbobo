@@ -1,0 +1,24 @@
+{
+  "description": "Calibração da Bola de Ouro para aproximadamente uma carreira vencedora a cada doze.",
+  "runs": 5000,
+  "batchSize": 1000,
+  "seedBases": [
+    20260723,
+    20260724,
+    424242,
+    777777,
+    987654321
+  ],
+  "careersWithBallonDor": 410,
+  "totalBallonDor": 1568,
+  "careerChancePercent": 8.2,
+  "careersPerWinner": 12.2,
+  "averageBallonDorPerWinningCareer": 3.82,
+  "batches": [
+    { "seedBase": 20260723, "careersWithBallonDor": 70, "totalBallonDor": 250 },
+    { "seedBase": 20260724, "careersWithBallonDor": 64, "totalBallonDor": 235 },
+    { "seedBase": 424242, "careersWithBallonDor": 88, "totalBallonDor": 344 },
+    { "seedBase": 777777, "careersWithBallonDor": 88, "totalBallonDor": 376 },
+    { "seedBase": 987654321, "careersWithBallonDor": 100, "totalBallonDor": 363 }
+  ]
+}

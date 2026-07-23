@@ -1533,15 +1533,15 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (majorNationalTitle && nextOverall >= 86 && performanceScore >= 80) awards.push(`Craque da ${nationalHistoryAdd?.name}`);
   const europeanBallonEligible =
     inEurope &&
-    nextOverall >= 87 &&
-    performanceScore >= 79 &&
-    affected.reputation >= 68 &&
-    appearances >= 24;
+    nextOverall >= 84 &&
+    performanceScore >= 75 &&
+    affected.reputation >= 60 &&
+    appearances >= 22;
   const americanBallonEligible =
     !inEurope &&
-    nextOverall >= 91 &&
-    performanceScore >= 88 &&
-    affected.reputation >= 82 &&
+    nextOverall >= 89 &&
+    performanceScore >= 84 &&
+    affected.reputation >= 75 &&
     (mundialChampion || continentalChampion);
   const ballonScore =
     performanceScore * 0.35 +
@@ -1551,10 +1551,10 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     (playsContinental === "champions" && continentalChampion ? 9 : 0) +
     (mundialChampion ? 12 : 0) +
     (majorNationalTitle ? 8 : 0);
-  const ballonChance = clamp(8 + Math.max(0, ballonScore - 80) * 1.8, 8, 45);
+  const ballonChance = clamp(20 + Math.max(0, ballonScore - 76) * 4, 20, 85);
   if (
     (europeanBallonEligible || americanBallonEligible) &&
-    ballonScore >= 79 &&
+    ballonScore >= 75 &&
     seeded(state.seed, state.season * 109) * 100 < ballonChance
   ) awards.push("Bola de Ouro");
   const title = titleCount > 0;
