@@ -1,0 +1,33 @@
+{
+  "name": "futbobo",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "lint": "eslint app next.config.ts tests eslint.config.mjs"
+  },
+  "dependencies": {
+    "next": "16.2.11",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "typescript": "5.9.3"
+  },
+  "overrides": {
+    "postcss": "8.5.10",
+    "sharp": "0.35.0"
+  },
+  "type": "module"
+}

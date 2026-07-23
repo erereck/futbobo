@@ -1,0 +1,13 @@
+{
+  "name": "Futbobo — Sua carreira começa na base",
+  "short_name": "Futbobo",
+  "description": "Construa uma carreira no futebol brasileiro dos 12 anos à aposentadoria.",
+  "start_url": "/futbobo/",
+  "scope": "/futbobo/",
+  "display": "standalone",
+  "background_color": "#0b1f17",
+  "theme_color": "#0b1f17",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
