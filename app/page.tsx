@@ -126,6 +126,35 @@ type PlayerStats = {
   redCards: number;
 };
 
+type AttributeKey =
+  | "finishing"
+  | "longShots"
+  | "passing"
+  | "crossing"
+  | "dribbling"
+  | "firstTouch"
+  | "pace"
+  | "acceleration"
+  | "strength"
+  | "stamina"
+  | "positioning"
+  | "vision"
+  | "composure"
+  | "marking"
+  | "tackling"
+  | "aerial"
+  | "reflexes"
+  | "handling"
+  | "distribution";
+
+type PlayerAttributes = Record<AttributeKey, number>;
+
+type AwardNomination = {
+  award: string;
+  won: boolean;
+  winner: string;
+};
+
 type YouthYear = {
   age: number;
   title: string;
@@ -144,6 +173,7 @@ type SeasonRecord = PlayerStats & {
   eventTitle: string;
   competitions: CompetitionResult[];
   awards: string[];
+  awardNominations: AwardNomination[];
   squadRole: SquadRole;
   objectiveResult: ObjectiveResult | null;
 };
@@ -182,6 +212,7 @@ type GameState = {
   season: number;
   overall: number;
   potential: number;
+  attributes: PlayerAttributes;
   morale: number;
   fitness: number;
   reputation: number;
@@ -235,6 +266,7 @@ type GameState = {
   transferStatus: TransferStatus | null;
   transferRequested: boolean;
   renewalDenied: boolean;
+  forcedAlternativeTransfer: boolean;
   nationalitySwitched: boolean;
   nationalitySwitchInviteUsed: boolean;
   pendingNationalitySwitchTarget: string;
@@ -359,11 +391,119 @@ const EMPTY_STATS: PlayerStats = {
   redCards: 0,
 };
 
+const ATTRIBUTE_GROUPS: Array<{ label: string; keys: AttributeKey[] }> = [
+  { label: "ATAQUE", keys: ["finishing", "longShots", "positioning", "composure"] },
+  { label: "CRIAÇÃO", keys: ["passing", "vision", "crossing", "distribution"] },
+  { label: "TÉCNICA", keys: ["dribbling", "firstTouch"] },
+  { label: "FÍSICO", keys: ["pace", "acceleration", "strength", "stamina", "aerial"] },
+  { label: "DEFESA", keys: ["marking", "tackling"] },
+  { label: "GOLEIRO", keys: ["reflexes", "handling"] },
+];
+
+const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
+  finishing: "Finalização",
+  longShots: "Chute de longe",
+  passing: "Passe",
+  crossing: "Cruzamento",
+  dribbling: "Drible",
+  firstTouch: "Domínio",
+  pace: "Velocidade",
+  acceleration: "Aceleração",
+  strength: "Força",
+  stamina: "Fôlego",
+  positioning: "Posicionamento",
+  vision: "Visão",
+  composure: "Frieza",
+  marking: "Marcação",
+  tackling: "Desarme",
+  aerial: "Jogo aéreo",
+  reflexes: "Reflexos",
+  handling: "Defesa",
+  distribution: "Reposição",
+};
+
+const POSITION_PRIMARY_ATTRIBUTES: Record<PositionKey, AttributeKey[]> = {
+  GOL: ["reflexes", "handling", "positioning", "distribution", "composure"],
+  LD: ["pace", "stamina", "crossing", "tackling", "marking"],
+  ZAG: ["marking", "tackling", "aerial", "strength", "positioning"],
+  LE: ["pace", "stamina", "crossing", "tackling", "marking"],
+  VOL: ["tackling", "marking", "passing", "stamina", "positioning"],
+  MC: ["passing", "vision", "firstTouch", "stamina", "positioning"],
+  MEI: ["passing", "vision", "dribbling", "firstTouch", "longShots"],
+  MD: ["pace", "crossing", "dribbling", "stamina", "passing"],
+  ME: ["pace", "crossing", "dribbling", "stamina", "passing"],
+  PD: ["pace", "acceleration", "dribbling", "finishing", "crossing"],
+  PE: ["pace", "acceleration", "dribbling", "finishing", "crossing"],
+  CA: ["finishing", "positioning", "composure", "aerial", "strength"],
+};
+
+const ALL_ATTRIBUTE_KEYS = Object.keys(ATTRIBUTE_LABELS) as AttributeKey[];
+
+function attributeAverage(attributes: PlayerAttributes, keys: AttributeKey[]) {
+  return keys.reduce((total, key) => total + attributes[key], 0) / Math.max(1, keys.length);
+}
+
+function attributeTone(value: number) {
+  if (value >= 85) return "#ffc72c";
+  if (value >= 72) return "#63e36b";
+  if (value >= 58) return "#2ca8ff";
+  if (value >= 45) return "#f5f7f2";
+  return "#ff8c5a";
+}
+
+function createPlayerAttributes(positionKey: PositionKey, overall: number, seed: number): PlayerAttributes {
+  const position = positionByKey(positionKey);
+  const primary = new Set(POSITION_PRIMARY_ATTRIBUTES[positionKey]);
+  const goalkeeperKeys = new Set<AttributeKey>(["reflexes", "handling", "distribution"]);
+  return Object.fromEntries(ALL_ATTRIBUTE_KEYS.map((key, index) => {
+    const isGoalkeeping = goalkeeperKeys.has(key);
+    let offset = primary.has(key) ? 5 : -2;
+    if (position.zone === "gol") offset += isGoalkeeping ? 6 : key === "positioning" || key === "composure" ? 3 : -17;
+    else if (isGoalkeeping) offset -= 24;
+    if (position.zone === "defesa" && (key === "marking" || key === "tackling" || key === "aerial")) offset += 4;
+    if (position.zone === "ataque" && (key === "finishing" || key === "dribbling" || key === "pace")) offset += 3;
+    const variation = Math.round((seeded(seed, 500 + index * 17) - 0.5) * 12);
+    return [key, clamp(overall + offset + variation, 18, 96)];
+  })) as PlayerAttributes;
+}
+
+function shiftPlayerAttributes(attributes: PlayerAttributes, amount: number, positionKey: PositionKey, seed: number): PlayerAttributes {
+  if (!amount) return attributes;
+  const primary = new Set(POSITION_PRIMARY_ATTRIBUTES[positionKey]);
+  return Object.fromEntries(ALL_ATTRIBUTE_KEYS.map((key, index) => {
+    const relevance = primary.has(key) ? 1 : 0.55;
+    const variation = amount > 0 && seeded(seed, 1700 + index * 13) > 0.76 ? 1 : 0;
+    const delta = Math.sign(amount) * Math.max(0, Math.round(Math.abs(amount) * relevance) + variation);
+    return [key, clamp(attributes[key] + delta, 15, 99)];
+  })) as PlayerAttributes;
+}
+
+function evolvePlayerAttributes(
+  attributes: PlayerAttributes,
+  positionKey: PositionKey,
+  development: number,
+  age: number,
+  seed: number,
+  season: number,
+): PlayerAttributes {
+  const primary = new Set(POSITION_PRIMARY_ATTRIBUTES[positionKey]);
+  const physical = new Set<AttributeKey>(["pace", "acceleration", "strength", "stamina"]);
+  return Object.fromEntries(ALL_ATTRIBUTE_KEYS.map((key, index) => {
+    let delta = development === 0
+      ? (seeded(seed, season * 401 + index * 23) > 0.91 ? 1 : 0)
+      : Math.sign(development) * Math.max(1, Math.round(Math.abs(development) * (primary.has(key) ? 1 : 0.55)));
+    if (age >= 32 && physical.has(key)) delta -= age >= 35 ? 2 : 1;
+    if (age >= 34 && (key === "vision" || key === "composure" || key === "positioning")) delta = Math.max(delta, 0);
+    return [key, clamp(attributes[key] + delta, 15, 99)];
+  })) as PlayerAttributes;
+}
+
 function initialState(): GameState {
+  const seed = Date.now() % 2147483647;
   return {
     version: 5,
     phase: "welcome",
-    seed: Date.now() % 2147483647,
+    seed,
     name: "",
     number: 10,
     foot: "Direita",
@@ -381,6 +521,7 @@ function initialState(): GameState {
     season: 2026,
     overall: 42,
     potential: 78,
+    attributes: createPlayerAttributes("MEI", 42, seed),
     morale: 76,
     fitness: 92,
     reputation: 0,
@@ -434,6 +575,7 @@ function initialState(): GameState {
     transferStatus: null,
     transferRequested: false,
     renewalDenied: false,
+    forcedAlternativeTransfer: false,
     nationalitySwitched: false,
     nationalitySwitchInviteUsed: false,
     pendingNationalitySwitchTarget: "",
@@ -477,6 +619,7 @@ function normalizeSave(value: unknown): GameState {
     nationalHistory: saved.nationalHistory ?? [],
     qualifiedNextMajor: saved.qualifiedNextMajor ?? true,
     renewalDenied: saved.renewalDenied ?? false,
+    forcedAlternativeTransfer: saved.forcedAlternativeTransfer ?? false,
     nationalitySwitched: saved.nationalitySwitched ?? false,
     nationalitySwitchInviteUsed: saved.nationalitySwitchInviteUsed ?? false,
     pendingNationalitySwitchTarget: saved.pendingNationalitySwitchTarget ?? "",
@@ -513,6 +656,11 @@ function normalizeSave(value: unknown): GameState {
     legacyPoints: saved.legacyPoints ?? 0,
     unlockedAchievements: saved.unlockedAchievements ?? [],
     newsFeed: saved.newsFeed ?? [],
+    attributes: saved.attributes ?? createPlayerAttributes(
+      saved.position ?? base.position,
+      saved.overall ?? base.overall,
+      saved.seed ?? base.seed,
+    ),
     trophyCabinet: {
       domesticLeague: oldDomesticLeague,
       domesticCup: oldDomesticCup,
@@ -541,6 +689,9 @@ function normalizeSave(value: unknown): GameState {
       eventTitle: record.eventTitle ?? "",
       competitions: record.competitions ?? [],
       awards: record.awards ?? [],
+      awardNominations: record.awardNominations ?? (record.awards ?? [])
+        .filter((award) => awardPresentation(award).tier !== "regular")
+        .map((award) => ({ award, won: true, winner: saved.name || "Você" })),
       squadRole: record.squadRole ?? "rotacao",
       objectiveResult: record.objectiveResult ?? null,
     })),
@@ -549,6 +700,9 @@ function normalizeSave(value: unknown): GameState {
       position: saved.lastResult.position ?? saved.position ?? base.position,
       competitions: saved.lastResult.competitions ?? [],
       awards: saved.lastResult.awards ?? [],
+      awardNominations: saved.lastResult.awardNominations ?? (saved.lastResult.awards ?? [])
+        .filter((award) => awardPresentation(award).tier !== "regular")
+        .map((award) => ({ award, won: true, winner: saved.name || "Você" })),
       twist: saved.lastResult.twist ?? null,
       nationalNote: saved.lastResult.nationalNote ?? null,
       yellowCards: saved.lastResult.yellowCards ?? 0,
@@ -597,6 +751,10 @@ function awardFinalists(playerName: string, award: string, seed: number, season:
     .map((name, index) => ({ name, order: seeded(seed, season * 211 + award.length * 31 + index * 71) }))
     .sort((a, b) => a.order - b.order)
     .map(({ name }) => name);
+}
+
+function fictionalAwardWinner(playerName: string, award: string, seed: number, season: number) {
+  return awardFinalists(playerName, award, seed, season).find((name) => name !== playerName) ?? FICTIONAL_FINALISTS[0];
 }
 
 function careerHallEntry(game: GameState): CareerHallEntry {
@@ -874,6 +1032,7 @@ function describeEffects(effect: Effect) {
   if (effect.nationalCaptain) changes.push("Braçadeira da Seleção");
   if (effect.transfer) changes.push("Mercado aberto");
   if (effect.transferAbroad) changes.push("Ofertas apenas da Europa");
+  if (effect.forcedAlternativeTransfer) changes.push("Saída obrigatória para uma liga alternativa");
   if (effect.injuryRisk) changes.push(`+${effect.injuryRisk} risco físico`);
   if (effect.retire) changes.push("Despedida anunciada");
   return changes.length ? changes : ["Sua escolha mudou o rumo da temporada"];
@@ -904,6 +1063,7 @@ function mergeEffects(base: Effect, extra: Effect): Effect {
     contractYears: (base.contractYears ?? 0) + (extra.contractYears ?? 0),
     salaryBoost: (base.salaryBoost ?? 0) + (extra.salaryBoost ?? 0),
     clubCaptain: Boolean(base.clubCaptain || extra.clubCaptain),
+    forcedAlternativeTransfer: Boolean(base.forcedAlternativeTransfer || extra.forcedAlternativeTransfer),
   };
 }
 
@@ -1044,6 +1204,38 @@ function selectTransferOffers(state: GameState, salt: number, opts: { includeFor
   );
 }
 
+const ALTERNATIVE_EXILE_LEAGUES = new Set([
+  "liga-uruguaia",
+  "liga-chilena",
+  "liga-colombiana",
+  "liga-paraguaia",
+  "liga-equatoriana",
+  "liga-peruana",
+  "liga-mx",
+  "mls",
+  "eredivisie",
+  "primeira",
+]);
+
+function selectAlternativeExileOffers(state: GameState, salt: number) {
+  const current = clubById(state.currentClubId || state.academyClubId);
+  const targetStrength = clamp(competitiveStrength(current) - 8, 58, 78);
+  return CLUBS
+    .filter((club) =>
+      club.id !== current.id &&
+      club.countryId !== current.countryId &&
+      ALTERNATIVE_EXILE_LEAGUES.has(club.leagueId) &&
+      club.reputation <= 3,
+    )
+    .sort((a, b) => {
+      const scoreA = Math.abs(competitiveStrength(a) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(a)) * 7;
+      const scoreB = Math.abs(competitiveStrength(b) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(b)) * 7;
+      return scoreA - scoreB;
+    })
+    .slice(0, 6)
+    .map((club) => club.id);
+}
+
 function eligibleEvents(state: GameState) {
   const club = clubById(state.currentClubId || state.academyClubId);
   return ALL_PRO_EVENTS.filter((event) => {
@@ -1075,12 +1267,18 @@ function eligibleEvents(state: GameState) {
     if (event.needsCaptainRole === "national" && !state.nationalCaptain) return false;
     if (event.needsCaptainRole === "any" && !(state.clubCaptain || state.nationalCaptain)) return false;
     if (event.oneTime && state.seenEvents.includes(event.id)) return false;
+    if (event.rareChance !== undefined) {
+      const eventSalt = [...event.id].reduce((total, character) => total + character.charCodeAt(0), 0);
+      if (seeded(state.seed, state.season * 997 + eventSalt) >= event.rareChance) return false;
+    }
     return true;
   });
 }
 
 function selectNextEvent(state: GameState, salt: number) {
   const events = eligibleEvents(state);
+  const triggeredRareEvents = events.filter((event) => event.rareChance !== undefined);
+  if (triggeredRareEvents.length) return pick(triggeredRareEvents, state.seed + state.season, salt).id;
   const unseen = events.filter((event) => !state.seenEvents.includes(event.id));
   return pick(unseen.length ? unseen : events, state.seed + state.season, salt)?.id ?? "extra-training";
 }
@@ -1235,6 +1433,7 @@ function applyEffect(state: GameState, effect: Effect) {
   return {
     ...state,
     overall,
+    attributes: shiftPlayerAttributes(state.attributes, effect.ovr ?? 0, state.position, state.seed + state.season),
     potential: clamp(state.potential + (effect.potential ?? 0), 45, 99),
     morale: clamp(state.morale + (effect.morale ?? 0)),
     fitness: clamp(state.fitness + (effect.fitness ?? 0)),
@@ -1278,23 +1477,31 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const abroad = isAbroad(club);
   const inEurope = isEuropeanClub(club);
   const position = positionByKey(affected.position);
+  const isKeeper = position.key === "GOL";
+  const attributes = affected.attributes;
+  const primaryAttributeRating = attributeAverage(attributes, POSITION_PRIMARY_ATTRIBUTES[position.key]);
+  const finishingSkill = attributes.finishing * 0.54 + attributes.positioning * 0.26 + attributes.composure * 0.2;
+  const creationSkill = attributes.passing * 0.38 + attributes.vision * 0.27 + attributes.crossing * 0.2 + attributes.dribbling * 0.15;
+  const defensiveSkill = attributes.marking * 0.36 + attributes.tackling * 0.36 + attributes.aerial * 0.16 + attributes.positioning * 0.12;
+  const keeperSkill = attributes.reflexes * 0.42 + attributes.handling * 0.34 + attributes.positioning * 0.14 + attributes.distribution * 0.1;
   const adaptationPenalty = abroad ? Math.max(0, (72 - affected.adaptation) / 8) : 0;
   const requirement = 55 + club.reputation * 5 + (abroad ? league.prestige * 3 : 0);
   const seasonRole = calculateSquadRole(affected.overall, club, league.prestige, affected.managerTrust, affected.age);
-  const roleScore = affected.overall - requirement + (effect.minutes ?? 0) - adaptationPenalty + roleAppearanceModifier(seasonRole);
+  const roleScore = affected.overall - requirement + (primaryAttributeRating - affected.overall) * 0.18 + (effect.minutes ?? 0) - adaptationPenalty + roleAppearanceModifier(seasonRole);
   const baseApps = roleScore >= 5 ? 33 : roleScore >= 0 ? 26 : roleScore >= -5 ? 19 : 11;
   const provisionalCards = Math.floor(seeded(state.seed, state.season * 211) * 5);
   const suspensionPenalty = affected.suspensionMatches + (affected.discipline < 35 ? 3 : affected.discipline < 55 ? 1 : 0);
   const quality = clamp((affected.overall - 48) / 35, 0.45, 1.5);
-  const isKeeper = position.key === "GOL";
   const roleProductionBonus = seasonRole === "estrela" ? 0.12 : seasonRole === "titular" ? 0.07 : seasonRole === "rotacao" ? 0.02 : seasonRole === "reserva" ? -0.03 : 0;
   const productionMomentum = clamp(
     1.1 + roleProductionBonus + (affected.morale - 50) / 250 + (affected.managerTrust - 50) / 300 + (affected.fitness - 70) / 500,
     0.9,
     1.45,
   );
-  const goalRate = position.goals * quality * productionMomentum * (0.82 + seeded(state.seed, state.season * 7) * 1.02);
-  const assistRate = position.assists * quality * productionMomentum * (0.82 + seeded(state.seed, state.season * 13) * 1.02);
+  const finishingFactor = clamp(0.45 + finishingSkill / 100, 0.68, 1.44);
+  const creationFactor = clamp(0.45 + creationSkill / 100, 0.68, 1.44);
+  const goalRate = position.goals * quality * finishingFactor * productionMomentum * (0.82 + seeded(state.seed, state.season * 7) * 1.02);
+  const assistRate = position.assists * quality * creationFactor * productionMomentum * (0.82 + seeded(state.seed, state.season * 13) * 1.02);
   const expectedContribution = Math.max(0.08, (position.goals + position.assists * 0.72) * quality);
   const contributionRate = goalRate + assistRate * 0.72;
   const formRatio = contributionRate / expectedContribution;
@@ -1326,14 +1533,14 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
         ? 2
         : 0;
   const appearances = clamp(
-    Math.round(baseApps + seeded(state.seed, state.season * 3) * 8 + inSeasonMeritApps + previousFormApps - suspensionPenalty),
+    Math.round(baseApps + seeded(state.seed, state.season * 3) * 8 + inSeasonMeritApps + previousFormApps + (attributes.stamina - 60) / 12 - suspensionPenalty),
     3,
     44,
   );
   const goals = isKeeper ? (seeded(state.seed, state.season * 5) > 0.992 ? 1 : 0) : Math.max(0, Math.round(appearances * goalRate));
   const assists = isKeeper ? Math.round(seeded(state.seed, state.season * 11) * 2) : Math.max(0, Math.round(appearances * assistRate));
-  const cleanSheets = isKeeper ? Math.round(appearances * (0.18 + club.reputation * 0.035 + affected.overall / 500)) : 0;
-  const goalsConceded = isKeeper ? Math.max(4, Math.round(appearances * (1.55 - club.reputation * 0.1 - affected.overall / 180))) : 0;
+  const cleanSheets = isKeeper ? Math.round(appearances * clamp(0.07 + club.reputation * 0.035 + keeperSkill / 270, 0.16, 0.57)) : 0;
+  const goalsConceded = isKeeper ? Math.max(4, Math.round(appearances * clamp(1.7 - club.reputation * 0.09 - keeperSkill / 160, 0.45, 1.45))) : 0;
   const positionCardWeight = position.zone === "defesa" ? 1.35 : position.zone === "meio" ? 1 : 0.65;
   const yellowCards = Math.max(0, Math.round((provisionalCards + appearances / 10) * positionCardWeight * (1.28 - affected.discipline / 180)));
   const redCards = seeded(state.seed, state.season * 223) < Math.max(0.015, (72 - affected.discipline) / 270) ? 1 : 0;
@@ -1341,7 +1548,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
 
   const boost = effect.titleBoost ?? 0;
   const strength = competitiveStrength(club);
-  const playerImpact = Math.max(0, affected.overall - 70);
+  const playerImpact = Math.max(0, affected.overall - 70) + Math.max(0, primaryAttributeRating - 70) * 0.12 + Math.max(0, defensiveSkill - 75) * 0.04;
   const leagueChance = clamp(
     4 + (strength - 70) * 0.7 + playerImpact * 0.36 + boost * 0.25 + affected.fanSupport / 55 - (abroad ? league.prestige * 0.35 : 0),
     1,
@@ -1471,6 +1678,14 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (development > 0) development = Math.min(development, affected.potential - affected.overall);
   const nextOverall = clamp(affected.overall + development, 42, Math.max(affected.potential, affected.overall));
   const nextAge = affected.age + 1;
+  const nextAttributes = evolvePlayerAttributes(
+    affected.attributes,
+    affected.position,
+    development,
+    nextAge,
+    affected.seed,
+    affected.season,
+  );
   // Seleção nacional: convocação real, categorias e grandes torneios.
   const nation = countryById(affected.nationality);
   const ageTier: NationalTier = affected.age <= 14 ? "none" : affected.age <= 17 ? "sub17" : affected.age <= 20 ? "sub20" : affected.age <= 23 ? "olympic" : "main";
@@ -1505,8 +1720,8 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     if (called) {
       const capsGain = Math.round(3 + seeded(state.seed, state.season * 137) * 5);
       const nationalQuality = clamp((affected.overall - 50) / 35, 0.4, 1.5);
-      const goalsGain = isKeeper ? 0 : Math.max(0, Math.round(capsGain * position.goals * nationalQuality * 1.3));
-      const assistsGain = isKeeper ? 0 : Math.max(0, Math.round(capsGain * position.assists * nationalQuality * 1.3));
+      const goalsGain = isKeeper ? 0 : Math.max(0, Math.round(capsGain * position.goals * nationalQuality * finishingFactor * 1.3));
+      const assistsGain = isKeeper ? 0 : Math.max(0, Math.round(capsGain * position.assists * nationalQuality * creationFactor * 1.3));
       nationalCaps += capsGain;
       nationalGoals += goalsGain;
       nationalAssists += assistsGain;
@@ -1631,6 +1846,45 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     ballonScore >= 75 &&
     seeded(state.seed, state.season * 109) * 100 < ballonChance
   ) awards.push("Bola de Ouro");
+  const awardNominations: AwardNomination[] = awards
+    .filter((award) => awardPresentation(award).tier !== "regular")
+    .map((award) => ({ award, won: true, winner: affected.name || "Você" }));
+  const addLostNomination = (award: string, eligible: boolean, chance: number, salt: number) => {
+    if (!eligible || awards.includes(award) || awardNominations.some((nomination) => nomination.award === award)) return;
+    if (seeded(state.seed, state.season * salt + award.length * 7) * 100 >= chance) return;
+    awardNominations.push({
+      award,
+      won: false,
+      winner: fictionalAwardWinner(affected.name || "Você", award, state.seed, affected.season),
+    });
+  };
+  addLostNomination(
+    "Bola de Ouro",
+    (inEurope && nextOverall >= 81 && performanceScore >= 68 && affected.reputation >= 48 && appearances >= 20) ||
+      (!inEurope && nextOverall >= 87 && performanceScore >= 78 && affected.reputation >= 66 && Boolean(continentalChampion || mundialChampion)),
+    clamp(24 + Math.max(0, ballonScore - 66) * 4.2, 24, 82),
+    313,
+  );
+  addLostNomination(
+    `Jogador do Ano do ${leagueLabel}`,
+    nextOverall >= 78 && performanceScore >= 70 && appearances >= 23,
+    clamp(34 + (performanceScore - 70) * 2, 34, 76),
+    317,
+  );
+  addLostNomination(
+    "Golden Boy",
+    inEurope && affected.age <= 21 && nextOverall >= 76 && appearances >= 16,
+    clamp(28 + (nextOverall - 76) * 4, 28, 72),
+    331,
+  );
+  addLostNomination(
+    "Troféu Yashin",
+    inEurope && isKeeper && keeperSkill >= 79 && cleanSheets >= 11,
+    clamp(30 + (keeperSkill - 79) * 3, 30, 75),
+    337,
+  );
+  awardNominations.sort((a, b) => awardTierWeight(b.award) - awardTierWeight(a.award) || Number(b.won) - Number(a.won));
+  if (awardNominations.length > 3) awardNominations.splice(3);
   const title = titleCount > 0;
   const seasonObjective = affected.currentObjective ?? createSeasonObjective(position, seasonRole, affected.season, affected.seed);
   const objectiveResult = evaluateObjective(seasonObjective, seasonStats, titleCount);
@@ -1659,7 +1913,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     : 0;
   const renewalDenied = nonRenewalChance > 0 && seeded(state.seed, state.season * 283 + 11) * 100 < nonRenewalChance;
 
-  const record: SeasonRecord = { ...seasonStats, age: affected.age, season: affected.season, clubId: club.id, position: affected.position, overall: nextOverall, title, eventTitle: event.title, competitions, awards, squadRole: seasonRole, objectiveResult };
+  const record: SeasonRecord = { ...seasonStats, age: affected.age, season: affected.season, clubId: club.id, position: affected.position, overall: nextOverall, title, eventTitle: event.title, competitions, awards, awardNominations, squadRole: seasonRole, objectiveResult };
   const result: SeasonResult = {
     ...record,
     resultText,
@@ -1721,6 +1975,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     age: nextAge,
     season: affected.season + 1,
     overall: nextOverall,
+    attributes: nextAttributes,
     fitness: nextFitness,
     morale: nextMorale,
     reputation: clamp(affected.reputation + Math.round(appearances / 12) + titleCount * 7 + europeanSpotlight + breakoutBonus * 2),
@@ -1766,12 +2021,16 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     seenEvents,
     nextEventId: "",
     renewalDenied,
+    forcedAlternativeTransfer: Boolean(effect.forcedAlternativeTransfer),
+    transferRequested: effect.forcedAlternativeTransfer ? true : affected.transferRequested,
     nationalitySwitched: affected.nationalitySwitched || Boolean(nationalitySwitchRecord),
     pendingNationalitySwitchTarget: "",
   };
   const wantsDomesticReturn = event.id === "european-exit" || event.id === "return-home" || event.id === "mega-empresta-para-time-menor";
-  let transferOffers = effect.transfer || nextBase.contractYears === 0
-    ? selectTransferOffers(nextBase, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad })
+  let transferOffers = effect.transfer || effect.forcedAlternativeTransfer || nextBase.contractYears === 0
+    ? effect.forcedAlternativeTransfer
+      ? selectAlternativeExileOffers(nextBase, affected.season * 43)
+      : selectTransferOffers(nextBase, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad })
     : [];
   if (effect.transfer && event.id === "return-home" && nextBase.academyClubId) {
     const europeanDoor = transferOffers.find((clubId) => isEuropeanClub(clubById(clubId)));
@@ -1924,6 +2183,7 @@ function completeSimulationTransfer(state: GameState, clubId: string | null): Ga
     transferStatus: null,
     transferRequested: false,
     renewalDenied: false,
+    forcedAlternativeTransfer: false,
     managerTrust,
     squadRole,
     contractYears: contract.years,
@@ -1963,6 +2223,7 @@ function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarlo
     season: state.season + journey.revealAge - 12,
     overall: journey.overall,
     potential: journey.potential,
+    attributes: createPlayerAttributes(chosenPosition, journey.overall, seed),
     morale: clamp(68 + Math.round(journey.score / 4)),
     fitness: 94,
   };
@@ -2003,6 +2264,7 @@ function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarlo
         lastConsequence: null,
         transferRequested: false,
         renewalDenied: false,
+        forcedAlternativeTransfer: false,
       };
     }
   }
@@ -2156,10 +2418,25 @@ function AwardReveal({ award }: { award: string }) {
   );
 }
 
-function AwardCeremony({ award, playerName, seed, season }: { award: string; playerName: string; seed: number; season: number }) {
+function AwardCeremony({
+  award,
+  playerName,
+  seed,
+  season,
+  won,
+  winner,
+}: {
+  award: string;
+  playerName: string;
+  seed: number;
+  season: number;
+  won: boolean;
+  winner: string;
+}) {
   const [revealed, setRevealed] = useState(false);
   const presentation = awardPresentation(award);
   const finalists = useMemo(() => awardFinalists(playerName, award, seed, season), [playerName, award, seed, season]);
+  const revealedWinner = won ? playerName : winner;
 
   return (
     <article className={`award-ceremony award-${presentation.tier} ${revealed ? "revealed" : ""}`}>
@@ -2182,8 +2459,16 @@ function AwardCeremony({ award, playerName, seed, season }: { award: string; pla
       ) : (
         <div className="award-winner-reveal">
           <small>O VENCEDOR É...</small>
-          <strong>{playerName}</strong>
-          <AwardReveal award={award} />
+          <strong>{revealedWinner}</strong>
+          {won ? (
+            <AwardReveal award={award} />
+          ) : (
+            <div className="award-near-miss">
+              <span>TOP 3 DO MUNDO</span>
+              <strong>Você chegou à final</strong>
+              <p>Seu nome esteve no envelope até o último instante. Desta vez, {revealedWinner} levou o prêmio.</p>
+            </div>
+          )}
         </div>
       )}
     </article>
@@ -2338,11 +2623,14 @@ export default function Home() {
     () => awardEntries.reduce((total, [, count]) => total + count, 0),
     [awardEntries],
   );
-  const seasonCeremonyAward = useMemo(
-    () => [...(game.lastResult?.awards ?? [])]
-      .sort((a, b) => awardTierWeight(b) - awardTierWeight(a))
-      .find((award) => awardPresentation(award).tier !== "regular") ?? null,
+  const seasonCeremonyNomination = useMemo(
+    () => [...(game.lastResult?.awardNominations ?? [])]
+      .sort((a, b) => awardTierWeight(b.award) - awardTierWeight(a.award) || Number(b.won) - Number(a.won))[0] ?? null,
     [game.lastResult],
+  );
+  const totalAwardNominations = useMemo(
+    () => game.history.reduce((total, record) => total + record.awardNominations.length, 0),
+    [game.history],
   );
   const clubCareerSummary = useMemo(() => {
     const byClub = new Map<string, {
@@ -2467,6 +2755,7 @@ export default function Home() {
       season: current.season + journey.revealAge - 12,
       overall: journey.overall,
       potential: journey.potential,
+      attributes: createPlayerAttributes(current.position, journey.overall, current.seed),
       morale: clamp(68 + Math.round(journey.score / 4)),
       fitness: 94,
     }));
@@ -2571,6 +2860,7 @@ export default function Home() {
         lastConsequence: null,
         transferRequested: false,
         renewalDenied: false,
+        forcedAlternativeTransfer: false,
       }));
     }
     setActiveTab("event");
@@ -2579,7 +2869,7 @@ export default function Home() {
 
   function chooseTransfer(clubId: string | null) {
     setGame((current) => {
-      if (!clubId && (current.transferRequested || current.renewalDenied)) return current;
+      if (!clubId && (current.transferRequested || current.renewalDenied || current.forcedAlternativeTransfer)) return current;
       const newClub = clubId ? clubById(clubId) : null;
       const oldClub = clubById(current.currentClubId);
       const targetClub = newClub ?? oldClub;
@@ -2624,6 +2914,7 @@ export default function Home() {
         transferStatus: null,
         transferRequested: false,
         renewalDenied: false,
+        forcedAlternativeTransfer: false,
         managerTrust,
         squadRole,
         contractYears: contract.years,
@@ -3085,26 +3376,28 @@ export default function Home() {
               </div>
               {game.lastResult.twist && <div className={`season-twist ${game.lastResult.twist.includes("improvável") ? "positive" : "negative"}`}><span>O IMPREVISTO DA TEMPORADA</span><p>{game.lastResult.twist}</p></div>}
               {game.lastResult.nationalNote && <div className="season-national-note"><NationBadge country={nationCountry} size="sm" /><p>{game.lastResult.nationalNote}</p></div>}
-              {game.lastResult.awards.length > 0 && (
-                <section className={`season-awards-showcase ${game.lastResult.awards.includes("Bola de Ouro") ? "has-ballon-dor" : ""}`}>
+              {(game.lastResult.awards.length > 0 || game.lastResult.awardNominations.length > 0) && (
+                <section className={`season-awards-showcase ${game.lastResult.awardNominations.some((nomination) => nomination.award === "Bola de Ouro") ? "has-ballon-dor" : ""}`}>
                   <div className="season-awards-heading">
                     <span>NOITE DE PREMIAÇÃO</span>
-                    <strong>{game.lastResult.awards.length === 1 ? "Seu nome foi chamado" : `${game.lastResult.awards.length} prêmios na mesma temporada`}</strong>
-                    <p>Seu desempenho individual ganhou reconhecimento.</p>
+                    <strong>{game.lastResult.awards.length > 1 ? `${game.lastResult.awards.length} prêmios na mesma temporada` : seasonCeremonyNomination?.won ? "Seu nome foi chamado" : "Você está entre os finalistas"}</strong>
+                    <p>O resultado só aparece quando o envelope for aberto.</p>
                   </div>
                   <div className="season-awards-list">
-                    {seasonCeremonyAward && (
+                    {seasonCeremonyNomination && (
                       <AwardCeremony
-                        key={`${seasonCeremonyAward}-${game.lastResult.season}`}
-                        award={seasonCeremonyAward}
+                        key={`${seasonCeremonyNomination.award}-${game.lastResult.season}`}
+                        award={seasonCeremonyNomination.award}
                         playerName={game.name}
                         seed={game.seed}
                         season={game.lastResult.season}
+                        won={seasonCeremonyNomination.won}
+                        winner={seasonCeremonyNomination.winner}
                       />
                     )}
                     {[...game.lastResult.awards]
                       .sort((a, b) => awardTierWeight(b) - awardTierWeight(a))
-                      .filter((award) => award !== seasonCeremonyAward)
+                      .filter((award) => award !== seasonCeremonyNomination?.award)
                       .map((award) => <AwardReveal key={award} award={award} />)}
                   </div>
                 </section>
@@ -3118,11 +3411,12 @@ export default function Home() {
 
           {game.phase === "transfer" && (
             <div className="transfer-stage screen-enter">
-              <span className="eyebrow">JANELA DE TRANSFERÊNCIAS</span><h1>{game.transferStatus?.success ? game.transferStatus.headline : game.renewalDenied ? "Sem renovação — hora de escolher" : "Seu próximo passo"}</h1><p>{game.transferStatus?.text ?? (game.renewalDenied ? `O ${currentClub.shortName} não renovou seu contrato. ${game.transferOffers.length} clube${game.transferOffers.length > 1 ? "s apareceram" : " apareceu"} com propostas.` : `${game.transferOffers.length} clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui.`)}</p>
+              <span className="eyebrow">{game.forcedAlternativeTransfer ? "RECOMEÇO FORÇADO" : "JANELA DE TRANSFERÊNCIAS"}</span><h1>{game.forcedAlternativeTransfer ? "As grandes ligas fecharam as portas" : game.transferStatus?.success ? game.transferStatus.headline : game.renewalDenied ? "Sem renovação — hora de escolher" : "Seu próximo passo"}</h1><p>{game.forcedAlternativeTransfer ? "Depois da suspensão, seu empresário encontrou projetos dispostos a bancar sua reconstrução. Você precisa escolher um deles." : game.transferStatus?.text ?? (game.renewalDenied ? `O ${currentClub.shortName} não renovou seu contrato. ${game.transferOffers.length} clube${game.transferOffers.length > 1 ? "s apareceram" : " apareceu"} com propostas.` : `${game.transferOffers.length} clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui.`)}</p>
               {game.renewalDenied && <div className="transfer-lock-card"><span>RENOVAÇÃO RECUSADA</span><strong>O {currentClub.shortName} decidiu não renovar seu contrato</strong><p>A diretoria avaliou a temporada e optou por não seguir com você. Escolha seu próximo destino.</p></div>}
-              {game.transferRequested && <div className="transfer-lock-card"><span>SAÍDA SEM VOLTA</span><strong>Escolha seu próximo clube</strong><p>Depois que a diretoria aceita seu pedido, permanecer no time atual deixa de ser uma opção.</p></div>}
-              {transferWindowProfile.isEuropeanWindow && <div className="european-market-card"><span>{transferWindowProfile.foreignMarketLabel}</span><strong>{transferWindowProfile.europeanOffers} clube{transferWindowProfile.europeanOffers > 1 ? `s ${transferWindowProfile.foreignMarketAdjective}s querem` : ` ${transferWindowProfile.foreignMarketAdjective} quer`} você</strong><p>{transferWindowProfile.brazilianOffers > 0 ? "Uma proposta rara de retorno ao Brasil também apareceu." : `Jogando fora do Brasil, seu empresário prioriza projetos ${transferWindowProfile.foreignMarketAdjective}s de nível compatível.`}</p></div>}
-              {transferWindowProfile.expandedOfferCount > 0 && <div className="market-expansion-card"><span>DESEMPENHO ABRIU PORTAS</span><strong>{marketProfile.label} · nota {marketProfile.performanceScore}</strong><p>{transferWindowProfile.expandedOfferCount} clube{transferWindowProfile.expandedOfferCount > 1 ? "s extras apareceram" : " extra apareceu"} em um nível compatível com sua fase.</p></div>}
+              {game.forcedAlternativeTransfer && <div className="transfer-lock-card exile"><span>PUNIÇÃO DISCIPLINAR</span><strong>Exílio esportivo obrigatório</strong><p>Ficar no clube atual ou assinar com uma potência não está disponível. Uma liga alternativa será seu único caminho de volta.</p></div>}
+              {game.transferRequested && !game.forcedAlternativeTransfer && <div className="transfer-lock-card"><span>SAÍDA SEM VOLTA</span><strong>Escolha seu próximo clube</strong><p>Depois que a diretoria aceita seu pedido, permanecer no time atual deixa de ser uma opção.</p></div>}
+              {!game.forcedAlternativeTransfer && transferWindowProfile.isEuropeanWindow && <div className="european-market-card"><span>{transferWindowProfile.foreignMarketLabel}</span><strong>{transferWindowProfile.europeanOffers} clube{transferWindowProfile.europeanOffers > 1 ? `s ${transferWindowProfile.foreignMarketAdjective}s querem` : ` ${transferWindowProfile.foreignMarketAdjective} quer`} você</strong><p>{transferWindowProfile.brazilianOffers > 0 ? "Uma proposta rara de retorno ao Brasil também apareceu." : `Jogando fora do Brasil, seu empresário prioriza projetos ${transferWindowProfile.foreignMarketAdjective}s de nível compatível.`}</p></div>}
+              {!game.forcedAlternativeTransfer && transferWindowProfile.expandedOfferCount > 0 && <div className="market-expansion-card"><span>DESEMPENHO ABRIU PORTAS</span><strong>{marketProfile.label} · nota {marketProfile.performanceScore}</strong><p>{transferWindowProfile.expandedOfferCount} clube{transferWindowProfile.expandedOfferCount > 1 ? "s extras apareceram" : " extra apareceu"} em um nível compatível com sua fase.</p></div>}
               <div className="offer-list transfer-offers">
                 {game.transferOffers.map((clubId, index) => {
                   const club = clubById(clubId);
@@ -3137,7 +3431,7 @@ export default function Home() {
                     <button className="offer-card" key={clubId} onClick={() => chooseTransfer(clubId)}>
                       <ClubBadge club={club} />
                       <span>
-                        <small>{rareBrazilReturn ? "RETORNO IMPROVÁVEL" : europeanEntryOffer ? "PORTA DE ENTRADA NA EUROPA" : index >= 5 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
+                        <small>{game.forcedAlternativeTransfer ? "PROJETO DE RECONSTRUÇÃO" : rareBrazilReturn ? "RETORNO IMPROVÁVEL" : europeanEntryOffer ? "PORTA DE ENTRADA NA EUROPA" : index >= 5 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
                         <strong>{club.shortName}</strong>
                         <em>{club.city} · {league.name} · reputação {club.reputation}/5</em>
                         <em className="offer-contract">{ROLE_LABELS[offerRole]} · {offerContract.years} anos · {formatMoney(offerContract.annualSalary)}/ano</em>
@@ -3149,7 +3443,7 @@ export default function Home() {
                     </button>
                   );
                 })}
-                {!game.transferRequested && !game.renewalDenied && <button className="offer-card stay-card" onClick={() => chooseTransfer(null)}><ClubBadge club={currentClub} /><span><small>{game.contractYears === 0 ? "PROPOSTA DE RENOVAÇÃO" : "CONTINUAR O PROJETO"}</small><strong>{game.contractYears === 0 ? `Renovar com o ${currentClub.shortName}` : `Ficar no ${currentClub.shortName}`}</strong><em>{game.contractYears === 0 ? "Novo vínculo e salário recalculado" : `Manter o contrato atual de ${game.contractYears} ano(s)`}</em></span><b>✓</b></button>}
+                {!game.transferRequested && !game.renewalDenied && !game.forcedAlternativeTransfer && <button className="offer-card stay-card" onClick={() => chooseTransfer(null)}><ClubBadge club={currentClub} /><span><small>{game.contractYears === 0 ? "PROPOSTA DE RENOVAÇÃO" : "CONTINUAR O PROJETO"}</small><strong>{game.contractYears === 0 ? `Renovar com o ${currentClub.shortName}` : `Ficar no ${currentClub.shortName}`}</strong><em>{game.contractYears === 0 ? "Novo vínculo e salário recalculado" : `Manter o contrato atual de ${game.contractYears} ano(s)`}</em></span><b>✓</b></button>}
               </div>
             </div>
           )}
@@ -3234,6 +3528,30 @@ export default function Home() {
               </div>
               <div className="profile-metrics"><Metric label="OVR" value={game.overall} tone="gold" /><Metric label="Momento" value={careerTrend(game.history)} /><Metric label="Valor" value={formatMoney(marketValue(game.overall, game.age, currentClub, game.reputation, game.history.at(-1)))} /></div>
               <div className="market-context"><span>{currentClub.countryId === "brasil" ? "MERCADO BRASILEIRO" : "MERCADO INTERNACIONAL"}</span><p>{currentClub.countryId === "brasil" ? "O mesmo jogador costuma valer menos no Brasil. Uma ida à Europa pode multiplicar sua cotação — e também a cobrança." : `${leagueById(currentClub.leagueId).name} amplia sua vitrine e o valor do seu passe.`}</p></div>
+              <section className="football-attributes-card">
+                <div className="football-attributes-heading">
+                  <div><span>ATRIBUTOS DE CAMPO</span><strong>Seu estilo em números</strong></div>
+                  <b>{Math.round(attributeAverage(game.attributes, POSITION_PRIMARY_ATTRIBUTES[game.position]))}<small>MÉDIA-CHAVE</small></b>
+                </div>
+                <p>Os atributos mudam a simulação: finalização gera gols, passe e visão criam assistências, fôlego aumenta seus jogos e qualidades defensivas ou de goleiro decidem o rendimento.</p>
+                <div className="football-attribute-groups">
+                  {ATTRIBUTE_GROUPS.map((group) => (
+                    <article key={group.label}>
+                      <span>{group.label}</span>
+                      <div>
+                        {group.keys.map((key) => (
+                          <div className={POSITION_PRIMARY_ATTRIBUTES[game.position].includes(key) ? "is-key" : ""} key={key}>
+                            <label>{ATTRIBUTE_LABELS[key]}</label>
+                            <i><em style={{ width: `${game.attributes[key]}%`, background: attributeTone(game.attributes[key]) }} /></i>
+                            <strong style={{ color: attributeTone(game.attributes[key]) }}>{game.attributes[key]}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                <small>◆ atributo-chave para {position.name}</small>
+              </section>
               <div className="contract-card"><span>CONTRATO E ELENCO</span><div><strong>{ROLE_LABELS[game.squadRole]}{game.clubCaptain ? " · Capitão" : ""}</strong><small>{game.contractYears ? `${game.contractYears} ano(s) restantes` : "Contrato encerrado"} · {formatMoney(game.annualSalary)}/ano</small></div><Progress label="Confiança do treinador" value={game.managerTrust} color="#a675ff" /></div>
               <div className="supporter-card"><span>RELAÇÃO COM A TORCIDA</span><strong style={{ color: supporterMood.color }}>{supporterMood.label}</strong><p>{game.fanSupport < 38 ? "Cada toque pode virar vaia. Títulos e entrega reconquistam a arquibancada." : game.fanSupport >= 82 ? "Seu nome já faz parte da identidade do clube." : "A arquibancada ainda está decidindo que história contará sobre você."}</p></div>
               <div className="attribute-card">
@@ -3288,7 +3606,7 @@ export default function Home() {
               <div className="award-cabinet">
                 <div className="award-cabinet-title">
                   <div><span>PRÊMIOS INDIVIDUAIS</span><strong>Sua galeria pessoal</strong></div>
-                  <b>{totalIndividualAwards}<small>CONQUISTAS</small></b>
+                  <b>{totalIndividualAwards}<small>{totalAwardNominations} INDICAÇÕES</small></b>
                 </div>
                 {awardEntries.length === 0 ? (
                   <p>O primeiro prêmio ainda está por vir. Grandes temporadas, números decisivos e títulos colocam seu nome entre os candidatos.</p>

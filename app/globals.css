@@ -432,6 +432,10 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .award-winner-reveal { display: grid; justify-items: center; margin-top: 12px; animation: award-rise 420ms cubic-bezier(.2,.8,.2,1) both; }
 .award-winner-reveal > strong { margin: 5px 0 11px; color: #fff4bf; font: 900 22px var(--display); text-align: center; text-transform: uppercase; }
 .award-winner-reveal .award-reveal-card { width: 100%; }
+.award-near-miss { width: 100%; padding: 14px; border: 1px solid rgba(255,199,44,.28); border-radius: 14px; background: linear-gradient(135deg, rgba(255,199,44,.08), rgba(255,255,255,.025)); text-align: left; }
+.award-near-miss > span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .13em; }
+.award-near-miss > strong { display: block; margin-top: 4px; color: var(--text); font: 900 17px var(--display); text-transform: none; }
+.award-near-miss p { margin: 5px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
 @keyframes award-rise { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
 @keyframes legendary-glow { from { box-shadow: 0 0 8px rgba(255,199,44,.05), inset 0 0 20px rgba(255,199,44,.035); } to { box-shadow: 0 0 24px rgba(255,199,44,.16), inset 0 0 28px rgba(255,199,44,.08); } }
 .season-twist { width: 100%; margin: 0 0 12px; padding: 12px 13px; border: 1px solid rgba(255,90,78,.22); border-radius: 14px; background: rgba(255,90,78,.06); text-align: left; }
@@ -477,6 +481,8 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .transfer-lock-card > span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
 .transfer-lock-card strong { display: block; margin-top: 4px; font-size: 11px; }
 .transfer-lock-card p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.transfer-lock-card.exile { border-color: rgba(255,90,78,.38); background: linear-gradient(120deg, rgba(255,90,78,.12), rgba(255,199,44,.055)); }
+.transfer-lock-card.exile > span { color: var(--red); }
 .european-market-card { width: 100%; margin-top: 15px; padding: 12px 13px; border: 1px solid rgba(166,117,255,.3); border-radius: 15px; background: linear-gradient(120deg, rgba(44,168,255,.08), rgba(166,117,255,.08)); }
 .european-market-card > span { color: #cbb4ff; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
 .european-market-card strong { display: block; margin-top: 4px; font-size: 11px; }
@@ -534,6 +540,25 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .attribute-card { display: grid; gap: 14px; padding: 17px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
 .attribute-card .progress-label { font-size: 9px; }
 .attribute-card .progress-track { height: 6px; }
+.football-attributes-card { margin: 10px 0; padding: 15px; border: 1px solid rgba(44,168,255,.24); border-radius: 19px; background: radial-gradient(circle at 100% 0, rgba(44,168,255,.09), transparent 36%), var(--surface); }
+.football-attributes-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.football-attributes-heading > div { display: flex; min-width: 0; flex-direction: column; }
+.football-attributes-heading span { color: var(--blue); font-size: 8px; font-weight: 900; letter-spacing: .12em; }
+.football-attributes-heading strong { margin-top: 3px; font: 900 18px var(--display); }
+.football-attributes-heading > b { display: flex; flex-direction: column; align-items: center; color: var(--gold); font: 900 25px var(--display); }
+.football-attributes-heading > b small { color: var(--muted); font: 900 6px var(--sans); letter-spacing: .08em; }
+.football-attributes-card > p { margin: 9px 0 12px; color: var(--muted); font-size: 8px; line-height: 1.45; }
+.football-attribute-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.football-attribute-groups > article { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.018); }
+.football-attribute-groups > article > span { color: var(--muted); font-size: 6px; font-weight: 900; letter-spacing: .12em; }
+.football-attribute-groups > article > div { display: grid; gap: 7px; margin-top: 8px; }
+.football-attribute-groups > article > div > div { display: grid; grid-template-columns: minmax(0, 1fr) 36px 19px; align-items: center; gap: 6px; }
+.football-attribute-groups label { overflow: hidden; color: #aebfb4; font-size: 7px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.football-attribute-groups i { height: 4px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.075); }
+.football-attribute-groups i em { display: block; height: 100%; border-radius: inherit; }
+.football-attribute-groups strong { font-size: 8px; text-align: right; }
+.football-attribute-groups .is-key label::before { content: "◆"; margin-right: 4px; color: var(--gold); font-size: 5px; }
+.football-attributes-card > small { display: block; margin-top: 10px; color: var(--gold); font-size: 7px; font-weight: 800; }
 .supporter-card { margin: 10px 0; padding: 15px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
 .supporter-card > span, .trophy-cabinet > span, .career-fortune > span { color: var(--muted); font-size: 8px; font-weight: 900; letter-spacing: .12em; }
 .supporter-card > strong { display: block; margin-top: 4px; font: 900 22px var(--display); }

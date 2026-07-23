@@ -1,6 +1,10 @@
 import type { GameEvent } from "./game-data";
 
 export const CAREER_DRAMA_EVENTS: GameEvent[] = [
+  // Evento deliberadamente raríssimo: uma única ocorrência força um exílio esportivo.
+  { id: "drama-drug-scandal", icon: "!", tag: "IMPRENSA", title: "O flagrante que destruiu a temporada", description: "Você foi flagrado com drogas em uma festa. O clube rompe o vínculo, os patrocinadores somem e as grandes ligas fecham as portas por enquanto.", minAge: 18, oneTime: true, rareChance: 0.004, choices: [
+    { label: "Cumprir a punição e recomeçar", hint: "Saída obrigatória · liga alternativa", result: "Sem recurso possível, você aceita a suspensão. Para continuar jogando, será obrigado a reconstruir a carreira longe dos grandes centros.", effect: { forcedAlternativeTransfer: true, transfer: true, reputation: -28, morale: -18, fans: -24, fitness: -8, discipline: -22 } },
+  ]},
   // ---- IDADE ----
   { id: "drama-teenage-spotlight", icon: "★", tag: "IDADE", title: "Muito jovem para tanto holofote", description: "Aos dezessete anos, sua estreia precoce virou manchete antes mesmo da sua primeira lesão de crescimento.", maxAge: 18, oneTime: true, choices: [
     { label: "Abraçar a exposição", hint: "Fama ↑ · pressão ↑", result: "Você aceita que o Brasil inteiro já sabe seu nome.", effect: { reputation: 8, fans: 6, morale: -3 } },

@@ -103,6 +103,7 @@ export type Effect = {
   salaryBoost?: number;
   clubCaptain?: boolean;
   switchNationalityTo?: string;
+  forcedAlternativeTransfer?: boolean;
 };
 
 export type GameEvent = {
@@ -129,6 +130,7 @@ export type GameEvent = {
   maxContractYears?: number;
   seasonParity?: "even" | "odd";
   oneTime?: boolean;
+  rareChance?: number;
   needsConfederation?: Confederation;
   needsPositionZone?: Position["zone"];
   needsSquadRoles?: Array<"promessa" | "reserva" | "rotacao" | "titular" | "estrela">;

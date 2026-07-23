@@ -244,8 +244,8 @@ test("gera temporadas com mais gols e assistências sem igualar todas as posiç�
 
   assert.match(page, /const productionMomentum = clamp\(/);
   assert.match(page, /roleProductionBonus/);
-  assert.match(page, /position\.goals \* quality \* productionMomentum/);
-  assert.match(page, /position\.assists \* quality \* productionMomentum/);
+  assert.match(page, /position\.goals \* quality \* finishingFactor \* productionMomentum/);
+  assert.match(page, /position\.assists \* quality \* creationFactor \* productionMomentum/);
   assert.match(data, /key: "CA"[\s\S]*goals: 0\.43, assists: 0\.11/);
   assert.match(data, /key: "MEI"[\s\S]*goals: 0\.22, assists: 0\.3/);
   assert.match(data, /key: "PD"[\s\S]*goals: 0\.28, assists: 0\.22/);
@@ -255,8 +255,8 @@ test("impede ficar no clube depois de um pedido de transferência aceito", async
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied\)\) return current/);
-  assert.match(page, /\{!game\.transferRequested && !game\.renewalDenied && <button className="offer-card stay-card"/);
+  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedAlternativeTransfer\)\) return current/);
+  assert.match(page, /\{!game\.transferRequested && !game\.renewalDenied && !game\.forcedAlternativeTransfer && <button className="offer-card stay-card"/);
   assert.match(page, /SAÍDA SEM VOLTA/);
   assert.match(page, /Seu pedido foi aceito — não há volta/);
   assert.match(page, /transferStatus: null, transferRequested: false/);
@@ -427,7 +427,33 @@ test("clube pode recusar renovar contrato após temporada ruim, forçando escolh
   assert.match(page, /nonRenewalRiskFactors >= 2/);
   assert.match(page, /RENOVAÇÃO RECUSADA/);
   assert.match(page, /O clube optou por não renovar/);
-  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied\)\) return current/);
+  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedAlternativeTransfer\)\) return current/);
+});
+
+test("atributos influenciam a simulação, premiações têm suspense e o escândalo força exílio", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const drama = await readFile(new URL("../app/career-drama.ts", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /type PlayerAttributes = Record<AttributeKey, number>/);
+  assert.match(page, /const finishingSkill = attributes\.finishing/);
+  assert.match(page, /const creationSkill = attributes\.passing/);
+  assert.match(page, /keeperSkill \/ 270/);
+  assert.match(page, /ATRIBUTOS DE CAMPO/);
+  assert.match(page, /game\.attributes\[key\]/);
+  assert.match(page, /type AwardNomination/);
+  assert.match(page, /won: false/);
+  assert.match(page, /O VENCEDOR É/);
+  assert.match(page, /Você chegou à final/);
+  assert.match(gameData, /rareChance\?: number/);
+  assert.match(gameData, /forcedAlternativeTransfer\?: boolean/);
+  assert.match(drama, /id: "drama-drug-scandal"/);
+  assert.match(drama, /rareChance: 0\.004/);
+  assert.match(page, /function selectAlternativeExileOffers/);
+  assert.match(page, /Exílio esportivo obrigatório/);
+  assert.match(styles, /\.football-attributes-card/);
+  assert.match(styles, /\.award-near-miss/);
 });
 
 test("convites raros de outras seleções respeitam proximidade geográfica e nunca se repetem", async () => {
