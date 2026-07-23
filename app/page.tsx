@@ -3339,6 +3339,7 @@ export default function Home() {
   const [monteCarloReport, setMonteCarloReport] = useState<MonteCarloReport | null>(null);
   const [hallOfFame, setHallOfFame] = useState<CareerHallEntry[]>([]);
   const [updateNoticeOpen, setUpdateNoticeOpen] = useState(true);
+  const [updateNoticePage, setUpdateNoticePage] = useState<"current" | "previous">("current");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [appSettings, setAppSettings] = useState<AppSettings>({ customCharacters: [] });
   const [characterName, setCharacterName] = useState("");
@@ -4046,17 +4047,36 @@ export default function Home() {
       {toast && <div className="toast" role="status">{toast}</div>}
       {updateNoticeOpen && (
         <div className="modal-backdrop update-backdrop" role="presentation">
-          <section className="update-notice" role="dialog" aria-modal="true" aria-labelledby="update-title">
-            <span className="update-version">NOVO UPDATE · FORA DAS QUATRO LINHAS</span>
-            <div className="update-symbol">✦</div>
-            <h1 id="update-title">Agora você também precisa sobreviver à fama.</h1>
-            <p>Redes sociais, vida pessoal, imprensa e patrocinadores persistentes transformam tudo que acontece longe do estádio.</p>
-            <div className="update-grid">
-              <article><b>@</b><span><strong>Redes sociais vivas</strong><small>Seguidores, virais, crises e sentimento do público</small></span></article>
-              <article><b>◇</b><span><strong>Patrocinadores reais</strong><small>Contratos plurianuais que acompanham sua carreira</small></span></article>
-              <article><b>☾</b><span><strong>Vida pessoal</strong><small>Festas, privacidade, documentários e saúde mental</small></span></article>
-              <article><b>♥</b><span><strong>Impacto social</strong><small>Use sua fama para construir algo além do futebol</small></span></article>
-            </div>
+          <section className={`update-notice update-page-${updateNoticePage}`} role="dialog" aria-modal="true" aria-labelledby="update-title">
+            {updateNoticePage === "current" ? (
+              <>
+                <span className="update-version">NOVO UPDATE · FORA DAS QUATRO LINHAS</span>
+                <div className="update-symbol">✦</div>
+                <h1 id="update-title">Agora você também precisa sobreviver à fama.</h1>
+                <p>Redes sociais, vida pessoal, imprensa e patrocinadores persistentes transformam tudo que acontece longe do estádio.</p>
+                <div className="update-grid">
+                  <article><b>@</b><span><strong>Redes sociais vivas</strong><small>Seguidores, virais, crises e sentimento do público</small></span></article>
+                  <article><b>◇</b><span><strong>Patrocinadores reais</strong><small>Contratos plurianuais que acompanham sua carreira</small></span></article>
+                  <article><b>☾</b><span><strong>Vida pessoal</strong><small>Festas, privacidade, documentários e saúde mental</small></span></article>
+                  <article><b>♥</b><span><strong>Impacto social</strong><small>Use sua fama para construir algo além do futebol</small></span></article>
+                </div>
+                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Conheça o Mundo Vivo</strong><b>→</b></button>
+              </>
+            ) : (
+              <>
+                <span className="update-version previous">UPDATE ANTERIOR · MUNDO VIVO</span>
+                <div className="update-symbol previous">◆</div>
+                <h1 id="update-title">A carreira deixou de existir só ao seu redor.</h1>
+                <p>O update anterior trouxe memória, mercado real, rivais de geração e novas maneiras de construir — ou perder — uma carreira.</p>
+                <div className="update-grid previous-grid">
+                  <article><b>▥</b><span><strong>Central Estatística</strong><small>Gráficos, recordes e melhores temporadas</small></span></article>
+                  <article><b>⇄</b><span><strong>Empréstimos reais</strong><small>Saia para jogar e volte ao clube de origem</small></span></article>
+                  <article><b>⚔</b><span><strong>Rivais e Personagens</strong><small>Adversários persistentes criados pelo jogo ou por você</small></span></article>
+                  <article><b>◇</b><span><strong>Traits e agente livre</strong><small>Identidade própria e liberdade no mercado</small></span></article>
+                </div>
+                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Fora das Quatro Linhas</strong><b>←</b></button>
+              </>
+            )}
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
           </section>
         </div>

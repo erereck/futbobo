@@ -608,9 +608,13 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /VIDA FORA DO CAMPO/);
   assert.match(page, /PATROCINADOR PESSOAL/);
   assert.match(page, /LINHA DO TEMPO/);
+  assert.match(page, /setUpdateNoticePage\("previous"\)/);
+  assert.match(page, /Conheça o Mundo Vivo/);
+  assert.match(page, /UPDATE ANTERIOR · MUNDO VIVO/);
   assert.match(gameData, /followers\?: number/);
   assert.match(gameData, /sponsorBrand\?: string/);
   assert.match(styles, /\.life-screen/);
   assert.match(styles, /\.sponsor-hub/);
   assert.match(styles, /\.social-post-list/);
+  assert.match(styles, /\.previous-update-button/);
 });
