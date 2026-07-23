@@ -267,11 +267,15 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .mini-avatar { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid rgba(255,199,44,.22); border-radius: 12px; background: rgba(255,199,44,.08); color: var(--gold); font-size: 9px; font-weight: 900; }
 .career-bars { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; padding: 10px 13px; border-bottom: 1px solid var(--line); background: #0b2118; }
 .career-bars-four { grid-template-columns: repeat(4, 1fr); gap: 7px; }
-.career-status-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; border-bottom: 1px solid var(--line); background: #091c14; }
-.career-status-strip > span { display: flex; min-width: 0; flex-direction: column; padding: 8px 10px; border-right: 1px solid var(--line); }
-.career-status-strip > span:last-child { border-right: 0; }
+.career-status-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border-bottom: 1px solid var(--line); background: #091c14; }
+.career-status-strip.retirement-open { grid-template-columns: repeat(3, 1fr); }
+.career-status-strip > span { display: flex; min-width: 0; flex-direction: column; padding: 8px 9px; border-right: 1px solid var(--line); }
+.career-status-strip > span:last-of-type { border-right: 0; }
 .career-status-strip small { color: var(--muted); font-size: 8px; font-weight: 900; letter-spacing: .08em; }
 .career-status-strip strong { margin-top: 2px; overflow: hidden; color: var(--text); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.retirement-trigger { display: flex; min-width: 0; flex-direction: column; justify-content: center; padding: 7px 8px; border: 0; border-left: 1px solid var(--line); background: rgba(255,90,78,.045); color: var(--text); text-align: left; cursor: pointer; }
+.retirement-trigger small { color: var(--red); }
+.retirement-trigger strong { color: #ff9a91; }
 .progress-stat { min-width: 0; }
 .progress-label { display: flex; justify-content: space-between; margin-bottom: 5px; color: var(--muted); font-size: 7px; font-weight: 800; }
 .progress-label strong { color: var(--text); font-size: 8px; }
@@ -305,7 +309,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .decision-button small { margin-top: 3px; color: var(--muted); font-size: 8px; }
 .decision-button b { color: var(--gold); font-size: 18px; }
 
-.result-stage, .transfer-stage, .consequence-stage, .transfer-denied-stage, .summary-screen { display: flex; min-height: calc(100dvh - 120px); flex-direction: column; padding: 28px 17px calc(env(safe-area-inset-bottom) + 25px); }
+.result-stage, .transfer-stage, .consequence-stage, .transfer-denied-stage, .retirement-stage, .summary-screen { display: flex; min-height: calc(100dvh - 120px); flex-direction: column; padding: 28px 17px calc(env(safe-area-inset-bottom) + 25px); }
 .result-stage { align-items: center; justify-content: flex-start; text-align: center; }
 .result-symbol { display: grid; width: 94px; height: 94px; place-items: center; margin: 20px 0 16px; border: 1px solid rgba(99,227,107,.28); border-radius: 31px 31px 31px 10px; background: rgba(99,227,107,.09); color: var(--green); font: 900 48px var(--display); box-shadow: 0 17px 45px rgba(0,0,0,.3); }
 .result-symbol.winner { border-color: rgba(255,199,44,.3); background: rgba(255,199,44,.1); }
@@ -322,6 +326,10 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .season-development.up > strong { color: var(--green); }
 .season-development.down { border-color: rgba(255,90,78,.25); background: rgba(255,90,78,.055); }
 .season-development.down > strong { color: var(--red); }
+.european-spotlight { width: 100%; margin-bottom: 10px; padding: 12px 13px; border: 1px solid rgba(44,168,255,.28); border-radius: 14px; background: linear-gradient(120deg, rgba(44,168,255,.11), rgba(166,117,255,.055)); text-align: left; }
+.european-spotlight > span { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .13em; }
+.european-spotlight > strong { display: block; margin-top: 4px; color: #b9ddff; font: 900 17px var(--display); }
+.european-spotlight p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
 .discipline-result { display: flex; width: 100%; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; }
 .discipline-result > span { color: var(--muted); }
 .discipline-result > strong { font-size: 9px; }
@@ -380,10 +388,23 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .transfer-stage { justify-content: center; }
 .transfer-stage > .eyebrow { margin-bottom: 7px; }
 .transfer-offers { width: 100%; margin-top: 22px; }
+.market-expansion-card { width: 100%; margin-top: 15px; padding: 12px 13px; border: 1px solid rgba(44,168,255,.28); border-radius: 15px; background: rgba(44,168,255,.065); }
+.market-expansion-card > span { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.market-expansion-card strong { display: block; margin-top: 4px; font-size: 11px; }
+.market-expansion-card p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
 .offer-contract { color: var(--green) !important; font-weight: 800 !important; }
 .offer-market-value { color: var(--gold) !important; font-weight: 800 !important; }
 .offer-rivalry { color: var(--red) !important; font-weight: 900 !important; }
 .stay-card { border-style: dashed; background: rgba(255,255,255,.02); }
+.retirement-stage { align-items: center; justify-content: center; text-align: center; }
+.retirement-symbol { display: grid; width: 92px; height: 92px; place-items: center; margin: 21px 0 16px; border: 1px solid rgba(255,90,78,.28); border-radius: 31px 31px 31px 10px; background: rgba(255,90,78,.075); font-size: 42px; }
+.retirement-stage h1 { max-width: 430px; margin: 0 0 9px; font: 900 30px/1 var(--display); letter-spacing: -.045em; }
+.retirement-stage > p { max-width: 430px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.retirement-recap { display: grid; width: 100%; grid-template-columns: repeat(4, 1fr); gap: 7px; margin: 22px 0 18px; text-align: left; }
+.retirement-recap .metric { min-height: 62px; padding: 10px; }
+.retirement-recap .metric strong { font-size: 15px; }
+.retirement-actions { display: grid; width: 100%; gap: 9px; }
+.danger-button { display: flex; min-height: 56px; align-items: center; justify-content: space-between; padding: 0 17px; border: 1px solid rgba(255,90,78,.42); border-radius: 15px; background: linear-gradient(135deg, #c83d34, #8f2822); color: #fff; font-size: 11px; font-weight: 900; cursor: pointer; box-shadow: 0 13px 28px rgba(120,30,25,.25); }
 
 .bottom-nav { position: fixed; z-index: 40; bottom: 0; left: 50%; display: grid; width: min(540px, 100%); grid-template-columns: repeat(4, 1fr); padding: 7px 10px calc(env(safe-area-inset-bottom) + 7px); transform: translateX(-50%); border-top: 1px solid var(--line); background: rgba(7,23,16,.94); backdrop-filter: blur(18px); }
 .bottom-nav button { display: flex; min-height: 50px; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 12px; background: transparent; color: #6f8878; font-size: 8px; font-weight: 800; cursor: pointer; }

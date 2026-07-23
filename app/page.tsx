@@ -55,6 +55,7 @@ type Phase =
   | "season-result"
   | "transfer"
   | "transfer-denied"
+  | "retirement-confirm"
   | "summary";
 
 type CompetitionId =
@@ -144,6 +145,9 @@ type SeasonRecord = PlayerStats & {
 type SeasonResult = SeasonRecord & {
   resultText: string;
   development: number;
+  performanceScore: number;
+  europeanSpotlight: number;
+  europeanDevelopmentBonus: number;
   marketValue: number;
   calledUp: boolean;
   twist: string | null;
@@ -216,6 +220,7 @@ type GameState = {
   lastResult: SeasonResult | null;
   lastConsequence: ChoiceConsequence | null;
   retireAfterSeason: boolean;
+  retirementReturnPhase: Phase;
   transferOffers: string[];
   transferRequests: number;
   transferCooldownSeason: number;
@@ -306,6 +311,7 @@ function initialState(): GameState {
     lastResult: null,
     lastConsequence: null,
     retireAfterSeason: false,
+    retirementReturnPhase: "career",
     transferOffers: [],
     transferRequests: 0,
     transferCooldownSeason: 0,
@@ -421,6 +427,9 @@ function normalizeSave(value: unknown): GameState {
       redCards: saved.lastResult.redCards ?? 0,
       squadRole: saved.lastResult.squadRole ?? "rotacao",
       objectiveResult: saved.lastResult.objectiveResult ?? null,
+      performanceScore: saved.lastResult.performanceScore ?? 0,
+      europeanSpotlight: saved.lastResult.europeanSpotlight ?? 0,
+      europeanDevelopmentBonus: saved.lastResult.europeanDevelopmentBonus ?? 0,
     } : null,
     lastConsequence: saved.lastConsequence ? {
       ...saved.lastConsequence,
@@ -506,6 +515,38 @@ function marketValue(overall: number, age: number, club: Club, reputation = 0, f
 function competitiveStrength(club: Club) {
   const league = leagueById(club.leagueId);
   return club.strength ?? clamp(Math.round(52 + club.reputation * 7 + league.prestige * 1.8), 62, 94);
+}
+
+function seasonPerformanceScore(positionKey: PositionKey, record?: Partial<SeasonRecord> | null) {
+  if (!record) return 0;
+  const position = positionByKey(positionKey);
+  const appearances = record.appearances ?? 0;
+  const production = position.key === "GOL"
+    ? (record.cleanSheets ?? 0) * 2 - (record.goalsConceded ?? 0) * 0.12
+    : position.zone === "defesa"
+      ? (record.goals ?? 0) * 4 + (record.assists ?? 0) * 3
+      : position.zone === "meio"
+        ? (record.goals ?? 0) * 2.5 + (record.assists ?? 0) * 2.2
+        : (record.goals ?? 0) * 2 + (record.assists ?? 0) * 1.6;
+  const score =
+    appearances * 0.9 +
+    Math.max(0, production) +
+    Math.max(0, (record.overall ?? 60) - 60) * 0.65 +
+    (record.objectiveResult?.completed ? 8 : 0) +
+    (record.awards?.length ?? 0) * 4 +
+    (record.title ? 6 : 0);
+  return clamp(Math.round(score), 0, 100);
+}
+
+function transferMarketProfile(state: GameState) {
+  const latest = state.lastResult ?? state.history.at(-1);
+  const performanceScore = seasonPerformanceScore(state.position, latest);
+  const extraEuropeanOffers = performanceScore >= 82 ? 2 : performanceScore >= 62 ? 1 : 0;
+  return {
+    performanceScore,
+    extraEuropeanOffers,
+    label: performanceScore >= 82 ? "Temporada excepcional" : performanceScore >= 62 ? "Boa temporada" : "Mercado regular",
+  };
 }
 
 function formatMoney(value: number) {
@@ -625,6 +666,38 @@ function selectOffers(state: GameState, count: number, salt: number, opts: { inc
     return scoreA - scoreB;
   });
   return candidates.slice(0, count).map((club) => club.id);
+}
+
+function selectTransferOffers(state: GameState, salt: number, opts: { includeForeign?: boolean; forceDomestic?: boolean; forceForeign?: boolean } = {}) {
+  const baseOffers = selectOffers(state, 3, salt, opts);
+  if (opts.forceDomestic) return baseOffers;
+
+  const profile = transferMarketProfile(state);
+  if (!profile.extraEuropeanOffers) return baseOffers;
+
+  const current = clubById(state.currentClubId || state.academyClubId);
+  const targetStrength = clamp(
+    Math.round(competitiveStrength(current) + (profile.performanceScore - 62) / 10),
+    66,
+    92,
+  );
+  const performanceBoost = Math.floor(profile.performanceScore / 10);
+  const europeanPool = CLUBS
+    .filter((club) => {
+      if (!isAbroad(club) || club.id === current.id || baseOffers.includes(club.id) || state.age > 33) return false;
+      const league = leagueById(club.leagueId);
+      const accessibleLevel = 58 + league.prestige * 3 + club.reputation * 2;
+      return state.overall + performanceBoost >= accessibleLevel;
+    })
+    .sort((a, b) => {
+      const distanceA = Math.abs(competitiveStrength(a) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(a)) * 3;
+      const distanceB = Math.abs(competitiveStrength(b) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(b)) * 3;
+      return distanceA - distanceB;
+    })
+    .slice(0, profile.extraEuropeanOffers)
+    .map((club) => club.id);
+
+  return [...baseOffers, ...europeanPool].slice(0, 5);
 }
 
 function eligibleEvents(state: GameState) {
@@ -838,6 +911,23 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     const catchUp = affected.overall < 56 ? 4 : affected.overall < 61 ? 3 : affected.overall < 66 ? 2 : affected.overall < 70 ? 1 : 0;
     development += Math.max(0, catchUp - (appearances < 10 ? 1 : 0));
   }
+  const performanceScore = seasonPerformanceScore(affected.position, {
+    ...seasonStats,
+    overall: affected.overall,
+    title: titleCount > 0,
+  });
+  const europeanSpotlight = abroad && performanceScore >= 58
+    ? clamp(Math.floor((performanceScore - 49) / 9), 1, 6)
+    : 0;
+  const europeanDevelopmentBonus =
+    abroad &&
+    affected.age <= 27 &&
+    appearances >= 18 &&
+    performanceScore >= 64 &&
+    affected.overall < affected.potential
+      ? performanceScore >= 88 && affected.age <= 23 ? 2 : 1
+      : 0;
+  development += europeanDevelopmentBonus;
   if (appearances < 15 && seeded(state.seed, state.season * 79) > 0.48) development -= 1;
   if (affected.overall >= affected.potential && development > 0) development = 0;
   if (development > 0) development = Math.min(development, affected.potential - affected.overall);
@@ -1007,6 +1097,9 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     ...record,
     resultText,
     development,
+    performanceScore,
+    europeanSpotlight,
+    europeanDevelopmentBonus,
     marketValue: marketValue(nextOverall, nextAge, club, affected.reputation, seasonStats),
     calledUp,
     twist,
@@ -1037,7 +1130,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     overall: nextOverall,
     fitness: clamp(affected.fitness + 14 - Math.max(0, appearances - 28) + twistFitness),
     morale: clamp(affected.morale + titleCount * 8 + twistMorale),
-    reputation: clamp(affected.reputation + Math.round(appearances / 12) + titleCount * 7),
+    reputation: clamp(affected.reputation + Math.round(appearances / 12) + titleCount * 7 + europeanSpotlight),
     fanSupport: clamp(affected.fanSupport + titleCount * 13 + Math.round(appearances / 14)),
     managerTrust: nextTrust,
     discipline: nextDiscipline,
@@ -1078,7 +1171,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   };
   const wantsDomesticReturn = event.id === "european-exit" || event.id === "return-home" || event.id === "mega-empresta-para-time-menor";
   let transferOffers = effect.transfer || nextBase.contractYears === 0
-    ? selectOffers(nextBase, 3, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad })
+    ? selectTransferOffers(nextBase, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad })
     : [];
   if (effect.transfer && event.id === "return-home" && nextBase.academyClubId) {
     transferOffers = [nextBase.academyClubId, ...transferOffers.filter((clubId) => clubId !== nextBase.academyClubId)].slice(0, 3);
@@ -1089,7 +1182,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
       .map((rivalry) => rivalry.clubIds.find((clubId) => clubId !== club.id))
       .filter((clubId): clubId is string => Boolean(clubId));
     const rivalOffer = pick(rivalIds, nextBase.seed, affected.season);
-    if (rivalOffer) transferOffers = [rivalOffer, ...transferOffers.filter((clubId) => clubId !== rivalOffer)].slice(0, 3);
+    if (rivalOffer) transferOffers = [rivalOffer, ...transferOffers.filter((clubId) => clubId !== rivalOffer)].slice(0, Math.max(3, transferOffers.length));
   }
   const legacyPoints = calculateLegacyScore({
     appearances: nextBase.stats.appearances,
@@ -1264,6 +1357,7 @@ export default function Home() {
   const position = useMemo(() => positionByKey(game.position), [game.position]);
   const supporterMood = useMemo(() => fanMood(game.fanSupport), [game.fanSupport]);
   const legacyStanding = useMemo(() => legacyTier(game.legacyPoints), [game.legacyPoints]);
+  const marketProfile = useMemo(() => transferMarketProfile(game), [game]);
   const currentEvent = useMemo(() => {
     if (game.currentEventId === FIRST_MATCH_EVENT.id) return FIRST_MATCH_EVENT;
     return ALL_PRO_EVENTS.find((event) => event.id === game.currentEventId) ?? ALL_PRO_EVENTS[0];
@@ -1458,18 +1552,20 @@ export default function Home() {
       if (current.transferCooldownSeason >= current.season) return current;
       const club = clubById(current.currentClubId);
       const requirement = 55 + club.reputation * 5;
-      const chance = clamp(Math.round(24 + current.reputation * 0.38 + (current.overall - requirement) * 1.8 + (current.fanSupport - 50) * 0.12), 8, 84);
+      const performance = transferMarketProfile(current);
+      const chance = clamp(Math.round(24 + current.reputation * 0.38 + (current.overall - requirement) * 1.8 + (current.fanSupport - 50) * 0.12 + Math.max(0, performance.performanceScore - 50) * 0.22), 8, 88);
       const success = seeded(current.seed, current.season * 97 + current.transferRequests * 13) * 100 < chance;
       if (success) {
+        const transferOffers = selectTransferOffers(current, current.season * 101, { includeForeign: true });
         return {
           ...current,
           phase: "transfer",
-          transferOffers: selectOffers(current, 3, current.season * 101, { includeForeign: true }),
+          transferOffers,
           transferRequests: current.transferRequests + 1,
           transferCooldownSeason: current.season,
           transferRequested: true,
           managerTrust: clamp(current.managerTrust - 8),
-          transferStatus: { success: true, chance, headline: "A diretoria abriu a porta", text: "Seu pedido foi aceito. O empresário encontrou três projetos para a próxima camisa." },
+          transferStatus: { success: true, chance, headline: "A diretoria abriu a porta", text: `Seu pedido foi aceito. O empresário encontrou ${transferOffers.length} projetos para a próxima camisa.` },
         };
       }
       return {
@@ -1485,6 +1581,33 @@ export default function Home() {
         transferStatus: { success: false, chance, headline: "O pedido vazou — e foi negado", text: "A diretoria recusou sua saída. A arquibancada entendeu o gesto como abandono e as vaias começaram." },
       };
     });
+    vibrate();
+  }
+
+  function requestRetirement() {
+    setGame((current) => ({
+      ...current,
+      retirementReturnPhase: current.phase,
+      phase: "retirement-confirm",
+    }));
+    vibrate();
+  }
+
+  function cancelRetirement() {
+    setGame((current) => ({
+      ...current,
+      phase: current.retirementReturnPhase === "retirement-confirm" ? "career" : current.retirementReturnPhase,
+    }));
+    vibrate();
+  }
+
+  function confirmRetirement() {
+    setGame((current) => ({
+      ...current,
+      phase: "summary",
+      retireAfterSeason: true,
+      newsFeed: [`${current.season}: ${current.name} anunciou a aposentadoria aos ${current.age} anos.`, ...current.newsFeed].slice(0, 16),
+    }));
     vibrate();
   }
 
@@ -1712,7 +1835,7 @@ export default function Home() {
         </section>
       )}
 
-      {(game.phase === "career" || game.phase === "consequence" || game.phase === "season-result" || game.phase === "transfer" || game.phase === "transfer-denied") && (
+      {(game.phase === "career" || game.phase === "consequence" || game.phase === "season-result" || game.phase === "transfer" || game.phase === "transfer-denied" || game.phase === "retirement-confirm") && (
         <section className="career-shell screen-enter">
           <header className="career-header">
             <div className="club-identity"><ClubBadge club={currentClub} size="sm" /><span><small>{headerSeason}</small><strong>{currentClub.shortName}</strong></span></div>
@@ -1725,10 +1848,11 @@ export default function Home() {
             <Progress label="Prestígio" value={game.reputation} color="#ffc72c" />
             <Progress label={supporterMood.label} value={game.fanSupport} color={supporterMood.color} />
           </div>
-          <div className="career-status-strip">
+          <div className={`career-status-strip ${game.phase === "retirement-confirm" ? "retirement-open" : ""}`}>
             <span><small>STATUS</small><strong>{ROLE_LABELS[game.squadRole]}</strong></span>
             <span><small>TREINADOR</small><strong>{game.managerTrust}%</strong></span>
             <span><small>CONTRATO</small><strong>{game.contractYears ? `${game.contractYears} ano${game.contractYears > 1 ? "s" : ""}` : "Expirado"}</strong></span>
+            {game.phase !== "retirement-confirm" && <button className="retirement-trigger" onClick={requestRetirement}><small>CARREIRA</small><strong>⌛ Aposentar</strong></button>}
           </div>
 
           {game.phase === "career" && activeTab === "event" && (
@@ -1781,6 +1905,13 @@ export default function Home() {
                 <strong>{game.lastResult.development > 0 ? "+" : ""}{game.lastResult.development} OVR</strong>
                 <small>{game.lastResult.development > 2 ? "Você está alcançando o nível profissional rapidamente." : game.lastResult.development > 0 ? "Mais um passo na direção da elite." : game.lastResult.development === 0 ? "Seu nível se manteve." : "A carreira também cobra seus anos difíceis."}</small>
               </div>
+              {game.lastResult.europeanSpotlight > 0 && (
+                <div className="european-spotlight">
+                  <span>VITRINE EUROPEIA</span>
+                  <strong>+{game.lastResult.europeanSpotlight} prestígio</strong>
+                  <p>Seu desempenho ganhou alcance internacional{game.lastResult.europeanDevelopmentBonus > 0 ? ` e acelerou sua evolução em +${game.lastResult.europeanDevelopmentBonus} OVR` : ""}.</p>
+                </div>
+              )}
               <div className="discipline-result"><span>DISCIPLINA</span><strong>{game.lastResult.yellowCards} amarelos · {game.lastResult.redCards} vermelhos</strong></div>
               {game.lastResult.objectiveResult && <div className={`objective-result ${game.lastResult.objectiveResult.completed ? "completed" : "failed"}`}><span>{game.lastResult.objectiveResult.completed ? "META CUMPRIDA" : "META PERDIDA"}</span><strong>{game.lastResult.objectiveResult.label}</strong><p>{game.lastResult.objectiveResult.text}</p></div>}
               {game.contractYears === 0 && <div className="contract-expired"><span>CONTRATO ENCERRADO</span><strong>Seu futuro está aberto</strong><p>Na próxima tela você poderá renovar ou escolher um novo clube.</p></div>}
@@ -1797,7 +1928,8 @@ export default function Home() {
 
           {game.phase === "transfer" && (
             <div className="transfer-stage screen-enter">
-              <span className="eyebrow">JANELA DE TRANSFERÊNCIAS</span><h1>{game.transferStatus?.success ? game.transferStatus.headline : "Seu próximo passo"}</h1><p>{game.transferStatus?.text ?? "Três clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui."}</p>
+              <span className="eyebrow">JANELA DE TRANSFERÊNCIAS</span><h1>{game.transferStatus?.success ? game.transferStatus.headline : "Seu próximo passo"}</h1><p>{game.transferStatus?.text ?? `${game.transferOffers.length} clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui.`}</p>
+              {game.transferOffers.length > 3 && <div className="market-expansion-card"><span>DESEMPENHO ABRIU PORTAS</span><strong>{marketProfile.label} · nota {marketProfile.performanceScore}</strong><p>{game.transferOffers.length - 3} clube{game.transferOffers.length - 3 > 1 ? "s europeus extras apareceram" : " europeu extra apareceu"} em um nível compatível com sua fase.</p></div>}
               <div className="offer-list transfer-offers">
                 {game.transferOffers.map((clubId, index) => {
                   const club = clubById(clubId);
@@ -1810,7 +1942,7 @@ export default function Home() {
                     <button className="offer-card" key={clubId} onClick={() => chooseTransfer(clubId)}>
                       <ClubBadge club={club} />
                       <span>
-                        <small>{index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
+                        <small>{index >= 3 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
                         <strong>{club.shortName}</strong>
                         <em>{club.city} · {league.name} · reputação {club.reputation}/5</em>
                         <em className="offer-contract">{ROLE_LABELS[offerRole]} · {offerContract.years} anos · {formatMoney(offerContract.annualSalary)}/ano</em>
@@ -1835,6 +1967,25 @@ export default function Home() {
               <p>{game.transferStatus.text}</p>
               <div className="fan-backlash"><span>REAÇÃO DA TORCIDA</span><strong>{supporterMood.label}</strong><div><i style={{ width: `${game.fanSupport}%` }} /></div><small>Relação destruída · −12 moral · −7 prestígio</small></div>
               <button className="primary-button" onClick={continueAfterDeniedTransfer}>Encarar a temporada <span>→</span></button>
+            </div>
+          )}
+
+          {game.phase === "retirement-confirm" && (
+            <div className="retirement-stage screen-enter">
+              <span className="result-kicker">DECISÃO DE CARREIRA</span>
+              <div className="retirement-symbol">⌛</div>
+              <h1>Pendurar as chuteiras agora?</h1>
+              <p>Você pode encerrar a carreira em qualquer idade. O legado será fechado exatamente como está — esta decisão é definitiva.</p>
+              <div className="retirement-recap">
+                <Metric label="Idade" value={`${game.age} anos`} />
+                <Metric label="Temporadas" value={game.history.length} />
+                <Metric label="OVR atual" value={game.overall} tone="gold" />
+                <Metric label="Legado" value={game.legacyPoints} tone="green" />
+              </div>
+              <div className="retirement-actions">
+                <button className="danger-button" onClick={confirmRetirement}>Confirmar aposentadoria <span>→</span></button>
+                <button className="secondary-button" onClick={cancelRetirement}>Ainda não</button>
+              </div>
             </div>
           )}
 

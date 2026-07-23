@@ -51,6 +51,10 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
     "Jogos Olímpicos",
     "CENTRAL DA SELEÇÃO",
     "Pedir transferência",
+    "Aposentar",
+    "Pendurar as chuteiras agora",
+    "DESTAQUE ABRIU ESTA PORTA",
+    "VITRINE EUROPEIA",
     "CONSEQUÊNCIAS DA ESCOLHA",
     "Ver propostas profissionais",
     "META DO TREINADOR",
@@ -78,4 +82,8 @@ test("mantém o novo equilíbrio de progressão, mercado e clubes brasileiros", 
   assert.match(page, /continentalLoadFactor/);
   assert.match(page, /}, 5000\);/);
   assert.match(page, /overall - 1/);
+  assert.match(page, /function selectTransferOffers/);
+  assert.match(page, /extraEuropeanOffers/);
+  assert.match(page, /europeanDevelopmentBonus/);
+  assert.match(page, /retirement-confirm/);
 });
