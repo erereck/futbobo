@@ -17,9 +17,9 @@ test("exporta uma página estática pronta para o GitHub Pages", async () => {
   const html = await readFile(new URL("index.html", outputRoot), "utf8");
   assert.match(html, /<html lang="pt-BR"/);
   assert.match(html, /Futbobo/);
-  assert.match(html, /Do Brasil ao mundo/i);
+  assert.match(html, /Sua carreira, seu legado/i);
   assert.match(html, /manifest\.webmanifest/);
-  assert.match(html, /og-v4\.png/);
+  assert.match(html, /og-v5\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
@@ -53,6 +53,11 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
     "Pedir transferência",
     "CONSEQUÊNCIAS DA ESCOLHA",
     "Ver propostas profissionais",
+    "META DO TREINADOR",
+    "CONTRATO E ELENCO",
+    "ÍNDICE DE LEGADO",
+    "CONQUISTAS",
+    "Fla-Flu",
   ]) {
     assert.match(bundle, new RegExp(content, "i"));
   }

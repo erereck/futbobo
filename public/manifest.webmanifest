@@ -1,7 +1,7 @@
 {
-  "name": "Futbobo — A carreira agora é mundial",
+  "name": "Futbobo — Sua carreira, seu legado",
   "short_name": "Futbobo",
-  "description": "Construa uma carreira dos 12 anos à aposentadoria, jogue em oito ligas e defenda sua Seleção.",
+  "description": "Uma carreira mundial com contratos, metas, rivalidades, conquistas e Seleção.",
   "start_url": "/futbobo/",
   "scope": "/futbobo/",
   "display": "standalone",

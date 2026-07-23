@@ -97,6 +97,10 @@ export type Effect = {
   transfer?: boolean;
   transferAbroad?: boolean;
   retire?: boolean;
+  discipline?: number;
+  contractYears?: number;
+  salaryBoost?: number;
+  clubCaptain?: boolean;
 };
 
 export type GameEvent = {
@@ -118,6 +122,10 @@ export type GameEvent = {
   needsNationalMain?: boolean;
   needsNationalYouth?: boolean;
   nationalWindow?: "major" | "continental" | "olympics" | "qualifiers";
+  needsDomestic?: boolean;
+  needsRivalry?: boolean;
+  maxContractYears?: number;
+  seasonParity?: "even" | "odd";
   oneTime?: boolean;
   choices: Array<{
     label: string;
@@ -300,10 +308,10 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Aprender os atalhos", hint: "Evolução futura ↑", result: "O jogo parece um pouco mais lento depois da conversa.", effect: { potential: 2, ovr: 1 } },
     { label: "Aprender sobre a carreira", hint: "Longevidade ↑", result: "Você começa a cuidar melhor do corpo e da cabeça.", effect: { fitness: 8, morale: 4 } },
   ]},
-  { id: "derby", icon: "⚔", tag: "CLÁSSICO", title: "A cidade para por noventa minutos", description: "Clássico lotado. Uma boa atuação muda a forma como a torcida olha para você.", minOvr: 64, choices: [
+  { id: "derby", icon: "⚔", tag: "CLÁSSICO", title: "A cidade para por noventa minutos", description: "Clássico lotado. Uma boa atuação muda a forma como a torcida olha para você.", minOvr: 64, needsRivalry: true, choices: [
     { label: "Jogar para o time", hint: "Seguro · reputação ↑", result: "Sem firula: você foi útil em cada bola.", effect: { reputation: 4, morale: 3 } },
     { label: "Buscar o lance do jogo", hint: "Alto risco · alto retorno", result: "A arquibancada levantou antes mesmo da bola chegar.", effect: { ovr: 1, reputation: 7, fitness: -5, injuryRisk: 4 } },
-    { label: "Provocar o rival", hint: "Torcida ↑ · disciplina ↓", result: "Seu nome ecoa no estádio — dos dois lados.", effect: { reputation: 8, morale: 5, fitness: -3 } },
+    { label: "Provocar o rival", hint: "Torcida ↑ · disciplina ↓", result: "Seu nome ecoa no estádio — dos dois lados.", effect: { reputation: 8, morale: 5, fitness: -3, discipline: -10 } },
   ]},
   { id: "bad-interview", icon: "●", tag: "MÍDIA", title: "Microfone depois do erro", description: "A derrota passou pelos seus pés e a primeira pergunta vem sem carinho.", choices: [
     { label: "Assumir a culpa", hint: "Respeito ↑", result: "A resposta dói agora e rende respeito depois.", effect: { morale: -4, reputation: 5, leadership: 3 } },
@@ -323,9 +331,9 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Representar seu país", hint: "Convocado · reputação ↑↑", result: "O hino arrepia e seu nome ganha o país.", effect: { reputation: 10, fitness: -9, nationalBoost: 12, nationalCall: true } },
     { label: "Ficar no clube", hint: "Condição ↑ · seleção ↓", result: "Você ganha fôlego no clube e perde espaço no radar.", effect: { fitness: 12, nationalBoost: -8 } },
   ]},
-  { id: "renewal", icon: "✎", tag: "CONTRATO", title: "A caneta está na mesa", description: "Seu contrato entra no último ano e o clube quer uma resposta.", minAge: 20, choices: [
-    { label: "Renovar por identificação", hint: "Torcida ↑ · salário menor", result: "A arquibancada trata a assinatura como um gol.", effect: { reputation: 7, morale: 5, money: 2 } },
-    { label: "Exigir valorização", hint: "Dinheiro ↑↑ · pressão ↑", result: "O salário cresce junto com a cobrança.", effect: { money: 10, morale: -3 } },
+  { id: "renewal", icon: "✎", tag: "CONTRATO", title: "A caneta está na mesa", description: "Seu contrato entra no último ano e o clube quer uma resposta.", minAge: 20, maxContractYears: 1, choices: [
+    { label: "Renovar por identificação", hint: "3 anos · torcida ↑ · salário +8%", result: "A arquibancada trata a assinatura como um gol.", effect: { reputation: 7, morale: 5, money: 2, contractYears: 3, salaryBoost: 8 } },
+    { label: "Exigir valorização", hint: "3 anos · salário +25% · pressão ↑", result: "O salário cresce junto com a cobrança.", effect: { money: 10, morale: -3, contractYears: 3, salaryBoost: 25 } },
     { label: "Esperar outras propostas", hint: "Mercado ↑ · risco", result: "Cada rodada agora também acontece fora de campo.", effect: { transfer: true, reputation: -2 } },
   ]},
   { id: "rival-offer", icon: "⇄", tag: "MERCADO", title: "Um rival ligou para seu empresário", description: "A proposta é grande e a repercussão seria ainda maior.", minAge: 21, minOvr: 72, choices: [
@@ -335,7 +343,7 @@ export const PRO_EVENTS: GameEvent[] = [
   ]},
   { id: "fight", icon: "!", tag: "CAMPO", title: "Confusão depois da falta", description: "Um adversário chega forte em seu companheiro e o jogo esquenta.", choices: [
     { label: "Separar a confusão", hint: "Liderança ↑", result: "A cabeça fria evita uma noite pior.", effect: { leadership: 6, reputation: 2 } },
-    { label: "Defender o companheiro", hint: "Grupo ↑ · suspensão possível", result: "O elenco fecha com você; o árbitro também anota.", effect: { morale: 8, fitness: -4, minutes: -3 } },
+    { label: "Defender o companheiro", hint: "Grupo ↑ · suspensão possível", result: "O elenco fecha com você; o árbitro também anota.", effect: { morale: 8, fitness: -4, minutes: -3, discipline: -12 } },
     { label: "Sair de perto", hint: "Seguro", result: "Você preserva o jogo e escuta algumas cobranças depois.", effect: { morale: -2 } },
   ]},
   { id: "sponsorship", icon: "$", tag: "FORA DE CAMPO", title: "Sua primeira campanha", description: "Duas marcas querem associar a imagem ao seu momento.", minOvr: 70, oneTime: true, choices: [
@@ -377,7 +385,7 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Ignorar", hint: "Moral ↑ · reputação ↓", result: "Você protege a cabeça e deixa a internet falar sozinha.", effect: { morale: 5, reputation: -5 } },
   ]},
   { id: "captain", icon: "C", tag: "LIDERANÇA", title: "A braçadeira espera sua resposta", description: "O treinador quer você como capitão do clube.", minAge: 24, minOvr: 78, oneTime: true, choices: [
-    { label: "Aceitar a responsabilidade", hint: "Liderança ↑↑ · pressão", result: "A faixa aperta o braço e alarga sua história.", effect: { leadership: 15, reputation: 10, morale: -2 } },
+    { label: "Aceitar a responsabilidade", hint: "Liderança ↑↑ · pressão", result: "A faixa aperta o braço e alarga sua história.", effect: { leadership: 15, reputation: 10, morale: -2, clubCaptain: true } },
     { label: "Indicar um veterano", hint: "Grupo ↑ · humildade", result: "Sua escolha fortalece o vestiário.", effect: { morale: 8, leadership: 5 } },
   ]},
   { id: "peak-injury", icon: "+", tag: "DECISÃO MÉDICA", title: "Dor na semana mais importante", description: "Você sente que algo não está certo. O jogo pode definir a temporada.", minOvr: 80, needsLowFitness: true, choices: [
