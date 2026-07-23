@@ -65,7 +65,8 @@ type CompetitionId =
   | "mundial"
   | "championsLeague"
   | "europaLeague"
-  | "conferenceLeague";
+  | "conferenceLeague"
+  | "concacafChampions";
 
 type CompetitionResult = {
   id: CompetitionId;
@@ -83,6 +84,7 @@ type TrophyCabinet = {
   championsLeague: number;
   europaLeague: number;
   conferenceLeague: number;
+  concacafChampions: number;
 };
 
 type NationalTier = "none" | "sub17" | "sub20" | "olympic" | "main";
@@ -227,6 +229,10 @@ type GameState = {
   transferCooldownSeason: number;
   transferStatus: TransferStatus | null;
   transferRequested: boolean;
+  renewalDenied: boolean;
+  nationalitySwitched: boolean;
+  nationalitySwitchInviteUsed: boolean;
+  pendingNationalitySwitchTarget: string;
   legacyPoints: number;
   unlockedAchievements: string[];
   newsFeed: string[];
@@ -287,7 +293,7 @@ function initialState(): GameState {
     objectivesFailed: 0,
     stats: { ...EMPTY_STATS },
     trophies: 0,
-    trophyCabinet: { domesticLeague: 0, domesticCup: 0, libertadores: 0, mundial: 0, championsLeague: 0, europaLeague: 0, conferenceLeague: 0 },
+    trophyCabinet: { domesticLeague: 0, domesticCup: 0, libertadores: 0, mundial: 0, championsLeague: 0, europaLeague: 0, conferenceLeague: 0, concacafChampions: 0 },
     awards: 0,
     awardCabinet: {},
     setbacks: 0,
@@ -318,6 +324,10 @@ function initialState(): GameState {
     transferCooldownSeason: 0,
     transferStatus: null,
     transferRequested: false,
+    renewalDenied: false,
+    nationalitySwitched: false,
+    nationalitySwitchInviteUsed: false,
+    pendingNationalitySwitchTarget: "",
     legacyPoints: 0,
     unlockedAchievements: [],
     newsFeed: [],
@@ -357,6 +367,10 @@ function normalizeSave(value: unknown): GameState {
     nationalTrophies: saved.nationalTrophies ?? 0,
     nationalHistory: saved.nationalHistory ?? [],
     qualifiedNextMajor: saved.qualifiedNextMajor ?? true,
+    renewalDenied: saved.renewalDenied ?? false,
+    nationalitySwitched: saved.nationalitySwitched ?? false,
+    nationalitySwitchInviteUsed: saved.nationalitySwitchInviteUsed ?? false,
+    pendingNationalitySwitchTarget: saved.pendingNationalitySwitchTarget ?? "",
     stats: {
       appearances: saved.stats?.appearances ?? 0,
       goals: saved.stats?.goals ?? 0,
@@ -397,6 +411,7 @@ function normalizeSave(value: unknown): GameState {
       championsLeague: saved.trophyCabinet?.championsLeague ?? 0,
       europaLeague: saved.trophyCabinet?.europaLeague ?? 0,
       conferenceLeague: saved.trophyCabinet?.conferenceLeague ?? 0,
+      concacafChampions: saved.trophyCabinet?.concacafChampions ?? 0,
     },
     awardCabinet: { ...base.awardCabinet, ...saved.awardCabinet },
     history: (saved.history ?? []).map((record) => ({
@@ -466,25 +481,67 @@ function isAbroad(club: Club) {
   return club.countryId !== "brasil";
 }
 
+function clubConfederation(club: Club) {
+  return countryById(club.countryId).confederation;
+}
+
+function isEuropeanClub(club: Club) {
+  return clubConfederation(club) === "EUROPE";
+}
+
 function initialContinentalSlot(club: Club): ContinentalSlot | null {
-  if (club.countryId === "brasil") return club.reputation >= 4 ? "libertadores" : null;
+  const confederation = clubConfederation(club);
+  if (confederation === "SOUTH_AMERICA") return club.reputation >= 4 ? "libertadores" : null;
+  if (confederation === "NORTH_AMERICA") return club.reputation >= 4 ? "concacaf" : null;
   if (club.reputation >= 5) return "champions";
   if (club.reputation >= 4) return "europa";
   return null;
 }
 
-function initialAdaptation(countryId: string) {
-  if (countryId === "brasil") return 100;
-  if (countryId === "portugal") return 62;
-  if (countryId === "espanha" || countryId === "italia") return 48;
+// Proximidade geográfica: destinos do mesmo continente do clube atual aparecem com muito mais frequência.
+function regionAffinity(originCountryId: string, club: Club) {
+  if (club.countryId === originCountryId) return 0;
+  const originConfederation = countryById(originCountryId).confederation;
+  const targetConfederation = clubConfederation(club);
+  if (originConfederation === "SOUTH_AMERICA") {
+    if (targetConfederation === "SOUTH_AMERICA") return -6;
+    if (targetConfederation === "NORTH_AMERICA") return -2;
+    return 0;
+  }
+  if (originConfederation === "NORTH_AMERICA") {
+    if (targetConfederation === "NORTH_AMERICA") return -4;
+    if (targetConfederation === "SOUTH_AMERICA") return -2;
+    return 0;
+  }
+  return 0;
+}
+
+function initialAdaptation(originCountryId: string, destinationCountryId: string) {
+  if (originCountryId === destinationCountryId) return 100;
+  const originConfederation = countryById(originCountryId).confederation;
+  const destinationConfederation = countryById(destinationCountryId).confederation;
+  if (originConfederation === destinationConfederation) return 72;
+  if (
+    (originConfederation === "SOUTH_AMERICA" && destinationConfederation === "NORTH_AMERICA") ||
+    (originConfederation === "NORTH_AMERICA" && destinationConfederation === "SOUTH_AMERICA")
+  ) return 56;
+  if (
+    (originCountryId === "brasil" && destinationCountryId === "portugal") ||
+    (originCountryId === "portugal" && destinationCountryId === "brasil")
+  ) return 62;
+  if (destinationCountryId === "espanha" && originConfederation === "SOUTH_AMERICA") return 58;
   return 34;
 }
 
 function foreignEligible(state: GameState, club: Club) {
   if (!isAbroad(club)) return false;
-  if (state.age > 33) return false;
+  if (state.age > 38) return false;
   const league = leagueById(club.leagueId);
-  const requirement = 58 + league.prestige * 5 + club.reputation * 3 - Math.min(10, state.reputation / 12) - Math.min(6, state.nationalLevel / 18);
+  const confederation = clubConfederation(club);
+  let requirement = 58 + league.prestige * 5 + club.reputation * 3 - Math.min(10, state.reputation / 12) - Math.min(6, state.nationalLevel / 18);
+  if (confederation === "SOUTH_AMERICA") requirement -= 6;
+  if (confederation === "NORTH_AMERICA") requirement -= state.age >= 29 ? 10 : 4;
+  if (state.age > 33) requirement += confederation === "EUROPE" ? (state.age - 33) * 4 : (state.age - 33) * 1.5;
   return state.overall >= requirement;
 }
 
@@ -501,6 +558,15 @@ const LEAGUE_MARKET_MULTIPLIER: Record<string, number> = {
   bundesliga: 1.06,
   laliga: 1.12,
   premier: 1.28,
+  "liga-argentina": 0.5,
+  "liga-uruguaia": 0.34,
+  "liga-chilena": 0.36,
+  "liga-colombiana": 0.38,
+  "liga-paraguaia": 0.28,
+  "liga-equatoriana": 0.32,
+  "liga-peruana": 0.28,
+  "liga-mx": 0.58,
+  mls: 0.5,
 };
 
 function marketValue(overall: number, age: number, club: Club, reputation = 0, form?: Partial<PlayerStats>) {
@@ -654,7 +720,7 @@ function selectOffers(state: GameState, count: number, salt: number, opts: { inc
   const targetRep = clamp(Math.round((state.overall - 56) / 6), 2, 5);
   let pool = CLUBS.filter((club) => club.id !== current);
   if (opts.forceForeign) {
-    pool = pool.filter((club) => isAbroad(club) && (foreignEligible(state, club) || club.reputation <= Math.max(3, currentRep - 1)));
+    pool = pool.filter((club) => isEuropeanClub(club) && (foreignEligible(state, club) || club.reputation <= Math.max(3, currentRep - 1)));
   } else if (opts.forceDomestic) {
     pool = pool.filter((club) => !isAbroad(club));
   } else if (!opts.includeForeign) {
@@ -662,9 +728,10 @@ function selectOffers(state: GameState, count: number, salt: number, opts: { inc
   } else {
     pool = pool.filter((club) => !isAbroad(club) || foreignEligible(state, club));
   }
+  const originCountryId = clubById(current).countryId;
   const candidates = pool.sort((a, b) => {
-    const scoreA = Math.abs(a.reputation - Math.max(currentRep, targetRep)) + seeded(state.seed, salt + CLUBS.indexOf(a));
-    const scoreB = Math.abs(b.reputation - Math.max(currentRep, targetRep)) + seeded(state.seed, salt + CLUBS.indexOf(b));
+    const scoreA = Math.abs(a.reputation - Math.max(currentRep, targetRep)) + seeded(state.seed, salt + CLUBS.indexOf(a)) + regionAffinity(originCountryId, a);
+    const scoreB = Math.abs(b.reputation - Math.max(currentRep, targetRep)) + seeded(state.seed, salt + CLUBS.indexOf(b)) + regionAffinity(originCountryId, b);
     return scoreA - scoreB;
   });
   return candidates.slice(0, count).map((club) => club.id);
@@ -672,12 +739,12 @@ function selectOffers(state: GameState, count: number, salt: number, opts: { inc
 
 function selectTransferOffers(state: GameState, salt: number, opts: { includeForeign?: boolean; forceDomestic?: boolean; forceForeign?: boolean } = {}) {
   const current = clubById(state.currentClubId || state.academyClubId);
-  let baseOffers = isAbroad(current) && !opts.forceDomestic
+  let baseOffers = isEuropeanClub(current) && !opts.forceDomestic
     ? selectOffers(state, 3, salt, { ...opts, includeForeign: true, forceForeign: true })
     : selectOffers(state, 3, salt, opts);
   if (opts.forceDomestic) return baseOffers;
 
-  if (isAbroad(current) && !opts.forceForeign) {
+  if (isEuropeanClub(current) && !opts.forceForeign) {
     const brazilReturnChance = state.age >= 34 ? 0.16 : state.age >= 30 ? 0.09 : 0.04;
     if (seeded(state.seed, salt + 887) < brazilReturnChance) {
       const rareBrazilOffer = selectOffers(state, 1, salt + 907, { forceDomestic: true })[0];
@@ -694,22 +761,28 @@ function selectTransferOffers(state: GameState, salt: number, opts: { includeFor
     92,
   );
   const performanceBoost = Math.floor(profile.performanceScore / 10);
-  const europeanPool = CLUBS
+  const foreignPool = CLUBS
     .filter((club) => {
-      if (!isAbroad(club) || club.id === current.id || baseOffers.includes(club.id) || state.age > 33) return false;
+      if (!isAbroad(club) || club.id === current.id || baseOffers.includes(club.id)) return false;
+      const confederation = clubConfederation(club);
+      if (isEuropeanClub(current) && confederation !== "EUROPE") return false;
+      if (state.age > 38) return false;
+      if (state.age > 33 && confederation === "EUROPE") return false;
       const league = leagueById(club.leagueId);
-      const accessibleLevel = 58 + league.prestige * 3 + club.reputation * 2;
+      let accessibleLevel = 58 + league.prestige * 3 + club.reputation * 2;
+      if (confederation === "SOUTH_AMERICA") accessibleLevel -= 8;
+      if (confederation === "NORTH_AMERICA") accessibleLevel -= state.age >= 29 ? 12 : 6;
       return state.overall + performanceBoost >= accessibleLevel;
     })
     .sort((a, b) => {
-      const distanceA = Math.abs(competitiveStrength(a) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(a)) * 3;
-      const distanceB = Math.abs(competitiveStrength(b) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(b)) * 3;
+      const distanceA = Math.abs(competitiveStrength(a) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(a)) * 3 + regionAffinity(current.countryId, a);
+      const distanceB = Math.abs(competitiveStrength(b) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(b)) * 3 + regionAffinity(current.countryId, b);
       return distanceA - distanceB;
     })
     .slice(0, profile.extraEuropeanOffers)
     .map((club) => club.id);
 
-  return [...baseOffers, ...europeanPool].slice(0, 5);
+  return [...baseOffers, ...foreignPool].slice(0, 5);
 }
 
 function eligibleEvents(state: GameState) {
@@ -724,7 +797,7 @@ function eligibleEvents(state: GameState) {
     if (event.needsLibertadores && state.continentalSlot !== "libertadores") return false;
     if (event.needsContinental && state.continentalSlot !== event.needsContinental) return false;
     if (event.needsWorld && (state.worldQualifiedSeason !== state.season || state.worldQualifiedClubId !== state.currentClubId)) return false;
-    if (event.needsAbroad && !isAbroad(club)) return false;
+    if (event.needsAbroad && !isEuropeanClub(club)) return false;
     if (event.needsDomestic && isAbroad(club)) return false;
     if (event.needsRivalry && !RIVALRIES.some((rivalry) => rivalry.clubIds.includes(club.id))) return false;
     if (event.maxContractYears !== undefined && state.contractYears > event.maxContractYears) return false;
@@ -745,6 +818,83 @@ function selectNextEvent(state: GameState, salt: number) {
   const events = eligibleEvents(state);
   const unseen = events.filter((event) => !state.seenEvents.includes(event.id));
   return pick(unseen.length ? unseen : events, state.seed + state.season, salt)?.id ?? "extra-training";
+}
+
+const NATIONALITY_SWITCH_EVENT_ID = "dynamic-nationality-switch";
+
+const NEARBY_NATIONAL_TEAMS: Record<string, string[]> = {
+  brasil: ["argentina", "uruguai", "paraguai", "colombia", "peru"],
+  argentina: ["uruguai", "chile", "paraguai", "brasil"],
+  uruguai: ["argentina", "brasil", "paraguai"],
+  chile: ["argentina", "peru"],
+  colombia: ["equador", "peru", "brasil"],
+  paraguai: ["brasil", "argentina", "uruguai"],
+  equador: ["colombia", "peru"],
+  peru: ["equador", "colombia", "chile", "brasil"],
+  mexico: ["eua", "colombia"],
+  eua: ["mexico"],
+  portugal: ["espanha"],
+  espanha: ["portugal", "franca"],
+  franca: ["espanha", "alemanha", "italia"],
+  inglaterra: ["franca", "holanda"],
+  alemanha: ["holanda", "franca", "italia"],
+  italia: ["franca", "alemanha"],
+  holanda: ["alemanha", "franca", "inglaterra"],
+};
+
+// Convite raro de outra seleção: tenta primeiro vizinhos e só então amplia para a região.
+function pickNationalitySwitchTarget(state: GameState, salt: number): string | null {
+  const originCountry = countryById(state.nationality);
+  const nearbyIds = NEARBY_NATIONAL_TEAMS[state.nationality] ?? [];
+  const nearbyCandidates = nearbyIds
+    .map((countryId) => COUNTRIES.find((country) => country.id === countryId))
+    .filter((country): country is Country => Boolean(country));
+  const regionalCandidates = COUNTRIES.filter((country) => {
+    if (country.id === state.nationality) return false;
+    if (originCountry.confederation === "SOUTH_AMERICA") return country.confederation === "SOUTH_AMERICA";
+    if (originCountry.confederation === "NORTH_AMERICA") return country.confederation === "NORTH_AMERICA" || country.confederation === "SOUTH_AMERICA";
+    return country.confederation === "EUROPE";
+  });
+  const candidates = nearbyCandidates.length && seeded(state.seed, salt + 19) < 0.82
+    ? nearbyCandidates
+    : regionalCandidates;
+  if (!candidates.length) return null;
+  return pick(candidates, state.seed, salt).id;
+}
+
+function maybeOfferNationalitySwitch(state: GameState, salt: number): string | null {
+  if (state.nationalitySwitchInviteUsed) return null;
+  if (state.age < 17 || state.age > 27) return null;
+  if (state.nationalCaptain) return null;
+  if (state.nationalCaps >= 18) return null;
+  if (state.nationalTrophies > 0) return null;
+  if (state.overall < 62) return null;
+  if (seeded(state.seed, salt) > 0.05) return null;
+  return pickNationalitySwitchTarget(state, salt + 31);
+}
+
+function buildNationalitySwitchEvent(from: Country, to: Country): GameEvent {
+  return {
+    id: NATIONALITY_SWITCH_EVENT_ID,
+    icon: "↔",
+    tag: "SELEÇÃO",
+    title: `A Seleção de ${to.name} quer você`,
+    description: `Uma federação vizinha enxergou seu potencial antes da sua consolidação na Seleção principal de ${from.name}. A escolha é sua — e não terá volta.`,
+    choices: [
+      {
+        label: `Vestir a camisa de ${to.name}`,
+        hint: "Mudança definitiva · reinício na Seleção",
+        result: `Você assina os papéis e passa a defender a Seleção de ${to.name}. Não é possível voltar atrás.`,
+        effect: { switchNationalityTo: to.id, reputation: 6, morale: 4 },
+      },
+      {
+        label: `Seguir pela Seleção de ${from.name}`,
+        hint: "Fidelidade à seleção original",
+        result: `Você agradece o interesse, mas decide seguir representando apenas a Seleção de ${from.name}.`,
+        effect: { reputation: 3, morale: 3, leadership: 2 },
+      },
+    ],
+  };
 }
 
 function createYouthJourney(state: GameState, formationId: string) {
@@ -839,10 +989,24 @@ function isNegativeConsequence(change: string) {
 
 function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choiceLabel: string, resultText: string, luckOutcome: "success" | "failure" | null = null): GameState {
   const affected = applyEffect(state, effect);
+  let nationalitySwitchRecord: NationalRecord | null = null;
+  if (effect.switchNationalityTo && effect.switchNationalityTo !== state.nationality) {
+    const fromCountry = countryById(state.nationality);
+    const toCountry = countryById(effect.switchNationalityTo);
+    affected.nationality = effect.switchNationalityTo;
+    affected.nationalCaps = 0;
+    affected.nationalGoals = 0;
+    affected.nationalAssists = 0;
+    affected.nationalCaptain = false;
+    affected.nationalCategory = "none";
+    affected.nationalLevel = Math.round(affected.nationalLevel * 0.4);
+    nationalitySwitchRecord = { season: state.season, tier: "none", name: "Troca de Seleção", icon: "↔", stage: `Deixou a Seleção de ${fromCountry.name} para defender a Seleção de ${toCountry.name}`, champion: false };
+  }
   const club = clubById(affected.currentClubId);
   const league = leagueById(club.leagueId);
   const country = countryById(club.countryId);
   const abroad = isAbroad(club);
+  const inEurope = isEuropeanClub(club);
   const position = positionByKey(affected.position);
   const adaptationPenalty = abroad ? Math.max(0, (72 - affected.adaptation) / 8) : 0;
   const requirement = 55 + club.reputation * 5 + (abroad ? league.prestige * 3 : 0);
@@ -908,6 +1072,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     champions: { id: "championsLeague", name: "Champions League", icon: "UCL" },
     europa: { id: "europaLeague", name: "Europa League", icon: "UEL" },
     conference: { id: "conferenceLeague", name: "Conference League", icon: "UECL" },
+    concacaf: { id: "concacafChampions", name: "Copa de Campeões Concacaf", icon: "CCC" },
   };
   if (playsContinental) {
     const info = continentalNames[playsContinental];
@@ -935,11 +1100,11 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     overall: affected.overall,
     title: titleCount > 0,
   });
-  const europeanSpotlight = abroad && performanceScore >= 58
+  const europeanSpotlight = inEurope && performanceScore >= 58
     ? clamp(Math.floor((performanceScore - 49) / 9), 1, 6)
     : 0;
   const europeanDevelopmentBonus =
-    abroad &&
+    inEurope &&
     affected.age <= 27 &&
     appearances >= 18 &&
     performanceScore >= 64 &&
@@ -1047,6 +1212,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
         if (seasonYear % 4 === 2) tournament = { name: "Copa do Mundo", icon: "MUN", scope: "world" };
         else if (nation.confederation === "EUROPE" && seasonYear % 4 === 0) tournament = { name: "Eurocopa", icon: "EURO", scope: "euro" };
         else if (nation.confederation === "SOUTH_AMERICA" && seasonYear % 4 === 0) tournament = { name: "Copa América", icon: "CA", scope: "copaAmerica" };
+        else if (nation.confederation === "NORTH_AMERICA" && seasonYear % 4 === 0) tournament = { name: "Copa Ouro", icon: "GOLD", scope: "goldCup" };
         else if (seasonYear % 4 === 3) tournament = { name: "Eliminatórias", icon: "ELIM", scope: "qualifiers" };
       } else if (nationalTier === "olympic" && seasonYear % 4 === 0) {
         tournament = { name: "Jogos Olímpicos", icon: "JO", scope: "olympics" };
@@ -1086,6 +1252,9 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
       nationalNote = "Corte doloroso: seu nome ficou de fora da lista da Seleção pela primeira vez em um bom tempo.";
     }
   }
+  if (nationalitySwitchRecord) {
+    nationalNote = `${nationalitySwitchRecord.stage}. Não há volta.`;
+  }
   const nextAgeTier: NationalTier = nextAge <= 14 ? "none" : nextAge <= 17 ? "sub17" : nextAge <= 20 ? "sub20" : nextAge <= 23 ? "olympic" : "main";
   const graduatesWithinYouth =
     (nationalTier === "sub17" && nextAgeTier === "sub20") ||
@@ -1112,15 +1281,15 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (affected.age <= 23 && playsContinental === "libertadores" && nextOverall >= 82 && seeded(state.seed, state.season * 89) > 0.5) awards.push("Melhor Jovem da América");
   if (playsContinental === "libertadores" && continentalChampion && nextOverall >= 86 && seeded(state.seed, state.season * 97) > 0.38) awards.push("MVP da Libertadores");
   if (playsContinental === "libertadores" && continentalChampion && nextOverall >= 89 && seeded(state.seed, state.season * 101) > 0.7) awards.push("Rei da América");
-  if (abroad && affected.age <= 21 && nextOverall >= 80 && appearances >= 18 && seeded(state.seed, state.season * 167) > 0.55) awards.push("Golden Boy");
-  if (abroad && affected.age <= 21 && playsContinental && nextOverall >= 82 && seeded(state.seed, state.season * 173) > 0.65) awards.push("Troféu Kopa");
-  if (abroad && isKeeper && cleanSheets >= 16 && nextOverall >= 85 && seeded(state.seed, state.season * 179) > 0.7) awards.push("Troféu Yashin");
-  if (abroad && !isKeeper && goals >= 22 && league.prestige >= 4 && seeded(state.seed, state.season * 181) > 0.65) awards.push("Chuteira de Ouro Europeia");
-  if (abroad && playsContinental === "champions" && continentalChampion && nextOverall >= 88 && seeded(state.seed, state.season * 191) > 0.55) awards.push("Melhor da UEFA");
+  if (inEurope && affected.age <= 21 && nextOverall >= 80 && appearances >= 18 && seeded(state.seed, state.season * 167) > 0.55) awards.push("Golden Boy");
+  if (inEurope && affected.age <= 21 && playsContinental && nextOverall >= 82 && seeded(state.seed, state.season * 173) > 0.65) awards.push("Troféu Kopa");
+  if (inEurope && isKeeper && cleanSheets >= 16 && nextOverall >= 85 && seeded(state.seed, state.season * 179) > 0.7) awards.push("Troféu Yashin");
+  if (inEurope && !isKeeper && goals >= 22 && league.prestige >= 4 && seeded(state.seed, state.season * 181) > 0.65) awards.push("Chuteira de Ouro Europeia");
+  if (inEurope && playsContinental === "champions" && continentalChampion && nextOverall >= 88 && seeded(state.seed, state.season * 191) > 0.55) awards.push("Melhor da UEFA");
   if (!isKeeper && goals >= 8 && nextOverall >= 82 && seeded(state.seed, state.season * 103) > 0.94) awards.push("Prêmio Puskás");
   if (affected.leadership >= 82 && seeded(state.seed, state.season * 107) > 0.82) awards.push("Prêmio Fair Play");
   if (affected.fanSupport >= 92 && titleCount > 0) awards.push("Ídolo da Torcida");
-  const majorClubTitle = (mundialChampion) || (abroad && playsContinental === "champions" && continentalChampion);
+  const majorClubTitle = mundialChampion || (inEurope && playsContinental === "champions" && continentalChampion);
   if (majorClubTitle && nextOverall >= 93 && affected.reputation >= 90 && seeded(state.seed, state.season * 109) > 0.9) awards.push("Bola de Ouro");
   const title = titleCount > 0;
   const seasonObjective = affected.currentObjective ?? createSeasonObjective(position, seasonRole, affected.season, affected.seed);
@@ -1134,6 +1303,22 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const nextTrust = clamp(affected.managerTrust + trustDelta);
   const nextDiscipline = clamp(affected.discipline + (yellowCards <= 4 ? 2 : -2) - redCards * 8);
   const nextRole = calculateSquadRole(nextOverall, club, league.prestige, nextTrust, nextAge);
+
+  // Não-renovação: um clube pode recusar renovar um contrato expirado após uma temporada ruim.
+  const contractExpiring = affected.contractYears - 1 <= 0;
+  const nonRenewalRiskFactors = [
+    performanceScore < 42 || !objectiveResult.completed,
+    nextRole === "reserva" || nextRole === "promessa",
+    nextTrust < 42,
+    appearances < 12,
+  ].filter(Boolean).length;
+  const nonRenewalChance = contractExpiring && nonRenewalRiskFactors >= 2
+    ? nonRenewalRiskFactors >= 3
+      ? 100
+      : clamp(62 - Math.max(0, affected.reputation - 45) * 0.25, 48, 72)
+    : 0;
+  const renewalDenied = nonRenewalChance > 0 && seeded(state.seed, state.season * 283 + 11) * 100 < nonRenewalChance;
+
   const record: SeasonRecord = { ...seasonStats, age: affected.age, season: affected.season, clubId: club.id, overall: nextOverall, title, eventTitle: event.title, competitions, awards, squadRole: seasonRole, objectiveResult };
   const result: SeasonResult = {
     ...record,
@@ -1151,20 +1336,23 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const seenEvents = event.oneTime || event.id === FIRST_MATCH_EVENT.id ? Array.from(new Set([...affected.seenEvents, event.id])) : affected.seenEvents;
   const nextCabinet = { ...affected.trophyCabinet };
   competitions.forEach((competition) => { if (competition.champion) nextCabinet[competition.id] += 1; });
-  const wonContinentalForWorld = continentalChampion && (playsContinental === "libertadores" || playsContinental === "champions");
+  const wonContinentalForWorld = continentalChampion && (playsContinental === "libertadores" || playsContinental === "champions" || playsContinental === "concacaf");
   const nextWorldQualifiedSeason = wonContinentalForWorld ? affected.season + 1 : affected.worldQualifiedSeason === affected.season ? 0 : affected.worldQualifiedSeason;
   const nextWorldQualifiedClubId = wonContinentalForWorld ? club.id : affected.worldQualifiedSeason === affected.season ? "" : affected.worldQualifiedClubId;
   const nextAwardCabinet = { ...affected.awardCabinet };
   awards.forEach((award) => { nextAwardCabinet[award] = (nextAwardCabinet[award] ?? 0) + 1; });
-  const nextContinentalSlot: ContinentalSlot | null = !abroad
+  const clubConfed = clubConfederation(club);
+  const nextContinentalSlot: ContinentalSlot | null = clubConfed === "SOUTH_AMERICA"
     ? (leagueChampion || cupChampion || leaguePosition <= 6 ? "libertadores" : null)
-    : (leagueChampion || leaguePosition <= league.championsPlaces
-        ? "champions"
-        : cupChampion || leaguePosition <= league.europaPlaces
-          ? "europa"
-          : leaguePosition <= league.conferencePlaces
-            ? "conference"
-            : null);
+    : clubConfed === "NORTH_AMERICA"
+      ? (leagueChampion || leaguePosition <= (league.championsPlaces || 4) ? "concacaf" : null)
+      : (leagueChampion || leaguePosition <= league.championsPlaces
+          ? "champions"
+          : cupChampion || leaguePosition <= league.europaPlaces
+            ? "europa"
+            : leaguePosition <= league.conferencePlaces
+              ? "conference"
+              : null);
   const nextBase: GameState = {
     ...affected,
     phase: "consequence",
@@ -1203,7 +1391,11 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     nationalAssists,
     nationalCaptain,
     nationalTrophies: nationalTrophiesCount,
-    nationalHistory: nationalHistoryAdd ? [...affected.nationalHistory, nationalHistoryAdd] : affected.nationalHistory,
+    nationalHistory: [
+      ...affected.nationalHistory,
+      ...(nationalitySwitchRecord ? [nationalitySwitchRecord] : []),
+      ...(nationalHistoryAdd ? [nationalHistoryAdd] : []),
+    ],
     qualifiedNextMajor,
     history: [...affected.history, record],
     lastResult: result,
@@ -1211,6 +1403,9 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     retireAfterSeason: Boolean(effect.retire || nextAge >= 40),
     seenEvents,
     nextEventId: "",
+    renewalDenied,
+    nationalitySwitched: affected.nationalitySwitched || Boolean(nationalitySwitchRecord),
+    pendingNationalitySwitchTarget: "",
   };
   const wantsDomesticReturn = event.id === "european-exit" || event.id === "return-home" || event.id === "mega-empresta-para-time-menor";
   let transferOffers = effect.transfer || nextBase.contractYears === 0
@@ -1246,7 +1441,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     assists: nextBase.stats.assists,
     cleanSheets: nextBase.stats.cleanSheets,
     trophies: nextBase.trophies + nextBase.nationalTrophies,
-    continentalTitles: nextBase.trophyCabinet.libertadores + nextBase.trophyCabinet.championsLeague + nextBase.trophyCabinet.europaLeague + nextBase.trophyCabinet.conferenceLeague,
+    continentalTitles: nextBase.trophyCabinet.libertadores + nextBase.trophyCabinet.championsLeague + nextBase.trophyCabinet.europaLeague + nextBase.trophyCabinet.conferenceLeague + nextBase.trophyCabinet.concacafChampions,
     worldTitles: nextBase.trophyCabinet.mundial,
     nationalCaps: nextBase.nationalCaps,
     nationalTrophies: nextBase.nationalTrophies,
@@ -1285,9 +1480,12 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     competition: competitions.find((item) => item.champion)?.name ?? league.name,
   });
   const achievementNews = newlyUnlocked.map((achievement) => `Conquista desbloqueada: ${achievement.title}.`);
+  const nationalitySwitchTarget = maybeOfferNationalitySwitch(nextBase, affected.season * 71);
   return {
     ...nextBase,
-    nextEventId: selectNextEvent(nextBase, affected.season * 37),
+    nextEventId: nationalitySwitchTarget ? NATIONALITY_SWITCH_EVENT_ID : selectNextEvent(nextBase, affected.season * 37),
+    pendingNationalitySwitchTarget: nationalitySwitchTarget ?? "",
+    nationalitySwitchInviteUsed: nextBase.nationalitySwitchInviteUsed || Boolean(nationalitySwitchTarget),
     transferOffers,
     legacyPoints,
     unlockedAchievements: [...nextBase.unlockedAchievements, ...newlyUnlocked.map((achievement) => achievement.id)],
@@ -1422,20 +1620,25 @@ export default function Home() {
   const legacyStanding = useMemo(() => legacyTier(game.legacyPoints), [game.legacyPoints]);
   const marketProfile = useMemo(() => transferMarketProfile(game), [game]);
   const transferWindowProfile = useMemo(() => {
-    const europeanOffers = game.transferOffers.filter((clubId) => isAbroad(clubById(clubId))).length;
+    const foreignOfferClubs = game.transferOffers.map(clubById).filter(isAbroad);
+    const europeanOffers = foreignOfferClubs.filter(isEuropeanClub).length;
+    const allForeignAreEurope = foreignOfferClubs.every((club) => clubConfederation(club) === "EUROPE");
     return {
       europeanOffers,
-      brazilianOffers: game.transferOffers.length - europeanOffers,
-      isEuropeanWindow: isAbroad(currentClub) && europeanOffers > 0,
-      expandedOfferCount: isAbroad(currentClub)
-        ? Math.max(0, europeanOffers - 3)
-        : Math.max(0, game.transferOffers.length - 3),
+      brazilianOffers: game.transferOffers.filter((clubId) => clubById(clubId).countryId === "brasil").length,
+      isEuropeanWindow: isEuropeanClub(currentClub) && europeanOffers > 0,
+      foreignMarketLabel: allForeignAreEurope ? "MERCADO EUROPEU" : "MERCADO INTERNACIONAL",
+      foreignMarketAdjective: allForeignAreEurope ? "europeu" : "internacional",
+      expandedOfferCount: Math.max(0, game.transferOffers.length - 3),
     };
   }, [game.transferOffers, currentClub]);
   const currentEvent = useMemo(() => {
     if (game.currentEventId === FIRST_MATCH_EVENT.id) return FIRST_MATCH_EVENT;
+    if (game.currentEventId === NATIONALITY_SWITCH_EVENT_ID && game.pendingNationalitySwitchTarget) {
+      return buildNationalitySwitchEvent(countryById(game.nationality), countryById(game.pendingNationalitySwitchTarget));
+    }
     return ALL_PRO_EVENTS.find((event) => event.id === game.currentEventId) ?? ALL_PRO_EVENTS[0];
-  }, [game.currentEventId]);
+  }, [game.currentEventId, game.nationality, game.pendingNationalitySwitchTarget]);
   const headerSeason = game.phase === "consequence" || game.phase === "season-result" ? game.lastResult?.season ?? game.season : game.season;
   const headerAge = game.phase === "consequence" || game.phase === "season-result" ? game.lastResult?.age ?? game.age : game.age;
   const nationalTierLabel: Record<NationalTier, string> = { none: "Fora dos planos", sub17: "Seleção Sub-17", sub20: "Seleção Sub-20", olympic: "Seleção Olímpica", main: "Seleção Principal" };
@@ -1554,6 +1757,7 @@ export default function Home() {
         lastResult: null,
         lastConsequence: null,
         transferRequested: false,
+        renewalDenied: false,
       }));
     }
     setActiveTab("event");
@@ -1562,7 +1766,7 @@ export default function Home() {
 
   function chooseTransfer(clubId: string | null) {
     setGame((current) => {
-      if (!clubId && current.transferRequested) return current;
+      if (!clubId && (current.transferRequested || current.renewalDenied)) return current;
       const newClub = clubId ? clubById(clubId) : null;
       const oldClub = clubById(current.currentClubId);
       const targetClub = newClub ?? oldClub;
@@ -1575,6 +1779,7 @@ export default function Home() {
       const managerTrust = newClub ? 50 : clamp(current.managerTrust + 5);
       const squadRole = calculateSquadRole(current.overall, targetClub, targetLeague.prestige, managerTrust, current.age);
       const rivalry = newClub ? findRivalry(oldClub.id, newClub.id) : undefined;
+      const pendingCareerEventId = current.nextEventId;
       const transferNewsPool = NEWS_TEMPLATES.filter((item) => item.category === (clubId ? "transfer" : "contract"));
       const genericTransferNews = fillNewsTemplate(
         pick(transferNewsPool, current.seed, current.season + offerIndex)?.template ?? "{player} define o futuro no {club}",
@@ -1601,10 +1806,11 @@ export default function Home() {
         morale: clamp(current.morale + (clubId ? 5 : 2)),
         fanSupport: clubId ? 52 : clamp(current.fanSupport + (current.transferRequested ? -8 : 3)),
         continentalSlot: newClub ? initialContinentalSlot(newClub) : current.continentalSlot,
-        adaptation: newClub ? (changingCountry ? initialAdaptation(newClub.countryId) : current.adaptation) : current.adaptation,
+        adaptation: newClub ? (changingCountry ? initialAdaptation(oldClub.countryId, newClub.countryId) : current.adaptation) : current.adaptation,
         abroadSeasons: changingCountry ? 0 : current.abroadSeasons,
         transferStatus: null,
         transferRequested: false,
+        renewalDenied: false,
         managerTrust,
         squadRole,
         contractYears: contract.years,
@@ -1616,7 +1822,10 @@ export default function Home() {
           ...current.newsFeed,
         ].slice(0, 12),
       };
-      return { ...transferred, currentEventId: selectNextEvent(transferred, current.season * 47) };
+      return {
+        ...transferred,
+        currentEventId: pendingCareerEventId || selectNextEvent(transferred, current.season * 47),
+      };
     });
     setActiveTab("event");
     vibrate();
@@ -1787,12 +1996,12 @@ export default function Home() {
             <div className="step-count">02</div>
           </header>
           <div className="setup-content">
-            <div className="intro-card"><span className="intro-icon">◇</span><div><strong>Sua Seleção vai te acompanhar a carreira toda.</strong><p>A nacionalidade define a trilha de base (Sub-17, Sub-20, Olímpica) e se você disputará a Eurocopa ou a Copa América com a Seleção principal.</p></div></div>
+            <div className="intro-card"><span className="intro-icon">◇</span><div><strong>Sua Seleção vai te acompanhar a carreira toda.</strong><p>A nacionalidade define a trilha de base (Sub-17, Sub-20, Olímpica) e se você disputará a Eurocopa, a Copa América ou a Copa Ouro com a Seleção principal.</p></div></div>
             <div className="nation-grid">
               {COUNTRIES.map((country) => (
                 <button key={country.id} aria-pressed={game.nationality === country.id} className={`nation-choice ${game.nationality === country.id ? "selected" : ""}`} onClick={() => setGame((current) => ({ ...current, nationality: country.id }))}>
                   <NationBadge country={country} size="md" />
-                  <span><strong>{country.name}</strong><small>{country.confederation === "EUROPE" ? "Eurocopa" : "Copa América"}</small></span>
+                  <span><strong>{country.name}</strong><small>{country.confederation === "EUROPE" ? "Eurocopa" : country.confederation === "NORTH_AMERICA" ? "Copa Ouro" : "Copa América"}</small></span>
                 </button>
               ))}
             </div>
@@ -1997,7 +2206,13 @@ export default function Home() {
               )}
               <div className="discipline-result"><span>DISCIPLINA</span><strong>{game.lastResult.yellowCards} amarelos · {game.lastResult.redCards} vermelhos</strong></div>
               {game.lastResult.objectiveResult && <div className={`objective-result ${game.lastResult.objectiveResult.completed ? "completed" : "failed"}`}><span>{game.lastResult.objectiveResult.completed ? "META CUMPRIDA" : "META PERDIDA"}</span><strong>{game.lastResult.objectiveResult.label}</strong><p>{game.lastResult.objectiveResult.text}</p></div>}
-              {game.contractYears === 0 && <div className="contract-expired"><span>CONTRATO ENCERRADO</span><strong>Seu futuro está aberto</strong><p>Na próxima tela você poderá renovar ou escolher um novo clube.</p></div>}
+              {game.contractYears === 0 && (
+                <div className="contract-expired">
+                  <span>CONTRATO ENCERRADO</span>
+                  <strong>{game.renewalDenied ? "O clube optou por não renovar" : "Seu futuro está aberto"}</strong>
+                  <p>{game.renewalDenied ? "Depois de uma temporada difícil, a diretoria decidiu não seguir com você. Na próxima tela você precisa escolher um novo clube." : "Na próxima tela você poderá renovar ou escolher um novo clube."}</p>
+                </div>
+              )}
               <div className="competition-grid">
                 {game.lastResult.competitions.map((competition) => <article key={competition.id} className={competition.champion ? "competition-card champion" : "competition-card"}><span>{competition.icon}</span><div><strong>{competition.name}</strong><small>{competition.stage}</small></div>{competition.champion && <b>★</b>}</article>)}
               </div>
@@ -2013,10 +2228,11 @@ export default function Home() {
 
           {game.phase === "transfer" && (
             <div className="transfer-stage screen-enter">
-              <span className="eyebrow">JANELA DE TRANSFERÊNCIAS</span><h1>{game.transferStatus?.success ? game.transferStatus.headline : "Seu próximo passo"}</h1><p>{game.transferStatus?.text ?? `${game.transferOffers.length} clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui.`}</p>
+              <span className="eyebrow">JANELA DE TRANSFERÊNCIAS</span><h1>{game.transferStatus?.success ? game.transferStatus.headline : game.renewalDenied ? "Sem renovação — hora de escolher" : "Seu próximo passo"}</h1><p>{game.transferStatus?.text ?? (game.renewalDenied ? `O ${currentClub.shortName} não renovou seu contrato. ${game.transferOffers.length} clube${game.transferOffers.length > 1 ? "s apareceram" : " apareceu"} com propostas.` : `${game.transferOffers.length} clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui.`)}</p>
+              {game.renewalDenied && <div className="transfer-lock-card"><span>RENOVAÇÃO RECUSADA</span><strong>O {currentClub.shortName} decidiu não renovar seu contrato</strong><p>A diretoria avaliou a temporada e optou por não seguir com você. Escolha seu próximo destino.</p></div>}
               {game.transferRequested && <div className="transfer-lock-card"><span>SAÍDA SEM VOLTA</span><strong>Escolha seu próximo clube</strong><p>Depois que a diretoria aceita seu pedido, permanecer no time atual deixa de ser uma opção.</p></div>}
-              {transferWindowProfile.isEuropeanWindow && <div className="european-market-card"><span>MERCADO EUROPEU</span><strong>{transferWindowProfile.europeanOffers} clube{transferWindowProfile.europeanOffers > 1 ? "s europeus querem" : " europeu quer"} você</strong><p>{transferWindowProfile.brazilianOffers > 0 ? "Uma proposta rara de retorno ao Brasil também atravessou o Atlântico." : "Jogando na Europa, seu empresário prioriza projetos europeus de nível compatível."}</p></div>}
-              {transferWindowProfile.expandedOfferCount > 0 && <div className="market-expansion-card"><span>DESEMPENHO ABRIU PORTAS</span><strong>{marketProfile.label} · nota {marketProfile.performanceScore}</strong><p>{transferWindowProfile.expandedOfferCount} clube{transferWindowProfile.expandedOfferCount > 1 ? "s europeus extras apareceram" : " europeu extra apareceu"} em um nível compatível com sua fase.</p></div>}
+              {transferWindowProfile.isEuropeanWindow && <div className="european-market-card"><span>{transferWindowProfile.foreignMarketLabel}</span><strong>{transferWindowProfile.europeanOffers} clube{transferWindowProfile.europeanOffers > 1 ? `s ${transferWindowProfile.foreignMarketAdjective}s querem` : ` ${transferWindowProfile.foreignMarketAdjective} quer`} você</strong><p>{transferWindowProfile.brazilianOffers > 0 ? "Uma proposta rara de retorno ao Brasil também apareceu." : `Jogando fora do Brasil, seu empresário prioriza projetos ${transferWindowProfile.foreignMarketAdjective}s de nível compatível.`}</p></div>}
+              {transferWindowProfile.expandedOfferCount > 0 && <div className="market-expansion-card"><span>DESEMPENHO ABRIU PORTAS</span><strong>{marketProfile.label} · nota {marketProfile.performanceScore}</strong><p>{transferWindowProfile.expandedOfferCount} clube{transferWindowProfile.expandedOfferCount > 1 ? "s extras apareceram" : " extra apareceu"} em um nível compatível com sua fase.</p></div>}
               <div className="offer-list transfer-offers">
                 {game.transferOffers.map((clubId, index) => {
                   const club = clubById(clubId);
@@ -2025,7 +2241,7 @@ export default function Home() {
                   const offerContract = createContract(game.overall, game.age, club, game.seed + game.season + index);
                   const offerRole = calculateSquadRole(game.overall, club, league.prestige, 50, game.age);
                   const rivalry = findRivalry(currentClub.id, club.id);
-                  const rareBrazilReturn = isAbroad(currentClub) && club.countryId === "brasil" && transferWindowProfile.europeanOffers > 0;
+                  const rareBrazilReturn = isEuropeanClub(currentClub) && club.countryId === "brasil" && transferWindowProfile.europeanOffers > 0;
                   return (
                     <button className="offer-card" key={clubId} onClick={() => chooseTransfer(clubId)}>
                       <ClubBadge club={club} />
@@ -2042,7 +2258,7 @@ export default function Home() {
                     </button>
                   );
                 })}
-                {!game.transferRequested && <button className="offer-card stay-card" onClick={() => chooseTransfer(null)}><ClubBadge club={currentClub} /><span><small>{game.contractYears === 0 ? "PROPOSTA DE RENOVAÇÃO" : "CONTINUAR O PROJETO"}</small><strong>{game.contractYears === 0 ? `Renovar com o ${currentClub.shortName}` : `Ficar no ${currentClub.shortName}`}</strong><em>{game.contractYears === 0 ? "Novo vínculo e salário recalculado" : `Manter o contrato atual de ${game.contractYears} ano(s)`}</em></span><b>✓</b></button>}
+                {!game.transferRequested && !game.renewalDenied && <button className="offer-card stay-card" onClick={() => chooseTransfer(null)}><ClubBadge club={currentClub} /><span><small>{game.contractYears === 0 ? "PROPOSTA DE RENOVAÇÃO" : "CONTINUAR O PROJETO"}</small><strong>{game.contractYears === 0 ? `Renovar com o ${currentClub.shortName}` : `Ficar no ${currentClub.shortName}`}</strong><em>{game.contractYears === 0 ? "Novo vínculo e salário recalculado" : `Manter o contrato atual de ${game.contractYears} ano(s)`}</em></span><b>✓</b></button>}
               </div>
             </div>
           )}
@@ -2117,6 +2333,7 @@ export default function Home() {
                   {game.trophyCabinet.championsLeague > 0 && <Metric label="Champions" value={game.trophyCabinet.championsLeague} tone="gold" />}
                   {game.trophyCabinet.europaLeague > 0 && <Metric label="Europa League" value={game.trophyCabinet.europaLeague} />}
                   {game.trophyCabinet.conferenceLeague > 0 && <Metric label="Conference" value={game.trophyCabinet.conferenceLeague} />}
+                  {game.trophyCabinet.concacafChampions > 0 && <Metric label="Concacaf" value={game.trophyCabinet.concacafChampions} />}
                 </div>
                 <small>✦ {game.awards} prêmio(s) individual(is)</small>
               </div>

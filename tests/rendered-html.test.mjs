@@ -45,6 +45,10 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
     "Champions League",
     "Europa League",
     "Conference League",
+    "Copa de Campeões Concacaf",
+    "Liga Profesional Argentina",
+    "Liga MX",
+    "Major League Soccer",
     "Copa do Mundo",
     "Copa América",
     "Eurocopa",
@@ -156,10 +160,11 @@ test("prioriza clubes europeus quando a carreira já está na Europa", async () 
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /isAbroad\(current\) && !opts\.forceDomestic/);
+  assert.match(page, /isEuropeanClub\(current\) && !opts\.forceDomestic/);
+  assert.match(page, /clubConfederation\(club\) === "EUROPE"/);
   assert.match(page, /forceForeign: true/);
   assert.match(page, /brazilReturnChance = state\.age >= 34 \? 0\.16 : state\.age >= 30 \? 0\.09 : 0\.04/);
-  assert.match(page, /Math\.max\(0, europeanOffers - 3\)/);
+  assert.match(page, /isEuropeanClub\(current\) && confederation !== "EUROPE"/);
   assert.match(page, /MERCADO EUROPEU/);
   assert.match(page, /Retorno raro ao Brasil/);
   assert.match(styles, /\.european-market-card/);
@@ -183,10 +188,109 @@ test("impede ficar no clube depois de um pedido de transferência aceito", async
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /if \(!clubId && current\.transferRequested\) return current/);
-  assert.match(page, /\{!game\.transferRequested && <button className="offer-card stay-card"/);
+  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied\)\) return current/);
+  assert.match(page, /\{!game\.transferRequested && !game\.renewalDenied && <button className="offer-card stay-card"/);
   assert.match(page, /SAÍDA SEM VOLTA/);
   assert.match(page, /Seu pedido foi aceito — não há volta/);
   assert.match(page, /transferStatus: null, transferRequested: false/);
   assert.match(styles, /\.transfer-lock-card/);
+});
+
+test("expande o mercado para ligas e clubes das Américas", async () => {
+  const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+
+  for (const leagueId of [
+    "liga-argentina",
+    "liga-uruguaia",
+    "liga-chilena",
+    "liga-colombiana",
+    "liga-paraguaia",
+    "liga-equatoriana",
+    "liga-peruana",
+    "liga-mx",
+    "mls",
+  ]) {
+    assert.match(data, new RegExp(`id: "${leagueId}"`));
+  }
+
+  for (const clubId of [
+    "boca-juniors",
+    "river-plate",
+    "nacional-uru",
+    "penarol",
+    "colo-colo",
+    "atletico-nacional",
+    "olimpia",
+    "barcelona-sc",
+    "universitario",
+    "club-america",
+    "chivas",
+    "inter-miami",
+    "la-galaxy",
+  ]) {
+    assert.match(data, new RegExp(`id: "${clubId}"`));
+  }
+
+  assert.match(data, /confederation: "NORTH_AMERICA"/);
+  assert.match(data, /"colombia"|"chile"|"paraguai"|"equador"|"peru"/);
+
+  const countryIds = new Set(
+    [...data.matchAll(/\{ id: "([^"]+)", name: "[^"]+", demonym: "[^"]+", abbr: "[^"]+", confederation:/g)]
+      .map((match) => match[1]),
+  );
+  const leagueEntries = [...data.matchAll(/\{ id: "([^"]+)", countryId: "([^"]+)", name: "[^"]+", cupName:/g)];
+  const leagueIds = new Set(leagueEntries.map((match) => match[1]));
+  const clubEntries = [...data.matchAll(/\{ id: "([^"]+)", name: "[^"]+", shortName: "[^"]+", abbr: "[^"]+", city: "[^"]+"[^}]*countryId: "([^"]+)", leagueId: "([^"]+)"/g)];
+  const clubIds = clubEntries.map((match) => match[1]);
+
+  assert.equal(new Set(clubIds).size, clubIds.length, "IDs de clubes precisam ser únicos");
+  assert.ok(clubEntries.length >= 110, "a base deve manter pelo menos 110 clubes");
+  for (const [, leagueId, countryId] of leagueEntries) assert.ok(countryIds.has(countryId), `país ausente na liga ${leagueId}`);
+  for (const [, clubId, countryId, leagueId] of clubEntries) {
+    assert.ok(countryIds.has(countryId), `país ausente no clube ${clubId}`);
+    assert.ok(leagueIds.has(leagueId), `liga ausente no clube ${clubId}`);
+  }
+});
+
+test("prioriza destinos sul-americanos e norte-americanos por proximidade geográfica", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /function regionAffinity/);
+  assert.match(page, /originConfederation === "SOUTH_AMERICA"/);
+  assert.match(page, /targetConfederation === "SOUTH_AMERICA"\) return -6/);
+  assert.match(page, /targetConfederation === "NORTH_AMERICA"\) return -2/);
+  assert.match(page, /confederation === "NORTH_AMERICA"\) requirement -= state\.age >= 29 \? 10 : 4/);
+});
+
+test("adiciona a Copa de Campeões Concacaf sem quebrar o gabinete de troféus", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /concacafChampions: number/);
+  assert.match(page, /concacaf: \{ id: "concacafChampions", name: "Copa de Campeões Concacaf", icon: "CCC" \}/);
+  assert.match(page, /concacafChampions: saved\.trophyCabinet\?\.concacafChampions \?\? 0/);
+});
+
+test("clube pode recusar renovar contrato após temporada ruim, forçando escolha de novo clube", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /const renewalDenied = nonRenewalChance > 0 && seeded\(/);
+  assert.match(page, /nonRenewalRiskFactors >= 2/);
+  assert.match(page, /RENOVAÇÃO RECUSADA/);
+  assert.match(page, /O clube optou por não renovar/);
+  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied\)\) return current/);
+});
+
+test("convites raros de outras seleções respeitam proximidade geográfica e nunca se repetem", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /const NATIONALITY_SWITCH_EVENT_ID = "dynamic-nationality-switch"/);
+  assert.match(page, /function pickNationalitySwitchTarget/);
+  assert.match(page, /const NEARBY_NATIONAL_TEAMS/);
+  assert.match(page, /seeded\(state\.seed, salt \+ 19\) < 0\.82/);
+  assert.match(page, /function maybeOfferNationalitySwitch/);
+  assert.match(page, /if \(state\.nationalitySwitchInviteUsed\) return null/);
+  assert.match(page, /const pendingCareerEventId = current\.nextEventId/);
+  assert.match(page, /currentEventId: pendingCareerEventId \|\| selectNextEvent/);
+  assert.match(page, /Não é possível voltar atrás/);
+  assert.match(page, /nationalitySwitched: affected\.nationalitySwitched \|\| Boolean\(nationalitySwitchRecord\)/);
 });

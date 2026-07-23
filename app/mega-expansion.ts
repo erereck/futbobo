@@ -560,4 +560,12 @@ export const MEGA_EVENTS: GameEvent[] = [
     { label: "Aceitar aprender desde já", hint: "Liderança ↑↑ · legado", result: "Você começa a observar o jogo com outros olhos, ainda em atividade.", effect: { leadership: 10, reputation: 8, morale: 5 } },
     { label: "Focar só em jogar por enquanto", hint: "Foco ↑", result: "Você prefere decidir o futuro só depois de pendurar as chuteiras.", effect: { fitness: 4, morale: 3 } },
   ]},
+  { id: "mega-concacaf-viagem-longa", icon: "CCC", tag: "CONCACAF", title: "Uma viagem que atravessa o continente", description: "A Copa de Campeões Concacaf leva o elenco para um estádio a milhares de quilômetros, em pleno meio de semana.", needsContinental: "concacaf", choices: [
+    { label: "Tratar como a grande chance", hint: "Título ↑↑ · desgaste", result: "Você entende que essa vitrine pode mudar o rumo da sua carreira.", effect: { titleBoost: 12, reputation: 6, fitness: -8 } },
+    { label: "Administrar o desgaste da viagem", hint: "Título ↑ · físico preservado", result: "Você prioriza chegar inteiro para os compromissos do campeonato nacional.", effect: { titleBoost: 6, fitness: 5, leadership: 3 } },
+  ]},
+  { id: "mega-concacaf-final", icon: "CCC", tag: "CONCACAF", title: "A final que decide o representante continental", description: "Vencer aqui abre a porta para o Mundial de Clubes e para uma vitrine que poucos colegas da liga já tiveram.", needsContinental: "concacaf", minOvr: 74, choices: [
+    { label: "Assumir o protagonismo", hint: "Título ↑↑ · pressão", result: "Você pede a bola nos momentos que decidem histórias continentais.", effect: { titleBoost: 18, reputation: 10, fitness: -8 } },
+    { label: "Jogar pelo coletivo", hint: "Título ↑ · seguro", result: "Você confia no plano de jogo construído durante toda a campanha.", effect: { titleBoost: 10, leadership: 6 } },
+  ]},
 ];
