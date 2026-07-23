@@ -700,15 +700,15 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .club-summary-numbers span { display: flex; min-width: 24px; flex-direction: column; align-items: center; color: var(--muted); font-size: 6px; font-weight: 800; }
 .club-summary-numbers b { color: var(--text); font-size: 9px; }
 .final-hall-of-fame { background: radial-gradient(circle at 100% 0, rgba(255,199,44,.1), transparent 35%), var(--surface); }
-.hall-ranking > article { display: grid; grid-template-columns: 24px 52px minmax(0,1fr) auto; align-items: center; gap: 9px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); }
+.hall-ranking > article { display: grid; grid-template-columns: 24px 64px minmax(0,1fr) auto; align-items: center; column-gap: 10px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); }
 .hall-ranking > article.current-career { border-color: rgba(255,199,44,.36); background: rgba(255,199,44,.065); }
 .hall-ranking > article > b { color: var(--gold); font-size: 8px; text-align: center; }
 .hall-ranking > article > .club-badge { justify-self: center; }
-.hall-ranking > article > div { display: flex; min-width: 0; flex-direction: column; }
+.hall-ranking > article > div { display: flex; min-width: 0; flex-direction: column; padding-left: 4px; }
 .hall-ranking > article > div strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .hall-ranking > article > div small { margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
-.hall-ranking > article > span { display: flex; flex-direction: column; align-items: flex-end; color: var(--gold); font: 900 11px var(--display); }
-.hall-ranking > article > span small { color: var(--muted); font: 800 5px var(--sans); letter-spacing: .1em; }
+.hall-ranking > article > .hall-score { display: flex; flex-direction: column; align-items: flex-end; color: var(--gold); font: 900 11px var(--display); }
+.hall-ranking > article > .hall-score small { color: var(--muted); font: 800 5px var(--sans); letter-spacing: .1em; }
 .summary-screen .summary-actions { width: 100%; margin-bottom: calc(env(safe-area-inset-bottom) + 10px); }
 
 @media (max-width: 420px) {

@@ -3751,7 +3751,7 @@ export default function Home() {
                   <b>#{index + 1}</b>
                   <ClubBadge club={clubById(entry.finalClubId)} size="sm" />
                   <div><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.trophies} taças · {entry.ballonDor}× Bola de Ouro</small></div>
-                  <span>{entry.legacyPoints}<small>PTS</small></span>
+                  <span className="hall-score">{entry.legacyPoints}<small>PTS</small></span>
                 </article>
               ))}
             </div>

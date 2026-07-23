@@ -163,10 +163,13 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
 });
 
 test("reserva espaço real para os escudos no Hall da Fama mobile", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(styles, /\.hall-ranking > article \{[^}]*grid-template-columns: 24px 52px minmax\(0,1fr\) auto/);
+  assert.match(styles, /\.hall-ranking > article \{[^}]*grid-template-columns: 24px 64px minmax\(0,1fr\) auto/);
   assert.match(styles, /\.hall-ranking > article > \.club-badge \{ justify-self: center; \}/);
+  assert.match(page, /className="hall-score"/);
+  assert.doesNotMatch(styles, /\.hall-ranking > article > span \{/);
 });
 
 test("mantém o gramado contínuo atrás da meta do treinador", async () => {
