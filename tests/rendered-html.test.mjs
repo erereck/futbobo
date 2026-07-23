@@ -99,3 +99,18 @@ test("mantém a carreira encaixada na tela mobile com ações fixas", async () =
   assert.match(styles, /\.mobile-action-dock \{[\s\S]*position: fixed/);
   assert.match(styles, /\.event-card \{[\s\S]*position: absolute/);
 });
+
+test("aplica o equilíbrio levemente mais favorável sem liberar títulos fáceis", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
+
+  assert.match(page, /fateRoll < 0\.18/);
+  assert.match(page, /roleScore >= 5 \? 33[\s\S]*roleScore >= -5 \? 19 : 11/);
+  assert.match(page, /growthRoll < 0\.07 \? -1/);
+  assert.match(page, /seriousInjuryChance = 0\.038/);
+  assert.match(page, /playerImpact \* 0\.36/);
+  assert.match(page, /,\s*1,\s*27,/);
+  assert.match(page, /,\s*1,\s*20\);/);
+  assert.match(systems, /penalty: role === "promessa" \? 3 : 6/);
+  assert.match(page, /Bola de Ouro/);
+});

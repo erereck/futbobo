@@ -75,29 +75,29 @@ export function createSeasonObjective(
   const base = {
     id: `${season}-${position.key}-${selector}`,
     reward: role === "estrela" ? 5 : 7,
-    penalty: role === "promessa" ? 3 : 7,
+    penalty: role === "promessa" ? 3 : 6,
   };
 
   if (selector === 0 || role === "reserva" || role === "promessa") {
-    const target = role === "reserva" ? 15 : role === "promessa" ? 12 : starter ? 28 : 22;
+    const target = role === "reserva" ? 14 : role === "promessa" ? 12 : starter ? 27 : 21;
     return { ...base, metric: "appearances", target, label: "Conquistar espaço", description: `Disputar pelo menos ${target} partidas oficiais.` };
   }
   if (position.key === "GOL") {
-    const target = starter ? 13 : 8;
+    const target = starter ? 12 : 8;
     return { ...base, metric: "cleanSheets", target, label: "Fechar o gol", description: `Terminar ${target} jogos sem sofrer gols.` };
   }
   if (position.zone === "ataque") {
-    const target = starter ? 17 : 11;
+    const target = starter ? 16 : 10;
     return { ...base, metric: "goals", target, label: "Ser decisivo", description: `Marcar pelo menos ${target} gols na temporada.` };
   }
   if (position.zone === "meio") {
-    const target = starter ? 14 : 9;
+    const target = starter ? 13 : 8;
     return { ...base, metric: selector % 2 ? "assists" : "goalContributions", target, label: "Comandar o jogo", description: selector % 2 ? `Dar ${target} assistências.` : `Somar ${target} gols + assistências.` };
   }
   if (selector >= 3) {
     return { ...base, metric: "discipline", target: 7, label: "Liderar sem perder a cabeça", description: "Receber no máximo 7 pontos disciplinares (amarelo = 1, vermelho = 3)." };
   }
-  const target = starter ? 26 : 19;
+  const target = starter ? 25 : 18;
   return { ...base, metric: "appearances", target, label: "Virar pilar da defesa", description: `Entrar em campo ao menos ${target} vezes.` };
 }
 

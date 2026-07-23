@@ -752,11 +752,11 @@ function createYouthJourney(state: GameState, formationId: string) {
   const overall = clamp(Math.round(44 + score * 0.12 + seeded(state.seed, 22) * 4), 49, 60);
   const fateRoll = seeded(state.seed, 701);
   const ceilingRoll = seeded(state.seed, 709);
-  const hiddenCeiling = fateRoll < 0.25
+  const hiddenCeiling = fateRoll < 0.18
     ? 61 + Math.floor(ceilingRoll * 11)
-    : fateRoll < 0.85
+    : fateRoll < 0.80
       ? 70 + Math.floor(ceilingRoll * 13)
-      : fateRoll < 0.97
+      : fateRoll < 0.96
         ? 82 + Math.floor(ceilingRoll * 7)
         : fateRoll < 0.99
           ? 89 + Math.floor(ceilingRoll * 6)
@@ -836,7 +836,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const requirement = 55 + club.reputation * 5 + (abroad ? league.prestige * 3 : 0);
   const seasonRole = calculateSquadRole(affected.overall, club, league.prestige, affected.managerTrust, affected.age);
   const roleScore = affected.overall - requirement + (effect.minutes ?? 0) - adaptationPenalty + roleAppearanceModifier(seasonRole);
-  const baseApps = roleScore >= 5 ? 32 : roleScore >= 0 ? 25 : roleScore >= -5 ? 17 : 9;
+  const baseApps = roleScore >= 5 ? 33 : roleScore >= 0 ? 26 : roleScore >= -5 ? 19 : 11;
   const provisionalCards = Math.floor(seeded(state.seed, state.season * 211) * 5);
   const suspensionPenalty = affected.suspensionMatches + (affected.discipline < 35 ? 3 : affected.discipline < 55 ? 1 : 0);
   const appearances = clamp(Math.round(baseApps + seeded(state.seed, state.season * 3) * 8 - suspensionPenalty), 3, 38);
@@ -855,17 +855,17 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const strength = competitiveStrength(club);
   const playerImpact = Math.max(0, affected.overall - 70);
   const leagueChance = clamp(
-    4 + (strength - 70) * 0.7 + playerImpact * 0.32 + boost * 0.25 + affected.fanSupport / 55 - (abroad ? league.prestige * 0.35 : 0),
+    4 + (strength - 70) * 0.7 + playerImpact * 0.36 + boost * 0.25 + affected.fanSupport / 55 - (abroad ? league.prestige * 0.35 : 0),
     1,
     27,
   );
-  const cupChance = clamp(3 + (strength - 70) * 0.45 + playerImpact * 0.25 + boost * 0.22, 1, 20);
+  const cupChance = clamp(3 + (strength - 70) * 0.45 + playerImpact * 0.28 + boost * 0.22, 1, 20);
   const playsContinental = affected.continentalSlot;
   const playsWorld = affected.worldQualifiedSeason === affected.season && affected.worldQualifiedClubId === club.id;
   const continentalTier = playsContinental === "champions" ? -2 : playsContinental === "libertadores" ? 0 : playsContinental === "europa" ? 1 : 2;
   const underdogContinentalFactor = strength < 74 ? 0.62 : strength < 78 ? 0.82 : 1;
   const continentalChance = clamp(
-    (2 + (strength - 74) * 0.38 + Math.max(0, affected.overall - 72) * 0.32 + boost * 0.18 + continentalTier) * underdogContinentalFactor,
+    (2 + (strength - 74) * 0.38 + Math.max(0, affected.overall - 72) * 0.35 + boost * 0.18 + continentalTier) * underdogContinentalFactor,
     0.6,
     18,
   );
@@ -900,9 +900,9 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
 
   const growthRoll = seeded(state.seed, state.season * 19);
   let development = 0;
-  if (affected.age <= 19) development = growthRoll < 0.1 ? -1 : growthRoll < 0.43 ? 0 : growthRoll < 0.8 ? 1 : growthRoll < 0.96 ? 2 : 3;
-  else if (affected.age <= 23) development = growthRoll < 0.12 ? -1 : growthRoll < 0.52 ? 0 : growthRoll < 0.86 ? 1 : growthRoll < 0.98 ? 2 : 3;
-  else if (affected.age <= 27) development = growthRoll < 0.16 ? -1 : growthRoll < 0.66 ? 0 : growthRoll < 0.95 ? 1 : 2;
+  if (affected.age <= 19) development = growthRoll < 0.07 ? -1 : growthRoll < 0.38 ? 0 : growthRoll < 0.8 ? 1 : growthRoll < 0.96 ? 2 : 3;
+  else if (affected.age <= 23) development = growthRoll < 0.08 ? -1 : growthRoll < 0.42 ? 0 : growthRoll < 0.82 ? 1 : growthRoll < 0.97 ? 2 : 3;
+  else if (affected.age <= 27) development = growthRoll < 0.11 ? -1 : growthRoll < 0.59 ? 0 : growthRoll < 0.94 ? 1 : 2;
   else if (affected.age <= 29) development = growthRoll < 0.14 ? -2 : growthRoll < 0.44 ? -1 : growthRoll < 0.92 ? 0 : 1;
   else if (affected.age <= 31) development = growthRoll < 0.2 ? -2 : growthRoll < 0.67 ? -1 : growthRoll < 0.97 ? 0 : 1;
   else if (affected.age <= 34) development = growthRoll < 0.15 ? -3 : growthRoll < 0.52 ? -2 : growthRoll < 0.91 ? -1 : 0;
@@ -938,19 +938,19 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   let setbackDelta = 0;
   let luckyDelta = 0;
   const twistRoll = seeded(state.seed, state.season * 83);
-  const seriousInjuryChance = 0.045 + Math.max(0, 65 - affected.fitness) / 450 + (effect.injuryRisk ?? 0) / 500;
+  const seriousInjuryChance = 0.038 + Math.max(0, 65 - affected.fitness) / 450 + (effect.injuryRisk ?? 0) / 500;
   if (twistRoll < seriousInjuryChance) {
     development -= 3;
     twistFitness = -24;
     twistMorale = -10;
     setbackDelta = 1;
     twist = "Uma lesão séria interrompeu sua temporada e mudou o ritmo da carreira.";
-  } else if (twistRoll < seriousInjuryChance + 0.11) {
+  } else if (twistRoll < seriousInjuryChance + 0.095) {
     development -= 1;
     twistMorale = -13;
     setbackDelta = 1;
     twist = "A confiança desapareceu por meses. Nem toda fase ruim tem uma explicação simples.";
-  } else if (twistRoll > 0.955 && affected.age <= 29 && affected.overall < affected.potential) {
+  } else if (twistRoll > 0.95 && affected.age <= 29 && affected.overall < affected.potential) {
     development += Math.min(2, affected.potential - affected.overall);
     twistMorale = 10;
     luckyDelta = 1;
@@ -978,7 +978,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     const strengthDifficulty = nationalTier === "main" ? Math.max(0, nation.strength - 3) * 2 : Math.max(0, nation.strength - 3);
     const tierRequirement = (nationalTier === "main" ? 74 : nationalTier === "olympic" ? 70 : nationalTier === "sub20" ? 64 : 58) + strengthDifficulty;
     const callChance = clamp(
-      6 +
+      8 +
       (affected.overall - tierRequirement) * 3 +
       affected.nationalLevel * 0.3 +
       affected.reputation * 0.12 +
