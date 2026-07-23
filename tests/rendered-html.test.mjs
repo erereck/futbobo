@@ -181,6 +181,19 @@ test("mostra de cinco a dez propostas na janela de transferências", async () =>
   assert.match(page, /index >= 5 \? "DESTAQUE ABRIU ESTA PORTA"/);
 });
 
+test("garante uma proposta europeia compatível até para carreiras em baixa", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /function guaranteedEuropeanOffer/);
+  assert.match(page, /function ensureEuropeanOffer/);
+  assert.match(page, /baseOffers = ensureEuropeanOffer\(state, salt \+ 941, baseOffers\)/);
+  assert.match(page, /Math\.abs\(competitiveStrength\(a\) - targetStrength\)/);
+  assert.match(page, /PORTA DE ENTRADA NA EUROPA/);
+  assert.match(page, /Uma chance europeia compatível com o seu momento/);
+  assert.match(styles, /\.offer-european-door/);
+});
+
 test("gera temporadas com mais gols e assistências sem igualar todas as posições", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
@@ -250,11 +263,25 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
   );
   const leagueEntries = [...data.matchAll(/\{ id: "([^"]+)", countryId: "([^"]+)", name: "[^"]+", cupName:/g)];
   const leagueIds = new Set(leagueEntries.map((match) => match[1]));
-  const clubEntries = [...data.matchAll(/\{ id: "([^"]+)", name: "[^"]+", shortName: "[^"]+", abbr: "[^"]+", city: "[^"]+"[^}]*countryId: "([^"]+)", leagueId: "([^"]+)"/g)];
+  const clubEntries = [...data.matchAll(/\{ id: "([^"]+)", name: "[^"]+", shortName: "[^"]+", abbr: "[^"]+", city: "[^"]+"[^}]*countryId: "([^"]+)", leagueId: "([^"]+)"[^}]*reputation: (\d)/g)];
   const clubIds = clubEntries.map((match) => match[1]);
 
   assert.equal(new Set(clubIds).size, clubIds.length, "IDs de clubes precisam ser únicos");
-  assert.ok(clubEntries.length >= 110, "a base deve manter pelo menos 110 clubes");
+  assert.ok(clubEntries.length >= 200, "a base deve manter pelo menos 200 clubes");
+  const clubCountByLeague = new Map();
+  const modestClubCountByLeague = new Map();
+  for (const match of clubEntries) {
+    const leagueId = match[3];
+    clubCountByLeague.set(leagueId, (clubCountByLeague.get(leagueId) ?? 0) + 1);
+    if (match[4] === "1") {
+      modestClubCountByLeague.set(leagueId, (modestClubCountByLeague.get(leagueId) ?? 0) + 1);
+    }
+  }
+  for (const [, leagueId, countryId] of leagueEntries) {
+    if (countryId === "brasil") continue;
+    assert.ok((clubCountByLeague.get(leagueId) ?? 0) >= 10, `${leagueId} precisa ter ao menos 10 clubes`);
+    assert.ok((modestClubCountByLeague.get(leagueId) ?? 0) >= 1, `${leagueId} precisa ter clube modesto`);
+  }
   for (const [, leagueId, countryId] of leagueEntries) assert.ok(countryIds.has(countryId), `país ausente na liga ${leagueId}`);
   for (const [, clubId, countryId, leagueId] of clubEntries) {
     assert.ok(countryIds.has(countryId), `país ausente no clube ${clubId}`);

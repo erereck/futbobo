@@ -569,6 +569,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .reveal-nation { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--muted) !important; font-size: 10px !important; font-weight: 700 !important; }
 
 .offer-abroad-tag { display: block; margin-top: 3px; color: var(--blue) !important; }
+.offer-european-door { display: block; margin-top: 3px; color: var(--blue) !important; font-weight: 900 !important; }
 
 .season-national-note { display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 12px; padding: 11px 12px; border: 1px solid rgba(255,199,44,.22); border-radius: 14px; background: rgba(255,199,44,.05); text-align: left; }
 .season-national-note p { margin: 0; color: var(--text); font-size: 10px; line-height: 1.4; }

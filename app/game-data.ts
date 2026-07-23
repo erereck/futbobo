@@ -209,6 +209,10 @@ export function leagueById(id: string): League {
   return LEAGUES.find((league) => league.id === id) ?? LEAGUES[0];
 }
 
+// PARA ADICIONAR CLUBES MANUALMENTE: copie um objeto dentro da lista do país,
+// use um `id` único e mantenha `countryId` e `leagueId` iguais aos IDs definidos acima.
+// `reputation` vai de 1 a 5; `strength` ajusta a força esportiva (aprox. 55 a 90).
+//
 // Série A 2026, conforme a relação oficial da CBF. Os escudos serão substituídos
 // por uma fonte de dados licenciada; nesta demo cada clube recebe um monograma.
 const BRAZIL_CLUBS: Club[] = [
@@ -245,6 +249,12 @@ const EUROPE_CLUBS: Club[] = [
   { id: "tottenham", name: "Tottenham Hotspur Football Club", shortName: "Tottenham", abbr: "TOT", city: "Londres", countryId: "inglaterra", leagueId: "premier", primary: "#f5f5f5", secondary: "#111111", reputation: 4 },
   { id: "newcastle", name: "Newcastle United Football Club", shortName: "Newcastle", abbr: "NEW", city: "Newcastle", countryId: "inglaterra", leagueId: "premier", primary: "#111111", secondary: "#f5f5f5", reputation: 3 },
   { id: "aston-villa", name: "Aston Villa Football Club", shortName: "Aston Villa", abbr: "AVL", city: "Birmingham", countryId: "inglaterra", leagueId: "premier", primary: "#7a1538", secondary: "#4a9fd6", reputation: 3 },
+  { id: "everton", name: "Everton Football Club", shortName: "Everton", abbr: "EVE", city: "Liverpool", countryId: "inglaterra", leagueId: "premier", primary: "#274b9f", secondary: "#f5f5f5", reputation: 2, strength: 70 },
+  { id: "crystal-palace", name: "Crystal Palace Football Club", shortName: "Crystal Palace", abbr: "CRY", city: "Londres", countryId: "inglaterra", leagueId: "premier", primary: "#274b9f", secondary: "#d71920", reputation: 2, strength: 72 },
+  { id: "brentford", name: "Brentford Football Club", shortName: "Brentford", abbr: "BRE", city: "Londres", countryId: "inglaterra", leagueId: "premier", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 71 },
+  { id: "brighton", name: "Brighton & Hove Albion Football Club", shortName: "Brighton", abbr: "BHA", city: "Brighton", countryId: "inglaterra", leagueId: "premier", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 2, strength: 72 },
+  { id: "fulham", name: "Fulham Football Club", shortName: "Fulham", abbr: "FUL", city: "Londres", countryId: "inglaterra", leagueId: "premier", primary: "#f5f5f5", secondary: "#111111", reputation: 2, strength: 69 },
+  { id: "wolves", name: "Wolverhampton Wanderers Football Club", shortName: "Wolverhampton", abbr: "WOL", city: "Wolverhampton", countryId: "inglaterra", leagueId: "premier", primary: "#f2b705", secondary: "#111111", reputation: 1, strength: 66 },
   // Espanha — La Liga
   { id: "real-madrid", name: "Real Madrid Club de Fútbol", shortName: "Real Madrid", abbr: "RMA", city: "Madri", countryId: "espanha", leagueId: "laliga", primary: "#f5f5f5", secondary: "#f2b705", reputation: 5 },
   { id: "barcelona", name: "Futbol Club Barcelona", shortName: "Barcelona", abbr: "BAR", city: "Barcelona", countryId: "espanha", leagueId: "laliga", primary: "#274b9f", secondary: "#d71920", reputation: 5 },
@@ -253,6 +263,11 @@ const EUROPE_CLUBS: Club[] = [
   { id: "sevilla", name: "Sevilla Fútbol Club", shortName: "Sevilla", abbr: "SEV", city: "Sevilha", countryId: "espanha", leagueId: "laliga", primary: "#f5f5f5", secondary: "#d71920", reputation: 3 },
   { id: "athletic-bilbao", name: "Athletic Club", shortName: "Athletic Bilbao", abbr: "ATH", city: "Bilbao", countryId: "espanha", leagueId: "laliga", primary: "#d71920", secondary: "#f5f5f5", reputation: 3 },
   { id: "real-betis", name: "Real Betis Balompié", shortName: "Real Betis", abbr: "BET", city: "Sevilha", countryId: "espanha", leagueId: "laliga", primary: "#08783e", secondary: "#f5f5f5", reputation: 3 },
+  { id: "villarreal", name: "Villarreal Club de Fútbol", shortName: "Villarreal", abbr: "VIL", city: "Vila-real", countryId: "espanha", leagueId: "laliga", primary: "#f2b705", secondary: "#274b9f", reputation: 2, strength: 71 },
+  { id: "celta-vigo", name: "Real Club Celta de Vigo", shortName: "Celta de Vigo", abbr: "CEL", city: "Vigo", countryId: "espanha", leagueId: "laliga", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 2, strength: 67 },
+  { id: "getafe", name: "Getafe Club de Fútbol", shortName: "Getafe", abbr: "GET", city: "Getafe", countryId: "espanha", leagueId: "laliga", primary: "#274b9f", secondary: "#f5f5f5", reputation: 1, strength: 64 },
+  { id: "osasuna", name: "Club Atlético Osasuna", shortName: "Osasuna", abbr: "OSA", city: "Pamplona", countryId: "espanha", leagueId: "laliga", primary: "#d71920", secondary: "#274b9f", reputation: 1, strength: 65 },
+  { id: "mallorca", name: "Real Club Deportivo Mallorca", shortName: "Mallorca", abbr: "MLL", city: "Palma", countryId: "espanha", leagueId: "laliga", primary: "#d71920", secondary: "#111111", reputation: 1, strength: 63 },
   // Itália — Serie A
   { id: "inter", name: "Football Club Internazionale Milano", shortName: "Inter de Milão", abbr: "IMI", city: "Milão", countryId: "italia", leagueId: "seriea", primary: "#274b9f", secondary: "#111111", reputation: 5 },
   { id: "milan", name: "Associazione Calcio Milan", shortName: "Milan", abbr: "MIL", city: "Milão", countryId: "italia", leagueId: "seriea", primary: "#d71920", secondary: "#111111", reputation: 4 },
@@ -260,27 +275,64 @@ const EUROPE_CLUBS: Club[] = [
   { id: "napoli", name: "Società Sportiva Calcio Napoli", shortName: "Napoli", abbr: "NAP", city: "Nápoles", countryId: "italia", leagueId: "seriea", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 4 },
   { id: "roma", name: "Associazione Sportiva Roma", shortName: "Roma", abbr: "ROM", city: "Roma", countryId: "italia", leagueId: "seriea", primary: "#7a1538", secondary: "#f2b705", reputation: 3 },
   { id: "atalanta", name: "Atalanta Bergamasca Calcio", shortName: "Atalanta", abbr: "ATA", city: "Bérgamo", countryId: "italia", leagueId: "seriea", primary: "#111111", secondary: "#4a9fd6", reputation: 3 },
+  { id: "lazio", name: "Società Sportiva Lazio", shortName: "Lazio", abbr: "LAZ", city: "Roma", countryId: "italia", leagueId: "seriea", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 3, strength: 72 },
+  { id: "fiorentina", name: "ACF Fiorentina", shortName: "Fiorentina", abbr: "FIO", city: "Florença", countryId: "italia", leagueId: "seriea", primary: "#6f42a1", secondary: "#f5f5f5", reputation: 2, strength: 70 },
+  { id: "bologna", name: "Bologna Football Club 1909", shortName: "Bologna", abbr: "BOL", city: "Bolonha", countryId: "italia", leagueId: "seriea", primary: "#274b9f", secondary: "#d71920", reputation: 2, strength: 69 },
+  { id: "torino", name: "Torino Football Club", shortName: "Torino", abbr: "TOR", city: "Turim", countryId: "italia", leagueId: "seriea", primary: "#7a1538", secondary: "#f5f5f5", reputation: 2, strength: 67 },
+  { id: "genoa", name: "Genoa Cricket and Football Club", shortName: "Genoa", abbr: "GEN", city: "Gênova", countryId: "italia", leagueId: "seriea", primary: "#274b9f", secondary: "#d71920", reputation: 1, strength: 64 },
+  { id: "udinese", name: "Udinese Calcio", shortName: "Udinese", abbr: "UDI", city: "Údine", countryId: "italia", leagueId: "seriea", primary: "#111111", secondary: "#f5f5f5", reputation: 1, strength: 62 },
   // Alemanha — Bundesliga
   { id: "bayern", name: "Fußball-Club Bayern München", shortName: "Bayern de Munique", abbr: "BAY", city: "Munique", countryId: "alemanha", leagueId: "bundesliga", primary: "#d71920", secondary: "#f5f5f5", reputation: 5 },
   { id: "dortmund", name: "Borussia Dortmund", shortName: "Borussia Dortmund", abbr: "BVB", city: "Dortmund", countryId: "alemanha", leagueId: "bundesliga", primary: "#f2b705", secondary: "#111111", reputation: 4 },
   { id: "leipzig", name: "RasenBallsport Leipzig", shortName: "RB Leipzig", abbr: "RBL", city: "Leipzig", countryId: "alemanha", leagueId: "bundesliga", primary: "#f5f5f5", secondary: "#111111", reputation: 4 },
   { id: "leverkusen", name: "Bayer 04 Leverkusen", shortName: "Bayer Leverkusen", abbr: "B04", city: "Leverkusen", countryId: "alemanha", leagueId: "bundesliga", primary: "#d71920", secondary: "#111111", reputation: 4 },
   { id: "frankfurt", name: "Eintracht Frankfurt", shortName: "Eintracht Frankfurt", abbr: "SGE", city: "Frankfurt", countryId: "alemanha", leagueId: "bundesliga", primary: "#111111", secondary: "#d71920", reputation: 3 },
+  { id: "stuttgart", name: "Verein für Bewegungsspiele Stuttgart", shortName: "VfB Stuttgart", abbr: "VFB", city: "Stuttgart", countryId: "alemanha", leagueId: "bundesliga", primary: "#f5f5f5", secondary: "#d71920", reputation: 3, strength: 73 },
+  { id: "freiburg", name: "Sport-Club Freiburg", shortName: "Freiburg", abbr: "SCF", city: "Freiburg", countryId: "alemanha", leagueId: "bundesliga", primary: "#111111", secondary: "#d71920", reputation: 2, strength: 69 },
+  { id: "werder-bremen", name: "Sportverein Werder Bremen", shortName: "Werder Bremen", abbr: "SVW", city: "Bremen", countryId: "alemanha", leagueId: "bundesliga", primary: "#08783e", secondary: "#f5f5f5", reputation: 2, strength: 67 },
+  { id: "mainz", name: "1. Fußball- und Sportverein Mainz 05", shortName: "Mainz 05", abbr: "M05", city: "Mainz", countryId: "alemanha", leagueId: "bundesliga", primary: "#d71920", secondary: "#f5f5f5", reputation: 1, strength: 64 },
+  { id: "augsburg", name: "Fußball-Club Augsburg", shortName: "Augsburg", abbr: "FCA", city: "Augsburg", countryId: "alemanha", leagueId: "bundesliga", primary: "#d71920", secondary: "#08783e", reputation: 1, strength: 62 },
+  { id: "wolfsburg", name: "Verein für Leibesübungen Wolfsburg", shortName: "Wolfsburg", abbr: "WOB", city: "Wolfsburg", countryId: "alemanha", leagueId: "bundesliga", primary: "#63e36b", secondary: "#f5f5f5", reputation: 2, strength: 66 },
+  { id: "hoffenheim", name: "Turn- und Sportgemeinschaft 1899 Hoffenheim", shortName: "Hoffenheim", abbr: "TSG", city: "Sinsheim", countryId: "alemanha", leagueId: "bundesliga", primary: "#274b9f", secondary: "#f5f5f5", reputation: 1, strength: 61 },
   // França — Ligue 1
   { id: "psg", name: "Paris Saint-Germain Football Club", shortName: "Paris Saint-Germain", abbr: "PSG", city: "Paris", countryId: "franca", leagueId: "ligue1", primary: "#274b9f", secondary: "#d71920", reputation: 5 },
   { id: "marseille", name: "Olympique de Marseille", shortName: "Olympique de Marselha", abbr: "OM", city: "Marselha", countryId: "franca", leagueId: "ligue1", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 3 },
   { id: "lyon", name: "Olympique Lyonnais", shortName: "Olympique de Lyon", abbr: "OL", city: "Lyon", countryId: "franca", leagueId: "ligue1", primary: "#274b9f", secondary: "#d71920", reputation: 3 },
   { id: "monaco", name: "Association Sportive de Monaco", shortName: "AS Monaco", abbr: "ASM", city: "Mônaco", countryId: "franca", leagueId: "ligue1", primary: "#d71920", secondary: "#f5f5f5", reputation: 3 },
   { id: "lille", name: "Lille Olympique Sporting Club", shortName: "Lille", abbr: "LIL", city: "Lille", countryId: "franca", leagueId: "ligue1", primary: "#d71920", secondary: "#4a9fd6", reputation: 3 },
+  { id: "nice", name: "Olympique Gymnaste Club Nice", shortName: "Nice", abbr: "NIC", city: "Nice", countryId: "franca", leagueId: "ligue1", primary: "#111111", secondary: "#d71920", reputation: 2, strength: 70 },
+  { id: "lens", name: "Racing Club de Lens", shortName: "Lens", abbr: "RCL", city: "Lens", countryId: "franca", leagueId: "ligue1", primary: "#f2b705", secondary: "#d71920", reputation: 2, strength: 69 },
+  { id: "rennes", name: "Stade Rennais Football Club", shortName: "Rennes", abbr: "REN", city: "Rennes", countryId: "franca", leagueId: "ligue1", primary: "#d71920", secondary: "#111111", reputation: 2, strength: 67 },
+  { id: "strasbourg", name: "Racing Club de Strasbourg Alsace", shortName: "Strasbourg", abbr: "RCS", city: "Estrasburgo", countryId: "franca", leagueId: "ligue1", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 1, strength: 64 },
+  { id: "nantes", name: "Football Club de Nantes", shortName: "Nantes", abbr: "NAN", city: "Nantes", countryId: "franca", leagueId: "ligue1", primary: "#f2b705", secondary: "#08783e", reputation: 1, strength: 62 },
+  { id: "toulouse", name: "Toulouse Football Club", shortName: "Toulouse", abbr: "TFC", city: "Toulouse", countryId: "franca", leagueId: "ligue1", primary: "#6f42a1", secondary: "#f5f5f5", reputation: 1, strength: 61 },
+  { id: "brest", name: "Stade Brestois 29", shortName: "Brest", abbr: "BRE", city: "Brest", countryId: "franca", leagueId: "ligue1", primary: "#d71920", secondary: "#f5f5f5", reputation: 1, strength: 60 },
   // Portugal — Primeira Liga
   { id: "benfica", name: "Sport Lisboa e Benfica", shortName: "Benfica", abbr: "BEN", city: "Lisboa", countryId: "portugal", leagueId: "primeira", primary: "#d71920", secondary: "#f5f5f5", reputation: 4 },
   { id: "porto", name: "Futebol Clube do Porto", shortName: "Porto", abbr: "FCP", city: "Porto", countryId: "portugal", leagueId: "primeira", primary: "#4a9fd6", secondary: "#111111", reputation: 4 },
   { id: "sporting", name: "Sporting Clube de Portugal", shortName: "Sporting", abbr: "SCP", city: "Lisboa", countryId: "portugal", leagueId: "primeira", primary: "#08783e", secondary: "#f5f5f5", reputation: 4 },
   { id: "braga", name: "Sporting Clube de Braga", shortName: "Braga", abbr: "SCB", city: "Braga", countryId: "portugal", leagueId: "primeira", primary: "#d71920", secondary: "#f5f5f5", reputation: 3 },
+  { id: "vitoria-guimaraes", name: "Vitória Sport Clube", shortName: "Vitória de Guimarães", abbr: "VSC", city: "Guimarães", countryId: "portugal", leagueId: "primeira", primary: "#f5f5f5", secondary: "#111111", reputation: 2, strength: 68 },
+  { id: "famalicao", name: "Futebol Clube de Famalicão", shortName: "Famalicão", abbr: "FAM", city: "Vila Nova de Famalicão", countryId: "portugal", leagueId: "primeira", primary: "#274b9f", secondary: "#f5f5f5", reputation: 2, strength: 65 },
+  { id: "rio-ave", name: "Rio Ave Futebol Clube", shortName: "Rio Ave", abbr: "RIO", city: "Vila do Conde", countryId: "portugal", leagueId: "primeira", primary: "#08783e", secondary: "#f5f5f5", reputation: 1, strength: 61 },
+  { id: "moreirense", name: "Moreirense Futebol Clube", shortName: "Moreirense", abbr: "MOR", city: "Moreira de Cónegos", countryId: "portugal", leagueId: "primeira", primary: "#08783e", secondary: "#f5f5f5", reputation: 1, strength: 62 },
+  { id: "estoril", name: "Grupo Desportivo Estoril Praia", shortName: "Estoril", abbr: "EST", city: "Estoril", countryId: "portugal", leagueId: "primeira", primary: "#f2b705", secondary: "#274b9f", reputation: 1, strength: 60 },
+  { id: "casa-pia", name: "Casa Pia Atlético Clube", shortName: "Casa Pia", abbr: "CAP", city: "Lisboa", countryId: "portugal", leagueId: "primeira", primary: "#111111", secondary: "#f5f5f5", reputation: 1, strength: 59 },
+  { id: "arouca", name: "Futebol Clube de Arouca", shortName: "Arouca", abbr: "ARO", city: "Arouca", countryId: "portugal", leagueId: "primeira", primary: "#f2b705", secondary: "#274b9f", reputation: 1, strength: 60 },
+  { id: "gil-vicente", name: "Gil Vicente Futebol Clube", shortName: "Gil Vicente", abbr: "GIL", city: "Barcelos", countryId: "portugal", leagueId: "primeira", primary: "#d71920", secondary: "#274b9f", reputation: 1, strength: 58 },
   // Holanda — Eredivisie
   { id: "ajax", name: "Amsterdamsche Football Club Ajax", shortName: "Ajax", abbr: "AJA", city: "Amsterdã", countryId: "holanda", leagueId: "eredivisie", primary: "#f5f5f5", secondary: "#d71920", reputation: 3 },
   { id: "psv", name: "Philips Sport Vereniging", shortName: "PSV Eindhoven", abbr: "PSV", city: "Eindhoven", countryId: "holanda", leagueId: "eredivisie", primary: "#d71920", secondary: "#f5f5f5", reputation: 3 },
   { id: "feyenoord", name: "Feyenoord Rotterdam", shortName: "Feyenoord", abbr: "FEY", city: "Roterdã", countryId: "holanda", leagueId: "eredivisie", primary: "#d71920", secondary: "#f5f5f5", reputation: 3 },
+  { id: "az-alkmaar", name: "Alkmaar Zaanstreek", shortName: "AZ Alkmaar", abbr: "AZ", city: "Alkmaar", countryId: "holanda", leagueId: "eredivisie", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 69 },
+  { id: "utrecht", name: "Football Club Utrecht", shortName: "FC Utrecht", abbr: "UTR", city: "Utrecht", countryId: "holanda", leagueId: "eredivisie", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 66 },
+  { id: "twente", name: "Football Club Twente", shortName: "FC Twente", abbr: "TWE", city: "Enschede", countryId: "holanda", leagueId: "eredivisie", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 67 },
+  { id: "heerenveen", name: "Sportclub Heerenveen", shortName: "Heerenveen", abbr: "HEE", city: "Heerenveen", countryId: "holanda", leagueId: "eredivisie", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 1, strength: 61 },
+  { id: "groningen", name: "Football Club Groningen", shortName: "Groningen", abbr: "GRO", city: "Groningen", countryId: "holanda", leagueId: "eredivisie", primary: "#08783e", secondary: "#f5f5f5", reputation: 1, strength: 60 },
+  { id: "sparta-rotterdam", name: "Sparta Rotterdam", shortName: "Sparta Rotterdam", abbr: "SPA", city: "Roterdã", countryId: "holanda", leagueId: "eredivisie", primary: "#d71920", secondary: "#f5f5f5", reputation: 1, strength: 60 },
+  { id: "nec-nijmegen", name: "Nijmegen Eendracht Combinatie", shortName: "NEC Nijmegen", abbr: "NEC", city: "Nijmegen", countryId: "holanda", leagueId: "eredivisie", primary: "#d71920", secondary: "#08783e", reputation: 1, strength: 59 },
+  { id: "go-ahead-eagles", name: "Go Ahead Eagles", shortName: "Go Ahead Eagles", abbr: "GAE", city: "Deventer", countryId: "holanda", leagueId: "eredivisie", primary: "#d71920", secondary: "#f2b705", reputation: 1, strength: 58 },
+  { id: "fortuna-sittard", name: "Fortuna Sittard", shortName: "Fortuna Sittard", abbr: "FOR", city: "Sittard", countryId: "holanda", leagueId: "eredivisie", primary: "#f2b705", secondary: "#08783e", reputation: 1, strength: 57 },
 ];
 
 // Clubes sul-americanos fora do Brasil: elegíveis à Libertadores conforme campanha nacional.
@@ -293,6 +345,10 @@ const ARGENTINA_CLUBS: Club[] = [
   { id: "estudiantes-lp", name: "Club Estudiantes de La Plata", shortName: "Estudiantes", abbr: "EST", city: "La Plata", countryId: "argentina", leagueId: "liga-argentina", primary: "#d71920", secondary: "#f5f5f5", reputation: 3, strength: 71 },
   { id: "talleres", name: "Club Atlético Talleres", shortName: "Talleres", abbr: "TAL", city: "Córdoba", countryId: "argentina", leagueId: "liga-argentina", primary: "#274b9f", secondary: "#f5f5f5", reputation: 3, strength: 73 },
   { id: "velez-sarsfield", name: "Club Atlético Vélez Sarsfield", shortName: "Vélez Sarsfield", abbr: "VEL", city: "Buenos Aires", countryId: "argentina", leagueId: "liga-argentina", primary: "#f5f5f5", secondary: "#111111", reputation: 3, strength: 72 },
+  { id: "rosario-central", name: "Club Atlético Rosario Central", shortName: "Rosario Central", abbr: "ROS", city: "Rosário", countryId: "argentina", leagueId: "liga-argentina", primary: "#274b9f", secondary: "#f2b705", reputation: 2, strength: 68 },
+  { id: "newells", name: "Club Atlético Newell's Old Boys", shortName: "Newell's Old Boys", abbr: "NOB", city: "Rosário", countryId: "argentina", leagueId: "liga-argentina", primary: "#d71920", secondary: "#111111", reputation: 2, strength: 66 },
+  { id: "lanus", name: "Club Atlético Lanús", shortName: "Lanús", abbr: "LAN", city: "Lanús", countryId: "argentina", leagueId: "liga-argentina", primary: "#7a1538", secondary: "#f5f5f5", reputation: 2, strength: 67 },
+  { id: "defensa-justicia", name: "Club Social y Deportivo Defensa y Justicia", shortName: "Defensa y Justicia", abbr: "DYJ", city: "Florencio Varela", countryId: "argentina", leagueId: "liga-argentina", primary: "#f2b705", secondary: "#08783e", reputation: 1, strength: 63 },
 ];
 
 const URUGUAY_CLUBS: Club[] = [
@@ -302,6 +358,10 @@ const URUGUAY_CLUBS: Club[] = [
   { id: "danubio", name: "Danubio Fútbol Club", shortName: "Danubio", abbr: "DAN", city: "Montevidéu", countryId: "uruguai", leagueId: "liga-uruguaia", primary: "#f2b705", secondary: "#111111", reputation: 2, strength: 63 },
   { id: "liverpool-uru", name: "Liverpool Fútbol Club", shortName: "Liverpool FC", abbr: "LIV", city: "Montevidéu", countryId: "uruguai", leagueId: "liga-uruguaia", primary: "#111111", secondary: "#f5f5f5", reputation: 2, strength: 62 },
   { id: "cerro-largo", name: "Cerro Largo Fútbol Club", shortName: "Cerro Largo", abbr: "CEL", city: "Melo", countryId: "uruguai", leagueId: "liga-uruguaia", primary: "#08783e", secondary: "#f5f5f5", reputation: 1, strength: 58 },
+  { id: "wanderers-uru", name: "Montevideo Wanderers Fútbol Club", shortName: "Montevideo Wanderers", abbr: "MWF", city: "Montevidéu", countryId: "uruguai", leagueId: "liga-uruguaia", primary: "#111111", secondary: "#f5f5f5", reputation: 1, strength: 60 },
+  { id: "boston-river", name: "Club Atlético Boston River", shortName: "Boston River", abbr: "BOR", city: "Montevidéu", countryId: "uruguai", leagueId: "liga-uruguaia", primary: "#d71920", secondary: "#08783e", reputation: 1, strength: 58 },
+  { id: "plaza-colonia", name: "Club Plaza Colonia de Deportes", shortName: "Plaza Colonia", abbr: "PLC", city: "Colônia do Sacramento", countryId: "uruguai", leagueId: "liga-uruguaia", primary: "#08783e", secondary: "#f5f5f5", reputation: 1, strength: 56 },
+  { id: "racing-montevideo", name: "Racing Club de Montevideo", shortName: "Racing Montevideo", abbr: "RCM", city: "Montevidéu", countryId: "uruguai", leagueId: "liga-uruguaia", primary: "#08783e", secondary: "#f5f5f5", reputation: 1, strength: 57 },
 ];
 
 const CHILE_CLUBS: Club[] = [
@@ -311,6 +371,10 @@ const CHILE_CLUBS: Club[] = [
   { id: "palestino", name: "Club Deportivo Palestino", shortName: "Palestino", abbr: "PAL", city: "Santiago", countryId: "chile", leagueId: "liga-chilena", primary: "#111111", secondary: "#d71920", reputation: 2, strength: 65 },
   { id: "cobresal", name: "Club de Deportes Cobresal", shortName: "Cobresal", abbr: "COB", city: "El Salvador", countryId: "chile", leagueId: "liga-chilena", primary: "#d71920", secondary: "#111111", reputation: 1, strength: 61 },
   { id: "huachipato", name: "Club Deportivo Huachipato", shortName: "Huachipato", abbr: "HUA", city: "Talcahuano", countryId: "chile", leagueId: "liga-chilena", primary: "#111111", secondary: "#4a9fd6", reputation: 2, strength: 63 },
+  { id: "everton-vina", name: "Everton de Viña del Mar", shortName: "Everton de Viña", abbr: "EVE", city: "Viña del Mar", countryId: "chile", leagueId: "liga-chilena", primary: "#274b9f", secondary: "#f2b705", reputation: 2, strength: 64 },
+  { id: "union-espanola", name: "Unión Española", shortName: "Unión Española", abbr: "UES", city: "Santiago", countryId: "chile", leagueId: "liga-chilena", primary: "#d71920", secondary: "#f2b705", reputation: 1, strength: 61 },
+  { id: "audax-italiano", name: "Audax Club Sportivo Italiano", shortName: "Audax Italiano", abbr: "AUD", city: "Santiago", countryId: "chile", leagueId: "liga-chilena", primary: "#08783e", secondary: "#f5f5f5", reputation: 1, strength: 59 },
+  { id: "nublense", name: "Club Deportivo Ñublense", shortName: "Ñublense", abbr: "NUB", city: "Chillán", countryId: "chile", leagueId: "liga-chilena", primary: "#d71920", secondary: "#111111", reputation: 1, strength: 58 },
 ];
 
 const COLOMBIA_CLUBS: Club[] = [
@@ -320,6 +384,10 @@ const COLOMBIA_CLUBS: Club[] = [
   { id: "santa-fe", name: "Independiente Santa Fe", shortName: "Santa Fe", abbr: "ISF", city: "Bogotá", countryId: "colombia", leagueId: "liga-colombiana", primary: "#d71920", secondary: "#111111", reputation: 2, strength: 67 },
   { id: "deportivo-cali", name: "Deportivo Cali", shortName: "Deportivo Cali", abbr: "DCA", city: "Cali", countryId: "colombia", leagueId: "liga-colombiana", primary: "#63e36b", secondary: "#f5f5f5", reputation: 2, strength: 66 },
   { id: "junior-barranquilla", name: "Junior de Barranquilla", shortName: "Junior", abbr: "JUN", city: "Barranquilla", countryId: "colombia", leagueId: "liga-colombiana", primary: "#d71920", secondary: "#111111", reputation: 3, strength: 69 },
+  { id: "deportes-tolima", name: "Club Deportes Tolima", shortName: "Deportes Tolima", abbr: "TOL", city: "Ibagué", countryId: "colombia", leagueId: "liga-colombiana", primary: "#7a1538", secondary: "#f2b705", reputation: 2, strength: 68 },
+  { id: "once-caldas", name: "Once Caldas Sociedad Anónima", shortName: "Once Caldas", abbr: "ONC", city: "Manizales", countryId: "colombia", leagueId: "liga-colombiana", primary: "#f5f5f5", secondary: "#111111", reputation: 2, strength: 65 },
+  { id: "independiente-medellin", name: "Deportivo Independiente Medellín", shortName: "Ind. Medellín", abbr: "DIM", city: "Medellín", countryId: "colombia", leagueId: "liga-colombiana", primary: "#d71920", secondary: "#274b9f", reputation: 2, strength: 66 },
+  { id: "deportivo-pasto", name: "Asociación Deportivo Pasto", shortName: "Deportivo Pasto", abbr: "PAS", city: "Pasto", countryId: "colombia", leagueId: "liga-colombiana", primary: "#d71920", secondary: "#274b9f", reputation: 1, strength: 59 },
 ];
 
 const PARAGUAY_CLUBS: Club[] = [
@@ -328,6 +396,11 @@ const PARAGUAY_CLUBS: Club[] = [
   { id: "libertad-par", name: "Club Libertad", shortName: "Libertad", abbr: "LIB", city: "Assunção", countryId: "paraguai", leagueId: "liga-paraguaia", primary: "#f5f5f5", secondary: "#111111", reputation: 2, strength: 64 },
   { id: "guarani-par", name: "Club Guaraní", shortName: "Guaraní", abbr: "GUA", city: "Assunção", countryId: "paraguai", leagueId: "liga-paraguaia", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 62 },
   { id: "nacional-par", name: "Club Nacional", shortName: "Nacional-PAR", abbr: "NAP", city: "Assunção", countryId: "paraguai", leagueId: "liga-paraguaia", primary: "#f2b705", secondary: "#111111", reputation: 1, strength: 58 },
+  { id: "sportivo-luqueno", name: "Club Sportivo Luqueño", shortName: "Sportivo Luqueño", abbr: "SLU", city: "Luque", countryId: "paraguai", leagueId: "liga-paraguaia", primary: "#274b9f", secondary: "#f2b705", reputation: 1, strength: 61 },
+  { id: "2-de-mayo", name: "Club Sportivo 2 de Mayo", shortName: "2 de Mayo", abbr: "2DM", city: "Pedro Juan Caballero", countryId: "paraguai", leagueId: "liga-paraguaia", primary: "#274b9f", secondary: "#f5f5f5", reputation: 1, strength: 58 },
+  { id: "trinidense", name: "Club Sportivo Trinidense", shortName: "Trinidense", abbr: "TRI", city: "Assunção", countryId: "paraguai", leagueId: "liga-paraguaia", primary: "#f2b705", secondary: "#274b9f", reputation: 1, strength: 57 },
+  { id: "general-caballero", name: "General Caballero de Juan León Mallorquín", shortName: "General Caballero", abbr: "GCM", city: "Juan León Mallorquín", countryId: "paraguai", leagueId: "liga-paraguaia", primary: "#d71920", secondary: "#f5f5f5", reputation: 1, strength: 56 },
+  { id: "ameliano", name: "Club Sportivo Ameliano", shortName: "Sportivo Ameliano", abbr: "AME", city: "Assunção", countryId: "paraguai", leagueId: "liga-paraguaia", primary: "#274b9f", secondary: "#f5f5f5", reputation: 1, strength: 57 },
 ];
 
 const ECUADOR_CLUBS: Club[] = [
@@ -336,6 +409,11 @@ const ECUADOR_CLUBS: Club[] = [
   { id: "ldu-quito", name: "Liga Deportiva Universitaria de Quito", shortName: "LDU Quito", abbr: "LDU", city: "Quito", countryId: "equador", leagueId: "liga-equatoriana", primary: "#f5f5f5", secondary: "#111111", reputation: 3, strength: 72 },
   { id: "independiente-valle", name: "Independiente del Valle", shortName: "Ind. del Valle", abbr: "IDV", city: "Sangolquí", countryId: "equador", leagueId: "liga-equatoriana", primary: "#111111", secondary: "#63e36b", reputation: 3, strength: 71 },
   { id: "aucas", name: "Sociedad Deportiva Aucas", shortName: "Aucas", abbr: "AUC", city: "Quito", countryId: "equador", leagueId: "liga-equatoriana", primary: "#f2b705", secondary: "#08783e", reputation: 1, strength: 60 },
+  { id: "el-nacional", name: "Club Deportivo El Nacional", shortName: "El Nacional", abbr: "ELN", city: "Quito", countryId: "equador", leagueId: "liga-equatoriana", primary: "#d71920", secondary: "#4a9fd6", reputation: 2, strength: 65 },
+  { id: "deportivo-cuenca", name: "Club Deportivo Cuenca", shortName: "Deportivo Cuenca", abbr: "CUE", city: "Cuenca", countryId: "equador", leagueId: "liga-equatoriana", primary: "#d71920", secondary: "#f2b705", reputation: 1, strength: 60 },
+  { id: "mushuc-runa", name: "Mushuc Runa Sporting Club", shortName: "Mushuc Runa", abbr: "MUR", city: "Ambato", countryId: "equador", leagueId: "liga-equatoriana", primary: "#08783e", secondary: "#f5f5f5", reputation: 1, strength: 58 },
+  { id: "orense", name: "Orense Sporting Club", shortName: "Orense", abbr: "ORE", city: "Machala", countryId: "equador", leagueId: "liga-equatoriana", primary: "#08783e", secondary: "#f2b705", reputation: 1, strength: 57 },
+  { id: "u-catolica-ecu", name: "Club Deportivo Universidad Católica", shortName: "Universidad Católica-EQU", abbr: "UCE", city: "Quito", countryId: "equador", leagueId: "liga-equatoriana", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 2, strength: 64 },
 ];
 
 const PERU_CLUBS: Club[] = [
@@ -344,6 +422,11 @@ const PERU_CLUBS: Club[] = [
   { id: "sporting-cristal", name: "Club Sporting Cristal", shortName: "Sporting Cristal", abbr: "SCR", city: "Lima", countryId: "peru", leagueId: "liga-peruana", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 3, strength: 68 },
   { id: "cienciano", name: "Club Sportivo Cienciano", shortName: "Cienciano", abbr: "CIE", city: "Cusco", countryId: "peru", leagueId: "liga-peruana", primary: "#d71920", secondary: "#f2b705", reputation: 1, strength: 59 },
   { id: "melgar", name: "Foot Ball Club Melgar", shortName: "Melgar", abbr: "MEL", city: "Arequipa", countryId: "peru", leagueId: "liga-peruana", primary: "#7a1538", secondary: "#111111", reputation: 2, strength: 62 },
+  { id: "sport-boys", name: "Sport Boys Association", shortName: "Sport Boys", abbr: "SBO", city: "Callao", countryId: "peru", leagueId: "liga-peruana", primary: "#f2b8e0", secondary: "#111111", reputation: 1, strength: 58 },
+  { id: "cusco-fc", name: "Cusco Fútbol Club", shortName: "Cusco FC", abbr: "CUS", city: "Cusco", countryId: "peru", leagueId: "liga-peruana", primary: "#f2b705", secondary: "#111111", reputation: 1, strength: 60 },
+  { id: "sport-huancayo", name: "Club Sport Huancayo", shortName: "Sport Huancayo", abbr: "HUA", city: "Huancayo", countryId: "peru", leagueId: "liga-peruana", primary: "#d71920", secondary: "#f5f5f5", reputation: 1, strength: 59 },
+  { id: "alianza-atletico", name: "Club Alianza Atlético Sullana", shortName: "Alianza Atlético", abbr: "AAS", city: "Sullana", countryId: "peru", leagueId: "liga-peruana", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 1, strength: 56 },
+  { id: "deportivo-garcilaso", name: "Club Deportivo Garcilaso", shortName: "Deportivo Garcilaso", abbr: "GAR", city: "Cusco", countryId: "peru", leagueId: "liga-peruana", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 1, strength: 57 },
 ];
 
 // Liga MX: elegível à Copa de Campeões Concacaf conforme campanha nacional.
@@ -356,6 +439,10 @@ const MEXICO_CLUBS: Club[] = [
   { id: "tigres-uanl", name: "Club de Fútbol Tigres de la UANL", shortName: "Tigres UANL", abbr: "TIG", city: "San Nicolás de los Garza", countryId: "mexico", leagueId: "liga-mx", primary: "#f2b705", secondary: "#111111", reputation: 4, strength: 77 },
   { id: "toluca", name: "Deportivo Toluca Fútbol Club", shortName: "Toluca", abbr: "TOL", city: "Toluca", countryId: "mexico", leagueId: "liga-mx", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 68 },
   { id: "club-leon", name: "Club León", shortName: "León", abbr: "LEO", city: "León", countryId: "mexico", leagueId: "liga-mx", primary: "#111111", secondary: "#63e36b", reputation: 2, strength: 67 },
+  { id: "pachuca", name: "Club de Fútbol Pachuca", shortName: "Pachuca", abbr: "PAC", city: "Pachuca", countryId: "mexico", leagueId: "liga-mx", primary: "#274b9f", secondary: "#f5f5f5", reputation: 3, strength: 72 },
+  { id: "santos-laguna", name: "Club Santos Laguna", shortName: "Santos Laguna", abbr: "SAN", city: "Torreón", countryId: "mexico", leagueId: "liga-mx", primary: "#08783e", secondary: "#f5f5f5", reputation: 2, strength: 67 },
+  { id: "puebla", name: "Club Puebla", shortName: "Puebla", abbr: "PUE", city: "Puebla", countryId: "mexico", leagueId: "liga-mx", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 1, strength: 61 },
+  { id: "queretaro", name: "Querétaro Fútbol Club", shortName: "Querétaro", abbr: "QUE", city: "Querétaro", countryId: "mexico", leagueId: "liga-mx", primary: "#274b9f", secondary: "#111111", reputation: 1, strength: 60 },
 ];
 
 // MLS: elegível à Copa de Campeões Concacaf conforme campanha nacional.
@@ -368,6 +455,10 @@ const MLS_CLUBS: Club[] = [
   { id: "nycfc", name: "New York City Football Club", shortName: "NYCFC", abbr: "NYC", city: "Nova York", countryId: "eua", leagueId: "mls", primary: "#4a9fd6", secondary: "#f2b705", reputation: 2, strength: 66 },
   { id: "ny-red-bulls", name: "New York Red Bulls", shortName: "NY Red Bulls", abbr: "NYR", city: "Harrison", countryId: "eua", leagueId: "mls", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 65 },
   { id: "portland-timbers", name: "Portland Timbers", shortName: "Portland Timbers", abbr: "POR", city: "Portland", countryId: "eua", leagueId: "mls", primary: "#08783e", secondary: "#f5f5f5", reputation: 2, strength: 65 },
+  { id: "fc-cincinnati", name: "Football Club Cincinnati", shortName: "FC Cincinnati", abbr: "CIN", city: "Cincinnati", countryId: "eua", leagueId: "mls", primary: "#274b9f", secondary: "#ff7a1a", reputation: 2, strength: 69 },
+  { id: "columbus-crew", name: "Columbus Crew", shortName: "Columbus Crew", abbr: "CLB", city: "Columbus", countryId: "eua", leagueId: "mls", primary: "#f2b705", secondary: "#111111", reputation: 2, strength: 68 },
+  { id: "austin-fc", name: "Austin Football Club", shortName: "Austin FC", abbr: "ATX", city: "Austin", countryId: "eua", leagueId: "mls", primary: "#63e36b", secondary: "#111111", reputation: 1, strength: 62 },
+  { id: "san-jose-earthquakes", name: "San Jose Earthquakes", shortName: "San Jose Earthquakes", abbr: "SJE", city: "San José", countryId: "eua", leagueId: "mls", primary: "#274b9f", secondary: "#111111", reputation: 1, strength: 60 },
 ];
 
 export const CLUBS: Club[] = [

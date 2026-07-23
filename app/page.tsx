@@ -623,6 +623,40 @@ function transferMarketProfile(state: GameState) {
   };
 }
 
+function guaranteedEuropeanOffer(state: GameState, salt: number, excludedClubIds: string[]) {
+  const current = clubById(state.currentClubId || state.academyClubId);
+  const profile = transferMarketProfile(state);
+  const targetStrength = clamp(
+    Math.round(
+      56 +
+      Math.max(0, state.overall - 50) * 0.65 +
+      profile.performanceScore * 0.11 +
+      state.reputation * 0.08,
+    ),
+    57,
+    88,
+  );
+  return CLUBS
+    .filter((club) =>
+      isEuropeanClub(club) &&
+      club.id !== current.id &&
+      !excludedClubIds.includes(club.id),
+    )
+    .sort((a, b) => {
+      const scoreA = Math.abs(competitiveStrength(a) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(a)) * 2;
+      const scoreB = Math.abs(competitiveStrength(b) - targetStrength) + seeded(state.seed, salt + CLUBS.indexOf(b)) * 2;
+      return scoreA - scoreB;
+    })[0]?.id;
+}
+
+function ensureEuropeanOffer(state: GameState, salt: number, offers: string[]) {
+  if (offers.some((clubId) => isEuropeanClub(clubById(clubId)))) return offers;
+  const europeanOffer = guaranteedEuropeanOffer(state, salt, offers);
+  if (!europeanOffer) return offers;
+  if (offers.length < 5) return [...offers, europeanOffer];
+  return [...offers.slice(0, 4), europeanOffer];
+}
+
 function formatMoney(value: number) {
   if (value >= 1_000_000) return `€${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}M`;
   return `€${Math.round(value / 1000)}K`;
@@ -748,6 +782,7 @@ function selectTransferOffers(state: GameState, salt: number, opts: { includeFor
   let baseOffers = isEuropeanClub(current) && !opts.forceDomestic
     ? selectOffers(state, 5, salt, { ...opts, includeForeign: true, forceForeign: true })
     : selectOffers(state, 5, salt, opts);
+  baseOffers = ensureEuropeanOffer(state, salt + 941, baseOffers);
   if (opts.forceDomestic) return baseOffers;
 
   if (isEuropeanClub(current) && !opts.forceForeign) {
@@ -1418,7 +1453,14 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     ? selectTransferOffers(nextBase, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad })
     : [];
   if (effect.transfer && event.id === "return-home" && nextBase.academyClubId) {
-    transferOffers = [nextBase.academyClubId, ...transferOffers.filter((clubId) => clubId !== nextBase.academyClubId)].slice(0, 5);
+    const europeanDoor = transferOffers.find((clubId) => isEuropeanClub(clubById(clubId)));
+    const homecomingOffers = [
+      nextBase.academyClubId,
+      ...transferOffers.filter((clubId) => clubId !== nextBase.academyClubId && clubId !== europeanDoor),
+    ];
+    transferOffers = europeanDoor
+      ? [...homecomingOffers.slice(0, 4), europeanDoor]
+      : homecomingOffers.slice(0, 5);
   }
   if (effect.transfer && event.id === "rival-offer") {
     const rivalIds = RIVALRIES
@@ -2248,17 +2290,18 @@ export default function Home() {
                   const offerRole = calculateSquadRole(game.overall, club, league.prestige, 50, game.age);
                   const rivalry = findRivalry(currentClub.id, club.id);
                   const rareBrazilReturn = isEuropeanClub(currentClub) && club.countryId === "brasil" && transferWindowProfile.europeanOffers > 0;
+                  const europeanEntryOffer = !isEuropeanClub(currentClub) && isEuropeanClub(club);
                   return (
                     <button className="offer-card" key={clubId} onClick={() => chooseTransfer(clubId)}>
                       <ClubBadge club={club} />
                       <span>
-                        <small>{rareBrazilReturn ? "RETORNO IMPROVÁVEL" : index >= 5 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
+                        <small>{rareBrazilReturn ? "RETORNO IMPROVÁVEL" : europeanEntryOffer ? "PORTA DE ENTRADA NA EUROPA" : index >= 5 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
                         <strong>{club.shortName}</strong>
                         <em>{club.city} · {league.name} · reputação {club.reputation}/5</em>
                         <em className="offer-contract">{ROLE_LABELS[offerRole]} · {offerContract.years} anos · {formatMoney(offerContract.annualSalary)}/ano</em>
                         <em className="offer-market-value">Valor estimado na liga: {formatMoney(marketValue(game.overall, game.age, club, game.reputation, game.lastResult ?? undefined))}</em>
                         {rivalry && <em className="offer-rivalry">⚔ Transferência explosiva: {rivalry.nickname}</em>}
-                        {rareBrazilReturn ? <em className="offer-homecoming-tag">⌂ Retorno raro ao Brasil — oportunidade inesperada</em> : changesCountry && <em className="offer-abroad-tag">◇ Novo país — uma fase de adaptação começa</em>}
+                        {rareBrazilReturn ? <em className="offer-homecoming-tag">⌂ Retorno raro ao Brasil — oportunidade inesperada</em> : europeanEntryOffer ? <em className="offer-european-door">★ Uma chance europeia compatível com o seu momento</em> : changesCountry && <em className="offer-abroad-tag">◇ Novo país — uma fase de adaptação começa</em>}
                       </span>
                       <b>→</b>
                     </button>
