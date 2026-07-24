@@ -789,7 +789,8 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .free-agent-card { border-color: rgba(166,117,255,.34); background: linear-gradient(135deg, rgba(166,117,255,.09), rgba(44,168,255,.04)); }
 .free-agent-symbol { display: grid; width: 52px; height: 52px; flex: 0 0 auto; place-items: center; border-radius: 17px; background: rgba(166,117,255,.12); color: #d6c5ff; font-size: 24px; }
 
-.life-screen { display: grid; gap: 11px; }
+.life-screen { display: grid; width: 100%; min-width: 0; max-width: 100%; gap: 11px; }
+.life-screen > * { min-width: 0; max-width: 100%; }
 .life-hero { position: relative; display: grid; grid-template-columns: 60px minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 19px; overflow: hidden; border: 1px solid rgba(166,117,255,.31); border-radius: 23px; background: radial-gradient(circle at 90% 0, rgba(166,117,255,.22), transparent 42%), linear-gradient(145deg, #173b2c, #0c2118); }
 .life-network-icon { display: grid; width: 60px; height: 60px; place-items: center; border-radius: 20px 20px 20px 7px; background: linear-gradient(145deg, #a675ff, #6b42be); box-shadow: 0 13px 30px rgba(100,57,180,.25); color: #fff; font: 900 28px var(--display); }
 .life-hero > div:nth-child(2) { display: flex; min-width: 0; flex-direction: column; }
@@ -803,11 +804,12 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .public-life-dashboard { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px 18px; padding: 15px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
 .public-life-dashboard .progress-label { font-size: 8px; }
 .public-life-dashboard .progress-track { height: 6px; }
-.audience-growth-card, .sponsor-hub, .sponsor-history-card, .social-feed-card, .life-advisor-card, .life-milestones { padding: 15px; border: 1px solid var(--line); border-radius: 19px; background: var(--surface); }
+.audience-growth-card, .sponsor-hub, .sponsor-history-card, .social-feed-card, .life-advisor-card, .life-milestones { min-width: 0; max-width: 100%; padding: 15px; border: 1px solid var(--line); border-radius: 19px; background: var(--surface); }
+.audience-growth-card { overflow: hidden; }
 .audience-growth-card > div:first-child, .sponsor-history-card > div:first-child, .life-advisor-card > div:first-child { display: flex; flex-direction: column; }
 .audience-growth-card > div:first-child span, .sponsor-heading span, .sponsor-history-card > div:first-child span, .social-feed-heading span, .life-advisor-card > div:first-child span, .life-milestones > span { color: #cbb4ff; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
 .audience-growth-card > div:first-child strong, .sponsor-heading strong, .sponsor-history-card > div:first-child strong, .social-feed-heading strong, .life-advisor-card > div:first-child strong { margin-top: 3px; font: 900 16px var(--display); }
-.audience-bars { display: flex; height: 146px; align-items: end; gap: 7px; margin-top: 12px; overflow-x: auto; }
+.audience-bars { display: flex; width: 100%; max-width: 100%; height: 146px; align-items: end; gap: 7px; margin-top: 12px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
 .audience-bars article { display: grid; min-width: 30px; height: 100%; grid-template-rows: 17px 1fr 14px; align-items: end; text-align: center; }
 .audience-bars article > b { color: var(--muted); font-size: 6px; white-space: nowrap; }
 .audience-bars article > i { display: flex; height: 100%; align-items: end; overflow: hidden; border-radius: 8px 8px 3px 3px; background: rgba(255,255,255,.035); }
@@ -883,7 +885,8 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .final-public-life > article > div:last-child small { color: var(--gold); font-size: 6px; font-weight: 900; letter-spacing: .09em; }
 .final-public-life > article > div:last-child strong { margin-top: 2px; font-size: 10px; }
 
-.statistics-screen { display: grid; gap: 11px; }
+.statistics-screen { display: grid; width: 100%; min-width: 0; max-width: 100%; gap: 11px; }
+.statistics-screen > * { min-width: 0; max-width: 100%; }
 .statistics-hero { padding: 20px; overflow: hidden; border: 1px solid rgba(44,168,255,.28); border-radius: 23px; background: radial-gradient(circle at 90% 0, rgba(44,168,255,.19), transparent 40%), linear-gradient(145deg, #163e2d, #0d2119); }
 .statistics-hero > span, .season-chart-card > div:first-child span, .production-chart-card > div:first-child span, .best-season-card > span, .record-book > div span, .rival-center > div span { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .13em; }
 .statistics-hero h2 { margin: 5px 0 3px; font: 900 27px var(--display); letter-spacing: -.045em; }
@@ -891,10 +894,11 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .statistics-hero > div { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-top: 15px; }
 .statistics-hero .metric { min-height: 58px; padding: 8px; background: rgba(0,0,0,.13); }
 .statistics-hero .metric strong { font-size: 14px; }
-.season-chart-card, .production-chart-card, .best-season-card, .record-book, .rival-center { padding: 15px; border: 1px solid var(--line); border-radius: 19px; background: var(--surface); }
+.season-chart-card, .production-chart-card, .best-season-card, .record-book, .rival-center { min-width: 0; max-width: 100%; padding: 15px; border: 1px solid var(--line); border-radius: 19px; background: var(--surface); }
+.season-chart-card { overflow: hidden; }
 .season-chart-card > div:first-child, .production-chart-card > div:first-child, .record-book > div, .rival-center > div { display: flex; flex-direction: column; }
 .season-chart-card > div:first-child strong, .production-chart-card > div:first-child strong, .record-book > div strong, .rival-center > div strong { margin-top: 3px; font: 900 16px var(--display); }
-.season-bars { display: flex; height: 158px; align-items: end; gap: 7px; margin-top: 14px; padding-top: 20px; overflow-x: auto; }
+.season-bars { display: flex; width: 100%; max-width: 100%; height: 158px; align-items: end; gap: 7px; margin-top: 14px; padding-top: 20px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
 .season-bars article { display: grid; min-width: 29px; height: 100%; grid-template-rows: 16px 1fr 14px; align-items: end; text-align: center; }
 .season-bars article > b { color: var(--muted); font-size: 7px; }
 .season-bars article > i { position: relative; display: flex; width: 100%; height: 100%; align-items: end; overflow: hidden; border-radius: 8px 8px 3px 3px; background: rgba(255,255,255,.035); }
