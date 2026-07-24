@@ -3674,7 +3674,7 @@ export default function Home() {
     const timeout = window.setTimeout(() => {
       setGame((current) =>
         current.phase === "consequence"
-          ? { ...current, phase: current.retireAfterSeason ? "summary" : "season-result" }
+          ? { ...current, phase: "season-result" }
           : current,
       );
     }, 5000);
@@ -4016,11 +4016,17 @@ export default function Home() {
   }
 
   function continueAfterConsequence() {
-    setGame((current) => ({ ...current, phase: current.retireAfterSeason ? "summary" : "season-result" }));
+    setGame((current) => ({ ...current, phase: "season-result" }));
     vibrate();
   }
 
   function continueAfterResult() {
+    if (game.retireAfterSeason) {
+      setGame((current) => ({ ...current, phase: "summary", lastConsequence: null }));
+      setActiveTab("event");
+      vibrate();
+      return;
+    }
     if (game.loanParentClubId && game.season >= game.loanEndSeason) {
       setGame((current) => {
         const parentClub = clubById(current.loanParentClubId);
@@ -4643,7 +4649,7 @@ export default function Home() {
               </div>
               <div className="consequence-note"><strong>{game.lastConsequence.headline}</strong><span>Agora veja como essa decisão atravessou a temporada.</span></div>
               <div className="mobile-action-dock consequence-action-dock">
-                <button className="primary-button" onClick={continueAfterConsequence}>{game.retireAfterSeason ? "Ver o fim da carreira" : "Ver resultado da temporada"} <span>→</span></button>
+                <button className="primary-button" onClick={continueAfterConsequence}>{game.retireAfterSeason ? "Ver resultado da última temporada" : "Ver resultado da temporada"} <span>→</span></button>
                 <div className="consequence-autoplay" aria-live="polite">
                   <span>Avançando automaticamente em 5 segundos</span>
                   <div><i /></div>
@@ -4725,7 +4731,7 @@ export default function Home() {
               )}
               <div className="result-details"><span>Valor de mercado <strong>{formatMoney(game.lastResult.marketValue)}</strong></span>{game.lastResult.calledUp && <span className="callup-badge">★ Convocado pela Seleção</span>}</div>
               <div className="mobile-action-dock">
-                <button className="primary-button" onClick={continueAfterResult}>{game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"} <span>→</span></button>
+                <button className="primary-button" onClick={continueAfterResult}>{game.retireAfterSeason ? "Concluir carreira" : game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"} <span>→</span></button>
               </div>
             </div>
           )}

@@ -219,6 +219,16 @@ test("deixa o fim de temporada rolar sem o rodapé cobrir o conteúdo", async ()
   assert.match(styles, /\.career-phase-season-result \.mobile-action-dock \{[\s\S]*position: static;/);
 });
 
+test("mostra o resultado da última temporada antes de concluir a aposentadoria", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /current\.phase === "consequence"\s*\? \{ \.\.\.current, phase: "season-result" \}/);
+  assert.match(page, /function continueAfterConsequence\(\) \{[\s\S]*phase: "season-result"/);
+  assert.match(page, /function continueAfterResult\(\) \{[\s\S]*if \(game\.retireAfterSeason\) \{[\s\S]*phase: "summary"/);
+  assert.match(page, /Ver resultado da última temporada/);
+  assert.match(page, /game\.retireAfterSeason \? "Concluir carreira"/);
+});
+
 test("protege o OVR jovem e permite explosões raras de talento", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
