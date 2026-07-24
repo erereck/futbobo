@@ -575,6 +575,47 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .trophy-cabinet { margin-top: 10px; padding: 15px; border: 1px solid rgba(255,199,44,.2); border-radius: 18px; background: linear-gradient(145deg, rgba(255,199,44,.06), var(--surface)); }
 .trophy-cabinet > div { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 10px; }
 .trophy-cabinet > small { display: block; margin-top: 9px; color: #cbb4ff; font-size: 8px; font-weight: 900; }
+.trophy-gallery { width: 100%; margin-top: 10px; overflow: hidden; border: 1px solid rgba(255,199,44,.25); border-radius: 22px; background: radial-gradient(circle at 92% 0, rgba(255,199,44,.17), transparent 34%), linear-gradient(145deg, #173829, #0d261b 70%); box-shadow: 0 18px 42px rgba(0,0,0,.18); }
+.trophy-gallery-hero { display: flex; min-height: 106px; align-items: center; justify-content: space-between; padding: 18px; border-bottom: 1px solid rgba(255,199,44,.13); }
+.trophy-gallery-hero > div { display: grid; grid-template-columns: auto auto; align-items: end; column-gap: 7px; }
+.trophy-gallery-hero span { grid-column: 1 / 3; margin-bottom: 5px; color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .16em; }
+.trophy-gallery-hero strong { color: var(--gold); font: 900 42px/.82 var(--display); letter-spacing: -.04em; }
+.trophy-gallery-hero small { padding-bottom: 2px; color: var(--muted); font-size: 8px; font-weight: 800; }
+.trophy-gallery-hero > b { display: grid; width: 68px; height: 68px; place-items: center; border: 1px solid rgba(255,199,44,.25); border-radius: 22px 22px 22px 7px; background: radial-gradient(circle at 35% 25%, rgba(255,244,180,.3), rgba(255,199,44,.1) 45%, rgba(0,0,0,.08)); font-size: 31px; box-shadow: inset 0 0 22px rgba(255,199,44,.08), 0 10px 28px rgba(0,0,0,.2); }
+.trophy-groups { display: grid; gap: 10px; padding: 12px; }
+.trophy-groups > section { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(0,0,0,.1); }
+.trophy-groups > section.has-titles { border-color: rgba(255,199,44,.19); background: rgba(255,199,44,.025); }
+.trophy-groups > section > header { display: flex; align-items: center; justify-content: space-between; padding: 9px 11px 7px; color: var(--muted); }
+.trophy-groups > section > header span { font-size: 6px; font-weight: 900; letter-spacing: .15em; }
+.trophy-groups > section > header b { display: grid; min-width: 20px; height: 20px; place-items: center; border-radius: 7px; background: rgba(255,255,255,.04); font-size: 8px; }
+.trophy-groups > section.has-titles > header { color: var(--gold); }
+.trophy-groups > section > div { display: grid; gap: 5px; padding: 0 7px 7px; }
+.trophy-groups article { display: grid; min-width: 0; grid-template-columns: 42px minmax(0,1fr) 26px; align-items: center; gap: 8px; min-height: 57px; padding: 7px 8px; border: 1px solid transparent; border-radius: 12px; opacity: .43; }
+.trophy-groups article.won { border-color: rgba(255,199,44,.17); background: linear-gradient(100deg, rgba(255,199,44,.085), rgba(255,255,255,.018)); opacity: 1; }
+.trophy-medallion { position: relative; display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid rgba(255,199,44,.18); border-radius: 13px; background: radial-gradient(circle at 35% 25%, rgba(255,239,155,.26), rgba(255,199,44,.08) 50%, rgba(0,0,0,.12)); color: var(--gold); font: 900 14px var(--display); }
+.trophy-medallion .badge-image { object-fit: contain; padding: 5px; filter: drop-shadow(0 4px 6px rgba(0,0,0,.28)); }
+.trophy-medallion.national { color: #9cf3a2; border-color: rgba(99,227,107,.24); background: rgba(99,227,107,.08); }
+.trophy-groups article > div { display: flex; min-width: 0; flex-direction: column; }
+.trophy-groups article > div strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.trophy-groups article > div small { margin-top: 2px; color: var(--muted); font-size: 7px; }
+.trophy-groups article > b { color: var(--muted); font: 900 16px var(--display); text-align: right; }
+.trophy-groups article.won > b { color: var(--gold); }
+.recent-titles { padding: 3px 12px 12px; }
+.recent-titles > header { display: flex; align-items: center; justify-content: space-between; padding: 9px 2px; }
+.recent-titles > header span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .14em; }
+.recent-titles > header small { color: var(--muted); font-size: 6px; }
+.recent-titles > div { display: grid; gap: 5px; }
+.recent-titles article { display: grid; min-width: 0; grid-template-columns: 40px minmax(0,1fr) auto; align-items: center; gap: 9px; min-height: 57px; padding: 8px 9px; border: 1px solid rgba(255,199,44,.15); border-radius: 13px; background: rgba(0,0,0,.11); }
+.recent-titles article .competition-emblem { width: 40px; height: 40px; }
+.recent-titles article > div { display: flex; min-width: 0; flex-direction: column; }
+.recent-titles article strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.recent-titles article small { margin-top: 2px; color: var(--muted); font-size: 7px; }
+.recent-titles article > b { color: var(--gold); font-size: 6px; letter-spacing: .08em; }
+.trophy-gallery-final { margin-top: 14px; }
+.trophy-gallery-final .trophy-groups { grid-template-columns: 1fr 1fr; }
+.trophy-gallery-final .national-trophy-group { grid-column: 1 / 3; }
+.trophy-gallery-final .recent-titles { padding-top: 2px; }
+.trophy-gallery-final .recent-titles > div { grid-template-columns: 1fr 1fr; }
 .career-fortune, .award-cabinet { margin-top: 10px; padding: 15px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
 .career-fortune > div { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
 .award-cabinet { margin-bottom: 12px; background: radial-gradient(circle at 100% 0, rgba(166,117,255,.1), transparent 35%), var(--surface); }
@@ -672,6 +713,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .share-legacy-line strong { overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .share-trophies { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 7px; }
 .share-trophies span { padding: 6px 4px; border-radius: 8px; background: rgba(255,199,44,.08); color: var(--gold); font-size: 7px; font-weight: 900; text-align: center; }
+.share-trophies span:only-child { grid-column: 1 / -1; }
 .share-path { position: relative; z-index: 1; display: flex; align-items: center; gap: 5px; margin-top: 17px; padding-bottom: 4px; overflow-x: auto; scrollbar-width: thin; }
 .share-path > span { color: var(--muted); font-size: 8px; font-weight: 900; }
 .share-path > div { min-width: 8px; height: 1px; flex: 1; background: rgba(255,255,255,.18); }
@@ -972,6 +1014,11 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .career-club-list > article > .club-badge { grid-row: 1 / 3; }
   .club-summary-copy { align-self: end; padding-left: 2px; }
   .club-summary-numbers { grid-column: 2; align-self: start; width: min(100%, 180px); padding: 5px 2px 0; }
+  .trophy-gallery-final .trophy-groups { grid-template-columns: 1fr; }
+  .trophy-gallery-final .national-trophy-group { grid-column: auto; }
+  .trophy-gallery-final .recent-titles > div { grid-template-columns: 1fr; }
+  .trophy-gallery-hero { min-height: 94px; padding: 15px; }
+  .trophy-gallery-hero > b { width: 58px; height: 58px; border-radius: 19px 19px 19px 6px; font-size: 27px; }
 }
 
 .nation-badge { position: relative; display: inline-grid; flex: 0 0 auto; place-items: center; overflow: hidden; border: 2px solid rgba(255,255,255,.28); border-radius: 8px; background: linear-gradient(135deg, var(--nation-primary) 0 52%, var(--nation-secondary) 52%); box-shadow: 0 5px 12px rgba(0,0,0,.25), inset 0 0 0 3px rgba(0,0,0,.12); }

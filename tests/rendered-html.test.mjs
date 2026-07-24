@@ -229,6 +229,30 @@ test("mostra o resultado da última temporada antes de concluir a aposentadoria"
   assert.match(page, /game\.retireAfterSeason \? "Concluir carreira"/);
 });
 
+test("classifica para supercopas e recopás e exibe uma galeria completa de títulos", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const assetSync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
+
+  assert.match(page, /domesticSuperCup/);
+  assert.match(page, /recopaSudamericana/);
+  assert.match(page, /uefaSuperCup/);
+  assert.match(page, /campeonesCup/);
+  assert.match(page, /previousClubSeason\?\.clubId === club\.id/);
+  assert.match(page, /wonLastSeason\(\["domesticLeague", "domesticCup"\]\)/);
+  assert.match(page, /wonLastSeason\(\["championsLeague", "europaLeague"\]\)/);
+  assert.match(page, /wonLastSeason\(\["libertadores"\]\)/);
+  assert.match(page, /function TrophyGallery/);
+  assert.match(page, /ÚLTIMAS VOLTAS OLÍMPICAS/);
+  assert.match(page, /<TrophyGallery state=\{game\}/);
+  assert.match(page, /<TrophyGallery state=\{displayGame\} final/);
+  assert.match(styles, /\.trophy-gallery-hero/);
+  assert.match(styles, /\.recent-titles/);
+  assert.match(assetSync, /SUPER_CUP_SEARCH_NAMES/);
+  assert.match(assetSync, /recopaSudamericana: "5665"/);
+  assert.match(assetSync, /uefaSuperCup: "4512"/);
+});
+
 test("protege o OVR jovem e permite explosões raras de talento", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
@@ -439,7 +463,7 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
   assert.match(styles, /\.badge-image-flag/);
   assert.match(styles, /\.badge-image-competition/);
   assert.ok(clubAssets.filter((name) => name.endsWith(".png")).length >= 150, "a maioria dos clubes precisa ter escudo local");
-  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 17, "todas as seleções precisam ter bandeira");
+  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 63, "todas as seleções precisam ter bandeira");
   assert.ok(competitionAssets.filter((file) => file.pathname.endsWith(".png")).length >= 12, "as principais competições precisam ter emblema");
   assert.equal(new Set(providerIds).size, providerIds.length, "um mesmo escudo não pode representar clubes diferentes");
   assert.ok(mappedClubs.every((club) => !/women|femin|u-?\d\d|under-?\d\d/i.test(club.providerName)), "escudos precisam representar equipes principais masculinas");
@@ -656,8 +680,8 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /PATROCINADOR PESSOAL/);
   assert.match(page, /LINHA DO TEMPO/);
   assert.match(page, /setUpdateNoticePage\("previous"\)/);
-  assert.match(page, /Conheça o Mundo Vivo/);
-  assert.match(page, /UPDATE ANTERIOR · MUNDO VIVO/);
+  assert.match(page, /SALA DOS CAMPEÕES/);
+  assert.match(page, /UPDATE ANTERIOR · FORA DAS QUATRO LINHAS/);
   assert.match(gameData, /followers\?: number/);
   assert.match(gameData, /sponsorBrand\?: string/);
   assert.match(styles, /\.life-screen/);

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T18:27:55.145Z",
+  "generatedAt": "2026-07-24T20:38:20.423Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -1599,6 +1599,190 @@
     "holanda": {
       "code": "nl",
       "source": "https://flagcdn.com/w160/nl.png"
+    },
+    "bolivia": {
+      "code": "bo",
+      "source": "https://flagcdn.com/w160/bo.png"
+    },
+    "venezuela": {
+      "code": "ve",
+      "source": "https://flagcdn.com/w160/ve.png"
+    },
+    "canada": {
+      "code": "ca",
+      "source": "https://flagcdn.com/w160/ca.png"
+    },
+    "costa-rica": {
+      "code": "cr",
+      "source": "https://flagcdn.com/w160/cr.png"
+    },
+    "jamaica": {
+      "code": "jm",
+      "source": "https://flagcdn.com/w160/jm.png"
+    },
+    "panama": {
+      "code": "pa",
+      "source": "https://flagcdn.com/w160/pa.png"
+    },
+    "belgica": {
+      "code": "be",
+      "source": "https://flagcdn.com/w160/be.png"
+    },
+    "croacia": {
+      "code": "hr",
+      "source": "https://flagcdn.com/w160/hr.png"
+    },
+    "dinamarca": {
+      "code": "dk",
+      "source": "https://flagcdn.com/w160/dk.png"
+    },
+    "noruega": {
+      "code": "no",
+      "source": "https://flagcdn.com/w160/no.png"
+    },
+    "suecia": {
+      "code": "se",
+      "source": "https://flagcdn.com/w160/se.png"
+    },
+    "suica": {
+      "code": "ch",
+      "source": "https://flagcdn.com/w160/ch.png"
+    },
+    "austria": {
+      "code": "at",
+      "source": "https://flagcdn.com/w160/at.png"
+    },
+    "polonia": {
+      "code": "pl",
+      "source": "https://flagcdn.com/w160/pl.png"
+    },
+    "servia": {
+      "code": "rs",
+      "source": "https://flagcdn.com/w160/rs.png"
+    },
+    "turquia": {
+      "code": "tr",
+      "source": "https://flagcdn.com/w160/tr.png"
+    },
+    "ucrania": {
+      "code": "ua",
+      "source": "https://flagcdn.com/w160/ua.png"
+    },
+    "republica-tcheca": {
+      "code": "cz",
+      "source": "https://flagcdn.com/w160/cz.png"
+    },
+    "escocia": {
+      "code": "gb-sct",
+      "source": "https://flagcdn.com/w160/gb-sct.png"
+    },
+    "pais-de-gales": {
+      "code": "gb-wls",
+      "source": "https://flagcdn.com/w160/gb-wls.png"
+    },
+    "irlanda": {
+      "code": "ie",
+      "source": "https://flagcdn.com/w160/ie.png"
+    },
+    "grecia": {
+      "code": "gr",
+      "source": "https://flagcdn.com/w160/gr.png"
+    },
+    "romenia": {
+      "code": "ro",
+      "source": "https://flagcdn.com/w160/ro.png"
+    },
+    "hungria": {
+      "code": "hu",
+      "source": "https://flagcdn.com/w160/hu.png"
+    },
+    "islandia": {
+      "code": "is",
+      "source": "https://flagcdn.com/w160/is.png"
+    },
+    "georgia": {
+      "code": "ge",
+      "source": "https://flagcdn.com/w160/ge.png"
+    },
+    "japao": {
+      "code": "jp",
+      "source": "https://flagcdn.com/w160/jp.png"
+    },
+    "coreia-do-sul": {
+      "code": "kr",
+      "source": "https://flagcdn.com/w160/kr.png"
+    },
+    "uzbequistao": {
+      "code": "uz",
+      "source": "https://flagcdn.com/w160/uz.png"
+    },
+    "australia": {
+      "code": "au",
+      "source": "https://flagcdn.com/w160/au.png"
+    },
+    "arabia-saudita": {
+      "code": "sa",
+      "source": "https://flagcdn.com/w160/sa.png"
+    },
+    "ira": {
+      "code": "ir",
+      "source": "https://flagcdn.com/w160/ir.png"
+    },
+    "catar": {
+      "code": "qa",
+      "source": "https://flagcdn.com/w160/qa.png"
+    },
+    "iraque": {
+      "code": "iq",
+      "source": "https://flagcdn.com/w160/iq.png"
+    },
+    "marrocos": {
+      "code": "ma",
+      "source": "https://flagcdn.com/w160/ma.png"
+    },
+    "senegal": {
+      "code": "sn",
+      "source": "https://flagcdn.com/w160/sn.png"
+    },
+    "nigeria": {
+      "code": "ng",
+      "source": "https://flagcdn.com/w160/ng.png"
+    },
+    "egito": {
+      "code": "eg",
+      "source": "https://flagcdn.com/w160/eg.png"
+    },
+    "argelia": {
+      "code": "dz",
+      "source": "https://flagcdn.com/w160/dz.png"
+    },
+    "gana": {
+      "code": "gh",
+      "source": "https://flagcdn.com/w160/gh.png"
+    },
+    "costa-do-marfim": {
+      "code": "ci",
+      "source": "https://flagcdn.com/w160/ci.png"
+    },
+    "africa-do-sul": {
+      "code": "za",
+      "source": "https://flagcdn.com/w160/za.png"
+    },
+    "camaroes": {
+      "code": "cm",
+      "source": "https://flagcdn.com/w160/cm.png"
+    },
+    "tunisia": {
+      "code": "tn",
+      "source": "https://flagcdn.com/w160/tn.png"
+    },
+    "mali": {
+      "code": "ml",
+      "source": "https://flagcdn.com/w160/ml.png"
+    },
+    "nova-zelandia": {
+      "code": "nz",
+      "source": "https://flagcdn.com/w160/nz.png"
     }
   },
   "competitions": {
@@ -1761,6 +1945,45 @@
       "providerId": "4721",
       "providerName": "CONCACAF Champions Cup",
       "source": "https://r2.thesportsdb.com/images/media/league/badge/njx38y1691129615.png"
+    },
+    "recopaSudamericana": {
+      "providerId": "5665",
+      "providerName": "Recopa Sudamericana",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/86om5c1754314543.png"
+    },
+    "uefaSuperCup": {
+      "providerId": "4512",
+      "providerName": "UEFA Super Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/1eimvx1551123834.png"
+    },
+    "supercup:brasileirao": {
+      "providerId": "5776",
+      "providerName": "Brazilian Supercopa Rei",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/31h8771766587003.png"
+    },
+    "supercup:laliga": {
+      "providerId": "4511",
+      "providerName": "Supercopa de Espana",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/sp4q7d1641378531.png"
+    },
+    "supercup:seriea": {
+      "providerId": "4507",
+      "providerName": "Supercoppa Italiana",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/12hc5x1730129564.png"
+    },
+    "supercup:ligue1": {
+      "providerId": "4901",
+      "providerName": "French Trophée des Champions",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/vid0js1765815261.png"
+    },
+    "supercup:liga-mx": {
+      "providerId": "5662",
+      "providerName": "Mexican Campeon de Campeones",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/lpqijz1754305371.png"
+    },
+    "campeonesCup": {
+      "providerName": "Campeones Cup",
+      "source": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Campeones_Cup_logo.svg"
     }
   }
 }

@@ -65,12 +65,16 @@ type Phase =
 type CompetitionId =
   | "domesticLeague"
   | "domesticCup"
+  | "domesticSuperCup"
   | "libertadores"
+  | "recopaSudamericana"
   | "mundial"
   | "championsLeague"
+  | "uefaSuperCup"
   | "europaLeague"
   | "conferenceLeague"
-  | "concacafChampions";
+  | "concacafChampions"
+  | "campeonesCup";
 
 type CompetitionResult = {
   id: CompetitionId;
@@ -83,12 +87,16 @@ type CompetitionResult = {
 type TrophyCabinet = {
   domesticLeague: number;
   domesticCup: number;
+  domesticSuperCup: number;
   libertadores: number;
+  recopaSudamericana: number;
   mundial: number;
   championsLeague: number;
+  uefaSuperCup: number;
   europaLeague: number;
   conferenceLeague: number;
   concacafChampions: number;
+  campeonesCup: number;
 };
 
 type NationalTier = "none" | "sub17" | "sub20" | "olympic" | "main";
@@ -703,7 +711,20 @@ function initialState(): GameState {
     objectivesFailed: 0,
     stats: { ...EMPTY_STATS },
     trophies: 0,
-    trophyCabinet: { domesticLeague: 0, domesticCup: 0, libertadores: 0, mundial: 0, championsLeague: 0, europaLeague: 0, conferenceLeague: 0, concacafChampions: 0 },
+    trophyCabinet: {
+      domesticLeague: 0,
+      domesticCup: 0,
+      domesticSuperCup: 0,
+      libertadores: 0,
+      recopaSudamericana: 0,
+      mundial: 0,
+      championsLeague: 0,
+      uefaSuperCup: 0,
+      europaLeague: 0,
+      conferenceLeague: 0,
+      concacafChampions: 0,
+      campeonesCup: 0,
+    },
     awards: 0,
     awardCabinet: {},
     setbacks: 0,
@@ -878,12 +899,16 @@ function normalizeSave(value: unknown): GameState {
     trophyCabinet: {
       domesticLeague: oldDomesticLeague,
       domesticCup: oldDomesticCup,
+      domesticSuperCup: saved.trophyCabinet?.domesticSuperCup ?? 0,
       libertadores: saved.trophyCabinet?.libertadores ?? 0,
+      recopaSudamericana: saved.trophyCabinet?.recopaSudamericana ?? 0,
       mundial: saved.trophyCabinet?.mundial ?? 0,
       championsLeague: saved.trophyCabinet?.championsLeague ?? 0,
+      uefaSuperCup: saved.trophyCabinet?.uefaSuperCup ?? 0,
       europaLeague: saved.trophyCabinet?.europaLeague ?? 0,
       conferenceLeague: saved.trophyCabinet?.conferenceLeague ?? 0,
       concacafChampions: saved.trophyCabinet?.concacafChampions ?? 0,
+      campeonesCup: saved.trophyCabinet?.campeonesCup ?? 0,
     },
     awardCabinet: { ...base.awardCabinet, ...saved.awardCabinet },
     history: (saved.history ?? []).map((record) => ({
@@ -1290,6 +1315,33 @@ function isAbroad(club: Club) {
 function clubConfederation(club: Club) {
   return countryById(club.countryId).confederation;
 }
+
+const DOMESTIC_SUPER_CUP_NAMES: Record<string, string> = {
+  brasileirao: "Supercopa Rei",
+  premier: "FA Community Shield",
+  laliga: "Supercopa da Espanha",
+  seriea: "Supercoppa Italiana",
+  bundesliga: "DFL-Supercup",
+  ligue1: "Trophée des Champions",
+  primeira: "Supertaça Cândido de Oliveira",
+  eredivisie: "Johan Cruyff Shield",
+  "liga-argentina": "Trofeo de Campeones",
+  "liga-uruguaia": "Supercopa Uruguaya",
+  "liga-chilena": "Supercopa de Chile",
+  "liga-colombiana": "Superliga Colombiana",
+  "liga-paraguaia": "Supercopa Paraguay",
+  "liga-equatoriana": "Supercopa Ecuador",
+  "liga-peruana": "Supercopa Peruana",
+  "liga-mx": "Campeón de Campeones",
+  "pro-league-belga": "Supercopa da Bélgica",
+  "premiership-escocesa": "Supercopa da Escócia",
+  "super-lig-turca": "Supercopa da Turquia",
+  "super-league-grega": "Supercopa da Grécia",
+  "bundesliga-austriaca": "Supercopa da Áustria",
+  "super-league-suica": "Supercopa da Suíça",
+  "superliga-dinamarquesa": "Supercopa da Dinamarca",
+  "liga-tcheca": "Supercopa da República Tcheca",
+};
 
 function isEuropeanClub(club: Club) {
   return clubConfederation(club) === "EUROPE";
@@ -2363,6 +2415,18 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const continentalChampion = Boolean(playsContinental) && seeded(state.seed, state.season * 47) * 100 < continentalChance * continentalLoadFactor;
   const worldLoadFactor = (leagueChampion ? 0.86 : 1) * (cupChampion ? 0.82 : 1);
   const mundialChampion = playsWorld && seeded(state.seed, state.season * 53) * 100 < worldChance * worldLoadFactor;
+  const previousClubSeason = affected.history.at(-1);
+  const previousClubCompetitions = previousClubSeason?.clubId === club.id ? previousClubSeason.competitions : [];
+  const wonLastSeason = (ids: CompetitionId[]) => previousClubCompetitions.some((competition) => ids.includes(competition.id) && competition.champion);
+  const playsDomesticSuperCup = wonLastSeason(["domesticLeague", "domesticCup"]) && Boolean(DOMESTIC_SUPER_CUP_NAMES[league.id]);
+  const playsUefaSuperCup = clubConfederation(club) === "EUROPE" && wonLastSeason(["championsLeague", "europaLeague"]);
+  const playsRecopaSudamericana = clubConfederation(club) === "SOUTH_AMERICA" && wonLastSeason(["libertadores"]);
+  const playsCampeonesCup = ["liga-mx", "mls"].includes(league.id) && wonLastSeason(["domesticLeague"]);
+  const superCupChance = clamp(34 + (strength - 70) * 1.15 + playerImpact * 0.7 + boost * 0.4, 12, 82);
+  const domesticSuperCupChampion = playsDomesticSuperCup && seeded(state.seed, state.season * 73) * 100 < superCupChance;
+  const uefaSuperCupChampion = playsUefaSuperCup && seeded(state.seed, state.season * 79) * 100 < superCupChance * 0.9;
+  const recopaSudamericanaChampion = playsRecopaSudamericana && seeded(state.seed, state.season * 83) * 100 < superCupChance * 0.92;
+  const campeonesCupChampion = playsCampeonesCup && seeded(state.seed, state.season * 89) * 100 < superCupChance * 0.94;
   const expectedPosition = 11 - (strength - 74) * 0.45 - playerImpact * 0.08;
   const leaguePosition = leagueChampion ? 1 : clamp(Math.round(expectedPosition + seeded(state.seed, state.season * 59) * 8 - 4), 2, 20);
   const knockoutStage = (salt: number, champion: boolean, stages: string[]) => champion ? "CAMPEÃO" : stages[Math.floor(seeded(state.seed, state.season * salt) * stages.length)];
@@ -2382,6 +2446,34 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     competitions.push({ id: info.id, name: info.name, icon: info.icon, stage: knockoutStage(67, continentalChampion, ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"]), champion: continentalChampion });
   }
   if (playsWorld) competitions.push({ id: "mundial", name: "Mundial de Clubes", icon: "MUN", stage: knockoutStage(71, mundialChampion, ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"]), champion: mundialChampion });
+  if (playsDomesticSuperCup) competitions.push({
+    id: "domesticSuperCup",
+    name: DOMESTIC_SUPER_CUP_NAMES[league.id],
+    icon: "SUP",
+    stage: domesticSuperCupChampion ? "CAMPEÃO" : "Vice",
+    champion: domesticSuperCupChampion,
+  });
+  if (playsUefaSuperCup) competitions.push({
+    id: "uefaSuperCup",
+    name: "Supercopa da UEFA",
+    icon: "USC",
+    stage: uefaSuperCupChampion ? "CAMPEÃO" : "Vice",
+    champion: uefaSuperCupChampion,
+  });
+  if (playsRecopaSudamericana) competitions.push({
+    id: "recopaSudamericana",
+    name: "Recopa Sul-Americana",
+    icon: "REC",
+    stage: recopaSudamericanaChampion ? "CAMPEÃO" : "Vice",
+    champion: recopaSudamericanaChampion,
+  });
+  if (playsCampeonesCup) competitions.push({
+    id: "campeonesCup",
+    name: "Campeones Cup",
+    icon: "CAM",
+    stage: campeonesCupChampion ? "CAMPEÃO" : "Vice",
+    champion: campeonesCupChampion,
+  });
   const titleCount = competitions.filter((competition) => competition.champion).length;
 
   const growthRoll = seeded(state.seed, state.season * 19);
@@ -3056,7 +3148,15 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     assists: nextBase.stats.assists,
     cleanSheets: nextBase.stats.cleanSheets,
     trophies: nextBase.trophies + nextBase.nationalTrophies,
-    continentalTitles: nextBase.trophyCabinet.libertadores + nextBase.trophyCabinet.championsLeague + nextBase.trophyCabinet.europaLeague + nextBase.trophyCabinet.conferenceLeague + nextBase.trophyCabinet.concacafChampions,
+    continentalTitles:
+      nextBase.trophyCabinet.libertadores +
+      nextBase.trophyCabinet.recopaSudamericana +
+      nextBase.trophyCabinet.championsLeague +
+      nextBase.trophyCabinet.uefaSuperCup +
+      nextBase.trophyCabinet.europaLeague +
+      nextBase.trophyCabinet.conferenceLeague +
+      nextBase.trophyCabinet.concacafChampions +
+      nextBase.trophyCabinet.campeonesCup,
     worldTitles: nextBase.trophyCabinet.mundial,
     nationalCaps: nextBase.nationalCaps,
     nationalTrophies: nextBase.nationalTrophies,
@@ -3434,6 +3534,8 @@ function CompetitionBadge({ competition, leagueId }: { competition: CompetitionR
     ? `/assets/competitions/leagues/${leagueId}.png`
     : competition.id === "domesticCup"
       ? `/assets/competitions/cups/${leagueId}.png`
+      : competition.id === "domesticSuperCup"
+        ? `/assets/competitions/supercups/${leagueId}.png`
       : `/assets/competitions/${competition.id}.png`;
 
   return (
@@ -3441,6 +3543,104 @@ function CompetitionBadge({ competition, leagueId }: { competition: CompetitionR
       <b>{competition.icon}</b>
       <LocalBadgeImage path={path} kind="competition" />
     </span>
+  );
+}
+
+const TROPHY_PRESENTATIONS: {
+  id: keyof TrophyCabinet;
+  label: string;
+  shortLabel: string;
+  group: "NACIONAIS" | "CONTINENTAIS" | "MUNDIAIS";
+  symbol: string;
+  imagePath?: string;
+}[] = [
+  { id: "domesticLeague", label: "Ligas nacionais", shortLabel: "LIGAS", group: "NACIONAIS", symbol: "◆" },
+  { id: "domesticCup", label: "Copas nacionais", shortLabel: "COPAS", group: "NACIONAIS", symbol: "♜" },
+  { id: "domesticSuperCup", label: "Supercopas nacionais", shortLabel: "SUP.", group: "NACIONAIS", symbol: "✦" },
+  { id: "libertadores", label: "Libertadores", shortLabel: "LIB", group: "CONTINENTAIS", symbol: "L", imagePath: "/assets/competitions/libertadores.png" },
+  { id: "recopaSudamericana", label: "Recopa Sul-Americana", shortLabel: "REC", group: "CONTINENTAIS", symbol: "R", imagePath: "/assets/competitions/recopaSudamericana.png" },
+  { id: "championsLeague", label: "Champions League", shortLabel: "UCL", group: "CONTINENTAIS", symbol: "★", imagePath: "/assets/competitions/championsLeague.png" },
+  { id: "uefaSuperCup", label: "Supercopa da UEFA", shortLabel: "USC", group: "CONTINENTAIS", symbol: "U", imagePath: "/assets/competitions/uefaSuperCup.png" },
+  { id: "europaLeague", label: "Europa League", shortLabel: "UEL", group: "CONTINENTAIS", symbol: "E", imagePath: "/assets/competitions/europaLeague.png" },
+  { id: "conferenceLeague", label: "Conference League", shortLabel: "UECL", group: "CONTINENTAIS", symbol: "C", imagePath: "/assets/competitions/conferenceLeague.png" },
+  { id: "concacafChampions", label: "Copa dos Campeões Concacaf", shortLabel: "CCC", group: "CONTINENTAIS", symbol: "N", imagePath: "/assets/competitions/concacafChampions.png" },
+  { id: "campeonesCup", label: "Campeones Cup", shortLabel: "CAM", group: "CONTINENTAIS", symbol: "C", imagePath: "/assets/competitions/campeonesCup.png" },
+  { id: "mundial", label: "Mundial de Clubes", shortLabel: "MUN", group: "MUNDIAIS", symbol: "◉", imagePath: "/assets/competitions/mundial.png" },
+];
+
+function TrophyGallery({ state, final = false }: { state: GameState; final?: boolean }) {
+  const totalClubTitles = Object.values(state.trophyCabinet).reduce((total, count) => total + count, 0);
+  const recentTitles = state.history
+    .flatMap((record) => record.competitions
+      .filter((competition) => competition.champion)
+      .map((competition) => ({ record, competition })))
+    .reverse()
+    .slice(0, final ? 12 : 6);
+
+  return (
+    <section className={`trophy-gallery ${final ? "trophy-gallery-final" : ""}`}>
+      <header className="trophy-gallery-hero">
+        <div>
+          <span>{final ? "GALERIA DE TÍTULOS" : "SALA DE TROFÉUS"}</span>
+          <strong>{totalClubTitles + state.nationalTrophies}</strong>
+          <small>taças levantadas</small>
+        </div>
+        <b aria-hidden="true">🏆</b>
+      </header>
+      <div className="trophy-groups">
+        {(["NACIONAIS", "CONTINENTAIS", "MUNDIAIS"] as const).map((group) => {
+          const entries = TROPHY_PRESENTATIONS.filter((presentation) => presentation.group === group);
+          const groupTotal = entries.reduce((total, presentation) => total + state.trophyCabinet[presentation.id], 0);
+          return (
+            <section className={groupTotal > 0 ? "has-titles" : ""} key={group}>
+              <header><span>{group}</span><b>{groupTotal}</b></header>
+              <div>
+                {entries.map((presentation) => {
+                  const count = state.trophyCabinet[presentation.id];
+                  return (
+                    <article className={count > 0 ? "won" : "empty"} key={presentation.id}>
+                      <span className="trophy-medallion" aria-hidden="true">
+                        <b>{presentation.symbol}</b>
+                        {presentation.imagePath && <LocalBadgeImage path={presentation.imagePath} kind="competition" />}
+                      </span>
+                      <div><strong>{presentation.label}</strong><small>{count > 0 ? `${count} conquista${count > 1 ? "s" : ""}` : "Ainda não conquistada"}</small></div>
+                      <b>{count}</b>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+        <section className={state.nationalTrophies > 0 ? "has-titles national-trophy-group" : "national-trophy-group"}>
+          <header><span>SELEÇÃO</span><b>{state.nationalTrophies}</b></header>
+          <div>
+            <article className={state.nationalTrophies > 0 ? "won" : "empty"}>
+              <span className="trophy-medallion national" aria-hidden="true">★</span>
+              <div><strong>Títulos pela Seleção</strong><small>{state.nationalTrophies > 0 ? `${state.nationalTrophies} conquista${state.nationalTrophies > 1 ? "s" : ""}` : "O país ainda espera sua taça"}</small></div>
+              <b>{state.nationalTrophies}</b>
+            </article>
+          </div>
+        </section>
+      </div>
+      {recentTitles.length > 0 && (
+        <div className="recent-titles">
+          <header><span>ÚLTIMAS VOLTAS OLÍMPICAS</span><small>{recentTitles.length} mais recentes</small></header>
+          <div>
+            {recentTitles.map(({ record, competition }, index) => {
+              const titleClub = clubById(record.clubId);
+              return (
+                <article key={`${record.season}-${record.clubId}-${competition.id}-${index}`}>
+                  <CompetitionBadge competition={competition} leagueId={titleClub.leagueId} />
+                  <div><strong>{competition.name}</strong><small>{record.season} · {titleClub.shortName}</small></div>
+                  <b>CAMPEÃO</b>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -4300,31 +4500,31 @@ export default function Home() {
           <section className={`update-notice update-page-${updateNoticePage}`} role="dialog" aria-modal="true" aria-labelledby="update-title">
             {updateNoticePage === "current" ? (
               <>
-                <span className="update-version">NOVO UPDATE · FORA DAS QUATRO LINHAS</span>
-                <div className="update-symbol">✦</div>
-                <h1 id="update-title">Agora você também precisa sobreviver à fama.</h1>
-                <p>Redes sociais, vida pessoal, imprensa e patrocinadores persistentes transformam tudo que acontece longe do estádio.</p>
+                <span className="update-version">NOVO UPDATE · SALA DOS CAMPEÕES</span>
+                <div className="update-symbol">🏆</div>
+                <h1 id="update-title">Ganhar uma taça agora abre a porta para outra.</h1>
+                <p>Supercopas, Recopa, novas ligas europeias e uma galeria de títulos feita para cada volta olímpica ter peso.</p>
                 <div className="update-grid">
+                  <article><b>✦</b><span><strong>Supercopas nacionais</strong><small>O campeão volta na temporada seguinte para defender sua glória</small></span></article>
+                  <article><b>R</b><span><strong>Recopa e Supercopa UEFA</strong><small>Libertadores, Champions e Europa League agora deixam novas vagas</small></span></article>
+                  <article><b>▦</b><span><strong>Galeria de títulos</strong><small>Taças agrupadas e últimas voltas olímpicas durante toda a carreira</small></span></article>
+                  <article><b>+</b><span><strong>Mais Europa</strong><small>Oito novas ligas completas, com clubes, bandeiras e competições</small></span></article>
+                </div>
+                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Conheça Fora das Quatro Linhas</strong><b>→</b></button>
+              </>
+            ) : (
+              <>
+                <span className="update-version previous">UPDATE ANTERIOR · FORA DAS QUATRO LINHAS</span>
+                <div className="update-symbol previous">@</div>
+                <h1 id="update-title">Você também precisa sobreviver à fama.</h1>
+                <p>Redes sociais, vida pessoal, imprensa e patrocinadores persistentes transformaram tudo que acontece longe do estádio.</p>
+                <div className="update-grid previous-grid">
                   <article><b>@</b><span><strong>Redes sociais vivas</strong><small>Seguidores, virais, crises e sentimento do público</small></span></article>
                   <article><b>◇</b><span><strong>Patrocinadores reais</strong><small>Contratos plurianuais que acompanham sua carreira</small></span></article>
                   <article><b>☾</b><span><strong>Vida pessoal</strong><small>Festas, privacidade, documentários e saúde mental</small></span></article>
                   <article><b>♥</b><span><strong>Impacto social</strong><small>Use sua fama para construir algo além do futebol</small></span></article>
                 </div>
-                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Conheça o Mundo Vivo</strong><b>→</b></button>
-              </>
-            ) : (
-              <>
-                <span className="update-version previous">UPDATE ANTERIOR · MUNDO VIVO</span>
-                <div className="update-symbol previous">◆</div>
-                <h1 id="update-title">A carreira deixou de existir só ao seu redor.</h1>
-                <p>O update anterior trouxe memória, mercado real, rivais de geração e novas maneiras de construir — ou perder — uma carreira.</p>
-                <div className="update-grid previous-grid">
-                  <article><b>▥</b><span><strong>Central Estatística</strong><small>Gráficos, recordes e melhores temporadas</small></span></article>
-                  <article><b>⇄</b><span><strong>Empréstimos reais</strong><small>Saia para jogar e volte ao clube de origem</small></span></article>
-                  <article><b>⚔</b><span><strong>Rivais e Personagens</strong><small>Adversários persistentes criados pelo jogo ou por você</small></span></article>
-                  <article><b>◇</b><span><strong>Traits e agente livre</strong><small>Identidade própria e liberdade no mercado</small></span></article>
-                </div>
-                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Fora das Quatro Linhas</strong><b>←</b></button>
+                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Sala dos Campeões</strong><b>←</b></button>
               </>
             )}
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
@@ -4906,20 +5106,7 @@ export default function Home() {
                 {isAbroad(currentClub) && <Progress label="Adaptação" value={game.adaptation} color="#2ca8ff" />}
               </div>
               <div className="career-total-card"><span>TOTAIS DA CARREIRA</span><div><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label="Taças" value={game.trophies + game.nationalTrophies} tone="gold" /></div></div>
-              <div className="trophy-cabinet">
-                <span>SALA DE TROFÉUS</span>
-                <div>
-                  <Metric label="Ligas nacionais" value={game.trophyCabinet.domesticLeague} tone="gold" />
-                  <Metric label="Copas nacionais" value={game.trophyCabinet.domesticCup} />
-                  <Metric label="Libertadores" value={game.trophyCabinet.libertadores} tone="gold" />
-                  <Metric label="Mundial" value={game.trophyCabinet.mundial} tone="green" />
-                  {game.trophyCabinet.championsLeague > 0 && <Metric label="Champions" value={game.trophyCabinet.championsLeague} tone="gold" />}
-                  {game.trophyCabinet.europaLeague > 0 && <Metric label="Europa League" value={game.trophyCabinet.europaLeague} />}
-                  {game.trophyCabinet.conferenceLeague > 0 && <Metric label="Conference" value={game.trophyCabinet.conferenceLeague} />}
-                  {game.trophyCabinet.concacafChampions > 0 && <Metric label="Concacaf" value={game.trophyCabinet.concacafChampions} />}
-                </div>
-                <small>✦ {game.awards} prêmio(s) individual(is)</small>
-              </div>
+              <TrophyGallery state={game} />
               <div className="national-team-card">
                 <span>CENTRAL DA SELEÇÃO</span>
                 <div className="national-team-head">
@@ -5236,10 +5423,17 @@ export default function Home() {
             <div className="share-player"><ClubBadge club={currentClub} size="lg" /><div><span>{displayGame.archetype}</span><h2>{displayGame.name}</h2><p>#{displayGame.number} · {position.name} · {nationCountry.abbr}</p></div><strong>{Math.max(displayGame.overall, ...displayGame.history.map((item) => item.overall), 0)}<small>PICO OVR</small></strong></div>
             <div className="share-numbers"><Metric label="Jogos" value={displayGame.stats.appearances} /><Metric label={displayGame.position === "GOL" ? "Sem sofrer" : "Gols"} value={displayGame.position === "GOL" ? displayGame.stats.cleanSheets : displayGame.stats.goals} /><Metric label={displayGame.position === "GOL" ? "Sofridos" : "Assistências"} value={displayGame.position === "GOL" ? displayGame.stats.goalsConceded : displayGame.stats.assists} /><Metric label="Taças" value={displayGame.trophies + displayGame.nationalTrophies} tone="gold" /></div>
             <div className="share-legacy-line"><span>LEGADO {displayGame.legacyPoints}</span><strong>{legacyStanding.label}</strong><span>{displayGame.unlockedAchievements.length}/{ACHIEVEMENTS.length} CONQUISTAS</span></div>
-            <div className="share-trophies"><span>LIGA {displayGame.trophyCabinet.domesticLeague}</span><span>COPA {displayGame.trophyCabinet.domesticCup}</span><span>LIB {displayGame.trophyCabinet.libertadores}</span><span>MUN {displayGame.trophyCabinet.mundial}</span><span>UCL {displayGame.trophyCabinet.championsLeague}</span><span>SEL {displayGame.nationalTrophies}</span></div>
+            <div className="share-trophies">
+              {TROPHY_PRESENTATIONS.filter((presentation) => displayGame.trophyCabinet[presentation.id] > 0).slice(0, 7).map((presentation) => (
+                <span key={presentation.id}>{presentation.shortLabel} {displayGame.trophyCabinet[presentation.id]}</span>
+              ))}
+              {displayGame.nationalTrophies > 0 && <span>SEL {displayGame.nationalTrophies}</span>}
+              {displayGame.trophies + displayGame.nationalTrophies === 0 && <span>EM BUSCA DA PRIMEIRA TAÇA</span>}
+            </div>
             <div className="share-path"><span>12</span><div />{Array.from(new Set(displayGame.history.map((item) => item.clubId))).map((clubId) => <ClubBadge key={clubId} club={clubById(clubId)} size="sm" />)}<div /><span>{displayGame.age}</span></div>
             <small className="share-url">erereck.github.io/futbobo</small>
           </div>
+          <TrophyGallery state={displayGame} final />
           <section className="final-public-life">
             <div className="summary-section-heading"><span>FORA DAS QUATRO LINHAS</span><strong>A marca que você deixou no mundo</strong></div>
             <div className="final-public-grid">

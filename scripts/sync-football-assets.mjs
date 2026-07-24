@@ -8,6 +8,8 @@ const API_ROOT = "https://www.thesportsdb.com/api/v1/json/123";
 const repairOnly = process.argv.includes("--repair");
 const refresh = process.argv.includes("--refresh") || repairOnly;
 const missingOnly = process.argv.includes("--missing");
+const assetsOnly = process.argv.includes("--assets-only");
+const competitionOnly = process.argv.find((argument) => argument.startsWith("--competition="))?.split("=")[1] ?? "";
 
 const LEAGUE_SEARCH_NAMES = {
   brasileirao: "Brazilian Serie A",
@@ -27,6 +29,14 @@ const LEAGUE_SEARCH_NAMES = {
   "liga-peruana": "Peruvian Primera Division",
   "liga-mx": "Mexican Primera League",
   mls: "American Major League Soccer",
+  "pro-league-belga": "Belgian Pro League",
+  "premiership-escocesa": "Scottish Premier League",
+  "super-lig-turca": "Turkish Super Lig",
+  "super-league-grega": "Greek Superleague",
+  "bundesliga-austriaca": "Austrian Bundesliga",
+  "super-league-suica": "Swiss Super League",
+  "superliga-dinamarquesa": "Danish Superliga",
+  "liga-tcheca": "Czech First League",
 };
 
 const COUNTRY_NAMES = {
@@ -47,6 +57,14 @@ const COUNTRY_NAMES = {
   alemanha: ["germany"],
   italia: ["italy"],
   holanda: ["netherlands", "holland"],
+  belgica: ["belgium"],
+  escocia: ["scotland"],
+  turquia: ["turkey", "turkiye"],
+  grecia: ["greece"],
+  austria: ["austria"],
+  suica: ["switzerland"],
+  dinamarca: ["denmark"],
+  "republica-tcheca": ["czech republic", "czechia"],
 };
 
 const FLAG_CODES = {
@@ -67,6 +85,81 @@ const FLAG_CODES = {
   alemanha: "de",
   italia: "it",
   holanda: "nl",
+  bolivia: "bo",
+  venezuela: "ve",
+  canada: "ca",
+  "costa-rica": "cr",
+  jamaica: "jm",
+  panama: "pa",
+  belgica: "be",
+  croacia: "hr",
+  dinamarca: "dk",
+  noruega: "no",
+  suecia: "se",
+  suica: "ch",
+  austria: "at",
+  polonia: "pl",
+  servia: "rs",
+  turquia: "tr",
+  ucrania: "ua",
+  "republica-tcheca": "cz",
+  escocia: "gb-sct",
+  "pais-de-gales": "gb-wls",
+  irlanda: "ie",
+  grecia: "gr",
+  romenia: "ro",
+  hungria: "hu",
+  islandia: "is",
+  georgia: "ge",
+  japao: "jp",
+  "coreia-do-sul": "kr",
+  uzbequistao: "uz",
+  australia: "au",
+  "arabia-saudita": "sa",
+  ira: "ir",
+  catar: "qa",
+  iraque: "iq",
+  marrocos: "ma",
+  senegal: "sn",
+  nigeria: "ng",
+  egito: "eg",
+  argelia: "dz",
+  gana: "gh",
+  "costa-do-marfim": "ci",
+  "africa-do-sul": "za",
+  camaroes: "cm",
+  tunisia: "tn",
+  mali: "ml",
+  "nova-zelandia": "nz",
+};
+
+const SUPER_CUP_SEARCH_NAMES = {
+  brasileirao: "Brazilian Supercopa Rei",
+  premier: "FA Community Shield",
+  laliga: "Supercopa de Espana",
+  seriea: "Supercoppa Italiana",
+  bundesliga: "German DFL-Supercup",
+  ligue1: "French Trophée des Champions",
+  primeira: "Portuguese Supertaça Cândido de Oliveira",
+  eredivisie: "Johan Cruijff Schaal",
+  "liga-argentina": "Trofeo de Campeones",
+  "liga-uruguaia": "Uruguayan Supercopa",
+  "liga-chilena": "Chilean Supercopa",
+  "liga-colombiana": "Colombian Superliga",
+  "liga-paraguaia": "Paraguayan Supercopa",
+  "liga-equatoriana": "Ecuadorian Supercopa",
+  "liga-peruana": "Peruvian Supercopa",
+  "liga-mx": "Mexican Campeon de Campeones",
+  "pro-league-belga": "Belgian Super Cup",
+  "super-lig-turca": "Turkish Super Cup",
+};
+
+const SUPER_CUP_ID_OVERRIDES = {
+  brasileirao: "5776",
+  laliga: "4511",
+  seriea: "4507",
+  ligue1: "4901",
+  "liga-mx": "5662",
 };
 
 const TEAM_QUERY_OVERRIDES = {
@@ -162,6 +255,8 @@ const GLOBAL_COMPETITIONS = {
   europaLeague: "4481",
   conferenceLeague: "5071",
   concacafChampions: "4721",
+  recopaSudamericana: "5665",
+  uefaSuperCup: "4512",
 };
 
 const STOP_WORDS = new Set([
@@ -221,6 +316,7 @@ await Promise.all([
   mkdir(path.join(ASSET_ROOT, "flags"), { recursive: true }),
   mkdir(path.join(ASSET_ROOT, "competitions", "leagues"), { recursive: true }),
   mkdir(path.join(ASSET_ROOT, "competitions", "cups"), { recursive: true }),
+  mkdir(path.join(ASSET_ROOT, "competitions", "supercups"), { recursive: true }),
 ]);
 
 let lastApiRequest = 0;
@@ -292,13 +388,19 @@ function teamScore(club, team, enforceCountry = false) {
   return bestNameScore + (countryMatches ? 0.12 : 0);
 }
 
-async function apiJson(endpoint) {
+async function apiJson(endpoint, attempt = 0) {
   const elapsed = Date.now() - lastApiRequest;
   if (elapsed < 2050) await new Promise((resolve) => setTimeout(resolve, 2050 - elapsed));
   const response = await fetch(`${API_ROOT}/${endpoint}`, {
     headers: { "User-Agent": "Futbobo asset sync (github.com/erereck/futbobo)" },
   });
   lastApiRequest = Date.now();
+  if (response.status === 429 && attempt < 5) {
+    const backoff = 4000 * (attempt + 1);
+    console.log(`\nLimite temporário da API; nova tentativa em ${backoff / 1000}s (${attempt + 1}/5)...`);
+    await new Promise((resolve) => setTimeout(resolve, backoff));
+    return apiJson(endpoint, attempt + 1);
+  }
   if (!response.ok) throw new Error(`TheSportsDB respondeu ${response.status} em ${endpoint}`);
   return response.json();
 }
@@ -360,7 +462,7 @@ function findCompetitionId(teamRows, wantedName) {
 
 if (missingOnly || repairOnly) {
   const remaining = [];
-  for (const club of clubs) {
+  for (const club of assetsOnly ? [] : clubs) {
     if (
       (repairOnly && TEAM_ID_OVERRIDES[club.id])
       || (missingOnly && !await fileExists(path.join(ASSET_ROOT, "clubs", `${club.id}.png`)))
@@ -411,6 +513,44 @@ if (missingOnly || repairOnly) {
       manifest.clubs[club.id],
       { providerId: choice.team.idTeam, providerName: choice.team.strTeam },
     );
+  }
+
+  if (missingOnly) {
+    for (const [countryId, code] of competitionOnly ? [] : Object.entries(FLAG_CODES)) {
+      const destination = path.join(ASSET_ROOT, "flags", `${countryId}.png`);
+      if (!refresh && await fileExists(destination)) continue;
+      const url = `https://flagcdn.com/w160/${code}.png`;
+      manifest.flags[countryId] = {};
+      queueImage(url, destination, manifest.flags[countryId], { code });
+    }
+
+    const missingCompetitionLookups = [
+      ...Object.entries(GLOBAL_COMPETITIONS).map(([key, providerId]) => ({ key, providerId, path: `${key}.png` })),
+      ...Object.entries(SUPER_CUP_ID_OVERRIDES).map(([leagueId, providerId]) => ({
+        key: `supercup:${leagueId}`,
+        providerId,
+        path: path.join("supercups", `${leagueId}.png`),
+      })),
+    ];
+    for (const lookup of missingCompetitionLookups.filter((item) => !competitionOnly || item.key === competitionOnly)) {
+      const destination = path.join(ASSET_ROOT, "competitions", lookup.path);
+      if (!refresh && await fileExists(destination)) continue;
+      process.stdout.write(`Recuperando competição ${lookup.key}... `);
+      const payload = await apiJson(`lookupleague.php?id=${lookup.providerId}`);
+      const competition = payload.leagues?.[0];
+      if (competition?.strBadge) {
+        manifest.competitions[lookup.key] = {};
+        queueImage(
+          competition.strBadge,
+          destination,
+          manifest.competitions[lookup.key],
+          { providerId: lookup.providerId, providerName: competition.strLeague },
+        );
+        console.log("ok");
+      } else {
+        console.log("sem imagem");
+      }
+    }
   }
 
   let downloaded = 0;
@@ -488,8 +628,16 @@ for (const league of leagues) {
   const teams = leagueTeams.get(league.id) ?? [];
   const leagueProviderId = teams.find((team) => team.idLeague)?.idLeague;
   const cupProviderId = findCompetitionId(teams, league.cupName);
+  const superCupSearchName = SUPER_CUP_SEARCH_NAMES[league.id];
+  const superCupProviderId = SUPER_CUP_ID_OVERRIDES[league.id]
+    ?? (superCupSearchName ? findCompetitionId(teams, superCupSearchName) : null);
   if (leagueProviderId) competitionLookups.push({ key: `league:${league.id}`, providerId: leagueProviderId, path: path.join("leagues", `${league.id}.png`) });
   if (cupProviderId) competitionLookups.push({ key: `cup:${league.id}`, providerId: cupProviderId, path: path.join("cups", `${league.id}.png`) });
+  if (superCupProviderId) competitionLookups.push({ key: `supercup:${league.id}`, providerId: superCupProviderId, path: path.join("supercups", `${league.id}.png`) });
+  if (league.id === "mls") {
+    const campeonesCupId = findCompetitionId(teams, "Campeones Cup");
+    if (campeonesCupId) competitionLookups.push({ key: "campeonesCup", providerId: campeonesCupId, path: "campeonesCup.png" });
+  }
 }
 for (const [key, providerId] of Object.entries(GLOBAL_COMPETITIONS)) {
   competitionLookups.push({ key, providerId, path: `${key}.png` });
