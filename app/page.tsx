@@ -383,6 +383,10 @@ type MonteCarloCareerSummary = {
   trophies: number;
   individualAwards: number;
   ballonDor: number;
+  worldXi: number;
+  worldXiWithoutBallonDor: number;
+  ballonDorWithoutProductionAward: number;
+  ballonDorWithoutWorldXi: number;
 };
 
 type MonteCarloReport = {
@@ -410,6 +414,10 @@ type MonteCarloReport = {
   }>;
   careersWithBallonDor: number;
   totalBallonDor: number;
+  totalWorldXi: number;
+  worldXiWithoutBallonDor: number;
+  ballonDorWithoutProductionAward: number;
+  ballonDorWithoutWorldXi: number;
   careerChancePercent: number;
   awardChancePerSeasonPercent: number;
   winners: MonteCarloCareerSummary[];
@@ -2701,7 +2709,24 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (inEurope && !isKeeper && goals >= europeanGoldenShoeLine && league.prestige >= 4) awards.push("Chuteira de Ouro Europeia");
   if (inEurope && playsContinental === "champions" && continentalChampion && nextOverall >= 88 && seeded(state.seed, state.season * 191) > 0.55) awards.push("Melhor da UEFA");
   if (inEurope && playsContinental === "champions" && continentalChampion && performanceScore >= 84 && seeded(state.seed, state.season * 193) > 0.38) awards.push("MVP da Champions League");
-  if (inEurope && nextOverall >= 87 && performanceScore >= 86 && appearances >= 28 && seeded(state.seed, state.season * 197 + 13) > 0.48) awards.push("FIFPRO World XI");
+  const hasLeagueGoldenBoot = awards.some((award) => award.includes("Artilheiro"));
+  const hasEuropeanGoldenShoe = awards.includes("Chuteira de Ouro Europeia");
+  const hasAssistKingAward = awards.includes("Rei das Assistências");
+  const hasGoalsOrAssistsAward = hasLeagueGoldenBoot || hasEuropeanGoldenShoe || hasAssistKingAward;
+  const worldXiMerit =
+    inEurope &&
+    appearances >= 25 &&
+    (
+      (nextOverall >= 87 && performanceScore >= 84) ||
+      (hasEuropeanGoldenShoe && nextOverall >= 82 && performanceScore >= 76) ||
+      (hasLeagueGoldenBoot && league.prestige >= 3 && nextOverall >= 83 && performanceScore >= 78) ||
+      (hasAssistKingAward && league.prestige >= 3 && nextOverall >= 83 && performanceScore >= 80)
+    );
+  const worldXiChance =
+    hasEuropeanGoldenShoe ? 88 :
+    hasLeagueGoldenBoot || hasAssistKingAward ? 68 :
+    48;
+  if (worldXiMerit && seeded(state.seed, state.season * 197 + 13) * 100 < worldXiChance) awards.push("FIFPRO World XI");
   if (!isKeeper && goals >= 8 && nextOverall >= 82 && seeded(state.seed, state.season * 103) > 0.94) awards.push("Prêmio Puskás");
   if (affected.leadership >= 82 && seeded(state.seed, state.season * 107) > 0.82) awards.push("Prêmio Fair Play");
   if (affected.fanSupport >= 92 && titleCount > 0 && !(affected.awardCabinet["Ídolo da Torcida"] > 0)) awards.push("Ídolo da Torcida");
@@ -2812,11 +2837,15 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
       ? 98
       : Math.max(0.25, 28 * 0.52 ** (previousBallonDor - 7));
   const ballonChance = Math.max(baseBallonChance, historicBallonChanceFloor);
-  if (
+  const wonBallonDor =
     (europeanBallonEligible || americanBallonEligible) &&
+    hasGoalsOrAssistsAward &&
     ballonScore >= 72 &&
-    seeded(state.seed, state.season * 109) * 100 < ballonChance
-  ) awards.push("Bola de Ouro");
+    seeded(state.seed, state.season * 109) * 100 < ballonChance;
+  if (wonBallonDor) {
+    if (!awards.includes("FIFPRO World XI")) awards.push("FIFPRO World XI");
+    awards.push("Bola de Ouro");
+  }
   const awardNominations: AwardNomination[] = awards
     .filter((award) => awardPresentation(award).tier !== "regular")
     .map((award) => ({
@@ -2837,8 +2866,11 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   };
   addLostNomination(
     "Bola de Ouro",
-    (inEurope && nextOverall >= 81 && performanceScore >= 68 && affected.reputation >= 48 && appearances >= 20) ||
-      (!inEurope && nextOverall >= 87 && performanceScore >= 78 && affected.reputation >= 66 && Boolean(continentalChampion || mundialChampion)),
+    hasGoalsOrAssistsAward &&
+      (
+        (inEurope && nextOverall >= 81 && performanceScore >= 68 && affected.reputation >= 48 && appearances >= 20) ||
+        (!inEurope && nextOverall >= 87 && performanceScore >= 78 && affected.reputation >= 66 && Boolean(continentalChampion || mundialChampion))
+      ),
     historicBallonSeason ? 100 : clamp(24 + Math.max(0, ballonScore - 66) * 4.2, 24, 88),
     313,
   );
@@ -3395,6 +3427,15 @@ function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarlo
     }
   }
 
+  const awardSeasons = state.history.map((record) => ({
+    ballonDor: record.awards.includes("Bola de Ouro"),
+    worldXi: record.awards.includes("FIFPRO World XI"),
+    production: record.awards.some((award) =>
+      award.includes("Artilheiro") ||
+      award === "Chuteira de Ouro Europeia" ||
+      award === "Rei das Assistências"
+    ),
+  }));
   return {
     career: careerIndex + 1,
     seed,
@@ -3410,6 +3451,10 @@ function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarlo
     trophies: state.trophies + state.nationalTrophies,
     individualAwards: state.awards,
     ballonDor: state.awardCabinet["Bola de Ouro"] ?? 0,
+    worldXi: state.awardCabinet["FIFPRO World XI"] ?? 0,
+    worldXiWithoutBallonDor: awardSeasons.filter((season) => season.worldXi && !season.ballonDor).length,
+    ballonDorWithoutProductionAward: awardSeasons.filter((season) => season.ballonDor && !season.production).length,
+    ballonDorWithoutWorldXi: awardSeasons.filter((season) => season.ballonDor && !season.worldXi).length,
   };
 }
 
@@ -3420,6 +3465,10 @@ function runMonteCarloCareers(runs: number, seedBase = 20260723): MonteCarloRepo
   );
   const winners = careers.filter((career) => career.ballonDor > 0);
   const totalBallonDor = winners.reduce((total, career) => total + career.ballonDor, 0);
+  const totalWorldXi = careers.reduce((total, career) => total + career.worldXi, 0);
+  const worldXiWithoutBallonDor = careers.reduce((total, career) => total + career.worldXiWithoutBallonDor, 0);
+  const ballonDorWithoutProductionAward = careers.reduce((total, career) => total + career.ballonDorWithoutProductionAward, 0);
+  const ballonDorWithoutWorldXi = careers.reduce((total, career) => total + career.ballonDorWithoutWorldXi, 0);
   const totalSeasons = careers.reduce((total, career) => total + career.seasons, 0);
   const totalIndividualAwards = careers.reduce((total, career) => total + career.individualAwards, 0);
   const average = (key: keyof Pick<MonteCarloCareerSummary, "seasons" | "peakOverall" | "appearances" | "goals" | "assists" | "trophies">) =>
@@ -3460,6 +3509,10 @@ function runMonteCarloCareers(runs: number, seedBase = 20260723): MonteCarloRepo
     positionBreakdown,
     careersWithBallonDor: winners.length,
     totalBallonDor,
+    totalWorldXi,
+    worldXiWithoutBallonDor,
+    ballonDorWithoutProductionAward,
+    ballonDorWithoutWorldXi,
     careerChancePercent: Number(((winners.length / safeRuns) * 100).toFixed(2)),
     awardChancePerSeasonPercent: Number(((totalBallonDor / Math.max(1, totalSeasons)) * 100).toFixed(3)),
     winners,
@@ -4464,6 +4517,10 @@ export default function Home() {
           <h1>{monteCarloReport.runs} carreiras simuladas</h1>
           <div className="monte-carlo-grid">
             <Metric label="Bolas de Ouro" value={monteCarloReport.totalBallonDor} tone="gold" />
+            <Metric label="World XI" value={monteCarloReport.totalWorldXi} tone="green" />
+            <Metric label="World XI sem Bola de Ouro" value={monteCarloReport.worldXiWithoutBallonDor} />
+            <Metric label="Bola de Ouro sem prêmio de produção" value={monteCarloReport.ballonDorWithoutProductionAward} />
+            <Metric label="Bola de Ouro sem World XI" value={monteCarloReport.ballonDorWithoutWorldXi} />
             <Metric label="Carreiras vencedoras" value={monteCarloReport.careersWithBallonDor} tone="green" />
             <Metric label="Chance por carreira" value={`${monteCarloReport.careerChancePercent}%`} />
             <Metric label="Prêmios por carreira" value={monteCarloReport.averageIndividualAwards} />

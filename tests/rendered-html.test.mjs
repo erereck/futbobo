@@ -141,6 +141,14 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   assert.match(page, /Jogador do Ano do \$\{leagueLabel\}/);
   assert.match(page, /MVP da Champions League/);
   assert.match(page, /FIFPRO World XI/);
+  assert.match(page, /const hasGoalsOrAssistsAward = hasLeagueGoldenBoot \|\| hasEuropeanGoldenShoe \|\| hasAssistKingAward/);
+  assert.match(page, /const wonBallonDor =[\s\S]*hasGoalsOrAssistsAward[\s\S]*ballonScore >= 72/);
+  assert.match(page, /if \(wonBallonDor\) \{[\s\S]*!awards\.includes\("FIFPRO World XI"\)[\s\S]*awards\.push\("Bola de Ouro"\)/);
+  assert.match(page, /hasEuropeanGoldenShoe \? 88[\s\S]*hasLeagueGoldenBoot \|\| hasAssistKingAward \? 68[\s\S]*48/);
+  assert.match(page, /hasEuropeanGoldenShoe && nextOverall >= 82 && performanceScore >= 76/);
+  assert.match(page, /worldXiWithoutBallonDor: awardSeasons\.filter\(\(season\) => season\.worldXi && !season\.ballonDor\)\.length/);
+  assert.match(page, /ballonDorWithoutProductionAward: awardSeasons\.filter\(\(season\) => season\.ballonDor && !season\.production\)\.length/);
+  assert.match(page, /ballonDorWithoutWorldXi: awardSeasons\.filter\(\(season\) => season\.ballonDor && !season\.worldXi\)\.length/);
   assert.match(page, /function AwardReveal/);
   assert.match(page, /function AwardCeremony/);
   assert.match(page, /OS TRÊS FINALISTAS/);
