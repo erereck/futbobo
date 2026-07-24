@@ -2587,9 +2587,12 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   const awards: string[] = [];
   const awardRoll = seeded(state.seed, state.season * 73);
   const leagueLabel = abroad ? league.name : "Brasileirão";
+  const leagueGoldenBootLine = 28 + Math.floor(seeded(state.seed, state.season * 227 + 19) * 9);
+  const leagueAssistKingLine = 14 + Math.floor(seeded(state.seed, state.season * 229 + 23) * 7);
+  const europeanGoldenShoeLine = 28 + Math.floor(seeded(state.seed, state.season * 233 + 29) * 9);
   if (affected.age <= 21 && appearances >= 22 && nextOverall >= 74 && awardRoll > 0.38) awards.push(`Revelação do ${leagueLabel}`);
-  if (!isKeeper && goals >= 18) awards.push(`Artilheiro do ${leagueLabel}`);
-  if (!isKeeper && assists >= 12) awards.push("Rei das Assistências");
+  if (!isKeeper && goals >= leagueGoldenBootLine) awards.push(`Artilheiro do ${leagueLabel}`);
+  if (!isKeeper && assists >= leagueAssistKingLine) awards.push("Rei das Assistências");
   if (isKeeper && cleanSheets >= 14) awards.push("Luva de Ouro");
   if (position.zone === "defesa" && appearances >= 28 && nextOverall >= 80 && leaguePosition <= 6) awards.push("Melhor Defensor");
   if (position.zone === "meio" && appearances >= 26 && goals + assists >= 16 && performanceScore >= 72 && awardRoll > 0.32) awards.push(`Melhor Meio-Campista do ${leagueLabel}`);
@@ -2603,7 +2606,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (inEurope && affected.age <= 21 && nextOverall >= 80 && appearances >= 18 && seeded(state.seed, state.season * 167) > 0.55) awards.push("Golden Boy");
   if (inEurope && affected.age <= 21 && playsContinental && nextOverall >= 82 && seeded(state.seed, state.season * 173) > 0.65) awards.push("Troféu Kopa");
   if (inEurope && isKeeper && cleanSheets >= 16 && nextOverall >= 85 && seeded(state.seed, state.season * 179) > 0.7) awards.push("Troféu Yashin");
-  if (inEurope && !isKeeper && goals >= 22 && league.prestige >= 4 && seeded(state.seed, state.season * 181) > 0.65) awards.push("Chuteira de Ouro Europeia");
+  if (inEurope && !isKeeper && goals >= europeanGoldenShoeLine && league.prestige >= 4) awards.push("Chuteira de Ouro Europeia");
   if (inEurope && playsContinental === "champions" && continentalChampion && nextOverall >= 88 && seeded(state.seed, state.season * 191) > 0.55) awards.push("Melhor da UEFA");
   if (inEurope && playsContinental === "champions" && continentalChampion && performanceScore >= 84 && seeded(state.seed, state.season * 193) > 0.38) awards.push("MVP da Champions League");
   if (inEurope && nextOverall >= 87 && performanceScore >= 86 && appearances >= 28 && seeded(state.seed, state.season * 197 + 13) > 0.48) awards.push("FIFPRO World XI");
@@ -2640,16 +2643,45 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     (mundialChampion || continentalChampion);
   const positionBallonModifier = isKeeper ? -7 : position.zone === "defesa" ? -4 : position.zone === "ataque" ? 3 : 0;
   const previousBallonDor = affected.awardCabinet["Bola de Ouro"] ?? 0;
+  const ballonProduction =
+    isKeeper
+      ? cleanSheets * 1.8 - goalsConceded * 0.08
+      : position.zone === "defesa"
+        ? goals * 1.45 + assists * 1.2
+        : position.zone === "meio"
+          ? goals * 0.72 + assists
+          : goals + assists * 0.65;
+  const eliteProductionTarget = isKeeper ? 22 : position.zone === "defesa" ? 18 : position.zone === "meio" ? 34 : 40;
+  const productionBallonModifier = clamp((ballonProduction - eliteProductionTarget) / 1.5, -12, 18);
+  const supportingAwardBonus = Math.min(10, awards.reduce((bonus, award) => (
+    bonus +
+    (
+      award === "FIFPRO World XI" ||
+      award === "Melhor da UEFA" ||
+      award.includes("MVP") ||
+      award.includes("Jogador do Ano")
+        ? 2.5
+        : award.includes("Craque") ||
+            award.includes("Chuteira") ||
+            award.includes("Artilheiro") ||
+            award === "Rei da América"
+          ? 1.4
+          : 0
+    )
+  ), 0));
   const ballonScore =
-    performanceScore * 0.35 +
+    performanceScore * 0.33 +
     nextOverall * 0.35 +
-    affected.reputation * 0.2 +
+    affected.reputation * 0.17 +
     titleCount * 2.5 +
     (playsContinental === "champions" && continentalChampion ? 9 : 0) +
     (mundialChampion ? 12 : 0) +
     (majorNationalTitle ? 8 : 0) +
+    productionBallonModifier +
+    supportingAwardBonus +
     positionBallonModifier;
-  const firstBallonChance = clamp(36 + Math.max(0, ballonScore - 75) * 4.2, 36, 92);
+  const firstBallonChance = clamp(32 + Math.max(0, ballonScore - 72) * 3.8, 32, 97);
+  const repeatBallonBaseChance = clamp(16 + Math.max(0, ballonScore - 72) * 4.4, 16, 97);
   const repeatBallonMultiplier =
     previousBallonDor === 0 ? 1 :
     previousBallonDor === 1 ? 0.78 :
@@ -2659,13 +2691,38 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     previousBallonDor === 5 ? 0.03 :
     previousBallonDor === 6 ? 0.012 :
     Math.max(0.0004, 0.006 * 0.55 ** (previousBallonDor - 7));
-  const rawBallonChance = firstBallonChance * repeatBallonMultiplier;
-  const ballonChance = previousBallonDor === 0
-    ? clamp(Math.round(rawBallonChance), 24, 92)
+  const rawBallonChance = (previousBallonDor === 0 ? firstBallonChance : repeatBallonBaseChance) * repeatBallonMultiplier;
+  const baseBallonChance = previousBallonDor === 0
+    ? clamp(Math.round(rawBallonChance), 32, 94)
     : Math.max(0.03, Number(rawBallonChance.toFixed(3)));
+  const historicBallonSeason =
+    (
+      position.zone === "ataque" &&
+      (goals >= 50 || goals + assists >= 68)
+    ) ||
+    (
+      position.zone === "meio" &&
+      goals + assists >= 55
+    ) ||
+    (
+      position.zone === "defesa" &&
+      goals + assists >= 30 &&
+      performanceScore >= 94
+    ) ||
+    (
+      isKeeper &&
+      cleanSheets >= 25 &&
+      performanceScore >= 94
+    );
+  const historicBallonChanceFloor = !historicBallonSeason
+    ? 0
+    : previousBallonDor <= 6
+      ? 98
+      : Math.max(0.25, 28 * 0.52 ** (previousBallonDor - 7));
+  const ballonChance = Math.max(baseBallonChance, historicBallonChanceFloor);
   if (
     (europeanBallonEligible || americanBallonEligible) &&
-    ballonScore >= 75 &&
+    ballonScore >= 72 &&
     seeded(state.seed, state.season * 109) * 100 < ballonChance
   ) awards.push("Bola de Ouro");
   const awardNominations: AwardNomination[] = awards
@@ -2690,7 +2747,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     "Bola de Ouro",
     (inEurope && nextOverall >= 81 && performanceScore >= 68 && affected.reputation >= 48 && appearances >= 20) ||
       (!inEurope && nextOverall >= 87 && performanceScore >= 78 && affected.reputation >= 66 && Boolean(continentalChampion || mundialChampion)),
-    clamp(24 + Math.max(0, ballonScore - 66) * 4.2, 24, 82),
+    historicBallonSeason ? 100 : clamp(24 + Math.max(0, ballonScore - 66) * 4.2, 24, 88),
     313,
   );
   addLostNomination(

@@ -124,7 +124,17 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 83[\s\S]*nextOverall === 82[\s\S]*performanceScore >= 80/);
-  assert.match(page, /const firstBallonChance = clamp\(36 \+ Math\.max\(0, ballonScore - 75\) \* 4\.2, 36, 92\)/);
+  assert.match(page, /const leagueGoldenBootLine = 28 \+ Math\.floor\([\s\S]*\* 9\)/);
+  assert.match(page, /goals >= leagueGoldenBootLine/);
+  assert.match(page, /const leagueAssistKingLine = 14 \+ Math\.floor\([\s\S]*\* 7\)/);
+  assert.match(page, /goals >= europeanGoldenShoeLine/);
+  assert.match(page, /const productionBallonModifier = clamp\(\(ballonProduction - eliteProductionTarget\) \/ 1\.5, -12, 18\)/);
+  assert.match(page, /const supportingAwardBonus = Math\.min\(10/);
+  assert.match(page, /const firstBallonChance = clamp\(32 \+ Math\.max\(0, ballonScore - 72\) \* 3\.8, 32, 97\)/);
+  assert.match(page, /const repeatBallonBaseChance = clamp\(16 \+ Math\.max\(0, ballonScore - 72\) \* 4\.4, 16, 97\)/);
+  assert.match(page, /previousBallonDor === 0[\s\S]*clamp\(Math\.round\(rawBallonChance\), 32, 94\)/);
+  assert.match(page, /const historicBallonSeason =[\s\S]*goals >= 50[\s\S]*goals \+ assists >= 68/);
+  assert.match(page, /previousBallonDor <= 6[\s\S]*\? 98[\s\S]*28 \* 0\.52 \*\* \(previousBallonDor - 7\)/);
   assert.match(page, /previousBallonDor === 4 \? 0\.08/);
   assert.match(page, /previousBallonDor === 6 \? 0\.012/);
   assert.match(page, /Math\.max\(0\.0004, 0\.006 \* 0\.55 \*\* \(previousBallonDor - 7\)\)/);
