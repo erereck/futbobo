@@ -116,6 +116,8 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .primary-button:disabled { cursor: not-allowed; opacity: .35; }
 .secondary-button { border: 1px solid var(--line); background: rgba(255,255,255,.035); color: var(--text); }
 .welcome-features { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 14px; margin-top: 18px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.welcome-version { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 11px; color: rgba(163,184,170,.5); font-size: 8px; font-weight: 800; letter-spacing: .15em; }
+.welcome-version b { color: rgba(255,199,44,.72); font-size: 9px; text-transform: uppercase; }
 .welcome-hall { display: grid; gap: 6px; margin-top: 14px; padding: 12px; border: 1px solid rgba(255,199,44,.18); border-radius: 17px; background: rgba(255,199,44,.035); }
 .welcome-hall > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
 .welcome-hall > div span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .13em; }

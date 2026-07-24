@@ -4,6 +4,14 @@ import test from "node:test";
 
 const outputRoot = new URL("../out/", import.meta.url);
 
+test("mostra a versao comunitaria no rodape do menu inicial", async () => {
+  const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  assert.match(pageSource, /<footer className="welcome-version">/);
+  assert.match(pageSource, /<b>v62<\/b>/);
+  assert.match(styles, /\.welcome-version/);
+});
+
 async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const nested = await Promise.all(entries.map(async (entry) => {

@@ -4673,6 +4673,10 @@ export default function Home() {
           <div className="welcome-features">
             <span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span>
           </div>
+          <footer className="welcome-version">
+            <span>FUTBOBO</span>
+            <b>v62</b>
+          </footer>
         </section>
       )}
 
