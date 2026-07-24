@@ -2616,10 +2616,21 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (majorNationalTitle && nextOverall >= 86 && performanceScore >= 80) awards.push(`Craque da ${nationalHistoryAdd?.name}`);
   const europeanBallonEligible =
     inEurope &&
-    nextOverall >= 85 &&
-    performanceScore >= 78 &&
-    affected.reputation >= 65 &&
-    appearances >= 24;
+    (
+      (
+        nextOverall >= 84 &&
+        performanceScore >= 75 &&
+        affected.reputation >= 60 &&
+        appearances >= 22
+      ) ||
+      (
+        nextOverall === 83 &&
+        performanceScore >= 85 &&
+        affected.reputation >= 70 &&
+        appearances >= 26 &&
+        titleCount > 0
+      )
+    );
   const americanBallonEligible =
     !inEurope &&
     nextOverall >= 89 &&
@@ -2637,9 +2648,19 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     (mundialChampion ? 12 : 0) +
     (majorNationalTitle ? 8 : 0) +
     positionBallonModifier;
-  const firstBallonChance = clamp(12 + Math.max(0, ballonScore - 80) * 3, 12, 68);
-  const repeatBallonMultiplier = previousBallonDor === 0 ? 1 : Math.max(0.22, 0.72 ** previousBallonDor);
-  const ballonChance = clamp(Math.round(firstBallonChance * repeatBallonMultiplier), previousBallonDor > 0 ? 4 : 10, 68);
+  const firstBallonChance = clamp(28 + Math.max(0, ballonScore - 76) * 4.2, 28, 90);
+  const repeatBallonMultiplier =
+    previousBallonDor === 0 ? 1 :
+    previousBallonDor === 1 ? 0.75 :
+    previousBallonDor === 2 ? 0.55 :
+    previousBallonDor === 3 ? 0.25 :
+    previousBallonDor === 4 ? 0.06 :
+    previousBallonDor === 5 ? 0.02 :
+    previousBallonDor === 6 ? 0.005 :
+    0;
+  const ballonChance = previousBallonDor >= 7
+    ? 0
+    : clamp(Math.round(firstBallonChance * repeatBallonMultiplier), previousBallonDor > 0 ? 2 : 15, 85);
   if (
     (europeanBallonEligible || americanBallonEligible) &&
     ballonScore >= 75 &&
