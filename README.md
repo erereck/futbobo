@@ -38,6 +38,7 @@ O projeto usa Next.js com exportação estática e é publicado automaticamente 
 - 12 posições e quatro caminhos de formação.
 - 332 clubes de 17 ligas completas, com escudos reais e fallback visual gerado em CSS.
 - Dezenas de eventos de carreira, evolução, transferências, Seleção, lesões e aposentadoria.
+- Bastidores da carreira: comissão técnica, diretoria, olheiros, departamento de dados, psicólogo esportivo, preparador físico, negociações sigilosas de janela de transferência, vestiário, equipe de apoio, base e arbitragem.
 - Brasileirão, Copa do Brasil, Libertadores e Mundial de Clubes.
 - Pedido de transferência com negociação, chance de recusa e reação da torcida.
 - Consequências visíveis para cada decisão antes do resultado da temporada.

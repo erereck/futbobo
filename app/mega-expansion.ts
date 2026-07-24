@@ -285,6 +285,27 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   { id: "carreira-de-quinze-temporadas", icon: "⏳", title: "Quinze Temporadas de Carreira", description: "Completou 15 temporadas como profissional.", rarity: "épico", match: "all", conditions: [{ field: "seasons", operator: "gte", value: 15 }] },
   { id: "carreira-de-vinte-temporadas", icon: "⏳", title: "Vinte Temporadas de Carreira", description: "Completou 20 temporadas como profissional.", rarity: "lendário", match: "all", conditions: [{ field: "seasons", operator: "gte", value: 20 }] },
   { id: "eterno-do-futebol", icon: "⏳", title: "Eterno do Futebol", description: "Seguiu jogando profissionalmente aos 38 anos.", rarity: "lendário", match: "all", conditions: [{ field: "age", operator: "gte", value: 38 }] },
+  // ---- BASTIDORES DA CARREIRA ----
+  { id: "referencia-completa", icon: "✦", title: "Referência Completa", description: "Somou 100 gols e 100 assistências na carreira.", rarity: "raro", match: "all", conditions: [
+    { field: "goals", operator: "gte", value: 100 },
+    { field: "assists", operator: "gte", value: 100 },
+  ]},
+  { id: "capitao-em-dois-fronts", icon: "C", title: "Capitão em Dois Fronts", description: "Foi capitão do clube e da Seleção na mesma carreira.", rarity: "épico", match: "all", conditions: [
+    { field: "wasCaptain", operator: "eq", value: true },
+    { field: "nationalCaptain", operator: "eq", value: true },
+  ]},
+  { id: "bastidor-de-confianca", icon: "🧳", title: "Bastidor de Confiança", description: "Foi capitão em algum clube depois de já ter defendido 6 camisas diferentes.", rarity: "raro", match: "all", conditions: [
+    { field: "clubsPlayed", operator: "gte", value: 6 },
+    { field: "wasCaptain", operator: "eq", value: true },
+  ]},
+  { id: "onze-escudos-diferentes", icon: "🧳", title: "Uma Carreira, Onze Escudos", description: "Já defendeu 11 clubes diferentes.", rarity: "lendário", match: "all", conditions: [{ field: "clubsPlayed", operator: "gte", value: 11 }] },
+  { id: "cidadao-do-mundo-do-futebol", icon: "✈", title: "Cidadão do Mundo", description: "Completou 15 temporadas jogando fora do país de origem.", rarity: "lendário", match: "all", conditions: [{ field: "seasonsAbroad", operator: "gte", value: 15 }] },
+  { id: "mil-jogos-de-bastidores", icon: "■", title: "Mil Jogos, Mil Bastidores", description: "Disputou 1000 partidas como profissional.", rarity: "lendário", match: "all", conditions: [{ field: "appearances", operator: "gte", value: 1000 }] },
+  { id: "o-dono-do-premio", icon: "🥇", title: "O Dono do Prêmio", description: "Venceu a Bola de Ouro cinco vezes na carreira.", rarity: "lendário", match: "all", conditions: [{ field: "ballonDor", operator: "gte", value: 5 }] },
+  { id: "cabeca-no-lugar", icon: "🟩", title: "Cabeça no Lugar", description: "Completou 12 temporadas de carreira levando no máximo 1 cartão vermelho.", rarity: "raro", match: "all", conditions: [
+    { field: "seasons", operator: "gte", value: 12 },
+    { field: "redCards", operator: "lte", value: 1 },
+  ]},
 ];
 
 const BOOLEAN_METRIC_FIELDS = new Set<MetricField>(["wasCaptain", "nationalCaptain", "retired"]);
