@@ -123,11 +123,11 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 84[\s\S]*nextOverall === 83[\s\S]*performanceScore >= 85/);
-  assert.match(page, /const firstBallonChance = clamp\(28 \+ Math\.max\(0, ballonScore - 76\) \* 4\.2, 28, 90\)/);
-  assert.match(page, /previousBallonDor === 4 \? 0\.06/);
-  assert.match(page, /previousBallonDor === 5 \? 0\.02/);
-  assert.match(page, /previousBallonDor >= 7[\s\S]*\? 0/);
+  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 83[\s\S]*nextOverall === 82[\s\S]*performanceScore >= 80/);
+  assert.match(page, /const firstBallonChance = clamp\(36 \+ Math\.max\(0, ballonScore - 75\) \* 4\.2, 36, 92\)/);
+  assert.match(page, /previousBallonDor === 4 \? 0\.08/);
+  assert.match(page, /previousBallonDor === 6 \? 0\.012/);
+  assert.match(page, /Math\.max\(0\.0004, 0\.006 \* 0\.55 \*\* \(previousBallonDor - 7\)\)/);
   assert.match(page, /Jogador do Ano do \$\{leagueLabel\}/);
   assert.match(page, /MVP da Champions League/);
   assert.match(page, /FIFPRO World XI/);
@@ -556,7 +556,7 @@ test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da
   assert.match(page, /positionBreakdown/);
   assert.match(page, /careersWithFiveBallonDor/);
   assert.match(page, /repeatBallonMultiplier/);
-  assert.match(page, /previousBallonDor > 0 \? 2 : 15/);
+  assert.match(page, /previousBallonDor === 0[\s\S]*Math\.max\(0\.03, Number\(rawBallonChance\.toFixed\(3\)\)\)/);
   assert.match(page, /affected\.awardCabinet\["Ídolo da Torcida"\] > 0/);
   assert.match(styles, /\.monte-carlo-shell/);
 });

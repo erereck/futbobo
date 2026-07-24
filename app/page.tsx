@@ -2618,16 +2618,16 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     inEurope &&
     (
       (
-        nextOverall >= 84 &&
-        performanceScore >= 75 &&
-        affected.reputation >= 60 &&
+        nextOverall >= 83 &&
+        performanceScore >= 74 &&
+        affected.reputation >= 58 &&
         appearances >= 22
       ) ||
       (
-        nextOverall === 83 &&
-        performanceScore >= 85 &&
-        affected.reputation >= 70 &&
-        appearances >= 26 &&
+        nextOverall === 82 &&
+        performanceScore >= 80 &&
+        affected.reputation >= 65 &&
+        appearances >= 24 &&
         titleCount > 0
       )
     );
@@ -2648,19 +2648,20 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     (mundialChampion ? 12 : 0) +
     (majorNationalTitle ? 8 : 0) +
     positionBallonModifier;
-  const firstBallonChance = clamp(28 + Math.max(0, ballonScore - 76) * 4.2, 28, 90);
+  const firstBallonChance = clamp(36 + Math.max(0, ballonScore - 75) * 4.2, 36, 92);
   const repeatBallonMultiplier =
     previousBallonDor === 0 ? 1 :
-    previousBallonDor === 1 ? 0.75 :
-    previousBallonDor === 2 ? 0.55 :
+    previousBallonDor === 1 ? 0.78 :
+    previousBallonDor === 2 ? 0.58 :
     previousBallonDor === 3 ? 0.25 :
-    previousBallonDor === 4 ? 0.06 :
-    previousBallonDor === 5 ? 0.02 :
-    previousBallonDor === 6 ? 0.005 :
-    0;
-  const ballonChance = previousBallonDor >= 7
-    ? 0
-    : clamp(Math.round(firstBallonChance * repeatBallonMultiplier), previousBallonDor > 0 ? 2 : 15, 85);
+    previousBallonDor === 4 ? 0.08 :
+    previousBallonDor === 5 ? 0.03 :
+    previousBallonDor === 6 ? 0.012 :
+    Math.max(0.0004, 0.006 * 0.55 ** (previousBallonDor - 7));
+  const rawBallonChance = firstBallonChance * repeatBallonMultiplier;
+  const ballonChance = previousBallonDor === 0
+    ? clamp(Math.round(rawBallonChance), 24, 92)
+    : Math.max(0.03, Number(rawBallonChance.toFixed(3)));
   if (
     (europeanBallonEligible || americanBallonEligible) &&
     ballonScore >= 75 &&
