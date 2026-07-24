@@ -27,6 +27,11 @@ const LEAGUE_SEARCH_NAMES = {
   "liga-peruana": "Peruvian Primera Division",
   "liga-mx": "Mexican Primera League",
   mls: "American Major League Soccer",
+  proleague: "Belgian Jupiler League",
+  superlig: "Turkish Super Lig",
+  "austria-bundesliga": "Austrian Bundesliga",
+  "swiss-super-league": "Swiss Super League",
+  "premiership-sco": "Scottish Premier League",
 };
 
 const COUNTRY_NAMES = {
@@ -47,6 +52,11 @@ const COUNTRY_NAMES = {
   alemanha: ["germany"],
   italia: ["italy"],
   holanda: ["netherlands", "holland"],
+  belgica: ["belgium"],
+  turquia: ["turkey"],
+  austria: ["austria"],
+  suica: ["switzerland"],
+  escocia: ["scotland"],
 };
 
 const FLAG_CODES = {
@@ -67,6 +77,11 @@ const FLAG_CODES = {
   alemanha: "de",
   italia: "it",
   holanda: "nl",
+  belgica: "be",
+  turquia: "tr",
+  austria: "at",
+  suica: "ch",
+  escocia: "gb-sct",
 };
 
 const TEAM_QUERY_OVERRIDES = {
@@ -136,6 +151,39 @@ const TEAM_QUERY_OVERRIDES = {
   "nycfc": "New York City FC",
   lafc: "Los Angeles FC",
   "seattle-sounders": "Seattle Sounders",
+  "club-brugge": "Club Brugge",
+  gent: "KAA Gent",
+  "standard-liege": "Standard Liege",
+  "union-sg": "Union Saint-Gilloise",
+  "sint-truiden": "Sint-Truiden",
+  "oh-leuven": "OH Leuven",
+  "rwd-molenbeek": "RWD Molenbeek",
+  fenerbahce: "Fenerbahce",
+  besiktas: "Besiktas",
+  basaksehir: "Istanbul Basaksehir",
+  "adana-demirspor": "Adana Demirspor",
+  kasimpasa: "Kasimpasa",
+  genclerbirligi: "Genclerbirligi",
+  goztepe: "Goztepe",
+  rizespor: "Caykur Rizespor",
+  "sturm-graz": "Sturm Graz",
+  salzburg: "Red Bull Salzburg",
+  "rapid-wien": "Rapid Wien",
+  "austria-wien": "Austria Wien",
+  "wolfsberger-ac": "Wolfsberger AC",
+  "austria-klagenfurt": "Austria Klagenfurt",
+  "grazer-ak": "Grazer AK",
+  "wsg-tirol": "WSG Tirol",
+  "blau-weiss-linz": "Blau Weiss Linz",
+  "young-boys": "BSC Young Boys",
+  servette: "Servette FC",
+  grasshoppers: "Grasshopper Club Zurich",
+  "st-gallen": "St Gallen",
+  "lausanne-sport": "Lausanne Sport",
+  "dundee-united": "Dundee United",
+  "st-mirren": "St Mirren",
+  "ross-county": "Ross County",
+  "st-johnstone": "St Johnstone",
 };
 
 const TEAM_ID_OVERRIDES = {
@@ -292,13 +340,19 @@ function teamScore(club, team, enforceCountry = false) {
   return bestNameScore + (countryMatches ? 0.12 : 0);
 }
 
-async function apiJson(endpoint) {
+async function apiJson(endpoint, attempt = 0) {
   const elapsed = Date.now() - lastApiRequest;
   if (elapsed < 2050) await new Promise((resolve) => setTimeout(resolve, 2050 - elapsed));
   const response = await fetch(`${API_ROOT}/${endpoint}`, {
     headers: { "User-Agent": "Futbobo asset sync (github.com/erereck/futbobo)" },
   });
   lastApiRequest = Date.now();
+  if (response.status === 429 && attempt < 5) {
+    const backoff = 4000 * (attempt + 1);
+    console.log(`\n429 recebido, aguardando ${backoff}ms antes de tentar de novo (${attempt + 1}/5)...`);
+    await new Promise((resolve) => setTimeout(resolve, backoff));
+    return apiJson(endpoint, attempt + 1);
+  }
   if (!response.ok) throw new Error(`TheSportsDB respondeu ${response.status} em ${endpoint}`);
   return response.json();
 }

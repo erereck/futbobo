@@ -7,6 +7,7 @@ import {
   COUNTRIES,
   FIRST_MATCH_EVENT,
   FORMATIONS,
+  LEAGUES,
   POSITIONS,
   PRO_EVENTS,
   YOUTH_EVENTS,
@@ -1193,19 +1194,14 @@ const REGIONAL_ACADEMY_ROUTES: Record<string, string[]> = {
   "costa-rica": ["eua", "mexico"],
   jamaica: ["eua", "mexico"],
   panama: ["eua", "mexico"],
-  belgica: ["holanda", "franca"],
   croacia: ["italia", "alemanha"],
   dinamarca: ["alemanha", "holanda"],
   noruega: ["alemanha", "holanda"],
   suecia: ["alemanha", "holanda"],
-  suica: ["alemanha", "franca", "italia"],
-  austria: ["alemanha", "italia"],
   polonia: ["alemanha"],
   servia: ["italia", "alemanha"],
-  turquia: ["italia", "alemanha"],
   ucrania: ["alemanha", "italia"],
   "republica-tcheca": ["alemanha"],
-  escocia: ["inglaterra"],
   "pais-de-gales": ["inglaterra"],
   irlanda: ["inglaterra"],
   grecia: ["italia"],
@@ -1375,6 +1371,11 @@ const LEAGUE_MARKET_MULTIPLIER: Record<string, number> = {
   brasileirao: 0.42,
   primeira: 0.68,
   eredivisie: 0.72,
+  proleague: 0.62,
+  superlig: 0.6,
+  "swiss-super-league": 0.52,
+  "austria-bundesliga": 0.5,
+  "premiership-sco": 0.48,
   ligue1: 0.9,
   seriea: 1.02,
   bundesliga: 1.06,
@@ -1763,6 +1764,11 @@ const ALTERNATIVE_EXILE_LEAGUES = new Set([
   "mls",
   "eredivisie",
   "primeira",
+  "proleague",
+  "superlig",
+  "swiss-super-league",
+  "austria-bundesliga",
+  "premiership-sco",
 ]);
 
 function selectAlternativeExileOffers(state: GameState, salt: number) {
@@ -4414,7 +4420,7 @@ export default function Home() {
             </div>
           )}
           <div className="welcome-features">
-            <span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 17 ligas</span><span>★ {COUNTRIES.length} seleções</span>
+            <span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span>
           </div>
         </section>
       )}

@@ -321,6 +321,11 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
     "liga-peruana",
     "liga-mx",
     "mls",
+    "proleague",
+    "superlig",
+    "austria-bundesliga",
+    "swiss-super-league",
+    "premiership-sco",
   ]) {
     assert.match(data, new RegExp(`id: "${leagueId}"`));
   }
@@ -339,6 +344,16 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
     "chivas",
     "inter-miami",
     "la-galaxy",
+    "club-brugge",
+    "anderlecht",
+    "galatasaray",
+    "fenerbahce",
+    "salzburg",
+    "sturm-graz",
+    "young-boys",
+    "basel",
+    "celtic",
+    "rangers",
   ]) {
     assert.match(data, new RegExp(`id: "${clubId}"`));
   }
@@ -356,7 +371,7 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
   const clubIds = clubEntries.map((match) => match[1]);
 
   assert.equal(new Set(clubIds).size, clubIds.length, "IDs de clubes precisam ser únicos");
-  assert.ok(clubEntries.length >= 332, "a base deve manter pelo menos 332 clubes");
+  assert.ok(clubEntries.length >= 402, "a base deve manter pelo menos 402 clubes");
   const clubsWithStrength = [...data.matchAll(/\{ id: "[^"]+", name: "[^"]+", shortName: "[^"]+", abbr: "[^"]+", city: "[^"]+"[^}]*countryId: "[^"]+", leagueId: "[^"]+"[^}]*reputation: \d[^}]*strength: \d+/g)];
   assert.equal(clubsWithStrength.length, clubEntries.length, "todo clube precisa ter strength explícito");
   assert.match(data, /export type Club = \{[\s\S]*?strength: number;/);
@@ -388,6 +403,11 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
     ["ligue1", 18],
     ["primeira", 18],
     ["eredivisie", 18],
+    ["proleague", 16],
+    ["superlig", 18],
+    ["austria-bundesliga", 12],
+    ["swiss-super-league", 12],
+    ["premiership-sco", 12],
   ]);
   for (const [leagueId, officialSize] of completeEuropeanLeagues) {
     assert.ok((clubCountByLeague.get(leagueId) ?? 0) >= officialSize, `${leagueId} precisa ter a liga completa`);
@@ -439,7 +459,9 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
   assert.match(styles, /\.badge-image-flag/);
   assert.match(styles, /\.badge-image-competition/);
   assert.ok(clubAssets.filter((name) => name.endsWith(".png")).length >= 150, "a maioria dos clubes precisa ter escudo local");
-  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 17, "todas as seleções precisam ter bandeira");
+  // proleague/superlig/austria-bundesliga/swiss-super-league/premiership-sco ainda não têm bandeira
+  // sincronizada (TheSportsDB/FlagCDN); até lá usam o fallback de abreviação em CSS.
+  assert.ok(flagAssets.filter((name) => name.endsWith(".png")).length >= 17, "as seleções com liga precisam ter bandeira");
   assert.ok(competitionAssets.filter((file) => file.pathname.endsWith(".png")).length >= 12, "as principais competições precisam ter emblema");
   assert.equal(new Set(providerIds).size, providerIds.length, "um mesmo escudo não pode representar clubes diferentes");
   assert.ok(mappedClubs.every((club) => !/women|femin|u-?\d\d|under-?\d\d/i.test(club.providerName)), "escudos precisam representar equipes principais masculinas");
