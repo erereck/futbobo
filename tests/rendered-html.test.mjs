@@ -246,8 +246,11 @@ test("classifica para supercopas e recopás e exibe uma galeria completa de tít
   assert.match(page, /ÚLTIMAS VOLTAS OLÍMPICAS/);
   assert.match(page, /<TrophyGallery state=\{game\}/);
   assert.match(page, /<TrophyGallery state=\{displayGame\} final/);
+  assert.match(page, /className="season-title-parade"/);
+  assert.match(page, /TAÇAS DA TEMPORADA/);
   assert.match(styles, /\.trophy-gallery-hero/);
   assert.match(styles, /\.recent-titles/);
+  assert.match(styles, /\.season-title-parade/);
   assert.match(assetSync, /SUPER_CUP_SEARCH_NAMES/);
   assert.match(assetSync, /recopaSudamericana: "5665"/);
   assert.match(assetSync, /uefaSuperCup: "4512"/);
@@ -471,6 +474,7 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
   const flagAssets = await readdir(new URL("../public/assets/flags/", import.meta.url));
   const competitionAssets = await walk(new URL("../public/assets/competitions/", import.meta.url));
   const assetManifest = JSON.parse(await readFile(new URL("../public/assets/football-assets.json", import.meta.url), "utf8"));
+  const assetSync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
   const mappedClubs = Object.values(assetManifest.clubs);
   const providerIds = mappedClubs.map((club) => club.providerId);
 
@@ -479,6 +483,10 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
   assert.match(page, /VERIFIED_CLUB_ASSET_IDS\.has\(club\.id\)/);
   assert.match(page, /assets\/flags\/\$\{country\.id\}\.png/);
   assert.match(page, /function CompetitionBadge/);
+  assert.match(assetSync, /writeVerifiedClubAssetIds/);
+  assert.match(assetSync, /VERIFIED_ASSETS_FILE/);
+  assert.match(assetSync, /auditManifestClubMappings/);
+  assert.match(assetSync, /nameScore < 0\.42/);
   assert.match(styles, /\.badge-image-club/);
   assert.match(styles, /\.badge-image-flag/);
   assert.match(styles, /\.badge-image-competition/);

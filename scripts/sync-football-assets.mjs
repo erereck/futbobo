@@ -3,6 +3,7 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const DATA_FILE = path.join(ROOT, "app", "game-data.ts");
+const VERIFIED_ASSETS_FILE = path.join(ROOT, "app", "verified-club-assets.ts");
 const ASSET_ROOT = path.join(ROOT, "public", "assets");
 const API_ROOT = "https://www.thesportsdb.com/api/v1/json/123";
 const repairOnly = process.argv.includes("--repair");
@@ -157,6 +158,35 @@ const SUPER_CUP_ID_OVERRIDES = {
   seriea: "4507",
   ligue1: "4901",
   "liga-mx": "5662",
+};
+
+const LEAGUE_ID_OVERRIDES = {
+  proleague: "4338",
+  superlig: "4339",
+  "austria-bundesliga": "4621",
+  "swiss-super-league": "4675",
+  "premiership-sco": "4330",
+};
+
+const CUP_ID_OVERRIDES = {
+  proleague: "5831",
+  superlig: "4960",
+  "austria-bundesliga": "5883",
+  "swiss-super-league": "5489",
+  "premiership-sco": "4723",
+};
+
+const EXTERNAL_COMPETITION_ASSETS = {
+  "supercup:proleague": {
+    path: path.join("supercups", "proleague.png"),
+    providerName: "Belgian Super Cup",
+    source: "https://upload.wikimedia.org/wikipedia/en/thumb/1/19/Logo_of_the_Belgian_Super_Cup.png/250px-Logo_of_the_Belgian_Super_Cup.png",
+  },
+  "supercup:superlig": {
+    path: path.join("supercups", "superlig.png"),
+    providerName: "Turkcell Super Kupa 2025",
+    source: "https://upload.wikimedia.org/wikipedia/commons/2/2c/Turkcell-super-kupa-2025-koyu.jpg",
+  },
 };
 
 const TEAM_QUERY_OVERRIDES = {
@@ -418,6 +448,34 @@ function teamScore(club, team, enforceCountry = false) {
   return bestNameScore + (countryMatches ? 0.12 : 0);
 }
 
+function auditManifestClubMappings() {
+  const clubIndex = new Map(clubs.map((club) => [club.id, club]));
+  const claims = new Map();
+  for (const [clubId, asset] of Object.entries(manifest.clubs)) {
+    const club = clubIndex.get(clubId);
+    if (!club || !asset.providerId || !asset.providerName) {
+      delete manifest.clubs[clubId];
+      continue;
+    }
+    const nameScore = Math.max(
+      similarity(club.name, asset.providerName),
+      similarity(club.shortName, asset.providerName),
+      similarity(TEAM_QUERY_OVERRIDES[club.id] ?? "", asset.providerName),
+    );
+    if (nameScore < 0.42) {
+      delete manifest.clubs[clubId];
+      continue;
+    }
+    const previous = claims.get(asset.providerId);
+    if (!previous || nameScore > previous.score) {
+      if (previous) delete manifest.clubs[previous.clubId];
+      claims.set(asset.providerId, { clubId, score: nameScore });
+    } else {
+      delete manifest.clubs[clubId];
+    }
+  }
+}
+
 async function apiJson(endpoint, attempt = 0) {
   const elapsed = Date.now() - lastApiRequest;
   if (elapsed < 2050) await new Promise((resolve) => setTimeout(resolve, 2050 - elapsed));
@@ -441,6 +499,21 @@ async function fileExists(file) {
   } catch {
     return false;
   }
+}
+
+async function writeVerifiedClubAssetIds() {
+  const verifiedIds = [];
+  for (const clubId of Object.keys(manifest.clubs).sort()) {
+    if (await fileExists(path.join(ASSET_ROOT, "clubs", `${clubId}.png`))) verifiedIds.push(clubId);
+  }
+  const source = [
+    "// Gerado a partir de public/assets/football-assets.json. Somente escudos auditados entram aqui.",
+    "export const VERIFIED_CLUB_ASSET_IDS = new Set([",
+    ...verifiedIds.map((clubId) => `  \"${clubId}\",`),
+    "]);",
+    "",
+  ].join("\n");
+  await writeFile(VERIFIED_ASSETS_FILE, source, "utf8");
 }
 
 function queueImage(url, destination, metadataTarget, metadata) {
@@ -556,6 +629,16 @@ if (missingOnly || repairOnly) {
 
     const missingCompetitionLookups = [
       ...Object.entries(GLOBAL_COMPETITIONS).map(([key, providerId]) => ({ key, providerId, path: `${key}.png` })),
+      ...Object.entries(LEAGUE_ID_OVERRIDES).map(([leagueId, providerId]) => ({
+        key: `league:${leagueId}`,
+        providerId,
+        path: path.join("leagues", `${leagueId}.png`),
+      })),
+      ...Object.entries(CUP_ID_OVERRIDES).map(([leagueId, providerId]) => ({
+        key: `cup:${leagueId}`,
+        providerId,
+        path: path.join("cups", `${leagueId}.png`),
+      })),
       ...Object.entries(SUPER_CUP_ID_OVERRIDES).map(([leagueId, providerId]) => ({
         key: `supercup:${leagueId}`,
         providerId,
@@ -581,6 +664,12 @@ if (missingOnly || repairOnly) {
         console.log("sem imagem");
       }
     }
+    for (const [key, asset] of Object.entries(EXTERNAL_COMPETITION_ASSETS).filter(([assetKey]) => !competitionOnly || assetKey === competitionOnly)) {
+      const destination = path.join(ASSET_ROOT, "competitions", asset.path);
+      if (!refresh && await fileExists(destination)) continue;
+      manifest.competitions[key] = { providerName: asset.providerName };
+      queueImage(asset.source, destination, manifest.competitions[key], { providerName: asset.providerName });
+    }
   }
 
   let downloaded = 0;
@@ -590,7 +679,9 @@ if (missingOnly || repairOnly) {
     downloaded += results.filter((result) => result === "downloaded").length;
     failed += results.filter((result) => result === "failed").length;
   }
+  auditManifestClubMappings();
   await writeFile(path.join(ASSET_ROOT, "football-assets.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  await writeVerifiedClubAssetIds();
   console.log(`${repairOnly ? "Auditoria" : "Segunda passagem"}: ${downloaded} escudos atualizados; ${failed} falhas.`);
   process.exit(0);
 }
@@ -656,8 +747,8 @@ for (const [countryId, code] of Object.entries(FLAG_CODES)) {
 const competitionLookups = [];
 for (const league of leagues) {
   const teams = leagueTeams.get(league.id) ?? [];
-  const leagueProviderId = teams.find((team) => team.idLeague)?.idLeague;
-  const cupProviderId = findCompetitionId(teams, league.cupName);
+  const leagueProviderId = LEAGUE_ID_OVERRIDES[league.id] ?? teams.find((team) => team.idLeague)?.idLeague;
+  const cupProviderId = CUP_ID_OVERRIDES[league.id] ?? findCompetitionId(teams, league.cupName);
   const superCupSearchName = SUPER_CUP_SEARCH_NAMES[league.id];
   const superCupProviderId = SUPER_CUP_ID_OVERRIDES[league.id]
     ?? (superCupSearchName ? findCompetitionId(teams, superCupSearchName) : null);
@@ -671,6 +762,15 @@ for (const league of leagues) {
 }
 for (const [key, providerId] of Object.entries(GLOBAL_COMPETITIONS)) {
   competitionLookups.push({ key, providerId, path: `${key}.png` });
+}
+for (const [key, asset] of Object.entries(EXTERNAL_COMPETITION_ASSETS)) {
+  manifest.competitions[key] = { providerName: asset.providerName };
+  queueImage(
+    asset.source,
+    path.join(ASSET_ROOT, "competitions", asset.path),
+    manifest.competitions[key],
+    { providerName: asset.providerName },
+  );
 }
 
 const uniqueLookups = [...new Map(competitionLookups.map((lookup) => [`${lookup.key}:${lookup.providerId}`, lookup])).values()];
@@ -702,7 +802,9 @@ for (let index = 0; index < queuedDownloads.length; index += 8) {
   failed += results.filter((result) => result === "failed").length;
 }
 
+auditManifestClubMappings();
 await writeFile(path.join(ASSET_ROOT, "football-assets.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+await writeVerifiedClubAssetIds();
 
 console.log("");
 console.log(`Clubes com escudo: ${Object.keys(manifest.clubs).length}/${clubs.length}`);

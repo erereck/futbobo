@@ -1046,7 +1046,7 @@ function createCareerRivals(seed: number, playerAge: number, playerOverall: numb
   return [...builtIns, ...customRivals];
 }
 
-function evolveRivals(rivals: CareerRival[], seed: number, season: number, playerOverall: number) {
+function evolveRivals(rivals: CareerRival[], seed: number, season: number) {
   return rivals.map((rival, index) => {
     if (!rival.active) return rival;
     const position = positionByKey(rival.position);
@@ -3088,7 +3088,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     forcedAlternativeTransfer: Boolean(effect.forcedAlternativeTransfer),
     transferRequested: effect.forcedAlternativeTransfer ? true : affected.transferRequested,
     pendingTransferMode: effect.loan ? "loan" : "permanent",
-    rivals: evolveRivals(affected.rivals, affected.seed, affected.season, affected.overall).map((rival) =>
+    rivals: evolveRivals(affected.rivals, affected.seed, affected.season).map((rival) =>
       event.id === DYNAMIC_RIVAL_EVENT_ID &&
       rival.id === pick(affected.rivals.filter((item) => item.active), affected.seed, affected.season * 809)?.id
         ? { ...rival, relationship: clamp(rival.relationship + (effect.rivalRespect ?? 0)) }
@@ -4508,7 +4508,7 @@ export default function Home() {
                   <article><b>✦</b><span><strong>Supercopas nacionais</strong><small>O campeão volta na temporada seguinte para defender sua glória</small></span></article>
                   <article><b>R</b><span><strong>Recopa e Supercopa UEFA</strong><small>Libertadores, Champions e Europa League agora deixam novas vagas</small></span></article>
                   <article><b>▦</b><span><strong>Galeria de títulos</strong><small>Taças agrupadas e últimas voltas olímpicas durante toda a carreira</small></span></article>
-                  <article><b>+</b><span><strong>Mais Europa</strong><small>Oito novas ligas completas, com clubes, bandeiras e competições</small></span></article>
+                  <article><b>+</b><span><strong>Mais Europa</strong><small>Cinco novas ligas completas, com 70 clubes, bandeiras e competições</small></span></article>
                 </div>
                 <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Conheça Fora das Quatro Linhas</strong><b>→</b></button>
               </>
@@ -4896,6 +4896,20 @@ export default function Home() {
                   <strong>{game.renewalDenied ? "O clube optou por não renovar" : "Seu futuro está aberto"}</strong>
                   <p>{game.renewalDenied ? "Depois de uma temporada difícil, a diretoria decidiu não seguir com você. Na próxima tela você precisa escolher um novo clube." : "Na próxima tela você poderá renovar ou escolher um novo clube."}</p>
                 </div>
+              )}
+              {game.lastResult.competitions.some((competition) => competition.champion) && (
+                <section className="season-title-parade">
+                  <header><span>TAÇAS DA TEMPORADA</span><strong>{game.lastResult.competitions.filter((competition) => competition.champion).length} volta{game.lastResult.competitions.filter((competition) => competition.champion).length > 1 ? "s" : ""} olímpica{game.lastResult.competitions.filter((competition) => competition.champion).length > 1 ? "s" : ""}</strong></header>
+                  <div>
+                    {game.lastResult.competitions.filter((competition) => competition.champion).map((competition) => (
+                      <article key={`title-${competition.id}`}>
+                        <CompetitionBadge competition={competition} leagueId={currentClub.leagueId} />
+                        <div><small>CAMPEÃO</small><strong>{competition.name}</strong></div>
+                        <b>🏆</b>
+                      </article>
+                    ))}
+                  </div>
+                </section>
               )}
               <div className="competition-grid">
                 {game.lastResult.competitions.map((competition) => <article key={competition.id} className={competition.champion ? "competition-card champion" : "competition-card"}><CompetitionBadge competition={competition} leagueId={currentClub.leagueId} /><div><strong>{competition.name}</strong><small>{competition.stage}</small></div>{competition.champion && <b>★</b>}</article>)}

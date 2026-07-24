@@ -393,6 +393,17 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .competition-card b { color: var(--gold); }
 .competition-card.champion { border-color: rgba(255,199,44,.32); background: rgba(255,199,44,.07); }
 .competition-card.champion > span { background: rgba(255,199,44,.12); color: var(--gold); }
+.season-title-parade { width: 100%; margin: 5px 0 12px; padding: 12px; border: 1px solid rgba(255,199,44,.34); border-radius: 18px; background: radial-gradient(circle at 95% 0, rgba(255,199,44,.2), transparent 42%), linear-gradient(145deg, rgba(255,199,44,.1), rgba(17,51,37,.9)); text-align: left; box-shadow: 0 14px 34px rgba(0,0,0,.16); }
+.season-title-parade > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+.season-title-parade > header span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .16em; }
+.season-title-parade > header strong { color: #fff4bd; font-size: 9px; }
+.season-title-parade > div { display: grid; gap: 7px; }
+.season-title-parade article { display: grid; grid-template-columns: 44px minmax(0,1fr) 26px; align-items: center; gap: 9px; min-height: 58px; padding: 8px; border: 1px solid rgba(255,199,44,.2); border-radius: 14px; background: rgba(4,25,17,.5); }
+.season-title-parade article .competition-emblem { width: 44px; height: 44px; border-radius: 13px; background: rgba(255,255,255,.06); }
+.season-title-parade article > div { display: flex; min-width: 0; flex-direction: column; }
+.season-title-parade article small { margin-bottom: 3px; color: var(--gold); font-size: 6px; font-weight: 900; letter-spacing: .14em; }
+.season-title-parade article strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.season-title-parade article > b { font-size: 18px; filter: drop-shadow(0 3px 5px rgba(0,0,0,.28)); }
 .season-awards-showcase { position: relative; width: 100%; margin-bottom: 12px; padding: 16px; overflow: hidden; border: 1px solid rgba(166,117,255,.28); border-radius: 20px; background: radial-gradient(circle at 100% 0, rgba(166,117,255,.16), transparent 40%), linear-gradient(145deg, #183628, #10281d); }
 .season-awards-showcase::after { content: "✦"; position: absolute; top: -32px; right: -8px; color: rgba(255,255,255,.035); font: 900 130px var(--display); pointer-events: none; }
 .season-awards-showcase.has-ballon-dor { border-color: rgba(255,199,44,.52); background: radial-gradient(circle at 85% 0, rgba(255,199,44,.24), transparent 42%), linear-gradient(145deg, #352e13, #14291d 68%); box-shadow: 0 0 35px rgba(255,199,44,.08); }

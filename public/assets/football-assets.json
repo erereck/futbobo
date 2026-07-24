@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-24T20:38:20.423Z",
+  "generatedAt": "2026-07-24T21:19:47.306Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -54,6 +54,11 @@
       "providerId": "134296",
       "providerName": "Fluminense",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/stvvwp1473538082.png"
+    },
+    "gremio": {
+      "providerId": "134288",
+      "providerName": "Grêmio",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uvpwyt1473538089.png"
     },
     "internacional": {
       "providerId": "134281",
@@ -230,6 +235,11 @@
       "providerName": "Athletic Bilbao",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/68w7fe1639408210.png"
     },
+    "real-betis": {
+      "providerId": "133722",
+      "providerName": "Real Betis",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2oqulv1663245386.png"
+    },
     "villarreal": {
       "providerId": "133740",
       "providerName": "Villarreal",
@@ -315,6 +325,16 @@
       "providerName": "Juventus",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/uxf0gr1742983727.png"
     },
+    "napoli": {
+      "providerId": "133670",
+      "providerName": "Napoli",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/l8qyxv1742982541.png"
+    },
+    "roma": {
+      "providerId": "133682",
+      "providerName": "Roma",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/jwro2s1760820674.png"
+    },
     "atalanta": {
       "providerId": "134782",
       "providerName": "Atalanta",
@@ -359,6 +379,16 @@
       "providerId": "134783",
       "providerName": "Cagliari",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/wvsvxt1447534471.png"
+    },
+    "lecce": {
+      "providerId": "133678",
+      "providerName": "Lecce",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/j4vznr1567365249.png"
+    },
+    "sassuolo": {
+      "providerId": "133701",
+      "providerName": "Sassuolo",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xystvp1448806138.png"
     },
     "monza": {
       "providerId": "134270",
@@ -415,6 +445,16 @@
       "providerName": "Freiburg",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/urwtup1473453288.png"
     },
+    "werder-bremen": {
+      "providerId": "133662",
+      "providerName": "Werder Bremen",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tkvqan1716960454.png"
+    },
+    "mainz": {
+      "providerId": "133665",
+      "providerName": "Mainz",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/fhm9v51552134916.png"
+    },
     "augsburg": {
       "providerId": "133652",
       "providerName": "Augsburg",
@@ -435,6 +475,11 @@
       "providerName": "Borussia Mönchengladbach",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/sysurw1473453380.png"
     },
+    "union-berlin": {
+      "providerId": "134690",
+      "providerName": "Union Berlin",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/q0o5001599679795.png"
+    },
     "hamburger-sv": {
       "providerId": "133651",
       "providerName": "Hamburg",
@@ -445,10 +490,25 @@
       "providerName": "Köln",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/2j1sc91566049407.png"
     },
+    "schalke": {
+      "providerId": "133661",
+      "providerName": "Schalke 04",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/hnci291621593978.png"
+    },
+    "paderborn": {
+      "providerId": "134551",
+      "providerName": "Paderborn",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/kddvva1566048058.png"
+    },
     "elversberg": {
       "providerId": "138411",
       "providerName": "Elversberg",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/z079go1677573926.png"
+    },
+    "psg": {
+      "providerId": "133714",
+      "providerName": "Paris Saint-Germain",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rwqrrq1473504808.png"
     },
     "marseille": {
       "providerId": "133707",
@@ -475,6 +535,11 @@
       "providerName": "Lens",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/3pxoum1598797195.png"
     },
+    "rennes": {
+      "providerId": "133719",
+      "providerName": "Rennes",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ypturx1473504818.png"
+    },
     "strasbourg": {
       "providerId": "133882",
       "providerName": "Strasbourg",
@@ -494,6 +559,11 @@
       "providerId": "133704",
       "providerName": "Brest",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/z69be41598797026.png"
+    },
+    "paris-fc": {
+      "providerId": "135465",
+      "providerName": "Paris FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yuvtsy1447594254.png"
     },
     "lorient": {
       "providerId": "133715",
@@ -665,6 +735,261 @@
       "providerName": "ADO Den Haag",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/vpvtqt1473534732.png"
     },
+    "club-brugge": {
+      "providerId": "133789",
+      "providerName": "Club Brugge",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mz8y0q1771129880.png"
+    },
+    "anderlecht": {
+      "providerId": "133776",
+      "providerName": "Anderlecht",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/auindn1771129464.png"
+    },
+    "gent": {
+      "providerId": "133781",
+      "providerName": "Gent",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/48e27o1750703124.png"
+    },
+    "genk": {
+      "providerId": "133779",
+      "providerName": "Genk",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tp06te1534875918.png"
+    },
+    "antwerp": {
+      "providerId": "134245",
+      "providerName": "Antwerp",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gawwcf1691182178.png"
+    },
+    "standard-liege": {
+      "providerId": "133778",
+      "providerName": "Standard Liège",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0ynlvb1771130035.png"
+    },
+    "cercle-brugge": {
+      "providerId": "155207",
+      "providerName": "Jong Cercle",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/73ziot1774149399.png"
+    },
+    "kortrijk": {
+      "providerId": "133783",
+      "providerName": "Kortrijk",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ssvvtu1447618084.png"
+    },
+    "rwd-molenbeek": {
+      "providerId": "135924",
+      "providerName": "RWDM Brussels",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gyv8231753030497.png"
+    },
+    "westerlo": {
+      "providerId": "133790",
+      "providerName": "Westerlo",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xrxtrq1447620014.png"
+    },
+    "charleroi": {
+      "providerId": "155208",
+      "providerName": "Zébra Élites",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xai3my1774152125.png"
+    },
+    "galatasaray": {
+      "providerId": "133804",
+      "providerName": "Galatasaray",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/io7jk21767941298.png"
+    },
+    "fenerbahce": {
+      "providerId": "133807",
+      "providerName": "Fenerbahçe",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/twxxvs1448199691.png"
+    },
+    "besiktas": {
+      "providerId": "133794",
+      "providerName": "Beşiktaş",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/svo05k1776827439.png"
+    },
+    "basaksehir": {
+      "providerId": "134589",
+      "providerName": "İstanbul Başakşehir",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/895mqt1685993958.png"
+    },
+    "adana-demirspor": {
+      "providerId": "138982",
+      "providerName": "Adana Demirspor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/hewt221626264325.png"
+    },
+    "alanyaspor": {
+      "providerId": "135676",
+      "providerName": "Alanyaspor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9fr3071601667898.png"
+    },
+    "gaziantep": {
+      "providerId": "138092",
+      "providerName": "Gaziantep",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/54j6ik1579458093.png"
+    },
+    "genclerbirligi": {
+      "providerId": "133798",
+      "providerName": "Gençlerbirliği",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/5hnd1c1639569938.png"
+    },
+    "sturm-graz": {
+      "providerId": "137743",
+      "providerName": "Sturm Graz",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ppg0j71578585847.png"
+    },
+    "salzburg": {
+      "providerId": "133970",
+      "providerName": "Red Bull Salzburg",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/nc2cua1781541639.png"
+    },
+    "rapid-wien": {
+      "providerId": "134021",
+      "providerName": "Rapid Vienna",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/87y8id1779342351.png"
+    },
+    "austria-wien": {
+      "providerId": "134390",
+      "providerName": "Austria Vienna",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/w7j21f1779342211.png"
+    },
+    "lask": {
+      "providerId": "137261",
+      "providerName": "LASK",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/oox26l1683556395.png"
+    },
+    "wolfsberger-ac": {
+      "providerId": "137252",
+      "providerName": "Wolfsberger AC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xcwuqt1568668946.png"
+    },
+    "hartberg": {
+      "providerId": "137805",
+      "providerName": "TSV Hartberg",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/72c0xg1578833261.png"
+    },
+    "austria-klagenfurt": {
+      "providerId": "139411",
+      "providerName": "Austria Klagenfurt",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gbm0f61583516524.png"
+    },
+    "grazer-ak": {
+      "providerId": "139415",
+      "providerName": "Grazer AK",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/43rocv1750352978.png"
+    },
+    "wsg-tirol": {
+      "providerId": "137807",
+      "providerName": "WSG Tirol",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9dmxk01685123856.png"
+    },
+    "altach": {
+      "providerId": "137742",
+      "providerName": "SCR Altach",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2hit6x1750352012.png"
+    },
+    "young-boys": {
+      "providerId": "134001",
+      "providerName": "Young Boys",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9mxdoo1534784569.png"
+    },
+    "basel": {
+      "providerId": "133957",
+      "providerName": "Basel",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xppxwr1473791183.png"
+    },
+    "servette": {
+      "providerId": "133991",
+      "providerName": "Servette",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/440wv71692206330.png"
+    },
+    "lugano": {
+      "providerId": "136037",
+      "providerName": "Lugano",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2kh2if1567615581.png"
+    },
+    "grasshoppers": {
+      "providerId": "134391",
+      "providerName": "Grasshoppers",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/o8vms91779213403.png"
+    },
+    "st-gallen": {
+      "providerId": "134406",
+      "providerName": "St. Gallen",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tyvyvs1422644512.png"
+    },
+    "lausanne-sport": {
+      "providerId": "138990",
+      "providerName": "Lausanne-Sport",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/za539g1580927491.png"
+    },
+    "luzern": {
+      "providerId": "134123",
+      "providerName": "Luzern",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rsupty1473587847.png"
+    },
+    "sion": {
+      "providerId": "135947",
+      "providerName": "Sion",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gzpfmv1689085319.png"
+    },
+    "celtic": {
+      "providerId": "133647",
+      "providerName": "Celtic",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/3uv1641758780002.png"
+    },
+    "rangers": {
+      "providerId": "133642",
+      "providerName": "Rangers",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ti24j61614290048.png"
+    },
+    "aberdeen": {
+      "providerId": "133638",
+      "providerName": "Aberdeen",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/f9s6vg1781155578.png"
+    },
+    "hearts": {
+      "providerId": "133643",
+      "providerName": "Heart of Midlothian",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/twqvyt1447597939.png"
+    },
+    "hibernian": {
+      "providerId": "133646",
+      "providerName": "Hibernian",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qjys3z1684928969.png"
+    },
+    "dundee-united": {
+      "providerId": "133644",
+      "providerName": "Dundee United",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/orfh821655722356.png"
+    },
+    "dundee": {
+      "providerId": "133942",
+      "providerName": "Dundee",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tlei9x1750743461.png"
+    },
+    "st-mirren": {
+      "providerId": "133649",
+      "providerName": "St Mirren",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xvtuvv1447604452.png"
+    },
+    "motherwell": {
+      "providerId": "133640",
+      "providerName": "Motherwell",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vsysqx1447598301.png"
+    },
+    "kilmarnock": {
+      "providerId": "133645",
+      "providerName": "Kilmarnock",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xssqtu1447596951.png"
+    },
+    "ross-county": {
+      "providerId": "133940",
+      "providerName": "Ross County",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yi482m1688532289.png"
+    },
+    "st-johnstone": {
+      "providerId": "133639",
+      "providerName": "St Johnstone",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/j7o7cc1781888845.png"
+    },
     "boca-juniors": {
       "providerId": "135156",
       "providerName": "Boca Juniors",
@@ -674,6 +999,16 @@
       "providerId": "135171",
       "providerName": "River Plate",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/03dmi31645539717.png"
+    },
+    "racing-club": {
+      "providerId": "135170",
+      "providerName": "Racing Club",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vi4mu41695734959.png"
+    },
+    "independiente": {
+      "providerId": "135164",
+      "providerName": "Independiente",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/eki4nd1580842605.png"
     },
     "estudiantes-lp": {
       "providerId": "135160",
@@ -695,6 +1030,11 @@
       "providerName": "Rosario Central",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/y6q1ds1769660256.png"
     },
+    "newells": {
+      "providerId": "135166",
+      "providerName": "Newell's Old Boys",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/23aftf1580842633.png"
+    },
     "lanus": {
       "providerId": "135165",
       "providerName": "Lanús",
@@ -704,6 +1044,86 @@
       "providerId": "135159",
       "providerName": "Defensa y Justicia",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/3guvlh1775778978.png"
+    },
+    "aldosivi": {
+      "providerId": "135150",
+      "providerName": "Aldosivi",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/nqrjqb1517767667.png"
+    },
+    "deportivo-riestra": {
+      "providerId": "137782",
+      "providerName": "Deportivo Riestra",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/332h0l1578824392.png"
+    },
+    "union-santa-fe": {
+      "providerId": "135178",
+      "providerName": "Unión",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/btnx6q1734587495.png"
+    },
+    "platense": {
+      "providerId": "137775",
+      "providerName": "Platense",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/lbs14n1769317149.png"
+    },
+    "central-cordoba": {
+      "providerId": "137603",
+      "providerName": "Central Córdoba de Santiago del Estero",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/d62xkc1576101576.png"
+    },
+    "gimnasia-mendoza": {
+      "providerId": "137783",
+      "providerName": "Gimnasia y Esgrima de Jujuy",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1jxpz51677637810.png"
+    },
+    "barracas-central": {
+      "providerId": "137771",
+      "providerName": "Barracas Central",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rbkjba1707458543.png"
+    },
+    "gimnasia-lp": {
+      "providerId": "135161",
+      "providerName": "Gimnasia y Esgrima de La Plata",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/dtqto61775838814.png"
+    },
+    "belgrano": {
+      "providerId": "135155",
+      "providerName": "Belgrano",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0twgzi1517768087.png"
+    },
+    "tigre": {
+      "providerId": "135177",
+      "providerName": "Tigre",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/krryg71765858882.png"
+    },
+    "estudiantes-rio-cuarto": {
+      "providerId": "137773",
+      "providerName": "Estudiantes de Río Cuarto",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/391thp1775793121.png"
+    },
+    "argentinos-juniors": {
+      "providerId": "135151",
+      "providerName": "Argentinos Juniors",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uqfjuo1769234850.png"
+    },
+    "sarmiento-junin": {
+      "providerId": "150160",
+      "providerName": "Sarmiento de La Banda",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/328paa1734117044.png"
+    },
+    "banfield": {
+      "providerId": "135154",
+      "providerName": "Banfield",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/c2ea011775756104.png"
+    },
+    "huracan": {
+      "providerId": "135163",
+      "providerName": "Huracán",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/kppi2b1775776550.png"
+    },
+    "atletico-tucuman": {
+      "providerId": "135681",
+      "providerName": "Atlético Tucumán",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/m5i2q21775755577.png"
     },
     "nacional-uru": {
       "providerId": "135364",
@@ -755,6 +1175,26 @@
       "providerName": "Racing Montevideo",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/rtsusv1473541178.png"
     },
+    "cerro-uru": {
+      "providerId": "135363",
+      "providerName": "Cerro",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wtuxsq1464887392.png"
+    },
+    "juventud-las-piedras": {
+      "providerId": "135368",
+      "providerName": "Juventud Las Piedras",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qxxqsw1464887423.png"
+    },
+    "montevideo-city-torque": {
+      "providerId": "138818",
+      "providerName": "Montevideo City Torque",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/v7urjn1580234584.png"
+    },
+    "progreso": {
+      "providerId": "138815",
+      "providerName": "Progreso",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/oh4ksb1621865842.png"
+    },
     "u-de-chile": {
       "providerId": "137736",
       "providerName": "Universidad de Chile",
@@ -790,6 +1230,26 @@
       "providerName": "Audax Italiano",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/xbowln1672950178.png"
     },
+    "nublense": {
+      "providerId": "140549",
+      "providerName": "Ñublense",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0jpiwm1610649915.png"
+    },
+    "coquimbo-unido": {
+      "providerId": "137725",
+      "providerName": "Coquimbo Unido",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/b2cnht1602186172.png"
+    },
+    "deportes-limache": {
+      "providerId": "148082",
+      "providerName": "Deportes Limache",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1bd0ws1706521384.png"
+    },
+    "deportes-concepcion": {
+      "providerId": "148528",
+      "providerName": "Deportes Concepción",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/bn8l9d1719394347.png"
+    },
     "millonarios": {
       "providerId": "137617",
       "providerName": "Millonarios",
@@ -810,10 +1270,60 @@
       "providerName": "Deportivo Cali",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/isc2yu1580833286.png"
     },
+    "deportes-tolima": {
+      "providerId": "137609",
+      "providerName": "Deportes Tolima",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/4bscjt1766423328.png"
+    },
+    "once-caldas": {
+      "providerId": "137618",
+      "providerName": "Once Caldas",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/nuh9kd1778085916.png"
+    },
     "independiente-medellin": {
       "providerId": "137613",
       "providerName": "Independiente Medellín",
       "source": "https://www.thesportsdb.com/images/media/team/badge/mzezh31783226830.png"
+    },
+    "deportivo-pasto": {
+      "providerId": "137611",
+      "providerName": "Deportivo Pasto",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zlmyh31576159327.png"
+    },
+    "boyaca-chico": {
+      "providerId": "137622",
+      "providerName": "Boyacá Chicó",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/boe8tv1677602771.png"
+    },
+    "cucuta-deportivo": {
+      "providerId": "137608",
+      "providerName": "Cúcuta Deportivo",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/petg3h1778087075.png"
+    },
+    "fortaleza-ceif": {
+      "providerId": "141065",
+      "providerName": "Fortaleza FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/w1c6ix1769101721.png"
+    },
+    "la-equidad": {
+      "providerId": "137616",
+      "providerName": "Internacional de Bogotá",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/jujchi1767716318.png"
+    },
+    "llaneros": {
+      "providerId": "141067",
+      "providerName": "Llaneros",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/q1w56m1615832197.png"
+    },
+    "aguilas-doradas": {
+      "providerId": "137620",
+      "providerName": "Rionegro Águilas",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/6d7qas1703002070.png"
+    },
+    "union-magdalena": {
+      "providerId": "139042",
+      "providerName": "Unión Magdalena",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/i1fl6p1677602554.png"
     },
     "olimpia": {
       "providerId": "138296",
@@ -850,10 +1360,25 @@
       "providerName": "2 de Mayo",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/1xw1cj1705639376.png"
     },
+    "trinidense": {
+      "providerId": "140628",
+      "providerName": "Sportivo Trinidense",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/oi8bxo1766423607.png"
+    },
+    "general-caballero": {
+      "providerId": "140621",
+      "providerName": "General Caballero",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2prn101678717641.png"
+    },
     "ameliano": {
       "providerId": "140626",
       "providerName": "Sportivo Ameliano",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/g16ua11611773197.png"
+    },
+    "deportivo-recoleta": {
+      "providerId": "147065",
+      "providerName": "Recoleta",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/v68cg01735661603.png"
     },
     "barcelona-sc": {
       "providerId": "138159",
@@ -905,6 +1430,31 @@
       "providerName": "Universidad Católica del Ecuador",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/25pb661770394991.png"
     },
+    "macara": {
+      "providerId": "138228",
+      "providerName": "Macará",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/bretri1579959665.png"
+    },
+    "tecnico-universitario": {
+      "providerId": "138232",
+      "providerName": "Técnico Universitario",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/nrubzr1737648563.png"
+    },
+    "libertad-loja": {
+      "providerId": "145837",
+      "providerName": "Libertad FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/cqkwxs1675845340.png"
+    },
+    "delfin": {
+      "providerId": "138220",
+      "providerName": "Delfín",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/drhsv91579961166.png"
+    },
+    "manta-fc": {
+      "providerId": "140792",
+      "providerName": "Manta",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mwnqej1614891525.png"
+    },
     "universitario": {
       "providerId": "138329",
       "providerName": "Universitario",
@@ -955,6 +1505,36 @@
       "providerName": "Deportivo Garcilaso",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/me11g41690449129.png"
     },
+    "adt-tarma": {
+      "providerId": "144717",
+      "providerName": "ADT",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gliwig1768234286.png"
+    },
+    "atletico-grau": {
+      "providerId": "138313",
+      "providerName": "Atlético Grau",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ksemw91678411736.png"
+    },
+    "comerciantes-unidos": {
+      "providerId": "141812",
+      "providerName": "Comerciantes Unidos",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/umrof11768234590.png"
+    },
+    "los-chankas": {
+      "providerId": "141813",
+      "providerName": "Los Chankas",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rc0rvv1706347088.png"
+    },
+    "utc-cajamarca": {
+      "providerId": "150363",
+      "providerName": "Cajamarca",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/fl9mlx1768236425.png"
+    },
+    "ayacucho-fc": {
+      "providerId": "138314",
+      "providerName": "Ayacucho",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/j3hqce1736221181.png"
+    },
     "club-america": {
       "providerId": "134193",
       "providerName": "América",
@@ -980,10 +1560,20 @@
       "providerName": "Monterrey",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/yglj911721542561.png"
     },
+    "toluca": {
+      "providerId": "134204",
+      "providerName": "Toluca",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/y64wy91523913186.png"
+    },
     "club-leon": {
       "providerId": "134207",
       "providerName": "León",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/pc9gro1752393439.png"
+    },
+    "pachuca": {
+      "providerId": "134191",
+      "providerName": "Pachuca",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/k9duyw1747334895.png"
     },
     "santos-laguna": {
       "providerId": "134192",
@@ -1000,6 +1590,36 @@
       "providerName": "Querétaro",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/024n481781543211.png"
     },
+    "atlas": {
+      "providerId": "134195",
+      "providerName": "Atlas",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/svvyvw1473541813.png"
+    },
+    "atletico-san-luis": {
+      "providerId": "136856",
+      "providerName": "Atlético de San Luis",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9kgjme1593448412.png"
+    },
+    "fc-juarez": {
+      "providerId": "136855",
+      "providerName": "Juárez",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/b4oy071567446336.png"
+    },
+    "mazatlan": {
+      "providerId": "139995",
+      "providerName": "Mazatlán",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/fgpobf1593446489.png"
+    },
+    "necaxa": {
+      "providerId": "135662",
+      "providerName": "Necaxa",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tqdk9e1779772432.png"
+    },
+    "tijuana": {
+      "providerId": "134202",
+      "providerName": "Tijuana",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/b0mky81779772352.png"
+    },
     "inter-miami": {
       "providerId": "137699",
       "providerName": "Inter Miami",
@@ -1009,6 +1629,16 @@
       "providerId": "134153",
       "providerName": "LA Galaxy",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/ysyysr1420227188.png"
+    },
+    "lafc": {
+      "providerId": "136050",
+      "providerName": "Los Angeles FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7nbj2a1602103638.png"
+    },
+    "seattle-sounders": {
+      "providerId": "134149",
+      "providerName": "Seattle Sounders",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2dy5cx1706711036.png"
     },
     "atlanta-united": {
       "providerId": "135851",
@@ -1050,426 +1680,6 @@
       "providerName": "San Jose Earthquakes",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/xyrqqt1420781048.png"
     },
-    "gremio": {
-      "providerId": "134288",
-      "providerName": "Grêmio",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/uvpwyt1473538089.png"
-    },
-    "real-betis": {
-      "providerId": "133722",
-      "providerName": "Real Betis",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/2oqulv1663245386.png"
-    },
-    "napoli": {
-      "providerId": "133670",
-      "providerName": "Napoli",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/l8qyxv1742982541.png"
-    },
-    "roma": {
-      "providerId": "133682",
-      "providerName": "Roma",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/jwro2s1760820674.png"
-    },
-    "lecce": {
-      "providerId": "133678",
-      "providerName": "Lecce",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/j4vznr1567365249.png"
-    },
-    "sassuolo": {
-      "providerId": "133701",
-      "providerName": "Sassuolo",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/xystvp1448806138.png"
-    },
-    "werder-bremen": {
-      "providerId": "133662",
-      "providerName": "Werder Bremen",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/tkvqan1716960454.png"
-    },
-    "mainz": {
-      "providerId": "133665",
-      "providerName": "Mainz",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/fhm9v51552134916.png"
-    },
-    "union-berlin": {
-      "providerId": "134690",
-      "providerName": "Union Berlin",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/q0o5001599679795.png"
-    },
-    "schalke": {
-      "providerId": "133661",
-      "providerName": "Schalke 04",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/hnci291621593978.png"
-    },
-    "paderborn": {
-      "providerId": "134551",
-      "providerName": "Paderborn",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/kddvva1566048058.png"
-    },
-    "psg": {
-      "providerId": "133714",
-      "providerName": "Paris Saint-Germain",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/rwqrrq1473504808.png"
-    },
-    "rennes": {
-      "providerId": "133719",
-      "providerName": "Rennes",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/ypturx1473504818.png"
-    },
-    "paris-fc": {
-      "providerId": "135465",
-      "providerName": "Paris FC",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/yuvtsy1447594254.png"
-    },
-    "racing-club": {
-      "providerId": "135170",
-      "providerName": "Racing Club",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/vi4mu41695734959.png"
-    },
-    "independiente": {
-      "providerId": "135164",
-      "providerName": "Independiente",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/eki4nd1580842605.png"
-    },
-    "newells": {
-      "providerId": "135166",
-      "providerName": "Newell's Old Boys",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/23aftf1580842633.png"
-    },
-    "u-catolica": {
-      "providerId": "137735",
-      "providerName": "Universidad Católica",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/h2pcuc1602188028.png"
-    },
-    "nublense": {
-      "providerId": "140549",
-      "providerName": "Ñublense",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/0jpiwm1610649915.png"
-    },
-    "atletico-nacional": {
-      "providerId": "137607",
-      "providerName": "Atlético Nacional",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/efl4o41576157720.png"
-    },
-    "deportes-tolima": {
-      "providerId": "137609",
-      "providerName": "Deportes Tolima",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/4bscjt1766423328.png"
-    },
-    "once-caldas": {
-      "providerId": "137618",
-      "providerName": "Once Caldas",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/nuh9kd1778085916.png"
-    },
-    "deportivo-pasto": {
-      "providerId": "137611",
-      "providerName": "Deportivo Pasto",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/zlmyh31576159327.png"
-    },
-    "trinidense": {
-      "providerId": "140628",
-      "providerName": "Sportivo Trinidense",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/oi8bxo1766423607.png"
-    },
-    "general-caballero": {
-      "providerId": "140621",
-      "providerName": "General Caballero",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/2prn101678717641.png"
-    },
-    "tigres-uanl": {
-      "providerId": "134197",
-      "providerName": "Tigres UANL",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/lh80fx1701423708.png"
-    },
-    "toluca": {
-      "providerId": "134204",
-      "providerName": "Toluca",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/y64wy91523913186.png"
-    },
-    "pachuca": {
-      "providerId": "134191",
-      "providerName": "Pachuca",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/k9duyw1747334895.png"
-    },
-    "lafc": {
-      "providerId": "136050",
-      "providerName": "Los Angeles FC",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/7nbj2a1602103638.png"
-    },
-    "seattle-sounders": {
-      "providerId": "134149",
-      "providerName": "Seattle Sounders",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/2dy5cx1706711036.png"
-    },
-    "aldosivi": {
-      "providerId": "135150",
-      "providerName": "Aldosivi",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/nqrjqb1517767667.png"
-    },
-    "deportivo-riestra": {
-      "providerId": "137782",
-      "providerName": "Deportivo Riestra",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/332h0l1578824392.png"
-    },
-    "instituto": {
-      "providerId": "137786",
-      "providerName": "Instituto",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/jup59w1578825794.png"
-    },
-    "union-santa-fe": {
-      "providerId": "135178",
-      "providerName": "Unión",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/btnx6q1734587495.png"
-    },
-    "platense": {
-      "providerId": "137775",
-      "providerName": "Platense",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/lbs14n1769317149.png"
-    },
-    "gimnasia-mendoza": {
-      "providerId": "137778",
-      "providerName": "Gimnasia y Esgrima de Mendoza",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/h11mlf1677636958.png"
-    },
-    "barracas-central": {
-      "providerId": "137771",
-      "providerName": "Barracas Central",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/rbkjba1707458543.png"
-    },
-    "belgrano": {
-      "providerId": "135155",
-      "providerName": "Belgrano",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/0twgzi1517768087.png"
-    },
-    "tigre": {
-      "providerId": "135177",
-      "providerName": "Tigre",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/krryg71765858882.png"
-    },
-    "argentinos-juniors": {
-      "providerId": "135151",
-      "providerName": "Argentinos Juniors",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/uqfjuo1769234850.png"
-    },
-    "sarmiento-junin": {
-      "providerId": "135175",
-      "providerName": "Sarmiento",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/xxofu71677634191.png"
-    },
-    "banfield": {
-      "providerId": "135154",
-      "providerName": "Banfield",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/c2ea011775756104.png"
-    },
-    "huracan": {
-      "providerId": "135163",
-      "providerName": "Huracán",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/kppi2b1775776550.png"
-    },
-    "independiente-rivadavia": {
-      "providerId": "137777",
-      "providerName": "Independiente Rivadavia",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/qgzi2b1769406125.png"
-    },
-    "atletico-tucuman": {
-      "providerId": "135681",
-      "providerName": "Atlético Tucumán",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/m5i2q21775755577.png"
-    },
-    "cerro-uru": {
-      "providerId": "135363",
-      "providerName": "Cerro",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/wtuxsq1464887392.png"
-    },
-    "miramar-misiones": {
-      "providerId": "145844",
-      "providerName": "Miramar Misiones",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/7dvfx11647976997.png"
-    },
-    "montevideo-city-torque": {
-      "providerId": "138818",
-      "providerName": "Montevideo City Torque",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/v7urjn1580234584.png"
-    },
-    "progreso": {
-      "providerId": "138815",
-      "providerName": "Progreso",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/oh4ksb1621865842.png"
-    },
-    "ohiggins": {
-      "providerId": "137731",
-      "providerName": "O'Higgins",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/g44b1l1756095484.png"
-    },
-    "coquimbo-unido": {
-      "providerId": "137725",
-      "providerName": "Coquimbo Unido",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/b2cnht1602186172.png"
-    },
-    "union-la-calera": {
-      "providerId": "137734",
-      "providerName": "Unión La Calera",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/vadt5t1769834071.png"
-    },
-    "deportes-la-serena": {
-      "providerId": "139473",
-      "providerName": "Deportes La Serena",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/vs7mxv1677600646.png"
-    },
-    "deportes-limache": {
-      "providerId": "148082",
-      "providerName": "Deportes Limache",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/1bd0ws1706521384.png"
-    },
-    "deportes-concepcion": {
-      "providerId": "148528",
-      "providerName": "Deportes Concepción",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/bn8l9d1719394347.png"
-    },
-    "atletico-bucaramanga": {
-      "providerId": "137606",
-      "providerName": "Atlético Bucaramanga",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/rtjs411576157184.png"
-    },
-    "boyaca-chico": {
-      "providerId": "137622",
-      "providerName": "Boyacá Chicó",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/boe8tv1677602771.png"
-    },
-    "cucuta-deportivo": {
-      "providerId": "137608",
-      "providerName": "Cúcuta Deportivo",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/petg3h1778087075.png"
-    },
-    "fortaleza-ceif": {
-      "providerId": "141065",
-      "providerName": "Fortaleza FC",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/w1c6ix1769101721.png"
-    },
-    "la-equidad": {
-      "providerId": "137616",
-      "providerName": "Internacional de Bogotá",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/jujchi1767716318.png"
-    },
-    "llaneros": {
-      "providerId": "141067",
-      "providerName": "Llaneros",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/q1w56m1615832197.png"
-    },
-    "aguilas-doradas": {
-      "providerId": "137620",
-      "providerName": "Rionegro Águilas",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/6d7qas1703002070.png"
-    },
-    "union-magdalena": {
-      "providerId": "139042",
-      "providerName": "Unión Magdalena",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/i1fl6p1677602554.png"
-    },
-    "deportivo-recoleta": {
-      "providerId": "147065",
-      "providerName": "Recoleta",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/v68cg01735661603.png"
-    },
-    "atletico-tembetary": {
-      "providerId": "149487",
-      "providerName": "Atlético Tembetary",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/xinof51730664653.png"
-    },
-    "macara": {
-      "providerId": "138228",
-      "providerName": "Macará",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/bretri1579959665.png"
-    },
-    "tecnico-universitario": {
-      "providerId": "138232",
-      "providerName": "Técnico Universitario",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/nrubzr1737648563.png"
-    },
-    "delfin": {
-      "providerId": "138220",
-      "providerName": "Delfín",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/drhsv91579961166.png"
-    },
-    "manta-fc": {
-      "providerId": "140792",
-      "providerName": "Manta",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/mwnqej1614891525.png"
-    },
-    "vinotinto-ecuador": {
-      "providerId": "147318",
-      "providerName": "Vinotinto Ecuador",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/yc19kg1736990630.png"
-    },
-    "adt-tarma": {
-      "providerId": "144717",
-      "providerName": "ADT",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/gliwig1768234286.png"
-    },
-    "atletico-grau": {
-      "providerId": "138313",
-      "providerName": "Atlético Grau",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/ksemw91678411736.png"
-    },
-    "comerciantes-unidos": {
-      "providerId": "141812",
-      "providerName": "Comerciantes Unidos",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/umrof11768234590.png"
-    },
-    "juan-pablo-ii": {
-      "providerId": "149506",
-      "providerName": "Juan Pablo II College",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/zj9efi1730672606.png"
-    },
-    "los-chankas": {
-      "providerId": "141813",
-      "providerName": "Los Chankas",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/rc0rvv1706347088.png"
-    },
-    "utc-cajamarca": {
-      "providerId": "138330",
-      "providerName": "Universidad Técnica de Cajamarca",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/ea4ez01580040095.png"
-    },
-    "ayacucho-fc": {
-      "providerId": "138314",
-      "providerName": "Ayacucho",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/j3hqce1736221181.png"
-    },
-    "alianza-universidad": {
-      "providerId": "138312",
-      "providerName": "Alianza Universidad",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/z3nftr1681318889.png"
-    },
-    "atlas": {
-      "providerId": "134195",
-      "providerName": "Atlas",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/svvyvw1473541813.png"
-    },
-    "atletico-san-luis": {
-      "providerId": "136856",
-      "providerName": "Atlético de San Luis",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/9kgjme1593448412.png"
-    },
-    "fc-juarez": {
-      "providerId": "136855",
-      "providerName": "Juárez",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/b4oy071567446336.png"
-    },
-    "mazatlan": {
-      "providerId": "139995",
-      "providerName": "Mazatlán",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/fgpobf1593446489.png"
-    },
-    "necaxa": {
-      "providerId": "135662",
-      "providerName": "Necaxa",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/tqdk9e1779772432.png"
-    },
-    "tijuana": {
-      "providerId": "134202",
-      "providerName": "Tijuana",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/b0mky81779772352.png"
-    },
     "charlotte-fc": {
       "providerId": "140078",
       "providerName": "Charlotte FC",
@@ -1485,15 +1695,20 @@
       "providerName": "DC United",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/uwvsyt1467462609.png"
     },
-    "nashville-sc": {
-      "providerId": "137700",
-      "providerName": "Nashville SC",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/znrwt71602103062.png"
+    "cf-montreal": {
+      "providerId": "134150",
+      "providerName": "CF Montréal",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/livdl31679344925.png"
     },
-    "orlando-city": {
-      "providerId": "135292",
-      "providerName": "Orlando City",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/qyppxw1423832326.png"
+    "nashville-sc": {
+      "providerId": "138880",
+      "providerName": "Nashville",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/nqis9i1580591227.png"
+    },
+    "new-england-revolution": {
+      "providerId": "134159",
+      "providerName": "New England Revolution",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1ula2l1639493143.png"
     },
     "philadelphia-union": {
       "providerId": "134142",
@@ -1510,25 +1725,25 @@
       "providerName": "FC Dallas",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/vxy8xy1602103187.png"
     },
-    "houston-dynamo": {
-      "providerId": "134144",
-      "providerName": "Houston Dynamo",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/yvz9dq1707631352.png"
-    },
-    "minnesota-united": {
-      "providerId": "135852",
-      "providerName": "Minnesota United",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/vl67t41492453433.png"
-    },
     "real-salt-lake": {
       "providerId": "134158",
       "providerName": "Real Salt Lake",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/kkjlfa1556488022.png"
     },
+    "st-louis-city": {
+      "providerId": "147062",
+      "providerName": "St. Louis City SC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/22wanp1674118724.png"
+    },
     "san-diego-fc": {
       "providerId": "150261",
       "providerName": "San Diego FC",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/7ka2xd1734621068.png"
+    },
+    "sporting-kansas-city": {
+      "providerId": "134143",
+      "providerName": "Sporting Kansas City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tqupxw1473536504.png"
     }
   },
   "flags": {
@@ -1796,6 +2011,11 @@
       "providerName": "Copa do Brasil",
       "source": "https://r2.thesportsdb.com/images/media/league/badge/h38dax1582151151.png"
     },
+    "supercup:brasileirao": {
+      "providerId": "5776",
+      "providerName": "Brazilian Supercopa Rei",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/31h8771766587003.png"
+    },
     "league:premier": {
       "providerId": "4328",
       "providerName": "English Premier League",
@@ -1805,6 +2025,11 @@
       "providerId": "4482",
       "providerName": "FA Cup",
       "source": "https://r2.thesportsdb.com/images/media/league/badge/vk7isd1598802862.png"
+    },
+    "supercup:premier": {
+      "providerId": "4571",
+      "providerName": "FA Community Shield",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/c6p4yh1723626286.png"
     },
     "league:laliga": {
       "providerId": "4335",
@@ -1816,6 +2041,11 @@
       "providerName": "Copa del Rey",
       "source": "https://r2.thesportsdb.com/images/media/league/badge/2ikh3a1671782958.png"
     },
+    "supercup:laliga": {
+      "providerId": "4511",
+      "providerName": "Supercopa de Espana",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/sp4q7d1641378531.png"
+    },
     "league:seriea": {
       "providerId": "4332",
       "providerName": "Italian Serie A",
@@ -1825,6 +2055,11 @@
       "providerId": "4506",
       "providerName": "Coppa Italia",
       "source": "https://r2.thesportsdb.com/images/media/league/badge/hrm1vo1692679408.png"
+    },
+    "supercup:seriea": {
+      "providerId": "4507",
+      "providerName": "Supercoppa Italiana",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/12hc5x1730129564.png"
     },
     "league:bundesliga": {
       "providerId": "4331",
@@ -1846,6 +2081,11 @@
       "providerName": "Coupe de France",
       "source": "https://r2.thesportsdb.com/images/media/league/badge/l6fitb1546469041.png"
     },
+    "supercup:ligue1": {
+      "providerId": "4901",
+      "providerName": "French Trophée des Champions",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/vid0js1765815261.png"
+    },
     "league:primeira": {
       "providerId": "4344",
       "providerName": "Portuguese Primeira Liga",
@@ -1860,6 +2100,26 @@
       "providerId": "4337",
       "providerName": "Dutch Eredivisie",
       "source": "https://r2.thesportsdb.com/images/media/league/badge/5cdsu21725984946.png"
+    },
+    "league:superlig": {
+      "providerId": "4339",
+      "providerName": "Turkish Super Lig",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/ifm3zc1779990699.png"
+    },
+    "league:austria-bundesliga": {
+      "providerId": "4621",
+      "providerName": "Austrian Bundesliga",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/vcgyu71686617925.png"
+    },
+    "league:swiss-super-league": {
+      "providerId": "4675",
+      "providerName": "Swiss Super League",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/id6q2r1635867584.png"
+    },
+    "league:premiership-sco": {
+      "providerId": "4330",
+      "providerName": "Scottish Premier League",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/72d3zc1688333496.png"
     },
     "league:liga-argentina": {
       "providerId": "4406",
@@ -1905,6 +2165,11 @@
       "providerId": "4350",
       "providerName": "Mexican Primera League",
       "source": "https://r2.thesportsdb.com/images/media/league/badge/mav5rx1686157960.png"
+    },
+    "supercup:liga-mx": {
+      "providerId": "5662",
+      "providerName": "Mexican Campeon de Campeones",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/lpqijz1754305371.png"
     },
     "league:mls": {
       "providerId": "4346",
@@ -1956,34 +2221,43 @@
       "providerName": "UEFA Super Cup",
       "source": "https://r2.thesportsdb.com/images/media/league/badge/1eimvx1551123834.png"
     },
-    "supercup:brasileirao": {
-      "providerId": "5776",
-      "providerName": "Brazilian Supercopa Rei",
-      "source": "https://r2.thesportsdb.com/images/media/league/badge/31h8771766587003.png"
+    "league:proleague": {
+      "providerId": "4338",
+      "providerName": "Belgian Pro League",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/mjit7n1593634474.png"
     },
-    "supercup:laliga": {
-      "providerId": "4511",
-      "providerName": "Supercopa de Espana",
-      "source": "https://r2.thesportsdb.com/images/media/league/badge/sp4q7d1641378531.png"
+    "cup:proleague": {
+      "providerId": "5831",
+      "providerName": "Belgian Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/sa6dym1771044920.png"
     },
-    "supercup:seriea": {
-      "providerId": "4507",
-      "providerName": "Supercoppa Italiana",
-      "source": "https://r2.thesportsdb.com/images/media/league/badge/12hc5x1730129564.png"
+    "cup:superlig": {
+      "providerId": "4960",
+      "providerName": "Turkish Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/2qgb1w1764032803.png"
     },
-    "supercup:ligue1": {
-      "providerId": "4901",
-      "providerName": "French Trophée des Champions",
-      "source": "https://r2.thesportsdb.com/images/media/league/badge/vid0js1765815261.png"
+    "cup:austria-bundesliga": {
+      "providerId": "5883",
+      "providerName": "Austrian Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/jie4at1778948148.png"
     },
-    "supercup:liga-mx": {
-      "providerId": "5662",
-      "providerName": "Mexican Campeon de Campeones",
-      "source": "https://r2.thesportsdb.com/images/media/league/badge/lpqijz1754305371.png"
+    "cup:swiss-super-league": {
+      "providerId": "5489",
+      "providerName": "Swiss Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/jctm2j1722793404.png"
     },
-    "campeonesCup": {
-      "providerName": "Campeones Cup",
-      "source": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Campeones_Cup_logo.svg"
+    "cup:premiership-sco": {
+      "providerId": "4723",
+      "providerName": "Scottish FA Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/6m7mow1693378371.png"
+    },
+    "supercup:proleague": {
+      "providerName": "Belgian Super Cup",
+      "source": "https://upload.wikimedia.org/wikipedia/en/thumb/1/19/Logo_of_the_Belgian_Super_Cup.png/250px-Logo_of_the_Belgian_Super_Cup.png"
+    },
+    "supercup:superlig": {
+      "providerName": "Turkcell Super Kupa 2025",
+      "source": "https://upload.wikimedia.org/wikipedia/commons/2/2c/Turkcell-super-kupa-2025-koyu.jpg"
     }
   }
 }
