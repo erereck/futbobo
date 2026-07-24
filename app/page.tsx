@@ -42,6 +42,7 @@ import {
   getUnlockedAchievements,
 } from "./mega-expansion";
 import { CAREER_DRAMA_EVENTS } from "./career-drama";
+import { BACKSTAGE_EVENTS } from "./backstage-saga";
 import { VERIFIED_CLUB_ASSET_IDS } from "./verified-club-assets";
 
 type Phase =
@@ -468,7 +469,7 @@ declare global {
 const SAVE_KEY = "futbobo:career:v1";
 const HALL_OF_FAME_KEY = "futbobo:hall-of-fame:v1";
 const SETTINGS_KEY = "futbobo:settings:v1";
-const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS];
+const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS];
 const FICTIONAL_FINALISTS = [
   "Mateo Alcázar",
   "Noah van Dijk",
