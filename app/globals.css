@@ -646,6 +646,12 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .achievement-gallery article.unlocked.rarity-lendário > b { color: var(--gold); }
 
 .summary-screen { position: relative; min-height: 100dvh; height: auto; justify-content: flex-start; overflow: visible; padding-top: calc(env(safe-area-inset-top) + 30px); background: radial-gradient(circle at 50% 12%, rgba(255,199,44,.15), transparent 26%), var(--bg); }
+.summary-preview-bar { position: relative; z-index: 5; display: grid; width: 100%; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 11px; margin-bottom: 18px; padding: 10px; border: 1px solid rgba(44,168,255,.28); border-radius: 15px; background: rgba(44,168,255,.07); }
+.summary-preview-bar button { min-height: 38px; padding: 0 12px; border: 1px solid rgba(44,168,255,.25); border-radius: 11px; background: rgba(44,168,255,.1); color: #8bd0ff; font-size: 9px; font-weight: 900; cursor: pointer; }
+.summary-preview-bar > div { display: flex; min-width: 0; flex-direction: column; }
+.summary-preview-bar small { color: var(--blue); font-size: 6px; font-weight: 900; letter-spacing: .12em; }
+.summary-preview-bar strong { margin-top: 2px; overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.summary-legacy-warning { position: relative; z-index: 5; width: 100%; margin: -8px 0 16px; padding: 10px 12px; border: 1px solid rgba(255,199,44,.24); border-radius: 13px; background: rgba(255,199,44,.055); color: #dbc98f; font-size: 8px; line-height: 1.45; }
 .summary-confetti { position: absolute; top: 7%; left: 50%; width: 100%; transform: translateX(-50%); color: rgba(255,199,44,.35); font-size: 26px; letter-spacing: 16px; text-align: center; }
 .summary-screen > h1 { margin-bottom: 20px; font-size: 34px; }
 .share-card { position: relative; padding: 16px; overflow: hidden; border: 1px solid rgba(255,199,44,.3); border-radius: 24px; background: linear-gradient(145deg, #214a36, #0d261b 68%); box-shadow: 0 24px 60px rgba(0,0,0,.38); }
@@ -708,6 +714,10 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .final-hall-of-fame { background: radial-gradient(circle at 100% 0, rgba(255,199,44,.1), transparent 35%), var(--surface); }
 .hall-ranking > article { display: grid; grid-template-columns: 24px 64px minmax(0,1fr) auto; align-items: center; column-gap: 10px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.025); }
 .hall-ranking > article.current-career { border-color: rgba(255,199,44,.36); background: rgba(255,199,44,.065); }
+.hall-career-link { cursor: pointer; transition: border-color 160ms ease, background 160ms ease, transform 160ms ease; }
+.hall-career-link:hover { border-color: rgba(44,168,255,.38); background: rgba(44,168,255,.055); }
+.hall-career-link:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.hall-career-link:active { transform: scale(.985); }
 .hall-ranking > article > b { color: var(--gold); font-size: 8px; text-align: center; }
 .hall-ranking > article > .club-badge { justify-self: center; }
 .hall-ranking > article > div { display: flex; min-width: 0; flex-direction: column; padding-left: 4px; }

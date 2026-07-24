@@ -123,8 +123,9 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 84[\s\S]*performanceScore >= 75/);
-  assert.match(page, /const ballonChance = clamp\(20 \+ Math\.max\(0, ballonScore - 76\) \* 4, 20, 85\)/);
+  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 85[\s\S]*performanceScore >= 78/);
+  assert.match(page, /const firstBallonChance = clamp\(12 \+ Math\.max\(0, ballonScore - 80\) \* 3, 12, 68\)/);
+  assert.match(page, /const repeatBallonMultiplier = previousBallonDor === 0 \? 1 : Math\.max\(0\.22, 0\.72 \*\* previousBallonDor\)/);
   assert.match(page, /Jogador do Ano do \$\{leagueLabel\}/);
   assert.match(page, /MVP da Champions League/);
   assert.match(page, /FIFPRO World XI/);
@@ -147,6 +148,13 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
   assert.match(page, /HALL_OF_FAME_KEY/);
   assert.match(page, /futbobo:hall-of-fame:v1/);
   assert.match(page, /careerHallEntry/);
+  assert.match(page, /snapshot\?: GameState/);
+  assert.match(page, /snapshot: \{ \.\.\.game, phase: "summary" \}/);
+  assert.match(page, /function archivedCareerState/);
+  assert.match(page, /function openHallCareer/);
+  assert.match(page, /setHallPreview\(archive\.state\)/);
+  assert.match(page, /aria-label=\{`Ver carreira completa de \$\{entry\.name\}`\}/);
+  assert.match(page, /Voltar ao ranking/);
   assert.match(page, /clubCareerSummary/);
   assert.match(page, /PASSAGEM POR CLUBES/);
   assert.match(page, /PRÊMIOS INDIVIDUAIS/);
@@ -157,6 +165,8 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
   assert.match(styles, /grid-template-columns: 64px minmax\(84px,1fr\) minmax\(112px,auto\)/);
   assert.match(styles, /@media \(max-width: 420px\)[\s\S]*\.career-club-list > article/);
   assert.match(styles, /\.hall-ranking/);
+  assert.match(styles, /\.hall-career-link/);
+  assert.match(styles, /\.summary-preview-bar/);
   assert.match(systems, /O Imortal/);
   assert.match(systems, /No debate do GOAT/);
   assert.match(systems, /Carreira anônima/);
@@ -540,6 +550,12 @@ test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da
   assert.match(page, /__FUTBOBO_MONTE_CARLO__/);
   assert.match(page, /params\.get\("montecarlo"\)/);
   assert.match(page, /data-testid="monte-carlo-report"/);
+  assert.match(page, /averagePeakOverall/);
+  assert.match(page, /positionBreakdown/);
+  assert.match(page, /careersWithFiveBallonDor/);
+  assert.match(page, /repeatBallonMultiplier/);
+  assert.match(page, /previousBallonDor > 0 \? 4 : 10/);
+  assert.match(page, /affected\.awardCabinet\["Ídolo da Torcida"\] > 0/);
   assert.match(styles, /\.monte-carlo-shell/);
 });
 

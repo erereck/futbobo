@@ -381,6 +381,23 @@ type MonteCarloReport = {
   totalSeasons: number;
   totalIndividualAwards: number;
   averageIndividualAwards: number;
+  averageSeasons: number;
+  averagePeakOverall: number;
+  averageAppearances: number;
+  averageGoals: number;
+  averageAssists: number;
+  averageTrophies: number;
+  careersWithoutTrophies: number;
+  careersWithoutAwards: number;
+  careersBelow70Peak: number;
+  careersAtLeast85Peak: number;
+  careersWithFiveBallonDor: number;
+  positionBreakdown: Record<PositionKey, {
+    careers: number;
+    averagePeakOverall: number;
+    averageTrophies: number;
+    ballonDorCareers: number;
+  }>;
   careersWithBallonDor: number;
   totalBallonDor: number;
   careerChancePercent: number;
@@ -411,9 +428,11 @@ type CareerHallEntry = {
   trophies: number;
   awards: number;
   ballonDor: number;
+  appearances?: number;
   goals: number;
   assists: number;
   finishedAt: number;
+  snapshot?: GameState;
 };
 
 function awardPresentation(award: string): AwardPresentation {
@@ -1064,9 +1083,96 @@ function careerHallEntry(game: GameState): CareerHallEntry {
     trophies: game.trophies + game.nationalTrophies,
     awards: game.awards,
     ballonDor: game.awardCabinet["Bola de Ouro"] ?? 0,
+    appearances: game.stats.appearances,
     goals: game.stats.goals,
     assists: game.stats.assists,
     finishedAt: Date.now(),
+    snapshot: { ...game, phase: "summary" },
+  };
+}
+
+function archivedCareerState(entry: CareerHallEntry): { state: GameState; legacyArchive: boolean } {
+  if (entry.snapshot) {
+    return {
+      state: { ...normalizeSave(entry.snapshot), phase: "summary", retireAfterSeason: true },
+      legacyArchive: false,
+    };
+  }
+
+  const base = initialState();
+  const seasons = Math.max(1, entry.seasons);
+  const appearances = entry.appearances ?? seasons * 28;
+  const awardCabinet: Record<string, number> = {};
+  if (entry.ballonDor > 0) awardCabinet["Bola de Ouro"] = entry.ballonDor;
+  if (entry.awards > entry.ballonDor) awardCabinet["Prêmios do arquivo antigo"] = entry.awards - entry.ballonDor;
+  const share = (total: number, index: number) =>
+    Math.floor(total / seasons) + (index < total % seasons ? 1 : 0);
+  const history: SeasonRecord[] = Array.from({ length: seasons }, (_, index) => {
+    const titles = share(entry.trophies, index);
+    return {
+      age: 18 + index,
+      season: 2026 + index,
+      clubId: entry.finalClubId,
+      position: entry.position,
+      overall: entry.peakOverall,
+      appearances: share(appearances, index),
+      goals: share(entry.goals, index),
+      assists: share(entry.assists, index),
+      cleanSheets: 0,
+      goalsConceded: 0,
+      yellowCards: 0,
+      redCards: 0,
+      title: titles > 0,
+      eventTitle: "Registro recuperado do Hall da Fama",
+      competitions: Array.from({ length: titles }, (_, titleIndex) => ({
+        id: "domesticLeague" as CompetitionId,
+        name: `Título histórico ${titleIndex + 1}`,
+        icon: "★",
+        stage: "CAMPEÃO",
+        champion: true,
+      })),
+      awards: [],
+      awardNominations: [],
+      squadRole: "estrela",
+      objectiveResult: null,
+      performanceScore: 70,
+      marketValue: 0,
+      development: 0,
+    };
+  });
+  return {
+    legacyArchive: true,
+    state: {
+      ...base,
+      phase: "summary",
+      seed: Number(entry.id.split("-")[0]) || base.seed,
+      name: entry.name,
+      position: entry.position,
+      nationality: entry.nationality,
+      currentClubId: entry.finalClubId,
+      academyClubId: entry.finalClubId,
+      archetype: "Carreira histórica",
+      age: 18 + seasons,
+      season: 2026 + seasons,
+      overall: entry.peakOverall,
+      potential: entry.peakOverall,
+      attributes: createPlayerAttributes(entry.position, entry.peakOverall, base.seed),
+      stats: {
+        appearances,
+        goals: entry.goals,
+        assists: entry.assists,
+        cleanSheets: 0,
+        goalsConceded: 0,
+        yellowCards: 0,
+        redCards: 0,
+      },
+      trophies: entry.trophies,
+      awards: entry.awards,
+      awardCabinet,
+      history,
+      legacyPoints: entry.legacyPoints,
+      retireAfterSeason: true,
+    },
   };
 }
 
@@ -2502,7 +2608,7 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (inEurope && nextOverall >= 87 && performanceScore >= 86 && appearances >= 28 && seeded(state.seed, state.season * 197 + 13) > 0.48) awards.push("FIFPRO World XI");
   if (!isKeeper && goals >= 8 && nextOverall >= 82 && seeded(state.seed, state.season * 103) > 0.94) awards.push("Prêmio Puskás");
   if (affected.leadership >= 82 && seeded(state.seed, state.season * 107) > 0.82) awards.push("Prêmio Fair Play");
-  if (affected.fanSupport >= 92 && titleCount > 0) awards.push("Ídolo da Torcida");
+  if (affected.fanSupport >= 92 && titleCount > 0 && !(affected.awardCabinet["Ídolo da Torcida"] > 0)) awards.push("Ídolo da Torcida");
   const majorNationalTitle = Boolean(
     nationalHistoryAdd?.champion &&
     ["Copa do Mundo", "Eurocopa", "Copa América", "Copa Ouro", "Copa da Ásia", "Copa Africana de Nações", "Copa das Nações da OFC"].includes(nationalHistoryAdd.name),
@@ -2510,16 +2616,18 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
   if (majorNationalTitle && nextOverall >= 86 && performanceScore >= 80) awards.push(`Craque da ${nationalHistoryAdd?.name}`);
   const europeanBallonEligible =
     inEurope &&
-    nextOverall >= 84 &&
-    performanceScore >= 75 &&
-    affected.reputation >= 60 &&
-    appearances >= 22;
+    nextOverall >= 85 &&
+    performanceScore >= 78 &&
+    affected.reputation >= 65 &&
+    appearances >= 24;
   const americanBallonEligible =
     !inEurope &&
     nextOverall >= 89 &&
     performanceScore >= 84 &&
     affected.reputation >= 75 &&
     (mundialChampion || continentalChampion);
+  const positionBallonModifier = isKeeper ? -7 : position.zone === "defesa" ? -4 : position.zone === "ataque" ? 3 : 0;
+  const previousBallonDor = affected.awardCabinet["Bola de Ouro"] ?? 0;
   const ballonScore =
     performanceScore * 0.35 +
     nextOverall * 0.35 +
@@ -2527,8 +2635,11 @@ function simulateSeason(state: GameState, event: GameEvent, effect: Effect, choi
     titleCount * 2.5 +
     (playsContinental === "champions" && continentalChampion ? 9 : 0) +
     (mundialChampion ? 12 : 0) +
-    (majorNationalTitle ? 8 : 0);
-  const ballonChance = clamp(20 + Math.max(0, ballonScore - 76) * 4, 20, 85);
+    (majorNationalTitle ? 8 : 0) +
+    positionBallonModifier;
+  const firstBallonChance = clamp(12 + Math.max(0, ballonScore - 80) * 3, 12, 68);
+  const repeatBallonMultiplier = previousBallonDor === 0 ? 1 : Math.max(0.22, 0.72 ** previousBallonDor);
+  const ballonChance = clamp(Math.round(firstBallonChance * repeatBallonMultiplier), previousBallonDor > 0 ? 4 : 10, 68);
   if (
     (europeanBallonEligible || americanBallonEligible) &&
     ballonScore >= 75 &&
@@ -3131,6 +3242,18 @@ function runMonteCarloCareers(runs: number, seedBase = 20260723): MonteCarloRepo
   const totalBallonDor = winners.reduce((total, career) => total + career.ballonDor, 0);
   const totalSeasons = careers.reduce((total, career) => total + career.seasons, 0);
   const totalIndividualAwards = careers.reduce((total, career) => total + career.individualAwards, 0);
+  const average = (key: keyof Pick<MonteCarloCareerSummary, "seasons" | "peakOverall" | "appearances" | "goals" | "assists" | "trophies">) =>
+    Number((careers.reduce((total, career) => total + career[key], 0) / safeRuns).toFixed(2));
+  const positionBreakdown = Object.fromEntries(POSITIONS.map((position) => {
+    const positionCareers = careers.filter((career) => career.position === position.key);
+    const count = Math.max(1, positionCareers.length);
+    return [position.key, {
+      careers: positionCareers.length,
+      averagePeakOverall: Number((positionCareers.reduce((total, career) => total + career.peakOverall, 0) / count).toFixed(2)),
+      averageTrophies: Number((positionCareers.reduce((total, career) => total + career.trophies, 0) / count).toFixed(2)),
+      ballonDorCareers: positionCareers.filter((career) => career.ballonDor > 0).length,
+    }];
+  })) as MonteCarloReport["positionBreakdown"];
   const bestCareer = [...careers].sort((a, b) =>
     b.ballonDor - a.ballonDor ||
     b.peakOverall - a.peakOverall ||
@@ -3143,6 +3266,18 @@ function runMonteCarloCareers(runs: number, seedBase = 20260723): MonteCarloRepo
     totalSeasons,
     totalIndividualAwards,
     averageIndividualAwards: Number((totalIndividualAwards / safeRuns).toFixed(2)),
+    averageSeasons: average("seasons"),
+    averagePeakOverall: average("peakOverall"),
+    averageAppearances: average("appearances"),
+    averageGoals: average("goals"),
+    averageAssists: average("assists"),
+    averageTrophies: average("trophies"),
+    careersWithoutTrophies: careers.filter((career) => career.trophies === 0).length,
+    careersWithoutAwards: careers.filter((career) => career.individualAwards === 0).length,
+    careersBelow70Peak: careers.filter((career) => career.peakOverall < 70).length,
+    careersAtLeast85Peak: careers.filter((career) => career.peakOverall >= 85).length,
+    careersWithFiveBallonDor: careers.filter((career) => career.ballonDor >= 5).length,
+    positionBreakdown,
     careersWithBallonDor: winners.length,
     totalBallonDor,
     careerChancePercent: Number(((winners.length / safeRuns) * 100).toFixed(2)),
@@ -3338,6 +3473,8 @@ export default function Home() {
   const [nationalitySearch, setNationalitySearch] = useState("");
   const [monteCarloReport, setMonteCarloReport] = useState<MonteCarloReport | null>(null);
   const [hallOfFame, setHallOfFame] = useState<CareerHallEntry[]>([]);
+  const [hallPreview, setHallPreview] = useState<GameState | null>(null);
+  const [hallPreviewLegacy, setHallPreviewLegacy] = useState(false);
   const [updateNoticeOpen, setUpdateNoticeOpen] = useState(true);
   const [updateNoticePage, setUpdateNoticePage] = useState<"current" | "previous">("current");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -3464,7 +3601,8 @@ export default function Home() {
     return () => window.clearTimeout(timeout);
   }, [game.phase]);
 
-  const currentClub = useMemo(() => clubById(game.currentClubId || game.academyClubId), [game.currentClubId, game.academyClubId]);
+  const displayGame = hallPreview ?? game;
+  const currentClub = useMemo(() => clubById(displayGame.currentClubId || displayGame.academyClubId), [displayGame.currentClubId, displayGame.academyClubId]);
   const academyClubs = useMemo(() => randomAcademyClubs(game.seed, game.nationality), [game.seed, game.nationality]);
   const academyRoute = useMemo(() => academyRouteCopy(game.nationality), [game.nationality]);
   const filteredCountries = useMemo(() => {
@@ -3474,10 +3612,10 @@ export default function Home() {
       `${country.name} ${country.demonym} ${country.abbr}`.toLocaleLowerCase("pt-BR").includes(query),
     );
   }, [nationalitySearch]);
-  const nationCountry = useMemo(() => countryById(game.nationality), [game.nationality]);
-  const position = useMemo(() => positionByKey(game.position), [game.position]);
+  const nationCountry = useMemo(() => countryById(displayGame.nationality), [displayGame.nationality]);
+  const position = useMemo(() => positionByKey(displayGame.position), [displayGame.position]);
   const supporterMood = useMemo(() => fanMood(game.fanSupport), [game.fanSupport]);
-  const publicImage = useMemo(() => publicImageProfile(game), [game]);
+  const publicImage = useMemo(() => publicImageProfile(displayGame), [displayGame]);
   const sponsorCareerValue = useMemo(
     () => [
       ...game.sponsorHistory,
@@ -3490,15 +3628,15 @@ export default function Home() {
     }, 0),
     [game.sponsorHistory, game.activeSponsor, game.season],
   );
-  const legacyStanding = useMemo(() => legacyTier(game.legacyPoints), [game.legacyPoints]);
+  const legacyStanding = useMemo(() => legacyTier(displayGame.legacyPoints), [displayGame.legacyPoints]);
   const marketProfile = useMemo(() => transferMarketProfile(game), [game]);
   const awardEntries = useMemo(
-    () => Object.entries(game.awardCabinet).sort((a, b) =>
+    () => Object.entries(displayGame.awardCabinet).sort((a, b) =>
       awardTierWeight(b[0]) - awardTierWeight(a[0]) ||
       b[1] - a[1] ||
       a[0].localeCompare(b[0], "pt-BR"),
     ),
-    [game.awardCabinet],
+    [displayGame.awardCabinet],
   );
   const totalIndividualAwards = useMemo(
     () => awardEntries.reduce((total, [, count]) => total + count, 0),
@@ -3526,7 +3664,7 @@ export default function Home() {
       firstSeason: number;
       lastSeason: number;
     }>();
-    for (const record of game.history) {
+    for (const record of displayGame.history) {
       const current = byClub.get(record.clubId) ?? {
         clubId: record.clubId,
         seasons: 0,
@@ -3551,7 +3689,7 @@ export default function Home() {
       byClub.set(record.clubId, current);
     }
     return [...byClub.values()].sort((a, b) => b.appearances - a.appearances || b.trophies - a.trophies);
-  }, [game.history]);
+  }, [displayGame.history]);
   const statistics = useMemo(() => {
     const history = game.history;
     const by = <K extends keyof SeasonRecord>(key: K) => [...history].sort((a, b) => Number(b[key] ?? 0) - Number(a[key] ?? 0))[0] ?? null;
@@ -3623,6 +3761,8 @@ export default function Home() {
 
   function startNew() {
     localStorage.removeItem(SAVE_KEY);
+    setHallPreview(null);
+    setHallPreviewLegacy(false);
     setGame({ ...initialState(), phase: "identity", seed: Date.now() % 2147483647 });
     setHasSave(true);
     setActiveTab("event");
@@ -3632,10 +3772,29 @@ export default function Home() {
   function continueSave() {
     try {
       const saved = localStorage.getItem(SAVE_KEY);
-      if (saved) setGame(normalizeSave(JSON.parse(saved)));
+      if (saved) {
+        setHallPreview(null);
+        setHallPreviewLegacy(false);
+        setGame(normalizeSave(JSON.parse(saved)));
+      }
     } catch {
       startNew();
     }
+  }
+
+  function openHallCareer(entry: CareerHallEntry) {
+    const archive = archivedCareerState(entry);
+    setHallPreview(archive.state);
+    setHallPreviewLegacy(archive.legacyArchive);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    vibrate();
+  }
+
+  function closeHallCareer() {
+    setHallPreview(null);
+    setHallPreviewLegacy(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    vibrate();
   }
 
   function addCustomCharacter() {
@@ -3998,7 +4157,7 @@ export default function Home() {
   }
 
   async function shareCareer() {
-    const text = `Minha carreira no Futbobo: ${game.name}, ${position.name} de ${nationCountry.name}, ${game.stats.appearances} jogos, ${game.stats.goals} gols, ${game.trophies + game.nationalTrophies} taça(s) e pico de ${Math.max(game.overall, ...game.history.map((item) => item.overall), 0)} OVR. Você faria melhor?`;
+    const text = `Minha carreira no Futbobo: ${displayGame.name}, ${position.name} de ${nationCountry.name}, ${displayGame.stats.appearances} jogos, ${displayGame.stats.goals} gols, ${displayGame.trophies + displayGame.nationalTrophies} taça(s) e pico de ${Math.max(displayGame.overall, ...displayGame.history.map((item) => item.overall), 0)} OVR. Você faria melhor?`;
     try {
       if (navigator.share) await navigator.share({ title: "Minha carreira no Futbobo", text, url: window.location.href });
       else await navigator.clipboard.writeText(`${text} ${window.location.href}`);
@@ -4008,7 +4167,8 @@ export default function Home() {
     }
   }
 
-  const shellClass = `app-shell app-shell-${game.phase}${game.phase === "welcome" ? " app-shell-welcome" : ""}`;
+  const shellPhase = hallPreview ? "summary" : game.phase;
+  const shellClass = `app-shell app-shell-${shellPhase}${shellPhase === "welcome" ? " app-shell-welcome" : ""}`;
 
   if (monteCarloReport) {
     return (
@@ -4021,6 +4181,10 @@ export default function Home() {
             <Metric label="Carreiras vencedoras" value={monteCarloReport.careersWithBallonDor} tone="green" />
             <Metric label="Chance por carreira" value={`${monteCarloReport.careerChancePercent}%`} />
             <Metric label="Prêmios por carreira" value={monteCarloReport.averageIndividualAwards} />
+            <Metric label="Pico OVR médio" value={monteCarloReport.averagePeakOverall} />
+            <Metric label="Títulos por carreira" value={monteCarloReport.averageTrophies} />
+            <Metric label="Sem títulos" value={monteCarloReport.careersWithoutTrophies} />
+            <Metric label="5+ Bolas de Ouro" value={monteCarloReport.careersWithFiveBallonDor} />
             <Metric label="Temporadas processadas" value={monteCarloReport.totalSeasons} />
           </div>
           <article className="monte-carlo-best">
@@ -4112,7 +4276,7 @@ export default function Home() {
         </div>
       )}
 
-      {game.phase === "welcome" && (
+      {game.phase === "welcome" && !hallPreview && (
         <section className="welcome-screen screen-enter">
           <div className="brand-lockup" aria-label="Futbobo">
             <span className="brand-ball">F</span>
@@ -4141,7 +4305,20 @@ export default function Home() {
             <div className="welcome-hall">
               <div><span>HALL DA FAMA LOCAL</span><strong>Suas melhores carreiras</strong></div>
               {hallOfFame.slice(0, 3).map((entry, index) => (
-                <article key={entry.id}>
+                <article
+                  className="hall-career-link"
+                  key={entry.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Ver carreira completa de ${entry.name}`}
+                  onClick={() => openHallCareer(entry)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openHallCareer(entry);
+                    }
+                  }}
+                >
                   <b>#{index + 1}</b>
                   <ClubBadge club={clubById(entry.finalClubId)} size="sm" />
                   <div className="welcome-hall-copy"><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.peakOverall} OVR</small></div>
@@ -4952,29 +5129,40 @@ export default function Home() {
         </section>
       )}
 
-      {game.phase === "summary" && (
+      {(game.phase === "summary" || hallPreview) && (
         <section className="summary-screen screen-enter">
+          {hallPreview && (
+            <div className="summary-preview-bar">
+              <button type="button" onClick={closeHallCareer}>← Voltar ao ranking</button>
+              <div><small>CARREIRA ARQUIVADA</small><strong>Você está revendo a história de {displayGame.name}</strong></div>
+            </div>
+          )}
+          {hallPreviewLegacy && (
+            <div className="summary-legacy-warning">
+              Este registro é anterior ao arquivo completo. Números gerais foram recuperados, mas alguns detalhes de prêmios e clubes não existiam no save antigo.
+            </div>
+          )}
           <div className="summary-confetti" aria-hidden="true">✦ · ★ · ✦ · ★ · ✦</div>
           <span className="eyebrow">CARREIRA FINALIZADA</span>
           <h1>Uma história que só você viveu.</h1>
           <div className="share-card">
             <div className="share-brand"><span className="brand-ball">F</span><strong>FUTBOBO</strong><small>MINHA CARREIRA</small></div>
-            <div className="share-player"><ClubBadge club={currentClub} size="lg" /><div><span>{game.archetype}</span><h2>{game.name}</h2><p>#{game.number} · {position.name} · {nationCountry.abbr}</p></div><strong>{Math.max(game.overall, ...game.history.map((item) => item.overall), 0)}<small>PICO OVR</small></strong></div>
-            <div className="share-numbers"><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label="Taças" value={game.trophies + game.nationalTrophies} tone="gold" /></div>
-            <div className="share-legacy-line"><span>LEGADO {game.legacyPoints}</span><strong>{legacyStanding.label}</strong><span>{game.unlockedAchievements.length}/{ACHIEVEMENTS.length} CONQUISTAS</span></div>
-            <div className="share-trophies"><span>LIGA {game.trophyCabinet.domesticLeague}</span><span>COPA {game.trophyCabinet.domesticCup}</span><span>LIB {game.trophyCabinet.libertadores}</span><span>MUN {game.trophyCabinet.mundial}</span><span>UCL {game.trophyCabinet.championsLeague}</span><span>SEL {game.nationalTrophies}</span></div>
-            <div className="share-path"><span>12</span><div />{Array.from(new Set(game.history.map((item) => item.clubId))).map((clubId) => <ClubBadge key={clubId} club={clubById(clubId)} size="sm" />)}<div /><span>{game.age}</span></div>
+            <div className="share-player"><ClubBadge club={currentClub} size="lg" /><div><span>{displayGame.archetype}</span><h2>{displayGame.name}</h2><p>#{displayGame.number} · {position.name} · {nationCountry.abbr}</p></div><strong>{Math.max(displayGame.overall, ...displayGame.history.map((item) => item.overall), 0)}<small>PICO OVR</small></strong></div>
+            <div className="share-numbers"><Metric label="Jogos" value={displayGame.stats.appearances} /><Metric label={displayGame.position === "GOL" ? "Sem sofrer" : "Gols"} value={displayGame.position === "GOL" ? displayGame.stats.cleanSheets : displayGame.stats.goals} /><Metric label={displayGame.position === "GOL" ? "Sofridos" : "Assistências"} value={displayGame.position === "GOL" ? displayGame.stats.goalsConceded : displayGame.stats.assists} /><Metric label="Taças" value={displayGame.trophies + displayGame.nationalTrophies} tone="gold" /></div>
+            <div className="share-legacy-line"><span>LEGADO {displayGame.legacyPoints}</span><strong>{legacyStanding.label}</strong><span>{displayGame.unlockedAchievements.length}/{ACHIEVEMENTS.length} CONQUISTAS</span></div>
+            <div className="share-trophies"><span>LIGA {displayGame.trophyCabinet.domesticLeague}</span><span>COPA {displayGame.trophyCabinet.domesticCup}</span><span>LIB {displayGame.trophyCabinet.libertadores}</span><span>MUN {displayGame.trophyCabinet.mundial}</span><span>UCL {displayGame.trophyCabinet.championsLeague}</span><span>SEL {displayGame.nationalTrophies}</span></div>
+            <div className="share-path"><span>12</span><div />{Array.from(new Set(displayGame.history.map((item) => item.clubId))).map((clubId) => <ClubBadge key={clubId} club={clubById(clubId)} size="sm" />)}<div /><span>{displayGame.age}</span></div>
             <small className="share-url">erereck.github.io/futbobo</small>
           </div>
           <section className="final-public-life">
             <div className="summary-section-heading"><span>FORA DAS QUATRO LINHAS</span><strong>A marca que você deixou no mundo</strong></div>
             <div className="final-public-grid">
-              <Metric label="Seguidores" value={formatFollowers(game.followers)} tone="gold" />
+              <Metric label="Seguidores" value={formatFollowers(displayGame.followers)} tone="gold" />
               <Metric label="Imagem" value={publicImage.label} tone="green" />
-              <Metric label="Patrocínios" value={game.sponsorHistory.length + (game.activeSponsor ? 1 : 0)} />
-              <Metric label="Impacto social" value={game.charityReputation} />
+              <Metric label="Patrocínios" value={displayGame.sponsorHistory.length + (displayGame.activeSponsor ? 1 : 0)} />
+              <Metric label="Impacto social" value={displayGame.charityReputation} />
             </div>
-            {game.activeSponsor && <article><div className="sponsor-wordmark small">{game.activeSponsor.brand}</div><div><small>PARCERIA NA APOSENTADORIA</small><strong>{formatMoney(game.activeSponsor.annualValue)}/ano</strong></div></article>}
+            {displayGame.activeSponsor && <article><div className="sponsor-wordmark small">{displayGame.activeSponsor.brand}</div><div><small>PARCERIA NA APOSENTADORIA</small><strong>{formatMoney(displayGame.activeSponsor.annualValue)}/ano</strong></div></article>}
           </section>
           <section className="final-individual-awards">
             <div className="summary-section-heading final-awards-heading">
@@ -5012,7 +5200,7 @@ export default function Home() {
                     </div>
                     <div className="club-summary-numbers">
                       <span><b>{entry.appearances}</b>J</span>
-                      <span><b>{game.position === "GOL" ? entry.cleanSheets : entry.goals}</b>{game.position === "GOL" ? "SG" : "G"}</span>
+                      <span><b>{displayGame.position === "GOL" ? entry.cleanSheets : entry.goals}</b>{displayGame.position === "GOL" ? "SG" : "G"}</span>
                       <span><b>{entry.assists}</b>A</span>
                       <span><b>{entry.trophies}</b>🏆</span>
                     </div>
@@ -5025,7 +5213,20 @@ export default function Home() {
             <div className="summary-section-heading"><span>HALL DA FAMA</span><strong>As maiores carreiras deste aparelho</strong></div>
             <div className="hall-ranking">
               {hallOfFame.slice(0, 10).map((entry, index) => (
-                <article className={entry.id === `${game.seed}-${game.name}-${game.history.length}` ? "current-career" : ""} key={entry.id}>
+                <article
+                  className={`${entry.id === `${displayGame.seed}-${displayGame.name}-${displayGame.history.length}` ? "current-career " : ""}hall-career-link`}
+                  key={entry.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Ver carreira completa de ${entry.name}`}
+                  onClick={() => openHallCareer(entry)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      openHallCareer(entry);
+                    }
+                  }}
+                >
                   <b>#{index + 1}</b>
                   <ClubBadge club={clubById(entry.finalClubId)} size="sm" />
                   <div><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.trophies} taças · {entry.ballonDor}× Bola de Ouro</small></div>
