@@ -18,13 +18,13 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://erereck.github.io/futbobo/",
     siteName: "Futbobo",
-    images: [{ url: "og-v5.png", width: 1200, height: 630, alt: "Futbobo — Sua carreira, seu legado" }],
+    images: [{ url: "og-v6.png", width: 1200, height: 630, alt: "Futbobo — Sua carreira, seu legado" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Futbobo — Sua carreira, seu legado",
     description: "Metas, contratos, treinador, rivalidades e 46 conquistas em uma carreira mundial.",
-    images: ["og-v5.png"],
+    images: ["og-v6.png"],
   },
 };
 

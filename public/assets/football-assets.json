@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-24T21:19:47.306Z",
+  "generatedAt": "2026-07-25T21:53:12.963Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -605,11 +605,6 @@
       "providerName": "Porto",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/xu47rb1628855600.png"
     },
-    "sporting": {
-      "providerId": "135708",
-      "providerName": "Sporting CP",
-      "source": "https://www.thesportsdb.com/images/media/team/badge/5hiuk71783137875.png"
-    },
     "braga": {
       "providerId": "134098",
       "providerName": "Braga",
@@ -765,30 +760,15 @@
       "providerName": "Standard Liège",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/0ynlvb1771130035.png"
     },
-    "cercle-brugge": {
-      "providerId": "155207",
-      "providerName": "Jong Cercle",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/73ziot1774149399.png"
-    },
     "kortrijk": {
       "providerId": "133783",
       "providerName": "Kortrijk",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/ssvvtu1447618084.png"
     },
-    "rwd-molenbeek": {
-      "providerId": "135924",
-      "providerName": "RWDM Brussels",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/gyv8231753030497.png"
-    },
     "westerlo": {
       "providerId": "133790",
       "providerName": "Westerlo",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/xrxtrq1447620014.png"
-    },
-    "charleroi": {
-      "providerId": "155208",
-      "providerName": "Zébra Élites",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/xai3my1774152125.png"
     },
     "galatasaray": {
       "providerId": "133804",
@@ -839,16 +819,6 @@
       "providerId": "133970",
       "providerName": "Red Bull Salzburg",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/nc2cua1781541639.png"
-    },
-    "rapid-wien": {
-      "providerId": "134021",
-      "providerName": "Rapid Vienna",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/87y8id1779342351.png"
-    },
-    "austria-wien": {
-      "providerId": "134390",
-      "providerName": "Austria Vienna",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/w7j21f1779342211.png"
     },
     "lask": {
       "providerId": "137261",
@@ -1095,11 +1065,6 @@
       "providerName": "Tigre",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/krryg71765858882.png"
     },
-    "estudiantes-rio-cuarto": {
-      "providerId": "137773",
-      "providerName": "Estudiantes de Río Cuarto",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/391thp1775793121.png"
-    },
     "argentinos-juniors": {
       "providerId": "135151",
       "providerName": "Argentinos Juniors",
@@ -1314,11 +1279,6 @@
       "providerId": "141067",
       "providerName": "Llaneros",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/q1w56m1615832197.png"
-    },
-    "aguilas-doradas": {
-      "providerId": "137620",
-      "providerName": "Rionegro Águilas",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/6d7qas1703002070.png"
     },
     "union-magdalena": {
       "providerId": "139042",
@@ -1744,6 +1704,91 @@
       "providerId": "134143",
       "providerName": "Sporting Kansas City",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/tqupxw1473536504.png"
+    },
+    "mechelen": {
+      "providerId": "133787",
+      "providerName": "Mechelen",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/sxsxpt1447618693.png"
+    },
+    "sint-truiden": {
+      "providerId": "135461",
+      "providerName": "Sint-Truiden",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qww8ap1534620441.png"
+    },
+    "eupen": {
+      "providerId": "133825",
+      "providerName": "Eupen",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tyvrty1464539199.png"
+    },
+    "trabzonspor": {
+      "providerId": "133796",
+      "providerName": "Trabzonspor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/96s34o1776827629.png"
+    },
+    "sivasspor": {
+      "providerId": "133806",
+      "providerName": "Sivasspor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/pnhe5i1681161798.png"
+    },
+    "konyaspor": {
+      "providerId": "133835",
+      "providerName": "Konyaspor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rxwptr1448203413.png"
+    },
+    "kasimpasa": {
+      "providerId": "133834",
+      "providerName": "Kasımpaşa",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uryxtp1448203236.png"
+    },
+    "antalyaspor": {
+      "providerId": "133799",
+      "providerName": "Antalyaspor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vqoral1601669436.png"
+    },
+    "kayserispor": {
+      "providerId": "133802",
+      "providerName": "Kayserispor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/bvskgi1601668985.png"
+    },
+    "rizespor": {
+      "providerId": "133885",
+      "providerName": "Rizespor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/t7senr1657195719.png"
+    },
+    "samsunspor": {
+      "providerId": "133797",
+      "providerName": "Samsunspor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vz05y71679456608.png"
+    },
+    "goztepe": {
+      "providerId": "135891",
+      "providerName": "Göztepe",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9jwk7o1513952059.png"
+    },
+    "hatayspor": {
+      "providerId": "138944",
+      "providerName": "Hatayspor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ry2b941601668593.png"
+    },
+    "blau-weiss-linz": {
+      "providerId": "139412",
+      "providerName": "Blau-Weiß Linz",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7qazvh1583516559.png"
+    },
+    "zurich": {
+      "providerId": "134396",
+      "providerName": "Zürich",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/af50gk1779213314.png"
+    },
+    "winterthur": {
+      "providerId": "138984",
+      "providerName": "Winterthur",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/bimd8z1580926541.png"
+    },
+    "yverdon": {
+      "providerId": "141840",
+      "providerName": "Yverdon Sport",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mgacsr1624714631.png"
     }
   },
   "flags": {

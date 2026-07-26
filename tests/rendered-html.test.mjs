@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /<b>v62<\/b>/);
+  assert.match(pageSource, /<b>v67<\/b>/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -27,7 +27,7 @@ test("exporta uma página estática pronta para o GitHub Pages", async () => {
   assert.match(html, /Futbobo/);
   assert.match(html, /Sua carreira, seu legado/i);
   assert.match(html, /manifest\.webmanifest/);
-  assert.match(html, /og-v5\.png/);
+  assert.match(html, /og-v6\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
@@ -131,16 +131,16 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 83[\s\S]*nextOverall === 82[\s\S]*performanceScore >= 80/);
+  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 78[\s\S]*nextOverall === 82[\s\S]*performanceScore >= 80/);
   assert.match(page, /const leagueGoldenBootLine = 28 \+ Math\.floor\([\s\S]*\* 9\)/);
   assert.match(page, /goals >= leagueGoldenBootLine/);
-  assert.match(page, /const leagueAssistKingLine = 14 \+ Math\.floor\([\s\S]*\* 7\)/);
+  assert.match(page, /const leagueAssistKingLine = 18 \+ Math\.floor\([\s\S]*\* 7\)/);
   assert.match(page, /goals >= europeanGoldenShoeLine/);
   assert.match(page, /const productionBallonModifier = clamp\(\(ballonProduction - eliteProductionTarget\) \/ 1\.5, -12, 18\)/);
   assert.match(page, /const supportingAwardBonus = Math\.min\(10/);
-  assert.match(page, /const firstBallonChance = clamp\(32 \+ Math\.max\(0, ballonScore - 72\) \* 3\.8, 32, 97\)/);
-  assert.match(page, /const repeatBallonBaseChance = clamp\(16 \+ Math\.max\(0, ballonScore - 72\) \* 4\.4, 16, 97\)/);
-  assert.match(page, /previousBallonDor === 0[\s\S]*clamp\(Math\.round\(rawBallonChance\), 32, 94\)/);
+  assert.match(page, /const firstBallonChance = clamp\(38 \+ Math\.max\(0, ballonScore - 66\) \* 3\.8, 38, 97\)/);
+  assert.match(page, /const repeatBallonBaseChance = clamp\(16 \+ Math\.max\(0, ballonScore - 66\) \* 4\.4, 16, 97\)/);
+  assert.match(page, /previousBallonDor === 0[\s\S]*clamp\(Math\.round\(rawBallonChance\), 38, 94\)/);
   assert.match(page, /const historicBallonSeason =[\s\S]*goals >= 50[\s\S]*goals \+ assists >= 68/);
   assert.match(page, /previousBallonDor <= 6[\s\S]*\? 98[\s\S]*28 \* 0\.52 \*\* \(previousBallonDor - 7\)/);
   assert.match(page, /previousBallonDor === 4 \? 0\.08/);
@@ -150,7 +150,7 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   assert.match(page, /MVP da Champions League/);
   assert.match(page, /FIFPRO World XI/);
   assert.match(page, /const hasGoalsOrAssistsAward = hasLeagueGoldenBoot \|\| hasEuropeanGoldenShoe \|\| hasAssistKingAward/);
-  assert.match(page, /const wonBallonDor =[\s\S]*hasGoalsOrAssistsAward[\s\S]*ballonScore >= 72/);
+  assert.match(page, /const wonBallonDor =[\s\S]*hasGoalsOrAssistsAward[\s\S]*majorClubTitleCount > 0 \|\| majorNationalTitle[\s\S]*ballonScore >= 66/);
   assert.match(page, /if \(wonBallonDor\) \{[\s\S]*!awards\.includes\("FIFPRO World XI"\)[\s\S]*awards\.push\("Bola de Ouro"\)/);
   assert.match(page, /hasEuropeanGoldenShoe \? 88[\s\S]*hasLeagueGoldenBoot \|\| hasAssistKingAward \? 68[\s\S]*48/);
   assert.match(page, /hasEuropeanGoldenShoe && nextOverall >= 82 && performanceScore >= 76/);
@@ -238,8 +238,8 @@ test("deixa o fim de temporada rolar sem o rodapé cobrir o conteúdo", async ()
 test("mostra o resultado da última temporada antes de concluir a aposentadoria", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /current\.phase === "consequence"\s*\? \{ \.\.\.current, phase: "season-result" \}/);
-  assert.match(page, /function continueAfterConsequence\(\) \{[\s\S]*phase: "season-result"/);
+  assert.match(page, /current\.phase === "consequence"[\s\S]*current\.pendingBotaoMatches\.length \? "botao-final" : "season-result"/);
+  assert.match(page, /function continueAfterConsequence\(\) \{[\s\S]*current\.pendingBotaoMatches\.length \? "botao-final" : "season-result"/);
   assert.match(page, /function continueAfterResult\(\) \{[\s\S]*if \(game\.retireAfterSeason\) \{[\s\S]*phase: "summary"/);
   assert.match(page, /Ver resultado da última temporada/);
   assert.match(page, /game\.retireAfterSeason \? "Concluir carreira"/);
@@ -718,18 +718,41 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /function buildSocialEvent/);
   assert.match(page, /function buildLifeEvent/);
   assert.match(page, /activeSponsor: sponsorExpired \? null : affected\.activeSponsor/);
-  assert.match(page, /money: affected\.money \+ affected\.annualSalary \+ sponsorIncome/);
+  assert.match(page, /money: Math\.max\(0, affected\.money \+ affected\.annualSalary \+ sponsorIncome - seasonLivingCost\)/);
   assert.match(page, /socialFeed: \[\.\.\.milestonePosts, seasonSocialPost/);
   assert.match(page, /VIDA FORA DO CAMPO/);
   assert.match(page, /PATROCINADOR PESSOAL/);
   assert.match(page, /LINHA DO TEMPO/);
   assert.match(page, /setUpdateNoticePage\("previous"\)/);
   assert.match(page, /SALA DOS CAMPEÕES/);
-  assert.match(page, /UPDATE ANTERIOR · FORA DAS QUATRO LINHAS/);
+  assert.match(page, /FORA DAS QUATRO LINHAS/);
   assert.match(gameData, /followers\?: number/);
   assert.match(gameData, /sponsorBrand\?: string/);
   assert.match(styles, /\.life-screen/);
   assert.match(styles, /\.sponsor-hub/);
   assert.match(styles, /\.social-post-list/);
   assert.match(styles, /\.previous-update-button/);
+});
+
+test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundial", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
+  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
+
+  assert.match(page, /\| "botao-final"/);
+  assert.match(page, /\| "botao-result"/);
+  assert.match(page, /pendingBotaoMatches: PendingBotaoMatch\[\]/);
+  assert.match(page, /competition\.id !== "domesticLeague"/);
+  assert.match(page, /worldKnockoutStages = \["Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"\]/);
+  assert.match(page, /<BotaoMatch/);
+  assert.match(page, /simulateBotaoMatch\(currentBotaoSetup\)/);
+  assert.match(page, /function applyBotaoMatchResult/);
+  assert.match(page, /playerGoals/);
+  assert.match(page, /worldQualifiedSeason/);
+  assert.match(page, /DECIDIDO NO FUTEBOL DE BOTÃO/);
+  assert.match(adapter, /function buildNationalMatchSetup/);
+  assert.match(adapter, /function pickNationalOpponent/);
+  assert.match(engine, /function createMatch/);
+  assert.match(styles, /\.botao-career-lobby/);
 });

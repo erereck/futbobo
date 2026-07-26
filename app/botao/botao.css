@@ -1,0 +1,656 @@
+/* Estilo do modo botão. Usa as variáveis do globals.css do Futbobo, com
+   fallback para o módulo funcionar sozinho. */
+
+.botao-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 10px 12px calc(env(safe-area-inset-bottom) + 12px);
+  color: var(--text, #f5f7f2);
+  font-family: var(--sans, Inter, "Segoe UI", Roboto, Arial, sans-serif);
+}
+
+.botao-hud {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line, rgba(168, 211, 181, 0.15));
+  border-radius: var(--radius, 18px);
+  background: var(--surface, #10271d);
+}
+
+.botao-hud-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.botao-competition {
+  color: var(--gold, #ffc72c);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.botao-period {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--muted, #9fb3a6);
+  font-variant-numeric: tabular-nums;
+  transition: color 200ms ease, background 200ms ease;
+}
+
+/* Últimos 15 segundos: o relógio nunca para, então ele avisa. */
+.botao-period-urgent {
+  background: rgba(255, 90, 78, 0.18);
+  color: var(--red, #ff5a4e);
+  animation: botao-pulse 1s ease-in-out infinite;
+}
+
+@keyframes botao-pulse {
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botao-period-urgent { animation: none; }
+}
+
+.botao-scoreboard {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.botao-team {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.botao-team-cpu {
+  justify-content: flex-end;
+}
+
+.botao-team strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.botao-crest {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.botao-crest-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+.botao-stat-row {
+  display: grid;
+  grid-template-columns: 34px 1fr 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line, rgba(168, 211, 181, 0.15));
+  font-size: 11px;
+}
+
+.botao-stat-row:last-child {
+  border-bottom: none;
+}
+
+.botao-stat-row b {
+  color: var(--muted, #9fb3a6);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.botao-stat-row b.botao-stat-lead {
+  color: var(--text, #f5f7f2);
+}
+
+.botao-stat-row span {
+  color: var(--muted, #9fb3a6);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.botao-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--display, "Arial Black", Impact, sans-serif);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.botao-score span {
+  color: var(--muted, #9fb3a6);
+  font-size: 15px;
+}
+
+.botao-formation-row,
+.botao-controls-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.botao-chip {
+  padding: 4px 9px;
+  border: 1px solid var(--line, rgba(168, 211, 181, 0.15));
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--muted, #9fb3a6);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.botao-chip-you {
+  border-color: rgba(255, 199, 44, 0.45);
+  background: rgba(255, 199, 44, 0.12);
+  color: var(--gold, #ffc72c);
+}
+
+.botao-chip-stat {
+  border-color: rgba(99, 227, 107, 0.4);
+  color: var(--green, #63e36b);
+}
+
+.botao-penalty-track {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.botao-penalty-row {
+  display: grid;
+  grid-template-columns: 34px 1fr 18px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.botao-penalty-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.botao-penalty-dots i {
+  width: 11px;
+  height: 11px;
+  border: 1px solid var(--line, rgba(168, 211, 181, 0.15));
+  border-radius: 50%;
+}
+
+.botao-penalty-dots i.hit {
+  border-color: transparent;
+  background: var(--green, #63e36b);
+}
+
+.botao-penalty-dots i.miss {
+  border-color: transparent;
+  background: var(--red, #ff5a4e);
+}
+
+.botao-table-wrapper {
+  position: relative;
+  /* Em tela baixa a mesa encolhe pela altura em vez de estourar o rodapé. */
+  width: min(100%, calc(var(--botao-table-max, 68vh) * 316 / 516));
+  max-height: var(--botao-table-max, 68vh);
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.botao-shake {
+  animation: botao-shake 480ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes botao-shake {
+  10%, 90% { transform: translate3d(-1.5px, 0, 0); }
+  20%, 80% { transform: translate3d(3px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+  40%, 60% { transform: translate3d(5px, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botao-shake { animation: none; }
+  .botao-flash { animation: none; }
+}
+
+.botao-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.botao-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Sem isso o arraste rola a página no celular. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.botao-flash {
+  position: absolute;
+  top: 34%;
+  left: 50%;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-family: var(--display, "Arial Black", Impact, sans-serif);
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  pointer-events: none;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  animation: botao-flash-in 220ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+/* Avisos translúcidos: dá para ler o lance por trás deles. */
+.botao-flash-goal {
+  background: rgba(255, 199, 44, 0.76);
+  color: #10271d;
+  box-shadow: 0 10px 30px rgba(255, 199, 44, 0.22);
+  backdrop-filter: blur(2px);
+}
+
+.botao-flash-bad {
+  background: rgba(255, 90, 78, 0.72);
+  color: #1a0a08;
+  backdrop-filter: blur(2px);
+}
+
+.botao-flash-info {
+  background: rgba(16, 39, 29, 0.62);
+  border: 1px solid rgba(168, 211, 181, 0.22);
+  color: var(--text, #f5f7f2);
+  font-size: 15px;
+  backdrop-filter: blur(2px);
+}
+
+@keyframes botao-flash-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.botao-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(6, 17, 13, 0.86);
+  text-align: center;
+  backdrop-filter: blur(3px);
+}
+
+.botao-overlay strong {
+  font-family: var(--display, "Arial Black", Impact, sans-serif);
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.botao-overlay p {
+  margin: 0;
+  color: var(--muted, #9fb3a6);
+  font-size: 13px;
+}
+
+.botao-round-picker {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 2px 0 4px;
+}
+
+.botao-round-picker .botao-option {
+  min-width: 56px;
+  padding: 9px 8px;
+}
+
+.botao-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.botao-turn {
+  margin: 0;
+  padding: 11px 14px;
+  border: 1px solid var(--line, rgba(168, 211, 181, 0.15));
+  border-radius: 14px;
+  background: var(--surface, #10271d);
+  color: var(--muted, #9fb3a6);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.botao-turn-active {
+  border-color: rgba(255, 199, 44, 0.45);
+  background: rgba(255, 199, 44, 0.1);
+  color: var(--gold, #ffc72c);
+}
+
+.botao-controls-meta {
+  justify-content: center;
+  color: var(--muted, #9fb3a6);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.botao-primary,
+.botao-ghost {
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.botao-primary {
+  padding: 12px 26px;
+  border: none;
+  background: var(--gold, #ffc72c);
+  color: #10271d;
+  font-size: 14px;
+}
+
+.botao-ghost {
+  padding: 5px 12px;
+  border: 1px solid var(--line, rgba(168, 211, 181, 0.15));
+  background: transparent;
+  color: var(--muted, #9fb3a6);
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------- antessala */
+
+.botao-lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 18px 14px calc(env(safe-area-inset-bottom) + 20px);
+  color: var(--text, #f5f7f2);
+  font-family: var(--sans, Inter, "Segoe UI", Roboto, Arial, sans-serif);
+}
+
+.botao-career-lobby,
+.botao-career-result {
+  min-height: 100dvh;
+  padding-top: calc(env(safe-area-inset-top) + 22px);
+  background:
+    radial-gradient(circle at 50% 4%, rgba(255, 199, 44, 0.13), transparent 28rem),
+    var(--bg, #081a13);
+}
+
+.botao-lobby-kicker {
+  color: var(--gold, #ffc72c);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.botao-final-versus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr);
+  align-items: center;
+  padding-block: 22px;
+  background: linear-gradient(145deg, rgba(31, 75, 53, 0.95), rgba(13, 38, 27, 0.98));
+}
+
+.botao-final-versus .botao-team {
+  min-width: 0;
+  flex-direction: column;
+  text-align: center;
+}
+
+.botao-final-versus .botao-team-cpu {
+  flex-direction: column-reverse;
+}
+
+.botao-final-versus .botao-team strong {
+  width: 100%;
+  font-size: 12px;
+}
+
+.botao-versus-mark {
+  display: grid;
+  place-items: center;
+}
+
+.botao-versus-mark small {
+  color: var(--muted, #9fb3a6);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.botao-versus-mark b {
+  color: var(--gold, #ffc72c);
+  font: 900 34px var(--display, "Arial Black", Impact, sans-serif);
+}
+
+.botao-career-player span {
+  color: var(--gold, #ffc72c);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+}
+
+.botao-career-player strong {
+  font-size: 15px;
+}
+
+.botao-career-player p {
+  margin: 0;
+  color: var(--muted, #9fb3a6);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.botao-lobby h1 {
+  margin: 0;
+  font-family: var(--display, "Arial Black", Impact, sans-serif);
+  font-size: 27px;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.botao-lobby-lead {
+  margin: 0;
+  color: var(--muted, #9fb3a6);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.botao-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line, rgba(168, 211, 181, 0.15));
+  border-radius: var(--radius, 18px);
+  background: var(--surface, #10271d);
+}
+
+.botao-card-title {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted, #9fb3a6);
+}
+
+.botao-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 7px;
+}
+
+.botao-option {
+  padding: 10px 6px;
+  border: 1px solid var(--line, rgba(168, 211, 181, 0.15));
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text, #f5f7f2);
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+}
+
+.botao-option small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted, #9fb3a6);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.botao-option[aria-pressed="true"] {
+  border-color: var(--gold, #ffc72c);
+  background: rgba(255, 199, 44, 0.14);
+  color: var(--gold, #ffc72c);
+}
+
+.botao-option[aria-pressed="true"] small {
+  color: rgba(255, 199, 44, 0.75);
+}
+
+.botao-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.botao-field-row label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted, #9fb3a6);
+}
+
+.botao-field-row input,
+.botao-field-row select {
+  padding: 11px 12px;
+  border: 1px solid var(--line, rgba(168, 211, 181, 0.15));
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text, #f5f7f2);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.botao-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.botao-result-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.botao-result-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+}
+
+.botao-result-line span {
+  color: var(--muted, #9fb3a6);
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.botao-result-line-you {
+  border-left: 3px solid var(--gold, #ffc72c);
+}
+
+.botao-headline {
+  font-family: var(--display, "Arial Black", Impact, sans-serif);
+  font-size: 34px;
+  letter-spacing: -0.04em;
+  text-align: center;
+}
+
+.botao-headline-win {
+  color: var(--gold, #ffc72c);
+}
+
+.botao-headline-loss {
+  color: var(--red, #ff5a4e);
+}
