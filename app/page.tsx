@@ -5427,7 +5427,7 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v68 · ULTRA UPDATE</span>
+                    <span className="update-version">v69 · ULTRA UPDATE</span>
                     <h1 id="update-title">Agora você entra em campo.</h1>
                   </div>
                 </header>
@@ -5612,7 +5612,7 @@ export default function Home() {
           </div>
           <footer className="welcome-version">
             <span>FUTBOBO</span>
-            <b>v68</b>
+            <b>v69</b>
           </footer>
         </section>
       )}
@@ -5891,49 +5891,57 @@ export default function Home() {
                 <Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.lastResult.goalsConceded : game.lastResult.assists} />
                 <Metric label="Novo OVR" value={game.overall} tone={game.lastResult.development > 0 ? "gold" : game.lastResult.development < 0 ? "danger" : "default"} />
               </div>
-              <div className={`season-development ${game.lastResult.development > 0 ? "up" : game.lastResult.development < 0 ? "down" : ""}`}>
-                <span>EVOLUÇÃO NA TEMPORADA</span>
-                <strong>{game.lastResult.development > 0 ? "+" : ""}{game.lastResult.development} OVR</strong>
-                <small>{game.lastResult.development > 2 ? "Você está alcançando o nível profissional rapidamente." : game.lastResult.development > 0 ? "Mais um passo na direção da elite." : game.lastResult.development === 0 ? "Seu nível se manteve." : "A carreira também cobra seus anos difíceis."}</small>
-              </div>
-              {game.lastResult.breakoutBonus > 0 && (
-                <div className="breakout-result">
-                  <div><span>⚡ EXPLOSÃO DE TALENTO</span><strong>Temporada fora da curva</strong><p>Você jogou tão bem que rompeu a evolução normal da carreira.</p></div>
-                  <b>+{game.lastResult.breakoutBonus}<small>OVR EXTRA</small></b>
+              <section className="season-result-section">
+                <header className="season-result-section-heading"><span>DESEMPENHO</span><small>Como seu ano mudou o jogador</small></header>
+                <div className={`season-development ${game.lastResult.development > 0 ? "up" : game.lastResult.development < 0 ? "down" : ""}`}>
+                  <span>EVOLUÇÃO NA TEMPORADA</span>
+                  <strong>{game.lastResult.development > 0 ? "+" : ""}{game.lastResult.development} OVR</strong>
+                  <small>{game.lastResult.development > 2 ? "Você está alcançando o nível profissional rapidamente." : game.lastResult.development > 0 ? "Mais um passo na direção da elite." : game.lastResult.development === 0 ? "Seu nível se manteve." : "A carreira também cobra seus anos difíceis."}</small>
                 </div>
-              )}
-              {game.lastResult.europeanSpotlight > 0 && (
-                <div className="european-spotlight">
-                  <span>VITRINE EUROPEIA</span>
-                  <strong>+{game.lastResult.europeanSpotlight} prestígio</strong>
-                  <p>Seu desempenho ganhou alcance internacional{game.lastResult.europeanDevelopmentBonus > 0 ? ` e acelerou sua evolução em +${game.lastResult.europeanDevelopmentBonus} OVR` : ""}.</p>
+                {game.lastResult.breakoutBonus > 0 && (
+                  <div className="breakout-result">
+                    <div><span>⚡ EXPLOSÃO DE TALENTO</span><strong>Temporada fora da curva</strong><p>Você jogou tão bem que rompeu a evolução normal da carreira.</p></div>
+                    <b>+{game.lastResult.breakoutBonus}<small>OVR EXTRA</small></b>
+                  </div>
+                )}
+                {game.lastResult.europeanSpotlight > 0 && (
+                  <div className="european-spotlight">
+                    <span>VITRINE EUROPEIA</span>
+                    <strong>+{game.lastResult.europeanSpotlight} prestígio</strong>
+                    <p>Seu desempenho ganhou alcance internacional{game.lastResult.europeanDevelopmentBonus > 0 ? ` e acelerou sua evolução em +${game.lastResult.europeanDevelopmentBonus} OVR` : ""}.</p>
+                  </div>
+                )}
+                <div className="season-compact-grid">
+                  <div className="discipline-result"><span>DISCIPLINA</span><strong>{game.lastResult.yellowCards} amarelos · {game.lastResult.redCards} vermelhos</strong></div>
+                  {positionByKey(game.position).zone !== "gol" && (
+                    <div className="defensive-season-result">
+                      <span>TRABALHO SEM A BOLA</span>
+                      <strong>{game.lastResult.tackles} desarmes</strong>
+                      <small>{game.lastResult.appearances ? (game.lastResult.tackles / game.lastResult.appearances).toFixed(1) : "0.0"} por jogo</small>
+                    </div>
+                  )}
                 </div>
-              )}
-              <div className="discipline-result"><span>DISCIPLINA</span><strong>{game.lastResult.yellowCards} amarelos · {game.lastResult.redCards} vermelhos</strong></div>
-              {positionByKey(game.position).zone !== "gol" && (
-                <div className="defensive-season-result">
-                  <span>TRABALHO SEM A BOLA</span>
-                  <strong>{game.lastResult.tackles} desarmes</strong>
-                  <small>{game.lastResult.appearances ? (game.lastResult.tackles / game.lastResult.appearances).toFixed(1) : "0.0"} por jogo</small>
-                </div>
-              )}
-              <section className="season-finance-card">
-                <header><span>FECHAMENTO FINANCEIRO</span><strong>{formatMoney(game.lastResult.balanceAfter ?? game.money)}</strong></header>
-                <div>
-                  <span><small>Salário</small><b>+{formatMoney(game.lastResult.salaryIncome ?? 0)}</b></span>
-                  <span><small>Patrocínios</small><b>+{formatMoney(game.lastResult.sponsorIncome ?? 0)}</b></span>
-                  <span className="expense"><small>Custos da carreira</small><b>−{formatMoney(game.lastResult.livingCost ?? 0)}</b></span>
-                </div>
-                <p>Saldo anterior: {formatMoney(game.lastResult.balanceBefore ?? 0)} · patrimônio disponível para investir na aba Jogador.</p>
               </section>
-              {game.lastResult.objectiveResult && <div className={`objective-result ${game.lastResult.objectiveResult.completed ? "completed" : "failed"}`}><span>{game.lastResult.objectiveResult.completed ? "META CUMPRIDA" : "META PERDIDA"}</span><strong>{game.lastResult.objectiveResult.label}</strong><p>{game.lastResult.objectiveResult.text}</p></div>}
-              {game.contractYears === 0 && (
-                <div className="contract-expired">
-                  <span>CONTRATO ENCERRADO</span>
-                  <strong>{game.renewalDenied ? "O clube optou por não renovar" : "Seu futuro está aberto"}</strong>
-                  <p>{game.renewalDenied ? "Depois de uma temporada difícil, a diretoria decidiu não seguir com você. Na próxima tela você precisa escolher um novo clube." : "Na próxima tela você poderá renovar ou escolher um novo clube."}</p>
-                </div>
-              )}
+              <section className="season-result-section">
+                <header className="season-result-section-heading"><span>BASTIDORES</span><small>Dinheiro, meta e contrato</small></header>
+                <section className="season-finance-card">
+                  <header><span>PATRIMÔNIO ATUAL</span><strong>{formatMoney(game.lastResult.balanceAfter ?? game.money)}</strong></header>
+                  <div>
+                    <span><small>Salário</small><b>+{formatMoney(game.lastResult.salaryIncome ?? 0)}</b></span>
+                    <span><small>Patrocínios</small><b>+{formatMoney(game.lastResult.sponsorIncome ?? 0)}</b></span>
+                    <span className="expense"><small>Custos</small><b>−{formatMoney(game.lastResult.livingCost ?? 0)}</b></span>
+                  </div>
+                  <p>Saldo anterior: {formatMoney(game.lastResult.balanceBefore ?? 0)} · disponível para investir na aba Jogador.</p>
+                </section>
+                {game.lastResult.objectiveResult && <div className={`objective-result ${game.lastResult.objectiveResult.completed ? "completed" : "failed"}`}><span>{game.lastResult.objectiveResult.completed ? "META CUMPRIDA" : "META PERDIDA"}</span><strong>{game.lastResult.objectiveResult.label}</strong><p>{game.lastResult.objectiveResult.text}</p></div>}
+                {game.contractYears === 0 && (
+                  <div className="contract-expired">
+                    <span>CONTRATO ENCERRADO</span>
+                    <strong>{game.renewalDenied ? "O clube optou por não renovar" : "Seu futuro está aberto"}</strong>
+                    <p>{game.renewalDenied ? "Depois de uma temporada difícil, a diretoria decidiu não seguir com você. Na próxima tela você precisa escolher um novo clube." : "Na próxima tela você poderá renovar ou escolher um novo clube."}</p>
+                  </div>
+                )}
+              </section>
               {game.lastResult.competitions.some((competition) => competition.champion) && (
                 <section className="season-title-parade">
                   <header><span>TAÇAS DA TEMPORADA</span><strong>{game.lastResult.competitions.filter((competition) => competition.champion).length} volta{game.lastResult.competitions.filter((competition) => competition.champion).length > 1 ? "s" : ""} olímpica{game.lastResult.competitions.filter((competition) => competition.champion).length > 1 ? "s" : ""}</strong></header>
@@ -5964,9 +5972,14 @@ export default function Home() {
                   </div>
                 </section>
               )}
-              <div className="competition-grid">
-                {game.lastResult.competitions.map((competition) => <article key={competition.id} className={competition.champion ? "competition-card champion" : "competition-card"}><CompetitionBadge competition={competition} leagueId={currentClub.leagueId} /><div><strong>{competition.name}</strong><small>{competition.stage}</small></div>{competition.champion && <b>★</b>}</article>)}
-              </div>
+              {game.lastResult.competitions.some((competition) => !competition.champion) && (
+                <section className="season-result-section season-campaigns">
+                  <header className="season-result-section-heading"><span>OUTRAS CAMPANHAS</span><small>Onde a caminhada terminou</small></header>
+                  <div className="competition-grid">
+                    {game.lastResult.competitions.filter((competition) => !competition.champion).map((competition) => <article key={competition.id} className="competition-card"><CompetitionBadge competition={competition} leagueId={currentClub.leagueId} /><div><strong>{competition.name}</strong><small>{competition.stage}</small></div></article>)}
+                  </div>
+                </section>
+              )}
               {game.lastResult.twist && <div className={`season-twist ${game.lastResult.twist.includes("improvável") ? "positive" : "negative"}`}><span>O IMPREVISTO DA TEMPORADA</span><p>{game.lastResult.twist}</p></div>}
               {game.lastResult.nationalNote && <div className="season-national-note"><NationBadge country={nationCountry} size="sm" /><p>{game.lastResult.nationalNote}</p></div>}
               {(game.lastResult.awards.length > 0 || game.lastResult.awardNominations.length > 0) && (

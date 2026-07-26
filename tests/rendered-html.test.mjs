@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /<b>v68<\/b>/);
+  assert.match(pageSource, /<b>v69<\/b>/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -233,6 +233,12 @@ test("deixa o fim de temporada rolar sem o rodapé cobrir o conteúdo", async ()
   assert.match(styles, /\.career-shell\.career-phase-season-result \{[\s\S]*min-height: 100dvh;[\s\S]*overflow: visible;/);
   assert.match(styles, /\.career-phase-season-result > \.result-stage \{[\s\S]*overflow: visible;/);
   assert.match(styles, /\.career-phase-season-result \.mobile-action-dock \{[\s\S]*position: static;/);
+  assert.match(page, /className="season-result-section-heading"><span>DESEMPENHO<\/span>/);
+  assert.match(page, /className="season-result-section-heading"><span>BASTIDORES<\/span>/);
+  assert.match(page, /className="season-result-section season-campaigns"/);
+  assert.match(page, /competitions\.filter\(\(competition\) => !competition\.champion\)/);
+  assert.match(styles, /\.season-compact-grid \{[^}]*grid-template-columns: repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(styles, /\.career-phase-season-result \.result-symbol \{[\s\S]*width: 76px;[\s\S]*height: 76px;/);
 });
 
 test("mostra o resultado da última temporada antes de concluir a aposentadoria", async () => {

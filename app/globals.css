@@ -360,6 +360,19 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .season-stat-grid { display: grid; width: 100%; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 7px; margin: 22px 0 13px; text-align: left; }
 .season-stat-grid .metric { min-height: 61px; }
 .season-stat-grid .metric strong { font-size: 18px; }
+.season-result-section { width: 100%; margin-bottom: 17px; text-align: left; }
+.season-result-section-heading { display: flex; align-items: center; gap: 9px; margin: 0 2px 8px; }
+.season-result-section-heading::after { content: ""; height: 1px; flex: 1; background: linear-gradient(90deg, var(--line), transparent); }
+.season-result-section-heading > span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .16em; }
+.season-result-section-heading > small { color: var(--muted); font-size: 7px; white-space: nowrap; }
+.season-result-section > :last-child { margin-bottom: 0; }
+.season-compact-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+.season-compact-grid .discipline-result,
+.season-compact-grid .defensive-season-result { min-height: 57px; margin-bottom: 0; }
+.season-compact-grid .discipline-result { display: flex; align-items: flex-start; flex-direction: column; justify-content: center; gap: 5px; }
+.season-compact-grid .discipline-result > strong { font-size: 9px; line-height: 1.3; }
+.season-compact-grid .defensive-season-result { grid-template-columns: minmax(0,1fr); gap: 3px; }
+.season-compact-grid .defensive-season-result strong { grid-row: auto; grid-column: auto; font-size: 11px; }
 .season-development { display: grid; width: 100%; grid-template-columns: 1fr auto; align-items: center; gap: 3px 10px; margin-bottom: 10px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); text-align: left; }
 .season-development > span { color: var(--muted); font-size: 7px; font-weight: 900; letter-spacing: .1em; }
 .season-development > strong { grid-row: 1 / span 2; grid-column: 2; color: var(--muted); font: 900 21px var(--display); }
@@ -403,6 +416,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .competition-card b { color: var(--gold); }
 .competition-card.champion { border-color: rgba(255,199,44,.32); background: rgba(255,199,44,.07); }
 .competition-card.champion > span { background: rgba(255,199,44,.12); color: var(--gold); }
+.season-campaigns .competition-grid { margin-bottom: 0; }
 .season-title-parade { width: 100%; margin: 5px 0 12px; padding: 12px; border: 1px solid rgba(255,199,44,.34); border-radius: 18px; background: radial-gradient(circle at 95% 0, rgba(255,199,44,.2), transparent 42%), linear-gradient(145deg, rgba(255,199,44,.1), rgba(17,51,37,.9)); text-align: left; box-shadow: 0 14px 34px rgba(0,0,0,.16); }
 .season-title-parade > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
 .season-title-parade > header span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .16em; }
@@ -1134,7 +1148,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .career-total-card > div { grid-template-columns: repeat(3,1fr); }
   .career-shop article { grid-template-columns: 32px minmax(0,1fr); }
   .career-shop article > button { grid-column: 2; justify-self: stretch; width: 100%; max-width: none; }
-  .season-finance-card > div { grid-template-columns: 1fr; }
+  .season-finance-card > div { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .career-club-list > article { grid-template-columns: 58px minmax(0,1fr); align-items: center; }
   .career-club-list > article > .club-badge { grid-row: 1 / 3; }
   .club-summary-copy { align-self: end; padding-left: 2px; }
@@ -1416,24 +1430,23 @@ button:active:not(:disabled) { transform: scale(0.975); }
     touch-action: auto;
   }
   .career-phase-season-result .result-symbol {
-    width: 94px;
-    height: 94px;
-    margin: 20px 0 16px;
-    border-radius: 31px 31px 31px 10px;
-    font-size: 48px;
+    width: 76px;
+    height: 76px;
+    margin: 14px 0 12px;
+    border-radius: 25px 25px 25px 9px;
+    font-size: 38px;
   }
-  .career-phase-season-result .result-stage h1 { margin-bottom: 8px; font-size: 28px; }
-  .career-phase-season-result .result-stage > p { font-size: 12px; line-height: 1.5; }
-  .career-phase-season-result .season-stat-grid { gap: 7px; margin: 22px 0 13px; }
-  .career-phase-season-result .season-stat-grid .metric { min-height: 61px; padding: 10px; }
-  .career-phase-season-result .season-stat-grid .metric strong { font-size: 18px; }
+  .career-phase-season-result .result-stage h1 { margin-bottom: 6px; font-size: 25px; }
+  .career-phase-season-result .result-stage > p { font-size: 11px; line-height: 1.45; }
+  .career-phase-season-result .season-stat-grid { gap: 6px; margin: 17px 0 16px; }
+  .career-phase-season-result .season-stat-grid .metric { min-height: 56px; padding: 8px; }
+  .career-phase-season-result .season-stat-grid .metric strong { font-size: 17px; }
   .career-phase-season-result .season-development,
   .career-phase-season-result .breakout-result,
   .career-phase-season-result .european-spotlight,
   .career-phase-season-result .discipline-result { margin-bottom: 10px; }
   .career-phase-season-result .objective-result,
   .career-phase-season-result .contract-expired,
-  .career-phase-season-result .competition-grid,
   .career-phase-season-result .season-twist,
   .career-phase-season-result .season-national-note,
   .career-phase-season-result .season-awards-showcase { margin-bottom: 12px; }
@@ -1442,6 +1455,11 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .career-phase-season-result .breakout-result { padding: 13px; }
   .career-phase-season-result .breakout-result > b { font-size: 31px; }
   .career-phase-season-result .competition-card { min-height: 56px; padding: 9px; }
+  .career-phase-season-result .season-result-section { margin-bottom: 18px; }
+  .career-phase-season-result .season-result-section-heading { margin-bottom: 9px; }
+  .career-phase-season-result .season-finance-card > div { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .career-phase-season-result .season-finance-card > div span { padding: 7px 6px; }
+  .career-phase-season-result .season-finance-card > header strong { font-size: 17px; }
   .career-phase-season-result .result-details { margin-bottom: 0; }
   .career-phase-season-result .mobile-action-dock {
     position: static;
