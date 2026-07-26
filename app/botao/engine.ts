@@ -91,6 +91,7 @@ export type BotaoEvent =
   | { type: "goal"; side: BotaoSide; scorer: string; assist: string | null; byUser: boolean; ownGoal: boolean }
   | { type: "settled" }
   | { type: "idle-reset" }
+  | { type: "inactivity-penalty" }
   | { type: "period-end"; period: number }
   | { type: "formation"; userFormation: string; cpuFormation: string }
   | { type: "penalty"; side: BotaoSide; scored: boolean }
@@ -140,6 +141,9 @@ export type BotaoMatchState = {
   resolveElapsed: number;
   lastGoal: { side: BotaoSide; scorer: string; byUser: boolean; ownGoal: boolean } | null;
   penalties: BotaoPenaltyState | null;
+  penaltyReason: "shootout" | "inactivity" | null;
+  /** Reposição depois de gol não consome o relógio até o primeiro toque. */
+  clockPausedForKickoff: boolean;
   result: BotaoMatchResult | null;
   /** Sobe a cada mutação relevante; a UI usa como chave de re-render. */
   version: number;
@@ -371,6 +375,8 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
     resolveElapsed: 0,
     lastGoal: null,
     penalties: null,
+    penaltyReason: null,
+    clockPausedForKickoff: false,
     result: null,
     version: 0,
   };
@@ -544,6 +550,7 @@ export function beginShot(state: BotaoMatchState, shot: BotaoShot): boolean {
   disc.vx = Math.cos(angle) * capped;
   disc.vy = Math.sin(angle) * capped;
   state.phase = "resolving";
+  state.clockPausedForKickoff = false;
   state.resolveElapsed = 0;
   state.turns += 1;
   state.turnTouchMark = state.ballTouches;
@@ -751,7 +758,8 @@ function registerGoal(state: BotaoMatchState, side: BotaoSide, events: BotaoEven
   state.version += 1;
 
   const limit = state.setup.rules.goalLimit;
-  if (limit > 0 && state.score[side] >= limit) {
+  const inRegulation = state.period <= state.setup.rules.halves;
+  if (limit > 0 && inRegulation && state.score[side] >= limit) {
     finishMatch(state, "goal-limit", events);
   }
 }
@@ -775,6 +783,7 @@ export function resumeAfterGoal(state: BotaoMatchState): BotaoEvent[] {
   events.push({ type: "formation", userFormation: state.formationId.user, cpuFormation: state.formationId.cpu });
   state.turn = conceded;
   state.phase = "kickoff";
+  state.clockPausedForKickoff = true;
   state.version += 1;
   return events;
 }
@@ -833,6 +842,7 @@ export function startNextPeriod(state: BotaoMatchState): BotaoEvent[] {
   const firstSide: BotaoSide = state.setup.userIsHost ? "user" : "cpu";
   state.turn = state.period % 2 === 1 ? firstSide : otherSide(firstSide);
   state.phase = "kickoff";
+  state.clockPausedForKickoff = false;
   state.version += 1;
   return events;
 }
@@ -861,18 +871,18 @@ function settleTurn(state: BotaoMatchState, events: BotaoEvent[]) {
 /**
  * Corre o relógio em tempo real, fora da física.
  *
- * O cronômetro nunca para: enquanto você mira, enquanto o adversário pensa e
- * enquanto a bola rola. Quem chama isso é a interface (a cada frame) e a
- * simulação (o tempo morto de cada turno). Se o tempo acaba com a bola parada,
- * o período fecha na hora; se acaba com a bola rolando, o lance termina antes —
+ * O cronômetro corre enquanto se mira, o adversário pensa e a bola rola. A
+ * única pausa é a reposição depois de um gol: o relógio volta a andar no
+ * primeiro toque. Se o tempo acaba com a bola rolando, o lance termina antes —
  * a vantagem é resolvida em `settleTurn`.
  */
 export function advanceClock(state: BotaoMatchState, seconds: number): BotaoEvent[] {
   const events: BotaoEvent[] = [];
   if (seconds <= 0) return events;
-  if (state.phase !== "aim" && state.phase !== "kickoff" && state.phase !== "goal") return events;
+  if (state.phase !== "aim" && state.phase !== "kickoff") return events;
+  if (state.phase === "kickoff" && state.clockPausedForKickoff) return events;
   state.clock = Math.max(0, state.clock - seconds);
-  if (state.clock <= 0 && state.phase !== "goal") {
+  if (state.clock <= 0) {
     endPeriod(state, events);
   }
   state.version += 1;
@@ -960,6 +970,7 @@ function startPenalties(state: BotaoMatchState) {
     keeperDirection: state.rng.chance(0.5) ? 1 : -1,
     keeperSpeed: 96 + state.setup.difficulty * 26,
   };
+  state.penaltyReason = "shootout";
   // A bola só rola depois que o jogador escolher a cobrança dele.
   state.phase = "penalty-setup";
   state.version += 1;
@@ -982,6 +993,32 @@ export function jumpToPenalties(state: BotaoMatchState) {
   if (state.phase === "finished" || state.penalties) return;
   state.clock = 0;
   startPenalties(state);
+}
+
+/** Pune dez segundos sem ação do jogador com uma cobrança real para a CPU. */
+export function awardInactivityPenalty(state: BotaoMatchState): BotaoEvent[] {
+  const events: BotaoEvent[] = [];
+  if ((state.phase !== "aim" && state.phase !== "kickoff") || state.turn !== "user" || state.penalties) return events;
+  const defaultRound = Math.min(5, discsOf(state, "user").length);
+  state.penalties = {
+    round: 1,
+    turn: "cpu",
+    score: { user: 0, cpu: 0 },
+    results: { user: [], cpu: [] },
+    order: { user: buildPenaltyOrder(state, "user", defaultRound), cpu: buildPenaltyOrder(state, "cpu", 0) },
+    playerRound: defaultRound,
+    suddenDeath: false,
+    shotInFlight: false,
+    keeperDirection: state.rng.chance(0.5) ? 1 : -1,
+    keeperSpeed: 96 + state.setup.difficulty * 26,
+  };
+  state.penaltyReason = "inactivity";
+  state.clockPausedForKickoff = false;
+  state.phase = "penalties";
+  setupPenaltyShot(state);
+  state.version += 1;
+  events.push({ type: "inactivity-penalty" });
+  return events;
 }
 
 /** Monta a mesa reduzida do pênalti: batedor, bola, goleiro e traves. */
@@ -1174,6 +1211,32 @@ export function commitPenalty(state: BotaoMatchState, scored: boolean): BotaoEve
     text: `Pênalti ${penalties.round}: ${scored ? "na rede" : "perdeu"}`,
   });
   events.push({ type: "penalty", side, scored });
+
+  if (state.penaltyReason === "inactivity") {
+    const keeperIndex = state.bodies.findIndex((body) => body.kind === "keeper");
+    if (keeperIndex >= 0) state.bodies.splice(keeperIndex, 1);
+    state.penalties = null;
+    state.penaltyReason = null;
+    state.turn = "user";
+    if (scored) {
+      state.score.cpu += 1;
+      state.lastGoal = { side: "cpu", scorer: "Pênalti por demora", byUser: false, ownGoal: false };
+      state.phase = "goal";
+      state.clockPausedForKickoff = false;
+      const limit = state.setup.rules.goalLimit;
+      const inRegulation = state.period <= state.setup.rules.halves;
+      if (limit > 0 && inRegulation && state.score.cpu >= limit) finishMatch(state, "goal-limit", events);
+    } else {
+      state.formationIndex.user += 1;
+      state.formationIndex.cpu += 1;
+      placeTeams(state);
+      events.push({ type: "formation", userFormation: state.formationId.user, cpuFormation: state.formationId.cpu });
+      state.phase = "kickoff";
+      state.clockPausedForKickoff = true;
+    }
+    state.version += 1;
+    return events;
+  }
 
   const decision = penaltyDecision(state);
   if (decision) {

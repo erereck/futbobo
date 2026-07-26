@@ -12,16 +12,17 @@ temporada.
 | Botões por lado | 5 (nenhum é goleiro fixo) |
 | Turno | 1 toque alternado |
 | Controle | arrastar para trás e soltar (estilingue) |
-| Fim antecipado | 3 gols encerram na hora |
+| Fim antecipado | 3 gols encerram no tempo normal; a prorrogação vai até o fim |
 | Tempo | **um tempo corrido de 2min**, prorrogação de 45s, depois pênaltis |
-| Cronômetro | **nunca para** — corre para mirar, para pensar e com a bola rolando |
+| Cronômetro | corre para mirar, pensar e com a bola rolando; para na saída pós-gol |
 | Mesa | tem tabelas: a bola só sai em gol |
 | Formação | muda nos dois times a cada gol |
 
 O relógio ser literal (`clockScale: 1`) é o que torna a partida legível: o que
 está escrito na tela é o tempo real que falta. Nos últimos 15 segundos o
-cronômetro pulsa em vermelho. Se o tempo acaba com a bola rolando o lance
-termina antes; se acaba com a bola parada, fecha na hora.
+cronômetro pulsa em vermelho. Depois de um gol ele fica parado até a saída de
+bola. Se o jogador não agir por 10 segundos, os últimos três aparecem em tela
+cheia e, se ainda assim não houver ação, o adversário recebe um pênalti.
 
 Só o jogador da carreira tem nome. As outras peças são a camisa — `Palmeiras
 #7` —, como em botão de verdade.

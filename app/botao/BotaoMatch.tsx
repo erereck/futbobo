@@ -11,6 +11,7 @@ import { chooseCpuPenaltyShot, chooseCpuShot, cpuSkillFor } from "./cpu";
 import {
   advanceClock,
   aimFromDrag,
+  awardInactivityPenalty,
   ballOf,
   beginPenaltyShot,
   beginShot,
@@ -49,6 +50,8 @@ const MAX_SUBSTEPS = 12;
 const GOAL_PAUSE_MS = 1700;
 const CPU_THINK_MS = 430;
 const PENALTY_PAUSE_MS = 1100;
+const USER_DECISION_SECONDS = 10;
+const USER_WARNING_SECONDS = 3;
 const SIDES: BotaoSide[] = ["user", "cpu"];
 
 type Flash = { text: string; tone: "goal" | "info" | "bad" } | null;
@@ -100,6 +103,8 @@ export default function BotaoMatch({
   const lastFrameRef = useRef(0);
   const frameCountRef = useRef(0);
   const lastHitRef = useRef(0);
+  const idleDeadlineRef = useRef<number | null>(null);
+  const idleCountdownRef = useRef<number | null>(null);
   const trailRef = useRef<Array<{ x: number; y: number }>>([]);
   const goalFlashRef = useRef(0);
   const goalFlashSideRef = useRef<BotaoSide | null>(null);
@@ -122,6 +127,7 @@ export default function BotaoMatch({
   const [muted, setMuted] = useState(() => isBotaoMuted());
   const [shaking, setShaking] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const [idleCountdown, setIdleCountdown] = useState<number | null>(null);
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
 
@@ -167,6 +173,9 @@ export default function BotaoMatch({
   useEffect(() => {
     const onVisibility = () => {
       lastFrameRef.current = 0;
+      idleDeadlineRef.current = null;
+      idleCountdownRef.current = null;
+      setIdleCountdown(null);
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
@@ -189,6 +198,10 @@ export default function BotaoMatch({
           showFlash("NA TRAVE!", "info", 1100);
         }
         if (event.type === "idle-reset") showFlash("Bola ao centro", "info", 1100);
+        if (event.type === "inactivity-penalty") {
+          showFlash("PÊNALTI POR DEMORA!", "bad", 1700);
+          setAnnouncement(`Você demorou para jogar. Pênalti para ${machine.setup.cpuTeam.shortName}.`);
+        }
         if (event.type === "period-end") {
           playBotaoSound("whistle");
           showFlash("FIM DO TEMPO", "info", 1400);
@@ -241,9 +254,32 @@ export default function BotaoMatch({
         goalFlashRef.current = Math.max(0, goalFlashRef.current - elapsed * 1.6);
       }
 
-      // O relógio corre fora da física: mirar e esperar o adversário também
-      // gasta tempo. `stepMatch` cuida do trecho com a bola rolando.
-      if (state.phase === "aim" || state.phase === "kickoff" || state.phase === "goal") {
+      const waitingForUser = (state.phase === "aim" || state.phase === "kickoff") && state.turn === "user";
+      if (!waitingForUser) {
+        idleDeadlineRef.current = null;
+        if (idleCountdownRef.current !== null) {
+          idleCountdownRef.current = null;
+          setIdleCountdown(null);
+        }
+      } else {
+        if (idleDeadlineRef.current === null) idleDeadlineRef.current = time + USER_DECISION_SECONDS * 1000;
+        const remaining = (idleDeadlineRef.current - time) / 1000;
+        const nextCountdown = remaining <= USER_WARNING_SECONDS ? Math.max(1, Math.ceil(remaining)) : null;
+        if (nextCountdown !== idleCountdownRef.current) {
+          idleCountdownRef.current = nextCountdown;
+          setIdleCountdown(nextCountdown);
+        }
+        if (remaining <= 0) {
+          idleDeadlineRef.current = null;
+          idleCountdownRef.current = null;
+          setIdleCountdown(null);
+          handleEvents(awardInactivityPenalty(state));
+        }
+      }
+
+      // Mirar e esperar consome o relógio normal. A reposição pós-gol é a
+      // exceção: `advanceClock` segura o tempo até o primeiro toque.
+      if (state.phase === "aim" || state.phase === "kickoff") {
         const clockEvents = advanceClock(state, elapsed);
         if (clockEvents.length > 0) handleEvents(clockEvents);
         else if (frameCountRef.current % 6 === 0) bump();
@@ -417,6 +453,9 @@ export default function BotaoMatch({
       if (!disc) return;
       event.currentTarget.setPointerCapture(event.pointerId);
       pointerRef.current = event.pointerId;
+      idleDeadlineRef.current = performance.now() + USER_DECISION_SECONDS * 1000;
+      idleCountdownRef.current = null;
+      setIdleCountdown(null);
       selectedRef.current = disc.id;
       aimRef.current = { bodyId: disc.id, dragX: point.x, dragY: point.y, ratio: 0, valid: false };
       vibrate(8);
@@ -483,7 +522,11 @@ export default function BotaoMatch({
             {setup.competitionName} · {setup.stageName}
           </span>
           <span className={`botao-period ${!penalties && state.clock <= 15 && state.phase !== "finished" ? "botao-period-urgent" : ""}`}>
-            {penalties ? "Pênaltis" : `${periodName(state)} · ${formatClock(state.clock)}`}
+            {penalties
+              ? state.penaltyReason === "inactivity"
+                ? "Pênalti por demora"
+                : "Pênaltis"
+              : `${periodName(state)} · ${formatClock(state.clock)}`}
           </span>
         </div>
         <div className="botao-scoreboard">
@@ -501,7 +544,11 @@ export default function BotaoMatch({
             <TeamCrest team={setup.cpuTeam} />
           </div>
         </div>
-        {penalties ? (
+        {penalties && state.penaltyReason === "inactivity" ? (
+          <div className="botao-inactivity-penalty-strip">
+            PÊNALTI PARA {setup.cpuTeam.shortName}
+          </div>
+        ) : penalties ? (
           <div className="botao-penalty-track">
             {SIDES.map((side) => (
               <div key={side} className="botao-penalty-row">
@@ -549,6 +596,13 @@ export default function BotaoMatch({
           onPointerCancel={onPointerUp}
         />
         {flash ? <div className={`botao-flash botao-flash-${flash.tone}`}>{flash.text}</div> : null}
+        {idleCountdown !== null ? (
+          <div className="botao-inactivity-countdown" role="alert" aria-live="assertive">
+            <small>JOGUE AGORA</small>
+            <strong>{idleCountdown}</strong>
+            <span>ou o adversário ganha um pênalti</span>
+          </div>
+        ) : null}
         {state.phase === "interval" ? (
           <div className="botao-overlay">
             <strong>{state.period >= setup.rules.halves ? "Empate no tempo normal" : `Fim do ${state.period}º tempo`}</strong>

@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /<b>v69<\/b>/);
+  assert.match(pageSource, /<b>v70<\/b>/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -744,6 +744,8 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
   const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
+  const renderer = await readFile(new URL("../app/botao/render.ts", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
 
   assert.match(page, /\| "botao-final"/);
@@ -762,5 +764,17 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   assert.match(adapter, /function buildNationalMatchSetup/);
   assert.match(adapter, /function pickNationalOpponent/);
   assert.match(engine, /function createMatch/);
+  assert.match(engine, /export function awardInactivityPenalty/);
+  assert.match(engine, /const inRegulation = state\.period <= state\.setup\.rules\.halves/);
+  assert.match(engine, /state\.phase === "kickoff" && state\.clockPausedForKickoff/);
+  assert.match(match, /const USER_DECISION_SECONDS = 10/);
+  assert.match(match, /const USER_WARNING_SECONDS = 3/);
+  assert.match(match, /botao-inactivity-countdown/);
+  assert.doesNotMatch(renderer, /drawGoalLabels/);
+  assert.doesNotMatch(page, /o sorteio da temporada para aqui/i);
+  assert.doesNotMatch(page, /Dificuldade \{currentBotaoSetup/);
+  assert.doesNotMatch(page, /decis.o\(ões\) restante/);
   assert.match(styles, /\.botao-career-lobby/);
+  assert.match(styles, /\.botao-inactivity-countdown/);
+  assert.match(styles, /\.botao-career-lobby \.botao-actions > \.botao-primary/);
 });

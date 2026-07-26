@@ -5310,7 +5310,7 @@ export default function Home() {
         </span>
         <h1>{currentBotaoMatch.stageName}</h1>
         <p className="botao-lobby-lead">
-          {currentBotaoMatch.competitionName} · o sorteio da temporada para aqui. Agora a taça depende da mesa.
+          {currentBotaoMatch.competitionName} · Agora a taça depende da mesa.
         </p>
         <div className="botao-card botao-final-versus">
           <div className="botao-team">
@@ -5326,11 +5326,6 @@ export default function Home() {
         <div className="botao-card botao-career-player">
           <span>SEU BOTÃO</span>
           <strong>#{game.number} · {positionByKey(game.position).name} · {game.overall} OVR</strong>
-          <p>Força e controle vêm dos seus atributos. A peça com o anel dourado e a etiqueta “VC” é você.</p>
-        </div>
-        <div className="botao-formation-row">
-          <span className="botao-chip">Dificuldade {currentBotaoSetup.difficulty}/5</span>
-          <span className="botao-chip">{game.pendingBotaoMatches.length} decisão(ões) restante(s)</span>
         </div>
         <div className="botao-actions">
           <button type="button" className="botao-primary" onClick={() => setBotaoMatchStarted(true)}>
@@ -5427,7 +5422,7 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v69 · ULTRA UPDATE</span>
+                    <span className="update-version">v70 · ULTRA UPDATE</span>
                     <h1 id="update-title">Agora você entra em campo.</h1>
                   </div>
                 </header>
@@ -5612,7 +5607,7 @@ export default function Home() {
           </div>
           <footer className="welcome-version">
             <span>FUTBOBO</span>
-            <b>v69</b>
+            <b>v70</b>
           </footer>
         </section>
       )}
@@ -5917,7 +5912,6 @@ export default function Home() {
                     <div className="defensive-season-result">
                       <span>TRABALHO SEM A BOLA</span>
                       <strong>{game.lastResult.tackles} desarmes</strong>
-                      <small>{game.lastResult.appearances ? (game.lastResult.tackles / game.lastResult.appearances).toFixed(1) : "0.0"} por jogo</small>
                     </div>
                   )}
                 </div>

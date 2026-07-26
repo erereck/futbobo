@@ -321,19 +321,6 @@ function drawTrail(ctx: CanvasRenderingContext2D, trail: Array<{ x: number; y: n
   ctx.restore();
 }
 
-/** Sigla do time atrás de cada gol — resolve "para que lado eu ataco?". */
-function drawGoalLabels(ctx: CanvasRenderingContext2D, userAbbr: string, cpuAbbr: string) {
-  ctx.save();
-  ctx.font = "700 11px ui-sans-serif, system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(245, 247, 242, 0.45)";
-  ctx.textBaseline = "bottom";
-  ctx.fillText(`▲ ${cpuAbbr}`, FIELD.width / 2, -FIELD.goalDepth - 2);
-  ctx.textBaseline = "top";
-  ctx.fillText(`▼ ${userAbbr}`, FIELD.width / 2, FIELD.height + FIELD.goalDepth + 2);
-  ctx.restore();
-}
-
 function drawGoalFlash(ctx: CanvasRenderingContext2D, intensity: number, side: BotaoSide | null) {
   if (intensity <= 0) return;
   ctx.save();
@@ -368,7 +355,6 @@ export function drawMatch(
   ctx.clearRect(-VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT);
   drawField(ctx, userColors.primary, cpuColors.primary);
   drawGoalFlash(ctx, view.goalFlash, view.goalFlashSide);
-  drawGoalLabels(ctx, state.setup.userTeam.abbr, state.setup.cpuTeam.abbr);
 
   const visible = view.penaltyMode ? penaltyVisibleBodies(state) : state.bodies;
   if (view.penaltyMode) {
