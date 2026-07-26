@@ -10,6 +10,7 @@ const repairOnly = process.argv.includes("--repair");
 const refresh = process.argv.includes("--refresh") || repairOnly;
 const missingOnly = process.argv.includes("--missing");
 const assetsOnly = process.argv.includes("--assets-only");
+const externalClubsOnly = process.argv.includes("--external-clubs");
 const competitionOnly = process.argv.find((argument) => argument.startsWith("--competition="))?.split("=")[1] ?? "";
 
 const LEAGUE_SEARCH_NAMES = {
@@ -35,6 +36,12 @@ const LEAGUE_SEARCH_NAMES = {
   "austria-bundesliga": "Austrian Bundesliga",
   "swiss-super-league": "Swiss Super League",
   "premiership-sco": "Scottish Premier League",
+  "saudi-pro-league": "Saudi-Arabian Pro League",
+  "j1-league": "Japanese J1 League",
+  "k-league": "South Korean K League 1",
+  csl: "Chinese Super League",
+  "brasileirao-b": "Brazilian Serie B",
+  championship: "English League Championship",
 };
 
 const COUNTRY_NAMES = {
@@ -63,6 +70,10 @@ const COUNTRY_NAMES = {
   suica: ["switzerland"],
   dinamarca: ["denmark"],
   "republica-tcheca": ["czech republic", "czechia"],
+  "arabia-saudita": ["saudi arabia"],
+  japao: ["japan"],
+  "coreia-do-sul": ["south korea", "korea"],
+  china: ["china"],
 };
 
 const FLAG_CODES = {
@@ -114,6 +125,7 @@ const FLAG_CODES = {
   uzbequistao: "uz",
   australia: "au",
   "arabia-saudita": "sa",
+  china: "cn",
   ira: "ir",
   catar: "qa",
   iraque: "iq",
@@ -158,6 +170,7 @@ const SUPER_CUP_ID_OVERRIDES = {
   seriea: "4507",
   ligue1: "4901",
   "liga-mx": "5662",
+  "saudi-pro-league": "5650",
 };
 
 const LEAGUE_ID_OVERRIDES = {
@@ -166,6 +179,12 @@ const LEAGUE_ID_OVERRIDES = {
   "austria-bundesliga": "4621",
   "swiss-super-league": "4675",
   "premiership-sco": "4330",
+  "saudi-pro-league": "4668",
+  "j1-league": "4633",
+  "k-league": "4689",
+  csl: "4359",
+  "brasileirao-b": "4404",
+  championship: "4329",
 };
 
 const CUP_ID_OVERRIDES = {
@@ -174,9 +193,20 @@ const CUP_ID_OVERRIDES = {
   "austria-bundesliga": "5883",
   "swiss-super-league": "5489",
   "premiership-sco": "4723",
+  "saudi-pro-league": "5649",
+  "j1-league": "5637",
+  "k-league": "5635",
+  csl: "5525",
+  "brasileirao-b": "4725",
+  championship: "4482",
 };
 
 const EXTERNAL_COMPETITION_ASSETS = {
+  afcChampions: {
+    path: "afcChampions.png",
+    providerName: "AFC Champions League Elite",
+    source: "https://assets.fclogo.top/png/acl-elite-v2024.png",
+  },
   "supercup:proleague": {
     path: path.join("supercups", "proleague.png"),
     providerName: "Belgian Super Cup",
@@ -187,6 +217,13 @@ const EXTERNAL_COMPETITION_ASSETS = {
     providerName: "Turkcell Super Kupa 2025",
     source: "https://upload.wikimedia.org/wikipedia/commons/2/2c/Turkcell-super-kupa-2025-koyu.jpg",
   },
+};
+
+const EXTERNAL_CLUB_ASSETS = {
+  "al-shabab-riyadh": "https://assets.football-logos.cc/logos/saudi-arabia/1500x1500/al-shabab.787733e5.png",
+  "zhejiang-fc": "https://assets.football-logos.cc/logos/china/1500x1500/zhejiang-professional.dc402788.png",
+  swansea: "https://assets.football-logos.cc/logos/england/1500x1500/swansea-city.fff229fe.png",
+  wrexham: "https://assets.football-logos.cc/logos/england/1500x1500/wrexham.eaf0e9de.png",
 };
 
 const TEAM_QUERY_OVERRIDES = {
@@ -453,7 +490,12 @@ function auditManifestClubMappings() {
   const claims = new Map();
   for (const [clubId, asset] of Object.entries(manifest.clubs)) {
     const club = clubIndex.get(clubId);
-    if (!club || !asset.providerId || !asset.providerName) {
+    if (!club) {
+      delete manifest.clubs[clubId];
+      continue;
+    }
+    if (asset.externalSource && EXTERNAL_CLUB_ASSETS[clubId] === asset.externalSource) continue;
+    if (!asset.providerId || !asset.providerName) {
       delete manifest.clubs[clubId];
       continue;
     }
@@ -488,6 +530,10 @@ async function apiJson(endpoint, attempt = 0) {
     console.log(`\nLimite temporário da API; nova tentativa em ${backoff / 1000}s (${attempt + 1}/5)...`);
     await new Promise((resolve) => setTimeout(resolve, backoff));
     return apiJson(endpoint, attempt + 1);
+  }
+  if (response.status === 429) {
+    console.warn(`TheSportsDB continuou limitando ${endpoint}; asset ignorado sem abortar a sincronização.`);
+    return {};
   }
   if (!response.ok) throw new Error(`TheSportsDB respondeu ${response.status} em ${endpoint}`);
   return response.json();
@@ -566,16 +612,58 @@ function findCompetitionId(teamRows, wantedName) {
 if (missingOnly || repairOnly) {
   const remaining = [];
   for (const club of assetsOnly ? [] : clubs) {
+    const externalSource = EXTERNAL_CLUB_ASSETS[club.id];
+    if (externalClubsOnly && !externalSource) continue;
+    if (missingOnly && externalSource) {
+      manifest.clubs[club.id] = { providerName: club.name, externalSource };
+      if (!await fileExists(path.join(ASSET_ROOT, "clubs", `${club.id}.png`))) {
+        queueImage(
+          externalSource,
+          path.join(ASSET_ROOT, "clubs", `${club.id}.png`),
+          manifest.clubs[club.id],
+          { providerName: club.name, externalSource },
+        );
+      }
+      continue;
+    }
+    if (externalClubsOnly) continue;
     if (
       (repairOnly && TEAM_ID_OVERRIDES[club.id])
       || (missingOnly && !await fileExists(path.join(ASSET_ROOT, "clubs", `${club.id}.png`)))
     ) remaining.push(club);
   }
-  for (let index = 0; index < remaining.length; index += 1) {
-    const club = remaining[index];
+  const resolvedByLeague = new Set();
+  if (missingOnly) {
+    for (const league of leagues) {
+      const leagueClubs = remaining.filter((club) => club.leagueId === league.id);
+      const searchName = LEAGUE_SEARCH_NAMES[league.id];
+      if (!leagueClubs.length || !searchName) continue;
+      process.stdout.write(`Recuperando ${league.name} em lote... `);
+      const payload = await apiJson(`search_all_teams.php?l=${encodeURIComponent(searchName.replaceAll(" ", "_"))}`);
+      const teams = (payload.teams ?? []).filter((team) => team.strSport === "Soccer");
+      let leagueMatches = 0;
+      for (const club of leagueClubs) {
+        const choice = chooseTeam(club, teams);
+        if (!choice?.team?.strBadge || choice.score < 0.48) continue;
+        manifest.clubs[club.id] = {};
+        queueImage(
+          choice.team.strBadge,
+          path.join(ASSET_ROOT, "clubs", `${club.id}.png`),
+          manifest.clubs[club.id],
+          { providerId: choice.team.idTeam, providerName: choice.team.strTeam },
+        );
+        resolvedByLeague.add(club.id);
+        leagueMatches += 1;
+      }
+      console.log(`${leagueMatches}/${leagueClubs.length}`);
+    }
+  }
+  const individualLookups = remaining.filter((club) => !resolvedByLeague.has(club.id));
+  for (let index = 0; index < individualLookups.length; index += 1) {
+    const club = individualLookups[index];
     const providerId = TEAM_ID_OVERRIDES[club.id];
     if (providerId) {
-      process.stdout.write(`Confirmando ${index + 1}/${remaining.length}: ${club.shortName}... `);
+      process.stdout.write(`Confirmando ${index + 1}/${individualLookups.length}: ${club.shortName}... `);
       const payload = await apiJson(`lookupteam.php?id=${providerId}`);
       const exactChoice = chooseTeam(club, payload.teams ?? [], true);
       if (exactChoice?.team) {
@@ -593,12 +681,13 @@ if (missingOnly || repairOnly) {
     }
     const queries = [...new Set([
       TEAM_QUERY_OVERRIDES[club.id],
+      club.name,
       club.shortName,
       meaningful(club.shortName),
     ].filter(Boolean))];
     let choice;
     for (const query of queries) {
-      process.stdout.write(`Recuperando ${index + 1}/${remaining.length}: ${club.shortName} (${query})... `);
+      process.stdout.write(`Recuperando ${index + 1}/${individualLookups.length}: ${club.shortName} (${query})... `);
       const payload = await apiJson(`searchteams.php?t=${encodeURIComponent(query)}`);
       choice = chooseTeam(club, payload.teams ?? [], true);
       if (choice?.score >= 0.2) {
@@ -770,6 +859,17 @@ for (const [key, asset] of Object.entries(EXTERNAL_COMPETITION_ASSETS)) {
     path.join(ASSET_ROOT, "competitions", asset.path),
     manifest.competitions[key],
     { providerName: asset.providerName },
+  );
+}
+for (const [clubId, source] of Object.entries(EXTERNAL_CLUB_ASSETS)) {
+  const club = clubs.find((candidate) => candidate.id === clubId);
+  if (!club) continue;
+  manifest.clubs[clubId] = { providerName: club.name, externalSource: source };
+  queueImage(
+    source,
+    path.join(ASSET_ROOT, "clubs", `${clubId}.png`),
+    manifest.clubs[clubId],
+    { providerName: club.name, externalSource: source },
   );
 }
 

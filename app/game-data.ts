@@ -47,7 +47,7 @@ export type League = {
   conferencePlaces: number;
 };
 
-export type ContinentalSlot = "libertadores" | "champions" | "europa" | "conference" | "concacaf";
+export type ContinentalSlot = "libertadores" | "champions" | "europa" | "conference" | "concacaf" | "asian";
 
 export type Club = {
   id: string;
@@ -222,6 +222,7 @@ export const COUNTRIES: Country[] = [
   { id: "georgia", name: "Geórgia", demonym: "georgiano", abbr: "GEO", confederation: "EUROPE", strength: 2, primary: "#ff0000", secondary: "#ffffff" },
   { id: "japao", name: "Japão", demonym: "japonês", abbr: "JAP", confederation: "ASIA", strength: 4, primary: "#ffffff", secondary: "#bc002d" },
   { id: "coreia-do-sul", name: "Coreia do Sul", demonym: "sul-coreano", abbr: "COR", confederation: "ASIA", strength: 4, primary: "#ffffff", secondary: "#cd2e3a" },
+  { id: "china", name: "China", demonym: "chinês", abbr: "CHN", confederation: "ASIA", strength: 2, primary: "#de2910", secondary: "#ffde00" },
   { id: "uzbequistao", name: "Uzbequistão", demonym: "uzbeque", abbr: "UZB", confederation: "ASIA", strength: 2, primary: "#1eb53a", secondary: "#0099b5" },
   { id: "australia", name: "Austrália", demonym: "australiano", abbr: "AUS", confederation: "ASIA", strength: 3, primary: "#012169", secondary: "#ffcd00" },
   { id: "arabia-saudita", name: "Arábia Saudita", demonym: "saudita", abbr: "ARS", confederation: "ASIA", strength: 3, primary: "#006c35", secondary: "#ffffff" },
@@ -270,6 +271,15 @@ export const LEAGUES: League[] = [
   { id: "liga-peruana", countryId: "peru", name: "Liga 1 Perú", cupName: "Copa Bicentenario", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   { id: "liga-mx", countryId: "mexico", name: "Liga MX", cupName: "Copa MX", prestige: 3, championsPlaces: 4, europaPlaces: 0, conferencePlaces: 0 },
   { id: "mls", countryId: "eua", name: "Major League Soccer", cupName: "US Open Cup", prestige: 2, championsPlaces: 3, europaPlaces: 0, conferencePlaces: 0 },
+  // Ásia: `championsPlaces` aqui conta vagas na AFC Champions League Elite.
+  { id: "saudi-pro-league", countryId: "arabia-saudita", name: "Saudi Pro League", cupName: "Copa do Rei Saudita", prestige: 3, championsPlaces: 4, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "j1-league", countryId: "japao", name: "J1 League", cupName: "Copa do Imperador", prestige: 3, championsPlaces: 3, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "k-league", countryId: "coreia-do-sul", name: "K League 1", cupName: "Copa da Coreia", prestige: 2, championsPlaces: 3, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "csl", countryId: "china", name: "Chinese Super League", cupName: "Copa da China", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
+  // Segundas divisões: sem vaga continental pela liga, mas a copa nacional ainda
+  // vale — time da Série B que ganha a Copa do Brasil vai à Libertadores.
+  { id: "brasileirao-b", countryId: "brasil", name: "Brasileirão Série B", cupName: "Copa do Brasil", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "championship", countryId: "inglaterra", name: "EFL Championship", cupName: "FA Cup", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
 ];
 
 export function leagueById(id: string): League {
@@ -733,8 +743,152 @@ const MLS_CLUBS: Club[] = [
   { id: "vancouver-whitecaps", name: "Vancouver Whitecaps Football Club", shortName: "Vancouver Whitecaps", abbr: "VAN", city: "Vancouver", countryId: "eua", leagueId: "mls", primary: "#f5f5f5", secondary: "#274b9f", reputation: 2, strength: 67 },
 ];
 
+// Saudi Pro League. Os quatro grandes puxam a média para cima por causa do
+// investimento recente; o meio da tabela fica na faixa das ligas médias.
+const SAUDI_CLUBS: Club[] = [
+  { id: "al-hilal", name: "Al-Hilal Saudi Football Club", shortName: "Al-Hilal", abbr: "HIL", city: "Riade", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#005eb8", secondary: "#ffffff", reputation: 4, strength: 84, academy: 3 },
+  { id: "al-nassr", name: "Al-Nassr Football Club", shortName: "Al-Nassr", abbr: "NAS", city: "Riade", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#f9e300", secondary: "#0e4c92", reputation: 4, strength: 83, academy: 3 },
+  { id: "al-ittihad", name: "Al-Ittihad Club", shortName: "Al-Ittihad", abbr: "ITT", city: "Jidá", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#f6c800", secondary: "#111111", reputation: 4, strength: 82, academy: 3 },
+  { id: "al-ahli-jeddah", name: "Al-Ahli Saudi Football Club", shortName: "Al-Ahli", abbr: "AHL", city: "Jidá", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#00954c", secondary: "#ffffff", reputation: 4, strength: 81, academy: 3 },
+  { id: "al-qadsiah", name: "Al-Qadsiah Football Club", shortName: "Al-Qadsiah", abbr: "QAD", city: "Khobar", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#1d3f8b", secondary: "#f6c800", reputation: 3, strength: 75, academy: 2 },
+  { id: "al-shabab-riyadh", name: "Al-Shabab Football Club", shortName: "Al-Shabab", abbr: "SHB", city: "Riade", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#ffffff", secondary: "#111111", reputation: 3, strength: 74, academy: 3 },
+  { id: "al-ettifaq", name: "Al-Ettifaq Football Club", shortName: "Al-Ettifaq", abbr: "ETT", city: "Dammam", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#007c3e", secondary: "#ffffff", reputation: 3, strength: 72, academy: 2 },
+  { id: "al-taawoun", name: "Al-Taawoun Football Club", shortName: "Al-Taawoun", abbr: "TAA", city: "Buraidah", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#f5d000", secondary: "#005dab", reputation: 2, strength: 71, academy: 2 },
+  { id: "al-fateh", name: "Al-Fateh Sports Club", shortName: "Al-Fateh", abbr: "FTH", city: "Al-Hasa", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#003a70", secondary: "#ffffff", reputation: 2, strength: 70, academy: 2 },
+  { id: "al-khaleej", name: "Al-Khaleej Football Club", shortName: "Al-Khaleej", abbr: "KHA", city: "Saihat", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#009f4d", secondary: "#ffffff", reputation: 2, strength: 69, academy: 2 },
+  { id: "al-fayha", name: "Al-Fayha Football Club", shortName: "Al-Fayha", abbr: "FAY", city: "Al-Majma'ah", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#0f5eb0", secondary: "#ffffff", reputation: 2, strength: 69, academy: 2 },
+  { id: "al-riyadh", name: "Al-Riyadh Saudi Club", shortName: "Al-Riyadh", abbr: "RIY", city: "Riade", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#ffffff", secondary: "#1a3d8f", reputation: 2, strength: 68, academy: 2 },
+  { id: "al-wehda", name: "Al-Wehda Football Club", shortName: "Al-Wehda", abbr: "WEH", city: "Meca", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#d81e2e", secondary: "#ffffff", reputation: 2, strength: 67, academy: 2 },
+  { id: "damac", name: "Damac Football Club", shortName: "Damac", abbr: "DAM", city: "Khamis Mushait", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#0a6b3c", secondary: "#ffffff", reputation: 2, strength: 67, academy: 2 },
+  { id: "al-okhdood", name: "Al-Okhdood Club", shortName: "Al-Okhdood", abbr: "OKH", city: "Najran", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#7a1f2b", secondary: "#ffffff", reputation: 1, strength: 64, academy: 2 },
+  { id: "al-kholood", name: "Al-Kholood Club", shortName: "Al-Kholood", abbr: "KHO", city: "Ar Rass", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#1c8a5a", secondary: "#ffffff", reputation: 1, strength: 63, academy: 1 },
+  { id: "al-najma", name: "Al-Najma Club", shortName: "Al-Najma", abbr: "NAJ", city: "Unaizah", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#0f4d92", secondary: "#ffffff", reputation: 1, strength: 62, academy: 1 },
+  { id: "al-hazem", name: "Al-Hazem Club", shortName: "Al-Hazem", abbr: "HAZ", city: "Ar Rass", countryId: "arabia-saudita", leagueId: "saudi-pro-league", primary: "#b31b25", secondary: "#ffffff", reputation: 1, strength: 61, academy: 1 },
+];
+
+// J1 League. Liga equilibrada de propósito: a diferença entre o primeiro e o
+// último é bem menor que na Arábia.
+const JAPAN_CLUBS: Club[] = [
+  { id: "vissel-kobe", name: "Vissel Kobe", shortName: "Vissel Kobe", abbr: "KOB", city: "Kobe", countryId: "japao", leagueId: "j1-league", primary: "#a4262c", secondary: "#ffffff", reputation: 4, strength: 78, academy: 4 },
+  { id: "sanfrecce-hiroshima", name: "Sanfrecce Hiroshima", shortName: "Sanfrecce", abbr: "HIR", city: "Hiroshima", countryId: "japao", leagueId: "j1-league", primary: "#4b2e83", secondary: "#ffffff", reputation: 4, strength: 78, academy: 4 },
+  { id: "kashima-antlers", name: "Kashima Antlers", shortName: "Kashima", abbr: "KAS", city: "Kashima", countryId: "japao", leagueId: "j1-league", primary: "#a2231d", secondary: "#ffffff", reputation: 4, strength: 77, academy: 5 },
+  { id: "kawasaki-frontale", name: "Kawasaki Frontale", shortName: "Kawasaki", abbr: "KAW", city: "Kawasaki", countryId: "japao", leagueId: "j1-league", primary: "#00a0e9", secondary: "#111111", reputation: 4, strength: 76, academy: 4 },
+  { id: "yokohama-marinos", name: "Yokohama F. Marinos", shortName: "Yokohama FM", abbr: "YFM", city: "Yokohama", countryId: "japao", leagueId: "j1-league", primary: "#0033a0", secondary: "#d50032", reputation: 4, strength: 76, academy: 4 },
+  { id: "urawa-reds", name: "Urawa Red Diamonds", shortName: "Urawa Reds", abbr: "URA", city: "Saitama", countryId: "japao", leagueId: "j1-league", primary: "#e60012", secondary: "#111111", reputation: 4, strength: 76, academy: 4 },
+  { id: "gamba-osaka", name: "Gamba Osaka", shortName: "Gamba", abbr: "GAM", city: "Osaka", countryId: "japao", leagueId: "j1-league", primary: "#003da5", secondary: "#111111", reputation: 3, strength: 74, academy: 5 },
+  { id: "cerezo-osaka", name: "Cerezo Osaka", shortName: "Cerezo", abbr: "CER", city: "Osaka", countryId: "japao", leagueId: "j1-league", primary: "#e5007f", secondary: "#111111", reputation: 3, strength: 74, academy: 5 },
+  { id: "fc-tokyo", name: "Football Club Tokyo", shortName: "FC Tokyo", abbr: "TOK", city: "Tóquio", countryId: "japao", leagueId: "j1-league", primary: "#002b7f", secondary: "#d7141a", reputation: 3, strength: 73, academy: 4 },
+  { id: "nagoya-grampus", name: "Nagoya Grampus", shortName: "Nagoya", abbr: "NAG", city: "Nagoia", countryId: "japao", leagueId: "j1-league", primary: "#e8380d", secondary: "#ffffff", reputation: 3, strength: 72, academy: 3 },
+  { id: "machida-zelvia", name: "FC Machida Zelvia", shortName: "Machida", abbr: "MAC", city: "Machida", countryId: "japao", leagueId: "j1-league", primary: "#0072bc", secondary: "#111111", reputation: 3, strength: 72, academy: 3 },
+  { id: "kyoto-sanga", name: "Kyoto Sanga FC", shortName: "Kyoto Sanga", abbr: "KYO", city: "Quioto", countryId: "japao", leagueId: "j1-league", primary: "#4b2e83", secondary: "#f5c400", reputation: 3, strength: 71, academy: 3 },
+  { id: "kashiwa-reysol", name: "Kashiwa Reysol", shortName: "Kashiwa", abbr: "KSW", city: "Kashiwa", countryId: "japao", leagueId: "j1-league", primary: "#f5c400", secondary: "#111111", reputation: 3, strength: 70, academy: 4 },
+  { id: "avispa-fukuoka", name: "Avispa Fukuoka", shortName: "Avispa", abbr: "AVI", city: "Fukuoka", countryId: "japao", leagueId: "j1-league", primary: "#003da5", secondary: "#f5c400", reputation: 2, strength: 70, academy: 3 },
+  { id: "fagiano-okayama", name: "Fagiano Okayama", shortName: "Fagiano", abbr: "FAG", city: "Okayama", countryId: "japao", leagueId: "j1-league", primary: "#9b1b30", secondary: "#ffffff", reputation: 2, strength: 69, academy: 3 },
+  { id: "mito-hollyhock", name: "Mito HollyHock", shortName: "Mito", abbr: "MIT", city: "Mito", countryId: "japao", leagueId: "j1-league", primary: "#005bac", secondary: "#ffffff", reputation: 1, strength: 68, academy: 3 },
+  { id: "v-varen-nagasaki", name: "V-Varen Nagasaki", shortName: "V-Varen", abbr: "VVN", city: "Nagasaki", countryId: "japao", leagueId: "j1-league", primary: "#005bab", secondary: "#f58220", reputation: 2, strength: 68, academy: 3 },
+  { id: "jef-united-chiba", name: "JEF United Chiba", shortName: "JEF United", abbr: "JEF", city: "Chiba", countryId: "japao", leagueId: "j1-league", primary: "#ffe500", secondary: "#009844", reputation: 2, strength: 68, academy: 4 },
+  { id: "tokyo-verdy", name: "Tokyo Verdy", shortName: "Tokyo Verdy", abbr: "VER", city: "Tóquio", countryId: "japao", leagueId: "j1-league", primary: "#00a651", secondary: "#ffffff", reputation: 2, strength: 68, academy: 4 },
+  { id: "shimizu-s-pulse", name: "Shimizu S-Pulse", shortName: "Shimizu", abbr: "SHI", city: "Shizuoka", countryId: "japao", leagueId: "j1-league", primary: "#f5820b", secondary: "#111111", reputation: 2, strength: 68, academy: 3 },
+];
+
+// K League 1: doze clubes, calendário curto e disputa apertada no topo.
+const KOREA_CLUBS: Club[] = [
+  { id: "ulsan-hd", name: "Ulsan Hyundai Development", shortName: "Ulsan HD", abbr: "ULS", city: "Ulsan", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#0033a0", secondary: "#f5c400", reputation: 4, strength: 77, academy: 4 },
+  { id: "jeonbuk-motors", name: "Jeonbuk Hyundai Motors", shortName: "Jeonbuk", abbr: "JEO", city: "Jeonju", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#00693e", secondary: "#ffffff", reputation: 4, strength: 76, academy: 4 },
+  { id: "pohang-steelers", name: "Pohang Steelers", shortName: "Pohang", abbr: "POH", city: "Pohang", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#a2231d", secondary: "#111111", reputation: 3, strength: 74, academy: 4 },
+  { id: "fc-seoul", name: "Football Club Seoul", shortName: "FC Seoul", abbr: "SEO", city: "Seul", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#d7141a", secondary: "#111111", reputation: 3, strength: 73, academy: 4 },
+  { id: "gangwon-fc", name: "Gangwon Football Club", shortName: "Gangwon", abbr: "GAN", city: "Chuncheon", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#f5820b", secondary: "#111111", reputation: 3, strength: 72, academy: 3 },
+  { id: "gimcheon-sangmu", name: "Gimcheon Sangmu FC", shortName: "Gimcheon", abbr: "GIM", city: "Gimcheon", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#d7141a", secondary: "#ffffff", reputation: 2, strength: 71, academy: 2 },
+  { id: "gwangju-fc", name: "Gwangju Football Club", shortName: "Gwangju", abbr: "GWA", city: "Gwangju", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#f5c400", secondary: "#111111", reputation: 2, strength: 70, academy: 3 },
+  { id: "daejeon-hana", name: "Daejeon Hana Citizen", shortName: "Daejeon", abbr: "DAE", city: "Daejeon", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#6b2c91", secondary: "#ffffff", reputation: 2, strength: 70, academy: 3 },
+  { id: "suwon-fc", name: "Suwon Football Club", shortName: "Suwon FC", abbr: "SUW", city: "Suwon", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#0072bc", secondary: "#ffffff", reputation: 2, strength: 69, academy: 3 },
+  { id: "jeju-sk", name: "Jeju SK Football Club", shortName: "Jeju SK", abbr: "JEJ", city: "Jeju", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#f5820b", secondary: "#111111", reputation: 2, strength: 69, academy: 3 },
+  { id: "daegu-fc", name: "Daegu Football Club", shortName: "Daegu", abbr: "DAG", city: "Daegu", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#0f4d92", secondary: "#87ceeb", reputation: 2, strength: 68, academy: 3 },
+  { id: "fc-anyang", name: "Football Club Anyang", shortName: "Anyang", abbr: "ANY", city: "Anyang", countryId: "coreia-do-sul", leagueId: "k-league", primary: "#6d2077", secondary: "#ffffff", reputation: 1, strength: 66, academy: 2 },
+];
+
+// Chinese Super League. Depois da bolha, uma liga de força média.
+const CHINA_CLUBS: Club[] = [
+  { id: "shanghai-port", name: "Shanghai Port Football Club", shortName: "Shanghai Port", abbr: "SHP", city: "Xangai", countryId: "china", leagueId: "csl", primary: "#d7141a", secondary: "#111111", reputation: 3, strength: 75, academy: 3 },
+  { id: "shanghai-shenhua", name: "Shanghai Shenhua Football Club", shortName: "Shenhua", abbr: "SHS", city: "Xangai", countryId: "china", leagueId: "csl", primary: "#0033a0", secondary: "#ffffff", reputation: 3, strength: 73, academy: 3 },
+  { id: "shandong-taishan", name: "Shandong Taishan Football Club", shortName: "Shandong", abbr: "SHA", city: "Jinan", countryId: "china", leagueId: "csl", primary: "#f5820b", secondary: "#111111", reputation: 3, strength: 73, academy: 3 },
+  { id: "beijing-guoan", name: "Beijing Guoan Football Club", shortName: "Beijing Guoan", abbr: "BEI", city: "Pequim", countryId: "china", leagueId: "csl", primary: "#00693e", secondary: "#ffffff", reputation: 3, strength: 72, academy: 3 },
+  { id: "chengdu-rongcheng", name: "Chengdu Rongcheng Football Club", shortName: "Chengdu", abbr: "CHE", city: "Chengdu", countryId: "china", leagueId: "csl", primary: "#f5c400", secondary: "#111111", reputation: 2, strength: 72, academy: 2 },
+  { id: "zhejiang-fc", name: "Zhejiang Professional Football Club", shortName: "Zhejiang", abbr: "ZHE", city: "Hangzhou", countryId: "china", leagueId: "csl", primary: "#0072bc", secondary: "#ffffff", reputation: 2, strength: 70, academy: 3 },
+  { id: "tianjin-tiger", name: "Tianjin Jinmen Tiger", shortName: "Tianjin", abbr: "TIA", city: "Tianjin", countryId: "china", leagueId: "csl", primary: "#0f4d92", secondary: "#ffffff", reputation: 2, strength: 68, academy: 2 },
+  { id: "wuhan-three-towns", name: "Wuhan Three Towns Football Club", shortName: "Wuhan", abbr: "WUH", city: "Wuhan", countryId: "china", leagueId: "csl", primary: "#d7141a", secondary: "#f5c400", reputation: 2, strength: 68, academy: 2 },
+  { id: "henan-fc", name: "Henan Football Club", shortName: "Henan", abbr: "HEN", city: "Zhengzhou", countryId: "china", leagueId: "csl", primary: "#d7141a", secondary: "#ffffff", reputation: 2, strength: 66, academy: 2 },
+  { id: "qingdao-hainiu", name: "Qingdao Hainiu Football Club", shortName: "Qingdao Hainiu", abbr: "QIH", city: "Qingdao", countryId: "china", leagueId: "csl", primary: "#0072bc", secondary: "#111111", reputation: 2, strength: 66, academy: 2 },
+  { id: "meizhou-hakka", name: "Meizhou Hakka Football Club", shortName: "Meizhou", abbr: "MEI", city: "Meizhou", countryId: "china", leagueId: "csl", primary: "#00693e", secondary: "#f5c400", reputation: 1, strength: 65, academy: 2 },
+  { id: "changchun-yatai", name: "Changchun Yatai Football Club", shortName: "Changchun", abbr: "CHA", city: "Changchun", countryId: "china", leagueId: "csl", primary: "#d7141a", secondary: "#ffffff", reputation: 1, strength: 65, academy: 2 },
+  { id: "dalian-yingbo", name: "Dalian Yingbo Football Club", shortName: "Dalian", abbr: "DAL", city: "Dalian", countryId: "china", leagueId: "csl", primary: "#0033a0", secondary: "#ffffff", reputation: 1, strength: 64, academy: 3 },
+  { id: "shenzhen-peng-city", name: "Shenzhen Peng City Football Club", shortName: "Peng City", abbr: "SZP", city: "Shenzhen", countryId: "china", leagueId: "csl", primary: "#0f4d92", secondary: "#f5820b", reputation: 1, strength: 64, academy: 2 },
+  { id: "yunnan-yukun", name: "Yunnan Yukun Football Club", shortName: "Yunnan", abbr: "YUN", city: "Kunming", countryId: "china", leagueId: "csl", primary: "#d7141a", secondary: "#f5c400", reputation: 1, strength: 63, academy: 2 },
+  { id: "qingdao-west-coast", name: "Qingdao West Coast Football Club", shortName: "Qingdao WC", abbr: "QWC", city: "Qingdao", countryId: "china", leagueId: "csl", primary: "#f5820b", secondary: "#111111", reputation: 1, strength: 63, academy: 2 },
+];
+
+// Brasileirão Série B. Reputação limitada a 3 de propósito: clube de segunda
+// divisão não deve começar a carreira com vaga de Libertadores na mão.
+const BRAZIL_B_CLUBS: Club[] = [
+  { id: "sport", name: "Sport Club do Recife", shortName: "Sport", abbr: "SPT", city: "Recife", state: "PE", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#111111", reputation: 3, strength: 71, academy: 4 },
+  { id: "ceara", name: "Ceará Sporting Club", shortName: "Ceará", abbr: "CEA", city: "Fortaleza", state: "CE", countryId: "brasil", leagueId: "brasileirao-b", primary: "#111111", secondary: "#f5f5f5", reputation: 3, strength: 71, academy: 3 },
+  { id: "goias", name: "Goiás Esporte Clube", shortName: "Goiás", abbr: "GOI", city: "Goiânia", state: "GO", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5c400", reputation: 3, strength: 70, academy: 4 },
+  { id: "atletico-go", name: "Atlético Clube Goianiense", shortName: "Atlético-GO", abbr: "ACG", city: "Goiânia", state: "GO", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#111111", reputation: 3, strength: 70, academy: 3 },
+  { id: "cuiaba", name: "Cuiabá Esporte Clube", shortName: "Cuiabá", abbr: "CUI", city: "Cuiabá", state: "MT", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5c400", reputation: 2, strength: 69, academy: 2 },
+  { id: "america-mg", name: "América Futebol Clube", shortName: "América-MG", abbr: "AME", city: "Belo Horizonte", state: "MG", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5f5f5", reputation: 3, strength: 68, academy: 4 },
+  { id: "criciuma", name: "Criciúma Esporte Clube", shortName: "Criciúma", abbr: "CRI", city: "Criciúma", state: "SC", countryId: "brasil", leagueId: "brasileirao-b", primary: "#f5c400", secondary: "#111111", reputation: 2, strength: 68, academy: 3 },
+  { id: "juventude", name: "Esporte Clube Juventude", shortName: "Juventude", abbr: "JUV", city: "Caxias do Sul", state: "RS", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5f5f5", reputation: 2, strength: 68, academy: 3 },
+  { id: "novorizontino", name: "Grêmio Novorizontino", shortName: "Novorizontino", abbr: "NOV", city: "Novo Horizonte", state: "SP", countryId: "brasil", leagueId: "brasileirao-b", primary: "#f5c400", secondary: "#111111", reputation: 2, strength: 68, academy: 2 },
+  { id: "avai", name: "Avaí Futebol Clube", shortName: "Avaí", abbr: "AVA", city: "Florianópolis", state: "SC", countryId: "brasil", leagueId: "brasileirao-b", primary: "#0057a8", secondary: "#f5f5f5", reputation: 2, strength: 67, academy: 3 },
+  { id: "ponte-preta", name: "Associação Atlética Ponte Preta", shortName: "Ponte Preta", abbr: "PON", city: "Campinas", state: "SP", countryId: "brasil", leagueId: "brasileirao-b", primary: "#111111", secondary: "#f5f5f5", reputation: 2, strength: 66, academy: 4 },
+  { id: "crb", name: "Clube de Regatas Brasil", shortName: "CRB", abbr: "CRB", city: "Maceió", state: "AL", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#111111", reputation: 2, strength: 66, academy: 2 },
+  { id: "paysandu", name: "Paysandu Sport Club", shortName: "Paysandu", abbr: "PAY", city: "Belém", state: "PA", countryId: "brasil", leagueId: "brasileirao-b", primary: "#0057a8", secondary: "#f5f5f5", reputation: 2, strength: 65, academy: 2 },
+  { id: "vila-nova", name: "Vila Nova Futebol Clube", shortName: "Vila Nova", abbr: "VIL", city: "Goiânia", state: "GO", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 65, academy: 2 },
+  { id: "botafogo-sp", name: "Botafogo Futebol Clube", shortName: "Botafogo-SP", abbr: "BSP", city: "Ribeirão Preto", state: "SP", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#111111", reputation: 2, strength: 65, academy: 2 },
+  { id: "guarani", name: "Guarani Futebol Clube", shortName: "Guarani", abbr: "GUA", city: "Campinas", state: "SP", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5f5f5", reputation: 2, strength: 64, academy: 3 },
+  { id: "nautico", name: "Clube Náutico Capibaribe", shortName: "Náutico", abbr: "NAU", city: "Recife", state: "PE", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 64, academy: 3 },
+  { id: "operario-pr", name: "Operário Ferroviário Esporte Clube", shortName: "Operário-PR", abbr: "OPE", city: "Ponta Grossa", state: "PR", countryId: "brasil", leagueId: "brasileirao-b", primary: "#111111", secondary: "#f5f5f5", reputation: 1, strength: 64, academy: 2 },
+  { id: "figueirense", name: "Figueirense Futebol Clube", shortName: "Figueirense", abbr: "FIG", city: "Florianópolis", state: "SC", countryId: "brasil", leagueId: "brasileirao-b", primary: "#111111", secondary: "#f5f5f5", reputation: 2, strength: 63, academy: 3 },
+  { id: "amazonas", name: "Amazonas Futebol Clube", shortName: "Amazonas", abbr: "AMA", city: "Manaus", state: "AM", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5c400", reputation: 1, strength: 62, academy: 2 },
+];
+
+// EFL Championship. Segunda divisão inglesa: dinheiro de primeira, vaga
+// continental nenhuma — quem sobe muda de patamar em uma temporada.
+const ENGLAND_B_CLUBS: Club[] = [
+  { id: "leicester", name: "Leicester City Football Club", shortName: "Leicester", abbr: "LEI", city: "Leicester", countryId: "inglaterra", leagueId: "championship", primary: "#0053a0", secondary: "#fdbe11", reputation: 3, strength: 74, academy: 4 },
+  { id: "southampton", name: "Southampton Football Club", shortName: "Southampton", abbr: "SOU", city: "Southampton", countryId: "inglaterra", leagueId: "championship", primary: "#d71920", secondary: "#ffffff", reputation: 3, strength: 72, academy: 5 },
+  { id: "burnley", name: "Burnley Football Club", shortName: "Burnley", abbr: "BUR", city: "Burnley", countryId: "inglaterra", leagueId: "championship", primary: "#6c1d45", secondary: "#97d0e7", reputation: 3, strength: 72, academy: 3 },
+  { id: "sheffield-united", name: "Sheffield United Football Club", shortName: "Sheffield Utd", abbr: "SHU", city: "Sheffield", countryId: "inglaterra", leagueId: "championship", primary: "#ec2227", secondary: "#111111", reputation: 3, strength: 71, academy: 4 },
+  { id: "middlesbrough", name: "Middlesbrough Football Club", shortName: "Middlesbrough", abbr: "MID", city: "Middlesbrough", countryId: "inglaterra", leagueId: "championship", primary: "#d71920", secondary: "#ffffff", reputation: 3, strength: 70, academy: 4 },
+  { id: "west-brom", name: "West Bromwich Albion Football Club", shortName: "West Brom", abbr: "WBA", city: "West Bromwich", countryId: "inglaterra", leagueId: "championship", primary: "#122f67", secondary: "#ffffff", reputation: 3, strength: 70, academy: 4 },
+  { id: "norwich", name: "Norwich City Football Club", shortName: "Norwich", abbr: "NOR", city: "Norwich", countryId: "inglaterra", leagueId: "championship", primary: "#fff200", secondary: "#00a650", reputation: 3, strength: 69, academy: 4 },
+  { id: "watford", name: "Watford Football Club", shortName: "Watford", abbr: "WAT", city: "Watford", countryId: "inglaterra", leagueId: "championship", primary: "#fbee23", secondary: "#ed2127", reputation: 2, strength: 69, academy: 4 },
+  { id: "stoke", name: "Stoke City Football Club", shortName: "Stoke", abbr: "STO", city: "Stoke-on-Trent", countryId: "inglaterra", leagueId: "championship", primary: "#e03a3e", secondary: "#ffffff", reputation: 2, strength: 68, academy: 3 },
+  { id: "bristol-city", name: "Bristol City Football Club", shortName: "Bristol City", abbr: "BRC", city: "Bristol", countryId: "inglaterra", leagueId: "championship", primary: "#e21c38", secondary: "#ffffff", reputation: 2, strength: 68, academy: 3 },
+  { id: "millwall", name: "Millwall Football Club", shortName: "Millwall", abbr: "MIL", city: "Londres", countryId: "inglaterra", leagueId: "championship", primary: "#001d5c", secondary: "#ffffff", reputation: 2, strength: 67, academy: 3 },
+  { id: "swansea", name: "Swansea City Association Football Club", shortName: "Swansea", abbr: "SWA", city: "Swansea", countryId: "inglaterra", leagueId: "championship", primary: "#ffffff", secondary: "#111111", reputation: 2, strength: 66, academy: 4 },
+  { id: "blackburn", name: "Blackburn Rovers Football Club", shortName: "Blackburn", abbr: "BLB", city: "Blackburn", countryId: "inglaterra", leagueId: "championship", primary: "#009ee0", secondary: "#ffffff", reputation: 2, strength: 66, academy: 4 },
+  { id: "derby-county", name: "Derby County Football Club", shortName: "Derby", abbr: "DER", city: "Derby", countryId: "inglaterra", leagueId: "championship", primary: "#ffffff", secondary: "#111111", reputation: 2, strength: 66, academy: 3 },
+  { id: "sheffield-wednesday", name: "Sheffield Wednesday Football Club", shortName: "Sheffield Wed", abbr: "SHW", city: "Sheffield", countryId: "inglaterra", leagueId: "championship", primary: "#0f4d92", secondary: "#ffffff", reputation: 2, strength: 66, academy: 3 },
+  { id: "qpr", name: "Queens Park Rangers Football Club", shortName: "QPR", abbr: "QPR", city: "Londres", countryId: "inglaterra", leagueId: "championship", primary: "#1d5ba4", secondary: "#ffffff", reputation: 2, strength: 65, academy: 3 },
+  { id: "preston", name: "Preston North End Football Club", shortName: "Preston", abbr: "PRE", city: "Preston", countryId: "inglaterra", leagueId: "championship", primary: "#ffffff", secondary: "#0a4595", reputation: 2, strength: 65, academy: 3 },
+  { id: "cardiff", name: "Cardiff City Football Club", shortName: "Cardiff", abbr: "CAR", city: "Cardiff", countryId: "inglaterra", leagueId: "championship", primary: "#0070b5", secondary: "#ffffff", reputation: 2, strength: 65, academy: 3 },
+  { id: "birmingham", name: "Birmingham City Football Club", shortName: "Birmingham", abbr: "BIR", city: "Birmingham", countryId: "inglaterra", leagueId: "championship", primary: "#003399", secondary: "#ffffff", reputation: 2, strength: 68, academy: 4 },
+  { id: "wrexham", name: "Wrexham Association Football Club", shortName: "Wrexham", abbr: "WRE", city: "Wrexham", countryId: "inglaterra", leagueId: "championship", primary: "#d71920", secondary: "#ffffff", reputation: 2, strength: 67, academy: 3 },
+  { id: "charlton", name: "Charlton Athletic Football Club", shortName: "Charlton", abbr: "CHA", city: "Londres", countryId: "inglaterra", leagueId: "championship", primary: "#d71920", secondary: "#ffffff", reputation: 2, strength: 65, academy: 4 },
+  { id: "oxford-united", name: "Oxford United Football Club", shortName: "Oxford United", abbr: "OXF", city: "Oxford", countryId: "inglaterra", leagueId: "championship", primary: "#f8dc3d", secondary: "#0b1f3a", reputation: 2, strength: 64, academy: 3 },
+  { id: "portsmouth", name: "Portsmouth Football Club", shortName: "Portsmouth", abbr: "POR", city: "Portsmouth", countryId: "inglaterra", leagueId: "championship", primary: "#001489", secondary: "#ffffff", reputation: 2, strength: 64, academy: 3 },
+  { id: "luton", name: "Luton Town Football Club", shortName: "Luton", abbr: "LUT", city: "Luton", countryId: "inglaterra", leagueId: "championship", primary: "#f78f1e", secondary: "#002d5b", reputation: 1, strength: 63, academy: 3 },
+];
+
 export const CLUBS: Club[] = [
   ...BRAZIL_CLUBS,
+  ...BRAZIL_B_CLUBS,
+  ...ENGLAND_B_CLUBS,
+  ...SAUDI_CLUBS,
+  ...JAPAN_CLUBS,
+  ...KOREA_CLUBS,
+  ...CHINA_CLUBS,
   ...EUROPE_CLUBS,
   ...ARGENTINA_CLUBS,
   ...URUGUAY_CLUBS,

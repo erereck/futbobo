@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-25T21:53:12.963Z",
+  "generatedAt": "2026-07-26T03:57:53.545Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -1789,6 +1789,532 @@
       "providerId": "141840",
       "providerName": "Yverdon Sport",
       "source": "https://r2.thesportsdb.com/images/media/team/badge/mgacsr1624714631.png"
+    },
+    "al-hilal": {
+      "providerId": "136013",
+      "providerName": "Al-Hilal",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/w0b80d1661656916.png"
+    },
+    "al-ittihad": {
+      "providerId": "136018",
+      "providerName": "Al-Ittihad",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/8n1t1j1755192418.png"
+    },
+    "al-ahli-jeddah": {
+      "providerId": "137721",
+      "providerName": "Al-Ahli",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1bbtgb1755192301.png"
+    },
+    "al-ettifaq": {
+      "providerId": "136017",
+      "providerName": "Al-Ettifaq",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/m272h51694761970.png"
+    },
+    "al-fateh": {
+      "providerId": "136011",
+      "providerName": "Al-Fateh",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/a5cjf41662659789.png"
+    },
+    "al-khaleej": {
+      "providerId": "139080",
+      "providerName": "Al-Khaleej",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mvf6ga1755192630.png"
+    },
+    "al-fayha": {
+      "providerId": "136014",
+      "providerName": "Al-Fayha",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/jl3spp1677530565.png"
+    },
+    "al-kholood": {
+      "providerId": "149112",
+      "providerName": "Al-Kholood",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vv44v01755192851.png"
+    },
+    "al-najma": {
+      "providerId": "150638",
+      "providerName": "Al-Najma Unaizah",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/o65fn01737686968.png"
+    },
+    "al-hazem": {
+      "providerId": "136200",
+      "providerName": "Al-Hazem",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/3uy27p1635871755.png"
+    },
+    "kashima-antlers": {
+      "providerId": "137707",
+      "providerName": "Kashima Antlers",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2s8ady1578238881.png"
+    },
+    "kawasaki-frontale": {
+      "providerId": "137709",
+      "providerName": "Kawasaki Frontale",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/c6pot51578239112.png"
+    },
+    "gamba-osaka": {
+      "providerId": "137705",
+      "providerName": "Gamba Osaka",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tq9edk1638813311.png"
+    },
+    "cerezo-osaka": {
+      "providerId": "137703",
+      "providerName": "Cerezo Osaka",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/a7oyde1706245108.png"
+    },
+    "fc-tokyo": {
+      "providerId": "137704",
+      "providerName": "FC Tokyo",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9ls6lr1698754779.png"
+    },
+    "kyoto-sanga": {
+      "providerId": "139888",
+      "providerName": "Kyoto Sanga",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/5akmlf1590070888.png"
+    },
+    "kashiwa-reysol": {
+      "providerId": "137708",
+      "providerName": "Kashiwa Reysol",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mwnejb1578238986.png"
+    },
+    "avispa-fukuoka": {
+      "providerId": "139882",
+      "providerName": "Avispa Fukuoka",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/g14m751590070801.png"
+    },
+    "fagiano-okayama": {
+      "providerId": "139884",
+      "providerName": "Fagiano Okayama",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ts5p221590070816.png"
+    },
+    "jef-united-chiba": {
+      "providerId": "139886",
+      "providerName": "JEF United Chiba",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/no15iq1590070851.png"
+    },
+    "jeonbuk-motors": {
+      "providerId": "138111",
+      "providerName": "Jeonbuk Hyundai Motors",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/8jif3b1747853225.png"
+    },
+    "fc-seoul": {
+      "providerId": "138115",
+      "providerName": "FC Seoul",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/31z1zf1579473186.png"
+    },
+    "gangwon-fc": {
+      "providerId": "138108",
+      "providerName": "Gangwon FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/c4igx71579729617.png"
+    },
+    "gimcheon-sangmu": {
+      "providerId": "138113",
+      "providerName": "Gimcheon Sangmu",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/g4cjyk1609536787.png"
+    },
+    "gwangju-fc": {
+      "providerId": "138109",
+      "providerName": "Gwangju FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uuzr4x1579473084.png"
+    },
+    "daejeon-hana": {
+      "providerId": "139785",
+      "providerName": "Daejeon Hana Citizen",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/o9z6eq1589558557.png"
+    },
+    "jeju-sk": {
+      "providerId": "139078",
+      "providerName": "Jeju SK",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/hna7ae1736207131.png"
+    },
+    "fc-anyang": {
+      "providerId": "139786",
+      "providerName": "FC Anyang",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0tens91589557588.png"
+    },
+    "shanghai-port": {
+      "providerId": "134640",
+      "providerName": "Shanghai Port",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/d9evs91776534441.png"
+    },
+    "shandong-taishan": {
+      "providerId": "134648",
+      "providerName": "Shandong Taishan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vheyu21654266995.png"
+    },
+    "beijing-guoan": {
+      "providerId": "134635",
+      "providerName": "Beijing Guoan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/cdkguq1652626854.png"
+    },
+    "chengdu-rongcheng": {
+      "providerId": "139748",
+      "providerName": "Chengdu Rongcheng",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/r20v6x1713897058.png"
+    },
+    "henan-fc": {
+      "providerId": "134637",
+      "providerName": "Henan FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mc9rzf1699122167.png"
+    },
+    "qingdao-hainiu": {
+      "providerId": "145000",
+      "providerName": "Qingdao Hainiu",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qzq6nw1654864098.png"
+    },
+    "dalian-yingbo": {
+      "providerId": "149341",
+      "providerName": "Dalian Yingbo",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/isc1241738389501.png"
+    },
+    "qingdao-west-coast": {
+      "providerId": "145001",
+      "providerName": "Qingdao West Coast",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/6gnvpg1680389414.png"
+    },
+    "ceara": {
+      "providerId": "134744",
+      "providerName": "Ceará",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rxxvyp1464886685.png"
+    },
+    "atletico-go": {
+      "providerId": "134737",
+      "providerName": "Atlético Goianiense",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/l7382k1766505911.png"
+    },
+    "cuiaba": {
+      "providerId": "136831",
+      "providerName": "Cuiabá",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ykbxfa1766506334.png"
+    },
+    "america-mg": {
+      "providerId": "134742",
+      "providerName": "América Mineiro",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rtpp171752177342.png"
+    },
+    "criciuma": {
+      "providerId": "134292",
+      "providerName": "Criciúma",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/r11mld1766506200.png"
+    },
+    "avai": {
+      "providerId": "134738",
+      "providerName": "Avaí",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/bblkat1766506007.png"
+    },
+    "crb": {
+      "providerId": "135680",
+      "providerName": "CRB",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vpypuq1472069179.png"
+    },
+    "botafogo-sp": {
+      "providerId": "136830",
+      "providerName": "Botafogo-SP",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/kg3xsd1701366652.png"
+    },
+    "burnley": {
+      "providerId": "133623",
+      "providerName": "Burnley",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ql7nl31686893820.png"
+    },
+    "middlesbrough": {
+      "providerId": "133628",
+      "providerName": "Middlesbrough",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/advjg71780068902.png"
+    },
+    "bristol-city": {
+      "providerId": "133621",
+      "providerName": "Bristol City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0ejxwz1601721013.png"
+    },
+    "blackburn": {
+      "providerId": "133598",
+      "providerName": "Blackburn Rovers",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rvryut1448810814.png"
+    },
+    "derby-county": {
+      "providerId": "133627",
+      "providerName": "Derby County",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/jioo4z1557155744.png"
+    },
+    "cardiff": {
+      "providerId": "133637",
+      "providerName": "Cardiff City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xtytpt1448808285.png"
+    },
+    "birmingham": {
+      "providerId": "133597",
+      "providerName": "Birmingham City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wufs551672950865.png"
+    },
+    "charlton": {
+      "providerId": "133851",
+      "providerName": "Charlton Athletic",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/o08wvi1635872307.png"
+    },
+    "al-nassr": {
+      "providerId": "136022",
+      "providerName": "Al-Nassr",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/84yvqi1748524565.png"
+    },
+    "al-qadsiah": {
+      "providerId": "136015",
+      "providerName": "Al-Qadsiah",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ok63wb1719134839.png"
+    },
+    "al-taawoun": {
+      "providerId": "136012",
+      "providerName": "Al-Taawoun",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rlsmp91646835052.png"
+    },
+    "al-wehda": {
+      "providerId": "136199",
+      "providerName": "Al-Wehda",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/j4nvuy1677530944.png"
+    },
+    "damac": {
+      "providerId": "137852",
+      "providerName": "Damac",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/z2l4w31677530963.png"
+    },
+    "al-okhdood": {
+      "providerId": "147444",
+      "providerName": "Al-Okhdood",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ub1l7h1755193155.png"
+    },
+    "vissel-kobe": {
+      "providerId": "137717",
+      "providerName": "Vissel Kobe",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2axjch1578239819.png"
+    },
+    "sanfrecce-hiroshima": {
+      "providerId": "137713",
+      "providerName": "Sanfrecce Hiroshima",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gsgkxj1590068965.png"
+    },
+    "nagoya-grampus": {
+      "providerId": "137710",
+      "providerName": "Nagoya Grampus",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/a1ucr01706244426.png"
+    },
+    "machida-zelvia": {
+      "providerId": "139889",
+      "providerName": "Machida Zelvia",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/99zl6k1590070905.png"
+    },
+    "mito-hollyhock": {
+      "providerId": "139891",
+      "providerName": "Mito HollyHock",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/i3km591590070924.png"
+    },
+    "v-varen-nagasaki": {
+      "providerId": "139899",
+      "providerName": "V-Varen Nagasaki",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/m2heet1734627248.png"
+    },
+    "shimizu-s-pulse": {
+      "providerId": "137714",
+      "providerName": "Shimizu S-Pulse",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/u60mus1590068872.png"
+    },
+    "ulsan-hd": {
+      "providerId": "138117",
+      "providerName": "Ulsan HD",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0wooic1706533767.png"
+    },
+    "pohang-steelers": {
+      "providerId": "138112",
+      "providerName": "Pohang Steelers",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/63jst01769097748.png"
+    },
+    "suwon-fc": {
+      "providerId": "139789",
+      "providerName": "Suwon FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/x39pm41589559443.png"
+    },
+    "daegu-fc": {
+      "providerId": "138107",
+      "providerName": "Daegu FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xzjzn11579473073.png"
+    },
+    "shanghai-shenhua": {
+      "providerId": "134644",
+      "providerName": "Shanghai Shenhua",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/p0r1bj1654266974.png"
+    },
+    "tianjin-tiger": {
+      "providerId": "136835",
+      "providerName": "Tianjin Tianhai",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ar4tzs1563637134.png"
+    },
+    "wuhan-three-towns": {
+      "providerId": "150200",
+      "providerName": "Wuhan Xiaoma",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/3d1qqv1734156224.png"
+    },
+    "meizhou-hakka": {
+      "providerId": "139000",
+      "providerName": "Meizhou Hakka",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ae8zf61580929311.png"
+    },
+    "changchun-yatai": {
+      "providerId": "150187",
+      "providerName": "Changchun Xidu",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7fyg2b1734150179.png"
+    },
+    "shenzhen-peng-city": {
+      "providerId": "141326",
+      "providerName": "Shenzhen Peng City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/jsv5901716654183.png"
+    },
+    "yunnan-yukun": {
+      "providerId": "149342",
+      "providerName": "Yunnan Yukun",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/bze3ex1738388987.png"
+    },
+    "juventude": {
+      "providerId": "135887",
+      "providerName": "Juventude",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1ntter1766506778.png"
+    },
+    "novorizontino": {
+      "providerId": "141182",
+      "providerName": "Novorizontino",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2qwxw51617198963.png"
+    },
+    "ponte-preta": {
+      "providerId": "134290",
+      "providerName": "Ponte Preta",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wbss4d1644929547.png"
+    },
+    "paysandu": {
+      "providerId": "135671",
+      "providerName": "Paysandu",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9rrdrn1740851540.png"
+    },
+    "vila-nova": {
+      "providerId": "134734",
+      "providerName": "Vila Nova",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/nwd4ns1740851638.png"
+    },
+    "guarani": {
+      "providerId": "135886",
+      "providerName": "Guarani",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tpipb21766508536.png"
+    },
+    "nautico": {
+      "providerId": "134289",
+      "providerName": "Náutico",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wywuwv1464886832.png"
+    },
+    "figueirense": {
+      "providerId": "134462",
+      "providerName": "Figueirense",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yvvyps1473538067.png"
+    },
+    "amazonas": {
+      "providerId": "145394",
+      "providerName": "Amazonas",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/owccd41754110658.png"
+    },
+    "southampton": {
+      "providerId": "134778",
+      "providerName": "Southampton",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ggqtd01621593274.png"
+    },
+    "sheffield-united": {
+      "providerId": "133811",
+      "providerName": "Sheffield United",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/w7f8pj1672950689.png"
+    },
+    "watford": {
+      "providerId": "133624",
+      "providerName": "Watford",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rsuswy1448813519.png"
+    },
+    "stoke": {
+      "providerId": "133609",
+      "providerName": "Stoke City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/lz89v21781718914.png"
+    },
+    "millwall": {
+      "providerId": "133634",
+      "providerName": "Millwall",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/5p1z5k1537208888.png"
+    },
+    "sheffield-wednesday": {
+      "providerId": "133837",
+      "providerName": "Sheffield Wednesday",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/m3km7p1781284189.png"
+    },
+    "qpr": {
+      "providerId": "133605",
+      "providerName": "Queens Park Rangers",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/l4qscx1601721022.png"
+    },
+    "oxford-united": {
+      "providerId": "134361",
+      "providerName": "Oxford United",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/hgpm6u1781718489.png"
+    },
+    "portsmouth": {
+      "providerId": "133629",
+      "providerName": "Portsmouth",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/j13pfe1601726274.png"
+    },
+    "luton": {
+      "providerId": "133888",
+      "providerName": "Luton Town",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/v977eh1681319466.png"
+    },
+    "urawa-reds": {
+      "providerId": "137716",
+      "providerName": "Urawa Red Diamonds",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ce3lhk1578239741.png"
+    },
+    "sport": {
+      "providerId": "136250",
+      "providerName": "Sport Recife",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tyrbls1545421563.png"
+    },
+    "operario-pr": {
+      "providerId": "136829",
+      "providerName": "Operário Ferroviário",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/fhrc6i1560791704.png"
+    },
+    "leicester": {
+      "providerId": "133626",
+      "providerName": "Leicester City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xtxwtu1448813356.png"
+    },
+    "west-brom": {
+      "providerId": "133611",
+      "providerName": "West Bromwich Albion",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rsvuxw1448813527.png"
+    },
+    "norwich": {
+      "providerId": "133608",
+      "providerName": "Norwich City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/pabczm1679951464.png"
+    },
+    "preston": {
+      "providerId": "133809",
+      "providerName": "Preston North End",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wqtwvw1448811512.png"
+    },
+    "al-shabab-riyadh": {
+      "providerName": "Al-Shabab Football Club",
+      "externalSource": "https://assets.football-logos.cc/logos/saudi-arabia/1500x1500/al-shabab.787733e5.png"
+    },
+    "zhejiang-fc": {
+      "providerName": "Zhejiang Professional Football Club",
+      "externalSource": "https://assets.football-logos.cc/logos/china/1500x1500/zhejiang-professional.dc402788.png"
+    },
+    "swansea": {
+      "providerName": "Swansea City Association Football Club",
+      "externalSource": "https://assets.football-logos.cc/logos/england/1500x1500/swansea-city.fff229fe.png"
+    },
+    "wrexham": {
+      "providerName": "Wrexham Association Football Club",
+      "externalSource": "https://assets.football-logos.cc/logos/england/1500x1500/wrexham.eaf0e9de.png"
     }
   },
   "flags": {
@@ -2043,6 +2569,10 @@
     "nova-zelandia": {
       "code": "nz",
       "source": "https://flagcdn.com/w160/nz.png"
+    },
+    "china": {
+      "code": "cn",
+      "source": "https://flagcdn.com/w160/cn.png"
     }
   },
   "competitions": {
@@ -2303,6 +2833,75 @@
     "supercup:superlig": {
       "providerName": "Turkcell Super Kupa 2025",
       "source": "https://upload.wikimedia.org/wikipedia/commons/2/2c/Turkcell-super-kupa-2025-koyu.jpg"
+    },
+    "league:saudi-pro-league": {
+      "providerId": "4668",
+      "providerName": "Saudi-Arabian Pro League",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/w67i621701772123.png"
+    },
+    "league:j1-league": {
+      "providerId": "4633",
+      "providerName": "Japanese J1 League",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/3j8bni1675170553.png"
+    },
+    "league:k-league": {
+      "providerId": "4689",
+      "providerName": "South Korean K League 1",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/zaw2cj1628430843.png"
+    },
+    "league:csl": {
+      "providerId": "4359",
+      "providerName": "Chinese Super League",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/3s59ux1760652414.png"
+    },
+    "league:brasileirao-b": {
+      "providerId": "4404",
+      "providerName": "Brazilian Serie B",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/iiz0gf1778446845.png"
+    },
+    "league:championship": {
+      "providerId": "4329",
+      "providerName": "English League Championship",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/ty5a681688770169.png"
+    },
+    "cup:saudi-pro-league": {
+      "providerId": "5649",
+      "providerName": "Saudi King Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/bej7om1754244351.png"
+    },
+    "cup:j1-league": {
+      "providerId": "5637",
+      "providerName": "Japan Emperors Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/nd13o11750442580.png"
+    },
+    "cup:k-league": {
+      "providerId": "5635",
+      "providerName": "Korea Cup",
+      "source": "https://www.thesportsdb.com/images/media/league/badge/lu5cbf1782691118.png"
+    },
+    "cup:csl": {
+      "providerId": "5525",
+      "providerName": "China FA Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/l6dld71734102300.png"
+    },
+    "cup:brasileirao-b": {
+      "providerId": "4725",
+      "providerName": "Copa do Brasil",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/h38dax1582151151.png"
+    },
+    "cup:championship": {
+      "providerId": "4482",
+      "providerName": "FA Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/vk7isd1598802862.png"
+    },
+    "supercup:saudi-pro-league": {
+      "providerId": "5650",
+      "providerName": "Saudi Super Cup",
+      "source": "https://r2.thesportsdb.com/images/media/league/badge/i02vsl1754246325.png"
+    },
+    "afcChampions": {
+      "providerName": "AFC Champions League Elite",
+      "source": "https://assets.fclogo.top/png/acl-elite-v2024.png"
     }
   }
 }

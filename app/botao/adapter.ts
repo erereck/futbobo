@@ -65,6 +65,7 @@ export type FinalScope = "domestic" | "continental" | "world";
  */
 export function pickFinalOpponent(args: {
   clubId: string;
+  leagueId?: string;
   scope: FinalScope;
   seed: number;
   season: number;
@@ -74,7 +75,7 @@ export function pickFinalOpponent(args: {
   const confederation = countryById(club.countryId).confederation;
   const pool = CLUBS.filter((candidate) => {
     if (candidate.id === club.id) return false;
-    if (args.scope === "domestic") return candidate.leagueId === club.leagueId;
+    if (args.scope === "domestic") return candidate.leagueId === (args.leagueId ?? club.leagueId);
     if (args.scope === "continental") return countryById(candidate.countryId).confederation === confederation;
     return candidate.strength >= 78;
   });

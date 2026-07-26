@@ -90,6 +90,7 @@ type CompetitionId =
   | "europaLeague"
   | "conferenceLeague"
   | "concacafChampions"
+  | "afcChampions"
   | "campeonesCup";
 
 type CompetitionResult = {
@@ -129,6 +130,7 @@ type TrophyCabinet = {
   europaLeague: number;
   conferenceLeague: number;
   concacafChampions: number;
+  afcChampions: number;
   campeonesCup: number;
 };
 
@@ -278,6 +280,7 @@ type SeasonRecord = PlayerStats & {
   age: number;
   season: number;
   clubId: string;
+  leagueId?: string;
   position: PositionKey;
   overall: number;
   title: boolean;
@@ -293,6 +296,7 @@ type SeasonRecord = PlayerStats & {
   followers?: number;
   socialSentiment?: number;
   botaoResults?: StoredBotaoResult[];
+  promotion?: string | null;
 };
 
 type SeasonResult = SeasonRecord & {
@@ -331,6 +335,7 @@ type GameState = {
   youthYears: YouthYear[];
   proOffers: string[];
   currentClubId: string;
+  currentLeagueId: string;
   age: number;
   season: number;
   overall: number;
@@ -394,6 +399,7 @@ type GameState = {
   forcedAlternativeTransfer: boolean;
   pendingTransferMode: TransferMode;
   loanParentClubId: string;
+  loanParentLeagueId: string;
   loanEndSeason: number;
   isFreeAgent: boolean;
   freeAgentSinceSeason: number;
@@ -771,6 +777,7 @@ function initialState(): GameState {
     youthYears: [],
     proOffers: [],
     currentClubId: "",
+    currentLeagueId: "",
     age: 12,
     season: 2026,
     overall: 42,
@@ -808,6 +815,7 @@ function initialState(): GameState {
       europaLeague: 0,
       conferenceLeague: 0,
       concacafChampions: 0,
+      afcChampions: 0,
       campeonesCup: 0,
     },
     awards: 0,
@@ -847,6 +855,7 @@ function initialState(): GameState {
     forcedAlternativeTransfer: false,
     pendingTransferMode: "permanent",
     loanParentClubId: "",
+    loanParentLeagueId: "",
     loanEndSeason: 0,
     isFreeAgent: false,
     freeAgentSinceSeason: 0,
@@ -898,6 +907,7 @@ function normalizeSave(value: unknown): GameState {
         : saved.phase ?? base.phase,
     nationality: saved.nationality ?? "brasil",
     academyCountryId: saved.academyCountryId ?? saved.nationality ?? "brasil",
+    currentLeagueId: saved.currentLeagueId ?? (saved.currentClubId ? clubById(saved.currentClubId).leagueId : ""),
     continentalSlot,
     adaptation: saved.adaptation ?? 100,
     abroadSeasons: saved.abroadSeasons ?? 0,
@@ -913,6 +923,7 @@ function normalizeSave(value: unknown): GameState {
     forcedAlternativeTransfer: saved.forcedAlternativeTransfer ?? false,
     pendingTransferMode: saved.pendingTransferMode ?? "permanent",
     loanParentClubId: saved.loanParentClubId ?? "",
+    loanParentLeagueId: saved.loanParentLeagueId ?? "",
     loanEndSeason: saved.loanEndSeason ?? 0,
     isFreeAgent: saved.isFreeAgent ?? false,
     freeAgentSinceSeason: saved.freeAgentSinceSeason ?? 0,
@@ -1005,6 +1016,7 @@ function normalizeSave(value: unknown): GameState {
       europaLeague: saved.trophyCabinet?.europaLeague ?? 0,
       conferenceLeague: saved.trophyCabinet?.conferenceLeague ?? 0,
       concacafChampions: saved.trophyCabinet?.concacafChampions ?? 0,
+      afcChampions: saved.trophyCabinet?.afcChampions ?? 0,
       campeonesCup: saved.trophyCabinet?.campeonesCup ?? 0,
     },
     awardCabinet: { ...base.awardCabinet, ...saved.awardCabinet },
@@ -1020,6 +1032,7 @@ function normalizeSave(value: unknown): GameState {
       age: record.age ?? 0,
       season: record.season ?? 0,
       clubId: record.clubId ?? "",
+      leagueId: record.leagueId ?? (record.clubId ? clubById(record.clubId).leagueId : ""),
       position: record.position ?? saved.position ?? base.position,
       overall: record.overall ?? 0,
       title: record.title ?? false,
@@ -1037,6 +1050,7 @@ function normalizeSave(value: unknown): GameState {
       followers: record.followers ?? 0,
       socialSentiment: record.socialSentiment ?? 50,
       botaoResults: Array.isArray(record.botaoResults) ? record.botaoResults : [],
+      promotion: record.promotion ?? null,
     })),
     lastResult: saved.lastResult ? {
       ...saved.lastResult,
@@ -1053,6 +1067,7 @@ function normalizeSave(value: unknown): GameState {
       squadRole: saved.lastResult.squadRole ?? "rotacao",
       objectiveResult: saved.lastResult.objectiveResult ?? null,
       botaoResults: Array.isArray(saved.lastResult.botaoResults) ? saved.lastResult.botaoResults : [],
+      promotion: saved.lastResult.promotion ?? null,
       performanceScore: saved.lastResult.performanceScore ?? 0,
       europeanSpotlight: saved.lastResult.europeanSpotlight ?? 0,
       europeanDevelopmentBonus: saved.lastResult.europeanDevelopmentBonus ?? 0,
@@ -1457,6 +1472,10 @@ const DOMESTIC_SUPER_CUP_NAMES: Record<string, string> = {
   "liga-mx": "Campeón de Campeones",
   proleague: "Supercopa da Bélgica",
   superlig: "Supercopa da Turquia",
+  "saudi-pro-league": "Supercopa da Arábia Saudita",
+  "j1-league": "Supercopa do Japão",
+  "k-league": "Supercopa da Coreia",
+  csl: "Supercopa da China",
 };
 
 function isEuropeanClub(club: Club) {
@@ -1464,9 +1483,14 @@ function isEuropeanClub(club: Club) {
 }
 
 function initialContinentalSlot(club: Club): ContinentalSlot | null {
+  if (club.leagueId === "brasileirao-b" || club.leagueId === "championship") return null;
   const confederation = clubConfederation(club);
   if (confederation === "SOUTH_AMERICA") return club.reputation >= 4 ? "libertadores" : null;
   if (confederation === "NORTH_AMERICA") return club.reputation >= 4 ? "concacaf" : null;
+  if (confederation === "ASIA") return club.reputation >= 4 ? "asian" : null;
+  // Só a Europa entra nas competições da UEFA. Antes qualquer confederação sem
+  // caso próprio caía aqui, e clube asiático de reputação alta ganhava Champions.
+  if (confederation !== "EUROPE") return null;
   if (club.reputation >= 5) return "champions";
   if (club.reputation >= 4) return "europa";
   return null;
@@ -1562,6 +1586,13 @@ const LEAGUE_MARKET_MULTIPLIER: Record<string, number> = {
   "liga-peruana": 0.28,
   "liga-mx": 0.58,
   mls: 0.5,
+  // Arábia paga acima do nível esportivo; segunda divisão paga abaixo.
+  "saudi-pro-league": 0.95,
+  "j1-league": 0.6,
+  "k-league": 0.44,
+  csl: 0.62,
+  "brasileirao-b": 0.2,
+  championship: 0.66,
 };
 
 function marketValue(overall: number, age: number, club: Club, reputation = 0, form?: Partial<PlayerStats>) {
@@ -1942,6 +1973,12 @@ const ALTERNATIVE_EXILE_LEAGUES = new Set([
   "swiss-super-league",
   "austria-bundesliga",
   "premiership-sco",
+  "saudi-pro-league",
+  "j1-league",
+  "k-league",
+  "csl",
+  "brasileirao-b",
+  "championship",
 ]);
 
 function selectAlternativeExileOffers(state: GameState, salt: number) {
@@ -2448,7 +2485,7 @@ function simulateSeason(
     nationalitySwitchRecord = { season: state.season, tier: "none", name: "Troca de Seleção", icon: "↔", stage: `Deixou a Seleção de ${fromCountry.name} para defender a Seleção de ${toCountry.name}`, champion: false };
   }
   const club = clubById(affected.currentClubId);
-  const league = leagueById(club.leagueId);
+  const league = leagueById(affected.currentLeagueId || club.leagueId);
   const country = countryById(club.countryId);
   const abroad = isAbroad(club);
   const inEurope = isEuropeanClub(club);
@@ -2560,7 +2597,10 @@ function simulateSeason(
   const worldLoadFactor = (leagueChampion ? 0.86 : 1) * (cupChampion ? 0.82 : 1);
   const mundialChampion = playsWorld && seeded(state.seed, state.season * 53) * 100 < worldChance * worldLoadFactor;
   const previousClubSeason = affected.history.at(-1);
-  const previousClubCompetitions = previousClubSeason?.clubId === club.id ? previousClubSeason.competitions : [];
+  const previousClubCompetitions =
+    previousClubSeason?.clubId === club.id && (previousClubSeason.leagueId ?? club.leagueId) === league.id
+      ? previousClubSeason.competitions
+      : [];
   const wonLastSeason = (ids: CompetitionId[]) => previousClubCompetitions.some((competition) => ids.includes(competition.id) && competition.champion);
   const playsDomesticSuperCup = wonLastSeason(["domesticLeague", "domesticCup"]) && Boolean(DOMESTIC_SUPER_CUP_NAMES[league.id]);
   const playsUefaSuperCup = clubConfederation(club) === "EUROPE" && wonLastSeason(["championsLeague", "europaLeague"]);
@@ -2571,8 +2611,27 @@ function simulateSeason(
   const uefaSuperCupChampion = playsUefaSuperCup && seeded(state.seed, state.season * 79) * 100 < superCupChance * 0.9;
   const recopaSudamericanaChampion = playsRecopaSudamericana && seeded(state.seed, state.season * 83) * 100 < superCupChance * 0.92;
   const campeonesCupChampion = playsCampeonesCup && seeded(state.seed, state.season * 89) * 100 < superCupChance * 0.94;
-  const expectedPosition = 11 - (strength - 74) * 0.45 - playerImpact * 0.08;
-  const leaguePosition = leagueChampion ? 1 : clamp(Math.round(expectedPosition + seeded(state.seed, state.season * 59) * 8 - 4), 2, 20);
+  const leagueClubCount = Math.max(2, CLUBS.filter((candidate) => candidate.leagueId === league.id).length);
+  const expectedPosition = (leagueClubCount + 1) / 2 - (strength - 74) * 0.45 - playerImpact * 0.08;
+  const leaguePosition = leagueChampion
+    ? 1
+    : clamp(Math.round(expectedPosition + seeded(state.seed, state.season * 59) * 8 - 4), 2, leagueClubCount);
+  const championshipPlayoffPromotion =
+    league.id === "championship" &&
+    leaguePosition >= 3 &&
+    leaguePosition <= 6 &&
+    seeded(state.seed, state.season * 601) < clamp(0.34 + (6 - leaguePosition) * 0.09 + playerImpact * 0.012, 0.2, 0.72);
+  const promotedLeagueId =
+    league.id === "brasileirao-b" && leaguePosition <= 4
+      ? "brasileirao"
+      : league.id === "championship" && (leaguePosition <= 2 || championshipPlayoffPromotion)
+        ? "premier"
+        : "";
+  const promotion = promotedLeagueId
+    ? championshipPlayoffPromotion
+      ? `Acesso à Premier League conquistado nos playoffs!`
+      : `Acesso conquistado para a ${leagueById(promotedLeagueId).name}!`
+    : null;
   const knockoutStage = (salt: number, champion: boolean, stages: string[]) => champion ? "CAMPEÃO" : stages[Math.floor(seeded(state.seed, state.season * salt) * stages.length)];
   const competitions: CompetitionResult[] = [
     { id: "domesticLeague", name: league.name, icon: country.abbr, stage: leagueChampion ? "CAMPEÃO" : `${leaguePosition}º lugar`, champion: leagueChampion },
@@ -2584,6 +2643,7 @@ function simulateSeason(
     europa: { id: "europaLeague", name: "Europa League", icon: "UEL" },
     conference: { id: "conferenceLeague", name: "Conference League", icon: "UECL" },
     concacaf: { id: "concacafChampions", name: "Copa de Campeões Concacaf", icon: "CCC" },
+    asian: { id: "afcChampions", name: "AFC Champions League Elite", icon: "ACL" },
   };
   if (playsContinental) {
     const info = continentalNames[playsContinental];
@@ -3072,6 +3132,7 @@ function simulateSeason(
       championsLeague: 95,
       libertadores: 94,
       concacafChampions: 90,
+      afcChampions: 90,
       europaLeague: 85,
       conferenceLeague: 80,
       domesticCup: 70,
@@ -3094,6 +3155,7 @@ function simulateSeason(
             : "continental";
         const opponent = pickFinalOpponent({
           clubId: club.id,
+          leagueId: league.id,
           scope,
           seed: affected.seed,
           season: affected.season,
@@ -3148,12 +3210,13 @@ function simulateSeason(
     }
   }
 
-  const currentMarketValue = marketValue(nextOverall, nextAge, club, affected.reputation, seasonStats);
+  const currentMarketValue = marketValue(nextOverall, nextAge, { ...club, leagueId: league.id }, affected.reputation, seasonStats);
   const record: SeasonRecord = {
     ...seasonStats,
     age: affected.age,
     season: affected.season,
     clubId: club.id,
+    leagueId: league.id,
     position: affected.position,
     overall: nextOverall,
     title,
@@ -3167,6 +3230,7 @@ function simulateSeason(
     marketValue: currentMarketValue,
     development,
     botaoResults: [],
+    promotion,
   };
   const result: SeasonResult = {
     ...record,
@@ -3184,23 +3248,30 @@ function simulateSeason(
   const seenEvents = event.oneTime || event.id === FIRST_MATCH_EVENT.id ? Array.from(new Set([...affected.seenEvents, event.id])) : affected.seenEvents;
   const nextCabinet = { ...affected.trophyCabinet };
   competitions.forEach((competition) => { if (competition.champion) nextCabinet[competition.id] += 1; });
-  const wonContinentalForWorld = continentalChampion && (playsContinental === "libertadores" || playsContinental === "champions" || playsContinental === "concacaf");
+  const wonContinentalForWorld = continentalChampion && (playsContinental === "libertadores" || playsContinental === "champions" || playsContinental === "concacaf" || playsContinental === "asian");
   const nextWorldQualifiedSeason = wonContinentalForWorld ? affected.season + 1 : affected.worldQualifiedSeason === affected.season ? 0 : affected.worldQualifiedSeason;
   const nextWorldQualifiedClubId = wonContinentalForWorld ? club.id : affected.worldQualifiedSeason === affected.season ? "" : affected.worldQualifiedClubId;
   const nextAwardCabinet = { ...affected.awardCabinet };
   awards.forEach((award) => { nextAwardCabinet[award] = (nextAwardCabinet[award] ?? 0) + 1; });
   const clubConfed = clubConfederation(club);
-  const nextContinentalSlot: ContinentalSlot | null = clubConfed === "SOUTH_AMERICA"
+  const isSecondDivision = league.id === "brasileirao-b" || league.id === "championship";
+  const nextContinentalSlot: ContinentalSlot | null = isSecondDivision
+    ? (cupChampion ? (league.id === "brasileirao-b" ? "libertadores" : "europa") : null)
+    : clubConfed === "SOUTH_AMERICA"
     ? (leagueChampion || cupChampion || leaguePosition <= 6 ? "libertadores" : null)
     : clubConfed === "NORTH_AMERICA"
       ? (leagueChampion || leaguePosition <= (league.championsPlaces || 4) ? "concacaf" : null)
-      : (leagueChampion || leaguePosition <= league.championsPlaces
-          ? "champions"
-          : cupChampion || leaguePosition <= league.europaPlaces
-            ? "europa"
-            : leaguePosition <= league.conferencePlaces
-              ? "conference"
-              : null);
+      : clubConfed === "ASIA"
+        ? (leagueChampion || cupChampion || leaguePosition <= (league.championsPlaces || 3) ? "asian" : null)
+        : clubConfed !== "EUROPE"
+          ? null
+          : (leagueChampion || leaguePosition <= league.championsPlaces
+              ? "champions"
+              : cupChampion || leaguePosition <= league.europaPlaces
+                ? "europa"
+                : leaguePosition <= league.conferencePlaces
+                  ? "conference"
+                  : null);
   const fitnessTarget =
     91 -
     Math.max(0, appearances - 30) * 0.55 -
@@ -3324,6 +3395,7 @@ function simulateSeason(
     setbacks: affected.setbacks + setbackDelta,
     luckyBreaks: affected.luckyBreaks + luckyDelta,
     continentalSlot: nextContinentalSlot,
+    currentLeagueId: promotedLeagueId || league.id,
     worldQualifiedSeason: nextWorldQualifiedSeason,
     worldQualifiedClubId: nextWorldQualifiedClubId,
     adaptation: abroad ? clamp(affected.adaptation + 10, 0, 100) : 100,
@@ -3422,6 +3494,7 @@ function simulateSeason(
       nextBase.trophyCabinet.europaLeague +
       nextBase.trophyCabinet.conferenceLeague +
       nextBase.trophyCabinet.concacafChampions +
+      nextBase.trophyCabinet.afcChampions +
       nextBase.trophyCabinet.campeonesCup,
     worldTitles: nextBase.trophyCabinet.mundial,
     nationalCaps: nextBase.nationalCaps,
@@ -3504,6 +3577,7 @@ function signProfessionalForSimulation(state: GameState, clubId: string): GameSt
     ...state,
     phase: "career",
     currentClubId: clubId,
+    currentLeagueId: club.leagueId,
     currentEventId: FIRST_MATCH_EVENT.id,
     nextEventId: "",
     reputation: clubId === state.academyClubId ? 8 : 4,
@@ -3546,6 +3620,7 @@ function completeSimulationTransfer(state: GameState, clubId: string | null): Ga
     ...state,
     phase: "career",
     currentClubId: clubId ?? state.currentClubId,
+    currentLeagueId: newClub ? newClub.leagueId : state.currentLeagueId,
     currentEventId: "",
     nextEventId: "",
     lastResult: null,
@@ -3562,6 +3637,7 @@ function completeSimulationTransfer(state: GameState, clubId: string | null): Ga
     forcedAlternativeTransfer: false,
     pendingTransferMode: "permanent",
     loanParentClubId: isLoan ? oldClub.id : "",
+    loanParentLeagueId: isLoan ? (state.currentLeagueId || oldClub.leagueId) : "",
     loanEndSeason: isLoan ? state.season + 1 : 0,
     isFreeAgent: false,
     freeAgentSinceSeason: 0,
@@ -3619,7 +3695,9 @@ function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarlo
       state = {
         ...state,
         currentClubId: state.loanParentClubId,
+        currentLeagueId: state.loanParentLeagueId || clubById(state.loanParentClubId).leagueId,
         loanParentClubId: "",
+        loanParentLeagueId: "",
         loanEndSeason: 0,
         pendingTransferMode: "permanent",
       };
@@ -3861,6 +3939,7 @@ const TROPHY_PRESENTATIONS: {
   { id: "europaLeague", label: "Europa League", shortLabel: "UEL", group: "CONTINENTAIS", symbol: "E", imagePath: "/assets/competitions/europaLeague.png" },
   { id: "conferenceLeague", label: "Conference League", shortLabel: "UECL", group: "CONTINENTAIS", symbol: "C", imagePath: "/assets/competitions/conferenceLeague.png" },
   { id: "concacafChampions", label: "Copa dos Campeões Concacaf", shortLabel: "CCC", group: "CONTINENTAIS", symbol: "N", imagePath: "/assets/competitions/concacafChampions.png" },
+  { id: "afcChampions", label: "AFC Champions League Elite", shortLabel: "ACL", group: "CONTINENTAIS", symbol: "A", imagePath: "/assets/competitions/afcChampions.png" },
   { id: "campeonesCup", label: "Campeones Cup", shortLabel: "CAM", group: "CONTINENTAIS", symbol: "C", imagePath: "/assets/competitions/campeonesCup.png" },
   { id: "mundial", label: "Mundial de Clubes", shortLabel: "MUN", group: "MUNDIAIS", symbol: "◉", imagePath: "/assets/competitions/mundial.png" },
 ];
@@ -4529,6 +4608,7 @@ export default function Home() {
         ...current,
         phase: "career",
         currentClubId: clubId,
+        currentLeagueId: club.leagueId,
         currentEventId: FIRST_MATCH_EVENT.id,
         nextEventId: "",
         reputation: clubId === current.academyClubId ? 8 : 4,
@@ -4667,7 +4747,7 @@ export default function Home() {
               botaoResults: [...(current.lastResult.botaoResults ?? []), { match, result: matchResult }],
             }
           : null;
-        const continentalFinal = ["libertadores", "championsLeague", "concacafChampions"].includes(competitionId);
+        const continentalFinal = ["libertadores", "championsLeague", "concacafChampions", "afcChampions"].includes(competitionId);
         const qualifiesForWorld = continentalFinal && outcome.champion;
         const lostWorldTicket =
           continentalFinal &&
@@ -4966,10 +5046,12 @@ export default function Home() {
           ...current,
           phase: current.transferOffers.length ? "transfer" : "career",
           currentClubId: parentClub.id,
+          currentLeagueId: current.loanParentLeagueId || parentClub.leagueId,
           currentEventId: current.nextEventId || "extra-training",
           lastResult: current.transferOffers.length ? current.lastResult : null,
           lastConsequence: null,
           loanParentClubId: "",
+          loanParentLeagueId: "",
           loanEndSeason: 0,
           pendingTransferMode: "permanent",
           managerTrust,
@@ -5039,6 +5121,7 @@ export default function Home() {
         ...current,
         phase: "career",
         currentClubId: clubId ?? current.currentClubId,
+        currentLeagueId: newClub ? newClub.leagueId : current.currentLeagueId,
         currentEventId: "",
         nextEventId: "",
         lastResult: null,
@@ -5055,6 +5138,7 @@ export default function Home() {
         forcedAlternativeTransfer: false,
         pendingTransferMode: "permanent",
         loanParentClubId: isLoan ? oldClub.id : "",
+        loanParentLeagueId: isLoan ? (current.currentLeagueId || oldClub.leagueId) : "",
         loanEndSeason: isLoan ? current.season + 1 : 0,
         isFreeAgent: false,
         freeAgentSinceSeason: 0,
@@ -5430,21 +5514,25 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v71 · ULTRA UPDATE</span>
-                    <h1 id="update-title">Agora você entra em campo.</h1>
+                    <span className="update-version">v72 · VOLTA AO MUNDO</span>
+                    <h1 id="update-title">A carreira ficou ainda maior.</h1>
                   </div>
                 </header>
-                <p>O maior update do Futbobo até agora transforma as decisões da sua carreira e aprofunda tudo que acontece dentro e fora do campo.</p>
+                <p>Seis novas ligas, mais de cem clubes e a Champions asiática chegam ao mundo que já ganhou futebol de botão, decisões jogáveis e uma carreira muito mais profunda.</p>
                 <div className="update-mega-stats" aria-label="Resumo do update">
-                  <span><b>402</b> clubes</span>
-                  <span><b>22</b> ligas</span>
+                  <span><b>{CLUBS.length}</b> clubes</span>
+                  <span><b>{LEAGUES.length}</b> ligas</span>
                   <span><b>1</b> novo jogo</span>
                 </div>
                 <span className="update-section-label">O GRANDE DESTAQUE</span>
                 <div className="update-grid update-mega-grid">
                   <article className="update-featured"><b>↗</b><span><strong>Futebol de botão jogável</strong><small>Arraste, mire e solte com física, colisões, traves, rebotes, prorrogação e pênaltis. Seu overall e seus atributos mudam a força e o controle da peça.</small></span></article>
+                  <article><b>6×</b><span><strong>Seis ligas novas</strong><small>Arábia Saudita, Japão, Coreia do Sul, China, Brasileirão Série B e EFL Championship.</small></span></article>
+                  <article><b>ACL</b><span><strong>Ásia de verdade</strong><small>Clubes asiáticos disputam a AFC Champions League Elite e podem chegar ao Mundial.</small></span></article>
+                  <article><b>↑</b><span><strong>Briga pelo acesso</strong><small>Suba da Série B ou da Championship e leve o mesmo clube à elite nacional.</small></span></article>
                   <article><b>🏆</b><span><strong>Decida suas finais</strong><small>Jogue ou simule cada decisão de clube e veja o resultado alterar sua carreira.</small></span></article>
                   <article><b>MUN</b><span><strong>Copa do Mundo inteira</strong><small>No modo completo, vença das oitavas até a final — um adversário de cada vez.</small></span></article>
+                  <article><b>512</b><span><strong>Base de clubes ampliada</strong><small>Mais destinos grandes, médios e modestos para cada fase da sua carreira.</small></span></article>
                 </div>
                 <span className="update-section-label">UMA CARREIRA MUITO MAIOR</span>
                 <div className="update-grid update-mega-grid">
@@ -5615,7 +5703,7 @@ export default function Home() {
           </div>
           <footer className="welcome-version">
             <span>FUTBOBO</span>
-            <b>v71</b>
+            <b>v72</b>
           </footer>
         </section>
       )}
@@ -5936,6 +6024,7 @@ export default function Home() {
                   <p>Saldo anterior: {formatMoney(game.lastResult.balanceBefore ?? 0)} · disponível para investir na aba Jogador.</p>
                 </section>
                 {game.lastResult.objectiveResult && <div className={`objective-result ${game.lastResult.objectiveResult.completed ? "completed" : "failed"}`}><span>{game.lastResult.objectiveResult.completed ? "META CUMPRIDA" : "META PERDIDA"}</span><strong>{game.lastResult.objectiveResult.label}</strong><p>{game.lastResult.objectiveResult.text}</p></div>}
+                {game.lastResult.promotion && <div className="objective-result completed"><span>ACESSO CONQUISTADO</span><strong>O clube subiu de divisão</strong><p>{game.lastResult.promotion}</p></div>}
                 {game.contractYears === 0 && (
                   <div className="contract-expired">
                     <span>CONTRATO ENCERRADO</span>
@@ -5954,7 +6043,7 @@ export default function Home() {
                     <div className="season-title-list">
                       {seasonClubTitles.map((competition) => (
                         <article key={`title-${competition.id}`}>
-                          <CompetitionBadge competition={competition} leagueId={currentClub.leagueId} />
+                          <CompetitionBadge competition={competition} leagueId={game.lastResult?.leagueId || game.currentLeagueId || currentClub.leagueId} />
                           <div><small>CAMPEÃO</small><strong>{competition.name}</strong></div>
                           <b>🏆</b>
                         </article>
@@ -5987,7 +6076,7 @@ export default function Home() {
                 <section className="season-result-section season-campaigns">
                   <header className="season-result-section-heading"><span>OUTRAS CAMPANHAS</span><small>Onde a caminhada terminou</small></header>
                   <div className="competition-grid">
-                    {game.lastResult.competitions.filter((competition) => !competition.champion).map((competition) => <article key={competition.id} className="competition-card"><CompetitionBadge competition={competition} leagueId={currentClub.leagueId} /><div><strong>{competition.name}</strong><small>{competition.stage}</small></div></article>)}
+                    {game.lastResult.competitions.filter((competition) => !competition.champion).map((competition) => <article key={competition.id} className="competition-card"><CompetitionBadge competition={competition} leagueId={game.lastResult?.leagueId || game.currentLeagueId || currentClub.leagueId} /><div><strong>{competition.name}</strong><small>{competition.stage}</small></div></article>)}
                   </div>
                 </section>
               )}
@@ -6114,7 +6203,7 @@ export default function Home() {
               <div className="section-heading"><div><span>LINHA DO TEMPO</span><h2>Sua carreira até aqui</h2></div></div>
               <div className="timeline-list">
                 {game.history.length === 0 && <div className="empty-panel">Sua estreia será o primeiro capítulo desta história.</div>}
-                {[...game.history].reverse().map((record) => { const club = clubById(record.clubId); const titles = record.competitions.filter((competition) => competition.champion); return <article className="timeline-row" key={`${record.season}-${record.clubId}`}><span className="timeline-year">{record.season}</span><ClubBadge club={club} size="sm" /><div><strong>{club.shortName}</strong><small>{record.position} · {record.appearances}J · {record.position === "GOL" ? `${record.cleanSheets}SG` : `${record.goals}G · ${record.assists}A`}</small>{titles.length > 0 && <em className="timeline-title-badges">{titles.map((title) => <CompetitionBadge key={title.id} competition={title} leagueId={club.leagueId} />)}</em>}</div><span className="timeline-ovr">{record.overall}</span>{record.title && <span className="timeline-trophy">🏆</span>}</article>; })}
+                {[...game.history].reverse().map((record) => { const club = clubById(record.clubId); const titles = record.competitions.filter((competition) => competition.champion); return <article className="timeline-row" key={`${record.season}-${record.clubId}`}><span className="timeline-year">{record.season}</span><ClubBadge club={club} size="sm" /><div><strong>{club.shortName}</strong><small>{record.position} · {record.appearances}J · {record.position === "GOL" ? `${record.cleanSheets}SG` : `${record.goals}G · ${record.assists}A`}</small>{titles.length > 0 && <em className="timeline-title-badges">{titles.map((title) => <CompetitionBadge key={title.id} competition={title} leagueId={record.leagueId || club.leagueId} />)}</em>}</div><span className="timeline-ovr">{record.overall}</span>{record.title && <span className="timeline-trophy">🏆</span>}</article>; })}
               </div>
             </div>
           )}
@@ -6166,7 +6255,7 @@ export default function Home() {
                 </section>
                 {game.traits.length === 0 && <p>Este save começou antes do sistema de características. Uma nova carreira já nasce com identidade própria.</p>}
               </section>
-              <div className="market-context"><span>{currentClub.countryId === "brasil" ? "MERCADO BRASILEIRO" : "MERCADO INTERNACIONAL"}</span><p>{currentClub.countryId === "brasil" ? "O mesmo jogador costuma valer menos no Brasil. Uma ida à Europa pode multiplicar sua cotação — e também a cobrança." : `${leagueById(currentClub.leagueId).name} amplia sua vitrine e o valor do seu passe.`}</p></div>
+              <div className="market-context"><span>{currentClub.countryId === "brasil" ? "MERCADO BRASILEIRO" : "MERCADO INTERNACIONAL"}</span><p>{currentClub.countryId === "brasil" ? "O mesmo jogador costuma valer menos no Brasil. Uma ida à Europa pode multiplicar sua cotação — e também a cobrança." : `${leagueById(game.currentLeagueId || currentClub.leagueId).name} amplia sua vitrine e o valor do seu passe.`}</p></div>
               <section className="career-economy">
                 <header>
                   <div><span>VIDA FINANCEIRA</span><strong>Patrimônio: {formatMoney(game.money)}</strong></div>

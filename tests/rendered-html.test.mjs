@@ -8,8 +8,46 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /<b>v71<\/b>/);
+  assert.match(pageSource, /<b>v72<\/b>/);
   assert.match(styles, /\.welcome-version/);
+});
+
+test("fecha as seis novas ligas com acesso e torneio asiatico", async () => {
+  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const sync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
+
+  for (const leagueId of [
+    "saudi-pro-league",
+    "j1-league",
+    "k-league",
+    "csl",
+    "brasileirao-b",
+    "championship",
+  ]) {
+    assert.match(gameData, new RegExp(`id: "${leagueId}"`));
+    assert.match(sync, new RegExp(`"${leagueId}"|${leagueId}:`));
+  }
+  assert.match(page, /currentLeagueId/);
+  assert.match(page, /league\.id === "brasileirao-b" && leaguePosition <= 4/);
+  assert.match(page, /championshipPlayoffPromotion/);
+  assert.match(page, /isSecondDivision[\s\S]*cupChampion/);
+  assert.match(page, /AFC Champions League Elite/);
+  assert.match(sync, /afcChampions\.png/);
+  assert.match(sync, /china: "cn"/);
+  await readFile(new URL("../public/assets/flags/china.png", import.meta.url));
+  await readFile(new URL("../public/assets/competitions/afcChampions.png", import.meta.url));
+  for (const leagueId of [
+    "saudi-pro-league",
+    "j1-league",
+    "k-league",
+    "csl",
+    "brasileirao-b",
+    "championship",
+  ]) {
+    await readFile(new URL(`../public/assets/competitions/leagues/${leagueId}.png`, import.meta.url));
+    await readFile(new URL(`../public/assets/competitions/cups/${leagueId}.png`, import.meta.url));
+  }
 });
 
 async function walk(directory) {
@@ -498,7 +536,8 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
   const assetManifest = JSON.parse(await readFile(new URL("../public/assets/football-assets.json", import.meta.url), "utf8"));
   const assetSync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
   const mappedClubs = Object.values(assetManifest.clubs);
-  const providerIds = mappedClubs.map((club) => club.providerId);
+  const providerIds = mappedClubs.map((club) => club.providerId).filter(Boolean);
+  const externalSources = mappedClubs.map((club) => club.externalSource).filter(Boolean);
 
   assert.match(page, /LocalBadgeImage/);
   assert.match(page, /assets\/clubs\/\$\{club\.id\}\.png/);
@@ -513,9 +552,10 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
   assert.match(styles, /\.badge-image-flag/);
   assert.match(styles, /\.badge-image-competition/);
   assert.ok(clubAssets.filter((name) => name.endsWith(".png")).length >= 150, "a maioria dos clubes precisa ter escudo local");
-  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 63, "todas as seleções precisam ter bandeira");
+  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 64, "todas as seleções precisam ter bandeira");
   assert.ok(competitionAssets.filter((file) => file.pathname.endsWith(".png")).length >= 12, "as principais competições precisam ter emblema");
   assert.equal(new Set(providerIds).size, providerIds.length, "um mesmo escudo não pode representar clubes diferentes");
+  assert.equal(new Set(externalSources).size, externalSources.length, "assets externos não podem representar clubes diferentes");
   assert.ok(mappedClubs.every((club) => !/women|femin|u-?\d\d|under-?\d\d/i.test(club.providerName)), "escudos precisam representar equipes principais masculinas");
 });
 

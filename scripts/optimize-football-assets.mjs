@@ -19,6 +19,16 @@ async function walk(directory) {
   return files.flat();
 }
 
+async function writeWithRetry(file, data, attempt = 0) {
+  try {
+    await writeFile(file, data);
+  } catch (error) {
+    if (attempt >= 4 || !["UNKNOWN", "EBUSY", "EPERM"].includes(error?.code)) throw error;
+    await new Promise((resolve) => setTimeout(resolve, 120 * (attempt + 1)));
+    return writeWithRetry(file, data, attempt + 1);
+  }
+}
+
 const files = (await walk(ASSET_ROOT)).filter((file) => file.toLowerCase().endsWith(".png"));
 let before = 0;
 let after = 0;
@@ -33,7 +43,7 @@ for (const file of files) {
     .toBuffer();
 
   if (optimized.length < originalSize) {
-    await writeFile(file, optimized);
+    await writeWithRetry(file, optimized);
     after += optimized.length;
   } else {
     after += originalSize;
