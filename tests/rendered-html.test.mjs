@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /<b>v72<\/b>/);
+  assert.match(pageSource, /<b>v73<\/b>/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -552,7 +552,7 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
   assert.match(styles, /\.badge-image-flag/);
   assert.match(styles, /\.badge-image-competition/);
   assert.ok(clubAssets.filter((name) => name.endsWith(".png")).length >= 150, "a maioria dos clubes precisa ter escudo local");
-  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 64, "todas as seleções precisam ter bandeira");
+  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 104, "todas as seleções precisam ter bandeira");
   assert.ok(competitionAssets.filter((file) => file.pathname.endsWith(".png")).length >= 12, "as principais competições precisam ter emblema");
   assert.equal(new Set(providerIds).size, providerIds.length, "um mesmo escudo não pode representar clubes diferentes");
   assert.equal(new Set(externalSources).size, externalSources.length, "assets externos não podem representar clubes diferentes");
@@ -811,6 +811,10 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   assert.doesNotMatch(page, /className="played-finals-card"/);
   assert.match(adapter, /function buildNationalMatchSetup/);
   assert.match(adapter, /function pickNationalOpponent/);
+  assert.match(adapter, /excludedCountryIds/);
+  assert.match(adapter, /isWorldCupFinal/);
+  assert.match(adapter, /candidate\.strength >= \(isWorldCupFinal \? 4 : 2\)/);
+  assert.match(page, /previousOpponentIds/);
   assert.match(engine, /function createMatch/);
   assert.match(engine, /export function awardInactivityPenalty/);
   assert.match(engine, /const inRegulation = state\.period <= state\.setup\.rules\.halves/);

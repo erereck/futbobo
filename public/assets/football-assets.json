@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T03:57:53.545Z",
+  "generatedAt": "2026-07-26T04:38:09.648Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -2573,6 +2573,166 @@
     "china": {
       "code": "cn",
       "source": "https://flagcdn.com/w160/cn.png"
+    },
+    "albania": {
+      "code": "al",
+      "source": "https://flagcdn.com/w160/al.png"
+    },
+    "bosnia": {
+      "code": "ba",
+      "source": "https://flagcdn.com/w160/ba.png"
+    },
+    "bulgaria": {
+      "code": "bg",
+      "source": "https://flagcdn.com/w160/bg.png"
+    },
+    "finlandia": {
+      "code": "fi",
+      "source": "https://flagcdn.com/w160/fi.png"
+    },
+    "israel": {
+      "code": "il",
+      "source": "https://flagcdn.com/w160/il.png"
+    },
+    "kosovo": {
+      "code": "xk",
+      "source": "https://flagcdn.com/w160/xk.png"
+    },
+    "montenegro": {
+      "code": "me",
+      "source": "https://flagcdn.com/w160/me.png"
+    },
+    "macedonia-do-norte": {
+      "code": "mk",
+      "source": "https://flagcdn.com/w160/mk.png"
+    },
+    "irlanda-do-norte": {
+      "code": "gb-nir",
+      "source": "https://flagcdn.com/w160/gb-nir.png"
+    },
+    "eslovaquia": {
+      "code": "sk",
+      "source": "https://flagcdn.com/w160/sk.png"
+    },
+    "eslovenia": {
+      "code": "si",
+      "source": "https://flagcdn.com/w160/si.png"
+    },
+    "chipre": {
+      "code": "cy",
+      "source": "https://flagcdn.com/w160/cy.png"
+    },
+    "el-salvador": {
+      "code": "sv",
+      "source": "https://flagcdn.com/w160/sv.png"
+    },
+    "guatemala": {
+      "code": "gt",
+      "source": "https://flagcdn.com/w160/gt.png"
+    },
+    "honduras": {
+      "code": "hn",
+      "source": "https://flagcdn.com/w160/hn.png"
+    },
+    "haiti": {
+      "code": "ht",
+      "source": "https://flagcdn.com/w160/ht.png"
+    },
+    "trinidad-e-tobago": {
+      "code": "tt",
+      "source": "https://flagcdn.com/w160/tt.png"
+    },
+    "curacao": {
+      "code": "cw",
+      "source": "https://flagcdn.com/w160/cw.png"
+    },
+    "emirados-arabes": {
+      "code": "ae",
+      "source": "https://flagcdn.com/w160/ae.png"
+    },
+    "jordania": {
+      "code": "jo",
+      "source": "https://flagcdn.com/w160/jo.png"
+    },
+    "oma": {
+      "code": "om",
+      "source": "https://flagcdn.com/w160/om.png"
+    },
+    "bahrein": {
+      "code": "bh",
+      "source": "https://flagcdn.com/w160/bh.png"
+    },
+    "kuwait": {
+      "code": "kw",
+      "source": "https://flagcdn.com/w160/kw.png"
+    },
+    "tailandia": {
+      "code": "th",
+      "source": "https://flagcdn.com/w160/th.png"
+    },
+    "vietna": {
+      "code": "vn",
+      "source": "https://flagcdn.com/w160/vn.png"
+    },
+    "indonesia": {
+      "code": "id",
+      "source": "https://flagcdn.com/w160/id.png"
+    },
+    "india": {
+      "code": "in",
+      "source": "https://flagcdn.com/w160/in.png"
+    },
+    "coreia-do-norte": {
+      "code": "kp",
+      "source": "https://flagcdn.com/w160/kp.png"
+    },
+    "angola": {
+      "code": "ao",
+      "source": "https://flagcdn.com/w160/ao.png"
+    },
+    "burkina-faso": {
+      "code": "bf",
+      "source": "https://flagcdn.com/w160/bf.png"
+    },
+    "cabo-verde": {
+      "code": "cv",
+      "source": "https://flagcdn.com/w160/cv.png"
+    },
+    "congo-rd": {
+      "code": "cd",
+      "source": "https://flagcdn.com/w160/cd.png"
+    },
+    "gabao": {
+      "code": "ga",
+      "source": "https://flagcdn.com/w160/ga.png"
+    },
+    "guine": {
+      "code": "gn",
+      "source": "https://flagcdn.com/w160/gn.png"
+    },
+    "zambia": {
+      "code": "zm",
+      "source": "https://flagcdn.com/w160/zm.png"
+    },
+    "zimbabue": {
+      "code": "zw",
+      "source": "https://flagcdn.com/w160/zw.png"
+    },
+    "mocambique": {
+      "code": "mz",
+      "source": "https://flagcdn.com/w160/mz.png"
+    },
+    "fiji": {
+      "code": "fj",
+      "source": "https://flagcdn.com/w160/fj.png"
+    },
+    "ilhas-salomao": {
+      "code": "sb",
+      "source": "https://flagcdn.com/w160/sb.png"
+    },
+    "taiti": {
+      "code": "pf",
+      "source": "https://flagcdn.com/w160/pf.png"
     }
   },
   "competitions": {

@@ -111,6 +111,7 @@ type PendingBotaoMatch = {
   season: number;
   rngChampion: boolean;
   originalStage: string;
+  previousOpponentIds?: string[];
 };
 
 type StoredBotaoResult = {
@@ -1359,6 +1360,46 @@ const REGIONAL_ACADEMY_ROUTES: Record<string, string[]> = {
   hungria: ["alemanha", "italia"],
   islandia: ["holanda", "inglaterra"],
   georgia: ["alemanha", "italia"],
+  albania: ["italia"],
+  bosnia: ["italia", "alemanha"],
+  bulgaria: ["turquia", "italia"],
+  finlandia: ["alemanha", "holanda"],
+  israel: ["turquia"],
+  kosovo: ["alemanha", "italia"],
+  montenegro: ["italia"],
+  "macedonia-do-norte": ["turquia", "italia"],
+  "irlanda-do-norte": ["inglaterra", "escocia"],
+  eslovaquia: ["alemanha", "austria"],
+  eslovenia: ["italia", "austria"],
+  chipre: ["turquia", "grecia"],
+  "el-salvador": ["mexico", "eua"],
+  guatemala: ["mexico", "eua"],
+  honduras: ["mexico", "eua"],
+  haiti: ["eua", "mexico"],
+  "trinidad-e-tobago": ["eua", "mexico"],
+  curacao: ["holanda", "eua"],
+  "emirados-arabes": ["arabia-saudita"],
+  jordania: ["arabia-saudita"],
+  oma: ["arabia-saudita"],
+  bahrein: ["arabia-saudita"],
+  kuwait: ["arabia-saudita"],
+  tailandia: ["japao", "coreia-do-sul"],
+  vietna: ["japao", "coreia-do-sul"],
+  indonesia: ["japao", "coreia-do-sul"],
+  india: ["arabia-saudita", "japao"],
+  "coreia-do-norte": ["coreia-do-sul", "china"],
+  angola: ["portugal", "franca"],
+  "burkina-faso": ["franca"],
+  "cabo-verde": ["portugal"],
+  "congo-rd": ["franca", "belgica"],
+  gabao: ["franca"],
+  guine: ["franca", "portugal"],
+  zambia: ["franca", "portugal"],
+  zimbabue: ["franca", "portugal"],
+  mocambique: ["portugal"],
+  fiji: ["japao", "eua"],
+  "ilhas-salomao": ["japao", "eua"],
+  taiti: ["franca", "eua"],
 };
 
 const PLAYABLE_ACADEMY_COUNTRIES = Array.from(new Set(LEAGUES.map((league) => league.countryId)));
@@ -3205,6 +3246,7 @@ function simulateSeason(
           season: affected.season,
           rngChampion: nationalHistoryAdd.champion,
           originalStage: nationalHistoryAdd.stage,
+          previousOpponentIds: [],
         });
       }
     }
@@ -4811,18 +4853,32 @@ export default function Home() {
         );
 
         if (nextStageName) {
+          const previouslyPlayedOpponents = (current.lastResult?.botaoResults ?? [])
+            .filter(({ match: playedMatch }) =>
+              playedMatch.source === "national" &&
+              playedMatch.season === match.season &&
+              playedMatch.competitionId === match.competitionId,
+            )
+            .map(({ match: playedMatch }) => playedMatch.opponentId);
+          const excludedCountryIds = Array.from(new Set([
+            ...(match.previousOpponentIds ?? []),
+            ...previouslyPlayedOpponents,
+            match.opponentId,
+          ]));
           const opponent = pickNationalOpponent({
             countryId: current.nationality,
             seed: current.seed,
             season: match.season,
             competitionId: match.competitionId,
             stageName: nextStageName,
+            excludedCountryIds,
           });
           const nextRound: PendingBotaoMatch = {
             ...match,
             id: `national-${match.competitionId}-${nextStageName}-${match.season}`,
             stageName: nextStageName,
             opponentId: opponent.id,
+            previousOpponentIds: excludedCountryIds,
           };
           remainingMatches = [nextRound, ...remainingMatches];
         }
@@ -5514,7 +5570,7 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v72 · VOLTA AO MUNDO</span>
+                    <span className="update-version">v73 · VOLTA AO MUNDO</span>
                     <h1 id="update-title">A carreira ficou ainda maior.</h1>
                   </div>
                 </header>
@@ -5703,7 +5759,7 @@ export default function Home() {
           </div>
           <footer className="welcome-version">
             <span>FUTBOBO</span>
-            <b>v72</b>
+            <b>v73</b>
           </footer>
         </section>
       )}

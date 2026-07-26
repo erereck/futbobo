@@ -101,16 +101,25 @@ export function pickNationalOpponent(args: {
   season: number;
   competitionId: string;
   stageName: string;
+  excludedCountryIds?: string[];
 }): Country {
   const country = countryById(args.countryId);
+  const excludedCountryIds = new Set([country.id, ...(args.excludedCountryIds ?? [])]);
+  const isWorldCupFinal = args.competitionId === "world-cup" && args.stageName === "Final";
   const sameTournamentPool = COUNTRIES.filter((candidate) => {
-    if (candidate.id === country.id) return false;
-    if (args.competitionId === "world-cup") return candidate.strength >= 3;
+    if (excludedCountryIds.has(candidate.id)) return false;
+    // A final do Mundial sempre guarda uma potência inédita. Nas fases
+    // anteriores há mais variedade, mas uma seleção eliminada nunca volta.
+    if (args.competitionId === "world-cup") return candidate.strength >= (isWorldCupFinal ? 4 : 2);
     return candidate.confederation === country.confederation;
   });
+  const unseenCountries = COUNTRIES.filter((candidate) => !excludedCountryIds.has(candidate.id));
+  const strongUnseenCountries = unseenCountries.filter((candidate) => candidate.strength >= 4);
   const pool = sameTournamentPool.length > 0
     ? sameTournamentPool
-    : COUNTRIES.filter((candidate) => candidate.id !== country.id);
+    : isWorldCupFinal && strongUnseenCountries.length > 0
+      ? strongUnseenCountries
+      : unseenCountries;
   const weights = pool.map((candidate) => Math.pow(Math.max(1, candidate.strength + 1), 2.1));
   const total = weights.reduce((sum, weight) => sum + weight, 0);
   const roll = createRng(
