@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /<b>v70<\/b>/);
+  assert.match(pageSource, /<b>v71<\/b>/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -761,6 +761,14 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   assert.match(page, /finalMatchMode: "play-key-matches"/);
   assert.match(page, /finalMatchMode: AppSettings\["finalMatchMode"\] = "play-key-matches"/);
   assert.match(page, /DECIDIDO NO FUTEBOL DE BOTÃO/);
+  assert.match(page, /seasonClubTitles/);
+  assert.match(page, /seasonNationalTitles/);
+  assert.match(page, /seasonBotaoWins/);
+  assert.match(page, /seasonBotaoLosses/);
+  assert.match(page, /DISPUTADAS/);
+  assert.match(page, /GANHAS/);
+  assert.match(page, /PERDIDAS/);
+  assert.doesNotMatch(page, /className="played-finals-card"/);
   assert.match(adapter, /function buildNationalMatchSetup/);
   assert.match(adapter, /function pickNationalOpponent/);
   assert.match(engine, /function createMatch/);

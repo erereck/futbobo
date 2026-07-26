@@ -4206,6 +4206,14 @@ export default function Home() {
 
   const displayGame = hallPreview ?? game;
   const currentClub = useMemo(() => clubById(displayGame.currentClubId || displayGame.academyClubId), [displayGame.currentClubId, displayGame.academyClubId]);
+  const seasonClubTitles = game.lastResult?.competitions.filter((competition) => competition.champion) ?? [];
+  const seasonNationalTitles = game.lastResult
+    ? game.nationalHistory.filter((record) => record.season === game.lastResult?.season && record.champion)
+    : [];
+  const seasonTitleCount = seasonClubTitles.length + seasonNationalTitles.length;
+  const seasonBotaoResults = game.lastResult?.botaoResults ?? [];
+  const seasonBotaoWins = seasonBotaoResults.filter(({ result }) => result.champion).length;
+  const seasonBotaoLosses = seasonBotaoResults.length - seasonBotaoWins;
   const currentBotaoMatch = game.pendingBotaoMatches[0] ?? null;
   const currentBotaoSetup = useMemo<BotaoMatchSetup | null>(() => {
     if (!currentBotaoMatch) return null;
@@ -5422,7 +5430,7 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v70 · ULTRA UPDATE</span>
+                    <span className="update-version">v71 · ULTRA UPDATE</span>
                     <h1 id="update-title">Agora você entra em campo.</h1>
                   </div>
                 </header>
@@ -5607,7 +5615,7 @@ export default function Home() {
           </div>
           <footer className="welcome-version">
             <span>FUTBOBO</span>
-            <b>v70</b>
+            <b>v71</b>
           </footer>
         </section>
       )}
@@ -5936,34 +5944,43 @@ export default function Home() {
                   </div>
                 )}
               </section>
-              {game.lastResult.competitions.some((competition) => competition.champion) && (
+              {(seasonTitleCount > 0 || seasonBotaoResults.length > 0) && (
                 <section className="season-title-parade">
-                  <header><span>TAÇAS DA TEMPORADA</span><strong>{game.lastResult.competitions.filter((competition) => competition.champion).length} volta{game.lastResult.competitions.filter((competition) => competition.champion).length > 1 ? "s" : ""} olímpica{game.lastResult.competitions.filter((competition) => competition.champion).length > 1 ? "s" : ""}</strong></header>
-                  <div>
-                    {game.lastResult.competitions.filter((competition) => competition.champion).map((competition) => (
-                      <article key={`title-${competition.id}`}>
-                        <CompetitionBadge competition={competition} leagueId={currentClub.leagueId} />
-                        <div><small>CAMPEÃO</small><strong>{competition.name}</strong></div>
-                        <b>🏆</b>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-              )}
-              {(game.lastResult.botaoResults?.length ?? 0) > 0 && (
-                <section className="played-finals-card">
-                  <span>DECIDIDO NO FUTEBOL DE BOTÃO</span>
-                  <strong>{game.lastResult.botaoResults?.length} partida(s) decisiva(s) nesta temporada</strong>
-                  <p>O sorteio abriu espaço para a mesa. Cada placar abaixo já está aplicado à carreira.</p>
-                  <div className="played-finals-results">
-                    {game.lastResult.botaoResults?.map(({ match, result }) => (
-                      <article key={`${match.id}-${match.stageName}`}>
-                        <span>{match.competitionName} · {match.stageName}</span>
-                        <b>{result.goalsFor} × {result.goalsAgainst}</b>
-                        <small>{result.simulated ? "SIMULADA" : result.champion ? "VITÓRIA" : "DERROTA"}</small>
-                      </article>
-                    ))}
-                  </div>
+                  <header>
+                    <span>TAÇAS DA TEMPORADA</span>
+                    <strong>{seasonTitleCount > 0 ? `${seasonTitleCount} volta${seasonTitleCount > 1 ? "s" : ""} olímpica${seasonTitleCount > 1 ? "s" : ""}` : "Nenhuma taça levantada"}</strong>
+                  </header>
+                  {seasonTitleCount > 0 && (
+                    <div className="season-title-list">
+                      {seasonClubTitles.map((competition) => (
+                        <article key={`title-${competition.id}`}>
+                          <CompetitionBadge competition={competition} leagueId={currentClub.leagueId} />
+                          <div><small>CAMPEÃO</small><strong>{competition.name}</strong></div>
+                          <b>🏆</b>
+                        </article>
+                      ))}
+                      {seasonNationalTitles.map((record) => (
+                        <article key={`national-title-${record.season}-${record.name}`} className="national-season-title">
+                          <NationBadge country={nationCountry} size="sm" />
+                          <div><small>CAMPEÃO PELA SELEÇÃO</small><strong>{record.name}</strong></div>
+                          <b>🏆</b>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                  {seasonBotaoResults.length > 0 && (
+                    <div className="played-finals-summary">
+                      <header>
+                        <span>DECIDIDO NO FUTEBOL DE BOTÃO</span>
+                        <small>Finais e mata-matas da temporada</small>
+                      </header>
+                      <div>
+                        <b><strong>{seasonBotaoResults.length}</strong><small>DISPUTADAS</small></b>
+                        <b className="won"><strong>{seasonBotaoWins}</strong><small>GANHAS</small></b>
+                        <b className="lost"><strong>{seasonBotaoLosses}</strong><small>PERDIDAS</small></b>
+                      </div>
+                    </div>
+                  )}
                 </section>
               )}
               {game.lastResult.competitions.some((competition) => !competition.champion) && (

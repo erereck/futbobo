@@ -424,10 +424,23 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .season-title-parade > div { display: grid; gap: 7px; }
 .season-title-parade article { display: grid; grid-template-columns: 44px minmax(0,1fr) 26px; align-items: center; gap: 9px; min-height: 58px; padding: 8px; border: 1px solid rgba(255,199,44,.2); border-radius: 14px; background: rgba(4,25,17,.5); }
 .season-title-parade article .competition-emblem { width: 44px; height: 44px; border-radius: 13px; background: rgba(255,255,255,.06); }
+.season-title-parade article > .nation-badge { justify-self: center; }
 .season-title-parade article > div { display: flex; min-width: 0; flex-direction: column; }
 .season-title-parade article small { margin-bottom: 3px; color: var(--gold); font-size: 6px; font-weight: 900; letter-spacing: .14em; }
 .season-title-parade article strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .season-title-parade article > b { font-size: 18px; filter: drop-shadow(0 3px 5px rgba(0,0,0,.28)); }
+.season-title-parade article.national-season-title { border-color: rgba(99,227,107,.25); background: rgba(99,227,107,.06); }
+.season-title-parade article.national-season-title small { color: var(--green); }
+.played-finals-summary { margin-top: 9px; padding: 11px; border: 1px solid rgba(44,168,255,.22); border-radius: 14px; background: rgba(4,25,17,.42); }
+.played-finals-summary > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.played-finals-summary > header span { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.played-finals-summary > header small { color: var(--muted); font-size: 7px; }
+.played-finals-summary > div { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; margin-top: 9px; }
+.played-finals-summary > div > b { display: flex; min-width: 0; flex-direction: column; align-items: center; padding: 9px 5px; border-radius: 10px; background: rgba(255,255,255,.035); }
+.played-finals-summary > div strong { font: 900 18px var(--display); }
+.played-finals-summary > div small { margin-top: 2px; color: var(--muted); font-size: 6px; font-weight: 900; letter-spacing: .08em; }
+.played-finals-summary > div > b.won strong { color: var(--green); }
+.played-finals-summary > div > b.lost strong { color: var(--red); }
 .season-awards-showcase { position: relative; width: 100%; margin-bottom: 12px; padding: 16px; overflow: hidden; border: 1px solid rgba(166,117,255,.28); border-radius: 20px; background: radial-gradient(circle at 100% 0, rgba(166,117,255,.16), transparent 40%), linear-gradient(145deg, #183628, #10281d); }
 .season-awards-showcase::after { content: "✦"; position: absolute; top: -32px; right: -8px; color: rgba(255,255,255,.035); font: 900 130px var(--display); pointer-events: none; }
 .season-awards-showcase.has-ballon-dor { border-color: rgba(255,199,44,.52); background: radial-gradient(circle at 85% 0, rgba(255,199,44,.24), transparent 42%), linear-gradient(145deg, #352e13, #14291d 68%); box-shadow: 0 0 35px rgba(255,199,44,.08); }
@@ -789,19 +802,6 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .final-mode-settings button.selected { border-color: rgba(44,168,255,.42); background: rgba(44,168,255,.09); }
 .final-mode-settings button.selected > b { color: var(--blue); }
 .final-mode-settings > small { display: block; margin-top: 8px; color: var(--muted); font-size: 7px; line-height: 1.4; }
-.played-finals-card { margin-bottom: 17px; padding: 15px; border: 1px solid rgba(255,199,44,.24); border-radius: 18px; background: rgba(255,199,44,.05); }
-.played-finals-card > span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .13em; }
-.played-finals-card > strong { display: block; margin-top: 5px; font: 900 17px var(--display); }
-.played-finals-card > p { margin: 6px 0 11px; color: var(--muted); font-size: 9px; line-height: 1.45; }
-.played-finals-card > div { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.played-finals-card button { min-height: 34px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.03); color: var(--muted); font: 900 7px var(--sans); }
-.played-finals-card button.simulated { border-color: rgba(99,227,107,.2); color: var(--green); }
-.played-finals-card > .played-finals-results { grid-template-columns: 1fr; }
-.played-finals-results article { display: grid; min-height: 48px; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 9px; padding: 11px 12px; border: 1px solid rgba(255,255,255,.06); border-radius: 13px; background: rgba(0,0,0,.16); }
-.played-finals-results article span { overflow: hidden; color: var(--text); font-size: 9px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
-.played-finals-results article b { color: var(--gold); font: 900 15px var(--display); }
-.played-finals-results article small { color: var(--muted); font-size: 7px; font-weight: 900; letter-spacing: .08em; }
-
 .summary-screen { position: relative; min-height: 100dvh; height: auto; justify-content: flex-start; overflow: visible; padding-top: calc(env(safe-area-inset-top) + 30px); background: radial-gradient(circle at 50% 12%, rgba(255,199,44,.15), transparent 26%), var(--bg); }
 .summary-preview-bar { position: relative; z-index: 5; display: grid; width: 100%; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 11px; margin-bottom: 18px; padding: 10px; border: 1px solid rgba(44,168,255,.28); border-radius: 15px; background: rgba(44,168,255,.07); }
 .summary-preview-bar button { min-height: 38px; padding: 0 12px; border: 1px solid rgba(44,168,255,.25); border-radius: 11px; background: rgba(44,168,255,.1); color: #8bd0ff; font-size: 9px; font-weight: 900; cursor: pointer; }
