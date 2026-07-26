@@ -2431,7 +2431,7 @@ function simulateSeason(
   choiceLabel: string,
   resultText: string,
   luckOutcome: "success" | "failure" | null = null,
-  finalMatchMode: AppSettings["finalMatchMode"] = "simulate",
+  finalMatchMode: AppSettings["finalMatchMode"] = "play-key-matches",
 ): GameState {
   const affected = applyEffect(state, effect);
   let nationalitySwitchRecord: NationalRecord | null = null;
@@ -4063,7 +4063,7 @@ export default function Home() {
   const [updateNoticeOpen, setUpdateNoticeOpen] = useState(true);
   const [updateNoticePage, setUpdateNoticePage] = useState<"current" | "previous">("current");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [appSettings, setAppSettings] = useState<AppSettings>({ customCharacters: [] });
+  const [appSettings, setAppSettings] = useState<AppSettings>({ customCharacters: [], finalMatchMode: "play-key-matches" });
   const [characterName, setCharacterName] = useState("");
   const [characterPosition, setCharacterPosition] = useState<PositionKey>("MEI");
   const [shirtNumberInput, setShirtNumberInput] = useState("10");
@@ -4099,7 +4099,7 @@ export default function Home() {
           customCharacters: customCharacters
             .filter((character) => character && typeof character.name === "string" && POSITIONS.some((position) => position.key === character.position))
             .slice(0, 12),
-          finalMatchMode: storedSettings.finalMatchMode ?? "simulate",
+          finalMatchMode: storedSettings.finalMatchMode ?? "play-key-matches",
         }));
       }
     } catch {
@@ -4387,7 +4387,7 @@ export default function Home() {
           choice.label,
           luckSpin.succeeded ? choice.luck.successText : choice.luck.failureText,
           luckSpin.succeeded ? "success" : "failure",
-          appSettings.finalMatchMode ?? "simulate",
+          appSettings.finalMatchMode ?? "play-key-matches",
         );
       });
       setLuckSpin(null);
@@ -4565,7 +4565,7 @@ export default function Home() {
       choice.label,
       choice.result,
       null,
-      appSettings.finalMatchMode ?? "simulate",
+      appSettings.finalMatchMode ?? "play-key-matches",
     ));
     vibrate();
   }
@@ -5427,7 +5427,7 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v67 · ULTRA UPDATE</span>
+                    <span className="update-version">v68 · ULTRA UPDATE</span>
                     <h1 id="update-title">Agora você entra em campo.</h1>
                   </div>
                 </header>
@@ -5495,8 +5495,8 @@ export default function Home() {
                   { id: "finals-only" as const, label: "Jogar finais", text: "Botão manual apenas nas decisões." },
                   { id: "play-key-matches" as const, label: "Finais + Copa", text: "Também inclui o mata-mata da Copa do Mundo." },
                 ].map((mode) => (
-                  <button className={(appSettings.finalMatchMode ?? "simulate") === mode.id ? "selected" : ""} key={mode.id} onClick={() => setAppSettings((current) => ({ ...current, finalMatchMode: mode.id }))}>
-                    <b>{(appSettings.finalMatchMode ?? "simulate") === mode.id ? "✓" : "○"}</b><span><strong>{mode.label}</strong><small>{mode.text}</small></span>
+                  <button className={(appSettings.finalMatchMode ?? "play-key-matches") === mode.id ? "selected" : ""} key={mode.id} onClick={() => setAppSettings((current) => ({ ...current, finalMatchMode: mode.id }))}>
+                    <b>{(appSettings.finalMatchMode ?? "play-key-matches") === mode.id ? "✓" : "○"}</b><span><strong>{mode.label}</strong><small>{mode.text}</small></span>
                   </button>
                 ))}
               </div>
@@ -5612,7 +5612,7 @@ export default function Home() {
           </div>
           <footer className="welcome-version">
             <span>FUTBOBO</span>
-            <b>v67</b>
+            <b>v68</b>
           </footer>
         </section>
       )}
