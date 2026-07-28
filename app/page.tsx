@@ -146,6 +146,19 @@ type NationalRecord = {
   icon: string;
   stage: string;
   champion: boolean;
+  tournamentStats?: TournamentStats;
+};
+
+type TournamentStats = {
+  appearances: number;
+  goals: number;
+  assists: number;
+  groupAppearances: number;
+  groupGoals: number;
+  groupAssists: number;
+  knockoutAppearances: number;
+  knockoutGoals: number;
+  knockoutAssists: number;
 };
 
 type ChoiceConsequence = {
@@ -1847,6 +1860,45 @@ function medicalRecordForSeason(state: GameState): MedicalRecord {
   };
 }
 
+function worldCupGamesThroughStage(stage: string) {
+  if (stage === "CAMPEÃO" || stage === "Vice") return 8;
+  if (stage.includes("Semifinal")) return 7;
+  if (stage.includes("Quartas")) return 6;
+  if (stage.includes("Oitavas")) return 5;
+  if (stage.includes("16 avos")) return 4;
+  return 3;
+}
+
+function simulatedWorldCupStats(state: GameState, games: number, salt: number): TournamentStats {
+  const position = positionByKey(state.position);
+  const groupAppearances = Math.min(3, games);
+  const quality = clamp((state.overall - 54) / 34, 0.42, 1.42);
+  const groupForm = 0.62 + seeded(state.seed, state.season * 977 + salt) * 1.12;
+  const knockoutGames = Math.max(0, games - groupAppearances);
+  const knockoutForm = 0.65 + seeded(state.seed, state.season * 983 + salt) * 1.18;
+  const score = (appearances: number, rate: number, form: number) =>
+    position.key === "GOL" ? 0 : Math.max(0, Math.round(appearances * rate * quality * form * 1.18));
+  const groupGoals = score(groupAppearances, position.goals, groupForm);
+  const groupAssists = score(groupAppearances, position.assists, 0.72 + seeded(state.seed, state.season * 991 + salt) * 1.02);
+  const knockoutGoals = score(knockoutGames, position.goals, knockoutForm);
+  const knockoutAssists = score(knockoutGames, position.assists, 0.7 + seeded(state.seed, state.season * 997 + salt) * 1.08);
+  return {
+    appearances: games,
+    goals: groupGoals + knockoutGoals,
+    assists: groupAssists + knockoutAssists,
+    groupAppearances,
+    groupGoals,
+    groupAssists,
+    knockoutAppearances: knockoutGames,
+    knockoutGoals,
+    knockoutAssists,
+  };
+}
+
+function worldCupStatsForSeason(state: Pick<GameState, "nationalHistory">, season: number) {
+  return state.nationalHistory.find((record) => record.season === season && record.name === "Copa do Mundo")?.tournamentStats;
+}
+
 function transferMarketProfile(state: GameState) {
   const latest = state.lastResult ?? state.history.at(-1);
   const performanceScore = seasonPerformanceScore(state.position, latest);
@@ -3111,6 +3163,16 @@ function simulateSeason(
             : ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"];
           const stage = champion ? "CAMPEÃO" : knockoutStage(157, false, knockoutStages);
           nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage, champion };
+          if (tournament.scope === "world") {
+            const fullPlayableRun =
+              finalMatchMode === "play-key-matches" &&
+              ["16 avos", "Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"].includes(stage);
+            const playableFinalOnly =
+              finalMatchMode === "finals-only" &&
+              (stage === "Vice" || stage === "CAMPEÃO");
+            const simulatedGames = fullPlayableRun ? 3 : playableFinalOnly ? 7 : worldCupGamesThroughStage(stage);
+            nationalHistoryAdd.tournamentStats = simulatedWorldCupStats(affected, simulatedGames, 1009);
+          }
           if (champion) nationalTrophiesCount += 1;
           if (tournament.scope === "world") qualifiedNextMajor = true;
         }
@@ -3163,6 +3225,13 @@ function simulateSeason(
   if (inEurope && affected.age <= 21 && playsContinental && nextOverall >= 82 && seeded(state.seed, state.season * 173) > 0.65) awards.push("Troféu Kopa");
   if (inEurope && isKeeper && cleanSheets >= 16 && nextOverall >= 85 && seeded(state.seed, state.season * 179) > 0.7) awards.push("Troféu Yashin");
   if (inEurope && !isKeeper && goals >= europeanGoldenShoeLine && league.prestige >= 4) awards.push("Chuteira de Ouro Europeia");
+  const worldCupGoals = nationalHistoryAdd?.name === "Copa do Mundo"
+    ? nationalHistoryAdd.tournamentStats?.goals ?? 0
+    : 0;
+  const worldCupAssists = nationalHistoryAdd?.name === "Copa do Mundo"
+    ? nationalHistoryAdd.tournamentStats?.assists ?? 0
+    : 0;
+  if (!isKeeper && worldCupGoals >= 6) awards.push("Artilheiro da Copa do Mundo");
   if (inEurope && playsContinental === "champions" && continentalChampion && nextOverall >= 88 && seeded(state.seed, state.season * 191) > 0.55) awards.push("Melhor da UEFA");
   if (inEurope && playsContinental === "champions" && continentalChampion && performanceScore >= 84 && seeded(state.seed, state.season * 193) > 0.38) awards.push("MVP da Champions League");
   const hasLeagueGoldenBoot = awards.some((award) => award.includes("Artilheiro"));
@@ -3250,6 +3319,7 @@ function simulateSeason(
     (playsContinental === "champions" && continentalChampion ? 9 : 0) +
     (mundialChampion ? 12 : 0) +
     (majorNationalTitle ? 8 : 0) +
+    (inEurope && worldCupGoals >= 8 ? 24 + Math.min(10, (worldCupGoals - 8) * 2 + worldCupAssists * 0.7) : 0) +
     productionBallonModifier +
     supportingAwardBonus +
     positionBallonModifier;
@@ -3292,7 +3362,15 @@ function simulateSeason(
     : previousBallonDor <= 6
       ? 98
       : Math.max(0.25, 28 * 0.52 ** (previousBallonDor - 7));
-  const ballonChance = Math.max(baseBallonChance, historicBallonChanceFloor);
+  const worldCupBallonChanceFloor = !(inEurope && worldCupGoals >= 8)
+    ? 0
+    : previousBallonDor === 0 ? 94
+    : previousBallonDor === 1 ? 82
+    : previousBallonDor === 2 ? 64
+    : previousBallonDor === 3 ? 38
+    : previousBallonDor === 4 ? 16
+    : Math.max(0.25, 8 * 0.5 ** (previousBallonDor - 5));
+  const ballonChance = Math.max(baseBallonChance, historicBallonChanceFloor, worldCupBallonChanceFloor);
   const wonBallonDor =
     (europeanBallonEligible || americanBallonEligible) &&
     hasGoalsOrAssistsAward &&
@@ -4665,6 +4743,9 @@ export default function Home() {
   const seasonNationalTitles = game.lastResult
     ? game.nationalHistory.filter((record) => record.season === game.lastResult?.season && record.champion)
     : [];
+  const seasonWorldCupRecord = game.lastResult
+    ? game.nationalHistory.find((record) => record.season === game.lastResult?.season && record.name === "Copa do Mundo")
+    : null;
   const seasonTitleCount = seasonClubTitles.length + seasonNationalTitles.length;
   const seasonBotaoResults = game.lastResult?.botaoResults ?? [];
   const seasonBotaoWins = seasonBotaoResults.filter(({ result }) => result.champion).length;
@@ -5381,11 +5462,27 @@ export default function Home() {
           : wonRound
             ? 0
             : -Number(match.rngChampion);
-        const updatedNationalHistory = current.nationalHistory.map((record) =>
-          record.season === match.season && record.name === match.competitionName
-            ? { ...record, stage: stageAfterMatch, champion: wonTournament }
-            : record,
-        );
+        const updatedNationalHistory = current.nationalHistory.map((record) => {
+          if (record.season !== match.season || record.name !== match.competitionName) return record;
+          const baseTournamentStats = record.name === "Copa do Mundo"
+            ? record.tournamentStats ?? simulatedWorldCupStats(current, match.stageName === "Final" ? 7 : 3, 1009)
+            : null;
+          const tournamentStats = baseTournamentStats
+            ? {
+                ...baseTournamentStats,
+                appearances: baseTournamentStats.appearances + 1,
+                goals: baseTournamentStats.goals + matchResult.playerGoals,
+                assists: baseTournamentStats.assists + matchResult.playerAssists,
+                knockoutAppearances: baseTournamentStats.knockoutAppearances + 1,
+                knockoutGoals: baseTournamentStats.knockoutGoals + matchResult.playerGoals,
+                knockoutAssists: baseTournamentStats.knockoutAssists + matchResult.playerAssists,
+              }
+            : record.tournamentStats;
+          return { ...record, stage: stageAfterMatch, champion: wonTournament, tournamentStats };
+        });
+        const updatedWorldCupStats = updatedNationalHistory.find((record) =>
+          record.season === match.season && record.name === "Copa do Mundo"
+        )?.tournamentStats;
 
         if (nextStageName) {
           const previouslyPlayedOpponents = (current.lastResult?.botaoResults ?? [])
@@ -5432,7 +5529,11 @@ export default function Home() {
           lastResult: current.lastResult
             ? {
                 ...current.lastResult,
-                nationalNote: `${match.competitionName}: ${stageAfterMatch}`,
+                nationalNote: `${match.competitionName}: ${stageAfterMatch}${
+                  updatedWorldCupStats
+                    ? ` · ${updatedWorldCupStats.appearances}J, ${updatedWorldCupStats.goals}G, ${updatedWorldCupStats.assists}A`
+                    : ""
+                }`,
                 botaoResults: [...(current.lastResult.botaoResults ?? []), { match, result: matchResult }],
               }
             : null,
@@ -5500,14 +5601,44 @@ export default function Home() {
       }
 
       const seasonResolved = !nextState.pendingBotaoMatches.some((pending) => pending.season === match.season);
-      const resolvedResult = nextState.lastResult;
+      let resolvedResult = nextState.lastResult;
+      const playsInEurope = isEuropeanClub(clubById(nextState.currentClubId));
+      const resolvedWorldCupStats = worldCupStatsForSeason(nextState, match.season);
+      const earnedWorldCupGoldenBoot = Boolean(
+        seasonResolved &&
+        resolvedResult &&
+        resolvedWorldCupStats &&
+        resolvedWorldCupStats.goals >= 6 &&
+        !resolvedResult.awards.includes("Artilheiro da Copa do Mundo"),
+      );
+      if (earnedWorldCupGoldenBoot && resolvedResult) {
+        const goldenBootAward = "Artilheiro da Copa do Mundo";
+        const updatedAwardCabinet = {
+          ...nextState.awardCabinet,
+          [goldenBootAward]: (nextState.awardCabinet[goldenBootAward] ?? 0) + 1,
+        };
+        const addGoldenBoot = <T extends SeasonRecord | SeasonResult>(record: T): T => ({
+          ...record,
+          awards: [...record.awards, goldenBootAward],
+        });
+        resolvedResult = addGoldenBoot(resolvedResult);
+        nextState = {
+          ...nextState,
+          awards: nextState.awards + 1,
+          awardCabinet: updatedAwardCabinet,
+          lastResult: resolvedResult,
+          history: nextState.history.map((record) =>
+            record.season === match.season ? addGoldenBoot(record) : record,
+          ),
+        };
+      }
       const alreadyHasBallon = Boolean(resolvedResult?.awards.includes("Bola de Ouro"));
       const hasProductionAward = Boolean(resolvedResult?.awards.some((award) =>
         award.includes("Artilheiro") ||
         award.includes("Chuteira de Ouro") ||
         award.includes("Rei das Assistências"),
       ));
-      const playsInEurope = isEuropeanClub(clubById(nextState.currentClubId));
+      const worldCupBallonSurge = Boolean(playsInEurope && (resolvedWorldCupStats?.goals ?? 0) >= 8);
       const manualBallonEligible = Boolean(
         seasonResolved &&
         resolvedResult &&
@@ -5515,6 +5646,7 @@ export default function Home() {
         hasProductionAward &&
         (hasMajorClubTitle || hasMajorNationalTitle) &&
         (
+          (worldCupBallonSurge && nextState.overall >= 80 && resolvedResult.performanceScore >= 70) ||
           (playsInEurope && nextState.overall >= 84 && resolvedResult.performanceScore >= 80) ||
           (!playsInEurope && nextState.overall >= 89 && resolvedResult.performanceScore >= 87)
         ),
@@ -5523,9 +5655,10 @@ export default function Home() {
         const chance = clamp(
           10 +
           Math.max(0, resolvedResult.performanceScore - 80) * 1.45 +
-          Math.max(0, nextState.overall - 84) * 1.2,
+          Math.max(0, nextState.overall - 84) * 1.2 +
+          (worldCupBallonSurge ? 68 + Math.min(10, ((resolvedWorldCupStats?.goals ?? 8) - 8) * 2) : 0),
           10,
-          46,
+          worldCupBallonSurge ? 96 : 46,
         );
         const wonAfterFinal = seeded(nextState.seed, match.season * 109) * 100 < chance;
         const hasWorldXi = resolvedResult.awards.includes("FIFPRO World XI");
@@ -6150,19 +6283,19 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v74 · MESMA SORTE, OUTRA HISTÓRIA</span>
-                    <h1 id="update-title">Agora dá para provar quem faria a melhor carreira.</h1>
+                    <span className="update-version">v75 · COPA EM NÚMEROS</span>
+                    <h1 id="update-title">A Copa do Mundo agora deixa o recibo.</h1>
                   </div>
                 </header>
-                <p>O Desafio Futbobo coloca todo mundo no mesmo ponto de partida, enquanto avaliações por temporada e um prontuário médico persistente deixam cada carreira mais comparável e humana.</p>
+                <p>Fase de grupos simulada, mata-matas jogáveis e todos os seus números reunidos no fim. Uma Copa absurda também pode virar a eleição da Bola de Ouro.</p>
                 <div className="update-mega-stats" aria-label="Resumo do update">
-                  <span><b>1</b> desafio diário</span>
-                  <span><b>9.9</b> nota máxima</span>
-                  <span><b>100%</b> novo menu</span>
+                  <span><b>3</b> jogos de grupos</span>
+                  <span><b>8+</b> gols históricos</span>
+                  <span><b>1</b> relatório final</span>
                 </div>
                 <span className="update-section-label">O GRANDE DESTAQUE</span>
                 <div className="update-grid update-mega-grid">
-                  <article className="update-featured"><b>24H</b><span><strong>Desafio Futbobo</strong><small>A mesma semente diária em todos os aparelhos. Faça escolhas melhores, termine a carreira e compare os pontos no ranking local.</small></span></article>
+                  <article className="update-featured"><b>MUN</b><span><strong>Relatório completo da Copa</strong><small>Jogos, gols, assistências e G+A separados entre a fase de grupos simulada e cada partida do mata-mata.</small></span></article>
                   <article><b>8.7</b><span><strong>Avaliação média</strong><small>Cada temporada recebe nota de 5,4 a 9,9 e registra quantas vezes você foi o melhor em campo.</small></span></article>
                   <article><b>✚</b><span><strong>Departamento médico</strong><small>Lesão, gravidade, recuperação, jogos perdidos e recorrências formam um prontuário persistente.</small></span></article>
                   <article><b>PC</b><span><strong>Desktop de verdade</strong><small>Entrada, criação, fim de temporada e aposentadoria aproveitam telas largas com informação bem distribuída.</small></span></article>
@@ -6175,21 +6308,21 @@ export default function Home() {
                   <article><b>↔</b><span><strong>Saves separados</strong><small>O desafio diário nunca apaga nem substitui sua carreira normal.</small></span></article>
                   <article><b>▣</b><span><strong>Backup completo</strong><small>Desafios, resultados, carreira, Hall da Fama e configurações entram na exportação.</small></span></article>
                 </div>
-                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Conheça Volta ao Mundo</strong><b>→</b></button>
+                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Conheça Desafio Futbobo</strong><b>→</b></button>
               </>
             ) : (
               <>
-                <span className="update-version previous">v73 · VOLTA AO MUNDO</span>
-                <div className="update-symbol previous">🌍</div>
-                <h1 id="update-title">A carreira ficou ainda maior.</h1>
-                <p>Seis novas ligas, mais de cem clubes, acesso de divisão e a Champions asiática ampliaram o universo que já ganhou futebol de botão.</p>
+                <span className="update-version previous">v74 · MESMA SORTE, OUTRA HISTÓRIA</span>
+                <div className="update-symbol previous">24H</div>
+                <h1 id="update-title">Todo mundo começou com a mesma sorte.</h1>
+                <p>O Desafio Futbobo, avaliações por temporada, departamento médico persistente e o novo menu tornaram cada carreira mais comparável.</p>
                 <div className="update-grid previous-grid">
-                  <article><b>6×</b><span><strong>Seis ligas novas</strong><small>Arábia, Japão, Coreia do Sul, China, Série B e Championship.</small></span></article>
-                  <article><b>ACL</b><span><strong>Ásia de verdade</strong><small>AFC Champions League Elite e vaga no Mundial.</small></span></article>
-                  <article><b>↑</b><span><strong>Briga pelo acesso</strong><small>Suba com o mesmo clube para a primeira divisão.</small></span></article>
-                  <article><b>⚽</b><span><strong>Futebol de botão</strong><small>Finais e mata-matas jogáveis dentro da carreira.</small></span></article>
+                  <article><b>24H</b><span><strong>Desafio diário</strong><small>A mesma semente para todos e ranking local por pontos.</small></span></article>
+                  <article><b>8.7</b><span><strong>Avaliação média</strong><small>Notas anuais e prêmios de melhor em campo.</small></span></article>
+                  <article><b>✚</b><span><strong>Departamento médico</strong><small>Lesões, recuperação, recorrências e jogos perdidos.</small></span></article>
+                  <article><b>UI</b><span><strong>Novo menu</strong><small>Hierarquia melhor no celular e desktop aproveitado de verdade.</small></span></article>
                 </div>
-                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Desafio Futbobo</strong><b>←</b></button>
+                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Copa em Números</strong><b>←</b></button>
               </>
             )}
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
@@ -6410,7 +6543,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v74 · DESAFIO, AVALIAÇÃO E DM</b>
+            <span>FUTBOBO</span><b>v75 · COPA EM NÚMEROS</b>
           </footer>
         </section>
       )}
@@ -6802,6 +6935,27 @@ export default function Home() {
               )}
               {game.lastResult.twist && <div className={`season-twist ${game.lastResult.twist.includes("improvável") ? "positive" : "negative"}`}><span>O IMPREVISTO DA TEMPORADA</span><p>{game.lastResult.twist}</p></div>}
               {game.lastResult.nationalNote && <div className="season-national-note"><NationBadge country={nationCountry} size="sm" /><p>{game.lastResult.nationalNote}</p></div>}
+              {seasonWorldCupRecord?.tournamentStats && (
+                <section className={`world-cup-stat-report ${seasonWorldCupRecord.champion ? "champion" : ""}`}>
+                  <header>
+                    <div><span>RELATÓRIO DA COPA DO MUNDO</span><strong>{seasonWorldCupRecord.stage}</strong></div>
+                    <NationBadge country={nationCountry} size="sm" />
+                  </header>
+                  <div className="world-cup-stat-totals">
+                    <Metric label="Jogos" value={seasonWorldCupRecord.tournamentStats.appearances} />
+                    <Metric label="Gols" value={seasonWorldCupRecord.tournamentStats.goals} tone="gold" />
+                    <Metric label="Assistências" value={seasonWorldCupRecord.tournamentStats.assists} tone="green" />
+                    <Metric label="G+A" value={seasonWorldCupRecord.tournamentStats.goals + seasonWorldCupRecord.tournamentStats.assists} />
+                  </div>
+                  <div className="world-cup-stat-split">
+                    <span><small>FASE DE GRUPOS · SIMULADA</small><strong>{seasonWorldCupRecord.tournamentStats.groupAppearances}J · {seasonWorldCupRecord.tournamentStats.groupGoals}G · {seasonWorldCupRecord.tournamentStats.groupAssists}A</strong></span>
+                    <span><small>MATA-MATA</small><strong>{seasonWorldCupRecord.tournamentStats.knockoutAppearances}J · {seasonWorldCupRecord.tournamentStats.knockoutGoals}G · {seasonWorldCupRecord.tournamentStats.knockoutAssists}A</strong></span>
+                  </div>
+                  {isEuropeanClub(currentClub) && seasonWorldCupRecord.tournamentStats.goals >= 8 && (
+                    <div className="world-cup-ballon-surge"><b>◉</b><span><strong>A eleição mudou de figura</strong><small>Oito ou mais gols na Copa, jogando na Europa, colocaram seu nome no centro da disputa pela Bola de Ouro.</small></span></div>
+                  )}
+                </section>
+              )}
               {(game.lastResult.awards.length > 0 || game.lastResult.awardNominations.length > 0) && (
                 <section className={`season-awards-showcase ${game.lastResult.awardNominations.some((nomination) => nomination.award === "Bola de Ouro") ? "has-ballon-dor" : ""}`}>
                   <div className="season-awards-heading">

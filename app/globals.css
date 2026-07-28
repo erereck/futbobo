@@ -196,6 +196,23 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .challenge-summary-banner small { color: var(--muted); font-size: 8px; }
 .challenge-summary-banner > b { color: var(--gold); font: 900 24px var(--display); text-align: center; }
 .challenge-summary-banner > b small { display: block; font: 900 6px var(--sans); letter-spacing: .12em; }
+.world-cup-stat-report { width: 100%; margin-bottom: 14px; padding: 15px; border: 1px solid rgba(44,168,255,.27); border-radius: 19px; background: radial-gradient(circle at 100% 0, rgba(44,168,255,.12), transparent 38%), rgba(44,168,255,.045); text-align: left; }
+.world-cup-stat-report.champion { border-color: rgba(255,199,44,.38); background: radial-gradient(circle at 100% 0, rgba(255,199,44,.16), transparent 42%), rgba(255,199,44,.045); }
+.world-cup-stat-report > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.world-cup-stat-report > header > div { display: grid; gap: 3px; }
+.world-cup-stat-report > header span { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .14em; }
+.world-cup-stat-report.champion > header span { color: var(--gold); }
+.world-cup-stat-report > header strong { font: 900 18px var(--display); }
+.world-cup-stat-totals { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; margin-top: 12px; }
+.world-cup-stat-split { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 8px; }
+.world-cup-stat-split > span { display: grid; gap: 4px; padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: rgba(0,0,0,.13); }
+.world-cup-stat-split small { color: var(--muted); font-size: 6px; font-weight: 900; letter-spacing: .09em; }
+.world-cup-stat-split strong { font-size: 9px; }
+.world-cup-ballon-surge { display: flex; align-items: center; gap: 10px; margin-top: 9px; padding: 10px; border: 1px solid rgba(255,199,44,.27); border-radius: 12px; background: rgba(255,199,44,.07); }
+.world-cup-ballon-surge > b { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--gold); color: #4a3300; }
+.world-cup-ballon-surge span { display: grid; gap: 2px; }
+.world-cup-ballon-surge strong { font-size: 10px; }
+.world-cup-ballon-surge small { color: var(--muted); font-size: 7px; line-height: 1.35; }
 
 .setup-screen { min-height: 100dvh; padding-bottom: 96px; }
 .step-header { position: sticky; z-index: 20; top: 0; display: grid; grid-template-columns: 43px 1fr 42px; align-items: center; gap: 11px; min-height: 78px; padding: calc(env(safe-area-inset-top) + 9px) 16px 9px; border-bottom: 1px solid var(--line); background: rgba(8,26,19,.9); backdrop-filter: blur(18px); }

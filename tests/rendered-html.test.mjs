@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v74 · DESAFIO, AVALIAÇÃO E DM/);
+  assert.match(pageSource, /v75 · COPA EM NÚMEROS/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -29,6 +29,24 @@ test("adiciona desafio diario, avaliacao e departamento medico sem alterar a nav
   assert.match(styles, /\.season-rating-card/);
   assert.match(styles, /\.medical-department/);
   assert.match(page, /<nav className="bottom-nav"/);
+});
+
+test("fecha a Copa do Mundo com estatisticas completas e impacto forte na Bola de Ouro", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /type TournamentStats/);
+  assert.match(page, /function simulatedWorldCupStats/);
+  assert.match(page, /groupAppearances/);
+  assert.match(page, /knockoutAppearances/);
+  assert.match(page, /RELATÓRIO DA COPA DO MUNDO/);
+  assert.match(page, /FASE DE GRUPOS · SIMULADA/);
+  assert.match(page, /worldCupGoals >= 8 \? 24/);
+  assert.match(page, /worldCupBallonChanceFloor/);
+  assert.match(page, /worldCupBallonSurge \? 68/);
+  assert.match(page, /Artilheiro da Copa do Mundo/);
+  assert.match(styles, /\.world-cup-stat-report/);
+  assert.match(styles, /\.world-cup-ballon-surge/);
 });
 
 test("fecha as seis novas ligas com acesso e torneio asiatico", async () => {
@@ -801,7 +819,7 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /PATROCINADOR PESSOAL/);
   assert.match(page, /LINHA DO TEMPO/);
   assert.match(page, /setUpdateNoticePage\("previous"\)/);
-  assert.match(page, /VOLTA AO MUNDO/);
+  assert.match(page, /MESMA SORTE, OUTRA HISTÓRIA/);
   assert.match(page, /FORA DAS QUATRO LINHAS/);
   assert.match(gameData, /followers\?: number/);
   assert.match(gameData, /sponsorBrand\?: string/);
