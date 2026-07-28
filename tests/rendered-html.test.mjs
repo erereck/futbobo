@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v78 · CENTRAL DESKTOP/);
+  assert.match(pageSource, /v79 · PREMIAÇÃO DESKTOP/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -982,4 +982,12 @@ test("usa uma central de carreira própria no computador sem alterar o layout mo
   assert.match(styles, /\.career-tab-stats > \.statistics-screen/);
   assert.match(styles, /\.career-tab-history > \.panel-screen \.timeline-list/);
   assert.match(styles, /@media \(max-width: 540px\)/);
+});
+
+test("não comprime a cerimônia de prêmios no resultado desktop", async () => {
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(styles, /\.career-shell > \.result-stage > \* \{ flex-shrink: 0; \}/);
+  assert.match(styles, /\.career-shell > \.result-stage \.season-awards-showcase \{/);
+  assert.match(styles, /min-height: max-content/);
 });

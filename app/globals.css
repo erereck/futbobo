@@ -1690,6 +1690,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .app-shell-season-result .result-stage { max-width: none; margin-inline: 0; }
   .career-shell > .result-stage > h1 { font-size: 38px; }
   .career-shell > .result-stage > p { max-width: 620px; font-size: 14px; }
+  .career-shell > .result-stage > * { flex-shrink: 0; }
   .career-shell > .result-stage .season-stat-grid { max-width: 720px; }
   .career-shell > .result-stage .season-result-section,
   .career-shell > .result-stage .season-title-parade,
@@ -1700,6 +1701,10 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .career-shell > .result-stage .world-cup-stat-report,
   .career-shell > .result-stage .result-details,
   .career-shell > .result-stage .mobile-action-dock { max-width: 820px; }
+  .career-shell > .result-stage .season-awards-showcase {
+    height: auto;
+    min-height: max-content;
+  }
   .career-shell > .transfer-stage { justify-content: flex-start; }
   .career-shell > .transfer-stage > h1 { max-width: 760px; font-size: 42px; }
   .career-shell > .transfer-stage > p { max-width: 760px; font-size: 14px; }
