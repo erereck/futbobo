@@ -6543,7 +6543,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v77 · REBOTES DE PÊNALTI</b>
+            <span>FUTBOBO</span><b>v78 · CENTRAL DESKTOP</b>
           </footer>
         </section>
       )}
@@ -7502,6 +7502,10 @@ export default function Home() {
 
           {game.phase === "career" && (
             <nav className="bottom-nav" aria-label="Navegação da carreira">
+              <div className="desktop-career-nav-brand" aria-hidden="true">
+                <BrandMark size="sm" />
+                <span><small>CENTRAL DO JOGADOR</small><strong>{game.name}</strong><em>{position.name} · {leagueById(game.currentLeagueId || currentClub.leagueId).name}</em></span>
+              </div>
               <button aria-pressed={activeTab === "event"} className={activeTab === "event" ? "selected" : ""} onClick={() => changeTab("event")}><span>◆</span>Carreira</button>
               <button aria-pressed={activeTab === "history"} className={activeTab === "history" ? "selected" : ""} onClick={() => changeTab("history")}><span>≡</span>Histórico</button>
               <button aria-pressed={activeTab === "profile"} className={activeTab === "profile" ? "selected" : ""} onClick={() => changeTab("profile")}><span>●</span>Jogador</button>

@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v77 · REBOTES DE PÊNALTI/);
+  assert.match(pageSource, /v78 · CENTRAL DESKTOP/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -965,4 +965,21 @@ test("mantém vivo o rebote do goleiro que ainda segue em direção ao gol", asy
     engine.indexOf("if (savedByKeeper)") < engine.indexOf("const crossed ="),
     "o afastamento do goleiro precisa ser resolvido antes da linha do gol",
   );
+});
+
+test("usa uma central de carreira própria no computador sem alterar o layout mobile", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /desktop-career-nav-brand/);
+  assert.match(page, /CENTRAL DO JOGADOR/);
+  assert.match(styles, /grid-template-columns: 294px minmax\(0, 1fr\)/);
+  assert.match(styles, /\.career-shell > \.bottom-nav \{/);
+  assert.match(styles, /\.career-shell > \.event-stage \{/);
+  assert.match(styles, /grid-template-columns: minmax\(270px, \.82fr\) minmax\(430px, 1\.18fr\)/);
+  assert.match(styles, /\.career-tab-profile > \.panel-screen \{/);
+  assert.match(styles, /\.career-tab-life > \.life-screen/);
+  assert.match(styles, /\.career-tab-stats > \.statistics-screen/);
+  assert.match(styles, /\.career-tab-history > \.panel-screen \.timeline-list/);
+  assert.match(styles, /@media \(max-width: 540px\)/);
 });
