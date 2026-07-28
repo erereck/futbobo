@@ -1188,20 +1188,21 @@ export function stepPenalty(state: BotaoMatchState, dt: number): { scored: boole
   }
   keeper.vx = 0;
 
-  // A primeira defesa encerra a cobrança. Antes, o desvio continuava sendo
-  // simulado durante a pausa do resultado e podia atravessar a linha por trás
-  // do goleiro, transformando visualmente (e às vezes logicamente) defesa em gol.
+  // O contato do goleiro só encerra a cobrança quando ele realmente afasta ou
+  // mata a bola. Uma espalmada que ainda segue em direção à linha continua viva
+  // e pode entrar normalmente.
   if (savedByKeeper) {
-    for (const body of bodies) {
-      if (body.kind === "post" || body === keeper) continue;
-      body.vx = 0;
-      body.vy = 0;
+    const movingAwayFromGoal = goalY === 0 ? ball.vy > STOP_SPEED : ball.vy < -STOP_SPEED;
+    const keeperStoppedBall = Math.hypot(ball.vx, ball.vy) <= STOP_SPEED;
+    if (movingAwayFromGoal || keeperStoppedBall) {
+      ball.vx = 0;
+      ball.vy = 0;
+      return { scored: false };
     }
-    return { scored: false };
   }
 
   const crossed = goalY === 0 ? ball.y <= 0 : ball.y >= FIELD.height;
-  if (crossed && inGoalMouth(ball.x)) return { scored: true };
+  if (crossed) return { scored: inGoalMouth(ball.x) };
 
   state.resolveElapsed += dt;
   const ballStopped = ball.vx === 0 && ball.vy === 0;

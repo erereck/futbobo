@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v76 · PÊNALTIS CORRIGIDOS/);
+  assert.match(pageSource, /v77 · REBOTES DE PÊNALTI/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -951,16 +951,18 @@ test("mostra o minuto de cada gol no resultado do futebol de botão", async () =
   assert.match(engine, /inactivityPenalty && scored \? "goal"/);
 });
 
-test("encerra o pênalti como defesa no primeiro contato válido com o goleiro", async () => {
+test("mantém vivo o rebote do goleiro que ainda segue em direção ao gol", async () => {
   const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
 
   assert.match(engine, /function collide\([^)]*\): boolean/);
   assert.match(engine, /const keeperBallPair =/);
   assert.match(engine, /if \(collide\(state, a, b, events\) && keeperBallPair\) savedByKeeper = true/);
   assert.match(engine, /if \(savedByKeeper\) \{/);
-  assert.match(engine, /return \{ scored: false \}/);
+  assert.match(engine, /const movingAwayFromGoal = goalY === 0 \? ball\.vy > STOP_SPEED : ball\.vy < -STOP_SPEED/);
+  assert.match(engine, /if \(movingAwayFromGoal \|\| keeperStoppedBall\)/);
+  assert.match(engine, /if \(crossed\) return \{ scored: inGoalMouth\(ball\.x\) \}/);
   assert.ok(
     engine.indexOf("if (savedByKeeper)") < engine.indexOf("const crossed ="),
-    "a defesa precisa ser resolvida antes da checagem da linha do gol",
+    "o afastamento do goleiro precisa ser resolvido antes da linha do gol",
   );
 });

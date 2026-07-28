@@ -6543,7 +6543,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v76 · PÊNALTIS CORRIGIDOS</b>
+            <span>FUTBOBO</span><b>v77 · REBOTES DE PÊNALTI</b>
           </footer>
         </section>
       )}
