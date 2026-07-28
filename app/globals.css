@@ -128,6 +128,74 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .welcome-hall-copy strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .welcome-hall-copy small { margin-top: 1px; overflow: hidden; color: var(--muted); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
 .welcome-hall article > em { color: var(--gold); font: 900 10px var(--display); font-style: normal; }
+.welcome-layout, .welcome-main, .welcome-side { display: grid; align-content: start; }
+.welcome-layout { gap: 16px; }
+.welcome-main, .welcome-side { gap: 14px; }
+.welcome-actions .continue-career-button { position: relative; justify-content: flex-start; padding: 0 18px; }
+.welcome-actions .continue-career-button small { margin-right: auto; color: rgba(8,26,19,.62); font-size: 7px; letter-spacing: .15em; }
+.welcome-actions .new-career-button { min-height: 48px; }
+.challenge-card { position: relative; overflow: hidden; padding: 17px; border: 1px solid rgba(44,168,255,.3); border-radius: 21px 21px 21px 7px; background: radial-gradient(circle at 100% 0, rgba(44,168,255,.2), transparent 42%), linear-gradient(145deg, #12362d, #0c241c); box-shadow: 0 16px 38px rgba(0,0,0,.22); }
+.challenge-card::after { content: "F"; position: absolute; right: -9px; bottom: -34px; color: rgba(255,255,255,.025); font: 900 130px var(--display); pointer-events: none; }
+.challenge-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.challenge-card header div { display: grid; gap: 4px; }
+.challenge-card header span, .challenge-code small { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .15em; }
+.challenge-card header strong { font: 900 17px/1.05 var(--display); }
+.challenge-card header > b { padding: 6px 8px; border: 1px solid rgba(44,168,255,.25); border-radius: 9px; color: var(--blue); font-size: 8px; }
+.challenge-card > p { margin: 11px 0 13px; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.challenge-code { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 10px; border-radius: 11px; background: rgba(44,168,255,.07); }
+.challenge-code strong { font-size: 10px; letter-spacing: .08em; }
+.challenge-score-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 8px 0; }
+.challenge-score-row > span { display: grid; gap: 3px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.025); }
+.challenge-score-row small { color: var(--muted); font-size: 7px; }
+.challenge-score-row strong { color: var(--gold); font: 900 17px var(--display); }
+.challenge-card > button { position: relative; z-index: 1; width: 100%; min-height: 44px; border: 0; border-radius: 12px; background: var(--blue); color: #071711; font-size: 10px; font-weight: 900; cursor: pointer; }
+.challenge-card > button.challenge-restart { min-height: 28px; margin-top: 4px; background: transparent; color: var(--muted); font-size: 8px; }
+.welcome-utilities { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+.welcome-utilities button { display: grid; min-width: 0; min-height: 58px; place-items: center; padding: 7px 4px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.025); color: var(--text); cursor: pointer; }
+.welcome-utilities b { color: var(--gold); font-size: 15px; }
+.welcome-utilities span { overflow: hidden; max-width: 100%; color: var(--muted); font-size: 7px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+
+.season-rating-card { display: grid; width: 100%; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 12px; margin: 0 0 17px; padding: 13px 14px; border: 1px solid rgba(99,227,107,.2); border-radius: 16px; background: linear-gradient(135deg, rgba(99,227,107,.08), rgba(255,255,255,.025)); text-align: left; }
+.season-rating-card > div { display: grid; place-items: center; min-width: 64px; padding: 8px; border-radius: 12px; background: rgba(0,0,0,.18); }
+.season-rating-card span, .season-rating-card > b small { color: var(--muted); font-size: 6px; font-weight: 900; letter-spacing: .11em; }
+.season-rating-card > div strong { color: var(--green); font: 900 27px var(--display); }
+.season-rating-card p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.season-rating-card > b { display: grid; gap: 2px; color: var(--gold); font: 900 18px var(--display); text-align: center; }
+.season-rating-card > b small { display: block; max-width: 56px; }
+.season-rating-card.rating-elite { border-color: rgba(255,199,44,.35); background: linear-gradient(135deg, rgba(255,199,44,.13), rgba(99,227,107,.04)); }
+.season-rating-card.rating-elite > div strong { color: var(--gold); }
+.season-medical-card, .medical-department { width: 100%; margin-bottom: 12px; padding: 14px; border: 1px solid rgba(255,90,78,.25); border-radius: 17px; background: rgba(255,90,78,.055); text-align: left; }
+.season-medical-card header, .medical-department header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.season-medical-card header span, .medical-department header span { color: var(--red); font-size: 7px; font-weight: 900; letter-spacing: .14em; }
+.season-medical-card header b { padding: 4px 7px; border-radius: 999px; background: rgba(255,90,78,.12); color: var(--red); font-size: 6px; }
+.season-medical-card > strong { display: block; margin: 9px 0 11px; font-size: 13px; }
+.season-medical-card > div { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+.season-medical-card > div span { display: grid; place-items: center; padding: 8px 5px; border-radius: 10px; background: rgba(0,0,0,.16); }
+.season-medical-card > div b { font: 900 16px var(--display); }
+.season-medical-card > div small { margin-top: 2px; color: var(--muted); font-size: 6px; }
+.medical-department { margin-top: 10px; border-color: rgba(44,168,255,.2); background: linear-gradient(135deg, rgba(44,168,255,.07), rgba(255,255,255,.02)); }
+.medical-department header > div { display: grid; gap: 3px; }
+.medical-department header strong { font: 900 16px var(--display); }
+.medical-department header > b { display: grid; width: 37px; height: 37px; place-items: center; border-radius: 11px; background: rgba(99,227,107,.1); color: var(--green); }
+.medical-department header > b.has-history { background: rgba(255,90,78,.1); color: var(--red); }
+.medical-overview { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-top: 12px; }
+.medical-history-list { display: grid; gap: 6px; margin-top: 10px; }
+.medical-history-list article { display: grid; grid-template-columns: 34px minmax(0,1fr) auto; align-items: center; gap: 9px; padding: 9px; border: 1px solid var(--line); border-radius: 11px; background: rgba(0,0,0,.12); }
+.medical-history-list article > b { color: var(--muted); font-size: 8px; }
+.medical-history-list div { min-width: 0; }
+.medical-history-list strong, .medical-history-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.medical-history-list strong { font-size: 9px; }
+.medical-history-list small { margin-top: 2px; color: var(--muted); font-size: 7px; }
+.medical-history-list article > span { color: var(--red); font-size: 6px; font-weight: 900; text-transform: uppercase; }
+.medical-department > p { margin: 12px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.timeline-medical { display: block; margin-top: 3px; color: var(--red); font-size: 7px; font-style: normal; }
+.challenge-summary-banner { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; padding: 15px; border: 1px solid rgba(44,168,255,.3); border-radius: 18px; background: rgba(44,168,255,.07); text-align: left; }
+.challenge-summary-banner > div { display: grid; gap: 3px; }
+.challenge-summary-banner span { color: var(--blue); font-size: 7px; font-weight: 900; letter-spacing: .13em; }
+.challenge-summary-banner strong { font-size: 13px; }
+.challenge-summary-banner small { color: var(--muted); font-size: 8px; }
+.challenge-summary-banner > b { color: var(--gold); font: 900 24px var(--display); text-align: center; }
+.challenge-summary-banner > b small { display: block; font: 900 6px var(--sans); letter-spacing: .12em; }
 
 .setup-screen { min-height: 100dvh; padding-bottom: 96px; }
 .step-header { position: sticky; z-index: 20; top: 0; display: grid; grid-template-columns: 43px 1fr 42px; align-items: center; gap: 11px; min-height: 78px; padding: calc(env(safe-area-inset-top) + 9px) 16px 9px; border-bottom: 1px solid var(--line); background: rgba(8,26,19,.9); backdrop-filter: blur(18px); }
@@ -1272,6 +1340,63 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .welcome-screen, .setup-screen, .youth-screen, .youth-complete-screen, .revelation-screen, .career-shell, .summary-screen { min-height: calc(100dvh - 38px); }
   .sticky-action, .bottom-nav { bottom: 18px; border-radius: 0 0 28px 28px; }
   .career-header, .step-header { border-radius: 28px 28px 0 0; }
+}
+
+@media (min-width: 900px) {
+  body { padding: 24px; }
+  .app-shell-welcome { max-width: 1180px; }
+  .app-shell-welcome .welcome-screen { padding: 0 30px 24px; }
+  .app-shell-welcome .brand-lockup { padding-top: 24px; }
+  .welcome-layout { grid-template-columns: minmax(0,1.45fr) minmax(330px,.72fr); gap: 25px; margin-top: 18px; }
+  .welcome-main { grid-template-columns: minmax(0,1.2fr) minmax(280px,.8fr); column-gap: 25px; }
+  .welcome-main .hero-pitch { grid-row: 1 / 4; height: 610px; min-height: 0; margin: 0; }
+  .welcome-main .welcome-copy { align-self: end; padding-top: 34px; }
+  .welcome-main .welcome-copy h1 { font-size: 46px; }
+  .welcome-main .welcome-actions { align-self: start; margin-top: 8px; }
+  .welcome-side { gap: 12px; }
+  .challenge-card { padding: 20px; }
+  .welcome-hall { margin-top: 0; }
+  .welcome-features { margin-top: 22px; }
+
+  .app-shell-identity,
+  .app-shell-nationality,
+  .app-shell-academy,
+  .app-shell-formation,
+  .app-shell-youth,
+  .app-shell-youth-complete,
+  .app-shell-revelation,
+  .app-shell-season-result,
+  .app-shell-summary,
+  .app-shell-botao-final,
+  .app-shell-botao-result {
+    max-width: 980px;
+  }
+  .app-shell-identity .setup-content,
+  .app-shell-nationality .setup-content,
+  .app-shell-academy .setup-content,
+  .app-shell-formation .setup-content { max-width: 900px; margin-inline: auto; }
+  .app-shell-identity .setup-content { display: grid; grid-template-columns: minmax(260px,.72fr) minmax(420px,1.28fr); gap: 0 24px; }
+  .app-shell-identity .identity-card,
+  .app-shell-identity .field-label,
+  .app-shell-identity .two-fields { grid-column: 1; }
+  .app-shell-identity .section-heading,
+  .app-shell-identity .position-grid { grid-column: 2; }
+  .app-shell-identity .section-heading { grid-row: 1; align-self: end; }
+  .app-shell-identity .position-grid { grid-row: 2 / 7; height: 500px; }
+  .app-shell-identity .sticky-action,
+  .app-shell-nationality .sticky-action,
+  .app-shell-academy .sticky-action,
+  .app-shell-formation .sticky-action { width: min(980px, calc(100% - 48px)); bottom: 24px; }
+
+  .app-shell-season-result .career-header,
+  .app-shell-season-result .career-bars,
+  .app-shell-season-result .career-status-strip { max-width: 540px; margin-inline: auto; }
+  .app-shell-season-result .result-stage { max-width: 900px; margin-inline: auto; }
+  .app-shell-season-result .season-stat-grid { grid-template-columns: repeat(4,1fr); }
+  .app-shell-season-result .competition-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .app-shell-summary .summary-screen { max-width: 900px; margin-inline: auto; }
+  .app-shell-summary .final-public-grid,
+  .app-shell-summary .summary-stats { grid-template-columns: repeat(4,minmax(0,1fr)); }
 }
 
 @media (max-width: 540px) {

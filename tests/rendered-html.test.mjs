@@ -8,8 +8,27 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /<b>v73<\/b>/);
+  assert.match(pageSource, /v74 · DESAFIO, AVALIAÇÃO E DM/);
   assert.match(styles, /\.welcome-version/);
+});
+
+test("adiciona desafio diario, avaliacao e departamento medico sem alterar a navegacao da carreira", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /const CHALLENGE_SAVE_KEY = "futbobo:challenge-save:v1"/);
+  assert.match(page, /function dailyChallenge/);
+  assert.match(page, /Todo mundo com a mesma sorte/);
+  assert.match(page, /function seasonAverageRating/);
+  assert.match(page, /AVALIAÇÃO MÉDIA/);
+  assert.match(page, /type MedicalRecord/);
+  assert.match(page, /DEPARTAMENTO MÉDICO/);
+  assert.match(page, /medicalHistory: medicalRecord/);
+  assert.match(styles, /\.welcome-layout/);
+  assert.match(styles, /@media \(min-width: 900px\)/);
+  assert.match(styles, /\.season-rating-card/);
+  assert.match(styles, /\.medical-department/);
+  assert.match(page, /<nav className="bottom-nav"/);
 });
 
 test("fecha as seis novas ligas com acesso e torneio asiatico", async () => {
@@ -782,7 +801,7 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /PATROCINADOR PESSOAL/);
   assert.match(page, /LINHA DO TEMPO/);
   assert.match(page, /setUpdateNoticePage\("previous"\)/);
-  assert.match(page, /SALA DOS CAMPEÕES/);
+  assert.match(page, /VOLTA AO MUNDO/);
   assert.match(page, /FORA DAS QUATRO LINHAS/);
   assert.match(gameData, /followers\?: number/);
   assert.match(gameData, /sponsorBrand\?: string/);

@@ -315,6 +315,9 @@ type SeasonRecord = PlayerStats & {
   socialSentiment?: number;
   botaoResults?: StoredBotaoResult[];
   promotion?: string | null;
+  averageRating?: number;
+  manOfTheMatchAwards?: number;
+  medicalRecord?: MedicalRecord | null;
 };
 
 type SeasonResult = SeasonRecord & {
@@ -445,6 +448,37 @@ type GameState = {
   unlockedAchievements: string[];
   economyPurchases: string[];
   newsFeed: string[];
+  medicalHistory: MedicalRecord[];
+  injuryFreeSeasons: number;
+  matchesMissedInjuries: number;
+  challengeId: string;
+  challengeDate: string;
+};
+
+type MedicalRecord = {
+  id: string;
+  season: number;
+  age: number;
+  name: string;
+  severity: "moderada" | "grave";
+  matchesMissed: number;
+  recoveryMonths: number;
+  recurring: boolean;
+  overallImpact: number;
+};
+
+type ChallengeResult = {
+  id: string;
+  challengeId: string;
+  date: string;
+  name: string;
+  position: PositionKey;
+  nationality: string;
+  score: number;
+  peakOverall: number;
+  trophies: number;
+  ballonDor: number;
+  finishedAt: number;
 };
 
 type MonteCarloCareerSummary = {
@@ -563,8 +597,36 @@ declare global {
 }
 
 const SAVE_KEY = "futbobo:career:v1";
+const CHALLENGE_SAVE_KEY = "futbobo:challenge-save:v1";
+const CHALLENGE_RESULTS_KEY = "futbobo:challenge-results:v1";
 const HALL_OF_FAME_KEY = "futbobo:hall-of-fame:v1";
 const SETTINGS_KEY = "futbobo:settings:v1";
+
+function dateKey(date = new Date()) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function stableSeed(text: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash) % 2147483647 || 20260728;
+}
+
+function dailyChallenge(now = new Date()) {
+  const date = dateKey(now);
+  return {
+    date,
+    id: `FB-${date.replaceAll("-", "")}`,
+    seed: stableSeed(`futbobo-desafio-${date}`),
+  };
+}
 const ORIGINAL_CLUB_PRESENTATION = new Map(
   CLUBS.map((club) => [club.id, {
     name: club.name,
@@ -814,8 +876,8 @@ function evolvePlayerAttributes(
   })) as PlayerAttributes;
 }
 
-function initialState(): GameState {
-  const seed = Date.now() % 2147483647;
+function initialState(seedOverride?: number): GameState {
+  const seed = seedOverride ?? Date.now() % 2147483647;
   return {
     version: 6,
     phase: "welcome",
@@ -938,6 +1000,11 @@ function initialState(): GameState {
     unlockedAchievements: [],
     economyPurchases: [],
     newsFeed: [],
+    medicalHistory: [],
+    injuryFreeSeasons: 0,
+    matchesMissedInjuries: 0,
+    challengeId: "",
+    challengeDate: "",
   };
 }
 
@@ -1064,6 +1131,11 @@ function normalizeSave(value: unknown): GameState {
     unlockedAchievements: saved.unlockedAchievements ?? [],
     economyPurchases: saved.economyPurchases ?? [],
     newsFeed: saved.newsFeed ?? [],
+    medicalHistory: Array.isArray(saved.medicalHistory) ? saved.medicalHistory : [],
+    injuryFreeSeasons: saved.injuryFreeSeasons ?? 0,
+    matchesMissedInjuries: saved.matchesMissedInjuries ?? 0,
+    challengeId: saved.challengeId ?? "",
+    challengeDate: saved.challengeDate ?? "",
     attributes: saved.attributes ?? createPlayerAttributes(
       saved.position ?? base.position,
       saved.overall ?? base.overall,
@@ -1116,6 +1188,9 @@ function normalizeSave(value: unknown): GameState {
       socialSentiment: record.socialSentiment ?? 50,
       botaoResults: Array.isArray(record.botaoResults) ? record.botaoResults : [],
       promotion: record.promotion ?? null,
+      averageRating: record.averageRating,
+      manOfTheMatchAwards: record.manOfTheMatchAwards ?? 0,
+      medicalRecord: record.medicalRecord ?? null,
     })),
     lastResult: saved.lastResult ? {
       ...saved.lastResult,
@@ -1734,6 +1809,42 @@ function seasonPerformanceScore(positionKey: PositionKey, record?: Partial<Seaso
     (record.awards?.length ?? 0) * 4 +
     (record.title ? 6 : 0);
   return clamp(Math.round(score), 0, 100);
+}
+
+function seasonAverageRating(performanceScore: number, seed: number, season: number) {
+  const variance = (seeded(seed, season * 941 + 17) - 0.5) * 0.36;
+  const historicBonus = performanceScore >= 97 && seeded(seed, season * 941 + 29) > 0.82 ? 0.3 : 0;
+  return Number(clamp(
+    5.25 + performanceScore * 0.038 + Math.max(0, performanceScore - 90) * 0.04 + variance + historicBonus,
+    5.4,
+    9.9,
+  ).toFixed(1));
+}
+
+function medicalRecordForSeason(state: GameState): MedicalRecord {
+  const catalog = [
+    { name: "Ruptura do ligamento cruzado", severity: "grave" as const, months: [8, 11], matches: [20, 31], impact: -2 },
+    { name: "Lesão no tendão de Aquiles", severity: "grave" as const, months: [7, 10], matches: [17, 27], impact: -2 },
+    { name: "Fratura na tíbia", severity: "grave" as const, months: [5, 8], matches: [13, 22], impact: -1 },
+    { name: "Lesão no menisco", severity: "moderada" as const, months: [3, 6], matches: [8, 16], impact: -1 },
+    { name: "Lesão muscular de grau 3", severity: "moderada" as const, months: [2, 4], matches: [5, 12], impact: 0 },
+    { name: "Entorse grave no tornozelo", severity: "moderada" as const, months: [2, 4], matches: [6, 13], impact: 0 },
+  ];
+  const injury = catalog[Math.floor(seeded(state.seed, state.season * 947 + 31) * catalog.length)];
+  const rangeValue = (range: number[], salt: number) =>
+    range[0] + Math.floor(seeded(state.seed, state.season * salt) * (range[1] - range[0] + 1));
+  const recurring = state.medicalHistory.some((record) => record.name === injury.name);
+  return {
+    id: `${state.seed}-${state.season}-${injury.name}`,
+    season: state.season,
+    age: state.age,
+    name: injury.name,
+    severity: injury.severity,
+    recoveryMonths: rangeValue(injury.months, 953),
+    matchesMissed: rangeValue(injury.matches, 967),
+    recurring,
+    overallImpact: injury.impact,
+  };
 }
 
 function transferMarketProfile(state: GameState) {
@@ -2839,6 +2950,10 @@ function simulateSeason(
     overall: affected.overall,
     title: titleCount > 0,
   });
+  const averageRating = seasonAverageRating(performanceScore, affected.seed, affected.season);
+  const manOfTheMatchAwards = Math.max(0, Math.round(
+    appearances * Math.max(0, averageRating - 6.8) * (0.055 + seeded(affected.seed, affected.season * 943) * 0.025),
+  ));
   const europeanSpotlight = inEurope && performanceScore >= 58
     ? clamp(Math.floor((performanceScore - 49) / 9), 1, 6)
     : 0;
@@ -2858,16 +2973,18 @@ function simulateSeason(
   let twistMorale = 0;
   let setbackDelta = 0;
   let luckyDelta = 0;
+  let medicalRecord: MedicalRecord | null = null;
   const twistRoll = seeded(state.seed, state.season * 83);
   const injuryTraitFactor = hasTrait("ironman") ? 0.52 : hasTrait("injury-prone") ? 1.75 : 1;
   const seriousInjuryChance = 0.038 + Math.max(0, 65 - affected.fitness) / 450 + Math.max(0, 45 - affected.lifeBalance) / 650 + (effect.injuryRisk ?? 0) / 500;
   const effectiveSeriousInjuryChance = seriousInjuryChance * injuryTraitFactor;
   if (twistRoll < effectiveSeriousInjuryChance) {
+    medicalRecord = medicalRecordForSeason(affected);
     development -= 3;
     twistFitness = -24;
     twistMorale = -10;
     setbackDelta = 1;
-    twist = "Uma lesão séria interrompeu sua temporada e mudou o ritmo da carreira.";
+    twist = `${medicalRecord.name}: ${medicalRecord.recoveryMonths} meses de recuperação e ${medicalRecord.matchesMissed} jogos estimados fora.`;
   } else if (twistRoll < effectiveSeriousInjuryChance + 0.095) {
     development -= 1;
     twistMorale = -13;
@@ -3377,6 +3494,9 @@ function simulateSeason(
     development,
     botaoResults: [],
     promotion,
+    averageRating,
+    manOfTheMatchAwards,
+    medicalRecord,
   };
   const result: SeasonResult = {
     ...record,
@@ -3601,6 +3721,9 @@ function simulateSeason(
     nationalitySwitched: affected.nationalitySwitched || Boolean(nationalitySwitchRecord),
     pendingNationalitySwitchTarget: "",
     corruptionGuaranteedSeason: 0,
+    medicalHistory: medicalRecord ? [medicalRecord, ...affected.medicalHistory] : affected.medicalHistory,
+    injuryFreeSeasons: medicalRecord ? 0 : affected.injuryFreeSeasons + 1,
+    matchesMissedInjuries: affected.matchesMissedInjuries + (medicalRecord?.matchesMissed ?? 0),
   };
   const wantsDomesticReturn = event.id === "european-exit" || event.id === "return-home" || event.id === "mega-empresta-para-time-menor";
   const domesticReturnCountryId = event.id === "european-exit" || event.id === "return-home"
@@ -4303,6 +4426,8 @@ export default function Home() {
   const [game, setGame] = useState<GameState>(() => initialState());
   const nameRollRef = useRef(0);
   const [hasSave, setHasSave] = useState(false);
+  const [hasChallengeSave, setHasChallengeSave] = useState(false);
+  const [challengeResults, setChallengeResults] = useState<ChallengeResult[]>([]);
   const [youthStep, setYouthStep] = useState(0);
   const [youthFinished, setYouthFinished] = useState(false);
   const [activeTab, setActiveTab] = useState<"event" | "history" | "profile" | "life" | "stats" | "legacy">("event");
@@ -4354,6 +4479,17 @@ export default function Home() {
         if (parsed.version && parsed.version >= 1 && parsed.version <= 6) {
           queueMicrotask(() => setHasSave(parsed.phase !== "welcome"));
         }
+      }
+      const challengeSave = localStorage.getItem(CHALLENGE_SAVE_KEY);
+      if (challengeSave) {
+        const parsed = JSON.parse(challengeSave) as { version?: number; phase?: Phase; challengeId?: string };
+        if (parsed.version && parsed.version >= 1 && parsed.version <= 6 && parsed.challengeId) {
+          queueMicrotask(() => setHasChallengeSave(parsed.phase !== "welcome" && parsed.phase !== "summary"));
+        }
+      }
+      const storedChallengeResults = JSON.parse(localStorage.getItem(CHALLENGE_RESULTS_KEY) ?? "[]") as unknown;
+      if (Array.isArray(storedChallengeResults)) {
+        queueMicrotask(() => setChallengeResults((storedChallengeResults as ChallengeResult[]).slice(0, 40)));
       }
       const storedHall = JSON.parse(localStorage.getItem(HALL_OF_FAME_KEY) ?? "[]") as unknown;
       if (Array.isArray(storedHall)) {
@@ -4422,11 +4558,39 @@ export default function Home() {
 
   useEffect(() => {
     if (game.phase === "welcome") return;
-    localStorage.setItem(SAVE_KEY, JSON.stringify(game));
+    const key = game.challengeId ? CHALLENGE_SAVE_KEY : SAVE_KEY;
+    localStorage.setItem(key, JSON.stringify(game));
+    if (game.challengeId) queueMicrotask(() => setHasChallengeSave(game.phase !== "summary"));
   }, [game]);
 
   useEffect(() => {
-    if (game.phase !== "summary" || game.history.length === 0) return;
+    if (game.phase !== "summary" || !game.challengeId || game.history.length === 0) return;
+    const result: ChallengeResult = {
+      id: `${game.challengeId}-${game.seed}-${game.name}-${game.history.length}`,
+      challengeId: game.challengeId,
+      date: game.challengeDate,
+      name: game.name,
+      position: game.position,
+      nationality: game.nationality,
+      score: game.legacyPoints,
+      peakOverall: Math.max(game.overall, ...game.history.map((record) => record.overall)),
+      trophies: game.trophies + game.nationalTrophies,
+      ballonDor: game.awardCabinet["Bola de Ouro"] ?? 0,
+      finishedAt: Date.now(),
+    };
+    queueMicrotask(() => setChallengeResults((current) => {
+      const next = [result, ...current.filter((item) => item.id !== result.id)]
+        .sort((a, b) => b.score - a.score || b.peakOverall - a.peakOverall)
+        .slice(0, 40);
+      localStorage.setItem(CHALLENGE_RESULTS_KEY, JSON.stringify(next));
+      return next;
+    }));
+    localStorage.removeItem(CHALLENGE_SAVE_KEY);
+    queueMicrotask(() => setHasChallengeSave(false));
+  }, [game]);
+
+  useEffect(() => {
+    if (game.phase !== "summary" || game.history.length === 0 || game.challengeId) return;
     const entry = careerHallEntry(game);
     queueMicrotask(() => {
       setHallOfFame((current) => {
@@ -4491,6 +4655,11 @@ export default function Home() {
   }, [game.phase]);
 
   const displayGame = hallPreview ?? game;
+  const todayChallenge = dailyChallenge();
+  const todayChallengeResults = challengeResults
+    .filter((result) => result.challengeId === todayChallenge.id)
+    .sort((a, b) => b.score - a.score);
+  const todayChallengeBest = todayChallengeResults[0] ?? null;
   const currentClub = useMemo(() => clubById(displayGame.currentClubId || displayGame.academyClubId), [displayGame.currentClubId, displayGame.academyClubId]);
   const seasonClubTitles = game.lastResult?.competitions.filter((competition) => competition.champion) ?? [];
   const seasonNationalTitles = game.lastResult
@@ -4649,7 +4818,8 @@ export default function Home() {
     const history = game.history;
     const by = <K extends keyof SeasonRecord>(key: K) => [...history].sort((a, b) => Number(b[key] ?? 0) - Number(a[key] ?? 0))[0] ?? null;
     const bestSeason = [...history].sort((a, b) =>
-      (b.performanceScore ?? 0) - (a.performanceScore ?? 0) ||
+      (b.averageRating ?? seasonAverageRating(b.performanceScore ?? 0, game.seed, b.season)) -
+      (a.averageRating ?? seasonAverageRating(a.performanceScore ?? 0, game.seed, a.season)) ||
       b.goals + b.assists - a.goals - a.assists,
     )[0] ?? null;
     return {
@@ -4662,8 +4832,12 @@ export default function Home() {
       highestValue: [...history].sort((a, b) => (b.marketValue ?? 0) - (a.marketValue ?? 0))[0] ?? null,
       goalRate: game.stats.appearances ? game.stats.goals / game.stats.appearances : 0,
       contributionRate: game.stats.appearances ? (game.stats.goals + game.stats.assists) / game.stats.appearances : 0,
+      careerRating: history.length
+        ? history.reduce((total, record) => total + (record.averageRating ?? seasonAverageRating(record.performanceScore ?? 0, game.seed, record.season)), 0) / history.length
+        : 0,
+      manOfTheMatchAwards: history.reduce((total, record) => total + (record.manOfTheMatchAwards ?? 0), 0),
     };
-  }, [game.history, game.stats.appearances, game.stats.goals, game.stats.assists]);
+  }, [game.history, game.seed, game.stats.appearances, game.stats.goals, game.stats.assists]);
   const transferWindowProfile = useMemo(() => {
     const offerClubs = game.transferOffers.map(clubById);
     const foreignOfferClubs = offerClubs.filter((club) => club.countryId !== currentClub.countryId);
@@ -4759,6 +4933,41 @@ export default function Home() {
       }
     } catch {
       startNew();
+    }
+  }
+
+  function startChallenge() {
+    const challenge = dailyChallenge();
+    localStorage.removeItem(CHALLENGE_SAVE_KEY);
+    setHallPreview(null);
+    setHallPreviewLegacy(false);
+    nameRollRef.current = 0;
+    setGame({
+      ...initialState(challenge.seed),
+      phase: "identity",
+      seed: challenge.seed,
+      challengeId: challenge.id,
+      challengeDate: challenge.date,
+    });
+    setShirtNumberInput("10");
+    setHasChallengeSave(true);
+    setActiveTab("event");
+    vibrate();
+  }
+
+  function continueChallenge() {
+    try {
+      const saved = localStorage.getItem(CHALLENGE_SAVE_KEY);
+      if (!saved) return startChallenge();
+      const normalized = normalizeSave(JSON.parse(saved));
+      setHallPreview(null);
+      setHallPreviewLegacy(false);
+      setGame(normalized);
+      setShirtNumberInput(String(normalized.number || 10));
+      setActiveTab("event");
+      vibrate();
+    } catch {
+      startChallenge();
     }
   }
 
@@ -4858,6 +5067,8 @@ export default function Home() {
       version: 1,
       exportedAt: new Date().toISOString(),
       save: JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null"),
+      challengeSave: JSON.parse(localStorage.getItem(CHALLENGE_SAVE_KEY) ?? "null"),
+      challengeResults: JSON.parse(localStorage.getItem(CHALLENGE_RESULTS_KEY) ?? "[]"),
       hallOfFame: JSON.parse(localStorage.getItem(HALL_OF_FAME_KEY) ?? "[]"),
       settings: appSettings,
     };
@@ -4877,6 +5088,8 @@ export default function Home() {
       const payload = JSON.parse(await file.text()) as {
         format?: string;
         save?: unknown;
+        challengeSave?: unknown;
+        challengeResults?: unknown;
         hallOfFame?: unknown;
         settings?: Partial<AppSettings>;
       };
@@ -4900,6 +5113,23 @@ export default function Home() {
       setAppSettings(importedSettings);
       setHallOfFame(importedHall);
       localStorage.setItem(HALL_OF_FAME_KEY, JSON.stringify(importedHall));
+      const importedChallengeResults = Array.isArray(payload.challengeResults)
+        ? (payload.challengeResults as ChallengeResult[])
+            .filter((result) => result && typeof result.challengeId === "string" && typeof result.score === "number")
+            .slice(0, 40)
+        : [];
+      setChallengeResults(importedChallengeResults);
+      localStorage.setItem(CHALLENGE_RESULTS_KEY, JSON.stringify(importedChallengeResults));
+      if (payload.challengeSave) {
+        const importedChallenge = normalizeSave(payload.challengeSave);
+        if (importedChallenge.challengeId) {
+          localStorage.setItem(CHALLENGE_SAVE_KEY, JSON.stringify(importedChallenge));
+          setHasChallengeSave(importedChallenge.phase !== "summary");
+        }
+      } else {
+        localStorage.removeItem(CHALLENGE_SAVE_KEY);
+        setHasChallengeSave(false);
+      }
       if (payload.save) {
         const importedGame = normalizeSave(payload.save);
         setGame(importedGame);
@@ -5920,54 +6150,46 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v73 · VOLTA AO MUNDO</span>
-                    <h1 id="update-title">A carreira ficou ainda maior.</h1>
+                    <span className="update-version">v74 · MESMA SORTE, OUTRA HISTÓRIA</span>
+                    <h1 id="update-title">Agora dá para provar quem faria a melhor carreira.</h1>
                   </div>
                 </header>
-                <p>Seis novas ligas, mais de cem clubes e a Champions asiática chegam ao mundo que já ganhou futebol de botão, decisões jogáveis e uma carreira muito mais profunda.</p>
+                <p>O Desafio Futbobo coloca todo mundo no mesmo ponto de partida, enquanto avaliações por temporada e um prontuário médico persistente deixam cada carreira mais comparável e humana.</p>
                 <div className="update-mega-stats" aria-label="Resumo do update">
-                  <span><b>{CLUBS.length}</b> clubes</span>
-                  <span><b>{LEAGUES.length}</b> ligas</span>
-                  <span><b>1</b> novo jogo</span>
+                  <span><b>1</b> desafio diário</span>
+                  <span><b>9.9</b> nota máxima</span>
+                  <span><b>100%</b> novo menu</span>
                 </div>
                 <span className="update-section-label">O GRANDE DESTAQUE</span>
                 <div className="update-grid update-mega-grid">
-                  <article className="update-featured"><b>↗</b><span><strong>Futebol de botão jogável</strong><small>Arraste, mire e solte com física, colisões, traves, rebotes, prorrogação e pênaltis. Seu overall e seus atributos mudam a força e o controle da peça.</small></span></article>
-                  <article><b>6×</b><span><strong>Seis ligas novas</strong><small>Arábia Saudita, Japão, Coreia do Sul, China, Brasileirão Série B e EFL Championship.</small></span></article>
-                  <article><b>ACL</b><span><strong>Ásia de verdade</strong><small>Clubes asiáticos disputam a AFC Champions League Elite e podem chegar ao Mundial.</small></span></article>
-                  <article><b>↑</b><span><strong>Briga pelo acesso</strong><small>Suba da Série B ou da Championship e leve o mesmo clube à elite nacional.</small></span></article>
-                  <article><b>🏆</b><span><strong>Decida suas finais</strong><small>Jogue ou simule cada decisão de clube e veja o resultado alterar sua carreira.</small></span></article>
-                  <article><b>MUN</b><span><strong>Copa do Mundo inteira</strong><small>No modo completo, vença das oitavas até a final — um adversário de cada vez.</small></span></article>
-                  <article><b>512</b><span><strong>Base de clubes ampliada</strong><small>Mais destinos grandes, médios e modestos para cada fase da sua carreira.</small></span></article>
+                  <article className="update-featured"><b>24H</b><span><strong>Desafio Futbobo</strong><small>A mesma semente diária em todos os aparelhos. Faça escolhas melhores, termine a carreira e compare os pontos no ranking local.</small></span></article>
+                  <article><b>8.7</b><span><strong>Avaliação média</strong><small>Cada temporada recebe nota de 5,4 a 9,9 e registra quantas vezes você foi o melhor em campo.</small></span></article>
+                  <article><b>✚</b><span><strong>Departamento médico</strong><small>Lesão, gravidade, recuperação, jogos perdidos e recorrências formam um prontuário persistente.</small></span></article>
+                  <article><b>PC</b><span><strong>Desktop de verdade</strong><small>Entrada, criação, fim de temporada e aposentadoria aproveitam telas largas com informação bem distribuída.</small></span></article>
+                  <article><b>UI</b><span><strong>Menu reorganizado</strong><small>Carreira, desafio e ferramentas agora têm hierarquia clara em vez de uma pilha de botões iguais.</small></span></article>
+                  <article><b>↗</b><span><strong>Central renovada</strong><small>Notas, melhor em campo e evolução anual aparecem na Central, no histórico e no resumo da temporada.</small></span></article>
                 </div>
-                <span className="update-section-label">UMA CARREIRA MUITO MAIOR</span>
+                <span className="update-section-label">O QUE CONTINUA INTACTO</span>
                 <div className="update-grid update-mega-grid">
-                  <article><b>€</b><span><strong>Dinheiro com peso</strong><small>Salário, custo de vida, patrimônio e uma loja com decisões arriscadas.</small></span></article>
-                  <article><b>◎</b><span><strong>Vida e patrocínios</strong><small>Redes sociais, audiência, marcas persistentes e propostas controversas de casas de aposta.</small></span></article>
-                  <article><b>✦</b><span><strong>Prêmios refinados</strong><small>Bola de Ouro, World XI e artilharias agora conversam com desempenho e títulos.</small></span></article>
-                  <article><b>▦</b><span><strong>Taças de verdade</strong><small>Supercopas, recopas e títulos de seleção ganharam galerias e celebrações próprias.</small></span></article>
-                  <article><b>↔</b><span><strong>Mercado vivo</strong><small>Empréstimos, agente livre, temporadas sem clube e propostas mais coerentes.</small></span></article>
-                  <article><b>VS</b><span><strong>Rivais e personagens</strong><small>Crie nomes nas configurações e encontre aliados ou rivais em carreiras futuras.</small></span></article>
-                  <article><b>🌍</b><span><strong>Comece onde quiser</strong><small>Escolha o país da base, sorteie clubes e defenda uma seleção entre dezenas de opções.</small></span></article>
-                  <article><b>⚙</b><span><strong>Mais atributos</strong><small>Finalização, passe, desarmes e características especiais influenciam os números.</small></span></article>
-                  <article><b>⚄</b><span><strong>Mais liberdade</strong><small>Nomes aleatórios infinitos, número opcional, academia aleatória e mudança de posição.</small></span></article>
-                  <article><b>◉</b><span><strong>Nova cara mobile</strong><small>Marca renovada, novo menu, instalação como web-app e centenas de escudos otimizados.</small></span></article>
+                  <article><b>◆</b><span><strong>Menu da carreira preservado</strong><small>A tela principal durante a carreira continua com a navegação e o ritmo que já funcionavam.</small></span></article>
+                  <article><b>↔</b><span><strong>Saves separados</strong><small>O desafio diário nunca apaga nem substitui sua carreira normal.</small></span></article>
+                  <article><b>▣</b><span><strong>Backup completo</strong><small>Desafios, resultados, carreira, Hall da Fama e configurações entram na exportação.</small></span></article>
                 </div>
-                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Conheça Sala dos Campeões</strong><b>→</b></button>
+                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Conheça Volta ao Mundo</strong><b>→</b></button>
               </>
             ) : (
               <>
-                <span className="update-version previous">UPDATE ANTERIOR · SALA DOS CAMPEÕES</span>
-                <div className="update-symbol previous">🏆</div>
-                <h1 id="update-title">Ganhar uma taça abre a porta para outra.</h1>
-                <p>Supercopas, Recopa, novas ligas europeias e uma galeria de títulos deram peso para cada volta olímpica.</p>
+                <span className="update-version previous">v73 · VOLTA AO MUNDO</span>
+                <div className="update-symbol previous">🌍</div>
+                <h1 id="update-title">A carreira ficou ainda maior.</h1>
+                <p>Seis novas ligas, mais de cem clubes, acesso de divisão e a Champions asiática ampliaram o universo que já ganhou futebol de botão.</p>
                 <div className="update-grid previous-grid">
-                  <article><b>✦</b><span><strong>Supercopas nacionais</strong><small>O campeão volta na temporada seguinte para defender sua glória</small></span></article>
-                  <article><b>R</b><span><strong>Recopas continentais</strong><small>Libertadores, Champions e Europa League abrem novas decisões</small></span></article>
-                  <article><b>▦</b><span><strong>Galeria de títulos</strong><small>Taças agrupadas durante toda a carreira</small></span></article>
-                  <article><b>+</b><span><strong>Mais Europa</strong><small>Cinco novas ligas completas, clubes e competições</small></span></article>
+                  <article><b>6×</b><span><strong>Seis ligas novas</strong><small>Arábia, Japão, Coreia do Sul, China, Série B e Championship.</small></span></article>
+                  <article><b>ACL</b><span><strong>Ásia de verdade</strong><small>AFC Champions League Elite e vaga no Mundial.</small></span></article>
+                  <article><b>↑</b><span><strong>Briga pelo acesso</strong><small>Suba com o mesmo clube para a primeira divisão.</small></span></article>
+                  <article><b>⚽</b><span><strong>Futebol de botão</strong><small>Finais e mata-matas jogáveis dentro da carreira.</small></span></article>
                 </div>
-                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Futebol de Botão</strong><b>←</b></button>
+                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Desafio Futbobo</strong><b>←</b></button>
               </>
             )}
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
@@ -6121,69 +6343,74 @@ export default function Home() {
             <span>FUTBOBO</span>
             <small>CARREIRA</small>
           </div>
-          <div className="hero-pitch">
-            <Image
-              className="welcome-hero-image"
-              src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/assets/futbobo-hero-v6-background.webp`}
-              alt=""
-              fill
-              priority
-              sizes="(max-width: 540px) calc(100vw - 40px), 500px"
-              unoptimized
-            />
-            <div className="welcome-hero-brand" aria-label="Futbobo">
-              <BrandMark size="hero" />
-              <div>
-                <strong><span>FUT</span>BOBO</strong>
-                <small>SUA CARREIRA. SEU LEGADO.</small>
+          <div className="welcome-layout">
+            <div className="welcome-main">
+              <div className="hero-pitch">
+                <Image
+                  className="welcome-hero-image"
+                  src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/assets/futbobo-hero-v6-background.webp`}
+                  alt=""
+                  fill
+                  priority
+                  sizes="(max-width: 760px) calc(100vw - 40px), 680px"
+                  unoptimized
+                />
+                <div className="welcome-hero-brand" aria-label="Futbobo">
+                  <BrandMark size="hero" />
+                  <div>
+                    <strong><span>FUT</span>BOBO</strong>
+                    <small>SUA CARREIRA. SEU LEGADO.</small>
+                  </div>
+                </div>
+              </div>
+              <div className="welcome-copy">
+                <span className="eyebrow">SUA HISTÓRIA. SUAS ESCOLHAS.</span>
+                <h1>Do primeiro treino ao topo do mundo.</h1>
+                <p>Escolha onde tudo começa, construa sua história e descubra até onde a bola pode levar você.</p>
+              </div>
+              <div className="welcome-actions">
+                {hasSave && <button className="primary-button continue-career-button" onClick={continueSave}><small>SEU SAVE</small>Continuar carreira <span>→</span></button>}
+                <button className={hasSave ? "secondary-button new-career-button" : "primary-button"} onClick={startNew}>Começar nova carreira <span>→</span></button>
               </div>
             </div>
+            <aside className="welcome-side">
+              <section className="challenge-card">
+                <header><div><span>DESAFIO FUTBOBO</span><strong>Todo mundo com a mesma sorte</strong></div><b>24H</b></header>
+                <p>A semente de hoje é igual em todos os aparelhos. Escolhas diferentes, carreiras comparáveis.</p>
+                <div className="challenge-code"><small>CÓDIGO DE HOJE</small><strong>{todayChallenge.id}</strong></div>
+                <div className="challenge-score-row">
+                  <span><small>Seu recorde hoje</small><strong>{todayChallengeBest?.score ?? "—"}</strong></span>
+                  <span><small>Tentativas concluídas</small><strong>{todayChallengeResults.length}</strong></span>
+                </div>
+                <button type="button" onClick={hasChallengeSave ? continueChallenge : startChallenge}>
+                  {hasChallengeSave ? "Continuar desafio de hoje" : "Jogar o desafio de hoje"} <span>→</span>
+                </button>
+                {hasChallengeSave && <button className="challenge-restart" type="button" onClick={startChallenge}>Recomeçar com a mesma semente</button>}
+              </section>
+              {hallOfFame.length > 0 && (
+                <div className="welcome-hall">
+                  <div><span>HALL DA FAMA LOCAL</span><strong>Suas melhores carreiras</strong></div>
+                  {hallOfFame.slice(0, 3).map((entry, index) => (
+                    <article className="hall-career-link" key={entry.id} role="button" tabIndex={0} aria-label={`Ver carreira completa de ${entry.name}`} onClick={() => openHallCareer(entry)} onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openHallCareer(entry); }
+                    }}>
+                      <b>#{index + 1}</b><ClubBadge club={clubById(entry.finalClubId)} size="sm" />
+                      <div className="welcome-hall-copy"><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.peakOverall} OVR</small></div><em>{entry.legacyPoints}</em>
+                    </article>
+                  ))}
+                </div>
+              )}
+              <nav className="welcome-utilities" aria-label="Ferramentas">
+                <button type="button" onClick={() => setSettingsOpen(true)}><b>⚙</b><span>Configurações</span></button>
+                <button type="button" onClick={installWebApp}><b>▣</b><span>Instalar</span></button>
+                <button type="button" aria-label="Ver novidades do jogo" onClick={() => { setUpdateNoticePage("current"); setUpdateNoticeOpen(true); }}><b>⚽</b><span>Novidades</span></button>
+              </nav>
+              {installHelp && <div className="install-help">Use o menu do navegador e toque em <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>.</div>}
+            </aside>
           </div>
-          <div className="welcome-copy">
-            <span className="eyebrow">SUA HISTÓRIA. SUAS ESCOLHAS.</span>
-            <h1>Do primeiro treino ao topo do mundo.</h1>
-            <p>Escolha onde tudo começa, construa sua história e descubra até onde a bola pode levar você.</p>
-          </div>
-          <div className="welcome-actions">
-            <button className="primary-button" onClick={startNew}>Começar nova carreira <span>→</span></button>
-            {hasSave && <button className="secondary-button" onClick={continueSave}>Continuar carreira salva</button>}
-            <button className="secondary-button install-app-button" onClick={installWebApp}>▣ Instalar como aplicativo</button>
-            {installHelp && <div className="install-help">Se o navegador não abriu a instalação, use o menu dele e toque em <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>.</div>}
-            <button className="secondary-button settings-button" onClick={() => setSettingsOpen(true)}>⚙ Configurações, times e dados</button>
-            <button className="secondary-button update-menu-button" onClick={() => { setUpdateNoticePage("current"); setUpdateNoticeOpen(true); }}>⚽ Ver novidades do jogo</button>
-          </div>
-          {hallOfFame.length > 0 && (
-            <div className="welcome-hall">
-              <div><span>HALL DA FAMA LOCAL</span><strong>Suas melhores carreiras</strong></div>
-              {hallOfFame.slice(0, 3).map((entry, index) => (
-                <article
-                  className="hall-career-link"
-                  key={entry.id}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Ver carreira completa de ${entry.name}`}
-                  onClick={() => openHallCareer(entry)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      openHallCareer(entry);
-                    }
-                  }}
-                >
-                  <b>#{index + 1}</b>
-                  <ClubBadge club={clubById(entry.finalClubId)} size="sm" />
-                  <div className="welcome-hall-copy"><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.peakOverall} OVR</small></div>
-                  <em>{entry.legacyPoints}</em>
-                </article>
-              ))}
-            </div>
-          )}
-          <div className="welcome-features">
-            <span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span>
-          </div>
+          <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span>
-            <b>v73</b>
+            <span>FUTBOBO</span><b>v74 · DESAFIO, AVALIAÇÃO E DM</b>
           </footer>
         </section>
       )}
@@ -6462,6 +6689,11 @@ export default function Home() {
                 <Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.lastResult.goalsConceded : game.lastResult.assists} />
                 <Metric label="Novo OVR" value={game.overall} tone={game.lastResult.development > 0 ? "gold" : game.lastResult.development < 0 ? "danger" : "default"} />
               </div>
+              <div className={`season-rating-card rating-${(game.lastResult.averageRating ?? 6) >= 8 ? "elite" : (game.lastResult.averageRating ?? 6) >= 7 ? "good" : "regular"}`}>
+                <div><span>AVALIAÇÃO MÉDIA</span><strong>{(game.lastResult.averageRating ?? seasonAverageRating(game.lastResult.performanceScore, game.seed, game.lastResult.season)).toFixed(1)}</strong></div>
+                <p>{(game.lastResult.averageRating ?? 6) >= 8.5 ? "Uma temporada de nível mundial." : (game.lastResult.averageRating ?? 6) >= 7.5 ? "Você foi decisivo e constante." : (game.lastResult.averageRating ?? 6) >= 6.7 ? "Um ano sólido, com espaço para crescer." : "O rendimento ficou abaixo da cobrança."}</p>
+                <b>{game.lastResult.manOfTheMatchAwards ?? 0}<small>MELHOR EM CAMPO</small></b>
+              </div>
               <section className="season-result-section">
                 <header className="season-result-section-heading"><span>DESEMPENHO</span><small>Como seu ano mudou o jogador</small></header>
                 <div className={`season-development ${game.lastResult.development > 0 ? "up" : game.lastResult.development < 0 ? "down" : ""}`}>
@@ -6559,6 +6791,13 @@ export default function Home() {
                   <div className="competition-grid">
                     {game.lastResult.competitions.filter((competition) => !competition.champion).map((competition) => <article key={competition.id} className="competition-card"><CompetitionBadge competition={competition} leagueId={game.lastResult?.leagueId || game.currentLeagueId || currentClub.leagueId} /><div><strong>{competition.name}</strong><small>{competition.stage}</small></div></article>)}
                   </div>
+                </section>
+              )}
+              {game.lastResult.medicalRecord && (
+                <section className={`season-medical-card severity-${game.lastResult.medicalRecord.severity}`}>
+                  <header><span>DEPARTAMENTO MÉDICO</span><b>{game.lastResult.medicalRecord.severity.toLocaleUpperCase("pt-BR")}</b></header>
+                  <strong>{game.lastResult.medicalRecord.name}</strong>
+                  <div><span><b>{game.lastResult.medicalRecord.recoveryMonths}</b><small>MESES</small></span><span><b>{game.lastResult.medicalRecord.matchesMissed}</b><small>JOGOS FORA</small></span><span><b>{game.lastResult.medicalRecord.recurring ? "SIM" : "NÃO"}</b><small>RECORRENTE</small></span></div>
                 </section>
               )}
               {game.lastResult.twist && <div className={`season-twist ${game.lastResult.twist.includes("improvável") ? "positive" : "negative"}`}><span>O IMPREVISTO DA TEMPORADA</span><p>{game.lastResult.twist}</p></div>}
@@ -6690,7 +6929,7 @@ export default function Home() {
               <div className="section-heading"><div><span>LINHA DO TEMPO</span><h2>Sua carreira até aqui</h2></div></div>
               <div className="timeline-list">
                 {game.history.length === 0 && <div className="empty-panel">Sua estreia será o primeiro capítulo desta história.</div>}
-                {[...game.history].reverse().map((record) => { const club = clubById(record.clubId); const titles = record.competitions.filter((competition) => competition.champion); return <article className="timeline-row" key={`${record.season}-${record.clubId}`}><span className="timeline-year">{record.season}</span><ClubBadge club={club} size="sm" /><div><strong>{club.shortName}</strong><small>{record.position} · {record.appearances}J · {record.position === "GOL" ? `${record.cleanSheets}SG` : `${record.goals}G · ${record.assists}A`}</small>{titles.length > 0 && <em className="timeline-title-badges">{titles.map((title) => <CompetitionBadge key={title.id} competition={title} leagueId={record.leagueId || club.leagueId} />)}</em>}</div><span className="timeline-ovr">{record.overall}</span>{record.title && <span className="timeline-trophy">🏆</span>}</article>; })}
+                {[...game.history].reverse().map((record) => { const club = clubById(record.clubId); const titles = record.competitions.filter((competition) => competition.champion); return <article className="timeline-row" key={`${record.season}-${record.clubId}`}><span className="timeline-year">{record.season}</span><ClubBadge club={club} size="sm" /><div><strong>{club.shortName}</strong><small>{record.position} · {record.appearances}J · {record.position === "GOL" ? `${record.cleanSheets}SG` : `${record.goals}G · ${record.assists}A`} · nota {(record.averageRating ?? seasonAverageRating(record.performanceScore ?? 0, game.seed, record.season)).toFixed(1)}</small>{record.medicalRecord && <i className="timeline-medical">✚ {record.medicalRecord.matchesMissed} jogos fora</i>}{titles.length > 0 && <em className="timeline-title-badges">{titles.map((title) => <CompetitionBadge key={title.id} competition={title} leagueId={record.leagueId || club.leagueId} />)}</em>}</div><span className="timeline-ovr">{record.overall}</span>{record.title && <span className="timeline-trophy">🏆</span>}</article>; })}
               </div>
             </div>
           )}
@@ -6732,6 +6971,21 @@ export default function Home() {
                 )}
               </div>
               <div className="profile-metrics"><Metric label="OVR" value={game.overall} tone="gold" /><Metric label="Momento" value={careerTrend(game.history)} /><Metric label="Valor" value={formatMoney(marketValue(game.overall, game.age, currentClub, game.reputation, game.history.at(-1)))} /></div>
+              <section className="medical-department">
+                <header><div><span>DEPARTAMENTO MÉDICO</span><strong>Prontuário da carreira</strong></div><b className={game.medicalHistory.length ? "has-history" : ""}>✚</b></header>
+                <div className="medical-overview">
+                  <Metric label="Lesões sérias" value={game.medicalHistory.length} tone={game.medicalHistory.length ? "danger" : "green"} />
+                  <Metric label="Jogos perdidos" value={game.matchesMissedInjuries} />
+                  <Metric label="Sequência saudável" value={`${game.injuryFreeSeasons} ano${game.injuryFreeSeasons === 1 ? "" : "s"}`} tone="green" />
+                </div>
+                {game.medicalHistory.length ? (
+                  <div className="medical-history-list">
+                    {game.medicalHistory.slice(0, 5).map((record) => (
+                      <article key={record.id}><b>{record.season}</b><div><strong>{record.name}</strong><small>{record.recoveryMonths} meses · {record.matchesMissed} jogos fora{record.recurring ? " · recorrência" : ""}</small></div><span>{record.severity}</span></article>
+                    ))}
+                  </div>
+                ) : <p>Nenhuma lesão séria registrada. O histórico começa a ser construído temporada por temporada.</p>}
+              </section>
               <section className="trait-card">
                 <div><span>CARACTERÍSTICAS ESPECIAIS</span><strong>O que torna seu jogo diferente</strong></div>
                 <section>
@@ -6966,8 +7220,8 @@ export default function Home() {
                 <div>
                   <Metric label="Temporadas" value={game.history.length} />
                   <Metric label="G+A" value={game.stats.goals + game.stats.assists} tone="gold" />
-                  <Metric label="Gols/jogo" value={statistics.goalRate.toFixed(2)} />
-                  <Metric label="Participações/jogo" value={statistics.contributionRate.toFixed(2)} tone="green" />
+                  <Metric label="Nota média" value={statistics.careerRating.toFixed(1)} tone="green" />
+                  <Metric label="Melhor em campo" value={statistics.manOfTheMatchAwards} />
                 </div>
               </header>
 
@@ -6977,11 +7231,11 @@ export default function Home() {
                     <div><span>EVOLUÇÃO RECENTE</span><strong>Nota de temporada</strong></div>
                     <div className="season-bars" role="img" aria-label="Notas das últimas temporadas">
                       {statistics.recent.map((record) => {
-                        const score = record.performanceScore ?? 0;
+                        const score = record.averageRating ?? seasonAverageRating(record.performanceScore ?? 0, game.seed, record.season);
                         return (
                           <article key={`score-${record.season}`}>
-                            <b>{score}</b>
-                            <i><em style={{ height: `${clamp(score, 8, 100)}%` }} /></i>
+                            <b>{score.toFixed(1)}</b>
+                            <i><em style={{ height: `${clamp((score - 5) * 20, 8, 100)}%` }} /></i>
                             <small>{String(record.season).slice(-2)}</small>
                           </article>
                         );
@@ -7011,7 +7265,7 @@ export default function Home() {
                       <span>MELHOR TEMPORADA</span>
                       <div><strong>{statistics.bestSeason.season}</strong><small>{clubById(statistics.bestSeason.clubId).shortName} · {statistics.bestSeason.age} anos</small></div>
                       <section>
-                        <Metric label="Nota" value={statistics.bestSeason.performanceScore ?? 0} tone="gold" />
+                        <Metric label="Nota" value={(statistics.bestSeason.averageRating ?? seasonAverageRating(statistics.bestSeason.performanceScore ?? 0, game.seed, statistics.bestSeason.season)).toFixed(1)} tone="gold" />
                         <Metric label="Jogos" value={statistics.bestSeason.appearances} />
                         <Metric label="Gols" value={statistics.bestSeason.goals} />
                         <Metric label="Assist." value={statistics.bestSeason.assists} />
@@ -7118,6 +7372,12 @@ export default function Home() {
               Este registro é anterior ao arquivo completo. Números gerais foram recuperados, mas alguns detalhes de prêmios e clubes não existiam no save antigo.
             </div>
           )}
+          {displayGame.challengeId && (
+            <section className="challenge-summary-banner">
+              <div><span>DESAFIO FUTBOBO CONCLUÍDO</span><strong>{displayGame.challengeId}</strong><small>Mesmo ponto de partida. Este foi o seu caminho.</small></div>
+              <b>{displayGame.legacyPoints}<small>PONTOS</small></b>
+            </section>
+          )}
           <div className="summary-confetti" aria-hidden="true">✦ · ★ · ✦ · ★ · ✦</div>
           <span className="eyebrow">CARREIRA FINALIZADA</span>
           <h1>Uma história que só você viveu.</h1>
@@ -7219,7 +7479,7 @@ export default function Home() {
             </div>
             {filteredCountries.length === 0 && <div className="empty-panel">Nenhuma seleção encontrada.</div>}
           </section>
-          <div className="summary-actions"><button className="primary-button" onClick={shareCareer}>Compartilhar carreira <span>↗</span></button><button className="secondary-button" onClick={startNew}>Jogar novamente</button></div>
+          <div className="summary-actions"><button className="primary-button" onClick={shareCareer}>Compartilhar carreira <span>↗</span></button><button className="secondary-button" onClick={displayGame.challengeId ? startChallenge : startNew}>{displayGame.challengeId ? "Tentar o mesmo desafio novamente" : "Jogar novamente"}</button></div>
         </section>
       )}
     </main>
