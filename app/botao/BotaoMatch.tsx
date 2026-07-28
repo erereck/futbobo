@@ -78,12 +78,10 @@ function periodName(state: BotaoMatchState) {
 export default function BotaoMatch({
   setup,
   onFinish,
-  onGiveUp,
   startInPenalties = false,
 }: {
   setup: BotaoMatchSetup;
   onFinish: (result: BotaoMatchResult) => void;
-  onGiveUp?: () => void;
   /** Pula direto para a decisão por pênaltis (modo de teste). */
   startInPenalties?: boolean;
 }) {
@@ -708,11 +706,6 @@ export default function BotaoMatch({
           >
             {muted ? "Som off" : "Som on"}
           </button>
-          {onGiveUp ? (
-            <button type="button" className="botao-ghost" onClick={onGiveUp}>
-              Sair
-            </button>
-          ) : null}
         </div>
       </footer>
       <div className="botao-sr-only" role="status" aria-live="polite">

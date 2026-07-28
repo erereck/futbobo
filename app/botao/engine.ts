@@ -313,9 +313,12 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
   // Só o jogador da carreira tem nome. O resto é o time — como em botão de
   // verdade, onde a peça é a camisa e não um personagem inventado.
   const bodies: BotaoBody[] = [createBall()];
+  const teammateNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    .filter((number) => number !== setup.player.number);
+  let teammateNumberIndex = 0;
   for (let slot = 0; slot < formation.slots.length; slot += 1) {
     const isPlayer = slot === userSlot;
-    const number = isPlayer ? setup.player.number : 2 + slot;
+    const number = isPlayer ? setup.player.number : teammateNumbers[teammateNumberIndex++];
     bodies.push(
       createDisc({
         id: `user-${slot}`,

@@ -338,11 +338,12 @@ test("prioriza clubes europeus quando a carreira já está na Europa", async () 
   assert.match(page, /isEuropeanClub\(current\) && !opts\.forceDomestic/);
   assert.match(page, /clubConfederation\(club\) === "EUROPE"/);
   assert.match(page, /forceForeign: true/);
-  assert.match(page, /brazilReturnChance = state\.age >= 34 \? 0\.78 : state\.age >= 30 \? 0\.12 : 0\.035/);
-  assert.match(page, /const brazilCount = state\.age >= 34 \? 2 : 1/);
+  assert.match(page, /const homeCountryId = state\.academyCountryId/);
+  assert.match(page, /homeReturnChance = state\.age >= 34 \? 0\.78 : state\.age >= 30 \? 0\.12 : 0\.035/);
+  assert.match(page, /const homeOfferCount = state\.age >= 34 \? 2 : 1/);
   assert.match(page, /isEuropeanClub\(current\) && confederation !== "EUROPE"/);
   assert.match(page, /MERCADO EUROPEU/);
-  assert.match(page, /Retorno raro ao Brasil/);
+  assert.match(page, /Volta rara ao país da sua base/);
   assert.match(styles, /\.european-market-card/);
   assert.match(styles, /\.offer-homecoming-tag/);
 });
@@ -370,6 +371,17 @@ test("garante uma proposta europeia compatível até para carreiras em baixa", a
   assert.match(styles, /\.offer-european-door/);
 });
 
+test("oculta a reputação dos clubes no mercado e varia salários por negociação", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
+
+  assert.doesNotMatch(page, /reputação \{club\.reputation\}\/5/);
+  assert.match(systems, /club: Pick<Club, "id" \| "reputation" \| "countryId">/);
+  assert.match(systems, /salaryHash = Math\.imul\(salaryHash \^ club\.id\.charCodeAt\(index\), 16_777_619\)/);
+  assert.match(systems, /const negotiationFactor = 0\.87 \+ negotiationRoll \* 0\.28/);
+  assert.match(systems, /salaryBase \* negotiationFactor/);
+});
+
 test("gera temporadas com mais gols e assistências sem igualar todas as posições", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
@@ -387,8 +399,8 @@ test("impede ficar no clube depois de um pedido de transferência aceito", async
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedAlternativeTransfer\)\) return current/);
-  assert.match(page, /\{!game\.transferRequested && !game\.renewalDenied && !game\.forcedAlternativeTransfer && <button className="offer-card stay-card"/);
+  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/);
+  assert.match(page, /\{!game\.transferRequested && !game\.renewalDenied && !game\.forcedClubExit && !game\.forcedAlternativeTransfer && <button className="offer-card stay-card"/);
   assert.match(page, /SAÍDA SEM VOLTA/);
   assert.match(page, /Seu pedido foi aceito — não há volta/);
   assert.match(page, /transferStatus: null, transferRequested: false/);
@@ -586,7 +598,7 @@ test("clube pode recusar renovar contrato após temporada ruim, forçando escolh
   assert.match(page, /nonRenewalRiskFactors >= 2/);
   assert.match(page, /RENOVAÇÃO RECUSADA/);
   assert.match(page, /O clube optou por não renovar/);
-  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedAlternativeTransfer\)\) return current/);
+  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/);
 });
 
 test("atributos influenciam a simulação, premiações têm suspense e o escândalo força exílio", async () => {
@@ -792,7 +804,7 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   assert.match(page, /\| "botao-result"/);
   assert.match(page, /pendingBotaoMatches: PendingBotaoMatch\[\]/);
   assert.match(page, /competition\.id !== "domesticLeague"/);
-  assert.match(page, /worldKnockoutStages = \["Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"\]/);
+  assert.match(page, /worldKnockoutStages = \["16 avos", "Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"\]/);
   assert.match(page, /<BotaoMatch/);
   assert.match(page, /simulateBotaoMatch\(currentBotaoSetup\)/);
   assert.match(page, /function applyBotaoMatchResult/);
@@ -829,4 +841,59 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   assert.match(styles, /\.botao-career-lobby/);
   assert.match(styles, /\.botao-inactivity-countdown/);
   assert.match(styles, /\.botao-career-lobby \.botao-actions > \.botao-primary/);
+});
+
+test("fecha o patch de mercado, economia, personalização e futebol de botão", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const drama = await readFile(new URL("../app/career-drama.ts", import.meta.url), "utf8");
+  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
+  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /const SECOND_DIVISION_LEAGUES = new Set\(\["brasileirao-b", "championship"\]\)/);
+  assert.match(page, /sourceLeagueId: league\.id/);
+  assert.match(page, /offersFromCountry\(state, current\.countryId, 7, salt\)/);
+  assert.match(page, /domesticReturnCountryId = event\.id === "european-exit" \|\| event\.id === "return-home"[\s\S]*nextBase\.academyCountryId/);
+  assert.doesNotMatch(page, /const brazilReturnChance/);
+  assert.doesNotMatch(page, /Retorno raro ao Brasil/);
+  assert.match(adapter, /args\.competitionId === "domesticCup" && leagueId === "brasileirao-b"/);
+  assert.match(adapter, /candidate\.leagueId === "brasileirao"/);
+  assert.match(adapter, /args\.competitionId === "libertadores"/);
+  assert.match(adapter, /candidate\.countryId !== club\.countryId/);
+
+  assert.doesNotMatch(match, /onGiveUp/);
+  assert.doesNotMatch(match, />\s*Sair\s*</);
+  assert.match(engine, /filter\(\(number\) => number !== setup\.player\.number\)/);
+
+  assert.match(drama, /id: "drama-billie-eilish-photo"/);
+  assert.match(drama, /followers: 10_000_000/);
+  assert.match(page, /id: "corruption" as const/);
+  assert.match(page, /seeded\(game\.seed, game\.season \* 1877/);
+  assert.match(page, /forcedFreeAgentUntilSeason = current\.season \+ corruptionBanYears/);
+  assert.match(page, /seasonNetIncome \* 0\.18/);
+  assert.match(page, /spendableMoney/);
+
+  assert.match(page, /type CustomClubDefinition/);
+  assert.match(data, /customBadge\?: string/);
+  assert.match(page, /function applyCustomClubDefinitions/);
+  assert.match(page, /Escudo por link HTTPS/);
+  assert.match(page, /readCustomClubBadge/);
+  assert.match(page, /function exportSavedData/);
+  assert.match(page, /async function importSavedData/);
+
+  assert.match(page, /function isIdolAtClub/);
+  assert.match(page, /state\.fanSupport >= 94/);
+  assert.match(page, /const forcedClubExit = !isIdolAtClub/);
+  assert.match(page, /VENDA OBRIGATÓRIA/);
+
+  assert.match(page, /botaoGoalLimit\?: 0 \| 3 \| 5/);
+  assert.match(page, /botaoHalfSeconds\?: 90 \| 120 \| 180/);
+  assert.match(page, /stageOrder = \["16 avos de final", "Oitavas de final"/);
+  assert.match(page, /useState\(false\).*updateNoticeOpen|updateNoticeOpen, setUpdateNoticeOpen\] = useState\(false\)/);
+  assert.match(page, /Ver novidades do jogo/);
+  assert.match(page, /window\.scrollTo\(\{ top: 0, behavior: "smooth" \}\)/);
+  assert.match(styles, /\.custom-club-settings/);
+  assert.match(styles, /\.botao-rule-settings/);
 });

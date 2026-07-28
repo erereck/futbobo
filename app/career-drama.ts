@@ -5,6 +5,10 @@ export const CAREER_DRAMA_EVENTS: GameEvent[] = [
   { id: "drama-drug-scandal", icon: "!", tag: "IMPRENSA", title: "O flagrante que destruiu a temporada", description: "Você foi flagrado com drogas em uma festa. O clube rompe o vínculo, os patrocinadores somem e as grandes ligas fecham as portas por enquanto.", minAge: 18, oneTime: true, rareChance: 0.004, choices: [
     { label: "Cumprir a punição e recomeçar", hint: "Saída obrigatória · liga alternativa", result: "Sem recurso possível, você aceita a suspensão. Para continuar jogando, será obrigado a reconstruir a carreira longe dos grandes centros.", effect: { forcedAlternativeTransfer: true, transfer: true, reputation: -28, morale: -18, fans: -24, fitness: -8, discipline: -22 } },
   ]},
+  { id: "drama-billie-eilish-photo", icon: "◎", tag: "ENCONTRO IMPROVÁVEL", title: "Billie Eilish quer tirar uma foto com você", description: "Nos bastidores de um evento, Billie Eilish reconhece você, abre um sorriso e pergunta se vocês podem postar uma foto juntos.", minAge: 18, oneTime: true, rareChance: 0.003, choices: [
+    { label: "Aceitar e postar junto", hint: "+10 milhões de seguidores · exposição mundial", result: "A foto atravessa idiomas, bolhas e continentes. Em poucas horas, dez milhões de pessoas novas chegam às suas redes.", effect: { followers: 10_000_000, socialSentiment: 14, mediaRelation: 8, reputation: 5 } },
+    { label: "Agradecer e manter em privado", hint: "Equilíbrio pessoal ↑ · sem explosão nas redes", result: "A conversa fica longe das câmeras. Você perde o viral, mas guarda uma história que ninguém transforma em publicidade.", effect: { lifeBalance: 9, morale: 7 } },
+  ]},
   // ---- IDADE ----
   { id: "drama-teenage-spotlight", icon: "★", tag: "IDADE", title: "Muito jovem para tanto holofote", description: "Aos dezessete anos, sua estreia precoce virou manchete antes mesmo da sua primeira lesão de crescimento.", maxAge: 18, oneTime: true, choices: [
     { label: "Abraçar a exposição", hint: "Fama ↑ · pressão ↑", result: "Você aceita que o Brasil inteiro já sabe seu nome.", effect: { reputation: 8, fans: 6, morale: -3 } },

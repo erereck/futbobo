@@ -26,6 +26,7 @@ export function toBotaoPosition(position: PositionKey): BotaoPositionKey {
 
 /** Escudo real quando existe arquivo verificado; senão o HUD cai na sigla. */
 export function clubBadgePath(club: Club): string | undefined {
+  if (club.customBadge) return club.customBadge;
   if (!VERIFIED_CLUB_ASSET_IDS.has(club.id)) return undefined;
   return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/assets/clubs/${club.id}.png`;
 }
@@ -75,8 +76,22 @@ export function pickFinalOpponent(args: {
   const confederation = countryById(club.countryId).confederation;
   const pool = CLUBS.filter((candidate) => {
     if (candidate.id === club.id) return false;
-    if (args.scope === "domestic") return candidate.leagueId === (args.leagueId ?? club.leagueId);
-    if (args.scope === "continental") return countryById(candidate.countryId).confederation === confederation;
+    if (args.scope === "domestic") {
+      const leagueId = args.leagueId ?? club.leagueId;
+      if (args.competitionId === "domesticCup" && leagueId === "brasileirao-b") {
+        return candidate.leagueId === "brasileirao";
+      }
+      if (args.competitionId === "domesticCup" && leagueId === "championship") {
+        return candidate.leagueId === "premier";
+      }
+      return candidate.leagueId === leagueId;
+    }
+    if (args.scope === "continental") {
+      if (args.competitionId === "libertadores") {
+        return countryById(candidate.countryId).confederation === confederation && candidate.countryId !== club.countryId;
+      }
+      return countryById(candidate.countryId).confederation === confederation;
+    }
     return candidate.strength >= 78;
   });
   const fallback = pool.length > 0 ? pool : CLUBS.filter((candidate) => candidate.id !== club.id);
@@ -190,6 +205,7 @@ export function buildNationalMatchSetup(args: {
   position: PositionKey;
   overall: number;
   ratings?: { power?: number; control?: number };
+  rules?: Partial<BotaoRules>;
 }): BotaoMatchSetup {
   const kits = ensureContrastingKits(
     botaoTeamFromCountry(args.country),
@@ -213,7 +229,7 @@ export function buildNationalMatchSetup(args: {
     userTeam: kits.user,
     cpuTeam: kits.cpu,
     difficulty: difficultyFromStrength(kits.cpu.strength),
-    rules: { ...CAREER_FINAL_RULES },
+    rules: { ...CAREER_FINAL_RULES, ...args.rules },
   };
 }
 

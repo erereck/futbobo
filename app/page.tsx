@@ -259,9 +259,24 @@ type CustomCharacter = {
   position: PositionKey;
 };
 
+type CustomClubDefinition = {
+  replacedClubId: string;
+  name: string;
+  shortName: string;
+  abbr: string;
+  primary: string;
+  secondary: string;
+  badge: string;
+};
+
 type AppSettings = {
   customCharacters: CustomCharacter[];
+  customClubs?: CustomClubDefinition[];
   finalMatchMode?: "simulate" | "finals-only" | "play-key-matches";
+  botaoGoalLimit?: 0 | 3 | 5;
+  botaoHalfSeconds?: 90 | 120 | 180;
+  botaoExtraSeconds?: 30 | 45 | 60;
+  botaoPenaltyRounds?: 3 | 5;
 };
 
 type InstallPromptEvent = Event & {
@@ -316,6 +331,8 @@ type SeasonResult = SeasonRecord & {
   livingCost?: number;
   balanceBefore?: number;
   balanceAfter?: number;
+  spendableIncome?: number;
+  spendableAfter?: number;
 };
 
 type GameState = {
@@ -347,6 +364,7 @@ type GameState = {
   reputation: number;
   leadership: number;
   money: number;
+  spendableMoney: number;
   nationalLevel: number;
   fanSupport: number;
   managerTrust: number;
@@ -397,6 +415,7 @@ type GameState = {
   transferStatus: TransferStatus | null;
   transferRequested: boolean;
   renewalDenied: boolean;
+  forcedClubExit: boolean;
   forcedAlternativeTransfer: boolean;
   pendingTransferMode: TransferMode;
   loanParentClubId: string;
@@ -404,6 +423,8 @@ type GameState = {
   loanEndSeason: number;
   isFreeAgent: boolean;
   freeAgentSinceSeason: number;
+  forcedFreeAgentUntilSeason: number;
+  corruptionGuaranteedSeason: number;
   traits: SpecialTraitId[];
   rivals: CareerRival[];
   followers: number;
@@ -542,6 +563,39 @@ declare global {
 const SAVE_KEY = "futbobo:career:v1";
 const HALL_OF_FAME_KEY = "futbobo:hall-of-fame:v1";
 const SETTINGS_KEY = "futbobo:settings:v1";
+const ORIGINAL_CLUB_PRESENTATION = new Map(
+  CLUBS.map((club) => [club.id, {
+    name: club.name,
+    shortName: club.shortName,
+    abbr: club.abbr,
+    primary: club.primary,
+    secondary: club.secondary,
+    customBadge: club.customBadge,
+  }]),
+);
+
+function applyCustomClubDefinitions(definitions: CustomClubDefinition[]) {
+  CLUBS.forEach((club) => {
+    const original = ORIGINAL_CLUB_PRESENTATION.get(club.id);
+    if (original) Object.assign(club, original);
+  });
+  definitions.forEach((definition) => {
+    const club = CLUBS.find((candidate) => candidate.id === definition.replacedClubId);
+    if (!club) return;
+    const safeBadge = definition.badge?.startsWith("data:image/") || /^https:\/\//i.test(definition.badge ?? "")
+      ? definition.badge
+      : undefined;
+    Object.assign(club, {
+      name: definition.name,
+      shortName: definition.shortName,
+      abbr: definition.abbr,
+      primary: definition.primary,
+      secondary: definition.secondary,
+      customBadge: safeBadge,
+    });
+  });
+}
+
 const RANDOM_NAME_FIRST_PART = ["Lionel", "Rayan", "Enzo", "Thiago", "Neyvan", "Kaoru", "Joanderson", "Lauta", "Marlon", "Kenji", "Noah", "Zico", "Mateus", "Santi", "Davi", "Keirrison", "Rivaldo", "Gael", "Axl", "Juninho"];
 const RANDOM_NAME_LAST_PART = ["Kishimoto", "Ferreyra", "Montiel", "da Colina", "Okafor", "Sakamoto", "Bensaid", "van Bronze", "do Valle", "Moretti", "Zanetti", "Nakamura", "Pereirinha", "Alcazar", "Matsubara", "de la Vega", "dos Pampas", "Silveirinha", "Kronberg", "Batistuta Jr"];
 const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS];
@@ -789,6 +843,7 @@ function initialState(): GameState {
     reputation: 0,
     leadership: 10,
     money: 0,
+    spendableMoney: 0,
     nationalLevel: 0,
     fanSupport: 55,
     managerTrust: 48,
@@ -853,6 +908,7 @@ function initialState(): GameState {
     transferStatus: null,
     transferRequested: false,
     renewalDenied: false,
+    forcedClubExit: false,
     forcedAlternativeTransfer: false,
     pendingTransferMode: "permanent",
     loanParentClubId: "",
@@ -860,6 +916,8 @@ function initialState(): GameState {
     loanEndSeason: 0,
     isFreeAgent: false,
     freeAgentSinceSeason: 0,
+    forcedFreeAgentUntilSeason: 0,
+    corruptionGuaranteedSeason: 0,
     traits: [],
     rivals: [],
     followers: 0,
@@ -921,6 +979,7 @@ function normalizeSave(value: unknown): GameState {
     nationalHistory: saved.nationalHistory ?? [],
     qualifiedNextMajor: saved.qualifiedNextMajor ?? true,
     renewalDenied: saved.renewalDenied ?? false,
+    forcedClubExit: saved.forcedClubExit ?? false,
     forcedAlternativeTransfer: saved.forcedAlternativeTransfer ?? false,
     pendingTransferMode: saved.pendingTransferMode ?? "permanent",
     loanParentClubId: saved.loanParentClubId ?? "",
@@ -928,6 +987,9 @@ function normalizeSave(value: unknown): GameState {
     loanEndSeason: saved.loanEndSeason ?? 0,
     isFreeAgent: saved.isFreeAgent ?? false,
     freeAgentSinceSeason: saved.freeAgentSinceSeason ?? 0,
+    forcedFreeAgentUntilSeason: saved.forcedFreeAgentUntilSeason ?? 0,
+    corruptionGuaranteedSeason: saved.corruptionGuaranteedSeason ?? 0,
+    spendableMoney: saved.spendableMoney ?? Math.min(saved.money ?? 0, Math.round((saved.money ?? 0) * 0.12)),
     traits: Array.isArray(saved.traits) && saved.traits.length
       ? saved.traits.filter((trait): trait is SpecialTraitId => trait in SPECIAL_TRAITS)
       : saved.currentClubId
@@ -1878,10 +1940,30 @@ function fanMood(value: number) {
   if (value < 38) return { label: "Vaiado", color: "#ff8c5a" };
   if (value < 62) return { label: "Em avaliação", color: "#2ca8ff" };
   if (value < 82) return { label: "Querido", color: "#63e36b" };
+  if (value < 94) return { label: "Amado", color: "#9be86f" };
   return { label: "Ídolo", color: "#ffc72c" };
 }
 
-function selectOffers(state: GameState, count: number, salt: number, opts: { includeForeign?: boolean; forceDomestic?: boolean; forceForeign?: boolean } = {}) {
+function isIdolAtClub(state: GameState, clubId: string) {
+  const clubSeasons = state.history.filter((season) => season.clubId === clubId);
+  const clubTitles = clubSeasons.reduce(
+    (total, season) => total + season.competitions.filter((competition) => competition.champion).length,
+    0,
+  );
+  return state.fanSupport >= 94 && state.reputation >= 70 && (clubSeasons.length >= 4 || clubTitles >= 3);
+}
+
+type TransferOfferOptions = {
+  includeForeign?: boolean;
+  forceDomestic?: boolean;
+  forceForeign?: boolean;
+  domesticCountryId?: string;
+  sourceLeagueId?: string;
+};
+
+const SECOND_DIVISION_LEAGUES = new Set(["brasileirao-b", "championship"]);
+
+function selectOffers(state: GameState, count: number, salt: number, opts: TransferOfferOptions = {}) {
   const current = state.currentClubId || state.academyClubId;
   const currentRep = current ? clubById(current).reputation : 3;
   const targetRep = clamp(Math.round((state.overall - 56) / 6), 2, 5);
@@ -1889,7 +1971,8 @@ function selectOffers(state: GameState, count: number, salt: number, opts: { inc
   if (opts.forceForeign) {
     pool = pool.filter((club) => isEuropeanClub(club) && (foreignEligible(state, club) || club.reputation <= Math.max(3, currentRep - 1)));
   } else if (opts.forceDomestic) {
-    pool = pool.filter((club) => !isAbroad(club));
+    const domesticCountryId = opts.domesticCountryId ?? clubById(current).countryId;
+    pool = pool.filter((club) => club.countryId === domesticCountryId);
   } else if (!opts.includeForeign) {
     pool = pool.filter((club) => !isAbroad(club));
   } else {
@@ -1933,8 +2016,16 @@ function prioritizeCurrentCountry(state: GameState, salt: number, offers: string
   return Array.from(new Set([...localOffers, ...offers])).slice(0, Math.max(5, offers.length));
 }
 
-function selectTransferOffers(state: GameState, salt: number, opts: { includeForeign?: boolean; forceDomestic?: boolean; forceForeign?: boolean } = {}) {
+function selectTransferOffers(state: GameState, salt: number, opts: TransferOfferOptions = {}) {
   const current = clubById(state.currentClubId || state.academyClubId);
+  const sourceLeagueId = opts.sourceLeagueId ?? state.currentLeagueId ?? current.leagueId;
+  if (SECOND_DIVISION_LEAGUES.has(sourceLeagueId)) {
+    return offersFromCountry(state, current.countryId, 7, salt).slice(0, 7);
+  }
+  if (opts.forceDomestic) {
+    const domesticCountryId = opts.domesticCountryId ?? current.countryId;
+    return offersFromCountry(state, domesticCountryId, 7, salt).slice(0, 7);
+  }
   let baseOffers = isEuropeanClub(current) && !opts.forceDomestic
     ? selectOffers(state, 5, salt, { ...opts, includeForeign: true, forceForeign: true })
     : selectOffers(state, 5, salt, opts);
@@ -1945,16 +2036,15 @@ function selectTransferOffers(state: GameState, salt: number, opts: { includeFor
       : 2;
   baseOffers = prioritizeCurrentCountry(state, salt + 919, baseOffers, desiredLocalOffers);
   baseOffers = ensureEuropeanOffer(state, salt + 941, baseOffers);
-  if (opts.forceDomestic) return baseOffers;
-
-  if (current.countryId !== "brasil" && !opts.forceForeign) {
-    const brazilReturnChance = state.age >= 34 ? 0.78 : state.age >= 30 ? 0.12 : 0.035;
-    if (seeded(state.seed, salt + 887) < brazilReturnChance) {
-      const brazilCount = state.age >= 34 ? 2 : 1;
-      const brazilOffers = offersFromCountry(state, "brasil", brazilCount, salt + 907, baseOffers);
+  const homeCountryId = state.academyCountryId;
+  if (homeCountryId && current.countryId !== homeCountryId && !opts.forceForeign) {
+    const homeReturnChance = state.age >= 34 ? 0.78 : state.age >= 30 ? 0.12 : 0.035;
+    if (seeded(state.seed, salt + 887) < homeReturnChance) {
+      const homeOfferCount = state.age >= 34 ? 2 : 1;
+      const homeOffers = offersFromCountry(state, homeCountryId, homeOfferCount, salt + 907, baseOffers);
       baseOffers = Array.from(new Set([
         ...baseOffers.filter((clubId) => clubById(clubId).countryId === current.countryId).slice(0, desiredLocalOffers),
-        ...brazilOffers,
+        ...homeOffers,
         ...baseOffers,
       ])).slice(0, 7);
     }
@@ -2480,6 +2570,7 @@ function applyEffect(state: GameState, effect: Effect) {
     reputation: clamp(state.reputation + (effect.reputation ?? 0), 0, 100),
     leadership: clamp(state.leadership + (effect.leadership ?? 0), 0, 100),
     money: Math.max(0, state.money + (effect.money ?? 0) * 10_000),
+    spendableMoney: Math.max(0, state.spendableMoney + Math.round((effect.money ?? 0) * 3_500)),
     nationalLevel: clamp(state.nationalLevel + (effect.nationalBoost ?? 0), 0, 100),
     fanSupport: clamp(state.fanSupport + (effect.fans ?? 0), 0, 100),
     adaptation: clamp(state.adaptation + (effect.adaptation ?? 0), 0, 100),
@@ -2630,7 +2721,9 @@ function simulateSeason(
   );
   const worldChance = clamp(1 + (strength - 76) * 0.28 + Math.max(0, affected.overall - 74) * 0.24 + boost * 0.1, 0.5, 12);
 
-  const leagueChampion = seeded(state.seed, state.season * 17) * 100 < leagueChance;
+  const leagueChampion =
+    affected.corruptionGuaranteedSeason === affected.season ||
+    seeded(state.seed, state.season * 17) * 100 < leagueChance;
   const cupLoadFactor = leagueChampion ? 0.7 : 1;
   const cupChampion = seeded(state.seed, state.season * 41) * 100 < cupChance * cupLoadFactor;
   const continentalLoadFactor = (leagueChampion ? 0.78 : 1) * (cupChampion ? 0.68 : 1);
@@ -2894,7 +2987,10 @@ function simulateSeason(
           const chanceCeiling = tournament.scope === "world" ? 28 : tournament.scope === "euro" || tournament.scope === "copaAmerica" || tournament.scope === "asiaCup" || tournament.scope === "afcon" ? 32 : 34;
           const majorChance = clamp(baseChance + Math.max(0, affected.overall - 78) * 0.7 + titleBoostN * 0.7 + affected.luckyBreaks * 0.35, 2, chanceCeiling);
           const champion = seeded(state.seed, state.season * 151) * 100 < majorChance;
-          const stage = champion ? "CAMPEÃO" : knockoutStage(157, false, ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"]);
+          const knockoutStages = tournament.scope === "world"
+            ? ["Fase de grupos", "16 avos", "Oitavas", "Quartas", "Semifinal", "Vice"]
+            : ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"];
+          const stage = champion ? "CAMPEÃO" : knockoutStage(157, false, knockoutStages);
           nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage, champion };
           if (champion) nationalTrophiesCount += 1;
           if (tournament.scope === "world") qualifiedNextMajor = true;
@@ -3165,6 +3261,12 @@ function simulateSeason(
       : clamp(62 - Math.max(0, affected.reputation - 45) * 0.25, 48, 72)
     : 0;
   const renewalDenied = nonRenewalChance > 0 && seeded(state.seed, state.season * 283 + 11) * 100 < nonRenewalChance;
+  const clubLevelFloor = clamp(club.strength - 12, 55, 82);
+  const clearlyBelowClubLevel =
+    nextOverall <= clubLevelFloor - 6 &&
+    (performanceScore < 56 || appearances < 20 || nextRole === "reserva");
+  const eliteMismatch = club.reputation >= 5 && nextOverall < 73 && performanceScore < 62;
+  const forcedClubExit = !isIdolAtClub(affected, club.id) && (clearlyBelowClubLevel || eliteMismatch);
 
   const pendingBotaoMatches: PendingBotaoMatch[] = [];
   if (finalMatchMode !== "simulate") {
@@ -3216,7 +3318,7 @@ function simulateSeason(
       });
 
     if (nationalHistoryAdd) {
-      const worldKnockoutStages = ["Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"];
+      const worldKnockoutStages = ["16 avos", "Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"];
       const shouldPlayWorldKnockout =
         finalMatchMode === "play-key-matches" &&
         nationalHistoryAdd.name === "Copa do Mundo" &&
@@ -3224,7 +3326,7 @@ function simulateSeason(
       const shouldPlayNationalFinal =
         !shouldPlayWorldKnockout &&
         (nationalHistoryAdd.champion || nationalHistoryAdd.stage === "Vice");
-      const stageName = shouldPlayWorldKnockout ? "Oitavas de final" : shouldPlayNationalFinal ? "Final" : "";
+      const stageName = shouldPlayWorldKnockout ? "16 avos de final" : shouldPlayNationalFinal ? "Final" : "";
       if (stageName) {
         const competitionId = nationalHistoryAdd.name === "Copa do Mundo"
           ? "world-cup"
@@ -3364,11 +3466,18 @@ function simulateSeason(
     .map((milestone) => `${affected.season}: ${milestone.label}`);
   const sponsorIncome = affected.activeSponsor?.annualValue ?? 0;
   const seasonLivingCost = Math.round((120_000 + affected.age * 3_500 + (abroad ? 85_000 : 35_000) + Math.max(0, affected.reputation - 35) * 5_500) / 10_000) * 10_000;
+  const seasonNetIncome = Math.max(0, affected.annualSalary + sponsorIncome - seasonLivingCost);
+  const seasonSpendableGain = Math.round(seasonNetIncome * 0.18 / 10_000) * 10_000;
   result.salaryIncome = affected.annualSalary;
   result.sponsorIncome = sponsorIncome;
   result.livingCost = seasonLivingCost;
   result.balanceBefore = affected.money;
   result.balanceAfter = Math.max(0, affected.money + affected.annualSalary + sponsorIncome - seasonLivingCost);
+  result.spendableIncome = seasonSpendableGain;
+  result.spendableAfter = Math.min(
+    result.balanceAfter,
+    affected.spendableMoney + seasonSpendableGain,
+  );
   const sponsorExpired = Boolean(affected.activeSponsor && affected.season + 1 >= affected.activeSponsor.endSeason);
   const completedSponsor = sponsorExpired && affected.activeSponsor
     ? { ...affected.activeSponsor, status: "completed" as const }
@@ -3425,6 +3534,10 @@ function simulateSeason(
     squadRole: nextRole,
     contractYears: Math.max(0, affected.contractYears - 1),
     money: Math.max(0, affected.money + affected.annualSalary + sponsorIncome - seasonLivingCost),
+    spendableMoney: Math.min(
+      Math.max(0, affected.money + affected.annualSalary + sponsorIncome - seasonLivingCost),
+      affected.spendableMoney + seasonSpendableGain,
+    ),
     currentObjective: createSeasonObjective(position, nextRole, affected.season + 1, affected.seed + affected.history.length * 31),
     objectivesCompleted: affected.objectivesCompleted + (objectiveResult.completed ? 1 : 0),
     objectivesFailed: affected.objectivesFailed + (objectiveResult.completed ? 0 : 1),
@@ -3463,10 +3576,11 @@ function simulateSeason(
     seenEvents,
     nextEventId: "",
     renewalDenied,
+    forcedClubExit,
     isFreeAgent: renewalDenied,
     freeAgentSinceSeason: renewalDenied ? affected.season + 1 : affected.freeAgentSinceSeason,
     forcedAlternativeTransfer: Boolean(effect.forcedAlternativeTransfer),
-    transferRequested: effect.forcedAlternativeTransfer ? true : affected.transferRequested,
+    transferRequested: effect.forcedAlternativeTransfer || forcedClubExit ? true : affected.transferRequested,
     pendingTransferMode: effect.loan ? "loan" : "permanent",
     rivals: evolveRivals(affected.rivals, affected.seed, affected.season).map((rival) =>
       event.id === DYNAMIC_RIVAL_EVENT_ID &&
@@ -3484,12 +3598,22 @@ function simulateSeason(
     offFieldMilestones: [...affected.offFieldMilestones, ...newOffFieldMilestones],
     nationalitySwitched: affected.nationalitySwitched || Boolean(nationalitySwitchRecord),
     pendingNationalitySwitchTarget: "",
+    corruptionGuaranteedSeason: 0,
   };
   const wantsDomesticReturn = event.id === "european-exit" || event.id === "return-home" || event.id === "mega-empresta-para-time-menor";
-  let transferOffers = effect.transfer || effect.forcedAlternativeTransfer || nextBase.contractYears === 0
+  const domesticReturnCountryId = event.id === "european-exit" || event.id === "return-home"
+    ? nextBase.academyCountryId
+    : club.countryId;
+  let transferOffers = effect.transfer || effect.forcedAlternativeTransfer || forcedClubExit || nextBase.contractYears === 0
     ? effect.forcedAlternativeTransfer
       ? selectAlternativeExileOffers(nextBase, affected.season * 43)
-      : selectTransferOffers(nextBase, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad })
+      : selectTransferOffers(nextBase, affected.season * 43, {
+          includeForeign: !wantsDomesticReturn,
+          forceDomestic: wantsDomesticReturn,
+          forceForeign: effect.transferAbroad,
+          domesticCountryId: domesticReturnCountryId,
+          sourceLeagueId: league.id,
+        })
     : [];
   if (effect.transfer && event.id === "return-home" && nextBase.academyClubId) {
     const europeanDoor = transferOffers.find((clubId) => isEuropeanClub(clubById(clubId)));
@@ -3776,6 +3900,7 @@ function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarlo
         lastConsequence: null,
         transferRequested: false,
         renewalDenied: false,
+        forcedClubExit: false,
         forcedAlternativeTransfer: false,
       };
     }
@@ -3884,7 +4009,9 @@ function LocalBadgeImage({
   onAvailabilityChange?: (available: boolean) => void;
 }) {
   const [failedSource, setFailedSource] = useState("");
-  const source = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
+  const source = path.startsWith("data:") || /^https:\/\//i.test(path)
+    ? path
+    : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${path}`;
 
   if (failedSource === source) return null;
 
@@ -3916,7 +4043,13 @@ function ClubBadge({ club, size = "md" }: { club: Club; size?: "sm" | "md" | "lg
       aria-hidden="true"
     >
       <span className="badge-fallback">{club.abbr}</span>
-      {VERIFIED_CLUB_ASSET_IDS.has(club.id) && <LocalBadgeImage path={`/assets/clubs/${club.id}.png`} kind="club" onAvailabilityChange={(available) => setLoadedClubId(available ? club.id : "")} />}
+      {(club.customBadge || VERIFIED_CLUB_ASSET_IDS.has(club.id)) && (
+        <LocalBadgeImage
+          path={club.customBadge || `/assets/clubs/${club.id}.png`}
+          kind="club"
+          onAvailabilityChange={(available) => setLoadedClubId(available ? club.id : "")}
+        />
+      )}
     </span>
   );
 }
@@ -4181,12 +4314,27 @@ export default function Home() {
   const [hallOfFame, setHallOfFame] = useState<CareerHallEntry[]>([]);
   const [hallPreview, setHallPreview] = useState<GameState | null>(null);
   const [hallPreviewLegacy, setHallPreviewLegacy] = useState(false);
-  const [updateNoticeOpen, setUpdateNoticeOpen] = useState(true);
+  const [updateNoticeOpen, setUpdateNoticeOpen] = useState(false);
   const [updateNoticePage, setUpdateNoticePage] = useState<"current" | "previous">("current");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [appSettings, setAppSettings] = useState<AppSettings>({ customCharacters: [], finalMatchMode: "play-key-matches" });
+  const [appSettings, setAppSettings] = useState<AppSettings>({
+    customCharacters: [],
+    customClubs: [],
+    finalMatchMode: "play-key-matches",
+    botaoGoalLimit: 3,
+    botaoHalfSeconds: 120,
+    botaoExtraSeconds: 45,
+    botaoPenaltyRounds: 5,
+  });
   const [characterName, setCharacterName] = useState("");
   const [characterPosition, setCharacterPosition] = useState<PositionKey>("MEI");
+  const [customClubReplacement, setCustomClubReplacement] = useState(CLUBS[0].id);
+  const [customClubName, setCustomClubName] = useState("");
+  const [customClubShortName, setCustomClubShortName] = useState("");
+  const [customClubAbbr, setCustomClubAbbr] = useState("");
+  const [customClubPrimary, setCustomClubPrimary] = useState("#0b6b45");
+  const [customClubSecondary, setCustomClubSecondary] = useState("#f4c542");
+  const [customClubBadge, setCustomClubBadge] = useState("");
   const [shirtNumberInput, setShirtNumberInput] = useState("10");
   const [economyFeedback, setEconomyFeedback] = useState("");
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
@@ -4194,6 +4342,7 @@ export default function Home() {
   const [selectedAchievementId, setSelectedAchievementId] = useState("");
   const [botaoMatchStarted, setBotaoMatchStarted] = useState(false);
   const [botaoSimulating, setBotaoSimulating] = useState(false);
+  const saveImportRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try {
@@ -4214,15 +4363,25 @@ export default function Home() {
         ));
       }
       const storedSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") as Partial<AppSettings>;
-      if (Array.isArray(storedSettings.customCharacters)) {
-        const customCharacters = storedSettings.customCharacters;
-        queueMicrotask(() => setAppSettings({
-          customCharacters: customCharacters
-            .filter((character) => character && typeof character.name === "string" && POSITIONS.some((position) => position.key === character.position))
-            .slice(0, 12),
-          finalMatchMode: storedSettings.finalMatchMode ?? "play-key-matches",
-        }));
-      }
+      const sanitizedSettings: AppSettings = {
+        customCharacters: Array.isArray(storedSettings.customCharacters)
+          ? storedSettings.customCharacters
+              .filter((character) => character && typeof character.name === "string" && POSITIONS.some((position) => position.key === character.position))
+              .slice(0, 12)
+          : [],
+        customClubs: Array.isArray(storedSettings.customClubs)
+          ? storedSettings.customClubs
+              .filter((club) => club && CLUBS.some((candidate) => candidate.id === club.replacedClubId) && typeof club.name === "string")
+              .slice(0, 8)
+          : [],
+        finalMatchMode: storedSettings.finalMatchMode ?? "play-key-matches",
+        botaoGoalLimit: [0, 3, 5].includes(storedSettings.botaoGoalLimit ?? 3) ? storedSettings.botaoGoalLimit ?? 3 : 3,
+        botaoHalfSeconds: [90, 120, 180].includes(storedSettings.botaoHalfSeconds ?? 120) ? storedSettings.botaoHalfSeconds ?? 120 : 120,
+        botaoExtraSeconds: [30, 45, 60].includes(storedSettings.botaoExtraSeconds ?? 45) ? storedSettings.botaoExtraSeconds ?? 45 : 45,
+        botaoPenaltyRounds: storedSettings.botaoPenaltyRounds === 3 ? 3 : 5,
+      };
+      applyCustomClubDefinitions(sanitizedSettings.customClubs ?? []);
+      queueMicrotask(() => setAppSettings(sanitizedSettings));
     } catch {
       localStorage.removeItem(SAVE_KEY);
     }
@@ -4231,6 +4390,10 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
   }, [appSettings]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [game.phase, activeTab]);
 
 
   useEffect(() => {
@@ -4339,6 +4502,12 @@ export default function Home() {
   const currentBotaoSetup = useMemo<BotaoMatchSetup | null>(() => {
     if (!currentBotaoMatch) return null;
     const ratings = ratingsFromAttributes(game.attributes, game.overall);
+    const rules = {
+      goalLimit: appSettings.botaoGoalLimit ?? 3,
+      halfSeconds: appSettings.botaoHalfSeconds ?? 120,
+      extraSeconds: appSettings.botaoExtraSeconds ?? 45,
+      penaltyRounds: appSettings.botaoPenaltyRounds ?? 5,
+    };
     if (currentBotaoMatch.source === "national") {
       return buildNationalMatchSetup({
         seed: game.seed,
@@ -4353,6 +4522,7 @@ export default function Home() {
         position: game.position,
         overall: game.overall,
         ratings,
+        rules,
       });
     }
     return buildFinalSetup({
@@ -4368,6 +4538,7 @@ export default function Home() {
       position: game.position,
       overall: game.overall,
       ratings,
+      rules,
     });
   }, [
     currentBotaoMatch,
@@ -4379,6 +4550,10 @@ export default function Home() {
     game.overall,
     game.position,
     game.seed,
+    appSettings.botaoExtraSeconds,
+    appSettings.botaoGoalLimit,
+    appSettings.botaoHalfSeconds,
+    appSettings.botaoPenaltyRounds,
   ]);
   const academyClubs = useMemo(() => randomAcademyClubs(game.seed, game.academyCountryId), [game.seed, game.academyCountryId]);
   const academyRoute = useMemo(() => academyRouteCopy(game.academyCountryId), [game.academyCountryId]);
@@ -4488,18 +4663,25 @@ export default function Home() {
     };
   }, [game.history, game.stats.appearances, game.stats.goals, game.stats.assists]);
   const transferWindowProfile = useMemo(() => {
-    const foreignOfferClubs = game.transferOffers.map(clubById).filter(isAbroad);
+    const offerClubs = game.transferOffers.map(clubById);
+    const foreignOfferClubs = offerClubs.filter((club) => club.countryId !== currentClub.countryId);
     const europeanOffers = foreignOfferClubs.filter(isEuropeanClub).length;
     const allForeignAreEurope = foreignOfferClubs.every((club) => clubConfederation(club) === "EUROPE");
+    const homeCountry = countryById(game.academyCountryId);
+    const homeOffers = offerClubs.filter((club) =>
+      club.countryId === game.academyCountryId &&
+      club.countryId !== currentClub.countryId
+    ).length;
     return {
       europeanOffers,
-      brazilianOffers: game.transferOffers.filter((clubId) => clubById(clubId).countryId === "brasil").length,
+      homeCountry,
+      homeOffers,
       isEuropeanWindow: isEuropeanClub(currentClub) && europeanOffers > 0,
       foreignMarketLabel: allForeignAreEurope ? "MERCADO EUROPEU" : "MERCADO INTERNACIONAL",
       foreignMarketAdjective: allForeignAreEurope ? "europeu" : "internacional",
       expandedOfferCount: Math.max(0, game.transferOffers.length - 5),
     };
-  }, [game.transferOffers, currentClub]);
+  }, [game.transferOffers, game.academyCountryId, currentClub]);
   const currentEvent = eventForState(game);
 
   useEffect(() => {
@@ -4597,6 +4779,7 @@ export default function Home() {
     const name = characterName.trim().replace(/\s+/g, " ");
     if (name.length < 2 || appSettings.customCharacters.length >= 12) return;
     setAppSettings((current) => ({
+      ...current,
       customCharacters: [
         ...current.customCharacters,
         { id: `${Date.now()}-${name.toLocaleLowerCase("pt-BR")}`, name: name.slice(0, 28), position: characterPosition },
@@ -4608,9 +4791,129 @@ export default function Home() {
   }
   function removeCustomCharacter(id: string) {
     setAppSettings((current) => ({
+      ...current,
       customCharacters: current.customCharacters.filter((character) => character.id !== id),
     }));
     vibrate();
+  }
+
+  function saveCustomClub() {
+    const name = customClubName.trim().replace(/\s+/g, " ");
+    const shortName = (customClubShortName.trim() || name).replace(/\s+/g, " ");
+    const abbr = customClubAbbr.trim().toLocaleUpperCase("pt-BR").replace(/[^A-Z0-9]/g, "").slice(0, 4);
+    if (name.length < 2 || shortName.length < 2 || abbr.length < 2) return;
+    const badge = customClubBadge.trim();
+    const safeBadge = badge.startsWith("data:image/") || /^https:\/\//i.test(badge) ? badge : "";
+    const definition: CustomClubDefinition = {
+      replacedClubId: customClubReplacement,
+      name: name.slice(0, 42),
+      shortName: shortName.slice(0, 24),
+      abbr,
+      primary: customClubPrimary,
+      secondary: customClubSecondary,
+      badge: safeBadge,
+    };
+    setAppSettings((current) => {
+      const customClubs = [
+        ...(current.customClubs ?? []).filter((club) => club.replacedClubId !== definition.replacedClubId),
+        definition,
+      ].slice(-8);
+      applyCustomClubDefinitions(customClubs);
+      return { ...current, customClubs };
+    });
+    setToast(`${definition.shortName} substituiu o ${ORIGINAL_CLUB_PRESENTATION.get(definition.replacedClubId)?.shortName ?? "clube escolhido"}`);
+    vibrate();
+  }
+
+  function removeCustomClub(replacedClubId: string) {
+    setAppSettings((current) => {
+      const customClubs = (current.customClubs ?? []).filter((club) => club.replacedClubId !== replacedClubId);
+      applyCustomClubDefinitions(customClubs);
+      return { ...current, customClubs };
+    });
+    vibrate();
+  }
+
+  function readCustomClubBadge(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 1_000_000) {
+      setToast("Use uma imagem de até 1 MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setCustomClubBadge(reader.result);
+        setToast("Escudo carregado");
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function exportSavedData() {
+    const payload = {
+      format: "futbobo-backup",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      save: JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null"),
+      hallOfFame: JSON.parse(localStorage.getItem(HALL_OF_FAME_KEY) ?? "[]"),
+      settings: appSettings,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `futbobo-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setToast("Dados exportados");
+  }
+
+  async function importSavedData(file: File | undefined) {
+    if (!file) return;
+    try {
+      const payload = JSON.parse(await file.text()) as {
+        format?: string;
+        save?: unknown;
+        hallOfFame?: unknown;
+        settings?: Partial<AppSettings>;
+      };
+      if (payload.format !== "futbobo-backup") throw new Error("Formato inválido");
+      const importedSettings: AppSettings = {
+        customCharacters: Array.isArray(payload.settings?.customCharacters) ? payload.settings.customCharacters.slice(0, 12) : [],
+        customClubs: Array.isArray(payload.settings?.customClubs) ? payload.settings.customClubs.slice(0, 8) : [],
+        finalMatchMode: payload.settings?.finalMatchMode ?? "play-key-matches",
+        botaoGoalLimit: payload.settings?.botaoGoalLimit ?? 3,
+        botaoHalfSeconds: payload.settings?.botaoHalfSeconds ?? 120,
+        botaoExtraSeconds: payload.settings?.botaoExtraSeconds ?? 45,
+        botaoPenaltyRounds: payload.settings?.botaoPenaltyRounds ?? 5,
+      };
+      const importedHall = Array.isArray(payload.hallOfFame)
+        ? (payload.hallOfFame as CareerHallEntry[])
+            .filter((entry) => entry && typeof entry.name === "string" && typeof entry.legacyPoints === "number")
+            .sort((a, b) => b.legacyPoints - a.legacyPoints)
+            .slice(0, 10)
+        : [];
+      applyCustomClubDefinitions(importedSettings.customClubs ?? []);
+      setAppSettings(importedSettings);
+      setHallOfFame(importedHall);
+      localStorage.setItem(HALL_OF_FAME_KEY, JSON.stringify(importedHall));
+      if (payload.save) {
+        const importedGame = normalizeSave(payload.save);
+        setGame(importedGame);
+        setHasSave(importedGame.phase !== "welcome");
+        localStorage.setItem(SAVE_KEY, JSON.stringify(importedGame));
+      } else {
+        localStorage.removeItem(SAVE_KEY);
+        setHasSave(false);
+      }
+      setToast("Dados importados com sucesso");
+      setSettingsOpen(false);
+    } catch {
+      setToast("Arquivo de backup inválido");
+    } finally {
+      if (saveImportRef.current) saveImportRef.current.value = "";
+    }
   }
 
   function selectFormation(formationId: string) {
@@ -4829,7 +5132,7 @@ export default function Home() {
           ].slice(0, 16),
         };
       } else {
-        const stageOrder = ["Oitavas de final", "Quartas de final", "Semifinal", "Final"];
+        const stageOrder = ["16 avos de final", "Oitavas de final", "Quartas de final", "Semifinal", "Final"];
         const currentStageIndex = Math.max(0, stageOrder.indexOf(match.stageName));
         const wonRound = matchResult.champion;
         const wonTournament = wonRound && currentStageIndex === stageOrder.length - 1;
@@ -5141,7 +5444,7 @@ export default function Home() {
 
   function chooseTransfer(clubId: string | null) {
     setGame((current) => {
-      if (!clubId && (current.transferRequested || current.renewalDenied || current.forcedAlternativeTransfer)) return current;
+      if (!clubId && (current.transferRequested || current.renewalDenied || current.forcedClubExit || current.forcedAlternativeTransfer)) return current;
       if (!clubId && (current.isFreeAgent || current.pendingTransferMode === "loan")) return current;
       const newClub = clubId ? clubById(clubId) : null;
       const oldClub = clubById(current.currentClubId);
@@ -5191,6 +5494,7 @@ export default function Home() {
         transferStatus: null,
         transferRequested: false,
         renewalDenied: false,
+        forcedClubExit: false,
         forcedAlternativeTransfer: false,
         pendingTransferMode: "permanent",
         loanParentClubId: isLoan ? oldClub.id : "",
@@ -5198,6 +5502,7 @@ export default function Home() {
         loanEndSeason: isLoan ? current.season + 1 : 0,
         isFreeAgent: false,
         freeAgentSinceSeason: 0,
+        forcedFreeAgentUntilSeason: 0,
         managerTrust,
         squadRole,
         contractYears: contract.years,
@@ -5243,41 +5548,53 @@ export default function Home() {
 
   function waitAsFreeAgent() {
     setGame((current) => {
-      if (!current.isFreeAgent || current.age >= 39) return current;
+      if (!current.isFreeAgent || (current.age >= 42 && current.forcedFreeAgentUntilSeason <= current.season)) return current;
+      const nextSeason = current.season + 1;
+      const stillBanned = current.forcedFreeAgentUntilSeason > nextSeason;
+      const banJustEnded = current.forcedFreeAgentUntilSeason > 0 && !stillBanned;
       const waited: GameState = {
         ...current,
         age: current.age + 1,
-        season: current.season + 1,
+        season: nextSeason,
         morale: clamp(current.morale - 5),
         fitness: clamp(Math.round(current.fitness * 0.7 + 82 * 0.3), 45, 94),
         money: Math.max(0, current.money - 180_000),
+        spendableMoney: Math.max(0, current.spendableMoney - 180_000),
         freeAgentSinceSeason: current.freeAgentSinceSeason || current.season,
+        forcedFreeAgentUntilSeason: banJustEnded ? 0 : current.forcedFreeAgentUntilSeason,
         transferStatus: {
-          success: true,
+          success: !stillBanned,
           chance: 100,
-          headline: "Um ano passou sem clube",
-          text: "Você preservou a liberdade, mas perdeu ritmo e pagou seus custos sem salário. Uma nova rodada de propostas chegou.",
+          headline: stillBanned ? "A punição ainda está valendo" : banJustEnded ? "O banimento terminou" : "Um ano passou sem clube",
+          text: stillBanned
+            ? `Nenhum clube pode registrar você. Faltam ${current.forcedFreeAgentUntilSeason - nextSeason} ano(s) para o mercado reabrir.`
+            : banJustEnded
+              ? "Depois de anos fora, seu nome voltou ao mercado e uma nova rodada de propostas chegou."
+              : "Você preservou a liberdade, mas perdeu ritmo e pagou seus custos sem salário. Uma nova rodada de propostas chegou.",
         },
         newsFeed: [`${current.season}: ${current.name} passou a temporada como agente livre.`, ...current.newsFeed].slice(0, 16),
       };
       return {
         ...waited,
-        transferOffers: selectTransferOffers(waited, waited.season * 521, { includeForeign: true }).slice(0, 10),
+        transferOffers: stillBanned ? [] : selectTransferOffers(waited, waited.season * 521, { includeForeign: true }).slice(0, 10),
       };
     });
-    setToast("Nova temporada, novas propostas — sem jogos registrados");
+    setToast(game.forcedFreeAgentUntilSeason > game.season + 1 ? "Mais um ano cumprido longe dos clubes" : "Nova temporada, novas propostas — sem jogos registrados");
     vibrate();
   }
 
-  function buyCareerItem(item: "recovery" | "media" | "coach" | "potential") {
-    const prices = { recovery: 350_000, media: 600_000, coach: 1_200_000, potential: 2_500_000 };
+  function buyCareerItem(item: "recovery" | "media" | "coach" | "potential" | "corruption") {
+    const prices = { recovery: 350_000, media: 600_000, coach: 1_200_000, potential: 2_500_000, corruption: 2_000_000 };
     const price = prices[item];
     const purchaseKey = `${game.season}:${item}`;
-    if (game.money < price || game.economyPurchases.includes(purchaseKey)) return;
+    if (game.spendableMoney < price || game.economyPurchases.includes(purchaseKey)) return;
+    const corruptionSucceeded = item === "corruption" && seeded(game.seed, game.season * 1877 + game.economyPurchases.length * 31) < 0.5;
+    const corruptionBanYears = 3 + Math.floor(seeded(game.seed, game.season * 1889 + game.economyPurchases.length * 37) * 3);
     setGame((current) => {
       const next = {
         ...current,
         money: current.money - price,
+        spendableMoney: current.spendableMoney - price,
         economyPurchases: [...current.economyPurchases, purchaseKey],
       };
       if (item === "recovery") {
@@ -5289,13 +5606,45 @@ export default function Home() {
         next.followers = current.followers + Math.max(25_000, Math.round(current.followers * 0.04));
       } else if (item === "coach") {
         next.attributes = shiftPlayerAttributes(current.attributes, 1, current.position, current.seed + current.season * 613);
-      } else {
+      } else if (item === "potential") {
         next.potential = clamp(current.potential < 80 ? current.potential + 1 : current.potential - 1, current.overall, 99);
+      } else if (corruptionSucceeded) {
+        next.corruptionGuaranteedSeason = current.season;
+        next.discipline = clamp(current.discipline - 18);
+        next.mediaRelation = clamp(current.mediaRelation - 8);
+      } else {
+        next.phase = "transfer" as Phase;
+        next.isFreeAgent = true;
+        next.freeAgentSinceSeason = current.season;
+        next.forcedFreeAgentUntilSeason = current.season + corruptionBanYears;
+        next.transferOffers = [];
+        next.contractYears = 0;
+        next.annualSalary = 0;
+        next.activeSponsor = null;
+        next.managerTrust = 0;
+        next.fanSupport = clamp(current.fanSupport - 30);
+        next.reputation = clamp(current.reputation - 35);
+        next.discipline = clamp(current.discipline - 45);
+        next.transferRequested = true;
+        next.transferStatus = {
+          success: false,
+          chance: 50,
+          headline: "O esquema foi descoberto",
+          text: `A investigação expulsou você do mercado por ${corruptionBanYears} anos. Nenhum clube poderá contratar você antes de ${current.season + corruptionBanYears}.`,
+        };
+        next.newsFeed = [
+          `${current.season}: tentativa de corrupção descoberta; ${current.name} foi afastado do futebol por ${corruptionBanYears} anos.`,
+          ...current.newsFeed,
+        ].slice(0, 16);
       }
       return next;
     });
     setEconomyFeedback(
-      item === "potential"
+      item === "corruption"
+        ? corruptionSucceeded
+          ? "O acordo ficou escondido. O título nacional desta temporada está garantido — mas sua disciplina e sua imagem já carregam a escolha."
+          : `O pagamento deixou rastros. Você foi banido do mercado por ${corruptionBanYears} anos e terá de atravessar esse período como agente livre.`
+        : item === "potential"
         ? "A recalibração foi concluída. O relatório continua confidencial: você só descobrirá o efeito acompanhando sua evolução."
         : item === "coach"
           ? "O trabalho individual acrescentou um pequeno ganho técnico aos seus atributos."
@@ -5303,7 +5652,7 @@ export default function Home() {
             ? "A nova equipe reorganizou sua imagem, sua agenda e seu alcance."
             : "A estrutura de recuperação devolveu energia e tranquilidade.",
     );
-    setToast(`${formatMoney(price)} investidos na carreira`);
+    setToast(item === "corruption" ? (corruptionSucceeded ? "Esquema fechado — título garantido" : "Esquema descoberto") : `${formatMoney(price)} investidos na carreira`);
     vibrate();
   }
 
@@ -5447,7 +5796,6 @@ export default function Home() {
           key={currentBotaoSetup.matchId}
           setup={currentBotaoSetup}
           onFinish={applyBotaoMatchResult}
-          onGiveUp={() => setBotaoMatchStarted(false)}
         />
       );
     }
@@ -5629,7 +5977,7 @@ export default function Home() {
         <div className="modal-backdrop settings-backdrop" role="presentation" onMouseDown={() => setSettingsOpen(false)}>
           <section className="settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settings-title" onMouseDown={(event) => event.stopPropagation()}>
             <header>
-              <div><span>CONFIGURAÇÕES DO UNIVERSO</span><h2 id="settings-title">Personagens</h2></div>
+              <div><span>CONFIGURAÇÕES DO UNIVERSO</span><h2 id="settings-title">Universo e partidas</h2></div>
               <button className="icon-button" aria-label="Fechar configurações" onClick={() => setSettingsOpen(false)}>×</button>
             </header>
             <p>Crie pessoas do seu universo. Em novas carreiras, elas podem aparecer aleatoriamente como rivais, candidatos a prêmios e protagonistas de eventos. Nem toda carreira terá um rival.</p>
@@ -5648,7 +5996,37 @@ export default function Home() {
                 ))}
               </div>
               <small>A escolha vale imediatamente para a próxima temporada simulada e fica salva neste aparelho.</small>
+              <div className="botao-rule-settings">
+                <label>Fim antecipado
+                  <select value={appSettings.botaoGoalLimit ?? 3} onChange={(event) => setAppSettings((current) => ({ ...current, botaoGoalLimit: Number(event.target.value) as 0 | 3 | 5 }))}>
+                    <option value={3}>Terminar aos 3 gols</option>
+                    <option value={5}>Terminar aos 5 gols</option>
+                    <option value={0}>Desativado</option>
+                  </select>
+                </label>
+                <label>Duração
+                  <select value={appSettings.botaoHalfSeconds ?? 120} onChange={(event) => setAppSettings((current) => ({ ...current, botaoHalfSeconds: Number(event.target.value) as 90 | 120 | 180 }))}>
+                    <option value={90}>1min30</option>
+                    <option value={120}>2 minutos</option>
+                    <option value={180}>3 minutos</option>
+                  </select>
+                </label>
+                <label>Prorrogação
+                  <select value={appSettings.botaoExtraSeconds ?? 45} onChange={(event) => setAppSettings((current) => ({ ...current, botaoExtraSeconds: Number(event.target.value) as 30 | 45 | 60 }))}>
+                    <option value={30}>30 segundos</option>
+                    <option value={45}>45 segundos</option>
+                    <option value={60}>1 minuto</option>
+                  </select>
+                </label>
+                <label>Série de pênaltis
+                  <select value={appSettings.botaoPenaltyRounds ?? 5} onChange={(event) => setAppSettings((current) => ({ ...current, botaoPenaltyRounds: Number(event.target.value) as 3 | 5 }))}>
+                    <option value={3}>3 cobranças</option>
+                    <option value={5}>5 cobranças</option>
+                  </select>
+                </label>
+              </div>
             </section>
+            <div className="settings-section-heading"><span>PERSONAGENS</span><strong>Rivais e nomes do seu universo</strong></div>
             <div className="character-creator">
               <label>Nome do personagem<input value={characterName} maxLength={28} placeholder="Ex.: Gabriel Souza" onChange={(event) => setCharacterName(event.target.value)} /></label>
               <label>Posição<select value={characterPosition} onChange={(event) => setCharacterPosition(event.target.value as PositionKey)}>{POSITIONS.map((item) => <option key={item.key} value={item.key}>{item.key} · {item.name}</option>)}</select></label>
@@ -5666,6 +6044,49 @@ export default function Home() {
                 </article>
               ))}
             </div>
+            <section className="custom-club-settings">
+              <div className="settings-section-heading"><span>TIME PERSONALIZADO</span><strong>Substitua um clube sem alterar a liga</strong></div>
+              <p>O time customizado herda cidade, liga, força e reputação do clube substituído. Nome, cores e escudo passam a ser seus.</p>
+              <label>Clube que será substituído
+                <select value={customClubReplacement} onChange={(event) => setCustomClubReplacement(event.target.value)}>
+                  {[...ORIGINAL_CLUB_PRESENTATION.entries()]
+                    .sort((a, b) => a[1].shortName.localeCompare(b[1].shortName, "pt-BR"))
+                    .map(([id, club]) => <option key={id} value={id}>{club.shortName} · {leagueById(CLUBS.find((candidate) => candidate.id === id)?.leagueId ?? CLUBS[0].leagueId).name}</option>)}
+                </select>
+              </label>
+              <div className="custom-club-grid">
+                <label>Nome completo<input maxLength={42} value={customClubName} onChange={(event) => setCustomClubName(event.target.value)} placeholder="Ex.: Futbobo FC" /></label>
+                <label>Nome curto<input maxLength={24} value={customClubShortName} onChange={(event) => setCustomClubShortName(event.target.value)} placeholder="Ex.: Futbobo" /></label>
+                <label>Sigla<input maxLength={4} value={customClubAbbr} onChange={(event) => setCustomClubAbbr(event.target.value)} placeholder="FTB" /></label>
+                <label>Cor principal<input type="color" value={customClubPrimary} onChange={(event) => setCustomClubPrimary(event.target.value)} /></label>
+                <label>Cor secundária<input type="color" value={customClubSecondary} onChange={(event) => setCustomClubSecondary(event.target.value)} /></label>
+              </div>
+              <label>Escudo por link HTTPS<input value={customClubBadge.startsWith("data:") ? "" : customClubBadge} onChange={(event) => setCustomClubBadge(event.target.value)} placeholder="https://.../escudo.png" /></label>
+              <label className="custom-club-file">Ou envie um arquivo de até 1 MB<input type="file" accept="image/*" onChange={(event) => readCustomClubBadge(event.target.files?.[0])} /></label>
+              {customClubBadge && <small className="custom-club-badge-ready">✓ Escudo personalizado pronto</small>}
+              <button className="primary-button" disabled={customClubName.trim().length < 2 || customClubAbbr.trim().length < 2} onClick={saveCustomClub}>Salvar time personalizado <span>+</span></button>
+              {(appSettings.customClubs ?? []).length > 0 && (
+                <div className="custom-character-list">
+                  <div><span>TIMES CRIADOS</span><strong>{(appSettings.customClubs ?? []).length}/8</strong></div>
+                  {(appSettings.customClubs ?? []).map((club) => (
+                    <article key={club.replacedClubId}>
+                      <ClubBadge club={clubById(club.replacedClubId)} size="sm" />
+                      <div><strong>{club.shortName}</strong><small>Substitui {ORIGINAL_CLUB_PRESENTATION.get(club.replacedClubId)?.shortName}</small></div>
+                      <button onClick={() => removeCustomClub(club.replacedClubId)}>Remover</button>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+            <section className="save-data-settings">
+              <div className="settings-section-heading"><span>DADOS SALVOS</span><strong>Leve suas carreiras para outro aparelho</strong></div>
+              <p>O backup inclui carreira atual, Hall da Fama, personagens, times personalizados e configurações.</p>
+              <div>
+                <button className="secondary-button" onClick={exportSavedData}>Exportar dados</button>
+                <button className="secondary-button" onClick={() => saveImportRef.current?.click()}>Importar dados</button>
+                <input ref={saveImportRef} type="file" accept="application/json,.json" hidden onChange={(event) => importSavedData(event.target.files?.[0])} />
+              </div>
+            </section>
             <small className="settings-note">As alterações valem para carreiras novas e ficam salvas neste aparelho.</small>
           </section>
         </div>
@@ -5726,7 +6147,8 @@ export default function Home() {
             {hasSave && <button className="secondary-button" onClick={continueSave}>Continuar carreira salva</button>}
             <button className="secondary-button install-app-button" onClick={installWebApp}>▣ Instalar como aplicativo</button>
             {installHelp && <div className="install-help">Se o navegador não abriu a instalação, use o menu dele e toque em <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>.</div>}
-            <button className="secondary-button settings-button" onClick={() => setSettingsOpen(true)}>⚙ Configurações e personagens</button>
+            <button className="secondary-button settings-button" onClick={() => setSettingsOpen(true)}>⚙ Configurações, times e dados</button>
+            <button className="secondary-button update-menu-button" onClick={() => { setUpdateNoticePage("current"); setUpdateNoticeOpen(true); }}>⚽ Ver novidades do jogo</button>
           </div>
           {hallOfFame.length > 0 && (
             <div className="welcome-hall">
@@ -6077,10 +6499,11 @@ export default function Home() {
                     <span><small>Patrocínios</small><b>+{formatMoney(game.lastResult.sponsorIncome ?? 0)}</b></span>
                     <span className="expense"><small>Custos</small><b>−{formatMoney(game.lastResult.livingCost ?? 0)}</b></span>
                   </div>
-                  <p>Saldo anterior: {formatMoney(game.lastResult.balanceBefore ?? 0)} · disponível para investir na aba Jogador.</p>
+                  <p>Saldo anterior: {formatMoney(game.lastResult.balanceBefore ?? 0)} · +{formatMoney(game.lastResult.spendableIncome ?? 0)} liberados para compras · caixa livre atual: {formatMoney(game.lastResult.spendableAfter ?? game.spendableMoney)}.</p>
                 </section>
                 {game.lastResult.objectiveResult && <div className={`objective-result ${game.lastResult.objectiveResult.completed ? "completed" : "failed"}`}><span>{game.lastResult.objectiveResult.completed ? "META CUMPRIDA" : "META PERDIDA"}</span><strong>{game.lastResult.objectiveResult.label}</strong><p>{game.lastResult.objectiveResult.text}</p></div>}
                 {game.lastResult.promotion && <div className="objective-result completed"><span>ACESSO CONQUISTADO</span><strong>O clube subiu de divisão</strong><p>{game.lastResult.promotion}</p></div>}
+                {game.forcedClubExit && <div className="contract-expired"><span>VENDA OBRIGATÓRIA</span><strong>O clube colocou você no mercado</strong><p>Seu overall e seu rendimento ficaram muito abaixo da exigência do elenco. Sem status de ídolo, você terá de escolher outro destino.</p></div>}
                 {game.contractYears === 0 && (
                   <div className="contract-expired">
                     <span>CONTRATO ENCERRADO</span>
@@ -6174,12 +6597,15 @@ export default function Home() {
 
           {game.phase === "transfer" && (
             <div className="transfer-stage screen-enter">
-              <span className="eyebrow">{game.pendingTransferMode === "loan" ? "MERCADO DE EMPRÉSTIMOS" : game.isFreeAgent ? "AGENTE LIVRE" : game.forcedAlternativeTransfer ? "RECOMEÇO FORÇADO" : "JANELA DE TRANSFERÊNCIAS"}</span><h1>{game.pendingTransferMode === "loan" ? "Um ano para voltar jogando mais" : game.forcedAlternativeTransfer ? "As grandes ligas fecharam as portas" : game.transferStatus?.success ? game.transferStatus.headline : game.renewalDenied ? "Sem renovação — hora de escolher" : "Seu próximo passo"}</h1><p>{game.pendingTransferMode === "loan" ? `O ${currentClub.shortName} quer emprestar você por uma temporada. Escolha onde buscar minutos antes de retornar.` : game.forcedAlternativeTransfer ? "Depois da suspensão, seu empresário encontrou projetos dispostos a bancar sua reconstrução. Você precisa escolher um deles." : game.transferStatus?.text ?? (game.renewalDenied ? `O ${currentClub.shortName} não renovou seu contrato. ${game.transferOffers.length} clube${game.transferOffers.length > 1 ? "s apareceram" : " apareceu"} com propostas.` : `${game.transferOffers.length} clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui.`)}</p>
+              <span className="eyebrow">{game.forcedFreeAgentUntilSeason > game.season ? "BANIMENTO DO FUTEBOL" : game.pendingTransferMode === "loan" ? "MERCADO DE EMPRÉSTIMOS" : game.isFreeAgent ? "AGENTE LIVRE" : game.forcedAlternativeTransfer ? "RECOMEÇO FORÇADO" : "JANELA DE TRANSFERÊNCIAS"}</span>
+              <h1>{game.forcedFreeAgentUntilSeason > game.season ? "Nenhum clube pode contratar você" : game.pendingTransferMode === "loan" ? "Um ano para voltar jogando mais" : game.forcedAlternativeTransfer ? "As grandes ligas fecharam as portas" : game.forcedClubExit ? "O clube decidiu vender você" : game.transferStatus?.success ? game.transferStatus.headline : game.renewalDenied ? "Sem renovação — hora de escolher" : "Seu próximo passo"}</h1>
+              <p>{game.forcedFreeAgentUntilSeason > game.season ? `A punição pela tentativa de corrupção vai até ${game.forcedFreeAgentUntilSeason}. Você precisa atravessar os anos restantes sem disputar partidas.` : game.pendingTransferMode === "loan" ? `O ${currentClub.shortName} quer emprestar você por uma temporada. Escolha onde buscar minutos antes de retornar.` : game.forcedAlternativeTransfer ? "Depois da suspensão, seu empresário encontrou projetos dispostos a bancar sua reconstrução. Você precisa escolher um deles." : game.forcedClubExit ? `Seu nível já não acompanha a exigência do ${currentClub.shortName}. Como você ainda não virou ídolo, a diretoria tornou a saída obrigatória.` : game.transferStatus?.text ?? (game.renewalDenied ? `O ${currentClub.shortName} não renovou seu contrato. ${game.transferOffers.length} clube${game.transferOffers.length > 1 ? "s apareceram" : " apareceu"} com propostas.` : `${game.transferOffers.length} clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui.`)}</p>
               {game.pendingTransferMode === "loan" && <div className="transfer-lock-card loan"><span>EMPRÉSTIMO DE 1 TEMPORADA</span><strong>O vínculo com o {currentClub.shortName} continua</strong><p>Seu salário e contrato pertencem ao clube de origem. Ao fim da próxima temporada, o retorno será automático.</p></div>}
               {game.renewalDenied && <div className="transfer-lock-card"><span>RENOVAÇÃO RECUSADA</span><strong>O {currentClub.shortName} decidiu não renovar seu contrato</strong><p>A diretoria avaliou a temporada e optou por não seguir com você. Escolha seu próximo destino.</p></div>}
+              {game.forcedClubExit && <div className="transfer-lock-card"><span>VENDA OBRIGATÓRIA</span><strong>Seu nível ficou abaixo do projeto esportivo</strong><p>Ídolos históricos recebem proteção. Sem esse status, permanecer no clube não está disponível.</p></div>}
               {game.forcedAlternativeTransfer && <div className="transfer-lock-card exile"><span>PUNIÇÃO DISCIPLINAR</span><strong>Exílio esportivo obrigatório</strong><p>Ficar no clube atual ou assinar com uma potência não está disponível. Uma liga alternativa será seu único caminho de volta.</p></div>}
-              {game.transferRequested && !game.forcedAlternativeTransfer && <div className="transfer-lock-card"><span>SAÍDA SEM VOLTA</span><strong>Escolha seu próximo clube</strong><p>Depois que a diretoria aceita seu pedido, permanecer no time atual deixa de ser uma opção.</p></div>}
-              {!game.forcedAlternativeTransfer && transferWindowProfile.isEuropeanWindow && <div className="european-market-card"><span>{transferWindowProfile.foreignMarketLabel}</span><strong>{transferWindowProfile.europeanOffers} clube{transferWindowProfile.europeanOffers > 1 ? `s ${transferWindowProfile.foreignMarketAdjective}s querem` : ` ${transferWindowProfile.foreignMarketAdjective} quer`} você</strong><p>{transferWindowProfile.brazilianOffers > 0 ? "Uma proposta rara de retorno ao Brasil também apareceu." : `Jogando fora do Brasil, seu empresário prioriza projetos ${transferWindowProfile.foreignMarketAdjective}s de nível compatível.`}</p></div>}
+              {game.transferRequested && !game.forcedClubExit && !game.forcedAlternativeTransfer && game.forcedFreeAgentUntilSeason <= game.season && <div className="transfer-lock-card"><span>SAÍDA SEM VOLTA</span><strong>Escolha seu próximo clube</strong><p>Depois que a diretoria aceita seu pedido, permanecer no time atual deixa de ser uma opção.</p></div>}
+              {!game.forcedAlternativeTransfer && game.forcedFreeAgentUntilSeason <= game.season && transferWindowProfile.isEuropeanWindow && <div className="european-market-card"><span>{transferWindowProfile.foreignMarketLabel}</span><strong>{transferWindowProfile.europeanOffers} clube{transferWindowProfile.europeanOffers > 1 ? `s ${transferWindowProfile.foreignMarketAdjective}s querem` : ` ${transferWindowProfile.foreignMarketAdjective} quer`} você</strong><p>{transferWindowProfile.homeOffers > 0 ? `Uma proposta rara de volta ao país da sua base, ${transferWindowProfile.homeCountry.name}, também apareceu.` : `Seu empresário prioriza projetos ${transferWindowProfile.foreignMarketAdjective}s de nível compatível.`}</p></div>}
               {!game.forcedAlternativeTransfer && transferWindowProfile.expandedOfferCount > 0 && <div className="market-expansion-card"><span>DESEMPENHO ABRIU PORTAS</span><strong>{marketProfile.label} · nota {marketProfile.performanceScore}</strong><p>{transferWindowProfile.expandedOfferCount} clube{transferWindowProfile.expandedOfferCount > 1 ? "s extras apareceram" : " extra apareceu"} em um nível compatível com sua fase.</p></div>}
               <div className="offer-list transfer-offers">
                 {game.transferOffers.map((clubId, index) => {
@@ -6189,34 +6615,37 @@ export default function Home() {
                   const offerContract = createContract(game.overall, game.age, club, game.seed + game.season + index);
                   const offerRole = calculateSquadRole(game.overall, club, league.prestige, 50, game.age);
                   const rivalry = findRivalry(currentClub.id, club.id);
-                  const rareBrazilReturn = isEuropeanClub(currentClub) && club.countryId === "brasil" && transferWindowProfile.europeanOffers > 0;
+                  const rareHomeReturn =
+                    club.countryId === game.academyCountryId &&
+                    club.countryId !== currentClub.countryId &&
+                    transferWindowProfile.europeanOffers > 0;
                   const europeanEntryOffer = !isEuropeanClub(currentClub) && isEuropeanClub(club);
                   return (
                     <button className="offer-card" key={clubId} onClick={() => chooseTransfer(clubId)}>
                       <ClubBadge club={club} />
                       <span>
-                        <small>{game.pendingTransferMode === "loan" ? "DESTINO DE EMPRÉSTIMO" : game.isFreeAgent ? "CONTRATAÇÃO SEM CUSTO" : game.forcedAlternativeTransfer ? "PROJETO DE RECONSTRUÇÃO" : rareBrazilReturn ? "RETORNO IMPROVÁVEL" : europeanEntryOffer ? "PORTA DE ENTRADA NA EUROPA" : index >= 5 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
+                        <small>{game.pendingTransferMode === "loan" ? "DESTINO DE EMPRÉSTIMO" : game.isFreeAgent ? "CONTRATAÇÃO SEM CUSTO" : game.forcedAlternativeTransfer ? "PROJETO DE RECONSTRUÇÃO" : rareHomeReturn ? "RETORNO IMPROVÁVEL" : europeanEntryOffer ? "PORTA DE ENTRADA NA EUROPA" : index >= 5 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
                         <strong>{club.shortName}</strong>
-                        <em>{club.city} · {league.name} · reputação {club.reputation}/5</em>
+                        <em>{club.city} · {league.name}</em>
                         <em className="offer-contract">{game.pendingTransferMode === "loan" ? `${ROLE_LABELS[offerRole]} · 1 temporada · contrato de origem preservado` : `${ROLE_LABELS[offerRole]} · ${offerContract.years} anos · ${formatMoney(offerContract.annualSalary)}/ano`}</em>
                         <em className="offer-market-value">Valor estimado na liga: {formatMoney(marketValue(game.overall, game.age, club, game.reputation, game.lastResult ?? undefined))}</em>
                         {rivalry && <em className="offer-rivalry">⚔ Transferência explosiva: {rivalry.nickname}</em>}
-                        {rareBrazilReturn ? <em className="offer-homecoming-tag">⌂ Retorno raro ao Brasil — oportunidade inesperada</em> : europeanEntryOffer ? <em className="offer-european-door">★ Uma chance europeia compatível com o seu momento</em> : changesCountry && <em className="offer-abroad-tag">◇ Novo país — uma fase de adaptação começa</em>}
+                        {rareHomeReturn ? <em className="offer-homecoming-tag">⌂ Volta rara ao país da sua base: {transferWindowProfile.homeCountry.name}</em> : europeanEntryOffer ? <em className="offer-european-door">★ Uma chance europeia compatível com o seu momento</em> : changesCountry && <em className="offer-abroad-tag">◇ Novo país — uma fase de adaptação começa</em>}
                       </span>
                       <b>→</b>
                     </button>
                   );
                 })}
                 {game.pendingTransferMode !== "loan" && <>
-                  {!game.transferRequested && !game.renewalDenied && !game.forcedAlternativeTransfer && <button className="offer-card stay-card" onClick={() => chooseTransfer(null)}><ClubBadge club={currentClub} /><span><small>{game.contractYears === 0 ? "PROPOSTA DE RENOVAÇÃO" : "CONTINUAR O PROJETO"}</small><strong>{game.contractYears === 0 ? `Renovar com o ${currentClub.shortName}` : `Ficar no ${currentClub.shortName}`}</strong><em>{game.contractYears === 0 ? "Novo vínculo e salário recalculado" : `Manter o contrato atual de ${game.contractYears} ano(s)`}</em></span><b>✓</b></button>}
-                  {!game.transferRequested && !game.renewalDenied && !game.forcedAlternativeTransfer && game.contractYears === 0 && <button className="offer-card free-agent-card" onClick={becomeFreeAgent}><span className="free-agent-symbol">◇</span><span><small>RECUSAR A RENOVAÇÃO</small><strong>Virar agente livre</strong><em>Mais liberdade de escolha, sem possibilidade de voltar ao clube atual</em></span><b>→</b></button>}
+                  {!game.transferRequested && !game.renewalDenied && !game.forcedClubExit && !game.forcedAlternativeTransfer && <button className="offer-card stay-card" onClick={() => chooseTransfer(null)}><ClubBadge club={currentClub} /><span><small>{game.contractYears === 0 ? "PROPOSTA DE RENOVAÇÃO" : "CONTINUAR O PROJETO"}</small><strong>{game.contractYears === 0 ? `Renovar com o ${currentClub.shortName}` : `Ficar no ${currentClub.shortName}`}</strong><em>{game.contractYears === 0 ? "Novo vínculo e salário recalculado" : `Manter o contrato atual de ${game.contractYears} ano(s)`}</em></span><b>✓</b></button>}
+                  {!game.transferRequested && !game.renewalDenied && !game.forcedClubExit && !game.forcedAlternativeTransfer && game.contractYears === 0 && <button className="offer-card free-agent-card" onClick={becomeFreeAgent}><span className="free-agent-symbol">◇</span><span><small>RECUSAR A RENOVAÇÃO</small><strong>Virar agente livre</strong><em>Mais liberdade de escolha, sem possibilidade de voltar ao clube atual</em></span><b>→</b></button>}
                 </>}
               </div>
               {game.isFreeAgent && (
-                <button className="wait-free-agent-button" disabled={game.age >= 39} onClick={waitAsFreeAgent}>
+                <button className="wait-free-agent-button" disabled={game.age >= 42 && game.forcedFreeAgentUntilSeason <= game.season} onClick={waitAsFreeAgent}>
                   <span>SEM PROJETO INTERESSANTE?</span>
-                  <strong>Simular um ano como agente livre</strong>
-                  <small>Você não registra jogos nem recebe salário; perde ritmo, paga €180 mil em custos e recebe propostas novas.</small>
+                  <strong>{game.forcedFreeAgentUntilSeason > game.season ? "Cumprir mais um ano do banimento" : "Simular um ano como agente livre"}</strong>
+                  <small>{game.forcedFreeAgentUntilSeason > game.season ? `Nenhuma estatística será registrada. Punição prevista até ${game.forcedFreeAgentUntilSeason}.` : "Você não registra jogos nem recebe salário; perde ritmo, paga €180 mil em custos e recebe propostas novas."}</small>
                 </button>
               )}
             </div>
@@ -6315,22 +6744,23 @@ export default function Home() {
               <section className="career-economy">
                 <header>
                   <div><span>VIDA FINANCEIRA</span><strong>Patrimônio: {formatMoney(game.money)}</strong></div>
-                  <small>{formatMoney(game.annualSalary)}/ano</small>
+                  <small>Caixa livre: {formatMoney(game.spendableMoney)}</small>
                 </header>
-                <p>Salário e patrocínios entram uma vez por temporada. Moradia, equipe, viagens e padrão de vida são descontados automaticamente — fama alta também custa caro.</p>
+                <p>Salário e patrocínios formam seu patrimônio, mas só 18% da renda líquida vira caixa livre para decisões pessoais. O restante fica preso em impostos, contratos, reservas e gestão da carreira.</p>
                 <div className="career-shop">
                   {[
                     { id: "recovery" as const, icon: "✚", name: "Centro de recuperação", description: "+12 físico e +7 moral", price: 350_000 },
                     { id: "media" as const, icon: "@", name: "Equipe de imagem", description: "Imprensa, equilíbrio e seguidores", price: 600_000 },
                     { id: "coach" as const, icon: "↗", name: "Treinador particular", description: "Pequeno ganho nos atributos", price: 1_200_000 },
                     { id: "potential" as const, icon: "?", name: "Recalibração experimental", description: "Uso cego: em tetos abaixo de 80, abre +1 de margem. Em tetos já altos, a interferência pode reduzir 1. Seu potencial nunca é revelado.", price: 2_500_000 },
+                    { id: "corruption" as const, icon: "⚖", name: "Comprar os árbitros", description: "50/50: garante o título nacional deste ano ou causa banimento de 3 a 5 anos sem clube.", price: 2_000_000 },
                   ].map((item) => {
                     const purchased = game.economyPurchases.includes(`${game.season}:${item.id}`);
                     return (
-                      <article className={item.id === "potential" ? "risky" : ""} key={item.id}>
+                      <article className={item.id === "potential" || item.id === "corruption" ? "risky" : ""} key={item.id}>
                         <b>{item.icon}</b>
                         <div><strong>{item.name}</strong><small>{item.description}</small></div>
-                        <button disabled={purchased || game.money < item.price} onClick={() => buyCareerItem(item.id)}>
+                        <button disabled={purchased || game.spendableMoney < item.price} onClick={() => buyCareerItem(item.id)}>
                           {purchased ? "Usado neste ano" : formatMoney(item.price)}
                         </button>
                       </article>

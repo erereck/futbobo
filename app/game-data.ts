@@ -63,6 +63,8 @@ export type Club = {
   reputation: number;
   strength: number;
   academy?: number;
+  /** Escudo personalizado salvo nas configurações; substitui o asset padrão. */
+  customBadge?: string;
 };
 
 export type Formation = {
@@ -1244,8 +1246,8 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Aceitar um projeto menor", hint: "Empréstimo · minutos ↑↑", result: "Você sai por empréstimo: troca o banco por protagonismo sem romper com o clube.", effect: { transfer: true, transferAbroad: true, loan: true, minutes: 12, reputation: 2 } },
     { label: "Brigar pelo seu espaço", hint: "OVR ↑ · risco", result: "Ficar é uma aposta em você mesmo.", effect: { ovr: 1, fitness: -8, minutes: 3 } },
   ]},
-  { id: "european-exit", icon: "↩", tag: "EUROPA", title: "A Europa não deu certo como sonhado", description: "Meses depois da mudança, a adaptação ainda não veio e o telefone toca com uma saída para o Brasil.", needsAbroad: true, minAge: 21, choices: [
-    { label: "Voltar para o Brasil", hint: "Transferência · moral ↑", result: "Nem toda aventura precisa terminar em taça para valer a pena.", effect: { transfer: true, morale: 8, reputation: -3 } },
+  { id: "european-exit", icon: "↩", tag: "EUROPA", title: "A Europa não deu certo como sonhado", description: "Meses depois da mudança, a adaptação ainda não veio e o telefone toca com uma saída para o país onde você fez a base.", needsAbroad: true, minAge: 21, choices: [
+    { label: "Voltar para onde tudo começou", hint: "Transferência · moral ↑", result: "Nem toda aventura precisa terminar em taça para valer a pena.", effect: { transfer: true, morale: 8, reputation: -3 } },
     { label: "Insistir mais uma temporada", hint: "Adaptação ↑ · paciência", result: "Você aposta que o próximo ano é diferente.", effect: { adaptation: 15, morale: -2 } },
   ]},
   { id: "youth-or-club", icon: "★", tag: "SELEÇÃO", title: "O clube pede para poupar você da base da Seleção", description: "O departamento médico do clube sugere recusar a convocação de base para preservar sua temporada.", needsNationalYouth: true, choices: [

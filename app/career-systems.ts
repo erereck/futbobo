@@ -51,14 +51,21 @@ export function roleAppearanceModifier(role: SquadRole) {
 export function createContract(
   overall: number,
   age: number,
-  club: Pick<Club, "reputation" | "countryId">,
+  club: Pick<Club, "id" | "reputation" | "countryId">,
   seedValue: number,
 ) {
   const prime = age >= 22 && age <= 29 ? 1.18 : age >= 34 ? 0.68 : 1;
   const abroad = club.countryId === "brasil" ? 1 : 2.8;
+  let salaryHash = Math.abs(Math.trunc(seedValue)) || 1;
+  for (let index = 0; index < club.id.length; index += 1) {
+    salaryHash = Math.imul(salaryHash ^ club.id.charCodeAt(index), 16_777_619);
+  }
+  const negotiationRoll = (salaryHash >>> 0) / 4_294_967_295;
+  const negotiationFactor = 0.87 + negotiationRoll * 0.28;
+  const salaryBase = Math.pow(Math.max(8, overall - 46), 2.15) * 1_600 * club.reputation * abroad * prime;
   const annualSalary = Math.max(
-    45_000,
-    Math.round((Math.pow(Math.max(8, overall - 46), 2.15) * 1_600 * club.reputation * abroad * prime) / 10_000) * 10_000,
+    40_000,
+    Math.round((salaryBase * negotiationFactor) / 5_000) * 5_000,
   );
   const years = age >= 35 ? 1 : 2 + (seedValue % 4);
   return { years, annualSalary };

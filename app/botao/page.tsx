@@ -113,7 +113,6 @@ export default function BotaoStandalonePage() {
           setResult(matchResult);
           setScreen("result");
         }}
-        onGiveUp={() => setScreen("lobby")}
       />
     );
   }
