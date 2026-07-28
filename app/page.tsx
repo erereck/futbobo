@@ -52,6 +52,8 @@ import {
   buildNationalMatchSetup,
   describeFinal,
   finalOutcome,
+  formatGoalMinute,
+  isMatchGoal,
   pickFinalOpponent,
   pickNationalOpponent,
   ratingsFromAttributes,
@@ -5884,18 +5886,18 @@ export default function Home() {
             {result.manOfTheMatch && <span className="botao-chip botao-chip-stat">Melhor em campo</span>}
           </div>
         </div>
-        {result.timeline.length > 0 && (
-          <div className="botao-card">
-            <span className="botao-card-title">Como foi</span>
+        <div className="botao-card">
+          <span className="botao-card-title">Gols da partida</span>
+          {result.timeline.some(isMatchGoal) ? (
             <div className="botao-result-lines">
-              {result.timeline.slice(-8).map((entry, index) => (
+              {result.timeline.filter(isMatchGoal).map((entry, index) => (
                 <div key={`${entry.clock}-${index}`} className={`botao-result-line ${entry.byUser ? "botao-result-line-you" : ""}`}>
-                  <b>{entry.text}</b><span>{entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr}</span>
+                  <b>{entry.text}</b><span>{entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr} · {formatGoalMinute(entry, setup.rules)}</span>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : <p className="botao-result-empty">Nenhum gol antes da disputa por pênaltis.</p>}
+        </div>
         <div className="botao-actions">
           <button type="button" className="botao-primary" onClick={continueAfterBotaoResult}>
             {game.pendingBotaoMatches.length ? "Próxima decisão" : "Ver resumo da temporada"}

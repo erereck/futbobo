@@ -17,6 +17,7 @@ import {
   type BotaoPositionKey,
   type BotaoRules,
   type BotaoTeam,
+  type BotaoTimelineEntry,
 } from "./types";
 
 /** As 12 posições do Futbobo são exatamente as do módulo — a conversão é explícita para o compilador travar se uma delas mudar. */
@@ -266,6 +267,23 @@ export function describeFinal(setup: BotaoMatchSetup, result: BotaoMatchResult):
 }
 
 /** Nome da liga/país só para exibir na antessala. */
+export function isMatchGoal(entry: BotaoTimelineEntry) {
+  return entry.kind === "goal" || entry.kind === "own-goal";
+}
+
+export function formatGoalMinute(entry: BotaoTimelineEntry, rules: BotaoRules) {
+  const inExtraTime = entry.period > rules.halves;
+  const segmentSeconds = inExtraTime ? rules.extraSeconds : rules.halfSeconds;
+  const segmentMinutes = inExtraTime
+    ? 30 / Math.max(1, rules.extraHalves)
+    : 90 / Math.max(1, rules.halves);
+  const segmentIndex = inExtraTime ? entry.period - rules.halves - 1 : entry.period - 1;
+  const minuteBase = inExtraTime ? 90 + segmentIndex * segmentMinutes : segmentIndex * segmentMinutes;
+  const elapsedRatio = Math.min(1, Math.max(0, (segmentSeconds - entry.clock) / Math.max(1, segmentSeconds)));
+  const minute = Math.max(1, Math.ceil(minuteBase + elapsedRatio * segmentMinutes));
+  return `${minute}'${inExtraTime ? " · PR" : ""}`;
+}
+
 export function clubSubtitle(club: Club): string {
   const league = leagueById(club.leagueId);
   const country = countryById(club.countryId);

@@ -1201,17 +1201,20 @@ export function commitPenalty(state: BotaoMatchState, scored: boolean): BotaoEve
   const penalties = state.penalties;
   if (!penalties) return events;
   const side = penalties.turn;
+  const inactivityPenalty = state.penaltyReason === "inactivity";
   penalties.results[side].push(scored);
   if (scored) penalties.score[side] += 1;
   state.timeline.push({
     period: state.period,
-    clock: 0,
+    clock: inactivityPenalty ? Math.max(0, Math.round(state.clock)) : 0,
     side,
-    kind: scored ? "penalty-goal" : "penalty-miss",
-    scorer: penaltyShooter(state).label,
+    kind: inactivityPenalty && scored ? "goal" : scored ? "penalty-goal" : "penalty-miss",
+    scorer: inactivityPenalty ? "Pênalti por demora" : penaltyShooter(state).label,
     assist: null,
     byUser: side === "user" && penaltyShooter(state).isUserPlayer,
-    text: `Pênalti ${penalties.round}: ${scored ? "na rede" : "perdeu"}`,
+    text: inactivityPenalty
+      ? scored ? "Pênalti por demora convertido" : "Pênalti por demora defendido"
+      : `Pênalti ${penalties.round}: ${scored ? "na rede" : "perdeu"}`,
   });
   events.push({ type: "penalty", side, scored });
 

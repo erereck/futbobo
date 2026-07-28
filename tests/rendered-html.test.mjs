@@ -897,3 +897,19 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
   assert.match(styles, /\.custom-club-settings/);
   assert.match(styles, /\.botao-rule-settings/);
 });
+
+test("mostra o minuto de cada gol no resultado do futebol de botão", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const standalone = await readFile(new URL("../app/botao/page.tsx", import.meta.url), "utf8");
+  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
+  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+
+  assert.match(adapter, /export function formatGoalMinute/);
+  assert.match(adapter, /90 \+ segmentIndex \* segmentMinutes/);
+  assert.match(adapter, /inExtraTime \? " · PR" : ""/);
+  assert.match(page, /Gols da partida/);
+  assert.match(page, /formatGoalMinute\(entry, setup\.rules\)/);
+  assert.match(standalone, /Gols da partida/);
+  assert.match(standalone, /matchGoals = result\.timeline\.filter\(isMatchGoal\)/);
+  assert.match(engine, /inactivityPenalty && scored \? "goal"/);
+});

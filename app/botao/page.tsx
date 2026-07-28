@@ -13,7 +13,7 @@ import { CLUBS, POSITIONS, type Club, type PositionKey } from "../game-data";
 import BotaoMatch from "./BotaoMatch";
 import TeamCrest from "./TeamCrest";
 import "./botao.css";
-import { buildFinalSetup, clubSubtitle, pickFinalOpponent } from "./adapter";
+import { buildFinalSetup, clubSubtitle, formatGoalMinute, isMatchGoal, pickFinalOpponent } from "./adapter";
 import { simulateBotaoMatch } from "./simulate";
 import { DEFAULT_BOTAO_RULES, type BotaoMatchResult, type BotaoMatchSetup } from "./types";
 
@@ -119,6 +119,7 @@ export default function BotaoStandalonePage() {
 
   if (screen === "result" && result && setup) {
     const won = result.outcome === "win";
+    const matchGoals = result.timeline.filter(isMatchGoal);
     return (
       <main className="botao-lobby">
         <p className="botao-lobby-lead">
@@ -177,21 +178,21 @@ export default function BotaoStandalonePage() {
             </div>
           ))}
         </div>
-        {result.timeline.length > 0 ? (
-          <div className="botao-card">
-            <span className="botao-card-title">Como foi</span>
+        <div className="botao-card">
+          <span className="botao-card-title">Gols da partida</span>
+          {matchGoals.length > 0 ? (
             <div className="botao-result-lines">
-              {result.timeline.map((entry, index) => (
+              {matchGoals.map((entry, index) => (
                 <div key={index} className={`botao-result-line ${entry.byUser ? "botao-result-line-you" : ""}`}>
                   <b>{entry.text}</b>
                   <span>
-                    {entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr} · {entry.period}º
+                    {entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr} · {formatGoalMinute(entry, setup.rules)}
                   </span>
                 </div>
               ))}
             </div>
-          </div>
-        ) : null}
+          ) : <p className="botao-result-empty">Nenhum gol antes da disputa por pênaltis.</p>}
+        </div>
         <div className="botao-actions">
           <button type="button" className="botao-primary" onClick={() => setScreen("lobby")}>
             Voltar à antessala
