@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v75 · COPA EM NÚMEROS/);
+  assert.match(pageSource, /v76 · PÊNALTIS CORRIGIDOS/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -949,4 +949,18 @@ test("mostra o minuto de cada gol no resultado do futebol de botão", async () =
   assert.match(standalone, /Gols da partida/);
   assert.match(standalone, /matchGoals = result\.timeline\.filter\(isMatchGoal\)/);
   assert.match(engine, /inactivityPenalty && scored \? "goal"/);
+});
+
+test("encerra o pênalti como defesa no primeiro contato válido com o goleiro", async () => {
+  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+
+  assert.match(engine, /function collide\([^)]*\): boolean/);
+  assert.match(engine, /const keeperBallPair =/);
+  assert.match(engine, /if \(collide\(state, a, b, events\) && keeperBallPair\) savedByKeeper = true/);
+  assert.match(engine, /if \(savedByKeeper\) \{/);
+  assert.match(engine, /return \{ scored: false \}/);
+  assert.ok(
+    engine.indexOf("if (savedByKeeper)") < engine.indexOf("const crossed ="),
+    "a defesa precisa ser resolvida antes da checagem da linha do gol",
+  );
 });

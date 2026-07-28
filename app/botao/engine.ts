@@ -618,12 +618,12 @@ function resolveWalls(state: BotaoMatchState): BotaoSide | null {
   return scoringSide;
 }
 
-function collide(state: BotaoMatchState, a: BotaoBody, b: BotaoBody, events: BotaoEvent[]) {
+function collide(state: BotaoMatchState, a: BotaoBody, b: BotaoBody, events: BotaoEvent[]): boolean {
   const minimum = a.radius + b.radius;
   let dx = b.x - a.x;
   let dy = b.y - a.y;
   let distance = Math.hypot(dx, dy);
-  if (distance >= minimum) return;
+  if (distance >= minimum) return false;
   if (distance < 0.0001) {
     dx = 1;
     dy = 0;
@@ -634,7 +634,7 @@ function collide(state: BotaoMatchState, a: BotaoBody, b: BotaoBody, events: Bot
   const invA = Number.isFinite(a.mass) ? 1 / a.mass : 0;
   const invB = Number.isFinite(b.mass) ? 1 / b.mass : 0;
   const invSum = invA + invB;
-  if (invSum === 0) return;
+  if (invSum === 0) return false;
 
   const overlap = minimum - distance;
   a.x -= nx * overlap * (invA / invSum);
@@ -643,7 +643,7 @@ function collide(state: BotaoMatchState, a: BotaoBody, b: BotaoBody, events: Bot
   b.y += ny * overlap * (invB / invSum);
 
   const relative = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
-  if (relative > 0) return;
+  if (relative > 0) return true;
 
   const isBallPair = a.kind === "ball" || b.kind === "ball";
   const hasPost = a.kind === "post" || b.kind === "post";
@@ -676,6 +676,7 @@ function collide(state: BotaoMatchState, a: BotaoBody, b: BotaoBody, events: Bot
       events.push({ type: "post", side: shooter });
     }
   }
+  return true;
 }
 
 function resolveCollisions(state: BotaoMatchState, events: BotaoEvent[]) {
@@ -1172,16 +1173,32 @@ export function stepPenalty(state: BotaoMatchState, dt: number): { scored: boole
   }
 
   const events: BotaoEvent[] = [];
+  let savedByKeeper = false;
   for (let i = 0; i < bodies.length; i += 1) {
     for (let j = i + 1; j < bodies.length; j += 1) {
       const a = bodies[i];
       const b = bodies[j];
       if (a.kind === "post" && b.kind === "post") continue;
       if ((a.kind === "post" && b.kind !== "ball") || (b.kind === "post" && a.kind !== "ball")) continue;
-      collide(state, a, b, events);
+      const keeperBallPair =
+        (a.kind === "keeper" && b.kind === "ball") ||
+        (a.kind === "ball" && b.kind === "keeper");
+      if (collide(state, a, b, events) && keeperBallPair) savedByKeeper = true;
     }
   }
   keeper.vx = 0;
+
+  // A primeira defesa encerra a cobrança. Antes, o desvio continuava sendo
+  // simulado durante a pausa do resultado e podia atravessar a linha por trás
+  // do goleiro, transformando visualmente (e às vezes logicamente) defesa em gol.
+  if (savedByKeeper) {
+    for (const body of bodies) {
+      if (body.kind === "post" || body === keeper) continue;
+      body.vx = 0;
+      body.vy = 0;
+    }
+    return { scored: false };
+  }
 
   const crossed = goalY === 0 ? ball.y <= 0 : ball.y >= FIELD.height;
   if (crossed && inGoalMouth(ball.x)) return { scored: true };
