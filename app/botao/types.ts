@@ -127,6 +127,8 @@ export type BotaoMatchResult = {
   matchId: string;
   /** true quando a final foi resolvida sem o jogador tocar em nada. */
   simulated: boolean;
+  /** A partida foi abandonada ao fechar ou atualizar a página depois do início. */
+  walkover?: boolean;
   outcome: "win" | "loss" | "draw";
   goalsFor: number;
   goalsAgainst: number;

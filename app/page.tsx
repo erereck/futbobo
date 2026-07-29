@@ -57,6 +57,7 @@ import {
   pickFinalOpponent,
   pickNationalOpponent,
   ratingsFromAttributes,
+  walkoverBotaoResult,
 } from "./botao/adapter";
 import { simulateBotaoMatch } from "./botao/simulate";
 import type { BotaoMatchResult, BotaoMatchSetup } from "./botao/types";
@@ -614,6 +615,7 @@ const CHALLENGE_SAVE_KEY = "futbobo:challenge-save:v1";
 const CHALLENGE_RESULTS_KEY = "futbobo:challenge-results:v1";
 const HALL_OF_FAME_KEY = "futbobo:hall-of-fame:v1";
 const SETTINGS_KEY = "futbobo:settings:v1";
+const BOTAO_IN_PROGRESS_KEY = "futbobo:botao-in-progress:v1";
 
 function dateKey(date = new Date()) {
   return [
@@ -4751,62 +4753,50 @@ export default function Home() {
   const seasonBotaoWins = seasonBotaoResults.filter(({ result }) => result.champion).length;
   const seasonBotaoLosses = seasonBotaoResults.length - seasonBotaoWins;
   const currentBotaoMatch = game.pendingBotaoMatches[0] ?? null;
-  const currentBotaoSetup = useMemo<BotaoMatchSetup | null>(() => {
-    if (!currentBotaoMatch) return null;
-    const ratings = ratingsFromAttributes(game.attributes, game.overall);
+  function setupForPendingBotaoMatch(state: GameState, match: PendingBotaoMatch): BotaoMatchSetup {
+    const ratings = ratingsFromAttributes(state.attributes, state.overall);
     const rules = {
       goalLimit: appSettings.botaoGoalLimit ?? 3,
       halfSeconds: appSettings.botaoHalfSeconds ?? 120,
       extraSeconds: appSettings.botaoExtraSeconds ?? 45,
       penaltyRounds: appSettings.botaoPenaltyRounds ?? 5,
     };
-    if (currentBotaoMatch.source === "national") {
+    if (match.source === "national") {
       return buildNationalMatchSetup({
-        seed: game.seed,
-        season: currentBotaoMatch.season,
-        competitionId: currentBotaoMatch.competitionId,
-        competitionName: currentBotaoMatch.competitionName,
-        stageName: currentBotaoMatch.stageName,
-        country: countryById(game.nationality),
-        opponent: countryById(currentBotaoMatch.opponentId),
-        playerName: game.name,
-        playerNumber: game.number,
-        position: game.position,
-        overall: game.overall,
+        seed: state.seed,
+        season: match.season,
+        competitionId: match.competitionId,
+        competitionName: match.competitionName,
+        stageName: match.stageName,
+        country: countryById(state.nationality),
+        opponent: countryById(match.opponentId),
+        playerName: state.name,
+        playerNumber: state.number,
+        position: state.position,
+        overall: state.overall,
         ratings,
         rules,
       });
     }
     return buildFinalSetup({
-      seed: game.seed,
-      season: currentBotaoMatch.season,
-      competitionId: currentBotaoMatch.competitionId,
-      competitionName: currentBotaoMatch.competitionName,
-      stageName: currentBotaoMatch.stageName,
-      club: clubById(game.currentClubId),
-      opponent: clubById(currentBotaoMatch.opponentId),
-      playerName: game.name,
-      playerNumber: game.number,
-      position: game.position,
-      overall: game.overall,
+      seed: state.seed,
+      season: match.season,
+      competitionId: match.competitionId,
+      competitionName: match.competitionName,
+      stageName: match.stageName,
+      club: clubById(state.currentClubId),
+      opponent: clubById(match.opponentId),
+      playerName: state.name,
+      playerNumber: state.number,
+      position: state.position,
+      overall: state.overall,
       ratings,
       rules,
     });
-  }, [
-    currentBotaoMatch,
-    game.attributes,
-    game.currentClubId,
-    game.name,
-    game.nationality,
-    game.number,
-    game.overall,
-    game.position,
-    game.seed,
-    appSettings.botaoExtraSeconds,
-    appSettings.botaoGoalLimit,
-    appSettings.botaoHalfSeconds,
-    appSettings.botaoPenaltyRounds,
-  ]);
+  }
+  const currentBotaoSetup = currentBotaoMatch
+    ? setupForPendingBotaoMatch(game, currentBotaoMatch)
+    : null;
   const academyClubs = useMemo(() => randomAcademyClubs(game.seed, game.academyCountryId), [game.seed, game.academyCountryId]);
   const academyRoute = useMemo(() => academyRouteCopy(game.academyCountryId), [game.academyCountryId]);
   const filteredCountries = useMemo(() => {
@@ -4990,8 +4980,29 @@ export default function Home() {
     vibrate();
   }
 
+  function restoreSavedGame(state: GameState, saveKey: string) {
+    setGame(state);
+    const pendingMatch = state.pendingBotaoMatches[0];
+    if (!pendingMatch || state.phase !== "botao-final") return;
+    try {
+      const marker = JSON.parse(localStorage.getItem(BOTAO_IN_PROGRESS_KEY) ?? "null") as {
+        saveKey?: string;
+        matchId?: string;
+      } | null;
+      const setup = setupForPendingBotaoMatch(state, pendingMatch);
+      if (marker?.saveKey === saveKey && marker.matchId === setup.matchId) {
+        applyBotaoMatchResult(walkoverBotaoResult(setup), setup);
+      } else if (marker?.saveKey === saveKey) {
+        localStorage.removeItem(BOTAO_IN_PROGRESS_KEY);
+      }
+    } catch {
+      localStorage.removeItem(BOTAO_IN_PROGRESS_KEY);
+    }
+  }
+
   function startNew() {
     localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem(BOTAO_IN_PROGRESS_KEY);
     setHallPreview(null);
     setHallPreviewLegacy(false);
     nameRollRef.current = 0;
@@ -5009,7 +5020,7 @@ export default function Home() {
         setHallPreview(null);
         setHallPreviewLegacy(false);
         const normalized = normalizeSave(JSON.parse(saved));
-        setGame(normalized);
+        restoreSavedGame(normalized, SAVE_KEY);
         setShirtNumberInput(String(normalized.number || 10));
       }
     } catch {
@@ -5020,6 +5031,7 @@ export default function Home() {
   function startChallenge() {
     const challenge = dailyChallenge();
     localStorage.removeItem(CHALLENGE_SAVE_KEY);
+    localStorage.removeItem(BOTAO_IN_PROGRESS_KEY);
     setHallPreview(null);
     setHallPreviewLegacy(false);
     nameRollRef.current = 0;
@@ -5043,7 +5055,7 @@ export default function Home() {
       const normalized = normalizeSave(JSON.parse(saved));
       setHallPreview(null);
       setHallPreviewLegacy(false);
-      setGame(normalized);
+      restoreSavedGame(normalized, CHALLENGE_SAVE_KEY);
       setShirtNumberInput(String(normalized.number || 10));
       setActiveTab("event");
       vibrate();
@@ -5166,6 +5178,7 @@ export default function Home() {
   async function importSavedData(file: File | undefined) {
     if (!file) return;
     try {
+      localStorage.removeItem(BOTAO_IN_PROGRESS_KEY);
       const payload = JSON.parse(await file.text()) as {
         format?: string;
         save?: unknown;
@@ -5355,10 +5368,12 @@ export default function Home() {
     vibrate();
   }
 
-  function applyBotaoMatchResult(matchResult: BotaoMatchResult) {
+  function applyBotaoMatchResult(matchResult: BotaoMatchResult, setupOverride?: BotaoMatchSetup | null) {
+    const resolvedSetup = setupOverride ?? currentBotaoSetup;
+    localStorage.removeItem(BOTAO_IN_PROGRESS_KEY);
     setGame((current) => {
       const match = current.pendingBotaoMatches[0];
-      if (!match || matchResult.matchId !== currentBotaoSetup?.matchId) return current;
+      if (!match || matchResult.matchId !== resolvedSetup?.matchId) return current;
 
       let remainingMatches = current.pendingBotaoMatches.slice(1);
       let nextState: GameState = {
@@ -5438,8 +5453,8 @@ export default function Home() {
               ? ""
               : current.worldQualifiedClubId,
           newsFeed: [
-            currentBotaoSetup
-              ? describeFinal(currentBotaoSetup, matchResult)
+            resolvedSetup
+              ? describeFinal(resolvedSetup, matchResult)
               : `${match.competitionName}: ${outcome.champion ? "campeão" : "vice"}.`,
             ...current.newsFeed,
           ].slice(0, 16),
@@ -5732,8 +5747,24 @@ export default function Home() {
 
   function simulateCurrentBotaoMatch() {
     if (!currentBotaoSetup || botaoSimulating) return;
+    localStorage.removeItem(BOTAO_IN_PROGRESS_KEY);
     setBotaoSimulating(true);
     window.setTimeout(() => applyBotaoMatchResult(simulateBotaoMatch(currentBotaoSetup)), 30);
+  }
+
+  function startCurrentBotaoMatch() {
+    if (!currentBotaoSetup) return;
+    const saveKey = game.challengeId ? CHALLENGE_SAVE_KEY : SAVE_KEY;
+    // Persiste a decisão antes de abrir o campo: fechar, recarregar ou travar
+    // depois deste ponto precisa contar como abandono, mesmo antes do próximo efeito.
+    localStorage.setItem(saveKey, JSON.stringify(game));
+    localStorage.setItem(BOTAO_IN_PROGRESS_KEY, JSON.stringify({
+      saveKey,
+      matchId: currentBotaoSetup.matchId,
+      startedAt: Date.now(),
+    }));
+    setBotaoMatchStarted(true);
+    vibrate();
   }
 
   function continueAfterBotaoResult() {
@@ -6189,7 +6220,7 @@ export default function Home() {
           <strong>#{game.number} · {positionByKey(game.position).name} · {game.overall} OVR</strong>
         </div>
         <div className="botao-actions">
-          <button type="button" className="botao-primary" onClick={() => setBotaoMatchStarted(true)}>
+          <button type="button" className="botao-primary" onClick={startCurrentBotaoMatch}>
             Jogar no futebol de botão
           </button>
           <button type="button" className="botao-ghost" onClick={simulateCurrentBotaoMatch} disabled={botaoSimulating}>
@@ -6233,10 +6264,20 @@ export default function Home() {
         });
     return (
       <main className="botao-lobby botao-career-result screen-enter">
-        <p className="botao-lobby-lead">{match.competitionName} · {match.stageName}{result.simulated ? " · simulada" : ""}</p>
+        <p className="botao-lobby-lead">
+          {match.competitionName} · {match.stageName}
+          {result.walkover ? " · W.O. por abandono" : result.simulated ? " · simulada" : ""}
+        </p>
         <div className={`botao-headline ${result.champion ? "botao-headline-win" : "botao-headline-loss"}`}>
-          {result.champion ? (match.stageName === "Final" ? "CAMPEÃO" : "CLASSIFICADO") : match.stageName === "Final" ? "VICE" : "ELIMINADO"}
+          {result.walkover ? "DERROTA POR W.O." : result.champion ? (match.stageName === "Final" ? "CAMPEÃO" : "CLASSIFICADO") : match.stageName === "Final" ? "VICE" : "ELIMINADO"}
         </div>
+        {result.walkover && (
+          <div className="botao-card botao-walkover-notice">
+            <span>W.O. REGISTRADO</span>
+            <strong>A partida foi abandonada</strong>
+            <p>Atualizar ou fechar a página depois de entrar em campo confirma derrota administrativa por 3 × 0.</p>
+          </div>
+        )}
         <div className="botao-card">
           <div className="botao-scoreboard">
             <div className="botao-team"><TeamCrest team={setup.userTeam} /><strong>{setup.userTeam.shortName}</strong></div>
@@ -6259,7 +6300,7 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          ) : <p className="botao-result-empty">Nenhum gol antes da disputa por pênaltis.</p>}
+          ) : <p className="botao-result-empty">{result.walkover ? "Partida encerrada por abandono. Placar administrativo de 3 × 0." : "Nenhum gol antes da disputa por pênaltis."}</p>}
         </div>
         <div className="botao-actions">
           <button type="button" className="botao-primary" onClick={continueAfterBotaoResult}>
@@ -6543,7 +6584,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v79 · PREMIAÇÃO DESKTOP</b>
+            <span>FUTBOBO</span><b>v80 · W.O. ANTI-RELOAD</b>
           </footer>
         </section>
       )}

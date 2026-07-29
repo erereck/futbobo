@@ -255,8 +255,36 @@ export function finalOutcome(result: BotaoMatchResult): { champion: boolean; sta
   return { champion: false, stage: "Vice" };
 }
 
+/** Derrota administrativa usada quando uma partida iniciada é abandonada. */
+export function walkoverBotaoResult(setup: BotaoMatchSetup): BotaoMatchResult {
+  return {
+    matchId: setup.matchId,
+    simulated: false,
+    walkover: true,
+    outcome: "loss",
+    goalsFor: 0,
+    goalsAgainst: 3,
+    penaltyFor: null,
+    penaltyAgainst: null,
+    playerGoals: 0,
+    playerAssists: 0,
+    manOfTheMatch: false,
+    decision: "regulation",
+    turns: 0,
+    stats: {
+      user: { flicks: 0, touches: 0, posts: 0 },
+      cpu: { flicks: 0, touches: 0, posts: 0 },
+    },
+    timeline: [],
+    champion: false,
+  };
+}
+
 /** Rótulo do adversário para a narração da temporada. */
 export function describeFinal(setup: BotaoMatchSetup, result: BotaoMatchResult): string {
+  if (result.walkover) {
+    return `Final da ${setup.competitionName}: derrota por W.O. contra o ${setup.cpuTeam.shortName} após abandono da partida.`;
+  }
   const score = `${result.goalsFor} x ${result.goalsAgainst}`;
   const penalties =
     result.penaltyFor !== null && result.penaltyAgainst !== null

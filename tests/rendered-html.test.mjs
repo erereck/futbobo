@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v79 · PREMIAÇÃO DESKTOP/);
+  assert.match(pageSource, /v80 · W\.O\. ANTI-RELOAD/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -990,4 +990,26 @@ test("não comprime a cerimônia de prêmios no resultado desktop", async () => 
   assert.match(styles, /\.career-shell > \.result-stage > \* \{ flex-shrink: 0; \}/);
   assert.match(styles, /\.career-shell > \.result-stage \.season-awards-showcase \{/);
   assert.match(styles, /min-height: max-content/);
+});
+
+test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
+  const types = await readFile(new URL("../app/botao/types.ts", import.meta.url), "utf8");
+
+  assert.match(types, /walkover\?: boolean/);
+  assert.match(adapter, /export function walkoverBotaoResult/);
+  assert.match(adapter, /goalsFor: 0/);
+  assert.match(adapter, /goalsAgainst: 3/);
+  assert.match(page, /futbobo:botao-in-progress:v1/);
+  assert.match(page, /function restoreSavedGame/);
+  assert.match(page, /applyBotaoMatchResult\(walkoverBotaoResult\(setup\), setup\)/);
+  assert.match(page, /function startCurrentBotaoMatch/);
+  assert.match(page, /onClick=\{startCurrentBotaoMatch\}/);
+  assert.match(page, /DERROTA POR W\.O\./);
+
+  const startMatch = page.indexOf("function startCurrentBotaoMatch");
+  const markerWrite = page.indexOf("localStorage.setItem(BOTAO_IN_PROGRESS_KEY", startMatch);
+  const openField = page.indexOf("setBotaoMatchStarted(true)", startMatch);
+  assert.ok(markerWrite > startMatch && markerWrite < openField, "o marcador deve ser salvo antes de abrir o campo");
 });
