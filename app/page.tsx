@@ -46,6 +46,7 @@ import { CAREER_DRAMA_EVENTS } from "./career-drama";
 import { BACKSTAGE_EVENTS } from "./backstage-saga";
 import { VERIFIED_CLUB_ASSET_IDS } from "./verified-club-assets";
 import BotaoMatch from "./botao/BotaoMatch";
+import GoalReplay from "./botao/GoalReplay";
 import TeamCrest from "./botao/TeamCrest";
 import {
   buildFinalSetup,
@@ -61,6 +62,7 @@ import {
 } from "./botao/adapter";
 import { simulateBotaoMatch } from "./botao/simulate";
 import type { BotaoMatchResult, BotaoMatchSetup } from "./botao/types";
+import { PLAYER_STORIES, playerStoryById, type PlayerStoryId } from "./player-stories";
 
 type Phase =
   | "welcome"
@@ -68,6 +70,7 @@ type Phase =
   | "nationality"
   | "academy"
   | "formation"
+  | "story"
   | "youth"
   | "youth-complete"
   | "revelation"
@@ -168,6 +171,56 @@ type ChoiceConsequence = {
   resultText: string;
   changes: string[];
   luckOutcome: "success" | "failure" | null;
+};
+
+type StoryDecisionChoice = {
+  label: string;
+  hint: string;
+  result: string;
+  effect: Effect;
+  flag: string;
+  transferClubId?: string;
+};
+
+type StoryDecision = {
+  id: string;
+  storyId: PlayerStoryId;
+  chapter: number;
+  icon: string;
+  kicker: string;
+  title: string;
+  description: string;
+  choices: StoryDecisionChoice[];
+};
+
+type StoryLogEntry = {
+  season: number;
+  chapter: number;
+  title: string;
+  choice: string;
+  result: string;
+};
+
+type PressAnswer = {
+  label: string;
+  tone: "calm" | "bold" | "team";
+  result: string;
+  effect: Effect;
+};
+
+type PressQuestion = {
+  id: string;
+  question: string;
+  context: string;
+  answers: PressAnswer[];
+};
+
+type PressConference = {
+  matchId: string;
+  competitionName: string;
+  opponentName: string;
+  questionIndex: number;
+  questions: PressQuestion[];
 };
 
 type TransferStatus = {
@@ -355,7 +408,7 @@ type SeasonResult = SeasonRecord & {
 };
 
 type GameState = {
-  version: 6;
+  version: 7;
   phase: Phase;
   seed: number;
   name: string;
@@ -367,6 +420,10 @@ type GameState = {
   academyClubId: string;
   formationId: string;
   archetype: string;
+  playerStoryId: PlayerStoryId;
+  storyFlags: string[];
+  storyLog: StoryLogEntry[];
+  pendingStoryDecision: StoryDecision | null;
   revealAge: number;
   youthScore: number;
   youthYears: YouthYear[];
@@ -425,6 +482,7 @@ type GameState = {
   lastConsequence: ChoiceConsequence | null;
   pendingBotaoMatches: PendingBotaoMatch[];
   lastBotaoResult: StoredBotaoResult | null;
+  pendingPressConference: PressConference | null;
   retireAfterSeason: boolean;
   retirementReturnPhase: Phase;
   transferOffers: string[];
@@ -616,6 +674,12 @@ const CHALLENGE_RESULTS_KEY = "futbobo:challenge-results:v1";
 const HALL_OF_FAME_KEY = "futbobo:hall-of-fame:v1";
 const SETTINGS_KEY = "futbobo:settings:v1";
 const BOTAO_IN_PROGRESS_KEY = "futbobo:botao-in-progress:v1";
+const BALLON_DOR_EXCLUDED_TROPHIES = new Set<CompetitionId>([
+  "domesticSuperCup",
+  "recopaSudamericana",
+  "uefaSuperCup",
+  "campeonesCup",
+]);
 
 function dateKey(date = new Date()) {
   return [
@@ -894,7 +958,7 @@ function evolvePlayerAttributes(
 function initialState(seedOverride?: number): GameState {
   const seed = seedOverride ?? Date.now() % 2147483647;
   return {
-    version: 6,
+    version: 7,
     phase: "welcome",
     seed,
     name: "",
@@ -906,6 +970,10 @@ function initialState(seedOverride?: number): GameState {
     academyClubId: "",
     formationId: "",
     archetype: "",
+    playerStoryId: "open-book",
+    storyFlags: [],
+    storyLog: [],
+    pendingStoryDecision: null,
     revealAge: 18,
     youthScore: 0,
     youthYears: [],
@@ -978,6 +1046,7 @@ function initialState(seedOverride?: number): GameState {
     lastConsequence: null,
     pendingBotaoMatches: [],
     lastBotaoResult: null,
+    pendingPressConference: null,
     retireAfterSeason: false,
     retirementReturnPhase: "career",
     transferOffers: [],
@@ -1043,13 +1112,17 @@ function normalizeSave(value: unknown): GameState {
   return {
     ...base,
     ...saved,
-    version: 6,
+    version: 7,
     phase:
       saved.phase === "botao-final" && !(saved.pendingBotaoMatches?.length)
         ? "season-result"
         : saved.phase ?? base.phase,
     nationality: saved.nationality ?? "brasil",
     academyCountryId: saved.academyCountryId ?? saved.nationality ?? "brasil",
+    playerStoryId: saved.playerStoryId ?? "open-book",
+    storyFlags: Array.isArray(saved.storyFlags) ? saved.storyFlags : [],
+    storyLog: Array.isArray(saved.storyLog) ? saved.storyLog : [],
+    pendingStoryDecision: saved.pendingStoryDecision ?? null,
     currentLeagueId: saved.currentLeagueId ?? (saved.currentClubId ? clubById(saved.currentClubId).leagueId : ""),
     continentalSlot,
     adaptation: saved.adaptation ?? 100,
@@ -1111,6 +1184,7 @@ function normalizeSave(value: unknown): GameState {
     pendingNationalitySwitchTarget: saved.pendingNationalitySwitchTarget ?? "",
     pendingBotaoMatches: Array.isArray(saved.pendingBotaoMatches) ? saved.pendingBotaoMatches : [],
     lastBotaoResult: saved.lastBotaoResult ?? null,
+    pendingPressConference: saved.pendingPressConference ?? null,
     stats: {
       appearances: saved.stats?.appearances ?? 0,
       goals: saved.stats?.goals ?? 0,
@@ -1270,7 +1344,7 @@ function selectCareerTraits(position: PositionKey, seed: number) {
 }
 
 function createCareerRivals(seed: number, playerAge: number, playerOverall: number, customCharacters: CustomCharacter[]) {
-  if (seeded(seed, 1901) < 0.42) return [];
+  if (seeded(seed, 1901) < 0.25) return [];
   const builtInCount = 1 + Math.floor(seeded(seed, 1907) * 2);
   const builtIns = RIVAL_PROFILES
     .map((profile, index) => ({ profile, order: seeded(seed, 1913 + index * 23) }))
@@ -1285,7 +1359,7 @@ function createCareerRivals(seed: number, playerAge: number, playerOverall: numb
         position: profile.position,
         nationality: profile.nationality,
         age: Math.max(16, playerAge + Math.floor(seeded(seed, 1949 + index) * 5) - 2),
-        overall: clamp(playerOverall + Math.floor(seeded(seed, 1951 + index) * 7) - 2, 52, 83),
+        overall: clamp(playerOverall + Math.floor(seeded(seed, 1951 + index) * 8) - 1, 54, 84),
         currentClubId: club.id,
         appearances: 0,
         goals: 0,
@@ -1307,7 +1381,7 @@ function createCareerRivals(seed: number, playerAge: number, playerOverall: numb
         position: character.position,
         nationality: pick(COUNTRIES, seed, 1999 + index * 41).id,
         age: Math.max(16, playerAge + Math.floor(seeded(seed, 2003 + index) * 5) - 2),
-        overall: clamp(playerOverall + Math.floor(seeded(seed, 2011 + index) * 7) - 2, 52, 83),
+        overall: clamp(playerOverall + Math.floor(seeded(seed, 2011 + index) * 8) - 1, 54, 84),
         currentClubId: club.id,
         appearances: 0,
         goals: 0,
@@ -1326,14 +1400,24 @@ function evolveRivals(rivals: CareerRival[], seed: number, season: number) {
     if (!rival.active) return rival;
     const position = positionByKey(rival.position);
     const age = rival.age + 1;
-    const development = age <= 22 ? (seeded(seed, season * 251 + index) > 0.28 ? 2 : 1) : age <= 29 ? (seeded(seed, season * 257 + index) > 0.55 ? 1 : 0) : age >= 34 ? -1 : 0;
-    const overall = clamp(rival.overall + development, 48, 94);
-    const appearances = clamp(Math.round(23 + (overall - 65) * 0.55 + seeded(seed, season * 263 + index) * 13), 8, 46);
-    const quality = clamp((overall - 50) / 30, 0.45, 1.45);
-    const goals = rival.position === "GOL" ? 0 : Math.round(appearances * position.goals * quality * (0.8 + seeded(seed, season * 269 + index) * 0.7));
-    const assists = rival.position === "GOL" ? Math.round(seeded(seed, season * 271 + index) * 2) : Math.round(appearances * position.assists * quality * (0.8 + seeded(seed, season * 277 + index) * 0.7));
-    const changesClub = seeded(seed, season * 281 + index * 13) < 0.13;
-    const transferPool = CLUBS.filter((club) => club.id !== rival.currentClubId && Math.abs(competitiveStrength(club) - (overall + 3)) < 13);
+    const development = age <= 22
+      ? (seeded(seed, season * 251 + index) > 0.32 ? 3 : 2)
+      : age <= 27
+        ? (seeded(seed, season * 257 + index) > 0.38 ? 2 : 1)
+        : age <= 30
+          ? (seeded(seed, season * 259 + index) > 0.62 ? 1 : 0)
+          : age >= 34 ? -1 : 0;
+    const overall = clamp(rival.overall + development, 48, 96);
+    const appearances = clamp(Math.round(27 + (overall - 65) * 0.62 + seeded(seed, season * 263 + index) * 12), 10, 49);
+    const quality = clamp((overall - 48) / 29, 0.5, 1.62);
+    const goals = rival.position === "GOL" ? 0 : Math.round(appearances * position.goals * quality * (0.92 + seeded(seed, season * 269 + index) * 0.76));
+    const assists = rival.position === "GOL" ? Math.round(seeded(seed, season * 271 + index) * 2) : Math.round(appearances * position.assists * quality * (0.92 + seeded(seed, season * 277 + index) * 0.76));
+    const changesClub = seeded(seed, season * 281 + index * 13) < (overall >= 82 ? 0.24 : 0.16);
+    const transferPool = CLUBS.filter((club) =>
+      club.id !== rival.currentClubId &&
+      Math.abs(competitiveStrength(club) - (overall + 2)) < 12 &&
+      (overall < 82 || club.reputation >= 4),
+    );
     const currentClubId = changesClub && transferPool.length ? pick(transferPool, seed, season * 283 + index).id : rival.currentClubId;
     return {
       ...rival,
@@ -1343,7 +1427,7 @@ function evolveRivals(rivals: CareerRival[], seed: number, season: number) {
       appearances: rival.appearances + appearances,
       goals: rival.goals + goals,
       assists: rival.assists + assists,
-      awards: rival.awards + (overall >= 85 && goals + assists >= 18 && seeded(seed, season * 293 + index) > 0.72 ? 1 : 0),
+      awards: rival.awards + (overall >= 83 && goals + assists >= 16 && seeded(seed, season * 293 + index) > 0.54 ? 1 : 0),
       active: age < 39 && overall >= 50,
       relationship: clamp(rival.relationship + Math.round((seeded(seed, season * 307 + index) - 0.5) * 6)),
     };
@@ -2311,6 +2395,15 @@ function eligibleEvents(state: GameState) {
     if (event.needsContinental && state.continentalSlot !== event.needsContinental) return false;
     if (event.needsWorld && (state.worldQualifiedSeason !== state.season || state.worldQualifiedClubId !== state.currentClubId)) return false;
     if (event.needsAbroad && !isEuropeanClub(club)) return false;
+    if (event.id === "european-exit") {
+      const baseCountryIsEuropean = countryById(state.academyCountryId).confederation === "EUROPE";
+      const playerIsEuropean = countryById(state.nationality).confederation === "EUROPE";
+      const genuinelyStruggling =
+        state.adaptation < 66 ||
+        state.managerTrust < 42 ||
+        Boolean(state.lastResult && (state.lastResult.performanceScore < 54 || state.lastResult.appearances < 16));
+      if (baseCountryIsEuropean || playerIsEuropean || !genuinelyStruggling) return false;
+    }
     if (event.needsDomestic && isAbroad(club)) return false;
     if (event.needsRivalry && !RIVALRIES.some((rivalry) => rivalry.clubIds.includes(club.id))) return false;
     if (event.maxContractYears !== undefined && state.contractYears > event.maxContractYears) return false;
@@ -2339,6 +2432,7 @@ function eligibleEvents(state: GameState) {
 
 function selectNextEvent(state: GameState, salt: number) {
   const offFieldRoll = seeded(state.seed, state.season * 1237 + salt);
+  if (seeded(state.seed, state.season * 1871 + salt) < 0.18) return DYNAMIC_STORY_EVENT_ID;
   if (!state.activeSponsor && state.age >= 16 && state.reputation >= 10 && offFieldRoll < 0.34) {
     return DYNAMIC_SPONSOR_EVENT_ID;
   }
@@ -2361,6 +2455,37 @@ const DYNAMIC_SPONSOR_EVENT_ID = "dynamic-sponsor-offer";
 const DYNAMIC_SPONSOR_DUTY_EVENT_ID = "dynamic-sponsor-duty";
 const DYNAMIC_SOCIAL_EVENT_ID = "dynamic-social-media";
 const DYNAMIC_LIFE_EVENT_ID = "dynamic-off-field-life";
+const DYNAMIC_STORY_EVENT_ID = "dynamic-player-story";
+
+function buildStoryCareerEvent(state: GameState): GameEvent {
+  const story = playerStoryById(state.playerStoryId);
+  const scenarioByStory: Record<PlayerStoryId, { title: string; description: string; bold: string; careful: string; personal: string }> = {
+    "open-book": { title: "A imprensa quer encontrar o começo da sua lenda", description: "Sem uma narrativa pronta, cada entrevistador tenta escolher por você qual momento explica tudo.", bold: "Dizer que a história começa hoje", careful: "Recusar uma explicação fácil", personal: "Contar um detalhe que ninguém conhecia" },
+    "academy-destroyer": { title: "A velha promessa voltou às manchetes", description: "Uma mesa-redonda compara sua temporada profissional aos números impossíveis da base.", bold: "Prometer que o próximo recorde será profissional", careful: "Explicar que base e elite são mundos diferentes", personal: "Ligar para um antigo companheiro da base" },
+    "humble-roots": { title: "Sua família virou personagem de uma reportagem", description: "A produção quer filmar a casa e contar detalhes que nunca foram públicos.", bold: "Abrir as portas e contar tudo", careful: "Aceitar apenas uma entrevista curta", personal: "Proteger completamente a privacidade da família" },
+    "football-bloodline": { title: "Perguntaram novamente se você seria titular no time do seu pai", description: "A comparação atravessa a coletiva mesmo sem relação com o próximo jogo.", bold: "Dizer que seria o melhor dos dois", careful: "Reconhecer a história e mudar de assunto", personal: "Conversar com seu pai antes de responder" },
+    disillusioned: { title: "Um jovem da base disse que também pensa em desistir", description: "Ele procura você porque ouviu falar da fase em que o futebol deixou de fazer sentido.", bold: "Contar a verdade numa palestra aberta", careful: "Conversar em particular depois do treino", personal: "Levá-lo ao campo onde você reencontrou prazer" },
+    "street-football": { title: "A prefeitura cercou a quadra onde você aprendeu", description: "Um vídeo de crianças jogando do lado de fora chega ao seu celular.", bold: "Comprar a briga nas redes", careful: "Negociar uma solução sem exposição", personal: "Aparecer de surpresa com bolas e traves" },
+    "late-bloomer": { title: "Um reserva do Sub-17 pediu seu conselho", description: "Ele acredita que a carreira acabou antes de começar, exatamente como disseram sobre você.", bold: "Dizer que os olheiros vão se arrepender", careful: "Montar um plano de treino realista", personal: "Acompanhar os jogos dele em silêncio" },
+    "academy-reject": { title: "O diretor que dispensou você está no estádio", description: "As câmeras encontram o rosto dele pouco antes do jogo começar.", bold: "Apontar para a tribuna se marcar", careful: "Tratar como qualquer outro jogo", personal: "Encontrá-lo longe das câmeras" },
+    "migrant-dream": { title: "Uma criança recém-chegada escreveu no seu idioma de infância", description: "A carta diz que ver você em campo fez a cidade parecer menos estrangeira.", bold: "Transformar a carta em campanha internacional", careful: "Responder e apoiar uma associação local", personal: "Convidar a família para um treino" },
+    "student-athlete": { title: "O treinador ironizou seus livros no vestiário", description: "A frase era brincadeira, mas abriu uma discussão sobre foco e inteligência no futebol.", bold: "Responder com uma análise tática pública", careful: "Mostrar no treino o que o estudo acrescenta", personal: "Criar um grupo de estudos no elenco" },
+    "neighborhood-idol": { title: "O bairro quer que você escolha um lado", description: "Dois projetos comunitários rivais pedem seu nome e dizem representar suas raízes.", bold: "Financiar o projeto mais ambicioso", careful: "Dividir o apoio entre os dois", personal: "Reunir os responsáveis na mesma mesa" },
+  };
+  const scenario = scenarioByStory[state.playerStoryId];
+  return {
+    id: DYNAMIC_STORY_EVENT_ID,
+    icon: story.icon,
+    tag: "SUA HISTÓRIA",
+    title: scenario.title,
+    description: scenario.description,
+    choices: [
+      { label: scenario.bold, hint: "Impacto alto · risco de exposição", result: "Você transforma a própria origem em uma declaração pública. A reação é intensa.", effect: { followers: 120_000, reputation: 5, mediaRelation: -4, morale: 4 } },
+      { label: scenario.careful, hint: "Maturidade · controle", result: "A resposta não domina as manchetes, mas fortalece quem convive com você.", effect: { leadership: 6, mediaRelation: 5, discipline: 4 } },
+      { label: scenario.personal, hint: "Moral e equilíbrio ↑", result: "Sem campanha ou roteiro, você escolhe uma resposta pessoal que fica na memória.", effect: { morale: 9, lifeBalance: 7, fans: 4 } },
+    ],
+  };
+}
 
 function buildSponsorEvent(state: GameState): GameEvent {
   const offers = sponsorOfferPool(state, state.season * 1301);
@@ -2714,6 +2839,220 @@ function createYouthJourney(state: GameState, formationId: string) {
   };
 }
 
+function storyClubCandidate(state: GameState, salt: number, preference: "father" | "reject") {
+  const academyClub = clubById(state.academyClubId);
+  const sameCountry = CLUBS.filter((club) =>
+    club.id !== academyClub.id &&
+    club.countryId === academyClub.countryId &&
+    (preference === "father" ? club.reputation >= 3 : true),
+  );
+  const regional = CLUBS.filter((club) =>
+    club.id !== academyClub.id &&
+    countryById(club.countryId).confederation === countryById(academyClub.countryId).confederation,
+  );
+  return pick(sameCountry.length ? sameCountry : regional, state.seed, salt);
+}
+
+function buildStorySeasonDecision(
+  state: GameState,
+  context: { performanceScore: number; titleCount: number; club: Club },
+): StoryDecision | null {
+  const story = playerStoryById(state.playerStoryId);
+  const chapter = state.storyLog.length + 1;
+  if (chapter > 8) return null;
+  const milestoneBoost =
+    context.performanceScore >= 82 ||
+    context.titleCount > 0 ||
+    state.age === 18 ||
+    state.age === 23 ||
+    state.age === 30
+      ? 0.16
+      : 0;
+  const chance = 0.27 + milestoneBoost + (chapter === 1 ? 0.11 : 0);
+  if (seeded(state.seed, state.season * 1877 + chapter * 43) >= chance) return null;
+
+  const base = {
+    id: `story-${state.playerStoryId}-${state.season}-${chapter}`,
+    storyId: state.playerStoryId,
+    chapter,
+    icon: story.icon,
+    kicker: `CAPÍTULO ${String(chapter).padStart(2, "0")} · ${story.title.toLocaleUpperCase("pt-BR")}`,
+  };
+  const fatherClub = storyClubCandidate(state, 1889 + chapter * 17, "father");
+  const rejectedClub = storyClubCandidate(state, 1901 + chapter * 19, "reject");
+  const decisions: Record<PlayerStoryId, Omit<StoryDecision, keyof typeof base>> = {
+    "open-book": {
+      title: "Alguém tentou resumir sua carreira numa única frase",
+      description: "A reportagem procura uma origem perfeita para explicar seu momento. A verdade é menos simples: sua história foi sendo escrita enquanto acontecia.",
+      choices: [
+        { label: "Dizer que ainda não existe uma definição", hint: "Liberdade ↑ · imagem autêntica", result: "A ausência de rótulo vira justamente a parte mais interessante da entrevista.", effect: { mediaRelation: 6, morale: 6, lifeBalance: 4 }, flag: "recusou-rotulo" },
+        { label: "Escolher o trabalho como fio da história", hint: "Disciplina e treinador ↑", result: "Você transforma constância em identidade.", effect: { discipline: 8, minutes: 5, leadership: 3 }, flag: "historia-do-trabalho" },
+        { label: "Deixar a torcida dar um nome à trajetória", hint: "Torcida e seguidores ↑", result: "As arquibancadas inventam apelidos e versões que você jamais escreveria sozinho.", effect: { fans: 8, followers: 85_000, reputation: 3 }, flag: "historia-da-torcida" },
+      ],
+    },
+    "academy-destroyer": {
+      title: chapter <= 2 ? "A marca de promessa virou cobrança" : "Seu antigo recorde voltou para assombrar a temporada",
+      description: context.performanceScore >= 78
+        ? "Os vídeos da base reaparecem ao lado dos seus melhores lances. A imprensa quer transformar talento em destino."
+        : "Uma temporada humana foi tratada como queda. Seu nome ainda vende a ideia de que tudo precisa ser extraordinário.",
+      choices: [
+        { label: "Assumir que quer ser o melhor do mundo", hint: "Prestígio ↑↑ · pressão ↑", result: "A frase domina as manchetes. Agora todo jogo parece uma prova.", effect: { reputation: 8, followers: 180_000, morale: -6, mediaRelation: 3 }, flag: "aceitou-o-peso" },
+        { label: "Proteger o vestiário e dividir o mérito", hint: "Liderança ↑↑ · torcida ↑", result: "Você recusa o personagem de salvador e ganha o elenco.", effect: { leadership: 9, fans: 6, minutes: 4 }, flag: "dividiu-os-holofotes" },
+        { label: "Fechar as redes por um mês", hint: "Equilíbrio ↑ · alcance ↓", result: "O silêncio diminui o barulho e devolve prazer ao treino.", effect: { lifeBalance: 10, morale: 8, followers: -45_000, mediaRelation: -3 }, flag: "sumiu-dos-holofotes" },
+      ],
+    },
+    "humble-roots": {
+      title: "Uma ligação de casa mudou o valor do próximo contrato",
+      description: "A família pode finalmente sair do aperto, mas o pedido chega quando você também tenta construir sua própria vida.",
+      choices: [
+        { label: "Comprar uma casa para a família", hint: "Dinheiro ↓↓ · moral e legado ↑", result: "A chave vale mais que qualquer prêmio daquela temporada.", effect: { money: -18, morale: 13, leadership: 5, fans: 5 }, flag: "casa-da-familia" },
+        { label: "Criar um fundo mensal organizado", hint: "Dinheiro ↓ · equilíbrio ↑", result: "Você ajuda sem transformar cada emergência em crise.", effect: { money: -8, lifeBalance: 9, discipline: 4, morale: 5 }, flag: "fundo-familiar" },
+        { label: "Dizer que ainda não é a hora", hint: "Foco ↑ · moral ↓", result: "A decisão protege sua carreira e pesa nas conversas de domingo.", effect: { fitness: 6, minutes: 4, morale: -9, lifeBalance: -5 }, flag: "adiou-a-ajuda" },
+      ],
+    },
+    "football-bloodline": {
+      title: `${fatherClub.shortName}, o clube que marcou seu pai, quer conversar`,
+      description: `A proposta não é apenas esportiva. Para muita gente, vestir essa camisa fecharia um círculo; para você, pode abrir uma comparação impossível.`,
+      choices: [
+        { label: `Ouvir o projeto do ${fatherClub.shortName}`, hint: "Proposta especial liberada", result: "Seu empresário coloca a proposta na mesa. A decisão final ainda será sua.", effect: { reputation: 5, morale: 4 }, transferClubId: fatherClub.id, flag: `ouviu-clube-do-pai:${fatherClub.id}` },
+        { label: "Dizer que sua história precisa ser outra", hint: "Personalidade ↑ · imprensa divide", result: "A resposta é respeitosa e definitiva. Pela primeira vez, a manchete usa apenas seu nome.", effect: { leadership: 8, mediaRelation: -2, reputation: 4 }, flag: "rompeu-comparacao" },
+        { label: "Pedir conselho ao seu pai em público", hint: "Moral ↑ · pressão ↑", result: "A conversa emociona torcedores e reacende todas as comparações.", effect: { morale: 10, followers: 150_000, lifeBalance: -4 }, flag: "conselho-do-pai" },
+      ],
+    },
+    disillusioned: {
+      title: "Depois do treino, você ficou sozinho no gramado",
+      description: context.performanceScore < 60
+        ? "A velha pergunta voltou: você ainda quer isso ou apenas aprendeu a continuar?"
+        : "Mesmo num grande ano, a comemoração pareceu distante. Vencer e sentir são coisas diferentes.",
+      choices: [
+        { label: "Procurar o treinador que fez você amar o jogo", hint: "Paixão ↑↑ · potencial pode florescer", result: "Uma conversa sem câmeras devolve sentido aos próximos meses.", effect: { morale: 15, lifeBalance: 9, potential: 1 }, flag: "reencontrou-mentor" },
+        { label: "Transformar tudo em disciplina", hint: "Físico e OVR ↑ · equilíbrio ↓", result: "Você não encontra alegria, mas encontra método.", effect: { ovr: 1, fitness: 8, discipline: 7, lifeBalance: -9 }, flag: "virou-maquina" },
+        { label: "Admitir publicamente que não está bem", hint: "Imprensa ↑ · reputação oscila", result: "A honestidade surpreende. Muitos atletas se reconhecem em você.", effect: { mediaRelation: 12, followers: 120_000, reputation: -2, morale: 6 }, flag: "falou-sobre-a-mente" },
+      ],
+    },
+    "street-football": {
+      title: "O treinador quer tirar o improviso do seu jogo",
+      description: "A comissão mostra números: seus riscos criam lances inesquecíveis e contra-ataques perigosos na mesma proporção.",
+      choices: [
+        { label: "Aprender o sistema sem perder a ousadia", hint: "Controle ↑↑ · evolução equilibrada", result: "Você passa a escolher melhor quando quebrar o roteiro.", effect: { ovr: 1, discipline: 7, minutes: 5 }, flag: "domou-o-caos" },
+        { label: "Dizer que foi o improviso que trouxe você até aqui", hint: "Torcida ↑↑ · treinador ↓", result: "A arquibancada compra sua briga; a comissão não esquece.", effect: { fans: 11, followers: 130_000, minutes: -9, morale: 6 }, flag: "defendeu-a-rua" },
+        { label: "Treinar a jogada secreta depois do expediente", hint: "50% · lance histórico ou desgaste", result: "Você guarda uma nova jogada para o momento certo.", effect: { fitness: -7, potential: 1, reputation: 3 }, flag: "jogada-secreta" },
+      ],
+    },
+    "late-bloomer": {
+      title: "O olheiro que ignorou você pediu uma nova avaliação",
+      description: "O relatório antigo dizia que faltava explosão e futuro. Agora o mesmo nome aparece numa mensagem elogiando sua evolução.",
+      choices: [
+        { label: "Responder com o relatório emoldurado", hint: "Moral ↑ · rivalidade pessoal", result: "A provocação viraliza e vira combustível para a temporada.", effect: { morale: 12, followers: 95_000, mediaRelation: -4 }, flag: "emoldurou-o-relatorio" },
+        { label: "Aceitar a conversa e ouvir o que mudou", hint: "Potencial ↑ · maturidade ↑", result: "Você descobre detalhes do próprio jogo que nunca tinha percebido.", effect: { potential: 2, leadership: 5, discipline: 4 }, flag: "ouviu-o-olheiro" },
+        { label: "Ignorar e continuar trabalhando", hint: "Físico ↑ · perfil discreto", result: "Nenhuma postagem, nenhuma resposta. Só mais uma sessão de treino.", effect: { fitness: 9, ovr: 1, followers: -12_000 }, flag: "respondeu-no-campo" },
+      ],
+    },
+    "academy-reject": {
+      title: `${rejectedClub.shortName} apareceu no seu caminho`,
+      description: `Um dirigente ligado à sua primeira dispensa agora admite que o clube errou. Há uma proposta informal e um pedido de desculpas.`,
+      choices: [
+        { label: `Aceitar conversar com o ${rejectedClub.shortName}`, hint: "Proposta especial · ferida aberta", result: "O clube que disse não agora precisa convencer você.", effect: { reputation: 5, morale: 3 }, transferClubId: rejectedClub.id, flag: `reabriu-porta:${rejectedClub.id}` },
+        { label: "Aceitar as desculpas, recusar a proposta", hint: "Maturidade ↑↑", result: "O passado perde força sem precisar ser apagado.", effect: { leadership: 10, lifeBalance: 8, morale: 6 }, flag: "perdoou-sem-voltar" },
+        { label: "Publicar o relatório da dispensa", hint: "Viral ↑↑ · imprensa ↓", result: "A internet transforma sua rejeição em símbolo. O clube chama a atitude de desnecessária.", effect: { followers: 210_000, fans: 8, mediaRelation: -10, reputation: 3 }, flag: "expos-a-dispensa" },
+      ],
+    },
+    "migrant-dream": {
+      title: "Duas bandeiras apareceram na mesma arquibancada",
+      description: "Uma reportagem quer definir a qual lugar você pertence. Sua família sabe que a resposta nunca coube numa palavra.",
+      choices: [
+        { label: "Dizer que carrega os dois lugares", hint: "Imagem ↑↑ · adaptação ↑", result: "A resposta atravessa fronteiras e aproxima comunidades diferentes.", effect: { followers: 170_000, mediaRelation: 9, adaptation: 9, leadership: 4 }, flag: "duas-casas" },
+        { label: "Dedicar a temporada ao país da sua base", hint: "Torcida local ↑ · raízes fortes", result: "A cidade onde você cresceu adota a frase como lema.", effect: { fans: 10, morale: 7, reputation: 4 }, flag: "escolheu-a-base" },
+        { label: "Recusar transformar identidade em manchete", hint: "Equilíbrio ↑ · imprensa ↓", result: "Você protege sua família e encerra a pauta.", effect: { lifeBalance: 11, mediaRelation: -7, morale: 5 }, flag: "protegeu-identidade" },
+      ],
+    },
+    "student-athlete": {
+      title: "Uma universidade ofereceu um curso feito ao redor da sua carreira",
+      description: "A oportunidade exige horas semanais e promete algo raro: um futuro que não depende do próximo contrato.",
+      choices: [
+        { label: "Aceitar o curso completo", hint: "Visão e liderança ↑ · físico ↓", result: "As noites ficam menores, mas seu modo de ler o jogo muda.", effect: { leadership: 9, mediaRelation: 6, fitness: -6, lifeBalance: 3 }, flag: "entrou-na-universidade" },
+        { label: "Fazer apenas módulos nas férias", hint: "Equilíbrio · disciplina ↑", result: "Você encontra um ritmo que não sacrifica o campo.", effect: { discipline: 7, lifeBalance: 7, leadership: 3 }, flag: "curso-nas-ferias" },
+        { label: "Adiar até a aposentadoria", hint: "Foco esportivo ↑ · plano B distante", result: "O futebol ocupa todo o calendário novamente.", effect: { fitness: 7, minutes: 4, lifeBalance: -4 }, flag: "adiou-os-estudos" },
+      ],
+    },
+    "neighborhood-idol": {
+      title: "O campo onde você começou pode desaparecer",
+      description: "O terreno será vendido se a comunidade não levantar dinheiro e atenção. Seu nome pode salvar o lugar — mas o projeto exige presença real.",
+      choices: [
+        { label: "Comprar e reformar o campo", hint: "Dinheiro ↓↓↓ · legado ↑↑↑", result: "As luzes acendem de novo. Uma placa pequena leva seu nome; o campo continua sendo do bairro.", effect: { money: -25, charity: 18, fans: 12, leadership: 8 }, flag: "salvou-o-campo" },
+        { label: "Mobilizar patrocinadores e torcida", hint: "Imagem e alcance ↑ · desgaste", result: "A campanha bate a meta sem depender apenas do seu bolso.", effect: { followers: 190_000, charity: 12, mediaRelation: 7, fitness: -5 }, flag: "campanha-pelo-campo" },
+        { label: "Fazer uma doação discreta", hint: "Dinheiro ↓ · equilíbrio ↑", result: "O projeto ganha fôlego sem transformar ajuda em publicidade.", effect: { money: -9, charity: 8, morale: 9, followers: -5_000 }, flag: "ajuda-discreta" },
+      ],
+    },
+  };
+  return { ...base, ...decisions[state.playerStoryId] };
+}
+
+function buildPressConference(
+  state: GameState,
+  match: PendingBotaoMatch,
+  result: BotaoMatchResult,
+  opponentName: string,
+): PressConference {
+  const wonTitle = result.champion && match.stageName === "Final";
+  const story = playerStoryById(state.playerStoryId);
+  const pool: PressQuestion[] = [
+    {
+      id: "individual-night",
+      context: `${result.playerGoals} gol(s), ${result.playerAssists} assistência(s) e o prêmio de melhor em campo.`,
+      question: "Foi a melhor atuação da sua carreira até aqui?",
+      answers: [
+        { label: "Foi uma noite que eu nunca vou esquecer", tone: "bold", result: "A confiança vira manchete e a torcida abraça o protagonista.", effect: { morale: 7, fans: 5, followers: 45_000 } },
+        { label: "O prêmio pertence ao time inteiro", tone: "team", result: "O elenco recebe a fala como um gesto real, não como frase pronta.", effect: { leadership: 7, minutes: 4, fans: 3 } },
+        { label: "Ainda consigo jogar muito melhor", tone: "calm", result: "A cobrança sobre você aumenta, junto com o respeito pela ambição.", effect: { reputation: 5, morale: -2, mediaRelation: 2 } },
+      ],
+    },
+    {
+      id: "opposition",
+      context: `${opponentName} tentou tirar seu espaço até o último lance.`,
+      question: `O que fez a diferença contra o ${opponentName}?`,
+      answers: [
+        { label: "Nós entendemos onde eles eram vulneráveis", tone: "calm", result: "A resposta tática agrada a comissão.", effect: { minutes: 6, leadership: 3, mediaRelation: 3 } },
+        { label: "Em decisão, personalidade pesa mais", tone: "bold", result: "A frase vira corte de vídeo e provoca o adversário.", effect: { reputation: 6, followers: 65_000, discipline: -2 } },
+        { label: "Respeito total; eles nos levaram ao limite", tone: "team", result: "A fala baixa a temperatura depois da partida.", effect: { mediaRelation: 6, leadership: 4, fans: 2 } },
+      ],
+    },
+    {
+      id: "next-step",
+      context: wonTitle ? "A taça ainda está no gramado." : "A classificação já muda o tamanho da temporada.",
+      question: wonTitle ? "Essa conquista muda seu lugar na história do clube?" : "Até onde esse time pode chegar agora?",
+      answers: [
+        { label: wonTitle ? "Quero virar eterno aqui" : "Nós vamos buscar o título", tone: "bold", result: "A promessa aumenta sua ligação com a arquibancada e a cobrança do próximo capítulo.", effect: { fans: 8, reputation: 5, morale: 3 } },
+        { label: "A temporada só termina quando o calendário acabar", tone: "calm", result: "A comissão gosta do foco imediato.", effect: { fitness: 4, minutes: 4, discipline: 3 } },
+        { label: "Hoje é dia de agradecer quem veio com a gente", tone: "team", result: "A resposta divide o holofote e fortalece sua imagem de líder.", effect: { leadership: 8, mediaRelation: 5, followers: 35_000 } },
+      ],
+    },
+    {
+      id: "origin",
+      context: `Sua origem como “${story.title}” voltou a ser lembrada durante a transmissão.`,
+      question: "Quanto daquela história ainda entra em campo com você?",
+      answers: [
+        { label: "Tudo. Eu não seria o mesmo sem ela", tone: "bold", result: "Sua origem vira parte pública da identidade do jogador.", effect: { morale: 7, followers: 55_000, fans: 4 } },
+        { label: "Ela me formou, mas não me prende", tone: "calm", result: "A resposta marca uma distância madura entre passado e presente.", effect: { leadership: 6, lifeBalance: 5, mediaRelation: 3 } },
+        { label: "Prefiro guardar essa parte para minha família", tone: "team", result: "A imprensa respeita o limite, ainda que a curiosidade continue.", effect: { lifeBalance: 8, mediaRelation: -2, morale: 4 } },
+      ],
+    },
+  ];
+  const questionCount = 1 + Math.floor(seeded(state.seed, match.season * 1999 + match.id.length) * 3);
+  const questions = pool
+    .map((question, index) => ({ question, order: seeded(state.seed, match.season * 2003 + index * 37 + match.id.length) }))
+    .sort((a, b) => a.order - b.order)
+    .slice(0, questionCount)
+    .map(({ question }) => question);
+  return {
+    matchId: match.id,
+    competitionName: match.competitionName,
+    opponentName,
+    questionIndex: 0,
+    questions,
+  };
+}
+
 function applyEffect(state: GameState, effect: Effect) {
   const overall = clamp(state.overall + (effect.ovr ?? 0), 40, 99);
   const signedSponsor: SponsorDeal | null = effect.sponsorBrand
@@ -2752,6 +3091,47 @@ function applyEffect(state: GameState, effect: Effect) {
     lifeBalance: clamp(state.lifeBalance + (effect.lifeBalance ?? 0)),
     charityReputation: clamp(state.charityReputation + (effect.charity ?? 0)),
     activeSponsor: signedSponsor ?? state.activeSponsor,
+  };
+}
+
+function applyStoryOrigin(state: GameState, storyId: PlayerStoryId) {
+  const story = playerStoryById(storyId);
+  const modifiers = story.modifiers;
+  const overallDelta = modifiers.overall ?? 0;
+  let attributes = shiftPlayerAttributes(state.attributes, overallDelta, state.position, state.seed + 1709);
+  if (storyId === "street-football") {
+    attributes = {
+      ...attributes,
+      dribbling: clamp(attributes.dribbling + 5, 15, 99),
+      firstTouch: clamp(attributes.firstTouch + 4, 15, 99),
+      composure: clamp(attributes.composure + 2, 15, 99),
+    };
+  } else if (storyId === "student-athlete") {
+    attributes = {
+      ...attributes,
+      vision: clamp(attributes.vision + 5, 15, 99),
+      passing: clamp(attributes.passing + 3, 15, 99),
+    };
+  }
+  return {
+    ...state,
+    playerStoryId: storyId,
+    overall: clamp(state.overall + overallDelta, 38, 99),
+    potential: clamp(state.potential + (modifiers.potential ?? 0), 50, 99),
+    attributes,
+    morale: clamp(state.morale + (modifiers.morale ?? 0)),
+    fitness: clamp(state.fitness + (modifiers.fitness ?? 0)),
+    reputation: clamp(state.reputation + (modifiers.reputation ?? 0)),
+    leadership: clamp(state.leadership + (modifiers.leadership ?? 0)),
+    discipline: clamp(state.discipline + (modifiers.discipline ?? 0)),
+    fanSupport: clamp(state.fanSupport + (modifiers.fanSupport ?? 0)),
+    managerTrust: clamp(state.managerTrust + (modifiers.managerTrust ?? 0)),
+    followers: Math.max(0, state.followers + (modifiers.followers ?? 0)),
+    mediaRelation: clamp(state.mediaRelation + (modifiers.mediaRelation ?? 0)),
+    lifeBalance: clamp(state.lifeBalance + (modifiers.lifeBalance ?? 0)),
+    charityReputation: clamp(state.charityReputation + (modifiers.charityReputation ?? 0)),
+    adaptation: clamp(state.adaptation + (modifiers.adaptation ?? 0)),
+    money: Math.max(0, state.money + (modifiers.money ?? 0) * 10_000),
   };
 }
 
@@ -2982,7 +3362,7 @@ function simulateSeason(
   const titleCount = competitions.filter((competition) => competition.champion).length;
   const majorClubTitleCount = competitions.filter((competition) =>
     competition.champion &&
-    !["domesticSuperCup", "recopaSudamericana", "uefaSuperCup", "campeonesCup"].includes(competition.id),
+    !BALLON_DOR_EXCLUDED_TROPHIES.has(competition.id),
   ).length;
 
   const growthRoll = seeded(state.seed, state.season * 19);
@@ -3591,6 +3971,11 @@ function simulateSeason(
     twist,
     nationalNote,
   };
+  const pendingStoryDecision = buildStorySeasonDecision(affected, {
+    performanceScore,
+    titleCount,
+    club,
+  });
   const seenEvents = event.oneTime || event.id === FIRST_MATCH_EVENT.id ? Array.from(new Set([...affected.seenEvents, event.id])) : affected.seenEvents;
   const nextCabinet = { ...affected.trophyCabinet };
   competitions.forEach((competition) => { if (competition.champion) nextCabinet[competition.id] += 1; });
@@ -3774,6 +4159,7 @@ function simulateSeason(
     lastConsequence: { choice: choiceLabel, headline: luckOutcome === "success" ? "A aposta deu certo" : luckOutcome === "failure" ? "A aposta deu errado" : "Sua decisão teve peso", resultText, changes: describeEffects(effect), luckOutcome },
     pendingBotaoMatches,
     lastBotaoResult: null,
+    pendingStoryDecision,
     retireAfterSeason: Boolean(effect.retire || nextAge >= 40),
     seenEvents,
     nextEventId: "",
@@ -3929,6 +4315,7 @@ function eventForState(state: GameState) {
   if (state.currentEventId === DYNAMIC_SPONSOR_DUTY_EVENT_ID) return buildSponsorDutyEvent(state);
   if (state.currentEventId === DYNAMIC_SOCIAL_EVENT_ID) return buildSocialEvent(state);
   if (state.currentEventId === DYNAMIC_LIFE_EVENT_ID) return buildLifeEvent(state);
+  if (state.currentEventId === DYNAMIC_STORY_EVENT_ID) return buildStoryCareerEvent(state);
   if (state.currentEventId === DYNAMIC_RIVAL_EVENT_ID && state.rivals.some((rival) => rival.active)) {
     return buildRivalEvent(state);
   }
@@ -4549,6 +4936,8 @@ export default function Home() {
   const [selectedAchievementId, setSelectedAchievementId] = useState("");
   const [botaoMatchStarted, setBotaoMatchStarted] = useState(false);
   const [botaoSimulating, setBotaoSimulating] = useState(false);
+  const [activeGoalReplay, setActiveGoalReplay] = useState<number | null>(null);
+  const [pressConferenceOpen, setPressConferenceOpen] = useState(false);
   const saveImportRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -4556,14 +4945,14 @@ export default function Home() {
       const saved = localStorage.getItem(SAVE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as { version?: number; phase?: Phase };
-        if (parsed.version && parsed.version >= 1 && parsed.version <= 6) {
+        if (parsed.version && parsed.version >= 1 && parsed.version <= 7) {
           queueMicrotask(() => setHasSave(parsed.phase !== "welcome"));
         }
       }
       const challengeSave = localStorage.getItem(CHALLENGE_SAVE_KEY);
       if (challengeSave) {
         const parsed = JSON.parse(challengeSave) as { version?: number; phase?: Phase; challengeId?: string };
-        if (parsed.version && parsed.version >= 1 && parsed.version <= 6 && parsed.challengeId) {
+        if (parsed.version && parsed.version >= 1 && parsed.version <= 7 && parsed.challengeId) {
           queueMicrotask(() => setHasChallengeSave(parsed.phase !== "welcome" && parsed.phase !== "summary"));
         }
       }
@@ -5243,28 +5632,59 @@ export default function Home() {
   }
 
   function selectFormation(formationId: string) {
-    const journey = createYouthJourney(game, formationId);
-    setYouthStep(0);
-    setYouthFinished(false);
     setGame((current) => ({
       ...current,
-      phase: "youth",
+      phase: "story",
       formationId,
-      archetype: journey.formation.archetype,
-      revealAge: journey.revealAge,
-      youthScore: journey.score,
-      youthYears: journey.youthYears,
-      proOffers: journey.offers,
-      age: journey.revealAge,
-      season: current.season + journey.revealAge - 12,
-      overall: journey.overall,
-      potential: journey.potential,
-      attributes: createPlayerAttributes(current.position, journey.overall, current.seed),
-      traits: selectCareerTraits(current.position, current.seed),
-      rivals: createCareerRivals(current.seed, journey.revealAge, journey.overall, appSettings.customCharacters),
-      morale: clamp(68 + Math.round(journey.score / 4)),
-      fitness: 94,
+      archetype: FORMATIONS.find((formation) => formation.id === formationId)?.archetype ?? current.archetype,
     }));
+    vibrate();
+  }
+
+  function selectPlayerStory(storyId: PlayerStoryId) {
+    setYouthStep(0);
+    setYouthFinished(false);
+    setGame((current) => {
+      const journey = createYouthJourney(current, current.formationId);
+      const revealAge = storyId === "late-bloomer"
+        ? Math.max(17, journey.revealAge)
+        : storyId === "academy-destroyer"
+          ? Math.min(17, journey.revealAge)
+          : journey.revealAge;
+      const baseAfterYouth: GameState = {
+        ...current,
+        phase: "youth",
+        archetype: journey.formation.archetype,
+        revealAge,
+        youthScore: journey.score + (storyId === "academy-destroyer" ? 7 : storyId === "late-bloomer" ? -4 : 0),
+        youthYears: journey.youthYears,
+        proOffers: journey.offers,
+        age: revealAge,
+        season: current.season + revealAge - 12,
+        overall: journey.overall,
+        potential: journey.potential,
+        attributes: createPlayerAttributes(current.position, journey.overall, current.seed),
+        traits: selectCareerTraits(current.position, current.seed),
+        morale: clamp(68 + Math.round(journey.score / 4)),
+        fitness: 94,
+      };
+      const originated = applyStoryOrigin(baseAfterYouth, storyId);
+      const finalOverall = clamp(
+        originated.overall + (storyId === "academy-destroyer" ? 2 : storyId === "late-bloomer" ? -1 : 0),
+        42,
+        76,
+      );
+      return {
+        ...originated,
+        overall: finalOverall,
+        potential: clamp(originated.potential + (storyId === "late-bloomer" ? 2 : storyId === "disillusioned" ? 1 : 0), 58, 97),
+        attributes: shiftPlayerAttributes(originated.attributes, finalOverall - originated.overall, current.position, current.seed + 1777),
+        rivals: createCareerRivals(current.seed, revealAge, finalOverall, appSettings.customCharacters),
+        storyFlags: storyId === "academy-reject"
+          ? [`dispensado-por:${storyClubCandidate(originated, 1901, "reject").id}`]
+          : [],
+      };
+    });
     vibrate();
   }
 
@@ -5381,6 +5801,10 @@ export default function Home() {
         phase: "botao-result",
         pendingBotaoMatches: remainingMatches,
         lastBotaoResult: { match, result: matchResult },
+        pendingPressConference:
+          matchResult.manOfTheMatch && !matchResult.simulated && !matchResult.walkover && resolvedSetup
+            ? buildPressConference(current, match, matchResult, resolvedSetup.cpuTeam.shortName)
+            : null,
       };
 
       if (match.source === "club") {
@@ -5569,7 +5993,7 @@ export default function Home() {
       const latestClubCompetitions = nextState.lastResult?.competitions ?? [];
       const hasMajorClubTitle = latestClubCompetitions.some((competition) =>
         competition.champion &&
-        !["domesticSuperCup", "recopaSudamericana", "uefaSuperCup", "campeonesCup"].includes(competition.id),
+        !BALLON_DOR_EXCLUDED_TROPHIES.has(competition.id),
       );
       const hasMajorNationalTitle = nextState.nationalHistory.some((record) =>
         record.season === match.season &&
@@ -5768,11 +6192,50 @@ export default function Home() {
   }
 
   function continueAfterBotaoResult() {
+    if (game.pendingPressConference) {
+      setPressConferenceOpen(true);
+      return;
+    }
     setGame((current) => ({
       ...current,
       phase: current.pendingBotaoMatches.length ? "botao-final" : "season-result",
     }));
     setBotaoMatchStarted(false);
+    setActiveGoalReplay(null);
+    vibrate();
+  }
+
+  function answerPressConference(answerIndex: number) {
+    const visibleConference = game.pendingPressConference;
+    const finished = Boolean(
+      visibleConference &&
+      visibleConference.questionIndex + 1 >= visibleConference.questions.length,
+    );
+    setGame((current) => {
+      const conference = current.pendingPressConference;
+      const question = conference?.questions[conference.questionIndex];
+      const answer = question?.answers[answerIndex];
+      if (!conference || !question || !answer) return current;
+      const affected = applyEffect(current, answer.effect);
+      const nextIndex = conference.questionIndex + 1;
+      const completed = nextIndex >= conference.questions.length;
+      const post: SocialPost = {
+        id: `${current.seed}-${conference.matchId}-press-${conference.questionIndex}`,
+        season: current.lastResult?.season ?? current.season - 1,
+        source: "press",
+        author: "Zona Mista",
+        text: `“${answer.label}” — ${current.name}, após ${conference.competitionName}.`,
+        likes: Math.max(500, Math.round((current.followers + 10_000) * (0.02 + seeded(current.seed, conference.questionIndex + current.season) * 0.04))),
+        tone: answer.tone === "bold" ? "positive" : "neutral",
+      };
+      return {
+        ...affected,
+        pendingPressConference: completed ? null : { ...conference, questionIndex: nextIndex },
+        socialFeed: [post, ...affected.socialFeed].slice(0, 24),
+        newsFeed: [`Coletiva: ${answer.result}`, ...affected.newsFeed].slice(0, 16),
+      };
+    });
+    if (finished) setPressConferenceOpen(false);
     vibrate();
   }
 
@@ -5784,7 +6247,41 @@ export default function Home() {
     vibrate();
   }
 
+  function resolveStoryDecision(choiceIndex: number) {
+    setGame((current) => {
+      const decision = current.pendingStoryDecision;
+      const choice = decision?.choices[choiceIndex];
+      if (!decision || !choice) return current;
+      const affected = applyEffect(current, choice.effect);
+      const transferOffers = choice.transferClubId
+        ? [choice.transferClubId, ...affected.transferOffers.filter((clubId) => clubId !== choice.transferClubId)].slice(0, 10)
+        : affected.transferOffers;
+      return {
+        ...affected,
+        pendingStoryDecision: null,
+        storyFlags: Array.from(new Set([...affected.storyFlags, choice.flag])),
+        storyLog: [
+          ...affected.storyLog,
+          {
+            season: affected.lastResult?.season ?? affected.season - 1,
+            chapter: decision.chapter,
+            title: decision.title,
+            choice: choice.label,
+            result: choice.result,
+          },
+        ],
+        transferOffers,
+        newsFeed: [
+          `${affected.lastResult?.season ?? affected.season - 1}: ${choice.result}`,
+          ...affected.newsFeed,
+        ].slice(0, 16),
+      };
+    });
+    vibrate();
+  }
+
   function continueAfterResult() {
+    if (game.pendingStoryDecision) return;
     if (game.retireAfterSeason) {
       setGame((current) => ({ ...current, phase: "summary", lastConsequence: null }));
       setActiveTab("event");
@@ -6294,19 +6791,58 @@ export default function Home() {
           <span className="botao-card-title">Gols da partida</span>
           {result.timeline.some(isMatchGoal) ? (
             <div className="botao-result-lines">
-              {result.timeline.filter(isMatchGoal).map((entry, index) => (
-                <div key={`${entry.clock}-${index}`} className={`botao-result-line ${entry.byUser ? "botao-result-line-you" : ""}`}>
-                  <b>{entry.text}</b><span>{entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr} · {formatGoalMinute(entry, setup.rules)}</span>
-                </div>
-              ))}
+              {result.timeline.map((entry, timelineIndex) => ({ entry, timelineIndex })).filter(({ entry }) => isMatchGoal(entry)).map(({ entry, timelineIndex }) => {
+                const replayIndex = result.replays?.findIndex((replay) => replay.timelineIndex === timelineIndex) ?? -1;
+                return (
+                  <div key={`${entry.clock}-${timelineIndex}`} className={`botao-result-line ${entry.byUser ? "botao-result-line-you" : ""}`}>
+                    <span className="botao-result-goal-copy"><b>{entry.text}</b><span>{entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr} · {formatGoalMinute(entry, setup.rules)}</span></span>
+                    {replayIndex >= 0 && <button type="button" onClick={() => setActiveGoalReplay(activeGoalReplay === replayIndex ? null : replayIndex)}>{activeGoalReplay === replayIndex ? "Fechar replay" : "Ver replay"}</button>}
+                  </div>
+                );
+              })}
             </div>
           ) : <p className="botao-result-empty">{result.walkover ? "Partida encerrada por abandono. Placar administrativo de 3 × 0." : "Nenhum gol antes da disputa por pênaltis."}</p>}
+          {activeGoalReplay !== null && result.replays?.[activeGoalReplay] && (
+            <GoalReplay
+              replay={result.replays[activeGoalReplay]}
+              setup={setup}
+              label={result.timeline[result.replays[activeGoalReplay].timelineIndex]?.text ?? "Gol da partida"}
+            />
+          )}
         </div>
         <div className="botao-actions">
           <button type="button" className="botao-primary" onClick={continueAfterBotaoResult}>
-            {game.pendingBotaoMatches.length ? "Próxima decisão" : "Ver resumo da temporada"}
+            {game.pendingPressConference
+              ? "Ir para a coletiva de imprensa"
+              : game.pendingBotaoMatches.length
+                ? "Próxima decisão"
+                : "Ver resumo da temporada"}
           </button>
         </div>
+        {pressConferenceOpen && game.pendingPressConference && (() => {
+          const conference = game.pendingPressConference;
+          const question = conference.questions[conference.questionIndex];
+          return (
+            <div className="press-conference-backdrop">
+              <section className="press-conference" role="dialog" aria-modal="true" aria-labelledby="press-question">
+                <header>
+                  <span>🎙</span>
+                  <div><small>COLETIVA · PERGUNTA {conference.questionIndex + 1} DE {conference.questions.length}</small><strong>{conference.competitionName}</strong></div>
+                </header>
+                <p>{question.context}</p>
+                <h2 id="press-question">{question.question}</h2>
+                <div>
+                  {question.answers.map((answer, index) => (
+                    <button type="button" key={answer.label} onClick={() => answerPressConference(index)}>
+                      <span><strong>{answer.label}</strong><small>{answer.tone === "bold" ? "Resposta forte" : answer.tone === "team" ? "Valoriza o grupo" : "Resposta serena"}</small></span><b>→</b>
+                    </button>
+                  ))}
+                </div>
+                <footer>Suas respostas afetam torcida, imprensa, liderança e o vestiário.</footer>
+              </section>
+            </div>
+          );
+        })()}
       </main>
     );
   }
@@ -6316,6 +6852,28 @@ export default function Home() {
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       {toast && <div className="toast" role="status">{toast}</div>}
+      {game.phase === "season-result" && game.pendingStoryDecision && (
+        <div className="modal-backdrop story-decision-backdrop" role="presentation">
+          <section className="story-decision-modal" role="dialog" aria-modal="true" aria-labelledby="story-decision-title">
+            <header>
+              <span className="story-decision-icon">{game.pendingStoryDecision.icon}</span>
+              <div>
+                <small>{game.pendingStoryDecision.kicker}</small>
+                <h2 id="story-decision-title">{game.pendingStoryDecision.title}</h2>
+              </div>
+            </header>
+            <p>{game.pendingStoryDecision.description}</p>
+            <div className="story-decision-choices">
+              {game.pendingStoryDecision.choices.map((choice, index) => (
+                <button type="button" key={choice.label} onClick={() => resolveStoryDecision(index)}>
+                  <span><strong>{choice.label}</strong><small>{choice.hint}</small></span><b>→</b>
+                </button>
+              ))}
+            </div>
+            <footer>Esta decisão vira parte permanente da história de {game.name}.</footer>
+          </section>
+        </div>
+      )}
       {updateNoticeOpen && (
         <div className="modal-backdrop update-backdrop" role="presentation">
           <section className={`update-notice update-page-${updateNoticePage}`} role="dialog" aria-modal="true" aria-labelledby="update-title">
@@ -6324,24 +6882,24 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v75 · COPA EM NÚMEROS</span>
-                    <h1 id="update-title">A Copa do Mundo agora deixa o recibo.</h1>
+                    <span className="update-version">v81 · CADA CARREIRA TEM UMA ORIGEM</span>
+                    <h1 id="update-title">Agora os gols têm replay. E o jogador tem passado.</h1>
                   </div>
                 </header>
-                <p>Fase de grupos simulada, mata-matas jogáveis e todos os seus números reunidos no fim. Uma Copa absurda também pode virar a eleição da Bola de Ouro.</p>
+                <p>Escolha quem você era antes da estreia, viva capítulos exclusivos por décadas e reveja cada gol sem transformar seu save num arquivo pesado.</p>
                 <div className="update-mega-stats" aria-label="Resumo do update">
-                  <span><b>3</b> jogos de grupos</span>
-                  <span><b>8+</b> gols históricos</span>
-                  <span><b>1</b> relatório final</span>
+                  <span><b>11</b> histórias iniciais</span>
+                  <span><b>8</b> capítulos possíveis</span>
+                  <span><b>11fps</b> replay vetorial</span>
                 </div>
                 <span className="update-section-label">O GRANDE DESTAQUE</span>
                 <div className="update-grid update-mega-grid">
-                  <article className="update-featured"><b>MUN</b><span><strong>Relatório completo da Copa</strong><small>Jogos, gols, assistências e G+A separados entre a fase de grupos simulada e cada partida do mata-mata.</small></span></article>
-                  <article><b>8.7</b><span><strong>Avaliação média</strong><small>Cada temporada recebe nota de 5,4 a 9,9 e registra quantas vezes você foi o melhor em campo.</small></span></article>
-                  <article><b>✚</b><span><strong>Departamento médico</strong><small>Lesão, gravidade, recuperação, jogos perdidos e recorrências formam um prontuário persistente.</small></span></article>
-                  <article><b>PC</b><span><strong>Desktop de verdade</strong><small>Entrada, criação, fim de temporada e aposentadoria aproveitam telas largas com informação bem distribuída.</small></span></article>
-                  <article><b>UI</b><span><strong>Menu reorganizado</strong><small>Carreira, desafio e ferramentas agora têm hierarquia clara em vez de uma pilha de botões iguais.</small></span></article>
-                  <article><b>↗</b><span><strong>Central renovada</strong><small>Notas, melhor em campo e evolução anual aparecem na Central, no histórico e no resumo da temporada.</small></span></article>
+                  <article className="update-featured"><b>▶</b><span><strong>Replay de cada gol</strong><small>O jogo grava somente posições dos botões durante o lance. Sem vídeo, sem IA rodando de novo e com poucos KB.</small></span></article>
+                  <article><b>✦</b><span><strong>História do jogador</strong><small>Família modesta, ex-jogador na família, desilusão, futebol de rua e outras origens alteram a carreira.</small></span></article>
+                  <article><b>01</b><span><strong>Capítulos inesperados</strong><small>Decisões extras aparecem no fim de certas temporadas e ficam registradas até a aposentadoria.</small></span></article>
+                  <article><b>🎙</b><span><strong>Coletiva de imprensa</strong><small>O melhor em campo responde de uma a três perguntas com impacto real em imprensa, torcida e elenco.</small></span></article>
+                  <article><b>9</b><span><strong>Elencos com identidade</strong><small>Números variados e persistentes por time: camisas 9, 10, 8, 77 e outras finalmente chegam à mesa.</small></span></article>
+                  <article><b>⚖</b><span><strong>Regras revisadas</strong><small>Rivais mais fortes, finais plausíveis, Olimpíadas globais e Bola de Ouro blindada contra taças menores.</small></span></article>
                 </div>
                 <span className="update-section-label">O QUE CONTINUA INTACTO</span>
                 <div className="update-grid update-mega-grid">
@@ -6349,21 +6907,19 @@ export default function Home() {
                   <article><b>↔</b><span><strong>Saves separados</strong><small>O desafio diário nunca apaga nem substitui sua carreira normal.</small></span></article>
                   <article><b>▣</b><span><strong>Backup completo</strong><small>Desafios, resultados, carreira, Hall da Fama e configurações entram na exportação.</small></span></article>
                 </div>
-                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Conheça Desafio Futbobo</strong><b>→</b></button>
+                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>W.O. anti-reload e o futebol de botão consolidado</strong><b>→</b></button>
               </>
             ) : (
               <>
-                <span className="update-version previous">v74 · MESMA SORTE, OUTRA HISTÓRIA</span>
+                <span className="update-version previous">v80 · W.O. ANTI-RELOAD</span>
                 <div className="update-symbol previous">24H</div>
-                <h1 id="update-title">Todo mundo começou com a mesma sorte.</h1>
-                <p>O Desafio Futbobo, avaliações por temporada, departamento médico persistente e o novo menu tornaram cada carreira mais comparável.</p>
+                <h1 id="update-title">Entrou em campo, a partida vale.</h1>
+                <p>Atualizar ou fechar uma partida em andamento passou a registrar derrota administrativa por 3–0, fechando o último grande exploit das finais.</p>
                 <div className="update-grid previous-grid">
-                  <article><b>24H</b><span><strong>Desafio diário</strong><small>A mesma semente para todos e ranking local por pontos.</small></span></article>
-                  <article><b>8.7</b><span><strong>Avaliação média</strong><small>Notas anuais e prêmios de melhor em campo.</small></span></article>
-                  <article><b>✚</b><span><strong>Departamento médico</strong><small>Lesões, recuperação, recorrências e jogos perdidos.</small></span></article>
-                  <article><b>UI</b><span><strong>Novo menu</strong><small>Hierarquia melhor no celular e desktop aproveitado de verdade.</small></span></article>
+                  <article><b>3–0</b><span><strong>W.O. persistente</strong><small>Fechar, atualizar ou travar depois de entrar em campo conta como abandono.</small></span></article>
+                  <article><b>44</b><span><strong>Regressões protegidas</strong><small>A regra entrou sem quebrar carreira normal ou Desafio Futbobo.</small></span></article>
                 </div>
-                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Copa em Números</strong><b>←</b></button>
+                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Histórias e Replays</strong><b>←</b></button>
               </>
             )}
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
@@ -6584,7 +7140,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v80 · W.O. ANTI-RELOAD</b>
+            <span>FUTBOBO</span><b>v81 · HISTÓRIAS E REPLAYS</b>
           </footer>
         </section>
       )}
@@ -6593,7 +7149,7 @@ export default function Home() {
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "welcome" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 1 DE 4</span><strong>Quem vai vestir a camisa?</strong></div>
+            <div><span>PASSO 1 DE 5</span><strong>Quem vai vestir a camisa?</strong></div>
             <div className="step-count">01</div>
           </header>
           <div className="setup-content">
@@ -6640,7 +7196,7 @@ export default function Home() {
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "identity" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 2 DE 4</span><strong>Por qual país você vai jogar?</strong></div>
+            <div><span>PASSO 2 DE 5</span><strong>Por qual país você vai jogar?</strong></div>
             <div className="step-count">02</div>
           </header>
           <div className="setup-content">
@@ -6666,7 +7222,7 @@ export default function Home() {
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "nationality" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 3 DE 4</span><strong>Escolha sua base</strong></div>
+            <div><span>PASSO 3 DE 5</span><strong>Escolha sua base</strong></div>
             <div className="step-count">03</div>
           </header>
           <div className="setup-content">
@@ -6703,7 +7259,7 @@ export default function Home() {
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "academy" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 4 DE 4</span><strong>Que jogador você será?</strong></div>
+            <div><span>PASSO 4 DE 5</span><strong>Que jogador você será?</strong></div>
             <div className="step-count">04</div>
           </header>
           <div className="setup-content">
@@ -6720,6 +7276,43 @@ export default function Home() {
             </div>
           </div>
           <div className="setup-note">A base será simulada rapidamente dos 12 até os 16–18 anos.</div>
+        </section>
+      )}
+
+      {game.phase === "story" && (
+        <section className="setup-screen story-setup-screen screen-enter">
+          <header className="step-header">
+            <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "formation" }))} aria-label="Voltar">←</button>
+            <div><span>PASSO 5 DE 5</span><strong>Qual história trouxe você até aqui?</strong></div>
+            <div className="step-count">05</div>
+          </header>
+          <div className="setup-content">
+            <div className="story-intro">
+              <span>ORIGEM DO JOGADOR</span>
+              <h2>Uma carreira começa antes da estreia.</h2>
+              <p>Sua origem altera o começo, muda eventos da carreira e abre capítulos exclusivos durante os anos. Não existe opção perfeita.</p>
+            </div>
+            <div className="player-story-grid">
+              {PLAYER_STORIES.map((story) => (
+                <button
+                  type="button"
+                  key={story.id}
+                  className={`player-story-card story-${story.tone}`}
+                  onClick={() => selectPlayerStory(story.id)}
+                >
+                  <span className="player-story-icon">{story.icon}</span>
+                  <span className="player-story-copy">
+                    <small>{story.tagline}</small>
+                    <strong>{story.title}</strong>
+                    <p>{story.description}</p>
+                    <em>{story.promise}</em>
+                  </span>
+                  <b>→</b>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="setup-note">A origem não revela seu potencial. Ela muda o tipo de história que a carreira pode contar.</div>
         </section>
       )}
 
@@ -7132,6 +7725,19 @@ export default function Home() {
           {activeTab === "profile" && game.phase === "career" && (
             <div className="panel-screen screen-enter">
               <div className="profile-hero"><div className="academy-avatar"><span>{game.number}</span><small>{game.position}</small></div><div><span>{game.archetype}</span><h2>{game.name}</h2><p>{position.style} · {game.foot}</p></div></div>
+              <section className={`player-story-profile story-${playerStoryById(game.playerStoryId).tone}`}>
+                <header><b>{playerStoryById(game.playerStoryId).icon}</b><div><span>HISTÓRIA DO JOGADOR</span><strong>{playerStoryById(game.playerStoryId).title}</strong></div><em>{game.storyLog.length} capítulo{game.storyLog.length === 1 ? "" : "s"}</em></header>
+                <p>{playerStoryById(game.playerStoryId).description}</p>
+                {game.storyLog.length > 0 && (
+                  <div className="player-story-log">
+                    {[...game.storyLog].reverse().slice(0, 4).map((entry) => (
+                      <article key={`${entry.season}-${entry.chapter}`}>
+                        <span>{entry.season}</span><div><strong>{entry.title}</strong><small>{entry.choice}</small><p>{entry.result}</p></div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
               <div className="position-change-card">
                 <div><span>FUNÇÃO EM CAMPO</span><strong>{position.name}</strong><p>Você pode pedir ao treinador uma mudança. Quanto mais velho e mais distante da sua função atual, maior o risco de recusa.</p></div>
                 <button
@@ -7596,6 +8202,17 @@ export default function Home() {
             <small className="share-url">erereck.github.io/futbobo</small>
           </div>
           <TrophyGallery state={displayGame} final />
+          <section className={`final-player-story story-${playerStoryById(displayGame.playerStoryId).tone}`}>
+            <header><b>{playerStoryById(displayGame.playerStoryId).icon}</b><div><span>A HISTÓRIA POR TRÁS DA CARREIRA</span><strong>{playerStoryById(displayGame.playerStoryId).title}</strong></div><em>{displayGame.storyLog.length} capítulo{displayGame.storyLog.length === 1 ? "" : "s"} vivido{displayGame.storyLog.length === 1 ? "" : "s"}</em></header>
+            <p>{playerStoryById(displayGame.playerStoryId).description}</p>
+            {displayGame.storyLog.length > 0 && (
+              <div>
+                {displayGame.storyLog.map((entry) => (
+                  <article key={`${entry.season}-${entry.chapter}`}><span>{entry.season}</span><div><small>CAPÍTULO {entry.chapter}</small><strong>{entry.title}</strong><p>{entry.choice} — {entry.result}</p></div></article>
+                ))}
+              </div>
+            )}
+          </section>
           <section className="final-public-life">
             <div className="summary-section-heading"><span>FORA DAS QUATRO LINHAS</span><strong>A marca que você deixou no mundo</strong></div>
             <div className="final-public-grid">

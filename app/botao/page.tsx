@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CLUBS, POSITIONS, type Club, type PositionKey } from "../game-data";
 import BotaoMatch from "./BotaoMatch";
+import GoalReplay from "./GoalReplay";
 import TeamCrest from "./TeamCrest";
 import "./botao.css";
 import { buildFinalSetup, clubSubtitle, formatGoalMinute, isMatchGoal, pickFinalOpponent } from "./adapter";
@@ -60,6 +61,7 @@ export default function BotaoStandalonePage() {
   const [opponentId, setOpponentId] = useState<string>("");
   const [simulating, setSimulating] = useState(false);
   const [penaltiesOnly, setPenaltiesOnly] = useState(false);
+  const [activeReplay, setActiveReplay] = useState<number | null>(null);
 
   const club = clubs.find((candidate) => candidate.id === clubId) ?? defaultClub;
   const competition = COMPETITIONS[competitionIndex];
@@ -86,6 +88,7 @@ export default function BotaoStandalonePage() {
   const play = (penaltiesOnly = false) => {
     setSetup(makeSetup());
     setResult(null);
+    setActiveReplay(null);
     setPenaltiesOnly(penaltiesOnly);
     setScreen("match");
   };
@@ -95,6 +98,7 @@ export default function BotaoStandalonePage() {
   const simulate = () => {
     const nextSetup = makeSetup();
     setSetup(nextSetup);
+    setActiveReplay(null);
     setSimulating(true);
     window.setTimeout(() => {
       setResult(simulateBotaoMatch(nextSetup));
@@ -119,7 +123,7 @@ export default function BotaoStandalonePage() {
 
   if (screen === "result" && result && setup) {
     const won = result.outcome === "win";
-    const matchGoals = result.timeline.filter(isMatchGoal);
+    const matchGoals = result.timeline.map((entry, timelineIndex) => ({ entry, timelineIndex })).filter(({ entry }) => isMatchGoal(entry));
     return (
       <main className="botao-lobby">
         <p className="botao-lobby-lead">
@@ -182,16 +186,24 @@ export default function BotaoStandalonePage() {
           <span className="botao-card-title">Gols da partida</span>
           {matchGoals.length > 0 ? (
             <div className="botao-result-lines">
-              {matchGoals.map((entry, index) => (
-                <div key={index} className={`botao-result-line ${entry.byUser ? "botao-result-line-you" : ""}`}>
-                  <b>{entry.text}</b>
-                  <span>
-                    {entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr} · {formatGoalMinute(entry, setup.rules)}
-                  </span>
-                </div>
-              ))}
+              {matchGoals.map(({ entry, timelineIndex }) => {
+                const replayIndex = result.replays?.findIndex((replay) => replay.timelineIndex === timelineIndex) ?? -1;
+                return (
+                  <div key={timelineIndex} className={`botao-result-line ${entry.byUser ? "botao-result-line-you" : ""}`}>
+                    <span className="botao-result-goal-copy"><b>{entry.text}</b><span>{entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr} · {formatGoalMinute(entry, setup.rules)}</span></span>
+                    {replayIndex >= 0 && <button type="button" onClick={() => setActiveReplay(activeReplay === replayIndex ? null : replayIndex)}>{activeReplay === replayIndex ? "Fechar replay" : "Ver replay"}</button>}
+                  </div>
+                );
+              })}
             </div>
           ) : <p className="botao-result-empty">Nenhum gol antes da disputa por pênaltis.</p>}
+          {activeReplay !== null && result.replays?.[activeReplay] && (
+            <GoalReplay
+              replay={result.replays[activeReplay]}
+              setup={setup}
+              label={result.timeline[result.replays[activeReplay].timelineIndex]?.text ?? "Gol da partida"}
+            />
+          )}
         </div>
         <div className="botao-actions">
           <button type="button" className="botao-primary" onClick={() => setScreen("lobby")}>

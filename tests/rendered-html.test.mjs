@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v80 · W\.O\. ANTI-RELOAD/);
+  assert.match(pageSource, /v81 · HISTÓRIAS E REPLAYS/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -819,7 +819,7 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /PATROCINADOR PESSOAL/);
   assert.match(page, /LINHA DO TEMPO/);
   assert.match(page, /setUpdateNoticePage\("previous"\)/);
-  assert.match(page, /MESMA SORTE, OUTRA HISTÓRIA/);
+  assert.match(page, /v80 · W\.O\. ANTI-RELOAD/);
   assert.match(page, /FORA DAS QUATRO LINHAS/);
   assert.match(gameData, /followers\?: number/);
   assert.match(gameData, /sponsorBrand\?: string/);
@@ -861,8 +861,8 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   assert.match(adapter, /function buildNationalMatchSetup/);
   assert.match(adapter, /function pickNationalOpponent/);
   assert.match(adapter, /excludedCountryIds/);
-  assert.match(adapter, /isWorldCupFinal/);
-  assert.match(adapter, /candidate\.strength >= \(isWorldCupFinal \? 4 : 2\)/);
+  assert.match(adapter, /isGlobalFinal/);
+  assert.match(adapter, /candidate\.strength >= \(isGlobalFinal \? 4 : 2\)/);
   assert.match(page, /previousOpponentIds/);
   assert.match(engine, /function createMatch/);
   assert.match(engine, /export function awardInactivityPenalty/);
@@ -902,7 +902,7 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
 
   assert.doesNotMatch(match, /onGiveUp/);
   assert.doesNotMatch(match, />\s*Sair\s*</);
-  assert.match(engine, /filter\(\(number\) => number !== setup\.player\.number\)/);
+  assert.match(engine, /persistentSquadNumbers\(\s*setup\.userTeam\.id,\s*\[setup\.player\.number\]/);
 
   assert.match(drama, /id: "drama-billie-eilish-photo"/);
   assert.match(drama, /followers: 10_000_000/);
@@ -947,7 +947,8 @@ test("mostra o minuto de cada gol no resultado do futebol de botão", async () =
   assert.match(page, /Gols da partida/);
   assert.match(page, /formatGoalMinute\(entry, setup\.rules\)/);
   assert.match(standalone, /Gols da partida/);
-  assert.match(standalone, /matchGoals = result\.timeline\.filter\(isMatchGoal\)/);
+  assert.match(standalone, /matchGoals = result\.timeline\.map\(\(entry, timelineIndex\)/);
+  assert.match(standalone, /\.filter\(\(\{ entry \}\) => isMatchGoal\(entry\)\)/);
   assert.match(engine, /inactivityPenalty && scored \? "goal"/);
 });
 
@@ -1012,4 +1013,97 @@ test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
   const markerWrite = page.indexOf("localStorage.setItem(BOTAO_IN_PROGRESS_KEY", startMatch);
   const openField = page.indexOf("setBotaoMatchStarted(true)", startMatch);
   assert.ok(markerWrite > startMatch && markerWrite < openField, "o marcador deve ser salvo antes de abrir o campo");
+});
+
+test("cria origens persistentes que mudam a carreira e abrem capitulos proprios", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const stories = await readFile(new URL("../app/player-stories.ts", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(page, /version: 7/);
+  assert.match(page, /phase: "story"/);
+  assert.match(page, /function selectPlayerStory\(storyId: PlayerStoryId\)/);
+  assert.match(page, /function buildStorySeasonDecision/);
+  assert.match(page, /const pendingStoryDecision = buildStorySeasonDecision/);
+  assert.match(page, /pendingStoryDecision,/);
+  assert.match(page, /function resolveStoryDecision/);
+  assert.match(page, /DYNAMIC_STORY_EVENT_ID/);
+  assert.match(page, /Esta decisão vira parte permanente da história/);
+  assert.match(page, /A HISTÓRIA POR TRÁS DA CARREIRA/);
+  assert.match(stories, /"academy-destroyer"/);
+  assert.match(stories, /"humble-roots"/);
+  assert.match(stories, /"football-bloodline"/);
+  assert.match(stories, /"disillusioned"/);
+  assert.match(stories, /"academy-reject"/);
+  assert.match(stories, /"migrant-dream"/);
+  assert.match(styles, /\.player-story-grid/);
+  assert.match(styles, /\.story-decision-modal/);
+});
+
+test("grava replays vetoriais leves dos gols sem reexecutar a partida", async () => {
+  const types = await readFile(new URL("../app/botao/types.ts", import.meta.url), "utf8");
+  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
+  const replay = await readFile(new URL("../app/botao/GoalReplay.tsx", import.meta.url), "utf8");
+  const render = await readFile(new URL("../app/botao/render.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const standalone = await readFile(new URL("../app/botao/page.tsx", import.meta.url), "utf8");
+
+  assert.match(types, /export type BotaoGoalReplay/);
+  assert.match(types, /positions: number\[\]/);
+  assert.match(types, /replays\?: BotaoGoalReplay\[\]/);
+  assert.match(match, /const REPLAY_SAMPLE_MS = 90/);
+  assert.match(match, /const REPLAY_MAX_FRAMES = 48/);
+  assert.match(match, /Math\.round\(body\.x\)/);
+  assert.match(match, /goalReplaysRef\.current/);
+  assert.match(match, /replays: goalReplaysRef\.current/);
+  assert.match(replay, /requestAnimationFrame/);
+  assert.match(replay, /sem vídeo e sem reprocessar a partida/);
+  assert.match(render, /export function drawReplayFrame/);
+  assert.ok(
+    render.indexOf("drawDisc(ctx, rendered", render.indexOf("export function drawReplayFrame"))
+      < render.indexOf("if (ball) drawBall", render.indexOf("export function drawReplayFrame")),
+    "a bola precisa ser desenhada por cima dos botões no replay",
+  );
+  assert.match(page, /Ver replay/);
+  assert.match(standalone, /Ver replay/);
+});
+
+test("modera o melhor da partida e transforma o destaque em coletiva", async () => {
+  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
+
+  assert.match(engine, /const contributions = state\.playerGoals \+ state\.playerAssists/);
+  assert.match(engine, /const decisiveSingleContribution/);
+  assert.match(engine, /contributions >= 3/);
+  assert.match(engine, /contributions >= 2/);
+  assert.match(page, /function buildPressConference/);
+  assert.match(page, /pendingPressConference:/);
+  assert.match(page, /Ir para a coletiva de imprensa/);
+  assert.match(page, /function answerPressConference/);
+  assert.match(page, /COLETIVA · PERGUNTA/);
+  assert.match(styles, /\.press-conference-backdrop/);
+});
+
+test("corrige competicoes, bola de ouro, rivais e numeros persistentes", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
+  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /const BALLON_DOR_EXCLUDED_TROPHIES = new Set/);
+  assert.match(page, /"domesticSuperCup"/);
+  assert.match(page, /"recopaSudamericana"/);
+  assert.match(page, /const playerIsEuropean/);
+  assert.match(page, /const genuinelyStruggling/);
+  assert.match(page, /seeded\(seed, 1901\) < 0\.25/);
+  assert.match(page, /clamp\(rival\.overall \+ development, 48, 96\)/);
+  assert.match(adapter, /const eliteFinal = new Set/);
+  assert.match(adapter, /candidate\.reputation >= 4/);
+  assert.match(adapter, /args\.competitionId\.includes\("jogos-ol"\)/);
+  assert.match(adapter, /isGlobalFinal \? 4 : 2/);
+  assert.match(engine, /const SQUAD_NUMBER_POOL = \[1, 10, 9, 8, 7, 11/);
+  assert.match(engine, /hashSeed\("futbobo-squad-numbers", teamId\)/);
+  assert.match(engine, /persistentSquadNumbers\(\s*setup\.userTeam\.id,\s*\[setup\.player\.number\]/);
+  assert.match(match, /state\.setup\.stageName === "Final" \? "CAMPEÃO!" : "CLASSIFICADO!"/);
 });

@@ -13,7 +13,7 @@ import {
   type BotaoMatchState,
 } from "./engine";
 import { readableInk } from "./kits";
-import type { BotaoSide } from "./types";
+import type { BotaoGoalReplay, BotaoMatchSetup, BotaoSide } from "./types";
 
 export const VIEW_PAD_X = 8;
 export const VIEW_PAD_Y = FIELD.goalDepth + 8;
@@ -382,6 +382,41 @@ export function drawMatch(
     const disc = state.bodies.find((body) => body.id === view.aim?.bodyId);
     if (disc) drawAim(ctx, disc, view.aim);
   }
+}
+
+/** Desenha um quadro vetorial gravado, sem reexecutar física, IA ou relógio. */
+export function drawReplayFrame(
+  ctx: CanvasRenderingContext2D,
+  setup: BotaoMatchSetup,
+  replay: BotaoGoalReplay,
+  frameIndex: number,
+) {
+  const frame = replay.frames[Math.max(0, Math.min(replay.frames.length - 1, frameIndex))];
+  if (!frame) return;
+  ctx.clearRect(-VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT);
+  drawField(ctx, setup.userTeam.primary, setup.cpuTeam.primary);
+  const renderedBodies = replay.bodies.map((body, index): BotaoBody => ({
+    ...body,
+    x: frame.positions[index * 2] ?? 0,
+    y: frame.positions[index * 2 + 1] ?? 0,
+    vx: 0,
+    vy: 0,
+    mass: body.kind === "ball" ? 0.4 : 2,
+    friction: 0,
+    label: body.kind === "ball" ? "Bola" : `#${body.number}`,
+    power: 0,
+    control: 0,
+    slot: index - 1,
+  }));
+  renderedBodies.forEach((rendered) => {
+    if (rendered.kind === "ball") return;
+    const colors = rendered.side === "user"
+      ? { primary: setup.userTeam.primary, secondary: setup.userTeam.secondary }
+      : { primary: setup.cpuTeam.primary, secondary: setup.cpuTeam.secondary };
+    drawDisc(ctx, rendered, colors, { selected: false, ready: false, pulse: 0 });
+  });
+  const ball = renderedBodies.find((body) => body.kind === "ball");
+  if (ball) drawBall(ctx, ball);
 }
 
 /** No pênalti só ficam na mesa a bola, o batedor e o goleiro. */

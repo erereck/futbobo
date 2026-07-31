@@ -123,6 +123,31 @@ export type BotaoSideStats = {
   posts: number;
 };
 
+export type BotaoReplayBody = {
+  id: string;
+  kind: "disc" | "ball";
+  side: BotaoSide | null;
+  number: number;
+  radius: number;
+  isUserPlayer: boolean;
+};
+
+/**
+ * Um quadro guarda somente x/y, na mesma ordem de `bodies`.
+ * A amostragem baixa evita vídeo, imagens e estados inteiros do motor no save.
+ */
+export type BotaoReplayFrame = {
+  at: number;
+  positions: number[];
+};
+
+export type BotaoGoalReplay = {
+  timelineIndex: number;
+  duration: number;
+  bodies: BotaoReplayBody[];
+  frames: BotaoReplayFrame[];
+};
+
 export type BotaoMatchResult = {
   matchId: string;
   /** true quando a final foi resolvida sem o jogador tocar em nada. */
@@ -142,6 +167,8 @@ export type BotaoMatchResult = {
   turns: number;
   stats: { user: BotaoSideStats; cpu: BotaoSideStats };
   timeline: BotaoTimelineEntry[];
+  /** Clipes vetoriais de baixa frequência: apenas os segundos que antecedem cada gol. */
+  replays?: BotaoGoalReplay[];
   /** Atalho para o Futbobo: venceu a decisão, logo é campeão. */
   champion: boolean;
 };

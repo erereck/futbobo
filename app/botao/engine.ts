@@ -298,6 +298,19 @@ function createPost(id: string, x: number, y: number): BotaoBody {
   };
 }
 
+const SQUAD_NUMBER_POOL = [1, 10, 9, 8, 7, 11, 6, 4, 5, 3, 2, 14, 17, 18, 19, 20, 21, 23, 27, 30, 33, 42, 47, 66, 77, 88, 99];
+
+function persistentSquadNumbers(teamId: string, excluded: number[], count: number) {
+  const blocked = new Set(excluded);
+  const rng = createRng(hashSeed("futbobo-squad-numbers", teamId));
+  const available = SQUAD_NUMBER_POOL
+    .filter((number) => !blocked.has(number))
+    .map((number, index) => ({ number, order: rng.next() + (index === 0 ? -0.32 : 0) }))
+    .sort((a, b) => a.order - b.order)
+    .map(({ number }) => number);
+  return available.slice(0, count);
+}
+
 export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
   const rng = createRng(hashSeed(setup.seed, setup.matchId));
   const userPower = setup.player.power ?? clamp(44 + (setup.player.overall - 58) * 1.6, 34, 100);
@@ -313,8 +326,16 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
   // Só o jogador da carreira tem nome. O resto é o time — como em botão de
   // verdade, onde a peça é a camisa e não um personagem inventado.
   const bodies: BotaoBody[] = [createBall()];
-  const teammateNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-    .filter((number) => number !== setup.player.number);
+  const teammateNumbers = persistentSquadNumbers(
+    setup.userTeam.id,
+    [setup.player.number],
+    formation.slots.length - 1,
+  );
+  const cpuNumbers = persistentSquadNumbers(
+    setup.cpuTeam.id,
+    [setup.player.number],
+    formation.slots.length,
+  );
   let teammateNumberIndex = 0;
   for (let slot = 0; slot < formation.slots.length; slot += 1) {
     const isPlayer = slot === userSlot;
@@ -337,8 +358,8 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
       createDisc({
         id: `cpu-${slot}`,
         side: "cpu",
-        number: 2 + slot,
-        label: `#${2 + slot}`,
+        number: cpuNumbers[slot],
+        label: `#${cpuNumbers[slot]}`,
         power: cpuPower,
         control: cpuControl,
         isUserPlayer: false,
@@ -1315,6 +1336,20 @@ function finishMatch(state: BotaoMatchState, decision: BotaoDecision, events: Bo
     outcome = penaltyFor > penaltyAgainst ? "win" : "loss";
   }
   const won = outcome === "win";
+  const contributions = state.playerGoals + state.playerAssists;
+  const contributionWeight = state.playerGoals * 2.2 + state.playerAssists * 1.45;
+  const teammateBenchmark = 2.25 + Math.max(0, state.score.user - 1) * 0.48;
+  const decisiveSingleContribution =
+    contributions === 1 &&
+    state.score.user === 1 &&
+    (state.playerGoals === 1 ? state.rng.next() < 0.58 : state.rng.next() < 0.32);
+  const manOfTheMatch =
+    won &&
+    (
+      contributions >= 3 ||
+      (contributions >= 2 && contributionWeight >= teammateBenchmark && state.rng.next() < 0.82) ||
+      decisiveSingleContribution
+    );
   state.result = {
     matchId: state.setup.matchId,
     simulated: false,
@@ -1325,7 +1360,7 @@ function finishMatch(state: BotaoMatchState, decision: BotaoDecision, events: Bo
     penaltyAgainst,
     playerGoals: state.playerGoals,
     playerAssists: state.playerAssists,
-    manOfTheMatch: won && state.playerGoals + state.playerAssists >= 1,
+    manOfTheMatch,
     decision,
     turns: state.turns,
     stats: { user: { ...state.stats.user }, cpu: { ...state.stats.cpu } },

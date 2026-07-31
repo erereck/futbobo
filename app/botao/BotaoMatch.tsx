@@ -43,7 +43,7 @@ import {
   toFieldPoint,
   type BotaoAimView,
 } from "./render";
-import type { BotaoMatchResult, BotaoMatchSetup, BotaoSide } from "./types";
+import type { BotaoGoalReplay, BotaoMatchResult, BotaoMatchSetup, BotaoReplayFrame, BotaoSide } from "./types";
 
 const PHYSICS_DT = 1 / 120;
 const MAX_SUBSTEPS = 12;
@@ -52,6 +52,8 @@ const CPU_THINK_MS = 430;
 const PENALTY_PAUSE_MS = 1100;
 const USER_DECISION_SECONDS = 10;
 const USER_WARNING_SECONDS = 3;
+const REPLAY_SAMPLE_MS = 90;
+const REPLAY_MAX_FRAMES = 48;
 const SIDES: BotaoSide[] = ["user", "cpu"];
 
 type Flash = { text: string; tone: "goal" | "info" | "bad" } | null;
@@ -73,6 +75,15 @@ function periodName(state: BotaoMatchState) {
     return state.setup.rules.extraHalves > 1 ? `Prorrogação ${state.period - regulation}` : "Prorrogação";
   }
   return regulation === 1 ? "Tempo corrido" : `${state.period}º tempo`;
+}
+
+function replayFrame(state: BotaoMatchState, at: number): BotaoReplayFrame {
+  return {
+    at: Math.max(0, Math.round(at)),
+    positions: state.bodies
+      .filter((body) => body.kind !== "post")
+      .flatMap((body) => [Math.round(body.x), Math.round(body.y)]),
+  };
 }
 
 export default function BotaoMatch({
@@ -106,6 +117,11 @@ export default function BotaoMatch({
   const trailRef = useRef<Array<{ x: number; y: number }>>([]);
   const goalFlashRef = useRef(0);
   const goalFlashSideRef = useRef<BotaoSide | null>(null);
+  const replayBufferRef = useRef<BotaoReplayFrame[]>([]);
+  const goalReplaysRef = useRef<BotaoGoalReplay[]>([]);
+  const replayShotStartedAtRef = useRef(0);
+  const replayLastSampleRef = useRef(0);
+  const replayWasResolvingRef = useRef(false);
   // Timers guardados em ref: efeitos sem lista de dependências rodam a cada
   // render, e limpar no cleanup cancelaria a transição no meio do caminho.
   const timersRef = useRef<{ goal: number | null; cpu: number | null; penalty: number | null; finish: number | null }>({
@@ -206,6 +222,29 @@ export default function BotaoMatch({
         }
         if (event.type === "penalty") playBotaoSound(event.scored ? "goal" : "save");
         if (event.type === "goal") {
+          const replayNow = performance.now();
+          const finalFrame = replayFrame(machine, replayNow - replayShotStartedAtRef.current);
+          const frames = [...replayBufferRef.current, finalFrame]
+            .filter((frame, index, list) => index === 0 || frame.at > list[index - 1].at)
+            .slice(-REPLAY_MAX_FRAMES);
+          if (frames.length >= 2) {
+            const firstAt = frames[0].at;
+            goalReplaysRef.current.push({
+              timelineIndex: Math.max(0, machine.timeline.length - 1),
+              duration: Math.max(1, frames.at(-1)!.at - firstAt),
+              bodies: machine.bodies
+                .filter((body) => body.kind !== "post")
+                .map((body) => ({
+                  id: body.id,
+                  kind: body.kind === "ball" ? "ball" : "disc",
+                  side: body.side,
+                  number: body.number,
+                  radius: Math.round(body.radius * 10) / 10,
+                  isUserPlayer: body.isUserPlayer,
+                })),
+              frames: frames.map((frame) => ({ ...frame, at: frame.at - firstAt })),
+            });
+          }
           const mine = event.side === "user";
           vibrate([0, 60, 40, 120]);
           playBotaoSound(mine ? "goal" : "concede");
@@ -237,6 +276,21 @@ export default function BotaoMatch({
       const elapsed = Math.min((time - previous) / 1000, 0.25);
       lastFrameRef.current = time;
       frameCountRef.current += 1;
+
+      const resolvingForReplay = state.phase === "resolving";
+      if (resolvingForReplay) {
+        if (!replayWasResolvingRef.current) {
+          replayBufferRef.current = [];
+          replayShotStartedAtRef.current = time;
+          replayLastSampleRef.current = 0;
+        }
+        if (replayLastSampleRef.current === 0 || time - replayLastSampleRef.current >= REPLAY_SAMPLE_MS) {
+          replayBufferRef.current.push(replayFrame(state, time - replayShotStartedAtRef.current));
+          while (replayBufferRef.current.length > REPLAY_MAX_FRAMES) replayBufferRef.current.shift();
+          replayLastSampleRef.current = time;
+        }
+      }
+      replayWasResolvingRef.current = resolvingForReplay;
 
       // Rastro da bola e brilho da comemoração são puramente visuais e vivem
       // aqui, não no motor — simulação headless não precisa saber deles.
@@ -411,9 +465,15 @@ export default function BotaoMatch({
     const state = matchRef.current;
     if (!state || state.phase !== "finished" || !state.result || finishedRef.current) return;
     finishedRef.current = true;
-    const result = state.result;
+    const result = { ...state.result, replays: goalReplaysRef.current.map((replay) => ({
+      ...replay,
+      bodies: replay.bodies.map((body) => ({ ...body })),
+      frames: replay.frames.map((frame) => ({ ...frame, positions: frame.positions.slice() })),
+    })) };
+    state.result = result;
     const won = result.outcome === "win";
-    showFlash(won ? "CAMPEÃO!" : "FIM DE JOGO", won ? "goal" : "bad", 2400);
+    const victoryLabel = state.setup.stageName === "Final" ? "CAMPEÃO!" : "CLASSIFICADO!";
+    showFlash(won ? victoryLabel : "FIM DE JOGO", won ? "goal" : "bad", 2400);
     vibrate(won ? [0, 90, 60, 90, 60, 160] : [0, 200]);
     timersRef.current.finish = window.setTimeout(() => {
       timersRef.current.finish = null;

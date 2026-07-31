@@ -75,7 +75,14 @@ export function pickFinalOpponent(args: {
 }): Club {
   const club = CLUBS.find((candidate) => candidate.id === args.clubId) ?? CLUBS[0];
   const confederation = countryById(club.countryId).confederation;
-  const pool = CLUBS.filter((candidate) => {
+  const eliteFinal = new Set([
+    "championsLeague",
+    "domesticSuperCup",
+    "uefaSuperCup",
+    "recopaSudamericana",
+    "campeonesCup",
+  ]).has(args.competitionId);
+  const scopedPool = CLUBS.filter((candidate) => {
     if (candidate.id === club.id) return false;
     if (args.scope === "domestic") {
       const leagueId = args.leagueId ?? club.leagueId;
@@ -95,6 +102,8 @@ export function pickFinalOpponent(args: {
     }
     return candidate.strength >= 78;
   });
+  const elitePool = scopedPool.filter((candidate) => candidate.reputation >= 4);
+  const pool = eliteFinal && elitePool.length > 0 ? elitePool : scopedPool;
   const fallback = pool.length > 0 ? pool : CLUBS.filter((candidate) => candidate.id !== club.id);
   // Quem chega a uma final costuma ser grande, mas não é sempre o mesmo trio:
   // sorteio ponderado pela força dá variedade sem escalar time de meio de tabela.
@@ -121,19 +130,23 @@ export function pickNationalOpponent(args: {
 }): Country {
   const country = countryById(args.countryId);
   const excludedCountryIds = new Set([country.id, ...(args.excludedCountryIds ?? [])]);
-  const isWorldCupFinal = args.competitionId === "world-cup" && args.stageName === "Final";
+  const isGlobalTournament =
+    args.competitionId === "world-cup" ||
+    args.competitionId.includes("jogos-ol") ||
+    args.competitionId.includes("mundial-sub");
+  const isGlobalFinal = isGlobalTournament && args.stageName === "Final";
   const sameTournamentPool = COUNTRIES.filter((candidate) => {
     if (excludedCountryIds.has(candidate.id)) return false;
     // A final do Mundial sempre guarda uma potência inédita. Nas fases
     // anteriores há mais variedade, mas uma seleção eliminada nunca volta.
-    if (args.competitionId === "world-cup") return candidate.strength >= (isWorldCupFinal ? 4 : 2);
+    if (isGlobalTournament) return candidate.strength >= (isGlobalFinal ? 4 : 2);
     return candidate.confederation === country.confederation;
   });
   const unseenCountries = COUNTRIES.filter((candidate) => !excludedCountryIds.has(candidate.id));
   const strongUnseenCountries = unseenCountries.filter((candidate) => candidate.strength >= 4);
   const pool = sameTournamentPool.length > 0
     ? sameTournamentPool
-    : isWorldCupFinal && strongUnseenCountries.length > 0
+    : isGlobalFinal && strongUnseenCountries.length > 0
       ? strongUnseenCountries
       : unseenCountries;
   const weights = pool.map((candidate) => Math.pow(Math.max(1, candidate.strength + 1), 2.1));
