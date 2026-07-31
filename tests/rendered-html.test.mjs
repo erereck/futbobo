@@ -1024,6 +1024,11 @@ test("cria origens persistentes que mudam a carreira e abrem capitulos proprios"
   assert.match(page, /phase: "story"/);
   assert.match(page, /function selectPlayerStory\(storyId: PlayerStoryId\)/);
   assert.match(page, /function buildStorySeasonDecision/);
+  assert.match(page, /function buildStoryFollowup/);
+  assert.match(page, /const signatureWasSeen/);
+  assert.match(page, /story-followup-\$\{followup\.key\}/);
+  assert.match(page, /usedTitles\.has\(beat\.title\)/);
+  assert.match(page, /entry\.title === saved\.pendingStoryDecision\?\.title/);
   assert.match(page, /const pendingStoryDecision = buildStorySeasonDecision/);
   assert.match(page, /pendingStoryDecision,/);
   assert.match(page, /function resolveStoryDecision/);

@@ -196,6 +196,7 @@ type StoryDecision = {
 type StoryLogEntry = {
   season: number;
   chapter: number;
+  decisionId?: string;
   title: string;
   choice: string;
   result: string;
@@ -1122,7 +1123,11 @@ function normalizeSave(value: unknown): GameState {
     playerStoryId: saved.playerStoryId ?? "open-book",
     storyFlags: Array.isArray(saved.storyFlags) ? saved.storyFlags : [],
     storyLog: Array.isArray(saved.storyLog) ? saved.storyLog : [],
-    pendingStoryDecision: saved.pendingStoryDecision ?? null,
+    pendingStoryDecision:
+      saved.pendingStoryDecision &&
+      !(saved.storyLog ?? []).some((entry) => entry.title === saved.pendingStoryDecision?.title)
+        ? saved.pendingStoryDecision
+        : null,
     currentLeagueId: saved.currentLeagueId ?? (saved.currentClubId ? clubById(saved.currentClubId).leagueId : ""),
     continentalSlot,
     adaptation: saved.adaptation ?? 100,
@@ -2853,6 +2858,111 @@ function storyClubCandidate(state: GameState, salt: number, preference: "father"
   return pick(sameCountry.length ? sameCountry : regional, state.seed, salt);
 }
 
+function buildStoryFollowup(
+  state: GameState,
+  context: { performanceScore: number; titleCount: number; club: Club },
+  chapter: number,
+) {
+  const story = playerStoryById(state.playerStoryId);
+  const originEcho: Record<PlayerStoryId, string> = {
+    "open-book": "o fato de ninguém conseguir resumir sua trajetória",
+    "academy-destroyer": "a fama que chegou antes da estreia profissional",
+    "humble-roots": "as pessoas que dividiram o pouco que tinham com você",
+    "football-bloodline": "o sobrenome que abriu portas e criou comparações",
+    disillusioned: "o período em que você quase abandonou o futebol",
+    "street-football": "a rua onde seu jeito de jogar nasceu",
+    "late-bloomer": "os relatórios que não enxergaram seu crescimento",
+    "academy-reject": "a dispensa que quase encerrou tudo antes de começar",
+    "migrant-dream": "a mudança de país que redefiniu a ideia de casa",
+    "student-athlete": "o plano de vida que sempre existiu além do gramado",
+    "neighborhood-idol": "o bairro que transformou sua carreira num sonho coletivo",
+  };
+  const beats: Array<{
+    key: string;
+    title: string;
+    description: string;
+    choices: StoryDecisionChoice[];
+  }> = [
+    {
+      key: "mentor-return",
+      title: "Uma voz do começo reapareceu no seu telefone",
+      description: `Um antigo mentor lembra ${originEcho[state.playerStoryId]}. Ele não quer dinheiro nem ingresso: quer saber se você ainda reconhece o jogador que era.`,
+      choices: [
+        { label: "Viajar para conversar pessoalmente", hint: "Moral e equilíbrio ↑↑ · físico ↓", result: "A conversa devolve perspectiva a uma temporada que parecia consumir tudo.", effect: { morale: 12, lifeBalance: 10, fitness: -4 }, flag: "reencontrou-o-passado" },
+        { label: "Convidá-lo para conhecer o clube", hint: "Liderança e treinador ↑", result: "O reencontro aproxima dois mundos e impressiona o vestiário.", effect: { leadership: 8, minutes: 5, mediaRelation: 3 }, flag: "mentor-no-clube" },
+        { label: "Agradecer e manter o passado no passado", hint: "Foco ↑ · imagem ↓", result: "A resposta é curta. Você segue em frente, ainda que a mensagem permaneça na cabeça.", effect: { discipline: 7, fitness: 5, morale: -3 }, flag: "fechou-porta-passado" },
+      ],
+    },
+    {
+      key: "documentary",
+      title: "Uma produtora quer filmar o capítulo que ninguém viu",
+      description: `A proposta promete milhões de espectadores e acesso total à sua intimidade. O centro do documentário seria ${originEcho[state.playerStoryId]}.`,
+      choices: [
+        { label: "Abrir todas as portas para as câmeras", hint: "Seguidores ↑↑↑ · equilíbrio ↓↓", result: "A série vira fenômeno e transforma lembranças privadas em assunto mundial.", effect: { followers: 420_000, reputation: 7, lifeBalance: -12, mediaRelation: 5 }, flag: "documentario-sem-filtro" },
+        { label: "Controlar o roteiro e preservar a família", hint: "Imagem e liderança ↑", result: "O filme encontra força justamente nos limites que você impôs.", effect: { mediaRelation: 8, leadership: 5, followers: 130_000 }, flag: "documentario-controlado" },
+        { label: "Recusar qualquer adaptação da história", hint: "Equilíbrio ↑↑ · alcance ↓", result: "A produtora procura outro personagem. Sua história continua pertencendo a você.", effect: { lifeBalance: 12, morale: 6, followers: -18_000 }, flag: "recusou-documentario" },
+      ],
+    },
+    {
+      key: "origin-rival",
+      title: "Um rival disse que sua história virou desculpa",
+      description: `Depois de uma partida, um jogador adversário afirma que a imprensa romantiza ${originEcho[state.playerStoryId]} e ignora quem nunca recebeu atenção.`,
+      choices: [
+        { label: "Responder dentro de campo na próxima vez", hint: "Foco e moral ↑ · rivalidade nasce", result: "Você não cita o rival. O próximo confronto passa a valer muito mais.", effect: { morale: 9, fitness: 5, reputation: 3 }, flag: "rivalidade-da-origem" },
+        { label: "Admitir que toda história recebe privilégios", hint: "Imprensa e liderança ↑↑", result: "A resposta madura desmonta a provocação e abre uma conversa maior.", effect: { mediaRelation: 11, leadership: 9, fans: 3 }, flag: "reconheceu-privilegios" },
+        { label: "Transformar a fala numa guerra pública", hint: "Alcance ↑↑ · disciplina ↓↓", result: "Os cortes viralizam e a rivalidade domina a semana.", effect: { followers: 230_000, fans: 8, discipline: -10, mediaRelation: -5 }, flag: "guerra-publica-origem" },
+      ],
+    },
+    {
+      key: "personal-archive",
+      title: "Uma caixa guardada por anos chegou ao clube",
+      description: "Dentro dela há fotos, bilhetes e um objeto do começo da carreira. Você precisa decidir o que fazer com uma memória que agora vale dinheiro.",
+      choices: [
+        { label: "Doar tudo para um museu da sua cidade", hint: "Legado e torcida ↑↑", result: "A exposição vira ponto de encontro para quem acompanhou o começo.", effect: { charity: 10, fans: 10, reputation: 5 }, flag: "arquivo-no-museu" },
+        { label: "Guardar a caixa sem mostrar a ninguém", hint: "Equilíbrio e moral ↑", result: "Nem toda parte de uma lenda precisa virar conteúdo.", effect: { lifeBalance: 10, morale: 9 }, flag: "arquivo-privado" },
+        { label: "Leiloar o item principal por uma causa", hint: "Impacto social ↑↑↑ · memória vai embora", result: "O objeto muda de mãos e financia um projeto muito maior que ele.", effect: { charity: 17, followers: 90_000, morale: 3 }, flag: "leilao-da-memoria" },
+      ],
+    },
+    {
+      key: "career-crossroad",
+      title: `${context.club.shortName} quer que você represente uma nova era`,
+      description: context.performanceScore >= 75
+        ? "O clube oferece protagonismo fora de campo também. Aceitar pode aprofundar sua ligação — e tornar uma futura saída muito mais dolorosa."
+        : "Mesmo após um ano irregular, o clube acredita que sua história pode reconectar elenco e torcida.",
+      choices: [
+        { label: "Assumir o papel de rosto do projeto", hint: "Torcida e liderança ↑↑ · pressão ↑", result: "Sua imagem passa a ocupar muros, campanhas e conversas sobre o futuro.", effect: { fans: 11, leadership: 9, morale: -4, reputation: 5 }, flag: "rosto-da-nova-era" },
+        { label: "Aceitar apenas responsabilidades esportivas", hint: "Treinador e foco ↑", result: "Você escolhe liderar pelo treino e pelas partidas.", effect: { minutes: 7, discipline: 6, fitness: 4 }, flag: "lideranca-no-campo" },
+        { label: "Recusar para preservar sua liberdade", hint: "Equilíbrio ↑ · torcida divide", result: "A decisão evita promessas vazias, mas parte da arquibancada esperava mais.", effect: { lifeBalance: 9, fans: -5, mediaRelation: 3 }, flag: "preservou-liberdade" },
+      ],
+    },
+    {
+      key: "family-truth",
+      title: "Sua família contou uma versão que você nunca conheceu",
+      description: `Uma entrevista revela quanto custou manter vivo ${originEcho[state.playerStoryId]}. O relato muda detalhes que você repetiu durante anos.`,
+      choices: [
+        { label: "Ouvir tudo longe das câmeras", hint: "Moral e família ↑↑", result: "A conversa preenche silêncios antigos e muda sua relação com o passado.", effect: { morale: 13, lifeBalance: 9, leadership: 3 }, flag: "ouviu-a-verdade" },
+        { label: "Transformar a revelação numa homenagem pública", hint: "Torcida e alcance ↑↑", result: "A homenagem emociona o estádio e devolve o protagonismo a quem ficou nos bastidores.", effect: { fans: 10, followers: 180_000, charity: 5 }, flag: "homenagem-as-raizes" },
+        { label: "Pedir que a história não seja explorada", hint: "Privacidade ↑ · imprensa ↓", result: "A família aceita o limite e a pauta termina ali.", effect: { lifeBalance: 11, mediaRelation: -6, morale: 5 }, flag: "protegeu-a-familia" },
+      ],
+    },
+    {
+      key: "legacy-choice",
+      title: "Uma criança repetiu sua história palavra por palavra",
+      description: `Ela diz que começou a jogar por causa de “${story.title}”. Pela primeira vez, você percebe que sua origem já não pertence somente a você.`,
+      choices: [
+        { label: "Criar um projeto para novos jogadores", hint: "Dinheiro ↓↓ · legado ↑↑↑", result: "O primeiro treino reúne crianças que se reconhecem na sua trajetória.", effect: { money: -16, charity: 20, fans: 11, leadership: 7 }, flag: "projeto-da-origem" },
+        { label: "Convidar a criança para uma partida", hint: "Moral e torcida ↑↑", result: "O encontro dura minutos e vira uma memória para a vida inteira.", effect: { morale: 12, fans: 9, followers: 80_000 }, flag: "convite-ao-estadio" },
+        { label: "Escrever uma carta sem transformar em campanha", hint: "Equilíbrio e liderança ↑", result: "A resposta chega sem patrocinador, câmera ou comunicado.", effect: { lifeBalance: 8, leadership: 8, morale: 6 }, flag: "carta-sem-camera" },
+      ],
+    },
+  ];
+  const usedIds = new Set(state.storyLog.map((entry) => entry.decisionId).filter(Boolean));
+  const usedTitles = new Set(state.storyLog.map((entry) => entry.title));
+  const available = beats.filter((beat) => !usedIds.has(`story-followup-${beat.key}`) && !usedTitles.has(beat.title));
+  const pool = available.length ? available : beats;
+  return pick(pool, state.seed, state.season * 1931 + chapter * 71);
+}
+
 function buildStorySeasonDecision(
   state: GameState,
   context: { performanceScore: number; titleCount: number; club: Club },
@@ -2985,7 +3095,17 @@ function buildStorySeasonDecision(
       ],
     },
   };
-  return { ...base, ...decisions[state.playerStoryId] };
+  const signatureDecision = decisions[state.playerStoryId];
+  const signatureWasSeen = state.storyLog.some((entry) => entry.title === signatureDecision.title);
+  if (chapter === 1 && !signatureWasSeen) return { ...base, ...signatureDecision };
+  const followup = buildStoryFollowup(state, context, chapter);
+  return {
+    ...base,
+    id: `story-followup-${followup.key}-${state.season}-${chapter}`,
+    title: followup.title,
+    description: followup.description,
+    choices: followup.choices,
+  };
 }
 
 function buildPressConference(
@@ -6265,6 +6385,7 @@ export default function Home() {
           {
             season: affected.lastResult?.season ?? affected.season - 1,
             chapter: decision.chapter,
+            decisionId: decision.id,
             title: decision.title,
             choice: choice.label,
             result: choice.result,
