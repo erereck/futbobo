@@ -35,8 +35,8 @@ try {
     }
     $api = "https://api.github.com/repos/erereck/futbobo"
 
-    & git rev-parse $tag 2>$null
-    if ($LASTEXITCODE -ne 0) {
+    $existingTag = & git tag --list $tag
+    if (-not $existingTag) {
         & git tag -a $tag -m "Futbobo Android $version"
         if ($LASTEXITCODE -ne 0) { throw "Não foi possível criar a tag $tag." }
         & git push origin $tag
