@@ -1096,6 +1096,26 @@ test("coloca convocados de OVR baixo no banco e preserva o placar anterior", asy
   assert.match(page, /antes da sua entrada/);
 });
 
+test("entrega um APK offline sem criar uma segunda versão do jogo", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const android = await readFile(new URL("../app/android-app.ts", import.meta.url), "utf8");
+  const dialog = await readFile(new URL("../app/AndroidInstallDialog.tsx", import.meta.url), "utf8");
+  const capacitor = await readFile(new URL("../capacitor.config.ts", import.meta.url), "utf8");
+  const nextConfig = await readFile(new URL("../next.config.ts", import.meta.url), "utf8");
+  const packageJson = await readFile(new URL("../package.json", import.meta.url), "utf8");
+
+  assert.match(capacitor, /appId: "com\.futbobo\.game"/);
+  assert.match(capacitor, /webDir: "out"/);
+  assert.match(nextConfig, /CAPACITOR_BUILD/);
+  assert.match(android, /releases\/latest\/download\/futbobo\.apk/);
+  assert.match(android, /checkForAndroidUpdate/);
+  assert.match(android, /navigator\.onLine/);
+  assert.match(dialog, /Baixar APK offline/);
+  assert.match(dialog, /100% offline/);
+  assert.match(page, /<AndroidInstallDialog/);
+  assert.match(packageJson, /"android:publish"/);
+});
+
 test("modera o melhor da partida e transforma o destaque em coletiva", async () => {
   const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");

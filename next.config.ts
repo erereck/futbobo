@@ -2,9 +2,10 @@ import type { NextConfig } from "next";
 
 const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
 const isItchBuild = process.env.ITCH_BUILD === "true";
-const basePath = isGitHubPages ? "/futbobo" : "";
-const assetPrefix = isGitHubPages ? "/futbobo/" : isItchBuild ? "./" : "";
-const publicBasePath = isGitHubPages ? "/futbobo" : isItchBuild ? "." : "";
+const isCapacitorBuild = process.env.CAPACITOR_BUILD === "true";
+const basePath = isGitHubPages && !isCapacitorBuild ? "/futbobo" : "";
+const assetPrefix = isGitHubPages && !isCapacitorBuild ? "/futbobo/" : isItchBuild ? "./" : "";
+const publicBasePath = isGitHubPages && !isCapacitorBuild ? "/futbobo" : isItchBuild ? "." : "";
 
 const nextConfig: NextConfig = {
   output: "export",

@@ -48,6 +48,14 @@ import { VERIFIED_CLUB_ASSET_IDS } from "./verified-club-assets";
 import BotaoMatch from "./botao/BotaoMatch";
 import GoalReplay from "./botao/GoalReplay";
 import TeamCrest from "./botao/TeamCrest";
+import AndroidInstallDialog from "./AndroidInstallDialog";
+import {
+  checkForAndroidUpdate,
+  isAndroidDevice,
+  isNativeAndroid,
+  openAndroidDownload,
+  type AndroidRelease,
+} from "./android-app";
 import {
   buildFinalSetup,
   buildNationalMatchSetup,
@@ -5056,6 +5064,10 @@ export default function Home() {
   const [economyFeedback, setEconomyFeedback] = useState("");
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [installHelp, setInstallHelp] = useState(false);
+  const [androidInstallOpen, setAndroidInstallOpen] = useState(false);
+  const [androidRelease, setAndroidRelease] = useState<AndroidRelease | null>(null);
+  const [androidPhone, setAndroidPhone] = useState(false);
+  const [nativeAndroid, setNativeAndroid] = useState(false);
   const [selectedAchievementId, setSelectedAchievementId] = useState("");
   const [botaoMatchStarted, setBotaoMatchStarted] = useState(false);
   const [botaoSimulating, setBotaoSimulating] = useState(false);
@@ -5146,6 +5158,20 @@ export default function Home() {
     };
     window.addEventListener("beforeinstallprompt", captureInstallPrompt);
     return () => window.removeEventListener("beforeinstallprompt", captureInstallPrompt);
+  }, []);
+
+  useEffect(() => {
+    const native = isNativeAndroid();
+    queueMicrotask(() => {
+      setNativeAndroid(native);
+      setAndroidPhone(isAndroidDevice());
+    });
+    if (!native) return;
+    void checkForAndroidUpdate().then((release) => {
+      if (!release) return;
+      setAndroidRelease(release);
+      setAndroidInstallOpen(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -6750,8 +6776,9 @@ export default function Home() {
     vibrate();
   }
 
-  async function installWebApp() {
+  async function installWebShortcut() {
     if (!installPrompt) {
+      setAndroidInstallOpen(false);
       setInstallHelp(true);
       return;
     }
@@ -6759,6 +6786,10 @@ export default function Home() {
     const choice = await installPrompt.userChoice;
     setInstallPrompt(null);
     setToast(choice.outcome === "accepted" ? "Futbobo instalado no aparelho" : "Instalação cancelada");
+  }
+
+  function installWebApp() {
+    setAndroidInstallOpen(true);
   }
 
   async function shareCareer() {
@@ -7006,6 +7037,19 @@ export default function Home() {
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       {toast && <div className="toast" role="status">{toast}</div>}
+      {androidInstallOpen && (
+        <AndroidInstallDialog
+          native={nativeAndroid}
+          release={androidRelease}
+          onClose={() => setAndroidInstallOpen(false)}
+          onDownload={() => {
+            void openAndroidDownload(androidRelease?.url);
+          }}
+          onWebInstall={nativeAndroid ? undefined : () => {
+            void installWebShortcut();
+          }}
+        />
+      )}
       {game.phase === "season-result" && game.pendingStoryDecision && (
         <div className="modal-backdrop story-decision-backdrop" role="presentation">
           <section className={`story-decision-modal story-${playerStoryById(game.playerStoryId).tone}`} role="dialog" aria-modal="true" aria-labelledby="story-decision-title">
@@ -7290,7 +7334,7 @@ export default function Home() {
               )}
               <nav className="welcome-utilities" aria-label="Ferramentas">
                 <button type="button" onClick={() => setSettingsOpen(true)}><b>⚙</b><span>Configurações</span></button>
-                <button type="button" onClick={installWebApp}><b>▣</b><span>Instalar</span></button>
+                <button type="button" onClick={installWebApp}><b>{nativeAndroid ? "↻" : "▣"}</b><span>{nativeAndroid ? "Atualizar" : androidPhone ? "Baixar APK" : "Instalar"}</span></button>
                 <button type="button" aria-label="Ver novidades do jogo" onClick={() => { setUpdateNoticePage("current"); setUpdateNoticeOpen(true); }}><b>⚽</b><span>Novidades</span></button>
               </nav>
               {installHelp && <div className="install-help">Use o menu do navegador e toque em <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>.</div>}

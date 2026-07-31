@@ -1,6 +1,6 @@
 {
   "name": "futbobo",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -8,6 +8,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "android:prepare": "node scripts/prepare-android.mjs",
+    "android:open": "npx cap open android",
+    "android:apk": "npm run android:prepare && cd android && gradlew assembleRelease",
+    "android:publish": "powershell -ExecutionPolicy Bypass -File scripts/publish-android.ps1",
     "start": "next start",
     "sync:assets": "node scripts/sync-football-assets.mjs && node scripts/optimize-football-assets.mjs",
     "sync:assets:missing": "node scripts/sync-football-assets.mjs --missing && node scripts/optimize-football-assets.mjs",
@@ -16,11 +20,15 @@
     "lint": "eslint app next.config.ts tests eslint.config.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/core": "^8.4.2",
     "next": "16.2.11",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.2",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

@@ -42,6 +42,11 @@ next-env.d.ts
 /outputs/
 /work/
 
+# Android signing material (never commit)
+/.android-signing/
+*.jks
+*.keystore
+
 # local development assistants
 /.codex-dev-*.log
 /.codex-remote-attachments/
