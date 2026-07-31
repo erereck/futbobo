@@ -390,15 +390,20 @@ export function drawReplayFrame(
   setup: BotaoMatchSetup,
   replay: BotaoGoalReplay,
   frameIndex: number,
+  blend = 0,
 ) {
   const frame = replay.frames[Math.max(0, Math.min(replay.frames.length - 1, frameIndex))];
   if (!frame) return;
+  const nextFrame = replay.frames[Math.min(replay.frames.length - 1, frameIndex + 1)] ?? frame;
+  const interpolation = Math.max(0, Math.min(1, blend));
   ctx.clearRect(-VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT);
   drawField(ctx, setup.userTeam.primary, setup.cpuTeam.primary);
   const renderedBodies = replay.bodies.map((body, index): BotaoBody => ({
     ...body,
-    x: frame.positions[index * 2] ?? 0,
-    y: frame.positions[index * 2 + 1] ?? 0,
+    x: (frame.positions[index * 2] ?? 0) +
+      ((nextFrame.positions[index * 2] ?? frame.positions[index * 2] ?? 0) - (frame.positions[index * 2] ?? 0)) * interpolation,
+    y: (frame.positions[index * 2 + 1] ?? 0) +
+      ((nextFrame.positions[index * 2 + 1] ?? frame.positions[index * 2 + 1] ?? 0) - (frame.positions[index * 2 + 1] ?? 0)) * interpolation,
     vx: 0,
     vy: 0,
     mass: body.kind === "ball" ? 0.4 : 2,

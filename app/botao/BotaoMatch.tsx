@@ -52,8 +52,10 @@ const CPU_THINK_MS = 430;
 const PENALTY_PAUSE_MS = 1100;
 const USER_DECISION_SECONDS = 10;
 const USER_WARNING_SECONDS = 3;
-const REPLAY_SAMPLE_MS = 90;
-const REPLAY_MAX_FRAMES = 48;
+const REPLAY_SAMPLE_MS = 100;
+const REPLAY_MAX_FRAMES_PER_TURN = 36;
+const REPLAY_MAX_TURNS = 3;
+const REPLAY_TURN_GAP_MS = 140;
 const SIDES: BotaoSide[] = ["user", "cpu"];
 
 type Flash = { text: string; tone: "goal" | "info" | "bad" } | null;
@@ -118,10 +120,12 @@ export default function BotaoMatch({
   const goalFlashRef = useRef(0);
   const goalFlashSideRef = useRef<BotaoSide | null>(null);
   const replayBufferRef = useRef<BotaoReplayFrame[]>([]);
+  const replayPreviousTurnsRef = useRef<BotaoReplayFrame[][]>([]);
   const goalReplaysRef = useRef<BotaoGoalReplay[]>([]);
   const replayShotStartedAtRef = useRef(0);
   const replayLastSampleRef = useRef(0);
   const replayWasResolvingRef = useRef(false);
+  const replayGoalCapturedRef = useRef(false);
   // Timers guardados em ref: efeitos sem lista de dependências rodam a cada
   // render, e limpar no cleanup cancelaria a transição no meio do caminho.
   const timersRef = useRef<{ goal: number | null; cpu: number | null; penalty: number | null; finish: number | null }>({
@@ -224,14 +228,28 @@ export default function BotaoMatch({
         if (event.type === "goal") {
           const replayNow = performance.now();
           const finalFrame = replayFrame(machine, replayNow - replayShotStartedAtRef.current);
-          const frames = [...replayBufferRef.current, finalFrame]
+          const currentTurn = [...replayBufferRef.current, finalFrame]
             .filter((frame, index, list) => index === 0 || frame.at > list[index - 1].at)
-            .slice(-REPLAY_MAX_FRAMES);
+            .slice(-REPLAY_MAX_FRAMES_PER_TURN);
+          const turns = [...replayPreviousTurnsRef.current.slice(-(REPLAY_MAX_TURNS - 1)), currentTurn]
+            .filter((turn) => turn.length >= 2);
+          const turnStarts: number[] = [];
+          const frames: BotaoReplayFrame[] = [];
+          let replayCursor = 0;
+          turns.forEach((turn) => {
+            const firstAt = turn[0].at;
+            turnStarts.push(replayCursor);
+            turn.forEach((frame) => {
+              frames.push({ ...frame, at: replayCursor + frame.at - firstAt });
+            });
+            replayCursor = frames.at(-1)!.at + REPLAY_TURN_GAP_MS;
+          });
+          replayGoalCapturedRef.current = true;
           if (frames.length >= 2) {
-            const firstAt = frames[0].at;
             goalReplaysRef.current.push({
               timelineIndex: Math.max(0, machine.timeline.length - 1),
-              duration: Math.max(1, frames.at(-1)!.at - firstAt),
+              duration: Math.max(1, frames.at(-1)!.at),
+              turnStarts,
               bodies: machine.bodies
                 .filter((body) => body.kind !== "post")
                 .map((body) => ({
@@ -242,7 +260,7 @@ export default function BotaoMatch({
                   radius: Math.round(body.radius * 10) / 10,
                   isUserPlayer: body.isUserPlayer,
                 })),
-              frames: frames.map((frame) => ({ ...frame, at: frame.at - firstAt })),
+              frames,
             });
           }
           const mine = event.side === "user";
@@ -286,9 +304,20 @@ export default function BotaoMatch({
         }
         if (replayLastSampleRef.current === 0 || time - replayLastSampleRef.current >= REPLAY_SAMPLE_MS) {
           replayBufferRef.current.push(replayFrame(state, time - replayShotStartedAtRef.current));
-          while (replayBufferRef.current.length > REPLAY_MAX_FRAMES) replayBufferRef.current.shift();
+          while (replayBufferRef.current.length > REPLAY_MAX_FRAMES_PER_TURN) replayBufferRef.current.shift();
           replayLastSampleRef.current = time;
         }
+      } else if (replayWasResolvingRef.current) {
+        if (replayGoalCapturedRef.current) {
+          replayPreviousTurnsRef.current = [];
+          replayGoalCapturedRef.current = false;
+        } else if (replayBufferRef.current.length >= 2) {
+          replayPreviousTurnsRef.current.push(replayBufferRef.current.map((frame) => ({ ...frame })));
+          while (replayPreviousTurnsRef.current.length > REPLAY_MAX_TURNS - 1) {
+            replayPreviousTurnsRef.current.shift();
+          }
+        }
+        replayBufferRef.current = [];
       }
       replayWasResolvingRef.current = resolvingForReplay;
 

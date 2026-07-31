@@ -1051,13 +1051,18 @@ test("grava replays vetoriais leves dos gols sem reexecutar a partida", async ()
   assert.match(types, /export type BotaoGoalReplay/);
   assert.match(types, /positions: number\[\]/);
   assert.match(types, /replays\?: BotaoGoalReplay\[\]/);
-  assert.match(match, /const REPLAY_SAMPLE_MS = 90/);
-  assert.match(match, /const REPLAY_MAX_FRAMES = 48/);
+  assert.match(match, /const REPLAY_SAMPLE_MS = 100/);
+  assert.match(match, /const REPLAY_MAX_FRAMES_PER_TURN = 36/);
+  assert.match(match, /const REPLAY_MAX_TURNS = 3/);
+  assert.match(match, /replayPreviousTurnsRef/);
+  assert.match(match, /turnStarts/);
   assert.match(match, /Math\.round\(body\.x\)/);
   assert.match(match, /goalReplaysRef\.current/);
   assert.match(match, /replays: goalReplaysRef\.current/);
   assert.match(replay, /requestAnimationFrame/);
-  assert.match(replay, /sem vídeo e sem reprocessar a partida/);
+  assert.match(replay, /Os dois toques anteriores e o gol/);
+  assert.match(replay, /const blend =/);
+  assert.match(replay, /LANCE \{activeTurn \+ 1\}/);
   assert.match(render, /export function drawReplayFrame/);
   assert.ok(
     render.indexOf("drawDisc(ctx, rendered", render.indexOf("export function drawReplayFrame"))

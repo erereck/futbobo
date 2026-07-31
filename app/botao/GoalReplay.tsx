@@ -16,6 +16,7 @@ export default function GoalReplay({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [playing, setPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [activeTurn, setActiveTurn] = useState(0);
   const playbackRef = useRef({ startedAt: 0, offset: 0 });
 
   useEffect(() => {
@@ -36,6 +37,16 @@ export default function GoalReplay({
         if (replay.frames[index].at > replayTime) break;
         frameIndex = index;
       }
+      const currentFrame = replay.frames[frameIndex];
+      const nextFrame = replay.frames[Math.min(replay.frames.length - 1, frameIndex + 1)] ?? currentFrame;
+      const frameDuration = Math.max(1, nextFrame.at - currentFrame.at);
+      const blend = Math.max(0, Math.min(1, (replayTime - currentFrame.at) / frameDuration));
+      const turnStarts = replay.turnStarts?.length ? replay.turnStarts : [0];
+      let turnIndex = 0;
+      for (let index = 1; index < turnStarts.length; index += 1) {
+        if (turnStarts[index] > replayTime) break;
+        turnIndex = index;
+      }
       const rect = canvas.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const width = Math.round(rect.width * dpr);
@@ -48,8 +59,9 @@ export default function GoalReplay({
       if (!context) return;
       const scale = (rect.width / VIEW_WIDTH) * dpr;
       context.setTransform(scale, 0, 0, scale, VIEW_PAD_X * scale, VIEW_PAD_Y * scale);
-      drawReplayFrame(context, setup, replay, frameIndex);
+      drawReplayFrame(context, setup, replay, frameIndex, blend);
       setProgress(Math.round((replayTime / duration) * 100));
+      setActiveTurn(turnIndex);
     };
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
@@ -82,13 +94,14 @@ export default function GoalReplay({
       <div className="goal-replay-canvas">
         <canvas ref={canvasRef} style={{ aspectRatio: `${VIEW_WIDTH} / ${VIEW_HEIGHT}` }} />
         <span className="goal-replay-live">REPLAY</span>
+        <span className="goal-replay-turn">LANCE {activeTurn + 1}/{replay.turnStarts?.length ?? 1}</span>
       </div>
       <div className="goal-replay-controls">
         <button type="button" onClick={togglePlayback}>{playing ? "Pausar" : "Reproduzir"}</button>
         <span><i style={{ width: `${progress}%` }} /></span>
         <button type="button" onClick={restart}>↻</button>
       </div>
-      <small>Somente posições vetoriais do lance foram salvas — sem vídeo e sem reprocessar a partida.</small>
+      <small>Os dois toques anteriores e o gol foram reconstruídos apenas com coordenadas — sem vídeo e sem tempo de espera.</small>
     </section>
   );
 }

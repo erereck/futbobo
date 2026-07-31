@@ -144,6 +144,8 @@ export type BotaoReplayFrame = {
 export type BotaoGoalReplay = {
   timelineIndex: number;
   duration: number;
+  /** Instante em que cada uma das até três jogadas começa no replay compacto. */
+  turnStarts?: number[];
   bodies: BotaoReplayBody[];
   frames: BotaoReplayFrame[];
 };
