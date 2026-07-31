@@ -52,10 +52,11 @@ const CPU_THINK_MS = 430;
 const PENALTY_PAUSE_MS = 1100;
 const USER_DECISION_SECONDS = 10;
 const USER_WARNING_SECONDS = 3;
-const REPLAY_SAMPLE_MS = 100;
-const REPLAY_MAX_FRAMES_PER_TURN = 36;
+const REPLAY_SAMPLE_MS = 80;
+const REPLAY_MAX_FRAMES_PER_TURN = 42;
 const REPLAY_MAX_TURNS = 3;
 const REPLAY_TURN_GAP_MS = 140;
+const REPLAY_COORDINATE_SCALE = 4;
 const SIDES: BotaoSide[] = ["user", "cpu"];
 
 type Flash = { text: string; tone: "goal" | "info" | "bad" } | null;
@@ -84,7 +85,10 @@ function replayFrame(state: BotaoMatchState, at: number): BotaoReplayFrame {
     at: Math.max(0, Math.round(at)),
     positions: state.bodies
       .filter((body) => body.kind !== "post")
-      .flatMap((body) => [Math.round(body.x), Math.round(body.y)]),
+      .flatMap((body) => [
+        Math.round(body.x * REPLAY_COORDINATE_SCALE),
+        Math.round(body.y * REPLAY_COORDINATE_SCALE),
+      ]),
   };
 }
 
@@ -249,6 +253,7 @@ export default function BotaoMatch({
             goalReplaysRef.current.push({
               timelineIndex: Math.max(0, machine.timeline.length - 1),
               duration: Math.max(1, frames.at(-1)!.at),
+              coordinateScale: REPLAY_COORDINATE_SCALE,
               turnStarts,
               bodies: machine.bodies
                 .filter((body) => body.kind !== "post")

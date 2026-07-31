@@ -396,14 +396,15 @@ export function drawReplayFrame(
   if (!frame) return;
   const nextFrame = replay.frames[Math.min(replay.frames.length - 1, frameIndex + 1)] ?? frame;
   const interpolation = Math.max(0, Math.min(1, blend));
+  const coordinateScale = Math.max(1, replay.coordinateScale ?? 1);
   ctx.clearRect(-VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT);
   drawField(ctx, setup.userTeam.primary, setup.cpuTeam.primary);
   const renderedBodies = replay.bodies.map((body, index): BotaoBody => ({
     ...body,
-    x: (frame.positions[index * 2] ?? 0) +
-      ((nextFrame.positions[index * 2] ?? frame.positions[index * 2] ?? 0) - (frame.positions[index * 2] ?? 0)) * interpolation,
-    y: (frame.positions[index * 2 + 1] ?? 0) +
-      ((nextFrame.positions[index * 2 + 1] ?? frame.positions[index * 2 + 1] ?? 0) - (frame.positions[index * 2 + 1] ?? 0)) * interpolation,
+    x: ((frame.positions[index * 2] ?? 0) +
+      ((nextFrame.positions[index * 2] ?? frame.positions[index * 2] ?? 0) - (frame.positions[index * 2] ?? 0)) * interpolation) / coordinateScale,
+    y: ((frame.positions[index * 2 + 1] ?? 0) +
+      ((nextFrame.positions[index * 2 + 1] ?? frame.positions[index * 2 + 1] ?? 0) - (frame.positions[index * 2 + 1] ?? 0)) * interpolation) / coordinateScale,
     vx: 0,
     vy: 0,
     mass: body.kind === "ball" ? 0.4 : 2,

@@ -165,6 +165,69 @@ export function pickNationalOpponent(args: {
 /** Regras usadas na final da carreira. Preset único para todo mundo jogar a mesma coisa. */
 export const CAREER_FINAL_RULES: BotaoRules = { ...DEFAULT_BOTAO_RULES };
 
+export type BotaoNationalTier = "none" | "sub17" | "sub20" | "olympic" | "main";
+
+/** Titularidade segue o nível da seleção e da categoria, sem depender de sorte. */
+export function nationalMatchRole(
+  overall: number,
+  country: Country,
+  tier: BotaoNationalTier,
+  captain = false,
+): "starter" | "reserve" {
+  if (captain) return "starter";
+  const seniorTier = tier === "main" || tier === "none";
+  const tierBase = seniorTier ? 80 : tier === "olympic" ? 75 : tier === "sub20" ? 69 : 63;
+  const strengthDemand = Math.max(0, country.strength - 3) * (seniorTier ? 2 : 1);
+  return overall >= tierBase + strengthDemand ? "starter" : "reserve";
+}
+
+function reserveEntry(args: {
+  seed: number;
+  season: number;
+  competitionId: string;
+  stageName: string;
+  userTeam: BotaoTeam;
+  cpuTeam: BotaoTeam;
+  rules: BotaoRules;
+}) {
+  const rng = createRng(hashSeed(args.seed, args.season, args.competitionId, args.stageName, "reserve-entry"));
+  const goalRoll = rng.next();
+  const totalGoals = goalRoll < 0.42 ? 0 : goalRoll < 0.82 ? 1 : 2;
+  const score = { user: 0, cpu: 0 };
+  const timeline: BotaoTimelineEntry[] = [];
+  const userGoalChance = args.userTeam.strength / Math.max(1, args.userTeam.strength + args.cpuTeam.strength);
+
+  for (let index = 0; index < totalGoals; index += 1) {
+    const side = rng.next() < userGoalChance ? "user" : "cpu";
+    score[side] += 1;
+    const elapsedRatio = totalGoals === 1
+      ? rng.range(0.18, 0.82)
+      : 0.2 + index * 0.48 + rng.range(0, 0.12);
+    const clock = Math.round(args.rules.halfSeconds * (1 - Math.min(0.88, elapsedRatio)));
+    const scorer = `#${rng.pick([7, 8, 9, 10, 11, 17])}`;
+    timeline.push({
+      period: 1,
+      clock,
+      side,
+      kind: "goal",
+      scorer,
+      assist: null,
+      byUser: false,
+      beforePlayerEntry: true,
+      text: `Gol de ${scorer}`,
+    });
+  }
+
+  const hasMultiplePeriods = args.rules.halves > 1;
+  return {
+    role: "reserve" as const,
+    period: hasMultiplePeriods ? Math.min(2, args.rules.halves) : 1,
+    clock: hasMultiplePeriods ? args.rules.halfSeconds : args.rules.halfSeconds / 2,
+    score,
+    timeline,
+  };
+}
+
 export function buildFinalSetup(args: {
   seed: number;
   season: number;
@@ -218,6 +281,7 @@ export function buildNationalMatchSetup(args: {
   playerNumber: number;
   position: PositionKey;
   overall: number;
+  playerRole?: "starter" | "reserve";
   ratings?: { power?: number; control?: number };
   rules?: Partial<BotaoRules>;
 }): BotaoMatchSetup {
@@ -225,6 +289,7 @@ export function buildNationalMatchSetup(args: {
     botaoTeamFromCountry(args.country),
     botaoTeamFromCountry(args.opponent),
   );
+  const rules = { ...CAREER_FINAL_RULES, ...args.rules };
   return {
     matchId: `${args.competitionId}-${args.stageName}-${args.season}-${args.country.id}`,
     seed: hashSeed(args.seed, args.season, args.competitionId, args.stageName),
@@ -243,7 +308,18 @@ export function buildNationalMatchSetup(args: {
     userTeam: kits.user,
     cpuTeam: kits.cpu,
     difficulty: difficultyFromStrength(kits.cpu.strength),
-    rules: { ...CAREER_FINAL_RULES, ...args.rules },
+    rules,
+    entry: args.playerRole === "reserve"
+      ? reserveEntry({
+          seed: args.seed,
+          season: args.season,
+          competitionId: args.competitionId,
+          stageName: args.stageName,
+          userTeam: kits.user,
+          cpuTeam: kits.cpu,
+          rules,
+        })
+      : undefined,
   };
 }
 

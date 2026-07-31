@@ -1056,12 +1056,13 @@ test("grava replays vetoriais leves dos gols sem reexecutar a partida", async ()
   assert.match(types, /export type BotaoGoalReplay/);
   assert.match(types, /positions: number\[\]/);
   assert.match(types, /replays\?: BotaoGoalReplay\[\]/);
-  assert.match(match, /const REPLAY_SAMPLE_MS = 100/);
-  assert.match(match, /const REPLAY_MAX_FRAMES_PER_TURN = 36/);
+  assert.match(match, /const REPLAY_SAMPLE_MS = 80/);
+  assert.match(match, /const REPLAY_MAX_FRAMES_PER_TURN = 42/);
   assert.match(match, /const REPLAY_MAX_TURNS = 3/);
+  assert.match(match, /const REPLAY_COORDINATE_SCALE = 4/);
   assert.match(match, /replayPreviousTurnsRef/);
   assert.match(match, /turnStarts/);
-  assert.match(match, /Math\.round\(body\.x\)/);
+  assert.match(match, /Math\.round\(body\.x \* REPLAY_COORDINATE_SCALE\)/);
   assert.match(match, /goalReplaysRef\.current/);
   assert.match(match, /replays: goalReplaysRef\.current/);
   assert.match(replay, /requestAnimationFrame/);
@@ -1076,6 +1077,23 @@ test("grava replays vetoriais leves dos gols sem reexecutar a partida", async ()
   );
   assert.match(page, /Ver replay/);
   assert.match(standalone, /Ver replay/);
+});
+
+test("coloca convocados de OVR baixo no banco e preserva o placar anterior", async () => {
+  const types = await readFile(new URL("../app/botao/types.ts", import.meta.url), "utf8");
+  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
+  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(types, /export type BotaoMatchEntry/);
+  assert.match(types, /beforePlayerEntry\?: boolean/);
+  assert.match(adapter, /export function nationalMatchRole/);
+  assert.match(adapter, /function reserveEntry/);
+  assert.match(adapter, /args\.rules\.halfSeconds \/ 2/);
+  assert.match(engine, /period: setup\.entry\?\.period \?\? 1/);
+  assert.match(engine, /timeline: setup\.entry\?\.timeline/);
+  assert.match(page, /VOCÊ COMEÇA NO BANCO/);
+  assert.match(page, /antes da sua entrada/);
 });
 
 test("modera o melhor da partida e transforma o destaque em coletiva", async () => {

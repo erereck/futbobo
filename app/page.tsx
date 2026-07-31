@@ -55,6 +55,7 @@ import {
   finalOutcome,
   formatGoalMinute,
   isMatchGoal,
+  nationalMatchRole,
   pickFinalOpponent,
   pickNationalOpponent,
   ratingsFromAttributes,
@@ -117,6 +118,7 @@ type PendingBotaoMatch = {
   season: number;
   rngChampion: boolean;
   originalStage: string;
+  nationalTier?: NationalTier;
   previousOpponentIds?: string[];
 };
 
@@ -4047,6 +4049,7 @@ function simulateSeason(
           season: affected.season,
           rngChampion: nationalHistoryAdd.champion,
           originalStage: nationalHistoryAdd.stage,
+          nationalTier: nationalHistoryAdd.tier,
           previousOpponentIds: [],
         });
       }
@@ -5271,18 +5274,25 @@ export default function Home() {
       penaltyRounds: appSettings.botaoPenaltyRounds ?? 5,
     };
     if (match.source === "national") {
+      const country = countryById(state.nationality);
       return buildNationalMatchSetup({
         seed: state.seed,
         season: match.season,
         competitionId: match.competitionId,
         competitionName: match.competitionName,
         stageName: match.stageName,
-        country: countryById(state.nationality),
+        country,
         opponent: countryById(match.opponentId),
         playerName: state.name,
         playerNumber: state.number,
         position: state.position,
         overall: state.overall,
+        playerRole: nationalMatchRole(
+          state.overall,
+          country,
+          match.nationalTier ?? state.nationalCategory,
+          state.nationalCaptain,
+        ),
         ratings,
         rules,
       });
@@ -6834,8 +6844,19 @@ export default function Home() {
           </div>
         </div>
         <div className="botao-card botao-career-player">
-          <span>SEU BOTÃO</span>
+          <span>{currentBotaoSetup.entry ? "VOCÊ COMEÇA NO BANCO" : "SEU BOTÃO"}</span>
           <strong>#{game.number} · {positionByKey(game.position).name} · {game.overall} OVR</strong>
+          {currentBotaoSetup.entry && (
+            <div className="botao-reserve-entry">
+              <b>ENTRA AOS 45&apos;</b>
+              <p>
+                Seu OVR ainda está abaixo do nível de titularidade desta seleção. Você assume o botão
+                na metade final da partida{currentBotaoSetup.entry.score.user + currentBotaoSetup.entry.score.cpu > 0
+                  ? ` com o placar em ${currentBotaoSetup.entry.score.user} × ${currentBotaoSetup.entry.score.cpu}.`
+                  : " com o jogo ainda empatado."}
+              </p>
+            </div>
+          )}
         </div>
         <div className="botao-actions">
           <button type="button" className="botao-primary" onClick={startCurrentBotaoMatch}>
@@ -6864,7 +6885,19 @@ export default function Home() {
           playerNumber: game.number,
           position: game.position,
           overall: game.overall,
+          playerRole: nationalMatchRole(
+            game.overall,
+            countryById(game.nationality),
+            match.nationalTier ?? game.nationalCategory,
+            game.nationalCaptain,
+          ),
           ratings: ratingsFromAttributes(game.attributes, game.overall),
+          rules: {
+            goalLimit: appSettings.botaoGoalLimit ?? 3,
+            halfSeconds: appSettings.botaoHalfSeconds ?? 120,
+            extraSeconds: appSettings.botaoExtraSeconds ?? 45,
+            penaltyRounds: appSettings.botaoPenaltyRounds ?? 5,
+          },
         })
       : buildFinalSetup({
           seed: game.seed,
@@ -6915,8 +6948,8 @@ export default function Home() {
               {result.timeline.map((entry, timelineIndex) => ({ entry, timelineIndex })).filter(({ entry }) => isMatchGoal(entry)).map(({ entry, timelineIndex }) => {
                 const replayIndex = result.replays?.findIndex((replay) => replay.timelineIndex === timelineIndex) ?? -1;
                 return (
-                  <div key={`${entry.clock}-${timelineIndex}`} className={`botao-result-line ${entry.byUser ? "botao-result-line-you" : ""}`}>
-                    <span className="botao-result-goal-copy"><b>{entry.text}</b><span>{entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr} · {formatGoalMinute(entry, setup.rules)}</span></span>
+                  <div key={`${entry.clock}-${timelineIndex}`} className={`botao-result-line ${entry.byUser ? "botao-result-line-you" : ""} ${entry.beforePlayerEntry ? "botao-result-line-before-entry" : ""}`}>
+                    <span className="botao-result-goal-copy"><b>{entry.text}</b><span>{entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr} · {formatGoalMinute(entry, setup.rules)}{entry.beforePlayerEntry ? " · antes da sua entrada" : ""}</span></span>
                     {replayIndex >= 0 && <button type="button" onClick={() => setActiveGoalReplay(activeGoalReplay === replayIndex ? null : replayIndex)}>{activeGoalReplay === replayIndex ? "Fechar replay" : "Ver replay"}</button>}
                   </div>
                 );
@@ -6975,7 +7008,10 @@ export default function Home() {
       {toast && <div className="toast" role="status">{toast}</div>}
       {game.phase === "season-result" && game.pendingStoryDecision && (
         <div className="modal-backdrop story-decision-backdrop" role="presentation">
-          <section className="story-decision-modal" role="dialog" aria-modal="true" aria-labelledby="story-decision-title">
+          <section className={`story-decision-modal story-${playerStoryById(game.playerStoryId).tone}`} role="dialog" aria-modal="true" aria-labelledby="story-decision-title">
+            <div className="story-decision-chapter-track" aria-hidden="true">
+              {Array.from({ length: 8 }, (_, index) => <i key={index} className={index < game.storyLog.length + 1 ? "active" : ""} />)}
+            </div>
             <header>
               <span className="story-decision-icon">{game.pendingStoryDecision.icon}</span>
               <div>
@@ -6987,11 +7023,12 @@ export default function Home() {
             <div className="story-decision-choices">
               {game.pendingStoryDecision.choices.map((choice, index) => (
                 <button type="button" key={choice.label} onClick={() => resolveStoryDecision(index)}>
+                  <em>{String(index + 1).padStart(2, "0")}</em>
                   <span><strong>{choice.label}</strong><small>{choice.hint}</small></span><b>→</b>
                 </button>
               ))}
             </div>
-            <footer>Esta decisão vira parte permanente da história de {game.name}.</footer>
+            <footer><b>◆</b><span>Esta decisão vira parte permanente da história de {game.name}.</span></footer>
           </section>
         </div>
       )}

@@ -78,20 +78,6 @@ export const DEFAULT_BOTAO_RULES: BotaoRules = {
   clockScale: 1,
 };
 
-export type BotaoMatchSetup = {
-  matchId: string;
-  seed: number;
-  competitionName: string;
-  stageName: string;
-  neutralVenue: boolean;
-  userIsHost: boolean;
-  player: BotaoPlayer;
-  userTeam: BotaoTeam;
-  cpuTeam: BotaoTeam;
-  difficulty: BotaoDifficulty;
-  rules: BotaoRules;
-};
-
 export type BotaoTimelineKind =
   | "goal"
   | "own-goal"
@@ -109,7 +95,33 @@ export type BotaoTimelineEntry = {
   assist: string | null;
   /** true quando foi o botão do próprio jogador da carreira. */
   byUser: boolean;
+  /** Lance ocorrido antes de um jogador reserva entrar em campo. */
+  beforePlayerEntry?: boolean;
   text: string;
+};
+
+export type BotaoMatchEntry = {
+  role: "reserve";
+  period: number;
+  clock: number;
+  score: { user: number; cpu: number };
+  timeline: BotaoTimelineEntry[];
+};
+
+export type BotaoMatchSetup = {
+  matchId: string;
+  seed: number;
+  competitionName: string;
+  stageName: string;
+  neutralVenue: boolean;
+  userIsHost: boolean;
+  player: BotaoPlayer;
+  userTeam: BotaoTeam;
+  cpuTeam: BotaoTeam;
+  difficulty: BotaoDifficulty;
+  rules: BotaoRules;
+  /** Quando presente, a partida começa com o jogador saindo do banco. */
+  entry?: BotaoMatchEntry;
 };
 
 export type BotaoDecision = "goal-limit" | "regulation" | "extra-time" | "penalties";
@@ -144,6 +156,8 @@ export type BotaoReplayFrame = {
 export type BotaoGoalReplay = {
   timelineIndex: number;
   duration: number;
+  /** Escala das coordenadas inteiras. 4 = precisão de um quarto de unidade. */
+  coordinateScale?: number;
   /** Instante em que cada uma das até três jogadas começa no replay compacto. */
   turnStarts?: number[];
   bodies: BotaoReplayBody[];
