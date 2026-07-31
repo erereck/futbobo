@@ -64,7 +64,7 @@ try {
         }
     }
     $uploadUrl = ($release.upload_url -replace "\{\?name,label\}", "")
-    Invoke-RestMethod -Method Post -Headers $headers -ContentType "application/vnd.android.package-archive" -InFile $apkOutput -Uri "$uploadUrl?name=futbobo.apk" | Out-Null
+    Invoke-RestMethod -Method Post -Headers $headers -ContentType "application/vnd.android.package-archive" -InFile $apkOutput -Uri "${uploadUrl}?name=futbobo.apk" | Out-Null
     Write-Output "Futbobo Android $version publicado em $($release.html_url)"
 } finally {
     Pop-Location
