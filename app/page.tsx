@@ -44,6 +44,7 @@ import {
 } from "./mega-expansion";
 import { CAREER_DRAMA_EVENTS } from "./career-drama";
 import { BACKSTAGE_EVENTS } from "./backstage-saga";
+import { FUTBOBO_MOMENTS } from "./futbobo-moments";
 import { VERIFIED_CLUB_ASSET_IDS } from "./verified-club-assets";
 import BotaoMatch from "./botao/BotaoMatch";
 import GoalReplay from "./botao/GoalReplay";
@@ -752,7 +753,7 @@ function applyCustomClubDefinitions(definitions: CustomClubDefinition[]) {
 
 const RANDOM_NAME_FIRST_PART = ["Lionel", "Rayan", "Enzo", "Thiago", "Neyvan", "Kaoru", "Joanderson", "Lauta", "Marlon", "Kenji", "Noah", "Zico", "Mateus", "Santi", "Davi", "Keirrison", "Rivaldo", "Gael", "Axl", "Juninho"];
 const RANDOM_NAME_LAST_PART = ["Kishimoto", "Ferreyra", "Montiel", "da Colina", "Okafor", "Sakamoto", "Bensaid", "van Bronze", "do Valle", "Moretti", "Zanetti", "Nakamura", "Pereirinha", "Alcazar", "Matsubara", "de la Vega", "dos Pampas", "Silveirinha", "Kronberg", "Batistuta Jr"];
-const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS];
+const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS];
 const FICTIONAL_FINALISTS = [
   "Mateo Alcázar",
   "Noah van Dijk",
@@ -2460,6 +2461,10 @@ function selectNextEvent(state: GameState, salt: number) {
   const events = eligibleEvents(state);
   const triggeredRareEvents = events.filter((event) => event.rareChance !== undefined);
   if (triggeredRareEvents.length) return pick(triggeredRareEvents, state.seed + state.season, salt).id;
+  const unseenFutboboMoments = events.filter((event) => event.id.startsWith("funny-") && !state.seenEvents.includes(event.id));
+  if (unseenFutboboMoments.length && seeded(state.seed, state.season * 2137 + salt) < 0.22) {
+    return pick(unseenFutboboMoments, state.seed + state.season, salt + 73).id;
+  }
   const unseen = events.filter((event) => !state.seenEvents.includes(event.id));
   return pick(unseen.length ? unseen : events, state.seed + state.season, salt)?.id ?? "extra-training";
 }

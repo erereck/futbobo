@@ -1117,6 +1117,7 @@ test("entrega um APK offline sem criar uma segunda versão do jogo", async () =>
   assert.match(capacitor, /webDir: "out"/);
   assert.match(nextConfig, /CAPACITOR_BUILD/);
   assert.match(android, /releases\/latest\/download\/futbobo\.apk/);
+  assert.match(android, /ANDROID_APP_VERSION = packageJson\.version/);
   assert.match(android, /checkForAndroidUpdate/);
   assert.match(android, /navigator\.onLine/);
   assert.match(dialog, /Baixar APK offline/);
@@ -1140,6 +1141,22 @@ test("modera o melhor da partida e transforma o destaque em coletiva", async () 
   assert.match(page, /function answerPressConference/);
   assert.match(page, /COLETIVA · PERGUNTA/);
   assert.match(styles, /\.press-conference-backdrop/);
+});
+
+test("cria momentos engraçados e específicos com espaço próprio na carreira", async () => {
+  const moments = await readFile(new URL("../app/futbobo-moments.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const ids = [...moments.matchAll(/id: "(funny-[^"]+)"/g)].map((match) => match[1]);
+
+  assert.equal(ids.length, 22, "o pacote precisa manter variedade suficiente para várias carreiras");
+  assert.equal(new Set(ids).size, ids.length, "cada momento precisa ter identidade própria");
+  assert.equal((moments.match(/oneTime: true/g) ?? []).length, ids.length, "momentos específicos não devem se repetir na mesma carreira");
+  assert.match(moments, /Seu companheiro quer abrir um canal de gameplay com você/);
+  assert.match(moments, /O papagaio do vizinho aprendeu sua comemoração/);
+  assert.match(moments, /campeonato de futebol de botão na concentração/);
+  assert.match(page, /import \{ FUTBOBO_MOMENTS \} from "\.\/futbobo-moments"/);
+  assert.match(page, /event\.id\.startsWith\("funny-"\)/);
+  assert.match(page, /< 0\.22/);
 });
 
 test("corrige competicoes, bola de ouro, rivais e numeros persistentes", async () => {

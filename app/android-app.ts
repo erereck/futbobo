@@ -1,6 +1,7 @@
 import { Capacitor } from "@capacitor/core";
+import packageJson from "../package.json";
 
-export const ANDROID_APP_VERSION = "1.0.0";
+export const ANDROID_APP_VERSION = packageJson.version;
 export const ANDROID_APK_URL =
   "https://github.com/erereck/futbobo/releases/latest/download/futbobo.apk";
 
