@@ -577,6 +577,7 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
 });
 
 test("usa escudos, bandeiras e emblemas locais com fallback visual", async () => {
+  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const clubAssets = await readdir(new URL("../public/assets/clubs/", import.meta.url));
@@ -587,6 +588,8 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
   const mappedClubs = Object.values(assetManifest.clubs);
   const providerIds = mappedClubs.map((club) => club.providerId).filter(Boolean);
   const externalSources = mappedClubs.map((club) => club.externalSource).filter(Boolean);
+  const gameClubIds = [...gameData.matchAll(/\{ id: "([^"]+)", name: "[^"]+", shortName:/g)].map((match) => match[1]);
+  const localClubIds = new Set(clubAssets.filter((name) => name.endsWith(".png")).map((name) => name.slice(0, -4)));
 
   assert.match(page, /LocalBadgeImage/);
   assert.match(page, /assets\/clubs\/\$\{club\.id\}\.png/);
@@ -600,7 +603,13 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
   assert.match(styles, /\.badge-image-club/);
   assert.match(styles, /\.badge-image-flag/);
   assert.match(styles, /\.badge-image-competition/);
-  assert.ok(clubAssets.filter((name) => name.endsWith(".png")).length >= 150, "a maioria dos clubes precisa ter escudo local");
+  assert.ok(gameClubIds.length >= 500, "a base completa precisa ser auditada pelo teste");
+  assert.deepEqual(
+    gameClubIds.filter((clubId) => !assetManifest.clubs[clubId] || !localClubIds.has(clubId)),
+    [],
+    "todos os clubes da base precisam ter escudo local verificado",
+  );
+  assert.equal(assetManifest.clubs.liverpool.providerId, "133602", "Liverpool precisa usar o escudo do clube inglês");
   assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 104, "todas as seleções precisam ter bandeira");
   assert.ok(competitionAssets.filter((file) => file.pathname.endsWith(".png")).length >= 12, "as principais competições precisam ter emblema");
   assert.equal(new Set(providerIds).size, providerIds.length, "um mesmo escudo não pode representar clubes diferentes");

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T04:38:09.648Z",
+  "generatedAt": "2026-08-03T01:14:17.713Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -111,9 +111,9 @@
       "source": "https://r2.thesportsdb.com/images/media/team/badge/vwpvry1467462651.png"
     },
     "liverpool": {
-      "providerId": "148723",
-      "providerName": "AFC Liverpool",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/mix7a01731948221.png"
+      "providerId": "133602",
+      "providerName": "Liverpool",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/kfaher1737969724.png"
     },
     "arsenal": {
       "providerId": "133604",
@@ -2315,6 +2315,265 @@
     "wrexham": {
       "providerName": "Wrexham Association Football Club",
       "externalSource": "https://assets.football-logos.cc/logos/england/1500x1500/wrexham.eaf0e9de.png"
+    },
+    "independiente-rivadavia": {
+      "providerId": "137777",
+      "providerName": "Independiente Rivadavia",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qgzi2b1769406125.png"
+    },
+    "miramar-misiones": {
+      "providerId": "145844",
+      "providerName": "Miramar Misiones",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7dvfx11647976997.png"
+    },
+    "u-catolica": {
+      "providerId": "137735",
+      "providerName": "Universidad Católica",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/h2pcuc1602188028.png"
+    },
+    "ohiggins": {
+      "providerId": "137731",
+      "providerName": "O'Higgins",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/g44b1l1756095484.png"
+    },
+    "union-la-calera": {
+      "providerId": "137734",
+      "providerName": "Unión La Calera",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vadt5t1769834071.png"
+    },
+    "deportes-la-serena": {
+      "providerId": "139473",
+      "providerName": "Deportes La Serena",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vs7mxv1677600646.png"
+    },
+    "atletico-nacional": {
+      "providerId": "137607",
+      "providerName": "Atlético Nacional",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/efl4o41576157720.png"
+    },
+    "atletico-bucaramanga": {
+      "providerId": "137606",
+      "providerName": "Atlético Bucaramanga",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rtjs411576157184.png"
+    },
+    "atletico-tembetary": {
+      "providerId": "149487",
+      "providerName": "Atlético Tembetary",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xinof51730664653.png"
+    },
+    "vinotinto-ecuador": {
+      "providerId": "147318",
+      "providerName": "Vinotinto Ecuador",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yc19kg1736990630.png"
+    },
+    "juan-pablo-ii": {
+      "providerId": "149506",
+      "providerName": "Juan Pablo II College",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zj9efi1730672606.png"
+    },
+    "tigres-uanl": {
+      "providerId": "134197",
+      "providerName": "Tigres UANL",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/lh80fx1701423708.png"
+    },
+    "orlando-city": {
+      "providerId": "135292",
+      "providerName": "Orlando City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qyppxw1423832326.png"
+    },
+    "houston-dynamo": {
+      "providerId": "134144",
+      "providerName": "Houston Dynamo",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yvz9dq1707631352.png"
+    },
+    "minnesota-united": {
+      "providerId": "135852",
+      "providerName": "Minnesota United",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vl67t41492453433.png"
+    },
+    "yokohama-marinos": {
+      "providerId": "137719",
+      "providerName": "Yokohama F Marinos",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rgeshm1578240000.png"
+    },
+    "nottingham-forest": {
+      "providerId": "espn:393",
+      "providerName": "Nottingham Forest",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/393.png"
+    },
+    "monaco": {
+      "providerId": "espn:174",
+      "providerName": "AS Monaco",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/174.png"
+    },
+    "sporting": {
+      "providerId": "espn:2250",
+      "providerName": "Sporting CP",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/2250.png"
+    },
+    "psv": {
+      "providerId": "espn:148",
+      "providerName": "PSV Eindhoven",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/148.png"
+    },
+    "utrecht": {
+      "providerId": "espn:153",
+      "providerName": "FC Utrecht",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/153.png"
+    },
+    "twente": {
+      "providerId": "espn:152",
+      "providerName": "FC Twente",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/152.png"
+    },
+    "sparta-rotterdam": {
+      "providerId": "espn:151",
+      "providerName": "Sparta Rotterdam",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/151.png"
+    },
+    "nec-nijmegen": {
+      "providerId": "espn:147",
+      "providerName": "NEC Nijmegen",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/147.png"
+    },
+    "willem-ii": {
+      "providerId": "espn:156",
+      "providerName": "Willem II",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/156.png"
+    },
+    "pec-zwolle": {
+      "providerId": "espn:2565",
+      "providerName": "PEC Zwolle",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/2565.png"
+    },
+    "telstar": {
+      "providerId": "espn:3735",
+      "providerName": "Telstar",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/3735.png"
+    },
+    "union-sg": {
+      "providerId": "espn:5807",
+      "providerName": "Union St.-Gilloise",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/5807.png"
+    },
+    "cercle-brugge": {
+      "providerId": "espn:3610",
+      "providerName": "Cercle Brugge KSV",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/3610.png"
+    },
+    "oh-leuven": {
+      "providerId": "espn:5579",
+      "providerName": "OH Leuven",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/5579.png"
+    },
+    "charleroi": {
+      "providerId": "espn:3616",
+      "providerName": "Royal Charleroi SC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/3616.png"
+    },
+    "san-lorenzo": {
+      "providerId": "espn:18",
+      "providerName": "San Lorenzo",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/18.png"
+    },
+    "colo-colo": {
+      "providerId": "espn:2688",
+      "providerName": "Colo Colo",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/2688.png"
+    },
+    "junior-barranquilla": {
+      "providerId": "espn:4815",
+      "providerName": "Atlético Junior",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/4815.png"
+    },
+    "alianza-valledupar": {
+      "providerId": "espn:9761",
+      "providerName": "Alianza FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/9761.png"
+    },
+    "jaguares-cordoba": {
+      "providerId": "espn:10309",
+      "providerName": "Jaguares de Córdoba",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10309.png"
+    },
+    "aguilas-doradas": {
+      "providerId": "espn:9762",
+      "providerName": "Águilas Doradas",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/9762.png"
+    },
+    "toronto-fc": {
+      "providerId": "espn:7318",
+      "providerName": "Toronto FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/7318.png"
+    },
+    "vancouver-whitecaps": {
+      "providerId": "espn:9727",
+      "providerName": "Vancouver Whitecaps",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/9727.png"
+    },
+    "rwd-molenbeek": {
+      "providerName": "RWD Molenbeek",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/gyv8231753030497.png"
+    },
+    "rapid-wien": {
+      "providerName": "Sportklub Rapid Wien",
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/519.png"
+    },
+    "austria-wien": {
+      "providerName": "Fußballklub Austria Wien",
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/1382.png"
+    },
+    "instituto": {
+      "providerName": "Instituto Atlético Central Córdoba",
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/2975.png"
+    },
+    "estudiantes-rio-cuarto": {
+      "providerName": "Asociación Atlética Estudiantes",
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/19685.png"
+    },
+    "river-plate-uru": {
+      "providerName": "Club Atlético River Plate",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/vstxtq1473541083.png",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vstxtq1473541083.png"
+    },
+    "alianza-universidad": {
+      "providerName": "Club Social Deportivo Alianza Universidad",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/z3nftr1681318889.png"
+    },
+    "al-riyadh": {
+      "providerName": "Al-Riyadh Saudi Club",
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/21965.png"
+    },
+    "tokyo-verdy": {
+      "providerName": "Tokyo Verdy",
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/3393.png"
+    },
+    "goias": {
+      "providerName": "Goiás Esporte Clube",
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/3395.png"
     }
   },
   "flags": {

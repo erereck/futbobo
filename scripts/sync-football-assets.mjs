@@ -183,6 +183,30 @@ const FLAG_CODES = {
   taiti: "pf",
 };
 
+// Segunda fonte para clubes que não estão disponíveis ou estão desatualizados no TheSportsDB.
+// A consulta é sempre limitada à liga do clube, evitando homônimos de outros países.
+const ESPN_LEAGUE_IDS = {
+  premier: "eng.1",
+  championship: "eng.2",
+  ligue1: "fra.1",
+  primeira: "por.1",
+  eredivisie: "ned.1",
+  proleague: "bel.1",
+  "austria-bundesliga": "aut.1",
+  "liga-argentina": "arg.1",
+  "liga-uruguaia": "uru.1",
+  "liga-chilena": "chi.1",
+  "liga-colombiana": "col.1",
+  "liga-paraguaia": "par.1",
+  "liga-equatoriana": "ecu.1",
+  "liga-peruana": "per.1",
+  "liga-mx": "mex.1",
+  mls: "usa.1",
+  "saudi-pro-league": "ksa.1",
+  "j1-league": "jpn.1",
+  "brasileirao-b": "bra.2",
+};
+
 const SUPER_CUP_SEARCH_NAMES = {
   brasileirao: "Brazilian Supercopa Rei",
   premier: "FA Community Shield",
@@ -264,6 +288,16 @@ const EXTERNAL_CLUB_ASSETS = {
   "zhejiang-fc": "https://assets.football-logos.cc/logos/china/1500x1500/zhejiang-professional.dc402788.png",
   swansea: "https://assets.football-logos.cc/logos/england/1500x1500/swansea-city.fff229fe.png",
   wrexham: "https://assets.football-logos.cc/logos/england/1500x1500/wrexham.eaf0e9de.png",
+  "rwd-molenbeek": "https://r2.thesportsdb.com/images/media/team/badge/gyv8231753030497.png",
+  "rapid-wien": "https://a.espncdn.com/i/teamlogos/soccer/500/519.png",
+  "austria-wien": "https://a.espncdn.com/i/teamlogos/soccer/500/1382.png",
+  instituto: "https://a.espncdn.com/i/teamlogos/soccer/500/2975.png",
+  "estudiantes-rio-cuarto": "https://a.espncdn.com/i/teamlogos/soccer/500/19685.png",
+  "river-plate-uru": "https://r2.thesportsdb.com/images/media/team/badge/vstxtq1473541083.png",
+  "alianza-universidad": "https://r2.thesportsdb.com/images/media/team/badge/z3nftr1681318889.png",
+  "al-riyadh": "https://a.espncdn.com/i/teamlogos/soccer/500/21965.png",
+  "tokyo-verdy": "https://a.espncdn.com/i/teamlogos/soccer/500/3393.png",
+  goias: "https://a.espncdn.com/i/teamlogos/soccer/500/3395.png",
 };
 
 const TEAM_QUERY_OVERRIDES = {
@@ -295,6 +329,7 @@ const TEAM_QUERY_OVERRIDES = {
   "deportivo-coruna": "Deportivo La Coruna",
   "gladbach": "Borussia Monchengladbach",
   "vitoria-guimaraes": "Vitoria Guimaraes",
+  sporting: "Sporting CP",
   "nacional-madeira": "Nacional Madeira",
   psv: "PSV",
   utrecht: "Utrecht",
@@ -369,6 +404,8 @@ const TEAM_QUERY_OVERRIDES = {
 };
 
 const TEAM_ID_OVERRIDES = {
+  // Evita que a busca por nome confunda o Liverpool FC com AFC Liverpool.
+  liverpool: "133602",
   "man-city": "133613",
   "man-utd": "133612",
   "real-madrid": "133738",
@@ -503,11 +540,16 @@ function variants(team) {
 }
 
 function similarity(a, b) {
+  const rawLeft = plain(a);
+  const rawRight = plain(b);
+  if (!rawLeft || !rawRight) return 0;
+  if (rawLeft === rawRight) return 1;
+  if (rawLeft.replaceAll(" ", "") === rawRight.replaceAll(" ", "")) return 0.96;
   const left = meaningful(a);
   const right = meaningful(b);
   if (!left || !right) return 0;
-  if (left === right) return 1;
-  if (left.replaceAll(" ", "") === right.replaceAll(" ", "")) return 0.96;
+  if (left === right) return 0.94;
+  if (left.replaceAll(" ", "") === right.replaceAll(" ", "")) return 0.92;
   if (left.includes(right) || right.includes(left)) return 0.84;
   const leftTokens = new Set(left.split(" "));
   const rightTokens = new Set(right.split(" "));
@@ -585,6 +627,23 @@ async function fileExists(file) {
   } catch {
     return false;
   }
+}
+
+async function espnLeagueTeams(leagueId) {
+  const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${leagueId}/teams?limit=100`, {
+    headers: { "User-Agent": "Futbobo asset sync (github.com/erereck/futbobo)" },
+  });
+  if (!response.ok) return [];
+  const payload = await response.json();
+  const rows = payload?.sports?.[0]?.leagues?.[0]?.teams ?? [];
+  return rows.map(({ team }) => ({
+    idTeam: `espn:${team.id}`,
+    strTeam: team.displayName,
+    strTeamShort: team.shortDisplayName,
+    strTeamAlternate: [team.location, team.name, team.abbreviation].filter(Boolean).join(","),
+    strSport: "Soccer",
+    strBadge: team.logos?.find((logo) => logo.rel?.includes("default"))?.href ?? team.logos?.[0]?.href,
+  }));
 }
 
 async function writeVerifiedClubAssetIds() {
@@ -669,7 +728,10 @@ if (missingOnly || repairOnly) {
     if (externalClubsOnly) continue;
     if (
       (repairOnly && TEAM_ID_OVERRIDES[club.id])
-      || (missingOnly && !await fileExists(path.join(ASSET_ROOT, "clubs", `${club.id}.png`)))
+      || (missingOnly && (
+        !manifest.clubs[club.id]
+        || !await fileExists(path.join(ASSET_ROOT, "clubs", `${club.id}.png`))
+      ))
     ) remaining.push(club);
   }
   const resolvedByLeague = new Set();
@@ -691,6 +753,29 @@ if (missingOnly || repairOnly) {
           path.join(ASSET_ROOT, "clubs", `${club.id}.png`),
           manifest.clubs[club.id],
           { providerId: choice.team.idTeam, providerName: choice.team.strTeam },
+        );
+        resolvedByLeague.add(club.id);
+        leagueMatches += 1;
+      }
+      console.log(`${leagueMatches}/${leagueClubs.length}`);
+    }
+
+    for (const league of leagues) {
+      const leagueClubs = remaining.filter((club) => club.leagueId === league.id && !resolvedByLeague.has(club.id));
+      const espnLeagueId = ESPN_LEAGUE_IDS[league.id];
+      if (!leagueClubs.length || !espnLeagueId) continue;
+      process.stdout.write(`Recuperando ${league.name} pela fonte reserva... `);
+      const teams = await espnLeagueTeams(espnLeagueId);
+      let leagueMatches = 0;
+      for (const club of leagueClubs) {
+        const choice = chooseTeam(club, teams);
+        if (!choice?.team?.strBadge || choice.score < 0.42) continue;
+        manifest.clubs[club.id] = {};
+        queueImage(
+          choice.team.strBadge,
+          path.join(ASSET_ROOT, "clubs", `${club.id}.png`),
+          manifest.clubs[club.id],
+          { providerId: choice.team.idTeam, providerName: choice.team.strTeam, provider: "ESPN" },
         );
         resolvedByLeague.add(club.id);
         leagueMatches += 1;
