@@ -73,6 +73,7 @@ import {
 import { simulateBotaoMatch } from "./botao/simulate";
 import type { BotaoMatchResult, BotaoMatchSetup } from "./botao/types";
 import { PLAYER_STORIES, playerStoryById, type PlayerStoryId } from "./player-stories";
+import { STORY_CHAPTER_BEATS } from "./story-chapters";
 
 type Phase =
   | "welcome"
@@ -2973,6 +2974,10 @@ function buildStoryFollowup(
   ];
   const usedIds = new Set(state.storyLog.map((entry) => entry.decisionId).filter(Boolean));
   const usedTitles = new Set(state.storyLog.map((entry) => entry.title));
+  const unusedOriginChapters = STORY_CHAPTER_BEATS[state.playerStoryId].filter((beat) => !usedTitles.has(beat.title));
+  if (unusedOriginChapters.length) {
+    return pick(unusedOriginChapters, state.seed, state.season * 1949 + chapter * 83);
+  }
   const available = beats.filter((beat) => !usedIds.has(`story-followup-${beat.key}`) && !usedTitles.has(beat.title));
   const pool = available.length ? available : beats;
   return pick(pool, state.seed, state.season * 1931 + chapter * 71);

@@ -1027,6 +1027,7 @@ test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
 test("cria origens persistentes que mudam a carreira e abrem capitulos proprios", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const stories = await readFile(new URL("../app/player-stories.ts", import.meta.url), "utf8");
+  const chapters = await readFile(new URL("../app/story-chapters.ts", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /version: 7/);
@@ -1037,6 +1038,8 @@ test("cria origens persistentes que mudam a carreira e abrem capitulos proprios"
   assert.match(page, /const signatureWasSeen/);
   assert.match(page, /story-followup-\$\{followup\.key\}/);
   assert.match(page, /usedTitles\.has\(beat\.title\)/);
+  assert.match(page, /STORY_CHAPTER_BEATS\[state\.playerStoryId\]/);
+  assert.match(page, /if \(unusedOriginChapters\.length\)/);
   assert.match(page, /entry\.title === saved\.pendingStoryDecision\?\.title/);
   assert.match(page, /const pendingStoryDecision = buildStorySeasonDecision/);
   assert.match(page, /pendingStoryDecision,/);
@@ -1050,6 +1053,10 @@ test("cria origens persistentes que mudam a carreira e abrem capitulos proprios"
   assert.match(stories, /"disillusioned"/);
   assert.match(stories, /"academy-reject"/);
   assert.match(stories, /"migrant-dream"/);
+  assert.equal((chapters.match(/key: "[^"]+"/g) ?? []).length, 33, "cada origem precisa de três capítulos adicionais próprios");
+  assert.match(chapters, /Um ex-colega inventou a origem perfeita para você/);
+  assert.match(chapters, /A prova caiu na manhã seguinte à final/);
+  assert.match(chapters, /Querem colocar seu nome na rua onde você cresceu/);
   assert.match(styles, /\.player-story-grid/);
   assert.match(styles, /\.story-decision-modal/);
 });
