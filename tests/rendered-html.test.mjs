@@ -225,6 +225,7 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   assert.match(page, /MVP da Champions League/);
   assert.match(page, /FIFPRO World XI/);
   assert.match(page, /const hasGoalsOrAssistsAward = hasLeagueGoldenBoot \|\| hasEuropeanGoldenShoe \|\| hasAssistKingAward/);
+  assert.match(page, /const BALLON_DOR_EXCLUDED_TROPHIES = new Set<CompetitionId>\(\[[\s\S]*"domesticCup"[\s\S]*"domesticSuperCup"/);
   assert.match(page, /const wonBallonDor =[\s\S]*hasGoalsOrAssistsAward[\s\S]*majorClubTitleCount > 0 \|\| majorNationalTitle[\s\S]*ballonScore >= 66/);
   assert.match(page, /if \(wonBallonDor\) \{[\s\S]*!awards\.includes\("FIFPRO World XI"\)[\s\S]*awards\.push\("Bola de Ouro"\)/);
   assert.match(page, /hasEuropeanGoldenShoe \? 88[\s\S]*hasLeagueGoldenBoot \|\| hasAssistKingAward \? 68[\s\S]*48/);

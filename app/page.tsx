@@ -688,6 +688,7 @@ const HALL_OF_FAME_KEY = "futbobo:hall-of-fame:v1";
 const SETTINGS_KEY = "futbobo:settings:v1";
 const BOTAO_IN_PROGRESS_KEY = "futbobo:botao-in-progress:v1";
 const BALLON_DOR_EXCLUDED_TROPHIES = new Set<CompetitionId>([
+  "domesticCup",
   "domesticSuperCup",
   "recopaSudamericana",
   "uefaSuperCup",
