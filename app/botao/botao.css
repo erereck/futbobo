@@ -1056,3 +1056,251 @@
     border-radius: 24px 24px 0 0;
   }
 }
+
+/* v82 — Matchday Editorial. The table stays familiar; everything around it
+   now behaves like a real match broadcast. */
+
+.botao-root {
+  gap: 12px;
+  max-width: none;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 12px 12px calc(env(safe-area-inset-bottom) + 14px);
+  background: var(--bg, #07110d);
+  font-family: var(--sans, "Manrope", sans-serif);
+}
+
+.botao-hud {
+  gap: 10px;
+  padding: 12px;
+  border-color: var(--line, rgba(226,239,228,.09));
+  border-radius: 14px 14px 5px 14px;
+  background: var(--surface, #0b1812);
+}
+
+.botao-hud-top { font-size: 9px; letter-spacing: .12em; }
+.botao-competition { color: var(--gold, #f4c430); }
+
+.botao-period {
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: #08130e;
+  color: var(--muted, #aab8ac);
+}
+
+.botao-scoreboard { gap: 10px; }
+.botao-team strong { font: 700 16px var(--display, "Barlow Condensed", sans-serif); }
+
+.botao-crest {
+  width: 36px;
+  height: 36px;
+  border-width: 1px;
+  font-family: var(--display, "Barlow Condensed", sans-serif);
+}
+
+.botao-score {
+  gap: 9px;
+  font: 800 36px/.8 var(--display, "Barlow Condensed", sans-serif);
+}
+
+.botao-score span { color: var(--muted-2, #728178); font-size: 16px; }
+
+.botao-chip {
+  padding: 5px 8px;
+  border-color: var(--line, rgba(226,239,228,.09));
+  border-radius: 5px;
+  background: #08130e;
+  font-size: 9px;
+}
+
+.botao-chip-you {
+  border-color: rgba(244,196,48,.25);
+  background: rgba(244,196,48,.07);
+  color: var(--gold, #f4c430);
+}
+
+.botao-table-wrapper {
+  border: 1px solid var(--line-strong, rgba(226,239,228,.16));
+  border-radius: 16px 16px 5px 16px;
+  box-shadow: 0 0 0 6px #050b08;
+}
+
+.botao-overlay {
+  border: 1px solid var(--line-strong, rgba(226,239,228,.16));
+  border-radius: 16px 16px 5px 16px;
+  background: rgba(11,24,18,.96);
+  box-shadow: 0 24px 70px rgba(0,0,0,.48);
+  backdrop-filter: blur(10px);
+}
+
+.botao-overlay strong { font: 800 30px/.95 var(--display, "Barlow Condensed", sans-serif); }
+
+.botao-controls {
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line, rgba(226,239,228,.09));
+  border-radius: 12px;
+  background: var(--surface, #0b1812);
+}
+
+.botao-turn { font: 700 16px/1.15 var(--display, "Barlow Condensed", sans-serif); }
+.botao-turn-active { color: var(--gold, #f4c430); }
+
+.botao-primary,
+.botao-ghost {
+  min-height: 46px;
+  border-radius: 9px;
+  font: 800 16px var(--display, "Barlow Condensed", sans-serif);
+}
+
+.botao-primary { background: var(--gold, #f4c430); color: #15180e; }
+.botao-ghost { border-color: var(--line-strong, rgba(226,239,228,.16)); background: transparent; }
+
+.botao-flash,
+.botao-inactivity-countdown { font-family: var(--display, "Barlow Condensed", sans-serif); }
+
+.botao-lobby {
+  width: min(960px,100%);
+  max-width: none;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: max(28px,env(safe-area-inset-top)) 16px max(36px,env(safe-area-inset-bottom));
+  background: var(--bg, #07110d);
+}
+
+.botao-lobby h1 {
+  max-width: 720px;
+  margin: 0 0 8px;
+  font: 800 clamp(52px,13vw,82px)/.86 var(--display, "Barlow Condensed", sans-serif);
+  letter-spacing: -.025em;
+  text-wrap: balance;
+}
+
+.botao-lobby-lead {
+  max-width: 680px;
+  color: var(--muted, #aab8ac);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.botao-card {
+  padding: 18px;
+  border-color: var(--line, rgba(226,239,228,.09));
+  border-radius: 14px;
+  background: var(--surface, #0b1812);
+  box-shadow: none;
+}
+
+.botao-card-title {
+  color: var(--gold, #f4c430);
+  font: 800 10px var(--sans, "Manrope", sans-serif);
+  letter-spacing: .14em;
+}
+
+.botao-field-row input,
+.botao-field-row select {
+  min-height: 46px;
+  border-color: var(--line-strong, rgba(226,239,228,.16));
+  border-radius: 8px;
+  background: #08130e;
+}
+
+.botao-option {
+  min-height: 52px;
+  border-color: var(--line, rgba(226,239,228,.09));
+  border-radius: 8px;
+  background: #0c1b14;
+  font-family: var(--display, "Barlow Condensed", sans-serif);
+}
+
+.botao-option[aria-pressed="true"] {
+  border-color: rgba(244,196,48,.35);
+  background: rgba(244,196,48,.08);
+  color: var(--gold, #f4c430);
+}
+
+.botao-final-versus,
+.botao-career-player,
+.botao-reserve-entry,
+.botao-walkover-notice {
+  border-color: var(--line, rgba(226,239,228,.09));
+  border-radius: 12px;
+  background: var(--surface, #0b1812);
+}
+
+.botao-versus-mark b,
+.botao-headline { font-family: var(--display, "Barlow Condensed", sans-serif); }
+.botao-headline { font-size: clamp(48px,14vw,84px); letter-spacing: -.02em; }
+
+.botao-result-line {
+  border-color: var(--line, rgba(226,239,228,.09));
+  border-radius: 8px;
+  background: #0c1b14;
+}
+
+.botao-result-line > button { border-radius: 7px; }
+
+@media (min-width: 900px) {
+  .botao-root {
+    display: grid;
+    grid-template-columns: minmax(240px,.72fr) minmax(420px,560px) minmax(240px,.72fr);
+    grid-template-rows: 1fr;
+    align-items: center;
+    gap: clamp(20px,3vw,44px);
+    padding: 28px clamp(28px,5vw,72px);
+  }
+
+  .botao-hud {
+    align-self: center;
+    padding: 22px;
+  }
+
+  .botao-scoreboard {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .botao-team,
+  .botao-team-cpu { justify-content: flex-start; }
+  .botao-team-cpu { flex-direction: row-reverse; }
+  .botao-team strong { font-size: 22px; }
+  .botao-score { justify-content: center; padding: 18px 0; border-block: 1px solid var(--line, rgba(226,239,228,.09)); font-size: 64px; }
+  .botao-formation-row { margin-top: 8px; }
+
+  .botao-table-wrapper {
+    width: 100%;
+    max-height: calc(100dvh - 56px);
+  }
+
+  .botao-controls {
+    align-self: center;
+    padding: 22px;
+  }
+
+  .botao-turn { min-height: 72px; font-size: 28px; }
+  .botao-controls-meta { display: grid; grid-template-columns: 1fr; }
+
+  .botao-lobby {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    align-content: start;
+    gap: 16px;
+    padding: 56px 32px;
+  }
+
+  .botao-lobby > h1,
+  .botao-lobby > .botao-lobby-lead,
+  .botao-lobby > .botao-headline,
+  .botao-lobby > .botao-actions,
+  .botao-lobby > .botao-walkover-notice { grid-column: 1 / -1; }
+  .botao-lobby > h1 { font-size: 86px; }
+  .botao-lobby > .botao-actions { display: grid; grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 540px) {
+  .botao-root { overflow-x: clip; }
+  .botao-hud { flex: 0 0 auto; }
+  .botao-table-wrapper { width: min(100%,calc((100dvh - 278px) * 316 / 516)); max-height: calc(100dvh - 278px); }
+  .botao-controls { flex: 0 0 auto; }
+  .botao-controls-meta { justify-content: center; font-size: 9px; }
+}

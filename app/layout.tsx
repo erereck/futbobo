@@ -1,5 +1,25 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
+import "./premium.css";
+
+const manrope = localFont({
+  src: "../public/fonts/manrope-latin.woff2",
+  variable: "--font-manrope",
+  weight: "400 800",
+  display: "swap",
+});
+
+const barlowCondensed = localFont({
+  src: [
+    { path: "../public/fonts/barlow-condensed-600.woff2", weight: "600" },
+    { path: "../public/fonts/barlow-condensed-700.woff2", weight: "700" },
+    { path: "../public/fonts/barlow-condensed-800.woff2", weight: "800" },
+    { path: "../public/fonts/barlow-condensed-900.woff2", weight: "900" },
+  ],
+  variable: "--font-barlow-condensed",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://erereck.github.io/futbobo/"),
@@ -29,7 +49,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b1f17",
+  themeColor: "#07110d",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -43,7 +63,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body className={`${manrope.variable} ${barlowCondensed.variable}`}>{children}</body>
     </html>
   );
 }

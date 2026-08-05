@@ -8,8 +8,32 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v81 · HISTÓRIAS E REPLAYS/);
+  assert.match(pageSource, /v82 · MATCHDAY EDITORIAL/);
   assert.match(styles, /\.welcome-version/);
+});
+
+test("aplica o redesign Matchday Editorial com fontes offline e layouts realmente responsivos", async () => {
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  const premium = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
+  const botao = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
+  const fonts = await readdir(new URL("../public/fonts/", import.meta.url));
+
+  assert.match(layout, /import "\.\/premium\.css"/);
+  assert.match(layout, /localFont/);
+  assert.match(layout, /--font-barlow-condensed/);
+  assert.match(layout, /--font-manrope/);
+  assert.match(premium, /Matchday Editorial redesign/);
+  assert.match(premium, /grid-template-columns: 264px minmax\(0,1fr\)/);
+  assert.match(premium, /grid-template-columns: repeat\(12,minmax\(0,1fr\)\)/);
+  assert.match(premium, /@media \(max-width: 540px\)/);
+  assert.match(botao, /grid-template-columns: minmax\(240px,\.72fr\) minmax\(420px,560px\) minmax\(240px,\.72fr\)/);
+  assert.deepEqual(fonts.sort(), [
+    "barlow-condensed-600.woff2",
+    "barlow-condensed-700.woff2",
+    "barlow-condensed-800.woff2",
+    "barlow-condensed-900.woff2",
+    "manrope-latin.woff2",
+  ]);
 });
 
 test("adiciona desafio diario, avaliacao e departamento medico sem alterar a navegacao da carreira", async () => {
@@ -18,7 +42,7 @@ test("adiciona desafio diario, avaliacao e departamento medico sem alterar a nav
 
   assert.match(page, /const CHALLENGE_SAVE_KEY = "futbobo:challenge-save:v1"/);
   assert.match(page, /function dailyChallenge/);
-  assert.match(page, /Todo mundo com a mesma sorte/);
+  assert.match(page, /Mesma promessa\. Destinos opostos\./);
   assert.match(page, /function seasonAverageRating/);
   assert.match(page, /AVALIAÇÃO MÉDIA/);
   assert.match(page, /type MedicalRecord/);

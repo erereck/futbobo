@@ -7095,28 +7095,28 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v81 · CADA CARREIRA TEM UMA ORIGEM</span>
-                    <h1 id="update-title">Agora os gols têm replay. E o jogador tem passado.</h1>
+                    <span className="update-version">v82 · MATCHDAY EDITORIAL</span>
+                    <h1 id="update-title">O Futbobo inteiro entrou em campo de roupa nova.</h1>
                   </div>
                 </header>
-                <p>Escolha quem você era antes da estreia, viva capítulos exclusivos por décadas e reveja cada gol sem transformar seu save num arquivo pesado.</p>
+                <p>Navegação, hierarquia e distribuição foram reconstruídas para o celular funcionar como um jogo rápido e o computador como uma central de carreira de verdade.</p>
                 <div className="update-mega-stats" aria-label="Resumo do update">
-                  <span><b>11</b> histórias iniciais</span>
-                  <span><b>8</b> capítulos possíveis</span>
-                  <span><b>11fps</b> replay vetorial</span>
+                  <span><b>2</b> experiências responsivas</span>
+                  <span><b>6</b> centrais reconstruídas</span>
+                  <span><b>100%</b> offline no APK</span>
                 </div>
                 <span className="update-section-label">O GRANDE DESTAQUE</span>
                 <div className="update-grid update-mega-grid">
-                  <article className="update-featured"><b>▶</b><span><strong>Replay de cada gol</strong><small>O jogo grava somente posições dos botões durante o lance. Sem vídeo, sem IA rodando de novo e com poucos KB.</small></span></article>
-                  <article><b>✦</b><span><strong>História do jogador</strong><small>Família modesta, ex-jogador na família, desilusão, futebol de rua e outras origens alteram a carreira.</small></span></article>
-                  <article><b>01</b><span><strong>Capítulos inesperados</strong><small>Decisões extras aparecem no fim de certas temporadas e ficam registradas até a aposentadoria.</small></span></article>
-                  <article><b>🎙</b><span><strong>Coletiva de imprensa</strong><small>O melhor em campo responde de uma a três perguntas com impacto real em imprensa, torcida e elenco.</small></span></article>
-                  <article><b>9</b><span><strong>Elencos com identidade</strong><small>Números variados e persistentes por time: camisas 9, 10, 8, 77 e outras finalmente chegam à mesa.</small></span></article>
-                  <article><b>⚖</b><span><strong>Regras revisadas</strong><small>Rivais mais fortes, finais plausíveis, Olimpíadas globais e Bola de Ouro blindada contra taças menores.</small></span></article>
+                  <article className="update-featured"><b>▥</b><span><strong>Desktop é uma central</strong><small>Rail lateral, canvas amplo e módulos distribuídos pela importância — sem esticar a interface do celular.</small></span></article>
+                  <article><b>▯</b><span><strong>Mobile feito para o polegar</strong><small>Ações claras, leitura vertical e navegação fixa sem comprimir conteúdo importante.</small></span></article>
+                  <article><b>90</b><span><strong>Tipografia de placar</strong><small>Barlow Condensed e Manrope locais dão ritmo esportivo e continuam funcionando sem internet.</small></span></article>
+                  <article><b>◆</b><span><strong>Uma ação por tela</strong><small>Escolha, resultado, transferência ou prêmio sempre dominam a hierarquia certa.</small></span></article>
+                  <article><b>≡</b><span><strong>Arquivo editorial</strong><small>Histórico, troféus, carreira final e prêmios agora contam uma história em vez de formar uma pilha.</small></span></article>
+                  <article><b>●</b><span><strong>Futebol de botão integrado</strong><small>Mesa, placar, controles e replays passam a falar a mesma língua visual da carreira.</small></span></article>
                 </div>
                 <span className="update-section-label">O QUE CONTINUA INTACTO</span>
                 <div className="update-grid update-mega-grid">
-                  <article><b>◆</b><span><strong>Menu da carreira preservado</strong><small>A tela principal durante a carreira continua com a navegação e o ritmo que já funcionavam.</small></span></article>
+                  <article><b>◆</b><span><strong>Toda a lógica preservada</strong><small>O redesign reorganiza a experiência sem alterar saves, decisões, atributos ou resultados.</small></span></article>
                   <article><b>↔</b><span><strong>Saves separados</strong><small>O desafio diário nunca apaga nem substitui sua carreira normal.</small></span></article>
                   <article><b>▣</b><span><strong>Backup completo</strong><small>Desafios, resultados, carreira, Hall da Fama e configurações entram na exportação.</small></span></article>
                 </div>
@@ -7132,7 +7132,7 @@ export default function Home() {
                   <article><b>3–0</b><span><strong>W.O. persistente</strong><small>Fechar, atualizar ou travar depois de entrar em campo conta como abandono.</small></span></article>
                   <article><b>44</b><span><strong>Regressões protegidas</strong><small>A regra entrou sem quebrar carreira normal ou Desafio Futbobo.</small></span></article>
                 </div>
-                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Histórias e Replays</strong><b>←</b></button>
+                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Matchday Editorial</strong><b>←</b></button>
               </>
             )}
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
@@ -7307,9 +7307,9 @@ export default function Home() {
                 </div>
               </div>
               <div className="welcome-copy">
-                <span className="eyebrow">SUA HISTÓRIA. SUAS ESCOLHAS.</span>
-                <h1>Do primeiro treino ao topo do mundo.</h1>
-                <p>Escolha onde tudo começa, construa sua história e descubra até onde a bola pode levar você.</p>
+                <span className="eyebrow">SIMULADOR DE CARREIRA · FUTEBOL DE BOTÃO</span>
+                <h1>Seu nome na camisa. O resto é história.</h1>
+                <p>Comece aos 12, atravesse clubes e continentes e decida quem você será quando a bola parar de rolar.</p>
               </div>
               <div className="welcome-actions">
                 {hasSave && <button className="primary-button continue-career-button" onClick={continueSave}><small>SEU SAVE</small>Continuar carreira <span>→</span></button>}
@@ -7318,7 +7318,7 @@ export default function Home() {
             </div>
             <aside className="welcome-side">
               <section className="challenge-card">
-                <header><div><span>DESAFIO FUTBOBO</span><strong>Todo mundo com a mesma sorte</strong></div><b>24H</b></header>
+                <header><div><span>DESAFIO FUTBOBO</span><strong>Mesma promessa. Destinos opostos.</strong></div><b>24H</b></header>
                 <p>A semente de hoje é igual em todos os aparelhos. Escolhas diferentes, carreiras comparáveis.</p>
                 <div className="challenge-code"><small>CÓDIGO DE HOJE</small><strong>{todayChallenge.id}</strong></div>
                 <div className="challenge-score-row">
@@ -7353,7 +7353,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v81 · HISTÓRIAS E REPLAYS</b>
+            <span>FUTBOBO</span><b>v82 · MATCHDAY EDITORIAL</b>
           </footer>
         </section>
       )}
