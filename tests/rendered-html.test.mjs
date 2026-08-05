@@ -238,16 +238,16 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 78[\s\S]*nextOverall === 82[\s\S]*performanceScore >= 80/);
+  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 74[\s\S]*nextOverall === 82[\s\S]*performanceScore >= 80/);
   assert.match(page, /const leagueGoldenBootLine = 28 \+ Math\.floor\([\s\S]*\* 9\)/);
   assert.match(page, /goals >= leagueGoldenBootLine/);
   assert.match(page, /const leagueAssistKingLine = 18 \+ Math\.floor\([\s\S]*\* 7\)/);
   assert.match(page, /goals >= europeanGoldenShoeLine/);
   assert.match(page, /const productionBallonModifier = clamp\(\(ballonProduction - eliteProductionTarget\) \/ 1\.5, -12, 18\)/);
   assert.match(page, /const supportingAwardBonus = Math\.min\(10/);
-  assert.match(page, /const firstBallonChance = clamp\(38 \+ Math\.max\(0, ballonScore - 66\) \* 3\.8, 38, 97\)/);
+  assert.match(page, /const firstBallonChance = clamp\(88 \+ Math\.max\(0, ballonScore - 58\) \* 3\.2, 88, 98\)/);
   assert.match(page, /const repeatBallonBaseChance = clamp\(16 \+ Math\.max\(0, ballonScore - 66\) \* 4\.4, 16, 97\)/);
-  assert.match(page, /previousBallonDor === 0[\s\S]*clamp\(Math\.round\(rawBallonChance\), 38, 94\)/);
+  assert.match(page, /previousBallonDor === 0[\s\S]*clamp\(Math\.round\(rawBallonChance\), 88, 98\)/);
   assert.match(page, /const historicBallonSeason =[\s\S]*goals >= 50[\s\S]*goals \+ assists >= 68/);
   assert.match(page, /previousBallonDor <= 6[\s\S]*\? 98[\s\S]*28 \* 0\.52 \*\* \(previousBallonDor - 7\)/);
   assert.match(page, /previousBallonDor === 4 \? 0\.08/);
@@ -258,7 +258,9 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
   assert.match(page, /FIFPRO World XI/);
   assert.match(page, /const hasGoalsOrAssistsAward = hasLeagueGoldenBoot \|\| hasEuropeanGoldenShoe \|\| hasAssistKingAward/);
   assert.match(page, /const BALLON_DOR_EXCLUDED_TROPHIES = new Set<CompetitionId>\(\[[\s\S]*"domesticCup"[\s\S]*"domesticSuperCup"/);
-  assert.match(page, /const wonBallonDor =[\s\S]*hasGoalsOrAssistsAward[\s\S]*majorClubTitleCount > 0 \|\| majorNationalTitle[\s\S]*ballonScore >= 66/);
+  assert.match(page, /const wonBallonDor =[\s\S]*hasGoalsOrAssistsAward[\s\S]*majorClubTitleCount > 0 \|\| majorNationalTitle[\s\S]*ballonScore >= 58/);
+  assert.match(page, /continentalGoldenBootLine[\s\S]*Artilheiro da \$\{continentalNames\[playsContinental\]\.name\}/);
+  assert.match(page, /continentalAssistLine[\s\S]*L.der de Assist.ncias da \$\{continentalNames\[playsContinental\]\.name\}/);
   assert.match(page, /if \(wonBallonDor\) \{[\s\S]*!awards\.includes\("FIFPRO World XI"\)[\s\S]*awards\.push\("Bola de Ouro"\)/);
   assert.match(page, /hasEuropeanGoldenShoe \? 88[\s\S]*hasLeagueGoldenBoot \|\| hasAssistKingAward \? 68[\s\S]*48/);
   assert.match(page, /hasEuropeanGoldenShoe && nextOverall >= 82 && performanceScore >= 76/);
@@ -409,6 +411,8 @@ test("prioriza clubes europeus quando a carreira já está na Europa", async () 
   assert.match(page, /clubConfederation\(club\) === "EUROPE"/);
   assert.match(page, /forceForeign: true/);
   assert.match(page, /const homeCountryId = state\.academyCountryId/);
+  assert.match(page, /club\.countryId === originCountryId \|\| foreignEligible\(state, club, originCountryId\)/);
+  assert.match(page, /isOutsideAcademyHome\(affected, club\)/);
   assert.match(page, /homeReturnChance = state\.age >= 34 \? 0\.78 : state\.age >= 30 \? 0\.12 : 0\.035/);
   assert.match(page, /const homeOfferCount = state\.age >= 34 \? 2 : 1/);
   assert.match(page, /isEuropeanClub\(current\) && confederation !== "EUROPE"/);
@@ -752,13 +756,15 @@ test("liga a nacionalidade à base local, regional ou europeia", async () => {
   assert.match(data, /id: "canada"[\s\S]*confederation: "NORTH_AMERICA"/);
   assert.match(data, /export type Confederation = "SOUTH_AMERICA" \| "EUROPE" \| "NORTH_AMERICA" \| "ASIA" \| "AFRICA" \| "OCEANIA"/);
   assert.match(page, /const REGIONAL_ACADEMY_ROUTES/);
+  assert.match(page, /const CONFEDERATION_ACADEMY_ROUTES/);
   assert.match(page, /canada: \["eua"\]/);
   assert.match(page, /if \(localClubs\.length >= 4\) return localClubs/);
   assert.match(page, /countryById\(club\.countryId\)\.confederation === "EUROPE"/);
   assert.match(page, /club\.reputation <= 3/);
   assert.match(page, /academyClubId: ""/);
   assert.match(page, /Uma liga próxima abriu a porta/);
-  assert.match(page, /Um pequeno clube europeu abriu a porta/);
+  assert.match(page, /ROTA RECOMENDADA/);
+  assert.match(page, /defaultAcademyCountry\(game\.nationality\)/);
   assert.match(page, /Copa da Ásia/);
   assert.match(page, /Copa Africana de Nações/);
   assert.match(page, /BUSCAR ENTRE \{COUNTRIES\.length\} SELEÇÕES/);

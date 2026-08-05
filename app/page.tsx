@@ -1660,6 +1660,15 @@ const REGIONAL_ACADEMY_ROUTES: Record<string, string[]> = {
 
 const PLAYABLE_ACADEMY_COUNTRIES = Array.from(new Set(LEAGUES.map((league) => league.countryId)));
 
+const CONFEDERATION_ACADEMY_ROUTES: Record<Country["confederation"], string[]> = {
+  SOUTH_AMERICA: ["argentina", "brasil", "colombia", "uruguai", "chile"],
+  NORTH_AMERICA: ["eua", "mexico"],
+  EUROPE: ["franca", "alemanha", "portugal", "italia", "inglaterra"],
+  ASIA: ["japao", "coreia-do-sul", "arabia-saudita", "china"],
+  AFRICA: ["franca", "portugal", "belgica"],
+  OCEANIA: ["japao", "eua"],
+};
+
 function sortedCountries(countries: Country[]) {
   return [...countries].sort((a, b) => {
     if (a.id === "brasil") return -1;
@@ -1671,7 +1680,9 @@ function sortedCountries(countries: Country[]) {
 function defaultAcademyCountry(countryId: string) {
   if (PLAYABLE_ACADEMY_COUNTRIES.includes(countryId)) return countryId;
   const regionalCountries = REGIONAL_ACADEMY_ROUTES[countryId] ?? [];
-  return regionalCountries.find((candidate) => PLAYABLE_ACADEMY_COUNTRIES.includes(candidate)) ?? "brasil";
+  const confederationCountries = CONFEDERATION_ACADEMY_ROUTES[countryById(countryId).confederation] ?? [];
+  return [...regionalCountries, ...confederationCountries]
+    .find((candidate) => PLAYABLE_ACADEMY_COUNTRIES.includes(candidate)) ?? "franca";
 }
 
 function academyClubPool(countryId: string) {
@@ -1700,28 +1711,22 @@ function randomAcademyClubs(seed: number, countryId: string) {
   return randomClubSelection(academyClubPool(countryId), 4, seed, 1709 + countryId.length * 41);
 }
 
-function academyRouteCopy(countryId: string) {
-  const country = countryById(countryId);
-  if (hasLocalAcademyRoute(countryId)) {
+function academyRouteCopy(academyCountryId: string, nationalityId: string) {
+  const academyCountry = countryById(academyCountryId);
+  const nationality = countryById(nationalityId);
+  if (academyCountryId === nationalityId) {
     return {
-      label: `BASE NACIONAL · ${country.abbr}`,
-      title: `Seu futebol começa em ${country.name}`,
-      text: `As quatro portas sorteadas pertencem à liga de ${country.name}. Você cresce perto da sua cultura antes de decidir se quer cruzar fronteiras.`,
+      label: `BASE NACIONAL · ${academyCountry.abbr}`,
+      title: `Seu futebol começa em ${academyCountry.name}`,
+      text: `As quatro portas sorteadas pertencem à liga de ${academyCountry.name}. Você cresce perto da sua cultura antes de decidir se quer cruzar fronteiras.`,
     };
   }
-  const regionalCountries = REGIONAL_ACADEMY_ROUTES[countryId] ?? [];
-  if (regionalCountries.length) {
-    const destinations = regionalCountries.map((id) => countryById(id).name).join(" ou ");
-    return {
-      label: `ROTA REGIONAL · ${country.abbr}`,
-      title: "Uma liga próxima abriu a porta",
-      text: `${country.name} ainda não tem liga jogável. Sua base começa em clubes menores de ${destinations}, preservando uma rota geográfica natural para a carreira.`,
-    };
-  }
+  const recommendedCountryId = defaultAcademyCountry(nationalityId);
+  const isRecommendedRoute = academyCountryId === recommendedCountryId;
   return {
-    label: `ROTA INTERNACIONAL · ${country.abbr}`,
-    title: "Um pequeno clube europeu abriu a porta",
-    text: `${country.name} ainda não tem liga jogável. Aos 12 anos, você entra numa rota de formação europeia com clubes menores dispostos a apostar em talentos estrangeiros.`,
+    label: `${isRecommendedRoute ? "ROTA RECOMENDADA" : "ROTA INTERNACIONAL"} · ${academyCountry.abbr}`,
+    title: isRecommendedRoute ? "Uma liga próxima abriu a porta" : `Novo capítulo: ${academyCountry.name}`,
+    text: `${nationality.name} não tem liga jogável no momento. Sua formação acontece no futebol de ${academyCountry.name}, mas a Seleção e a identidade da carreira continuam sendo de ${nationality.name}.`,
   };
 }
 
@@ -1742,8 +1747,12 @@ function revelationOfferPool(state: GameState) {
   return Array.from(new Map([...sameCountry, ...routePool].map((club) => [club.id, club])).values());
 }
 
-function isAbroad(club: Club) {
-  return club.countryId !== "brasil";
+function isOutsideCountry(club: Club, countryId: string) {
+  return club.countryId !== countryId;
+}
+
+function isOutsideAcademyHome(state: Pick<GameState, "academyCountryId">, club: Club) {
+  return isOutsideCountry(club, state.academyCountryId);
 }
 
 function clubConfederation(club: Club) {
@@ -1829,8 +1838,8 @@ function initialAdaptation(originCountryId: string, destinationCountryId: string
   return 34;
 }
 
-function foreignEligible(state: GameState, club: Club) {
-  if (!isAbroad(club)) return false;
+function foreignEligible(state: GameState, club: Club, originCountryId: string) {
+  if (!isOutsideCountry(club, originCountryId)) return false;
   if (state.age > 38) return false;
   const league = leagueById(club.leagueId);
   const confederation = clubConfederation(club);
@@ -2234,20 +2243,21 @@ const SECOND_DIVISION_LEAGUES = new Set(["brasileirao-b", "championship"]);
 
 function selectOffers(state: GameState, count: number, salt: number, opts: TransferOfferOptions = {}) {
   const current = state.currentClubId || state.academyClubId;
-  const currentRep = current ? clubById(current).reputation : 3;
+  const currentClub = clubById(current);
+  const currentRep = current ? currentClub.reputation : 3;
+  const originCountryId = currentClub.countryId;
   const targetRep = clamp(Math.round((state.overall - 56) / 6), 2, 5);
   let pool = CLUBS.filter((club) => club.id !== current);
   if (opts.forceForeign) {
-    pool = pool.filter((club) => isEuropeanClub(club) && (foreignEligible(state, club) || club.reputation <= Math.max(3, currentRep - 1)));
+    pool = pool.filter((club) => isEuropeanClub(club) && (foreignEligible(state, club, originCountryId) || club.reputation <= Math.max(3, currentRep - 1)));
   } else if (opts.forceDomestic) {
-    const domesticCountryId = opts.domesticCountryId ?? clubById(current).countryId;
+    const domesticCountryId = opts.domesticCountryId ?? originCountryId;
     pool = pool.filter((club) => club.countryId === domesticCountryId);
   } else if (!opts.includeForeign) {
-    pool = pool.filter((club) => !isAbroad(club));
+    pool = pool.filter((club) => club.countryId === originCountryId);
   } else {
-    pool = pool.filter((club) => !isAbroad(club) || foreignEligible(state, club));
+    pool = pool.filter((club) => club.countryId === originCountryId || foreignEligible(state, club, originCountryId));
   }
-  const originCountryId = clubById(current).countryId;
   const candidates = pool.sort((a, b) => {
     const scoreA = Math.abs(a.reputation - Math.max(currentRep, targetRep)) + seeded(state.seed, salt + CLUBS.indexOf(a)) + regionAffinity(originCountryId, a);
     const scoreB = Math.abs(b.reputation - Math.max(currentRep, targetRep)) + seeded(state.seed, salt + CLUBS.indexOf(b)) + regionAffinity(originCountryId, b);
@@ -2330,7 +2340,7 @@ function selectTransferOffers(state: GameState, salt: number, opts: TransferOffe
   const performanceBoost = Math.floor(profile.performanceScore / 10);
   const foreignPool = CLUBS
     .filter((club) => {
-      if (!isAbroad(club) || club.id === current.id || baseOffers.includes(club.id)) return false;
+      if (club.countryId === current.countryId || club.id === current.id || baseOffers.includes(club.id)) return false;
       const confederation = clubConfederation(club);
       if (isEuropeanClub(current) && confederation !== "EUROPE") return false;
       if (state.age > 38) return false;
@@ -2422,7 +2432,7 @@ function eligibleEvents(state: GameState) {
         Boolean(state.lastResult && (state.lastResult.performanceScore < 54 || state.lastResult.appearances < 16));
       if (baseCountryIsEuropean || playerIsEuropean || !genuinelyStruggling) return false;
     }
-    if (event.needsDomestic && isAbroad(club)) return false;
+    if (event.needsDomestic && club.countryId !== "brasil") return false;
     if (event.needsRivalry && !RIVALRIES.some((rivalry) => rivalry.clubIds.includes(club.id))) return false;
     if (event.maxContractYears !== undefined && state.contractYears > event.maxContractYears) return false;
     if (event.seasonParity === "even" && state.season % 2 !== 0) return false;
@@ -3307,7 +3317,7 @@ function simulateSeason(
   const club = clubById(affected.currentClubId);
   const league = leagueById(affected.currentLeagueId || club.leagueId);
   const country = countryById(club.countryId);
-  const abroad = isAbroad(club);
+  const awayFromAcademyHome = isOutsideAcademyHome(affected, club);
   const inEurope = isEuropeanClub(club);
   const position = positionByKey(affected.position);
   const isKeeper = position.key === "GOL";
@@ -3321,8 +3331,9 @@ function simulateSeason(
   const creationSkill = attributes.passing * 0.38 + attributes.vision * 0.27 + attributes.crossing * 0.2 + attributes.dribbling * 0.15;
   const defensiveSkill = attributes.marking * 0.36 + attributes.tackling * 0.36 + attributes.aerial * 0.16 + attributes.positioning * 0.12;
   const keeperSkill = attributes.reflexes * 0.42 + attributes.handling * 0.34 + attributes.positioning * 0.14 + attributes.distribution * 0.1;
-  const adaptationPenalty = abroad ? Math.max(0, (72 - affected.adaptation) / 8) : 0;
-  const requirement = 55 + club.reputation * 5 + (abroad ? league.prestige * 3 : 0);
+  const adaptationPenalty = awayFromAcademyHome ? Math.max(0, (72 - affected.adaptation) / 8) : 0;
+  const leaguePressure = inEurope ? league.prestige * 3 : Math.max(0, league.prestige - 3) * 2;
+  const requirement = 55 + club.reputation * 5 + leaguePressure;
   const seasonRole = calculateSquadRole(affected.overall, club, league.prestige, affected.managerTrust, affected.age);
   const roleScore = affected.overall - requirement + (primaryAttributeRating - affected.overall) * 0.18 + (effect.minutes ?? 0) - adaptationPenalty + roleAppearanceModifier(seasonRole);
   const baseApps = roleScore >= 5 ? 33 : roleScore >= 0 ? 26 : roleScore >= -5 ? 19 : 11;
@@ -3392,8 +3403,9 @@ function simulateSeason(
   const boost = (effect.titleBoost ?? 0) + (hasTrait("big-game") ? 5 : 0);
   const strength = competitiveStrength(club);
   const playerImpact = Math.max(0, affected.overall - 70) + Math.max(0, primaryAttributeRating - 70) * 0.12 + Math.max(0, defensiveSkill - 75) * 0.04;
+  const seasonDominanceBoost = clamp((formRatio - 1) * 5, 0, 7);
   const leagueChance = clamp(
-    4 + (strength - 70) * 0.7 + playerImpact * 0.36 + boost * 0.25 + affected.fanSupport / 55 - (abroad ? league.prestige * 0.35 : 0),
+    4 + (strength - 70) * 0.7 + playerImpact * 0.36 + seasonDominanceBoost + boost * 0.25 + affected.fanSupport / 55 - (inEurope ? league.prestige * 0.35 : 0),
     1,
     27,
   );
@@ -3403,7 +3415,7 @@ function simulateSeason(
   const continentalTier = playsContinental === "champions" ? -2 : playsContinental === "libertadores" ? 0 : playsContinental === "europa" ? 1 : 2;
   const underdogContinentalFactor = strength < 74 ? 0.62 : strength < 78 ? 0.82 : 1;
   const continentalChance = clamp(
-    (2 + (strength - 74) * 0.38 + Math.max(0, affected.overall - 72) * 0.35 + boost * 0.18 + continentalTier) * underdogContinentalFactor,
+    (2 + (strength - 74) * 0.38 + Math.max(0, affected.overall - 72) * 0.35 + seasonDominanceBoost * 0.7 + boost * 0.18 + continentalTier) * underdogContinentalFactor,
     0.6,
     18,
   );
@@ -3727,10 +3739,12 @@ function simulateSeason(
 
   const awards: string[] = [];
   const awardRoll = seeded(state.seed, state.season * 73);
-  const leagueLabel = abroad ? league.name : "Brasileirão";
+  const leagueLabel = league.name;
   const leagueGoldenBootLine = 28 + Math.floor(seeded(state.seed, state.season * 227 + 19) * 9);
   const leagueAssistKingLine = 18 + Math.floor(seeded(state.seed, state.season * 229 + 23) * 7);
   const europeanGoldenShoeLine = 28 + Math.floor(seeded(state.seed, state.season * 233 + 29) * 9);
+  const continentalGoldenBootLine = 22 + Math.floor(seeded(state.seed, state.season * 239 + 31) * 7);
+  const continentalAssistLine = 14 + Math.floor(seeded(state.seed, state.season * 241 + 37) * 6);
   if (affected.age <= 21 && appearances >= 22 && nextOverall >= 74 && awardRoll > 0.38) awards.push(`Revelação do ${leagueLabel}`);
   if (!isKeeper && goals >= leagueGoldenBootLine) awards.push(`Artilheiro do ${leagueLabel}`);
   if (!isKeeper && assists >= leagueAssistKingLine) awards.push("Rei das Assistências");
@@ -3748,6 +3762,12 @@ function simulateSeason(
   if (inEurope && affected.age <= 21 && playsContinental && nextOverall >= 82 && seeded(state.seed, state.season * 173) > 0.65) awards.push("Troféu Kopa");
   if (inEurope && isKeeper && cleanSheets >= 16 && nextOverall >= 85 && seeded(state.seed, state.season * 179) > 0.7) awards.push("Troféu Yashin");
   if (inEurope && !isKeeper && goals >= europeanGoldenShoeLine && league.prestige >= 4) awards.push("Chuteira de Ouro Europeia");
+  if (!isKeeper && playsContinental && continentalChampion && goals >= continentalGoldenBootLine) {
+    awards.push(`Artilheiro da ${continentalNames[playsContinental].name}`);
+  }
+  if (!isKeeper && playsContinental && continentalChampion && assists >= continentalAssistLine && performanceScore >= 78) {
+    awards.push(`Líder de Assistências da ${continentalNames[playsContinental].name}`);
+  }
   const worldCupGoals = nationalHistoryAdd?.name === "Copa do Mundo"
     ? nationalHistoryAdd.tournamentStats?.goals ?? 0
     : 0;
@@ -3759,7 +3779,7 @@ function simulateSeason(
   if (inEurope && playsContinental === "champions" && continentalChampion && performanceScore >= 84 && seeded(state.seed, state.season * 193) > 0.38) awards.push("MVP da Champions League");
   const hasLeagueGoldenBoot = awards.some((award) => award.includes("Artilheiro"));
   const hasEuropeanGoldenShoe = awards.includes("Chuteira de Ouro Europeia");
-  const hasAssistKingAward = awards.includes("Rei das Assistências");
+  const hasAssistKingAward = awards.some((award) => award.includes("Assistências"));
   const hasGoalsOrAssistsAward = hasLeagueGoldenBoot || hasEuropeanGoldenShoe || hasAssistKingAward;
   const worldXiMerit =
     inEurope &&
@@ -3787,9 +3807,9 @@ function simulateSeason(
     inEurope &&
     (
       (
-        nextOverall >= 78 &&
-        performanceScore >= 63 &&
-        affected.reputation >= 38 &&
+        nextOverall >= 74 &&
+        performanceScore >= 58 &&
+        affected.reputation >= 25 &&
         appearances >= 18
       ) ||
       (
@@ -3802,9 +3822,9 @@ function simulateSeason(
     );
   const americanBallonEligible =
     !inEurope &&
-    nextOverall >= 89 &&
-    performanceScore >= 84 &&
-    affected.reputation >= 75 &&
+    nextOverall >= 86 &&
+    performanceScore >= 82 &&
+    affected.reputation >= 70 &&
     (mundialChampion || continentalChampion);
   const positionBallonModifier = isKeeper ? -7 : position.zone === "defesa" ? -4 : position.zone === "ataque" ? 3 : 0;
   const previousBallonDor = affected.awardCabinet["Bola de Ouro"] ?? 0;
@@ -3846,7 +3866,7 @@ function simulateSeason(
     productionBallonModifier +
     supportingAwardBonus +
     positionBallonModifier;
-  const firstBallonChance = clamp(38 + Math.max(0, ballonScore - 66) * 3.8, 38, 97);
+  const firstBallonChance = clamp(88 + Math.max(0, ballonScore - 58) * 3.2, 88, 98);
   const repeatBallonBaseChance = clamp(16 + Math.max(0, ballonScore - 66) * 4.4, 16, 97);
   const repeatBallonMultiplier =
     previousBallonDor === 0 ? 1 :
@@ -3859,7 +3879,7 @@ function simulateSeason(
     Math.max(0.0004, 0.006 * 0.55 ** (previousBallonDor - 7));
   const rawBallonChance = (previousBallonDor === 0 ? firstBallonChance : repeatBallonBaseChance) * repeatBallonMultiplier;
   const baseBallonChance = previousBallonDor === 0
-    ? clamp(Math.round(rawBallonChance), 38, 94)
+    ? clamp(Math.round(rawBallonChance), 88, 98)
     : Math.max(0.03, Number(rawBallonChance.toFixed(3)));
   const historicBallonSeason =
     (
@@ -3898,7 +3918,7 @@ function simulateSeason(
     (europeanBallonEligible || americanBallonEligible) &&
     hasGoalsOrAssistsAward &&
     (majorClubTitleCount > 0 || majorNationalTitle) &&
-    ballonScore >= 66 &&
+    ballonScore >= 58 &&
     seeded(state.seed, state.season * 109) * 100 < ballonChance;
   if (wonBallonDor) {
     if (!awards.includes("FIFPRO World XI")) awards.push("FIFPRO World XI");
@@ -3928,7 +3948,7 @@ function simulateSeason(
       (majorClubTitleCount > 0 || majorNationalTitle) &&
       (
         (inEurope && nextOverall >= 81 && performanceScore >= 68 && affected.reputation >= 48 && appearances >= 20) ||
-        (!inEurope && nextOverall >= 87 && performanceScore >= 78 && affected.reputation >= 66 && Boolean(continentalChampion || mundialChampion))
+        (!inEurope && nextOverall >= 85 && performanceScore >= 76 && affected.reputation >= 60 && Boolean(continentalChampion || mundialChampion))
       ),
     historicBallonSeason ? 100 : clamp(24 + Math.max(0, ballonScore - 66) * 4.2, 24, 88),
     313,
@@ -4194,7 +4214,7 @@ function simulateSeason(
     .filter((milestone) => affected.followers < milestone.threshold && nextFollowers >= milestone.threshold)
     .map((milestone) => `${affected.season}: ${milestone.label}`);
   const sponsorIncome = affected.activeSponsor?.annualValue ?? 0;
-  const seasonLivingCost = Math.round((120_000 + affected.age * 3_500 + (abroad ? 85_000 : 35_000) + Math.max(0, affected.reputation - 35) * 5_500) / 10_000) * 10_000;
+  const seasonLivingCost = Math.round((120_000 + affected.age * 3_500 + (awayFromAcademyHome ? 85_000 : 35_000) + Math.max(0, affected.reputation - 35) * 5_500) / 10_000) * 10_000;
   const seasonNetIncome = Math.max(0, affected.annualSalary + sponsorIncome - seasonLivingCost);
   const seasonSpendableGain = Math.round(seasonNetIncome * 0.18 / 10_000) * 10_000;
   result.salaryIncome = affected.annualSalary;
@@ -4282,8 +4302,8 @@ function simulateSeason(
     currentLeagueId: promotedLeagueId || league.id,
     worldQualifiedSeason: nextWorldQualifiedSeason,
     worldQualifiedClubId: nextWorldQualifiedClubId,
-    adaptation: abroad ? clamp(affected.adaptation + 10, 0, 100) : 100,
-    abroadSeasons: abroad ? affected.abroadSeasons + 1 : 0,
+    adaptation: awayFromAcademyHome ? clamp(affected.adaptation + 10, 0, 100) : 100,
+    abroadSeasons: awayFromAcademyHome ? affected.abroadSeasons + 1 : 0,
     nationalCategory: nextNationalCategory,
     nationalCaps,
     nationalGoals,
@@ -4400,7 +4420,7 @@ function simulateSeason(
     nationalTrophies: nextBase.nationalTrophies,
     ballonDor: nextBase.awardCabinet["Bola de Ouro"] ?? 0,
     clubsPlayed: new Set(nextBase.history.map((item) => item.clubId)).size,
-    seasonsAbroad: nextBase.history.filter((item) => isAbroad(clubById(item.clubId))).length,
+    seasonsAbroad: nextBase.history.filter((item) => isOutsideCountry(clubById(item.clubId), nextBase.academyCountryId)).length,
     seasons: nextBase.history.length,
     age: nextBase.age,
     wasCaptain: nextBase.clubCaptain,
@@ -4646,7 +4666,7 @@ function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarlo
     production: record.awards.some((award) =>
       award.includes("Artilheiro") ||
       award === "Chuteira de Ouro Europeia" ||
-      award === "Rei das Assistências"
+      award.includes("Assistências")
     ),
   }));
   return {
@@ -5355,7 +5375,10 @@ export default function Home() {
     ? setupForPendingBotaoMatch(game, currentBotaoMatch)
     : null;
   const academyClubs = useMemo(() => randomAcademyClubs(game.seed, game.academyCountryId), [game.seed, game.academyCountryId]);
-  const academyRoute = useMemo(() => academyRouteCopy(game.academyCountryId), [game.academyCountryId]);
+  const academyRoute = useMemo(
+    () => academyRouteCopy(game.academyCountryId, game.nationality),
+    [game.academyCountryId, game.nationality],
+  );
   const filteredCountries = useMemo(() => {
     const query = nationalitySearch.trim().toLocaleLowerCase("pt-BR");
     const pool = sortedCountries(COUNTRIES);
@@ -7446,7 +7469,7 @@ export default function Home() {
               {sortedCountries(COUNTRIES.filter((country) => PLAYABLE_ACADEMY_COUNTRIES.includes(country.id))).map((country) => (
                 <button key={country.id} aria-pressed={game.academyCountryId === country.id} className={`nation-choice ${game.academyCountryId === country.id ? "selected" : ""}`} onClick={() => setGame((current) => ({ ...current, academyCountryId: country.id, academyClubId: "" }))}>
                   <NationBadge country={country} size="md" />
-                  <span><strong>{country.name}</strong><small>{country.id === game.nationality ? "mesmo país da seleção" : "liga jogável"}</small></span>
+                  <span><strong>{country.name}</strong><small>{country.id === game.nationality ? "mesmo país da seleção" : country.id === defaultAcademyCountry(game.nationality) ? "rota recomendada" : "liga jogável"}</small></span>
                 </button>
               ))}
             </div>
@@ -8074,7 +8097,7 @@ export default function Home() {
                 <Progress label="Seleção" value={game.nationalLevel} color="#f5f7f2" />
                 <Progress label="Torcida" value={game.fanSupport} color={supporterMood.color} />
                 <Progress label="Disciplina" value={game.discipline} color={game.discipline < 45 ? "#ff5a4e" : "#63e36b"} />
-                {isAbroad(currentClub) && <Progress label="Adaptação" value={game.adaptation} color="#2ca8ff" />}
+                {isOutsideAcademyHome(game, currentClub) && <Progress label="Adaptação" value={game.adaptation} color="#2ca8ff" />}
               </div>
               <div className="career-total-card"><span>TOTAIS DA CARREIRA</span><div><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label={game.position === "GOL" ? "Defesas" : "Desarmes"} value={game.position === "GOL" ? game.stats.cleanSheets * 3 : game.stats.tackles} /><Metric label="Taças" value={game.trophies + game.nationalTrophies} tone="gold" /></div></div>
               <TrophyGallery state={game} />

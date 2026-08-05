@@ -66,6 +66,10 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Futebol de botão desktop: mesa sempre inteira na viewport, proporção `316/516`, largura máxima de 400px e respiro mínimo de 80px acima/abaixo.
 - Painéis longos: rolagem pertence ao canvas da direita; galerias nunca usam a altura do card vizinho como limite.
 
+### Onboarding internacional
+
+Selecoes sem liga recebem uma rota de base recomendada por confederacao. A recomendacao deve ser visivel, explicada em linguagem narrativa e nunca bloquear a escolha manual de outra liga.
+
 ## Componentes recorrentes
 
 - Botão primário — 52px mobile / 48px desktop · raio 10px · Barlow Condensed 18/800 · fundo referee.
