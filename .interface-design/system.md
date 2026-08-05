@@ -54,6 +54,10 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 ## Arquitetura responsiva
 
 - Mobile: cabeçalho compacto persistente; conteúdo vertical; navegação inferior fixa; ação principal próxima do polegar.
+- Decisões mobile: mercado, meta, arte e escolhas pertencem ao mesmo fluxo rolável. A carta pode sobrepor visualmente a arte em até 20px, mas nunca usa posicionamento absoluto nem cria uma segunda rolagem.
+- Histórico mobile: escudos de títulos são a informação primária; o texto-fallback só aparece quando a imagem não existe e a coleção rola dentro da própria linha.
+- Sala de troféus mobile: nomes podem quebrar em duas linhas, com corpo mínimo de 12px e entrelinha de 1.25; densidade nunca vem de comprimir texto.
+- Arquivo final desktop: dossiê da carreira + vida pública abrem a leitura; taças conquistadas ocupam uma faixa inteira; história/prêmios e clubes/Hall formam pares assimétricos abaixo. Categorias zeradas não entram na galeria comemorativa.
 - Desktop: rail esquerdo de 248–272px com identidade e navegação; contexto do jogador no topo do conteúdo; tela principal em 12 colunas.
 - Resultados: placar da temporada no topo, resumo e progressão primeiro; campanhas, dinheiro e prêmios em módulos largos abaixo.
 - Telas de dados: hero curto + duas colunas assimétricas, gráficos e arquivo usando a largura disponível.

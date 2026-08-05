@@ -175,10 +175,18 @@ export function nationalMatchRole(
   captain = false,
 ): "starter" | "reserve" {
   if (captain) return "starter";
-  const seniorTier = tier === "main" || tier === "none";
-  const tierBase = seniorTier ? 80 : tier === "olympic" ? 75 : tier === "sub20" ? 69 : 63;
-  const strengthDemand = Math.max(0, country.strength - 3) * (seniorTier ? 2 : 1);
-  return overall >= tierBase + strengthDemand ? "starter" : "reserve";
+  const safeStrength = Math.max(1, Math.min(5, country.strength));
+  // A vaga é disputada contra o nível real daquela seleção. Antes, qualquer
+  // adulto precisava de 80 OVR: uma régua adequada às potências, mas absurda
+  // para países médios e pequenos.
+  const requiredOverall = tier === "main" || tier === "none"
+    ? 64 + safeStrength * 3.5
+    : tier === "olympic"
+      ? 62 + safeStrength * 3
+      : tier === "sub20"
+        ? 58 + safeStrength * 2.5
+        : 53 + safeStrength * 2;
+  return overall >= Math.round(requiredOverall) ? "starter" : "reserve";
 }
 
 function reserveEntry(args: {

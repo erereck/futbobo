@@ -1664,3 +1664,329 @@ button:active:not(:disabled) { transform: scale(.98); }
   .career-club-summary,
   .final-hall-of-fame { padding: 16px; }
 }
+
+/* ——— Mobile fit & reading pass ——— */
+
+.competition-emblem.has-image > b { visibility: hidden; }
+
+@media (max-width: 540px) {
+  .career-shell,
+  .career-shell > *,
+  .panel-screen,
+  .panel-screen > *,
+  .event-stage,
+  .event-stage > * { max-width: 100%; min-width: 0; }
+
+  .event-stage {
+    align-content: start;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 86px);
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom) + 86px);
+  }
+
+  .event-stage .market-strip {
+    width: auto;
+    margin: 12px 12px 0;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 12px;
+  }
+
+  .event-stage .market-strip span {
+    display: grid;
+    align-content: center;
+    gap: 3px;
+  }
+
+  .event-stage .market-strip span strong {
+    font-size: 14px;
+    line-height: 1.2;
+  }
+
+  .event-stage .market-strip button {
+    min-width: 0;
+    padding: 9px 12px;
+    line-height: 1.15;
+  }
+
+  .event-stage .objective-card {
+    width: auto;
+    margin: 8px 12px 0;
+  }
+
+  .event-stage .event-art {
+    width: auto;
+    height: 132px;
+    min-height: 132px;
+    margin: 12px 12px 0;
+    border: 1px solid var(--line);
+    border-radius: 16px 16px 4px 16px;
+  }
+
+  .event-stage .event-card {
+    position: relative;
+    inset: auto;
+    z-index: 1;
+    width: auto;
+    max-height: none;
+    margin: -20px 12px 18px;
+    padding: 24px 18px 18px;
+    overflow: visible;
+  }
+
+  .event-heading h1 {
+    max-width: 13ch;
+    font-size: clamp(32px, 9.5vw, 40px);
+    line-height: .96;
+    overflow-wrap: anywhere;
+  }
+
+  .event-heading p { font-size: 12px; line-height: 1.5; }
+  .choice-list { gap: 9px; margin-top: 18px; }
+  .decision-button { min-height: 68px; padding: 12px 14px; }
+  .decision-button strong { font-size: 14px; line-height: 1.25; }
+  .decision-button small { margin-top: 4px; font-size: 10px; line-height: 1.3; }
+
+  .timeline-row {
+    grid-template-columns: 36px 38px minmax(0,1fr) 28px;
+    gap: 8px;
+    min-height: 76px;
+    padding: 10px;
+  }
+
+  .timeline-row > .timeline-trophy { display: none; }
+  .timeline-row > div > strong { font-size: 14px; line-height: 1.2; }
+  .timeline-row > div > small { font-size: 9px; line-height: 1.4; white-space: normal; }
+  .timeline-title-badges { max-width: 100%; gap: 5px; overflow-x: auto; padding: 2px 0 3px; scrollbar-width: none; }
+  .timeline-title-badges::-webkit-scrollbar { display: none; }
+  .timeline-title-badges .competition-emblem { width: 28px; height: 28px; flex: 0 0 28px; }
+  .timeline-title-badges .competition-emblem.has-image > b { display: none; }
+
+  .trophy-gallery { border-radius: 18px 18px 6px 18px; }
+  .trophy-gallery-hero { min-height: 112px; padding: 17px 16px; }
+  .trophy-gallery-hero span { font-size: 8px; line-height: 1.3; }
+  .trophy-gallery-hero small { font-size: 10px; line-height: 1.3; }
+  .trophy-groups { gap: 12px; padding: 12px; }
+  .trophy-groups > section > header { padding: 12px 12px 9px; }
+  .trophy-groups > section > header span { font-size: 8px; line-height: 1.2; }
+  .trophy-groups > section > header b { min-width: 24px; height: 24px; font-size: 10px; }
+  .trophy-groups > section > div { gap: 7px; padding: 0 8px 8px; }
+  .trophy-groups article {
+    grid-template-columns: 46px minmax(0,1fr) 28px;
+    gap: 10px;
+    min-height: 70px;
+    padding: 9px;
+  }
+  .trophy-medallion { width: 46px; height: 46px; }
+  .trophy-groups article > div strong {
+    overflow: visible;
+    font-size: 12px;
+    line-height: 1.25;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  .trophy-groups article > div small { margin-top: 4px; font-size: 9px; line-height: 1.35; }
+  .trophy-groups article > b { font-size: 18px; }
+  .recent-titles > header span { font-size: 8px; }
+  .recent-titles > header small { font-size: 8px; }
+  .recent-titles article { min-height: 66px; }
+  .recent-titles article strong { font-size: 11px; line-height: 1.25; white-space: normal; }
+  .recent-titles article small { font-size: 9px; line-height: 1.3; }
+
+  .profile-metrics,
+  .season-finance-card > div,
+  .career-fortune > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
+
+  .section-heading h2,
+  .panel-screen .section-heading:first-child h2 {
+    max-width: 100%;
+    font-size: clamp(27px, 8vw, 34px);
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .event-stage .market-strip { grid-template-columns: 1fr; }
+  .event-stage .market-strip button { width: 100%; }
+  .career-header { grid-template-columns: minmax(0,1.25fr) .68fr .8fr; }
+  .trophy-gallery-hero > b { width: 58px; height: 58px; }
+}
+
+/* ——— Desktop retirement archive ——— */
+
+@media (min-width: 900px) {
+  .app-shell-summary {
+    width: 100%;
+    max-width: none;
+    min-height: calc(100dvh - 48px);
+    overflow: visible;
+    border: 0;
+    background: var(--bg);
+  }
+
+  .app-shell-summary .summary-screen {
+    display: grid;
+    width: min(1480px, 100%);
+    max-width: 1480px;
+    margin-inline: auto;
+    grid-template-columns: repeat(12,minmax(0,1fr));
+    grid-auto-flow: row dense;
+    align-items: start;
+    gap: 20px;
+    padding: 56px 40px 80px;
+  }
+
+  .app-shell-summary .summary-screen > * {
+    min-width: 0;
+    align-self: start;
+  }
+
+  .app-shell-summary .summary-screen > .summary-preview-bar,
+  .app-shell-summary .summary-screen > .summary-legacy-warning,
+  .app-shell-summary .summary-screen > .challenge-summary-banner,
+  .app-shell-summary .summary-screen > .summary-confetti,
+  .app-shell-summary .summary-screen > .eyebrow,
+  .app-shell-summary .summary-screen > h1 {
+    grid-column: 1 / -1;
+    order: 0;
+  }
+
+  .app-shell-summary .summary-screen > h1 {
+    max-width: 920px;
+    margin-bottom: 18px;
+    font-size: clamp(58px,5vw,80px);
+  }
+
+  .app-shell-summary .summary-confetti { display: none; }
+
+  .app-shell-summary .share-card {
+    grid-column: 1 / 9;
+    grid-row: auto;
+    order: 10;
+    min-height: 520px;
+    margin: 0;
+    padding: 32px;
+  }
+
+  .app-shell-summary .share-player {
+    grid-template-columns: 96px minmax(0,1fr) 88px;
+    gap: 18px;
+    margin-top: 30px;
+  }
+
+  .app-shell-summary .share-player h2 {
+    overflow: visible;
+    font-size: clamp(44px,4vw,64px);
+    line-height: .88;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .app-shell-summary .share-player > strong { font-size: 68px; }
+  .app-shell-summary .share-numbers { margin-top: 26px; }
+  .app-shell-summary .share-numbers .metric { min-height: 96px; padding: 16px; }
+  .app-shell-summary .share-numbers .metric strong { font-size: 38px; }
+  .app-shell-summary .share-legacy-line { margin-top: 16px; padding: 13px 16px; }
+  .app-shell-summary .share-trophies { margin-top: 14px; }
+  .app-shell-summary .share-path {
+    max-width: 100%;
+    margin-top: 24px;
+    overflow-x: auto;
+    padding-block: 5px;
+    scrollbar-width: thin;
+  }
+
+  .app-shell-summary .final-public-life {
+    grid-column: 9 / -1;
+    order: 10;
+    min-height: 520px;
+    margin: 0;
+    padding: 28px;
+  }
+
+  .app-shell-summary .final-public-life .summary-section-heading strong { font-size: 34px; }
+  .app-shell-summary .final-public-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .app-shell-summary .final-public-grid .metric { min-height: 92px; padding: 15px; }
+  .app-shell-summary .final-public-grid .metric strong { font-size: 18px; white-space: normal; }
+
+  .app-shell-summary .trophy-gallery-final {
+    grid-column: 1 / -1;
+    order: 20;
+    margin: 0;
+    padding: 0 28px 28px;
+  }
+
+  .app-shell-summary .trophy-gallery-final .trophy-gallery-hero {
+    min-height: 140px;
+    margin-inline: -28px;
+    padding: 28px 32px;
+  }
+
+  .app-shell-summary .trophy-gallery-final .trophy-groups {
+    grid-template-columns: repeat(auto-fit,minmax(300px,1fr));
+    align-items: start;
+    gap: 14px;
+    padding: 22px 0 0;
+  }
+
+  .app-shell-summary .trophy-gallery-final .trophy-groups > section:not(.has-titles) { display: none; }
+  .app-shell-summary .trophy-gallery-final .national-trophy-group { grid-column: auto; }
+  .app-shell-summary .trophy-gallery-final .trophy-groups article { min-height: 72px; padding: 11px 12px; }
+  .app-shell-summary .trophy-gallery-final .trophy-groups article > div strong {
+    overflow: visible;
+    font-size: 13px;
+    line-height: 1.25;
+    text-overflow: clip;
+    white-space: normal;
+  }
+  .app-shell-summary .trophy-gallery-final .trophy-groups article > div small { font-size: 9px; }
+  .app-shell-summary .trophy-gallery-final .recent-titles { padding: 22px 0 0; }
+  .app-shell-summary .trophy-gallery-final .recent-titles > div { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+  .app-shell-summary .trophy-gallery-final .recent-titles article strong { font-size: 12px; }
+
+  .app-shell-summary .final-player-story {
+    grid-column: 1 / 6;
+    order: 30;
+    margin: 0;
+  }
+
+  .app-shell-summary .final-individual-awards {
+    grid-column: 6 / -1;
+    order: 30;
+    margin: 0;
+  }
+
+  .app-shell-summary .career-club-summary {
+    grid-column: 1 / 8;
+    order: 40;
+    margin: 0;
+  }
+
+  .app-shell-summary .final-hall-of-fame {
+    grid-column: 8 / -1;
+    order: 40;
+    margin: 0;
+  }
+
+  .app-shell-summary .summary-actions {
+    grid-column: 1 / -1;
+    order: 50;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1199px) {
+  .app-shell-summary .summary-screen { width: min(980px,100%); padding-inline: 32px; }
+  .app-shell-summary .share-card,
+  .app-shell-summary .final-public-life,
+  .app-shell-summary .trophy-gallery-final,
+  .app-shell-summary .final-player-story,
+  .app-shell-summary .final-individual-awards,
+  .app-shell-summary .career-club-summary,
+  .app-shell-summary .final-hall-of-fame { grid-column: 1 / -1; min-height: 0; }
+  .app-shell-summary .final-public-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .app-shell-summary .trophy-gallery-final .recent-titles > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}

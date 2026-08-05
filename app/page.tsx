@@ -4814,6 +4814,7 @@ function NationBadge({ country, size = "md" }: { country: Country; size?: "sm" |
 }
 
 function CompetitionBadge({ competition, leagueId }: { competition: CompetitionResult; leagueId: string }) {
+  const [imageAvailable, setImageAvailable] = useState(false);
   const path = competition.id === "domesticLeague"
     ? `/assets/competitions/leagues/${leagueId}.png`
     : competition.id === "domesticCup"
@@ -4823,9 +4824,9 @@ function CompetitionBadge({ competition, leagueId }: { competition: CompetitionR
       : `/assets/competitions/${competition.id}.png`;
 
   return (
-    <span className="competition-emblem" aria-hidden="true">
+    <span className={`competition-emblem ${imageAvailable ? "has-image" : "is-fallback"}`} aria-hidden="true">
       <b>{competition.icon}</b>
-      <LocalBadgeImage path={path} kind="competition" />
+      <LocalBadgeImage path={path} kind="competition" onAvailabilityChange={setImageAvailable} />
     </span>
   );
 }

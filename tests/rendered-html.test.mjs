@@ -215,7 +215,8 @@ test("mantém a carreira encaixada na tela mobile com ações fixas", async () =
   assert.match(styles, /@media \(max-width: 540px\)/);
   assert.match(styles, /\.career-shell \{[\s\S]*height: 100%/);
   assert.match(styles, /\.mobile-action-dock \{[\s\S]*position: fixed/);
-  assert.match(styles, /\.event-card \{[\s\S]*position: absolute/);
+  assert.match(styles, /\.event-stage \{[\s\S]*overflow-y: auto !important/);
+  assert.match(styles, /\.event-card \{[\s\S]*position: relative/);
 });
 
 test("aplica o equilíbrio levemente mais favorável sem liberar títulos fáceis", async () => {
@@ -1034,6 +1035,17 @@ test("não comprime a cerimônia de prêmios no resultado desktop", async () => 
   assert.match(styles, /min-height: max-content/);
 });
 
+test("organiza o arquivo final da carreira em faixas largas no desktop", async () => {
+  const premium = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
+
+  assert.match(premium, /\.app-shell-summary \.summary-screen \{[\s\S]*max-width: 1480px/);
+  assert.match(premium, /\.app-shell-summary \.share-card \{[\s\S]*grid-column: 1 \/ 9/);
+  assert.match(premium, /\.app-shell-summary \.trophy-gallery-final \{[\s\S]*grid-column: 1 \/ -1/);
+  assert.match(premium, /repeat\(auto-fit,minmax\(300px,1fr\)\)/);
+  assert.match(premium, /trophy-groups > section:not\(\.has-titles\) \{ display: none/);
+  assert.match(premium, /\.app-shell-summary \.summary-confetti \{ display: none/);
+});
+
 test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
@@ -1136,6 +1148,7 @@ test("coloca convocados de OVR baixo no banco e preserva o placar anterior", asy
   assert.match(types, /export type BotaoMatchEntry/);
   assert.match(types, /beforePlayerEntry\?: boolean/);
   assert.match(adapter, /export function nationalMatchRole/);
+  assert.match(adapter, /64 \+ safeStrength \* 3\.5/);
   assert.match(adapter, /function reserveEntry/);
   assert.match(adapter, /args\.rules\.halfSeconds \/ 2/);
   assert.match(engine, /period: setup\.entry\?\.period \?\? 1/);
