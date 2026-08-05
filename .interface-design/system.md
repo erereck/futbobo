@@ -58,6 +58,10 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Resultados: placar da temporada no topo, resumo e progressão primeiro; campanhas, dinheiro e prêmios em módulos largos abaixo.
 - Telas de dados: hero curto + duas colunas assimétricas, gráficos e arquivo usando a largura disponível.
 
+- Menu desktop: uma cabine de lançamento contida em `100dvh`; em monitores baixos a densidade diminui, nunca a informação nem a legibilidade.
+- Futebol de botão desktop: mesa sempre inteira na viewport, proporção `316/516`, largura máxima de 400px e respiro mínimo de 80px acima/abaixo.
+- Painéis longos: rolagem pertence ao canvas da direita; galerias nunca usam a altura do card vizinho como limite.
+
 ## Componentes recorrentes
 
 - Botão primário — 52px mobile / 48px desktop · raio 10px · Barlow Condensed 18/800 · fundo referee.
@@ -72,4 +76,3 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Hover/press: 140ms; `scale(.98)` no press.
 - Overlays: 220ms com `cubic-bezier(.23,1,.32,1)`.
 - Nunca `transition: all`; respeitar `prefers-reduced-motion`.
-

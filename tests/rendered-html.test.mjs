@@ -26,7 +26,14 @@ test("aplica o redesign Matchday Editorial com fontes offline e layouts realment
   assert.match(premium, /grid-template-columns: 264px minmax\(0,1fr\)/);
   assert.match(premium, /grid-template-columns: repeat\(12,minmax\(0,1fr\)\)/);
   assert.match(premium, /@media \(max-width: 540px\)/);
-  assert.match(botao, /grid-template-columns: minmax\(240px,\.72fr\) minmax\(420px,560px\) minmax\(240px,\.72fr\)/);
+  assert.match(premium, /height: 100dvh/);
+  assert.match(premium, /scrollbar-gutter: stable/);
+  assert.match(premium, /\.career-tab-profile \.trophy-gallery \{/);
+  assert.match(premium, /\.career-tab-legacy \.legacy-grid \.metric \{/);
+  assert.match(premium, /\.career-shell > \.result-stage \.mobile-action-dock \{/);
+  assert.match(botao, /grid-template-columns: minmax\(220px,\.72fr\) minmax\(340px,440px\) minmax\(220px,\.72fr\)/);
+  assert.match(botao, /width: min\(100%, 400px, calc\(\(100dvh - 160px\) \* 316 \/ 516\)\)/);
+  assert.match(botao, /aspect-ratio: 316 \/ 516/);
   assert.deepEqual(fonts.sort(), [
     "barlow-condensed-600.woff2",
     "barlow-condensed-700.woff2",

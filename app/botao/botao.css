@@ -1243,11 +1243,14 @@
 @media (min-width: 900px) {
   .botao-root {
     display: grid;
-    grid-template-columns: minmax(240px,.72fr) minmax(420px,560px) minmax(240px,.72fr);
+    grid-template-columns: minmax(220px,.72fr) minmax(340px,440px) minmax(220px,.72fr);
     grid-template-rows: 1fr;
     align-items: center;
-    gap: clamp(20px,3vw,44px);
-    padding: 28px clamp(28px,5vw,72px);
+    gap: clamp(16px,2.4vw,36px);
+    height: 100dvh;
+    min-height: 0;
+    padding: 20px clamp(20px,3.5vw,52px);
+    overflow: hidden;
   }
 
   .botao-hud {
@@ -1268,9 +1271,12 @@
   .botao-formation-row { margin-top: 8px; }
 
   .botao-table-wrapper {
-    width: 100%;
-    max-height: calc(100dvh - 56px);
+    width: min(100%, 400px, calc((100dvh - 160px) * 316 / 516));
+    max-height: calc(100dvh - 160px);
+    aspect-ratio: 316 / 516;
   }
+
+  .botao-canvas { aspect-ratio: 316 / 516; }
 
   .botao-controls {
     align-self: center;
@@ -1295,6 +1301,22 @@
   .botao-lobby > .botao-walkover-notice { grid-column: 1 / -1; }
   .botao-lobby > h1 { font-size: 86px; }
   .botao-lobby > .botao-actions { display: grid; grid-template-columns: 1fr 1fr; }
+}
+
+@media (min-width: 900px) and (max-height: 760px) {
+  .botao-root {
+    grid-template-columns: minmax(210px,.72fr) minmax(320px,390px) minmax(210px,.72fr);
+    padding-block: 14px;
+  }
+  .botao-hud,
+  .botao-controls { padding: 16px; }
+  .botao-team strong { font-size: 19px; }
+  .botao-score { padding-block: 12px; font-size: 52px; }
+  .botao-turn { min-height: 58px; font-size: 23px; }
+  .botao-table-wrapper {
+    width: min(100%, 360px, calc((100dvh - 132px) * 316 / 516));
+    max-height: calc(100dvh - 132px);
+  }
 }
 
 @media (max-width: 540px) {
