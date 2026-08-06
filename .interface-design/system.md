@@ -63,6 +63,7 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Telas de dados: hero curto + duas colunas assimétricas, gráficos e arquivo usando a largura disponível.
 
 - Menu desktop: uma cabine de lançamento contida em `100dvh`; em monitores baixos a densidade diminui, nunca a informação nem a legibilidade.
+- Menu desktop: a arte nunca determina a altura da cabine. O grid externo distribui cabeçalho, lançamento, assinatura e versão dentro de `100dvh` em zoom real de 100%; a arte apenas ocupa o espaço restante.
 - Futebol de botão desktop: mesa sempre inteira na viewport, proporção `316/516`, largura máxima de 400px e respiro mínimo de 80px acima/abaixo.
 - Futebol de botão horizontal: no desktop, o usuário pode girar a mesa em 90 graus sem alterar regras nem coordenadas do motor. O canvas passa a `516/316`, permanece inteiro na viewport e o mesmo controle nunca aparece no mobile.
 - Painéis longos: rolagem pertence ao canvas da direita; galerias nunca usam a altura do card vizinho como limite.
@@ -73,6 +74,12 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - A próxima partida é sempre o foco. A trilha do torneio mostra os três jogos de grupo e os cinco mata-matas como promessa visual de progressão, sem imitar uma planilha de tabela.
 - Azul `broadcast` identifica seleção e Copa; amarelo `referee` permanece reservado para a ação imediata e a taça.
 - No mobile, a lista de países rola dentro do próprio painel e a chamada para jogar continua visível sem competir com o seletor.
+
+### Mesa de decisão mobile
+
+- A aba Carreira/decisão é a única tela de conteúdo que não rola: cabeçalho, quatro barras, contrato, mercado, meta, capítulo e opções cabem juntos em `100dvh`.
+- O HUD é estrutural, não `sticky`: ocupa linhas fixas do shell; o capítulo recebe o restante por `minmax(0,1fr)` e reduz densidade em aparelhos de até 700px de altura.
+- Arte puramente decorativa sai no mobile desta tela para preservar texto e alvos mínimos de 44px. As outras abas e o resultado de temporada continuam roláveis.
 
 ### Onboarding internacional
 

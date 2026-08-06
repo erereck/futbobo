@@ -7120,7 +7120,7 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v83 · MODO COPA</span>
+                    <span className="update-version">v84 · VIEWPORT DINÂMICA</span>
                     <h1 id="update-title">O Futbobo inteiro entrou em campo de roupa nova.</h1>
                   </div>
                 </header>
@@ -7383,7 +7383,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v83 · MODO COPA</b>
+            <span>FUTBOBO</span><b>v84 · VIEWPORT DINÂMICA</b>
           </footer>
         </section>
       )}
