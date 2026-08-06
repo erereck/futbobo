@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v82 · MATCHDAY EDITORIAL/);
+  assert.match(pageSource, /v83 · MODO COPA/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -1215,6 +1215,32 @@ test("cria momentos engraçados e específicos com espaço próprio na carreira"
   assert.match(page, /import \{ FUTBOBO_MOMENTS \} from "\.\/futbobo-moments"/);
   assert.match(page, /event\.id\.startsWith\("funny-"\)/);
   assert.match(page, /< 0\.22/);
+});
+
+test("oferece uma Copa do Mundo independente e campo horizontal apenas no PC", async () => {
+  const home = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const cup = await readFile(new URL("../app/copa/page.tsx", import.meta.url), "utf8");
+  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
+  const render = await readFile(new URL("../app/botao/render.ts", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
+
+  assert.match(home, /href="\/copa"/);
+  assert.match(home, /Jogar uma Copa do Mundo/);
+  assert.match(cup, /const KNOCKOUT_STAGES = \["16 avos", "Oitavas", "Quartas", "Semifinal", "Final"\]/);
+  assert.match(cup, /usedOpponents: \[\.\.\.campaign\.usedOpponents, opponentId\]/);
+  assert.match(cup, /buildNationalMatchSetup/);
+  assert.match(cup, /<BotaoMatch/);
+  assert.match(cup, /Uma Copa inteira/);
+  assert.doesNotMatch(cup, /localStorage/);
+
+  assert.match(match, /const \[desktopLandscape, setDesktopLandscape\]/);
+  assert.match(match, /futbobo_botao_landscape/);
+  assert.match(match, /context\.setTransform\(0, scale, -scale, 0/);
+  assert.match(match, /toFieldPoint\(event\.clientX, event\.clientY, canvas\.getBoundingClientRect\(\), desktopLandscape\)/);
+  assert.match(match, /botao-desktop-only/);
+  assert.match(render, /rotated = false/);
+  assert.match(styles, /\.botao-desktop-only \{ display: none; \}/);
+  assert.match(styles, /\.botao-root-landscape \.botao-canvas \{ aspect-ratio: 516 \/ 316; \}/);
 });
 
 test("corrige competicoes, bola de ouro, rivais e numeros persistentes", async () => {

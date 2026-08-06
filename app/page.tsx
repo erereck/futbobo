@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   CLUBS,
@@ -7119,7 +7120,7 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v82 · MATCHDAY EDITORIAL</span>
+                    <span className="update-version">v83 · MODO COPA</span>
                     <h1 id="update-title">O Futbobo inteiro entrou em campo de roupa nova.</h1>
                   </div>
                 </header>
@@ -7354,6 +7355,11 @@ export default function Home() {
                 </button>
                 {hasChallengeSave && <button className="challenge-restart" type="button" onClick={startChallenge}>Recomeçar com a mesma semente</button>}
               </section>
+              <Link className="world-cup-quick-card" href="/copa">
+                <span className="world-cup-quick-mark">◎</span>
+                <span><small>MODO RÁPIDO</small><strong>Jogar uma Copa do Mundo</strong><em>Da fase de grupos à final · fora da carreira</em></span>
+                <b>→</b>
+              </Link>
               {hallOfFame.length > 0 && (
                 <div className="welcome-hall">
                   <div><span>HALL DA FAMA LOCAL</span><strong>Suas melhores carreiras</strong></div>
@@ -7377,7 +7383,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v82 · MATCHDAY EDITORIAL</b>
+            <span>FUTBOBO</span><b>v83 · MODO COPA</b>
           </footer>
         </section>
       )}

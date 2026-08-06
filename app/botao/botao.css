@@ -473,6 +473,8 @@
   text-transform: uppercase;
 }
 
+.botao-desktop-only { display: none; }
+
 /* ---------------------------------------------------------------- antessala */
 
 .botao-lobby {
@@ -1275,6 +1277,20 @@
     max-height: calc(100dvh - 160px);
     aspect-ratio: 316 / 516;
   }
+
+  .botao-desktop-only { display: inline-flex; align-items: center; justify-content: center; }
+
+  .botao-root-landscape {
+    grid-template-columns: minmax(180px,.55fr) minmax(480px,min(62vw,900px)) minmax(180px,.55fr);
+  }
+
+  .botao-root-landscape .botao-table-wrapper {
+    width: min(100%,900px,calc((100dvh - 120px) * 516 / 316));
+    max-height: calc(100dvh - 120px);
+    aspect-ratio: 516 / 316;
+  }
+
+  .botao-root-landscape .botao-canvas { aspect-ratio: 516 / 316; }
 
   .botao-canvas { aspect-ratio: 316 / 516; }
 

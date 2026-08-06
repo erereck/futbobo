@@ -433,8 +433,15 @@ function penaltyVisibleBodies(state: BotaoMatchState): BotaoBody[] {
   return state.bodies.filter((body) => body.kind === "ball" || body.id === shooter.id || body.id === keeper.id);
 }
 
-/** Converte um ponto do canvas (px) para unidades de campo. */
-export function toFieldPoint(clientX: number, clientY: number, rect: DOMRect): { x: number; y: number } {
+/** Converte um ponto do canvas (px) para unidades de campo, inclusive com a mesa deitada no desktop. */
+export function toFieldPoint(clientX: number, clientY: number, rect: DOMRect, rotated = false): { x: number; y: number } {
+  if (rotated) {
+    const scale = rect.height / VIEW_WIDTH;
+    return {
+      x: (clientY - rect.top) / scale - VIEW_PAD_X,
+      y: VIEW_HEIGHT - VIEW_PAD_Y - (clientX - rect.left) / scale,
+    };
+  }
   const scale = rect.width / VIEW_WIDTH;
   return {
     x: (clientX - rect.left) / scale - VIEW_PAD_X,

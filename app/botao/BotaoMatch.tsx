@@ -150,6 +150,7 @@ export default function BotaoMatch({
   const [shaking, setShaking] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [idleCountdown, setIdleCountdown] = useState<number | null>(null);
+  const [desktopLandscape, setDesktopLandscape] = useState(false);
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
 
@@ -189,6 +190,16 @@ export default function BotaoMatch({
     },
     [],
   );
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 900px)");
+    const syncOrientation = () => {
+      setDesktopLandscape(desktop.matches && window.localStorage.getItem("futbobo_botao_landscape") === "1");
+    };
+    syncOrientation();
+    desktop.addEventListener("change", syncOrientation);
+    return () => desktop.removeEventListener("change", syncOrientation);
+  }, []);
 
   // Voltando de segundo plano o rAF ficou parado: zera o relógio de frame para
   // não descontar de uma vez o tempo em que o app esteve fora da tela.
@@ -418,8 +429,12 @@ export default function BotaoMatch({
         canvas.width = targetWidth;
         canvas.height = targetHeight;
       }
-      const scale = (rect.width / VIEW_WIDTH) * dpr;
-      context.setTransform(scale, 0, 0, scale, VIEW_PAD_X * scale, VIEW_PAD_Y * scale);
+      const scale = ((desktopLandscape ? rect.height / VIEW_WIDTH : rect.width / VIEW_WIDTH) * dpr);
+      if (desktopLandscape) {
+        context.setTransform(0, scale, -scale, 0, (VIEW_HEIGHT - VIEW_PAD_Y) * scale, VIEW_PAD_X * scale);
+      } else {
+        context.setTransform(scale, 0, 0, scale, VIEW_PAD_X * scale, VIEW_PAD_Y * scale);
+      }
       drawMatch(
         context,
         state,
@@ -436,7 +451,7 @@ export default function BotaoMatch({
       );
     });
     return () => cancelAnimationFrame(frame);
-  }, [handleEvents, bump, showFlash]);
+  }, [handleEvents, bump, showFlash, desktopLandscape]);
 
   // -------------------------------------------------------- gol e intervalo
   useEffect(() => {
@@ -540,7 +555,7 @@ export default function BotaoMatch({
       const canvas = canvasRef.current;
       if (!canvas) return;
       unlockAudio();
-      const point = toFieldPoint(event.clientX, event.clientY, canvas.getBoundingClientRect());
+      const point = toFieldPoint(event.clientX, event.clientY, canvas.getBoundingClientRect(), desktopLandscape);
       const disc = shootableAt(point.x, point.y);
       if (!disc) return;
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -553,7 +568,7 @@ export default function BotaoMatch({
       vibrate(8);
       bump();
     },
-    [bump, shootableAt],
+    [bump, shootableAt, desktopLandscape],
   );
 
   const onPointerMove = useCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -562,12 +577,12 @@ export default function BotaoMatch({
     const state = matchRef.current;
     const aim = aimRef.current;
     if (!canvas || !state || !aim) return;
-    const point = toFieldPoint(event.clientX, event.clientY, canvas.getBoundingClientRect());
+    const point = toFieldPoint(event.clientX, event.clientY, canvas.getBoundingClientRect(), desktopLandscape);
     const disc = state.bodies.find((body) => body.id === aim.bodyId);
     if (!disc) return;
     const computed = aimFromDrag(disc, point.x, point.y);
     aimRef.current = { bodyId: aim.bodyId, dragX: point.x, dragY: point.y, ratio: computed.ratio, valid: computed.valid };
-  }, []);
+  }, [desktopLandscape]);
 
   const onPointerUp = useCallback(
     (event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -607,7 +622,7 @@ export default function BotaoMatch({
   const penalties = state.penalties;
 
   return (
-    <div className="botao-root">
+    <div className={`botao-root ${desktopLandscape ? "botao-root-landscape" : ""}`}>
       <header className="botao-hud">
         <div className="botao-hud-top">
           <span className="botao-competition">
@@ -675,8 +690,8 @@ export default function BotaoMatch({
       </header>
 
       <div
-        className={`botao-table-wrapper ${shaking ? "botao-shake" : ""}`}
-        style={{ aspectRatio: `${VIEW_WIDTH} / ${VIEW_HEIGHT}` }}
+        className={`botao-table-wrapper ${desktopLandscape ? "botao-table-landscape" : ""} ${shaking ? "botao-shake" : ""}`}
+        style={{ aspectRatio: desktopLandscape ? `${VIEW_HEIGHT} / ${VIEW_WIDTH}` : `${VIEW_WIDTH} / ${VIEW_HEIGHT}` }}
       >
         <canvas
           ref={canvasRef}
@@ -799,6 +814,21 @@ export default function BotaoMatch({
             }}
           >
             {muted ? "Som off" : "Som on"}
+          </button>
+          <button
+            type="button"
+            className="botao-ghost botao-desktop-only"
+            aria-pressed={desktopLandscape}
+            onClick={() => {
+              const next = !desktopLandscape;
+              setDesktopLandscape(next);
+              window.localStorage.setItem("futbobo_botao_landscape", next ? "1" : "0");
+              pointerRef.current = null;
+              aimRef.current = null;
+              selectedRef.current = null;
+            }}
+          >
+            {desktopLandscape ? "Campo em pé" : "Virar campo"} ↻
           </button>
         </div>
       </footer>

@@ -1,0 +1,140 @@
+.world-cup-shell {
+  min-height: 100dvh;
+  padding: max(20px,env(safe-area-inset-top)) 16px max(28px,env(safe-area-inset-bottom));
+  background: var(--bg,#07110d);
+  color: var(--text,#f2f5ed);
+  font-family: var(--sans,"Manrope",sans-serif);
+}
+
+.world-cup-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  color: var(--muted,#aab8ac);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+.world-cup-brand a { color: var(--text,#f2f5ed); text-decoration: none; }
+.world-cup-brand b { color: var(--gold,#f4c430); font-weight: 800; }
+
+.world-cup-hero { padding: 44px 0 32px; border-bottom: 1px solid var(--line,rgba(226,239,228,.09)); }
+.world-cup-hero > span,
+.world-cup-config-heading small,
+.world-cup-next-match > small,
+.world-cup-route-heading small,
+.world-cup-result-hero > small,
+.world-cup-finish-hero > span { color: var(--gold,#f4c430); font-size: 9px; font-weight: 800; letter-spacing: .16em; }
+.world-cup-hero h1 { max-width: 680px; margin: 12px 0 16px; font: 900 clamp(56px,18vw,104px)/.82 var(--display,"Barlow Condensed",sans-serif); letter-spacing: -.035em; text-wrap: balance; }
+.world-cup-hero p { max-width: 620px; margin: 0; color: var(--muted,#aab8ac); font-size: 14px; line-height: 1.65; text-wrap: pretty; }
+
+.world-cup-config { padding: 28px 0; border-bottom: 1px solid var(--line,rgba(226,239,228,.09)); }
+.world-cup-config-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.world-cup-config-heading > span { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid var(--line-strong,rgba(226,239,228,.16)); border-radius: 8px; color: var(--gold,#f4c430); font: 800 20px var(--display,"Barlow Condensed",sans-serif); }
+.world-cup-config-heading h2 { margin: 2px 0 0; font: 800 28px/.95 var(--display,"Barlow Condensed",sans-serif); }
+
+.world-cup-search { display: grid; gap: 7px; margin-bottom: 12px; }
+.world-cup-search span { color: var(--muted,#aab8ac); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+.world-cup-search input { min-height: 48px; padding: 0 14px; border: 1px solid var(--line-strong,rgba(226,239,228,.16)); border-radius: 8px; outline: 0; background: #050d09; color: var(--text,#f2f5ed); font: 700 14px var(--sans,"Manrope",sans-serif); }
+.world-cup-search input:focus { border-color: rgba(244,196,48,.5); box-shadow: 0 0 0 3px rgba(244,196,48,.08); }
+
+.world-cup-country-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; max-height: 340px; overflow-y: auto; scrollbar-gutter: stable; }
+.world-cup-country-grid button { display: grid; min-width: 0; min-height: 64px; grid-template-columns: 42px minmax(0,1fr); align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--line,rgba(226,239,228,.09)); border-radius: 10px; background: var(--surface,#0b1812); color: var(--text,#f2f5ed); text-align: left; cursor: pointer; }
+.world-cup-country-grid button[aria-pressed="true"] { border-color: rgba(244,196,48,.45); background: rgba(244,196,48,.07); }
+.world-cup-country-grid img { width: 42px; height: 30px; border-radius: 5px; object-fit: cover; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.world-cup-country-grid button span { display: flex; min-width: 0; flex-direction: column; }
+.world-cup-country-grid strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.world-cup-country-grid small { margin-top: 3px; color: var(--muted,#aab8ac); font-size: 8px; text-transform: uppercase; }
+
+.world-cup-position-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; }
+.world-cup-position-grid button { display: flex; min-height: 60px; flex-direction: column; align-items: center; justify-content: center; padding: 7px 4px; border: 1px solid var(--line,rgba(226,239,228,.09)); border-radius: 8px; background: var(--surface,#0b1812); color: var(--text,#f2f5ed); cursor: pointer; }
+.world-cup-position-grid button[aria-pressed="true"] { border-color: rgba(244,196,48,.45); background: rgba(244,196,48,.08); color: var(--gold,#f4c430); }
+.world-cup-position-grid b { font: 800 18px var(--display,"Barlow Condensed",sans-serif); }
+.world-cup-position-grid small { margin-top: 2px; color: var(--muted,#aab8ac); font-size: 7px; }
+
+.world-cup-primary { display: flex; width: 100%; min-height: 54px; align-items: center; justify-content: space-between; margin-top: 18px; padding: 0 18px; border: 0; border-radius: 9px; background: var(--gold,#f4c430); color: #15180e; font: 800 19px var(--display,"Barlow Condensed",sans-serif); cursor: pointer; }
+.world-cup-primary:active { transform: scale(.98); }
+.world-cup-fineprint { margin: 12px 0 0; color: var(--muted,#aab8ac); font-size: 9px; line-height: 1.55; text-align: center; }
+
+.world-cup-score-rail { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; padding: 16px; border: 1px solid var(--line,rgba(226,239,228,.09)); border-radius: 14px 14px 5px 14px; background: var(--surface,#0b1812); }
+.world-cup-nation { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.world-cup-nation img,.world-cup-next-match img,.world-cup-finish-hero img { border-radius: 7px; object-fit: cover; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.world-cup-nation span { display: flex; min-width: 0; flex-direction: column; }
+.world-cup-nation small,.world-cup-live-metrics small { color: var(--muted,#aab8ac); font-size: 8px; font-weight: 800; letter-spacing: .1em; }
+.world-cup-nation strong { overflow: hidden; font: 800 24px var(--display,"Barlow Condensed",sans-serif); text-overflow: ellipsis; white-space: nowrap; }
+.world-cup-live-metrics { display: flex; gap: 14px; }
+.world-cup-live-metrics span { display: flex; min-width: 34px; flex-direction: column; align-items: center; }
+.world-cup-live-metrics b { margin-top: 2px; font: 800 25px var(--display,"Barlow Condensed",sans-serif); font-variant-numeric: tabular-nums; }
+
+.world-cup-next-match { margin-top: 14px; padding: 24px 18px; border: 1px solid var(--line-strong,rgba(226,239,228,.16)); border-radius: 18px 18px 6px 18px; background: var(--surface,#0b1812); text-align: center; }
+.world-cup-next-match > div { display: grid; grid-template-columns: 1fr 30px 1fr; align-items: center; max-width: 320px; margin: 20px auto 12px; }
+.world-cup-next-match > div > span { display: flex; flex-direction: column; align-items: center; gap: 7px; font: 800 19px var(--display,"Barlow Condensed",sans-serif); }
+.world-cup-next-match > div > b { color: var(--muted,#aab8ac); font: 700 24px var(--display,"Barlow Condensed",sans-serif); }
+.world-cup-next-match h1 { margin: 0; font: 800 30px/.95 var(--display,"Barlow Condensed",sans-serif); text-wrap: balance; }
+
+.world-cup-route { margin-top: 14px; padding: 16px; border: 1px solid var(--line,rgba(226,239,228,.09)); border-radius: 14px; background: var(--surface,#0b1812); }
+.world-cup-route-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.world-cup-route-heading strong { color: var(--muted,#aab8ac); font-size: 9px; }
+.world-cup-route-list { display: grid; gap: 6px; }
+.world-cup-route-game { display: grid; min-height: 54px; grid-template-columns: 32px minmax(0,1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid transparent; border-radius: 8px; background: #08130e; }
+.world-cup-route-game > span { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 6px; background: rgba(255,255,255,.05); color: var(--muted,#aab8ac); font: 800 12px var(--display,"Barlow Condensed",sans-serif); }
+.world-cup-route-game div { min-width: 0; }
+.world-cup-route-game small { display: block; color: var(--muted,#aab8ac); font-size: 7px; font-weight: 800; letter-spacing: .1em; }
+.world-cup-route-game strong { display: block; margin-top: 2px; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.world-cup-route-game > b { font: 800 16px var(--display,"Barlow Condensed",sans-serif); font-variant-numeric: tabular-nums; }
+.world-cup-route-game.current { border-color: rgba(244,196,48,.35); background: rgba(244,196,48,.06); }
+.world-cup-route-game.current > span { background: var(--gold,#f4c430); color: #15180e; }
+.world-cup-route-game.win > span { background: rgba(103,221,120,.14); color: var(--green,#67dd78); }
+.world-cup-route-game.loss > span { background: rgba(239,98,88,.13); color: var(--red,#ef6258); }
+.world-cup-route-game.draw > span { color: var(--blue,#58a9e8); }
+.world-cup-route-game.future { opacity: .48; }
+
+.world-cup-result,.world-cup-finished { display: grid; align-content: center; max-width: 760px; margin: 0 auto; }
+.world-cup-result-hero { padding: 44px 20px; border: 1px solid var(--line-strong,rgba(226,239,228,.16)); border-radius: 20px 20px 7px 20px; background: var(--surface,#0b1812); text-align: center; }
+.world-cup-result-hero.won { border-color: rgba(103,221,120,.28); }
+.world-cup-result-hero.lost { border-color: rgba(239,98,88,.28); }
+.world-cup-result-hero > div { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; margin: 18px 0 7px; }
+.world-cup-result-hero > div span { color: var(--muted,#aab8ac); font: 800 24px var(--display,"Barlow Condensed",sans-serif); }
+.world-cup-result-hero > div strong { font: 900 clamp(64px,20vw,100px)/.8 var(--display,"Barlow Condensed",sans-serif); font-variant-numeric: tabular-nums; }
+.world-cup-result-hero p { margin: 0; color: var(--muted,#aab8ac); font-size: 12px; }
+.world-cup-match-summary { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-top: 12px; }
+.world-cup-match-summary div { min-height: 78px; padding: 13px; border: 1px solid var(--line,rgba(226,239,228,.09)); border-radius: 10px; background: var(--surface,#0b1812); }
+.world-cup-match-summary small { color: var(--muted,#aab8ac); font-size: 8px; font-weight: 800; letter-spacing: .1em; }
+.world-cup-match-summary strong { display: block; margin-top: 6px; font: 800 26px var(--display,"Barlow Condensed",sans-serif); }
+
+.world-cup-finish-hero { display: flex; flex-direction: column; align-items: center; padding: 52px 20px; border: 1px solid var(--line-strong,rgba(226,239,228,.16)); border-radius: 22px 22px 7px 22px; background: var(--surface,#0b1812); text-align: center; }
+.world-cup-finish-hero.champion { border-color: rgba(244,196,48,.38); }
+.world-cup-finish-hero img { margin-bottom: 20px; }
+.world-cup-finish-hero h1 { margin: 10px 0; font: 900 clamp(52px,16vw,88px)/.86 var(--display,"Barlow Condensed",sans-serif); text-wrap: balance; }
+.world-cup-finish-hero p { margin: 0; color: var(--muted,#aab8ac); font-size: 12px; line-height: 1.55; }
+.world-cup-finish-actions { display: grid; gap: 8px; margin-top: 14px; }
+.world-cup-finish-actions > button:not(.world-cup-primary),.world-cup-finish-actions > a { display: grid; min-height: 48px; place-items: center; border: 1px solid var(--line-strong,rgba(226,239,228,.16)); border-radius: 9px; background: transparent; color: var(--text,#f2f5ed); font: 800 16px var(--display,"Barlow Condensed",sans-serif); text-decoration: none; cursor: pointer; }
+
+@media (min-width: 900px) {
+  .world-cup-shell { max-width: 1440px; margin: 0 auto; padding: 28px 40px 40px; }
+  .world-cup-setup { display: grid; grid-template-columns: minmax(340px,.8fr) minmax(400px,1fr); gap: 0 32px; }
+  .world-cup-setup > .world-cup-brand { grid-column: 1 / -1; }
+  .world-cup-hero { grid-row: 2 / 4; padding: 80px 40px 40px 0; border-right: 1px solid var(--line,rgba(226,239,228,.09)); border-bottom: 0; }
+  .world-cup-config { padding: 32px 0 24px; }
+  .world-cup-country-grid { grid-template-columns: repeat(3,minmax(0,1fr)); max-height: 280px; }
+  .world-cup-position-grid { grid-template-columns: repeat(6,minmax(0,1fr)); }
+  .world-cup-hub { display: grid; grid-template-columns: minmax(0,1.25fr) minmax(340px,.75fr); gap: 14px 24px; align-content: start; }
+  .world-cup-hub > .world-cup-brand,.world-cup-hub > .world-cup-score-rail { grid-column: 1 / -1; }
+  .world-cup-next-match { margin-top: 0; padding: 42px; }
+  .world-cup-route { margin-top: 0; }
+  .world-cup-match-summary { grid-template-columns: repeat(4,1fr); }
+  .world-cup-finish-actions { grid-template-columns: 1.3fr 1fr 1fr; }
+  .world-cup-finish-actions .world-cup-primary { margin-top: 0; }
+}
+
+@media (max-width: 540px) {
+  .world-cup-country-grid { max-height: 300px; }
+  .world-cup-score-rail { align-items: flex-start; flex-direction: column; }
+  .world-cup-live-metrics { width: 100%; justify-content: space-around; padding-top: 12px; border-top: 1px solid var(--line,rgba(226,239,228,.09)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-cup-primary:active { transform: none; }
+}

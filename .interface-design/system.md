@@ -64,7 +64,15 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 
 - Menu desktop: uma cabine de lançamento contida em `100dvh`; em monitores baixos a densidade diminui, nunca a informação nem a legibilidade.
 - Futebol de botão desktop: mesa sempre inteira na viewport, proporção `316/516`, largura máxima de 400px e respiro mínimo de 80px acima/abaixo.
+- Futebol de botão horizontal: no desktop, o usuário pode girar a mesa em 90 graus sem alterar regras nem coordenadas do motor. O canvas passa a `516/316`, permanece inteiro na viewport e o mesmo controle nunca aparece no mobile.
 - Painéis longos: rolagem pertence ao canvas da direita; galerias nunca usam a altura do card vizinho como limite.
+
+### Copa instantânea
+
+- O modo Copa é uma experiência descartável e isolada da carreira: seleção + posição entram, campanha e resultado saem, sem escrever no save principal.
+- A próxima partida é sempre o foco. A trilha do torneio mostra os três jogos de grupo e os cinco mata-matas como promessa visual de progressão, sem imitar uma planilha de tabela.
+- Azul `broadcast` identifica seleção e Copa; amarelo `referee` permanece reservado para a ação imediata e a taça.
+- No mobile, a lista de países rola dentro do próprio painel e a chamada para jogar continua visível sem competir com o seletor.
 
 ### Onboarding internacional
 

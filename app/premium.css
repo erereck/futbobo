@@ -303,6 +303,30 @@ button:active:not(:disabled) { transform: scale(.98); }
 .welcome-utilities b { font-size: 17px; }
 .welcome-utilities span { font-size: 8px; }
 
+.world-cup-quick-card {
+  display: grid;
+  min-height: 82px;
+  grid-template-columns: 42px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(88,169,232,.24);
+  border-radius: 12px 12px 4px 12px;
+  background: rgba(88,169,232,.055);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 140ms cubic-bezier(.23,1,.32,1), background 140ms cubic-bezier(.23,1,.32,1), transform 140ms cubic-bezier(.23,1,.32,1);
+}
+
+.world-cup-quick-card:hover { border-color: rgba(88,169,232,.46); background: rgba(88,169,232,.09); }
+.world-cup-quick-card:active { transform: scale(.98); }
+.world-cup-quick-mark { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 8px; background: rgba(88,169,232,.12); color: var(--blue); font: 800 22px var(--display); }
+.world-cup-quick-card > span:nth-child(2) { display: flex; min-width: 0; flex-direction: column; }
+.world-cup-quick-card small { color: var(--blue); font-size: 7px; font-weight: 800; letter-spacing: .14em; }
+.world-cup-quick-card strong { margin-top: 3px; font: 800 18px/.95 var(--display); }
+.world-cup-quick-card em { margin-top: 4px; overflow: hidden; color: var(--muted); font-size: 8px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.world-cup-quick-card > b { color: var(--blue); font-size: 18px; }
+
 .welcome-hall {
   padding: 14px;
   border-color: var(--line);
