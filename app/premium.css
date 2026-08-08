@@ -2512,3 +2512,251 @@ button:active:not(:disabled) { transform: scale(.98); }
   .club-season-ledger article > div strong { font-size: 9px; line-height: 1.35; }
   .club-season-ledger article > div p { white-space: normal; }
 }
+
+/* v88 — final craft pass: readability, semantics and tactile consistency */
+::selection { background: rgba(244,196,48,.3); color: var(--text); }
+
+a:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+h1,
+h2,
+h3,
+.section-heading strong,
+.summary-section-heading strong { text-wrap: balance; }
+
+p,
+.empty-panel,
+.event-heading p,
+.story-card p { text-wrap: pretty; }
+
+.metric strong,
+.career-age strong,
+.player-identity strong,
+.season-stat-grid strong,
+.club-summary-numbers b,
+.hall-score,
+.career-value,
+.season-bars b,
+.production-list b,
+.audience-bars b,
+.botao-score,
+.world-cup-live-metrics b { font-variant-numeric: tabular-nums; }
+
+.primary-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled {
+  cursor: not-allowed;
+  filter: saturate(.55);
+  opacity: .48;
+}
+
+.primary-button[aria-busy="true"] { cursor: progress; }
+.primary-button[aria-busy="true"] > span { animation: share-busy 900ms ease-in-out infinite alternate; }
+
+@keyframes share-busy {
+  from { opacity: .35; transform: scale(.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.empty-panel {
+  display: flex;
+  min-height: 112px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-color: var(--line);
+  border-radius: 12px;
+  background: rgba(255,255,255,.018);
+}
+
+.empty-panel strong { color: var(--text); font: 800 18px var(--display); }
+.empty-panel span { max-width: 440px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+
+.welcome-hall button.hall-career-link {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 54px;
+  grid-template-columns: 22px 42px minmax(0,1fr) auto;
+  align-items: center;
+  column-gap: 9px;
+  padding: 6px 7px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: rgba(255,255,255,.025);
+  color: var(--text);
+  text-align: left;
+}
+
+.welcome-hall button.hall-career-link:hover { border-color: rgba(244,196,48,.2); background: rgba(244,196,48,.055); }
+.welcome-hall button.hall-career-link > b { color: var(--gold); font-size: 9px; }
+.welcome-hall button.hall-career-link > .club-badge { justify-self: center; }
+.welcome-hall button.hall-career-link > em { color: var(--gold); font: 900 14px var(--display); font-style: normal; }
+
+.hall-ranking > button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 28px 52px minmax(0,1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  min-width: 0;
+  min-height: 72px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #0c1b14;
+  color: var(--text);
+  text-align: left;
+}
+
+.hall-ranking > button:hover { border-color: rgba(88,169,232,.32); background: rgba(88,169,232,.045); }
+.hall-ranking > button.current-career { border-color: rgba(244,196,48,.36); background: rgba(244,196,48,.065); }
+.hall-ranking > button > b { color: var(--gold); font-size: 10px; text-align: center; }
+.hall-ranking > button > .club-badge { justify-self: center; }
+.hall-ranking > button > div { display: flex; min-width: 0; flex-direction: column; }
+.hall-ranking > button > div strong { overflow: hidden; font: 800 15px var(--display); text-overflow: ellipsis; white-space: nowrap; }
+.hall-ranking > button > div small { margin-top: 3px; overflow: hidden; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+
+.timeline-row,
+.award-cabinet-list article,
+.record-book article,
+.rival-center article,
+.social-post-list article { border-color: var(--line); }
+
+@media (hover: hover) {
+  .club-choice,
+  .offer-card,
+  .decision-button,
+  .achievement-card,
+  .position-button,
+  .nation-choice,
+  .world-cup-quick-card {
+    transition: background-color 140ms, border-color 140ms, color 140ms, transform 140ms;
+  }
+
+  .club-choice:hover,
+  .offer-card:hover,
+  .decision-button:hover,
+  .achievement-card:hover,
+  .position-button:hover,
+  .nation-choice:hover,
+  .world-cup-quick-card:hover {
+    border-color: var(--line-strong);
+    background-color: var(--surface-2);
+  }
+}
+
+@media (min-width: 900px) {
+  .panel-screen > .section-heading,
+  .statistics-screen > .section-heading,
+  .legacy-screen > .section-heading { padding-bottom: 6px; }
+
+  .panel-screen > .section-heading h2,
+  .statistics-screen > .section-heading h2,
+  .legacy-screen > .section-heading h2 { font-size: clamp(32px,3vw,44px); letter-spacing: -.025em; }
+
+  .career-shell > .bottom-nav button:hover { background: rgba(255,255,255,.035); color: var(--text); }
+  .career-shell > .bottom-nav button.selected:hover { background: var(--surface-2); color: var(--gold); }
+
+  .app-shell-summary .final-hall-of-fame .hall-ranking { grid-template-columns: repeat(auto-fit,minmax(360px,1fr)); }
+  .app-shell-summary .summary-actions { position: sticky; z-index: 8; bottom: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: rgba(7,17,13,.92); backdrop-filter: blur(16px); }
+}
+
+@media (max-width: 899px) {
+  .eyebrow,
+  .result-kicker,
+  .section-heading span,
+  .summary-section-heading span,
+  .season-result-section-heading span,
+  .profile-hero > div > span,
+  .step-header div span { font-size: 9px; }
+
+  .metric span { font-size: 9px; }
+  .metric strong { font-size: 18px; }
+  .progress-label { font-size: 9px; }
+  .career-status-strip small { font-size: 8px; }
+  .career-status-strip strong { font-size: 12px; }
+  .market-strip small,
+  .objective-card > span,
+  .event-heading > span { font-size: 9px; }
+  .market-strip strong { font-size: 13px; }
+  .objective-card > small { font-size: 9px; line-height: 1.35; }
+
+  .timeline-row > div strong { font-size: 13px; }
+  .timeline-row > div small { font-size: 9px; line-height: 1.4; }
+  .timeline-medical,
+  .timeline-row > div em { font-size: 8px; }
+
+  .football-attribute-groups > article > span,
+  .football-attribute-groups label,
+  .football-attributes-card > small { font-size: 9px; }
+  .football-attribute-groups label { white-space: normal; }
+
+  .settings-sheet > header span,
+  .settings-section-heading span,
+  .custom-character-list > div span,
+  .final-mode-settings > span { font-size: 9px; }
+  .settings-note,
+  .final-mode-settings button small,
+  .final-mode-settings > small { font-size: 9px; }
+
+  .statistics-hero > span,
+  .season-chart-card > div:first-child span,
+  .production-chart-card > div:first-child span,
+  .best-season-card > span,
+  .record-book > div span,
+  .rival-center > div span,
+  .audience-growth-card > div:first-child span,
+  .sponsor-heading span,
+  .social-feed-heading span { font-size: 9px; }
+
+  .season-bars article > b,
+  .season-bars article > small,
+  .audience-bars article > b,
+  .audience-bars article > small,
+  .production-list article > small,
+  .production-chart-card footer { font-size: 8px; }
+
+  .final-awards-list > article > div small,
+  .share-honours small,
+  .club-archive-tabs button > span small,
+  .club-archive-dossier > header span,
+  .club-season-ledger > header span,
+  .club-season-ledger > header small,
+  .club-season-ledger article > div small,
+  .club-season-ledger article > div p { font-size: 9px; }
+  .final-awards-list > article > div strong { font-size: 13px; }
+  .final-awards-list > article > div p { font-size: 9px; line-height: 1.45; }
+}
+
+@media (max-width: 540px) {
+  .bottom-nav { gap: 1px; padding-inline: 4px; }
+  .bottom-nav button { min-width: 0; min-height: 52px; padding-inline: 1px; font-size: 8px; }
+  .bottom-nav button span { font-size: 14px; }
+
+  .welcome-hall button.hall-career-link { grid-template-columns: 20px 38px minmax(0,1fr) auto; }
+  .welcome-hall-copy strong { font-size: 11px; }
+  .welcome-hall-copy small { font-size: 8px; }
+
+  .hall-ranking > button { grid-template-columns: 24px 44px minmax(0,1fr) auto; gap: 8px; padding-inline: 8px; }
+  .hall-ranking > button > div strong { font-size: 13px; }
+  .hall-ranking > button > div small { font-size: 8px; white-space: normal; }
+
+  .summary-actions { grid-template-columns: 1fr; }
+  .app-shell-summary .summary-actions { grid-template-columns: 1fr; }
+  .app-shell-summary .summary-actions .primary-button { order: 0; }
+  .app-shell-summary .summary-actions .secondary-button { order: 1; }
+
+  .club-archive-tabs button { flex-basis: min(250px,78vw); }
+  .club-archive-honours > span { min-width: 168px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+}

@@ -129,6 +129,57 @@
   .world-cup-finish-actions .world-cup-primary { margin-top: 0; }
 }
 
+/* v88 — tournament broadcast polish */
+.world-cup-shell button,
+.world-cup-shell a { transition: background-color 140ms, border-color 140ms, color 140ms, opacity 140ms, transform 140ms; }
+.world-cup-shell button:focus-visible,
+.world-cup-shell a:focus-visible,
+.world-cup-search input:focus-visible { outline: 2px solid var(--gold,#f4c430); outline-offset: 3px; }
+.world-cup-shell button:active:not(:disabled),
+.world-cup-shell a:active { transform: scale(.98); }
+.world-cup-shell button:disabled { cursor: not-allowed; opacity: .46; }
+.world-cup-country-grid { scrollbar-color: rgba(226,239,228,.18) transparent; scrollbar-gutter: stable; }
+.world-cup-route-game.current { position: relative; }
+.world-cup-route-game.current::before { content: ""; position: absolute; inset-block: 8px; left: 0; width: 3px; border-radius: 0 3px 3px 0; background: var(--gold,#f4c430); }
+.world-cup-result-hero h1,
+.world-cup-finish-hero h1,
+.world-cup-next-match h1 { text-wrap: balance; }
+.world-cup-result-hero p,
+.world-cup-finish-hero p,
+.world-cup-fineprint { text-wrap: pretty; }
+
+@media (hover:hover) {
+  .world-cup-country-grid button:hover,
+  .world-cup-position-grid button:hover,
+  .world-cup-finish-actions > button:not(.world-cup-primary):hover,
+  .world-cup-finish-actions > a:hover { border-color: var(--line-strong,rgba(226,239,228,.16)); background: var(--surface-2,#102219); }
+  .world-cup-primary:hover { background: #ffcf3b; }
+}
+
+@media (max-width: 540px) {
+  .world-cup-shell { padding-inline: 14px; }
+  .world-cup-hero { padding-block: 30px 24px; }
+  .world-cup-hero h1 { font-size: clamp(52px,17vw,76px); }
+  .world-cup-country-grid { max-height: min(330px,38dvh); }
+  .world-cup-country-grid button { min-height: 62px; }
+  .world-cup-country-grid small,
+  .world-cup-position-grid small,
+  .world-cup-route-game small,
+  .world-cup-nation small,
+  .world-cup-live-metrics small { font-size: 9px; }
+  .world-cup-position-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .world-cup-position-grid button { min-height: 64px; }
+  .world-cup-route-game strong { font-size: 13px; }
+  .world-cup-route-game { min-height: 58px; }
+  .world-cup-primary { position: sticky; z-index: 4; bottom: max(8px,env(safe-area-inset-bottom)); box-shadow: 0 10px 28px rgba(0,0,0,.34); }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .world-cup-shell *,
+  .world-cup-shell *::before,
+  .world-cup-shell *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
+
 @media (max-width: 540px) {
   .world-cup-country-grid { max-height: 300px; }
   .world-cup-score-rail { align-items: flex-start; flex-direction: column; }

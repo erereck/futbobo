@@ -50,6 +50,7 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Desktop: 16px entre módulos, 24–32px dentro de áreas principais.
 - Raios: 8px controles, 12px cards, 18px painéis, 24px modais/hero.
 - Alvos interativos: mínimo 44px.
+- Piso de leitura em telas pequenas: 8px apenas para metadado auxiliar; rótulos operacionais e textos de apoio usam 9px ou mais. Densidade vem do layout, nunca de texto microscópico.
 
 ## Arquitetura responsiva
 
@@ -59,6 +60,7 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Sala de troféus mobile: nomes podem quebrar em duas linhas, com corpo mínimo de 12px e entrelinha de 1.25; densidade nunca vem de comprimir texto.
 - Arquivo final desktop: dossiê da carreira + vida pública abrem a leitura; taças conquistadas ocupam uma faixa inteira; história/prêmios formam o par editorial e o arquivo por clube ocupa uma faixa inteira abaixo. O arquivo usa um rail de camisas e abre um dossiê com totais, honrarias e temporada por temporada; Hall da Fama vem depois, sem disputar foco. Categorias zeradas não entram na galeria comemorativa.
 - Compartilhamento: a carreira sai como pôster esportivo 4:5 gerado localmente, com identidade, pico OVR, produção, principais taças, Bola de Ouro, World XI, clubes e legado. Texto rico acompanha a imagem somente como contexto acessível e fallback.
+- Ações demoradas: o próprio botão comunica processamento, fica indisponível contra toque duplo e encerra com feedback específico para sucesso, cancelamento ou fallback.
 - Desktop: rail esquerdo de 248–272px com identidade e navegação; contexto do jogador no topo do conteúdo; tela principal em 12 colunas.
 - Resultados: placar da temporada no topo, resumo e progressão primeiro; campanhas, dinheiro e prêmios em módulos largos abaixo.
 - Telas de dados: hero curto + duas colunas assimétricas, gráficos e arquivo usando a largura disponível.
@@ -103,3 +105,4 @@ Selecoes sem liga recebem uma rota de base recomendada por confederacao. A recom
 - Hover/press: 140ms; `scale(.98)` no press.
 - Overlays: 220ms com `cubic-bezier(.23,1,.32,1)`.
 - Nunca `transition: all`; respeitar `prefers-reduced-motion`.
+- Controles interativos são elementos nativos (`button`, `a`, `input`) com foco visível; cards clicáveis nunca simulam botão com `role` e eventos manuais de teclado.

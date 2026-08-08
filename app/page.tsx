@@ -4814,7 +4814,7 @@ function BrandMark({ size = "md" }: { size?: "sm" | "md" | "hero" }) {
   const source = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/favicon.svg`;
   return (
     <span className={`brand-mark brand-mark-${size}`} aria-hidden="true">
-      <Image src={source} alt="" width={pixels} height={pixels} unoptimized draggable={false} />
+      <Image src={source} alt="" width={pixels} height={pixels} loading="eager" unoptimized draggable={false} />
     </span>
   );
 }
@@ -5107,6 +5107,7 @@ export default function Home() {
   const [activeGoalReplay, setActiveGoalReplay] = useState<number | null>(null);
   const [pressConferenceOpen, setPressConferenceOpen] = useState(false);
   const [summaryClubId, setSummaryClubId] = useState("");
+  const [shareBusy, setShareBusy] = useState(false);
   const saveImportRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -6854,6 +6855,9 @@ export default function Home() {
   }
 
   async function shareCareer() {
+    if (shareBusy) return;
+    setShareBusy(true);
+    setToast("Montando o pôster da carreira...");
     const peakOverall = Math.max(displayGame.overall, ...displayGame.history.map((item) => item.overall), 0);
     const ballonDor = displayGame.awardCabinet["Bola de Ouro"] ?? 0;
     const worldXi = displayGame.awardCabinet["FIFPRO World XI"] ?? 0;
@@ -7063,10 +7067,16 @@ export default function Home() {
       link.download = file.name;
       link.click();
       URL.revokeObjectURL(imageUrl);
-      await navigator.clipboard.writeText(`${text}\n${window.location.href}`);
-      setToast("Pôster salvo e resumo copiado");
-    } catch {
-      setToast("Compartilhamento cancelado");
+      try {
+        await navigator.clipboard.writeText(`${text}\n${window.location.href}`);
+        setToast("Pôster salvo e resumo copiado");
+      } catch {
+        setToast("Pôster salvo no aparelho");
+      }
+    } catch (error) {
+      setToast(error instanceof DOMException && error.name === "AbortError" ? "Compartilhamento cancelado" : "Não foi possível criar o pôster");
+    } finally {
+      setShareBusy(false);
     }
   }
 
@@ -7351,20 +7361,20 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v84 · VIEWPORT DINÂMICA</span>
-                    <h1 id="update-title">O Futbobo inteiro entrou em campo de roupa nova.</h1>
+                    <span className="update-version">v88 · ARQUIVO DE LENDA</span>
+                    <h1 id="update-title">Sua carreira agora termina como uma história que merece ser guardada.</h1>
                   </div>
                 </header>
-                <p>Navegação, hierarquia e distribuição foram reconstruídas para o celular funcionar como um jogo rápido e o computador como uma central de carreira de verdade.</p>
+                <p>O arquivo final ganhou pôster compartilhável, dossiê completo por clube e uma nova rodada de acabamento em carreira, Copa e futebol de botão.</p>
                 <div className="update-mega-stats" aria-label="Resumo do update">
-                  <span><b>2</b> experiências responsivas</span>
-                  <span><b>6</b> centrais reconstruídas</span>
-                  <span><b>100%</b> offline no APK</span>
+                  <span><b>4:5</b> pôster da carreira</span>
+                  <span><b>100%</b> histórico por clube</span>
+                  <span><b>50+</b> verificações automáticas</span>
                 </div>
                 <span className="update-section-label">O GRANDE DESTAQUE</span>
                 <div className="update-grid update-mega-grid">
-                  <article className="update-featured"><b>▥</b><span><strong>Desktop é uma central</strong><small>Rail lateral, canvas amplo e módulos distribuídos pela importância — sem esticar a interface do celular.</small></span></article>
-                  <article><b>▯</b><span><strong>Mobile feito para o polegar</strong><small>Ações claras, leitura vertical e navegação fixa sem comprimir conteúdo importante.</small></span></article>
+                  <article className="update-featured"><b>▥</b><span><strong>Dossiê de cada camisa</strong><small>Abra qualquer clube da carreira e reveja temporadas, números, taças, prêmios e evolução de OVR.</small></span></article>
+                  <article><b>↗</b><span><strong>Pôster pronto para compartilhar</strong><small>Principais títulos, Bolas de Ouro, World XI, clubes e legado agora viajam juntos em uma imagem.</small></span></article>
                   <article><b>90</b><span><strong>Tipografia de placar</strong><small>Barlow Condensed e Manrope locais dão ritmo esportivo e continuam funcionando sem internet.</small></span></article>
                   <article><b>◆</b><span><strong>Uma ação por tela</strong><small>Escolha, resultado, transferência ou prêmio sempre dominam a hierarquia certa.</small></span></article>
                   <article><b>≡</b><span><strong>Arquivo editorial</strong><small>Histórico, troféus, carreira final e prêmios agora contam uma história em vez de formar uma pilha.</small></span></article>
@@ -7595,12 +7605,10 @@ export default function Home() {
                 <div className="welcome-hall">
                   <div><span>HALL DA FAMA LOCAL</span><strong>Suas melhores carreiras</strong></div>
                   {hallOfFame.slice(0, 3).map((entry, index) => (
-                    <article className="hall-career-link" key={entry.id} role="button" tabIndex={0} aria-label={`Ver carreira completa de ${entry.name}`} onClick={() => openHallCareer(entry)} onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openHallCareer(entry); }
-                    }}>
+                    <button type="button" className="hall-career-link" key={entry.id} aria-label={`Ver carreira completa de ${entry.name}`} onClick={() => openHallCareer(entry)}>
                       <b>#{index + 1}</b><ClubBadge club={clubById(entry.finalClubId)} size="sm" />
                       <div className="welcome-hall-copy"><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.peakOverall} OVR</small></div><em>{entry.legacyPoints}</em>
-                    </article>
+                    </button>
                   ))}
                 </div>
               )}
@@ -7614,7 +7622,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v84 · VIEWPORT DINÂMICA</b>
+            <span>FUTBOBO</span><b>v88 · ARQUIVO DE LENDA</b>
           </footer>
         </section>
       )}
@@ -8787,30 +8795,23 @@ export default function Home() {
             <div className="summary-section-heading"><span>HALL DA FAMA</span><strong>As maiores carreiras deste aparelho</strong></div>
             <div className="hall-ranking">
               {hallOfFame.slice(0, 10).map((entry, index) => (
-                <article
+                <button
+                  type="button"
                   className={`${entry.id === `${displayGame.seed}-${displayGame.name}-${displayGame.history.length}` ? "current-career " : ""}hall-career-link`}
                   key={entry.id}
-                  role="button"
-                  tabIndex={0}
                   aria-label={`Ver carreira completa de ${entry.name}`}
                   onClick={() => openHallCareer(entry)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      openHallCareer(entry);
-                    }
-                  }}
                 >
                   <b>#{index + 1}</b>
                   <ClubBadge club={clubById(entry.finalClubId)} size="sm" />
                   <div><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.trophies} taças · {entry.ballonDor}× Bola de Ouro</small></div>
                   <span className="hall-score">{entry.legacyPoints}<small>PTS</small></span>
-                </article>
+                </button>
               ))}
             </div>
-            {filteredCountries.length === 0 && <div className="empty-panel">Nenhuma seleção encontrada.</div>}
+            {hallOfFame.length === 0 && <div className="empty-panel"><strong>O primeiro nome ainda será gravado aqui.</strong><span>Conclua uma carreira para inaugurar o Hall da Fama deste aparelho.</span></div>}
           </section>
-          <div className="summary-actions"><button className="primary-button" onClick={shareCareer}>Compartilhar pôster da carreira <span>↗</span></button><button className="secondary-button" onClick={displayGame.challengeId ? startChallenge : startNew}>{displayGame.challengeId ? "Tentar o mesmo desafio novamente" : "Jogar novamente"}</button></div>
+          <div className="summary-actions"><button className="primary-button" disabled={shareBusy} aria-busy={shareBusy} onClick={shareCareer}>{shareBusy ? "Criando seu pôster..." : "Compartilhar pôster da carreira"} <span>{shareBusy ? "●" : "↗"}</span></button><button className="secondary-button" onClick={displayGame.challengeId ? startChallenge : startNew}>{displayGame.challengeId ? "Tentar o mesmo desafio novamente" : "Jogar novamente"}</button></div>
         </section>
       )}
     </main>

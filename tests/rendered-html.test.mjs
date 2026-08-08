@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v84 · VIEWPORT DINÂMICA/);
+  assert.match(pageSource, /v88 · ARQUIVO DE LENDA/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -1067,6 +1067,23 @@ test("compartilha a carreira como pôster rico com fallback local", async () => 
   assert.match(page, /Compartilhar pôster da carreira/);
   assert.match(page, /share-honours/);
   assert.match(premium, /\.share-honours/);
+});
+
+test("fecha a rodada de polimento com controles semânticos e leitura acessível", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const premium = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
+  const botao = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
+  const worldCup = await readFile(new URL("../app/copa/world-cup.css", import.meta.url), "utf8");
+
+  assert.doesNotMatch(page, /role="button"/);
+  assert.doesNotMatch(page, /Nenhuma seleção encontrada/);
+  assert.match(page, /type="button"[\s\S]*hall-career-link/);
+  assert.match(page, /aria-busy=\{shareBusy\}/);
+  assert.match(page, /Montando o pôster da carreira/);
+  assert.match(premium, /v88 — final craft pass/);
+  assert.match(premium, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(botao, /v88 — matchday interaction polish/);
+  assert.match(worldCup, /v88 — tournament broadcast polish/);
 });
 
 test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {

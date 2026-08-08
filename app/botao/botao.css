@@ -1394,3 +1394,50 @@
 
   .botao-root-mobile-compact .botao-table-wrapper { height: 80%; }
 }
+
+/* v88 — matchday interaction polish */
+.botao-root button { transition: background-color 140ms, border-color 140ms, color 140ms, opacity 140ms, transform 140ms; }
+.botao-root button:focus-visible { outline: 2px solid var(--gold,#f4c430); outline-offset: 3px; }
+.botao-root button:active:not(:disabled) { transform: scale(.98); }
+.botao-root button:disabled { cursor: not-allowed; filter: saturate(.55); opacity: .46; }
+.botao-hud,
+.botao-controls { border-color: var(--line,rgba(226,239,228,.09)); box-shadow: none; }
+.botao-score,
+.botao-period,
+.botao-stat-row b,
+.botao-result-line span { font-variant-numeric: tabular-nums; }
+.botao-lobby h1,
+.botao-headline,
+.botao-overlay strong { text-wrap: balance; }
+.botao-lobby-lead,
+.botao-overlay p,
+.botao-walkover-notice p { text-wrap: pretty; }
+.botao-result-line > button { min-width: 44px; min-height: 44px; }
+
+@media (hover:hover) {
+  .botao-primary:hover { background: #ffcf3b; }
+  .botao-ghost:hover,
+  .botao-option:hover { border-color: var(--line-strong,rgba(226,239,228,.16)); background: var(--surface-2,#102219); }
+}
+
+@media (min-width:900px) {
+  .botao-table-wrapper { border-color: rgba(244,196,48,.24); }
+  .botao-hud-top { font-size: 10px; }
+  .botao-chip { font-size: 9px; }
+  .botao-controls-meta { font-size: 10px; }
+}
+
+@media (max-width:540px) {
+  .botao-hud-top { font-size: 9px; }
+  .botao-chip { font-size: 8px; }
+  .botao-controls-meta { font-size: 9px; }
+  .botao-controls-meta .botao-ghost { min-height: 38px; font-size: 9px; }
+  .botao-turn { font-size: 15px; }
+  .botao-table-wrapper { border-color: rgba(244,196,48,.2); }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .botao-root *,
+  .botao-root *::before,
+  .botao-root *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
