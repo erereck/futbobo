@@ -7,7 +7,7 @@ import { COUNTRIES, POSITIONS, countryById, type Country, type PositionKey } fro
 import BotaoMatch from "../botao/BotaoMatch";
 import { buildNationalMatchSetup } from "../botao/adapter";
 import { createRng, hashSeed } from "../botao/rng";
-import { DEFAULT_BOTAO_RULES, type BotaoMatchResult, type BotaoMatchSetup } from "../botao/types";
+import { DEFAULT_BOTAO_RULES, type BotaoMatchResult, type BotaoMatchSetup, type BotaoRules } from "../botao/types";
 import "../botao/botao.css";
 import "./world-cup.css";
 
@@ -36,6 +36,35 @@ type CupCampaign = {
 const KNOCKOUT_STAGES = ["16 avos", "Oitavas", "Quartas", "Semifinal", "Final"];
 const GROUP_RULES = { ...DEFAULT_BOTAO_RULES, goalLimit: 0, halfSeconds: 105, halves: 1, extraHalves: 0, penalties: false };
 const KNOCKOUT_RULES = { ...DEFAULT_BOTAO_RULES, goalLimit: 3, halfSeconds: 120, halves: 1, extraHalves: 1, extraSeconds: 45, penalties: true };
+const SETTINGS_KEY = "futbobo:settings:v1";
+
+type StoredBotaoSettings = {
+  botaoGoalLimit?: 0 | 3 | 5;
+  botaoHalfSeconds?: 90 | 120 | 180;
+  botaoExtraSeconds?: 30 | 45 | 60;
+  botaoPenaltyRounds?: 3 | 5;
+};
+
+function currentCupRules(groupStage: boolean): BotaoRules {
+  const base = groupStage ? GROUP_RULES : KNOCKOUT_RULES;
+  if (typeof window === "undefined") return base;
+  try {
+    const settings = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) ?? "{}") as StoredBotaoSettings;
+    const goalLimit = settings.botaoGoalLimit ?? DEFAULT_BOTAO_RULES.goalLimit;
+    const halfSeconds = settings.botaoHalfSeconds ?? DEFAULT_BOTAO_RULES.halfSeconds;
+    const extraSeconds = settings.botaoExtraSeconds ?? DEFAULT_BOTAO_RULES.extraSeconds;
+    const penaltyRounds = settings.botaoPenaltyRounds ?? DEFAULT_BOTAO_RULES.penaltyRounds;
+    return {
+      ...base,
+      goalLimit: [0, 3, 5].includes(goalLimit) ? goalLimit : DEFAULT_BOTAO_RULES.goalLimit,
+      halfSeconds: [90, 120, 180].includes(halfSeconds) ? halfSeconds : DEFAULT_BOTAO_RULES.halfSeconds,
+      extraSeconds: [30, 45, 60].includes(extraSeconds) ? extraSeconds : DEFAULT_BOTAO_RULES.extraSeconds,
+      penaltyRounds: [3, 5].includes(penaltyRounds) ? penaltyRounds : DEFAULT_BOTAO_RULES.penaltyRounds,
+    };
+  } catch {
+    return base;
+  }
+}
 
 function sortedCountries() {
   return [...COUNTRIES].sort((a, b) => {
@@ -165,7 +194,7 @@ export default function WorldCupModePage() {
       playerNumber: activeCampaign.playerNumber,
       position: activeCampaign.position,
       overall: 86,
-      rules: groupStage ? GROUP_RULES : KNOCKOUT_RULES,
+      rules: currentCupRules(groupStage),
     });
   }
 

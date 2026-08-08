@@ -2193,3 +2193,322 @@ button:active:not(:disabled) { transform: scale(.98); }
   .career-phase-career.career-tab-event .objective-card > small { display: none; }
   .career-phase-career.career-tab-event .event-heading p { line-height: 1.25; }
 }
+
+/* v85 — responsive match desk. The creation room uses the whole desktop
+   viewport, while the mobile event deck gives every decision a real row. */
+@media (min-width: 900px) {
+  body:has(.app-shell-identity) { overflow: hidden; }
+
+  .app-shell-identity,
+  .app-shell-identity .setup-screen {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell-identity .setup-screen {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .app-shell-identity .setup-content {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: minmax(230px, .7fr) minmax(360px, 1.3fr);
+    grid-template-rows: max-content max-content max-content minmax(0, 1fr);
+    gap: 0 clamp(20px, 2.5vw, 40px);
+    padding: clamp(20px, 4dvh, 42px) clamp(24px, 3vw, 40px) 16px;
+    overflow: hidden;
+  }
+
+  .app-shell-identity .identity-card { margin-bottom: 14px; }
+  .app-shell-identity .field-label { margin-bottom: 12px; }
+  .app-shell-identity .section-heading { grid-row: 1; margin: 0 0 12px; align-self: end; }
+  .app-shell-identity .position-grid {
+    height: auto;
+    min-height: 0;
+    grid-row: 2 / 5;
+    align-self: stretch;
+  }
+
+  .app-shell-identity .sticky-action {
+    position: static;
+    z-index: 2;
+    grid-row: 2;
+    left: auto;
+    bottom: auto;
+    width: auto;
+    margin: 0 clamp(24px, 3vw, 40px) 20px;
+    padding: 10px;
+    transform: none;
+  }
+
+  .app-shell-identity .sticky-action .primary-button { min-height: 48px; }
+}
+
+@media (min-width: 900px) and (max-height: 720px) {
+  .app-shell-identity .setup-content { padding-top: 18px; }
+  .app-shell-identity .identity-card { min-height: 84px; padding-block: 10px; }
+  .app-shell-identity .academy-avatar { width: 58px; height: 64px; }
+  .app-shell-identity .position-button { min-height: 42px; }
+  .app-shell-identity .sticky-action { margin-bottom: 12px; padding-block: 7px; }
+}
+
+@media (max-width: 540px) {
+  .app-shell-career .career-phase-career.career-tab-event {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  .career-phase-career.career-tab-event > .event-stage {
+    grid-template-rows: max-content max-content minmax(0, 1fr);
+  }
+
+  .career-phase-career.career-tab-event .market-strip {
+    grid-template-columns: minmax(0, 1fr) max-content;
+  }
+
+  .career-phase-career.career-tab-event .market-strip button {
+    width: auto;
+    max-width: none;
+    white-space: nowrap;
+  }
+
+  .career-phase-career.career-tab-event .event-card {
+    display: grid;
+    grid-template-rows: max-content minmax(0, 1fr);
+  }
+
+  .career-phase-career.career-tab-event .choice-list {
+    display: grid;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .career-phase-career.career-tab-event .choice-list[data-choice-count="2"] { grid-template-rows: repeat(2, minmax(44px, 1fr)); }
+  .career-phase-career.career-tab-event .choice-list[data-choice-count="3"] { grid-template-rows: repeat(3, minmax(44px, 1fr)); }
+  .career-phase-career.career-tab-event .choice-list[data-choice-count="4"] { grid-template-rows: repeat(4, minmax(44px, 1fr)); }
+
+  .career-phase-career.career-tab-event .decision-button {
+    height: 100%;
+    max-height: none;
+  }
+}
+
+@media (max-width: 540px) and (max-height: 760px) {
+  .career-phase-career.career-tab-event .event-heading p { display: none; }
+  .career-phase-career.career-tab-event .event-card { margin-bottom: 0; padding-block: 9px; }
+  .career-phase-career.career-tab-event .event-heading h1 { font-size: clamp(18px, 3dvh, 24px); }
+  .career-phase-career.career-tab-event .choice-list { gap: 4px; margin-top: 0; padding-top: 6px; }
+}
+
+/* v87 — retirement archive and share poster */
+.share-honours {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.share-honours article {
+  display: grid;
+  grid-template-columns: 32px minmax(0,1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(203,180,255,.18);
+  border-radius: 8px;
+  background: rgba(166,117,255,.055);
+}
+
+.share-honours article > span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(244,196,48,.12);
+  color: var(--gold);
+  font-size: 15px;
+}
+
+.share-honours article > div { display: flex; min-width: 0; flex-direction: column; }
+.share-honours small { overflow: hidden; color: #cbb4ff; font-size: 6px; font-weight: 900; letter-spacing: .08em; text-overflow: ellipsis; white-space: nowrap; }
+.share-honours strong { margin-top: 2px; color: var(--text); font: 900 20px/.9 var(--display); }
+
+.club-archive-heading {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.club-archive-heading > div { display: flex; min-width: 0; flex-direction: column; }
+.club-archive-heading > b { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; color: var(--gold); font: 900 38px/.8 var(--display); }
+.club-archive-heading > b small { margin-top: 5px; color: var(--muted); font: 800 7px var(--sans); letter-spacing: .12em; }
+
+.club-archive-layout {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(220px,290px) minmax(0,1fr);
+  gap: 14px;
+}
+
+.club-archive-tabs {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 720px;
+  padding-right: 4px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.club-archive-tabs button {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: 42px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0b1a13;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.club-archive-tabs button:hover { border-color: rgba(244,196,48,.3); background: #102219; }
+.club-archive-tabs button:active { transform: scale(.985); }
+.club-archive-tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.club-archive-tabs button.selected { border-color: rgba(244,196,48,.52); background: rgba(244,196,48,.075); }
+.club-archive-tabs button > span { display: flex; min-width: 0; flex-direction: column; }
+.club-archive-tabs button > span strong { overflow: hidden; font: 800 15px var(--display); text-overflow: ellipsis; white-space: nowrap; }
+.club-archive-tabs button > span small { margin-top: 3px; color: var(--muted); font-size: 7px; }
+.club-archive-tabs button > b { display: flex; flex-direction: column; align-items: flex-end; color: var(--gold); font: 900 20px/.85 var(--display); }
+.club-archive-tabs button > b small { margin-top: 4px; color: var(--muted); font: 800 5px var(--sans); letter-spacing: .08em; }
+
+.club-archive-dossier {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #091811;
+}
+
+.club-archive-dossier > header {
+  display: grid;
+  grid-template-columns: 86px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--line);
+}
+
+.club-archive-dossier > header > div { min-width: 0; }
+.club-archive-dossier > header span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.club-archive-dossier h3 { margin: 3px 0 0; font: 900 34px/.9 var(--display); overflow-wrap: anywhere; }
+.club-archive-dossier > header p { margin: 7px 0 0; color: var(--muted); font-size: 9px; }
+.club-archive-dossier > header > b { display: flex; flex-direction: column; align-items: flex-end; color: var(--gold); font: 900 44px/.8 var(--display); }
+.club-archive-dossier > header > b small { margin-top: 6px; color: var(--muted); font: 800 6px var(--sans); letter-spacing: .1em; }
+
+.club-archive-metrics { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 7px; margin-top: 14px; }
+.club-archive-metrics .metric { min-height: 78px; padding: 11px; background: rgba(255,255,255,.025); }
+.club-archive-metrics .metric strong { font-size: 24px; }
+
+.club-archive-honours {
+  display: flex;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 12px 0 3px;
+  overflow-x: auto;
+  border-top: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+
+.club-archive-honours > span {
+  display: grid;
+  min-width: 150px;
+  grid-template-columns: 36px minmax(0,1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(244,196,48,.18);
+  border-radius: 8px;
+  background: rgba(244,196,48,.045);
+}
+
+.club-archive-honours .competition-emblem { grid-row: 1 / 3; width: 36px; height: 36px; }
+.club-archive-honours > span > b { overflow: hidden; font: 800 11px var(--display); text-overflow: ellipsis; white-space: nowrap; }
+.club-archive-honours > span > small { grid-column: 2; color: var(--muted); font-size: 7px; }
+.club-archive-honours > span.individual { border-color: rgba(203,180,255,.2); background: rgba(166,117,255,.05); }
+.club-archive-honours > span.individual > i { display: grid; grid-row: 1 / 3; width: 36px; height: 36px; place-items: center; border-radius: 50%; background: rgba(166,117,255,.12); color: #cbb4ff; font-style: normal; }
+
+.club-season-ledger { margin-top: 18px; }
+.club-season-ledger > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.club-season-ledger > header span { color: var(--gold); font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.club-season-ledger > header small { color: var(--muted); font-size: 7px; }
+.club-season-ledger > div { display: grid; gap: 6px; max-height: 390px; padding-right: 4px; overflow-y: auto; scrollbar-width: thin; }
+.club-season-ledger article {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 58px minmax(0,1fr) 42px;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0c1d15;
+}
+.club-season-ledger time { display: flex; flex-direction: column; color: var(--gold); font: 900 21px/.9 var(--display); }
+.club-season-ledger time small { margin-top: 5px; color: var(--muted); font: 800 5px var(--sans); letter-spacing: .08em; }
+.club-season-ledger article > div { display: flex; min-width: 0; flex-direction: column; }
+.club-season-ledger article > div strong { font-size: 10px; }
+.club-season-ledger article > div small { margin-top: 3px; color: var(--muted); font-size: 7px; }
+.club-season-ledger article > div p { margin: 5px 0 0; overflow: hidden; color: #bac9c1; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.club-season-ovr { display: flex; flex-direction: column; align-items: flex-end; color: var(--text); font: 900 23px/.85 var(--display); }
+.club-season-ovr small { margin-top: 5px; color: var(--muted); font: 800 5px var(--sans); }
+.club-season-ledger article > footer { display: flex; grid-column: 2 / -1; align-items: center; gap: 5px; min-width: 0; padding-top: 7px; border-top: 1px solid rgba(255,255,255,.055); }
+.club-season-ledger footer .competition-emblem { width: 30px; height: 30px; }
+.club-season-ledger footer em { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: rgba(166,117,255,.1); color: #cbb4ff; font-size: 11px; font-style: normal; }
+
+@media (min-width: 900px) {
+  .app-shell-summary .summary-screen > .career-club-summary { grid-column: 1 / -1; }
+  .app-shell-summary .summary-screen > .final-hall-of-fame { grid-column: 1 / -1; }
+  .app-shell-summary .final-hall-of-fame .hall-ranking { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width: 899px) {
+  .club-archive-layout { grid-template-columns: 1fr; }
+  .club-archive-tabs { flex-direction: row; max-height: none; padding: 0 0 4px; overflow-x: auto; overflow-y: hidden; }
+  .club-archive-tabs button { flex: 0 0 min(260px,82vw); }
+  .club-archive-dossier { padding: 14px; }
+  .club-archive-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+
+@media (max-width: 540px) {
+  .share-honours { grid-template-columns: 1fr; }
+  .share-honours article { grid-template-columns: 30px minmax(0,1fr) auto; }
+  .share-honours article > div { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .share-honours strong { font-size: 22px; }
+  .club-archive-heading > b { font-size: 30px; }
+  .club-archive-dossier > header { grid-template-columns: 62px minmax(0,1fr); gap: 11px; }
+  .club-archive-dossier h3 { font-size: 26px; }
+  .club-archive-dossier > header > b { grid-column: 1 / -1; align-items: flex-start; padding-top: 10px; border-top: 1px solid var(--line); font-size: 36px; }
+  .club-archive-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .club-archive-metrics .metric { min-height: 70px; }
+  .club-season-ledger > header { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .club-season-ledger > div { max-height: none; overflow: visible; }
+  .club-season-ledger article { grid-template-columns: 48px minmax(0,1fr) 36px; gap: 8px; padding: 10px 8px; }
+  .club-season-ledger article > div strong { font-size: 9px; line-height: 1.35; }
+  .club-season-ledger article > div p { white-space: normal; }
+}

@@ -294,7 +294,9 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
   assert.match(page, /aria-label=\{`Ver carreira completa de \$\{entry\.name\}`\}/);
   assert.match(page, /Voltar ao ranking/);
   assert.match(page, /clubCareerSummary/);
-  assert.match(page, /PASSAGEM POR CLUBES/);
+  assert.match(page, /ARQUIVO POR CLUBE/);
+  assert.match(page, /club-archive-tabs/);
+  assert.match(page, /club-season-ledger/);
   assert.match(page, /PRÊMIOS INDIVIDUAIS/);
   assert.match(page, /final-individual-awards/);
   assert.match(page, /HALL DA FAMA LOCAL/);
@@ -1050,6 +1052,21 @@ test("organiza o arquivo final da carreira em faixas largas no desktop", async (
   assert.match(premium, /repeat\(auto-fit,minmax\(300px,1fr\)\)/);
   assert.match(premium, /trophy-groups > section:not\(\.has-titles\) \{ display: none/);
   assert.match(premium, /\.app-shell-summary \.summary-confetti \{ display: none/);
+  assert.match(premium, /\.app-shell-summary \.summary-screen > \.career-club-summary \{ grid-column: 1 \/ -1/);
+  assert.match(premium, /\.club-archive-layout/);
+});
+
+test("compartilha a carreira como pôster rico com fallback local", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const premium = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
+
+  assert.match(page, /canvas\.width = 1080/);
+  assert.match(page, /canvas\.height = 1350/);
+  assert.match(page, /navigator\.canShare\?\.\(\{ files: \[file\] \}\)/);
+  assert.match(page, /Bola de Ouro · \$\{worldXi\}× World XI/);
+  assert.match(page, /Compartilhar pôster da carreira/);
+  assert.match(page, /share-honours/);
+  assert.match(premium, /\.share-honours/);
 });
 
 test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
@@ -1229,7 +1246,7 @@ test("mantem menu desktop e mesa de decisoes mobile dentro da viewport", async (
   assert.match(styles, /@media \(max-width: 540px\) and \(max-height: 700px\)/);
 });
 
-test("oferece uma Copa do Mundo independente e campo horizontal apenas no PC", async () => {
+test("oferece uma Copa do Mundo independente que respeita as regras atuais e campo horizontal apenas no PC", async () => {
   const home = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const cup = await readFile(new URL("../app/copa/page.tsx", import.meta.url), "utf8");
   const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
@@ -1243,15 +1260,21 @@ test("oferece uma Copa do Mundo independente e campo horizontal apenas no PC", a
   assert.match(cup, /buildNationalMatchSetup/);
   assert.match(cup, /<BotaoMatch/);
   assert.match(cup, /Uma Copa inteira/);
-  assert.doesNotMatch(cup, /localStorage/);
+  assert.match(cup, /SETTINGS_KEY = "futbobo:settings:v1"/);
+  assert.match(cup, /function currentCupRules/);
+  assert.match(cup, /goalLimit: \[0, 3, 5\]\.includes\(goalLimit\)/);
+  assert.match(cup, /rules: currentCupRules\(groupStage\)/);
 
   assert.match(match, /const \[desktopLandscape, setDesktopLandscape\]/);
   assert.match(match, /futbobo_botao_landscape/);
   assert.match(match, /context\.setTransform\(0, scale, -scale, 0/);
   assert.match(match, /toFieldPoint\(event\.clientX, event\.clientY, canvas\.getBoundingClientRect\(\), desktopLandscape\)/);
   assert.match(match, /botao-desktop-only/);
+  assert.match(match, /compactMobileTable/);
+  assert.match(match, /Encolher mesa/);
   assert.match(render, /rotated = false/);
-  assert.match(styles, /\.botao-desktop-only \{ display: none; \}/);
+  assert.match(styles, /\.botao-desktop-only,\s*\.botao-mobile-size-toggle \{ display: none; \}/);
+  assert.match(styles, /\.botao-mobile-size-toggle \{ display: inline-flex;/);
   assert.match(styles, /\.botao-root-landscape \.botao-canvas \{ aspect-ratio: 516 \/ 316; \}/);
 });
 

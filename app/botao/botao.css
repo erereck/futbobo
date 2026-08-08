@@ -473,7 +473,8 @@
   text-transform: uppercase;
 }
 
-.botao-desktop-only { display: none; }
+.botao-desktop-only,
+.botao-mobile-size-toggle { display: none; }
 
 /* ---------------------------------------------------------------- antessala */
 
@@ -1336,9 +1337,60 @@
 }
 
 @media (max-width: 540px) {
-  .botao-root { overflow-x: clip; }
-  .botao-hud { flex: 0 0 auto; }
-  .botao-table-wrapper { width: min(100%,calc((100dvh - 278px) * 316 / 516)); max-height: calc(100dvh - 278px); }
-  .botao-controls { flex: 0 0 auto; }
-  .botao-controls-meta { justify-content: center; font-size: 9px; }
+  .botao-root {
+    display: grid;
+    height: 100dvh;
+    min-height: 0;
+    grid-template-rows: max-content minmax(0, 1fr) max-content;
+    gap: 6px;
+    padding: max(6px, env(safe-area-inset-top)) 7px max(6px, env(safe-area-inset-bottom));
+    overflow: hidden;
+  }
+
+  .botao-hud {
+    min-height: 0;
+    gap: 5px;
+    padding: 7px 9px;
+    border-radius: 11px 11px 4px 11px;
+  }
+
+  .botao-hud-top { font-size: 8px; }
+  .botao-period { padding: 3px 6px; }
+  .botao-scoreboard { gap: 6px; }
+  .botao-team { gap: 5px; }
+  .botao-team strong { font-size: 14px; }
+  .botao-crest { width: 29px; height: 29px; }
+  .botao-score { gap: 6px; font-size: 29px; }
+  .botao-formation-row { flex-wrap: nowrap; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .botao-formation-row::-webkit-scrollbar { display: none; }
+  .botao-chip { flex: 0 0 auto; padding: 3px 6px; font-size: 7px; }
+
+  .botao-table-wrapper {
+    width: auto;
+    height: 100%;
+    min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
+    align-self: center;
+    justify-self: center;
+    border-radius: 12px 12px 4px 12px;
+    box-shadow: 0 0 0 3px #050b08;
+    transition: height 180ms cubic-bezier(.23, 1, .32, 1);
+  }
+
+  .botao-controls {
+    min-height: 0;
+    gap: 4px;
+    padding: 6px 8px;
+    border-radius: 9px;
+  }
+
+  .botao-turn { min-height: 36px; padding: 7px 9px; font-size: 14px; }
+  .botao-controls-meta { flex-wrap: nowrap; justify-content: center; gap: 4px; overflow-x: auto; font-size: 8px; scrollbar-width: none; }
+  .botao-controls-meta::-webkit-scrollbar { display: none; }
+  .botao-controls-meta > span { flex: 0 0 auto; }
+  .botao-controls-meta .botao-ghost { min-height: 34px; flex: 0 0 auto; padding: 4px 8px; font-size: 8px; }
+  .botao-mobile-size-toggle { display: inline-flex; align-items: center; justify-content: center; }
+
+  .botao-root-mobile-compact .botao-table-wrapper { height: 80%; }
 }

@@ -57,7 +57,8 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Decisões mobile: mercado, meta, arte e escolhas pertencem ao mesmo fluxo rolável. A carta pode sobrepor visualmente a arte em até 20px, mas nunca usa posicionamento absoluto nem cria uma segunda rolagem.
 - Histórico mobile: escudos de títulos são a informação primária; o texto-fallback só aparece quando a imagem não existe e a coleção rola dentro da própria linha.
 - Sala de troféus mobile: nomes podem quebrar em duas linhas, com corpo mínimo de 12px e entrelinha de 1.25; densidade nunca vem de comprimir texto.
-- Arquivo final desktop: dossiê da carreira + vida pública abrem a leitura; taças conquistadas ocupam uma faixa inteira; história/prêmios e clubes/Hall formam pares assimétricos abaixo. Categorias zeradas não entram na galeria comemorativa.
+- Arquivo final desktop: dossiê da carreira + vida pública abrem a leitura; taças conquistadas ocupam uma faixa inteira; história/prêmios formam o par editorial e o arquivo por clube ocupa uma faixa inteira abaixo. O arquivo usa um rail de camisas e abre um dossiê com totais, honrarias e temporada por temporada; Hall da Fama vem depois, sem disputar foco. Categorias zeradas não entram na galeria comemorativa.
+- Compartilhamento: a carreira sai como pôster esportivo 4:5 gerado localmente, com identidade, pico OVR, produção, principais taças, Bola de Ouro, World XI, clubes e legado. Texto rico acompanha a imagem somente como contexto acessível e fallback.
 - Desktop: rail esquerdo de 248–272px com identidade e navegação; contexto do jogador no topo do conteúdo; tela principal em 12 colunas.
 - Resultados: placar da temporada no topo, resumo e progressão primeiro; campanhas, dinheiro e prêmios em módulos largos abaixo.
 - Telas de dados: hero curto + duas colunas assimétricas, gráficos e arquivo usando a largura disponível.
@@ -80,6 +81,9 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - A aba Carreira/decisão é a única tela de conteúdo que não rola: cabeçalho, quatro barras, contrato, mercado, meta, capítulo e opções cabem juntos em `100dvh`.
 - O HUD é estrutural, não `sticky`: ocupa linhas fixas do shell; o capítulo recebe o restante por `minmax(0,1fr)` e reduz densidade em aparelhos de até 700px de altura.
 - Arte puramente decorativa sai no mobile desta tela para preservar texto e alvos mínimos de 44px. As outras abas e o resultado de temporada continuam roláveis.
+- Toda opção de evento ocupa uma linha real de no mínimo 44px; descrição e metadados cedem espaço antes que qualquer escolha seja cortada.
+- A criação do jogador no desktop é uma cabine de uma viewport: ficha à esquerda, campo de posições à direita e avanço integrado no rodapé, sempre visível.
+- A mesa mobile mede o espaço restante entre placar e comando. O tamanho cheio é padrão; reduzir a mesa é uma escolha explícita e reversível.
 
 ### Onboarding internacional
 

@@ -151,6 +151,7 @@ export default function BotaoMatch({
   const [announcement, setAnnouncement] = useState("");
   const [idleCountdown, setIdleCountdown] = useState<number | null>(null);
   const [desktopLandscape, setDesktopLandscape] = useState(false);
+  const [compactMobileTable, setCompactMobileTable] = useState(false);
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
 
@@ -622,7 +623,7 @@ export default function BotaoMatch({
   const penalties = state.penalties;
 
   return (
-    <div className={`botao-root ${desktopLandscape ? "botao-root-landscape" : ""}`}>
+    <div className={`botao-root ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""}`}>
       <header className="botao-hud">
         <div className="botao-hud-top">
           <span className="botao-competition">
@@ -829,6 +830,14 @@ export default function BotaoMatch({
             }}
           >
             {desktopLandscape ? "Campo em pé" : "Virar campo"} ↻
+          </button>
+          <button
+            type="button"
+            className="botao-ghost botao-mobile-size-toggle"
+            aria-pressed={compactMobileTable}
+            onClick={() => setCompactMobileTable((current) => !current)}
+          >
+            {compactMobileTable ? "Ampliar mesa" : "Encolher mesa"}
           </button>
         </div>
       </footer>

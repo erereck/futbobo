@@ -4937,7 +4937,7 @@ function TrophyGallery({ state, final = false }: { state: GameState; final?: boo
           </div>
         </section>
       </div>
-      {recentTitles.length > 0 && (
+      {!final && recentTitles.length > 0 && (
         <div className="recent-titles">
           <header><span>ÚLTIMAS VOLTAS OLÍMPICAS</span><small>{recentTitles.length} mais recentes</small></header>
           <div>
@@ -5106,6 +5106,7 @@ export default function Home() {
   const [botaoSimulating, setBotaoSimulating] = useState(false);
   const [activeGoalReplay, setActiveGoalReplay] = useState<number | null>(null);
   const [pressConferenceOpen, setPressConferenceOpen] = useState(false);
+  const [summaryClubId, setSummaryClubId] = useState("");
   const saveImportRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -5439,6 +5440,10 @@ export default function Home() {
       awards: number;
       firstSeason: number;
       lastSeason: number;
+      peakOverall: number;
+      entryOverall: number;
+      exitOverall: number;
+      records: SeasonRecord[];
     }>();
     for (const record of displayGame.history) {
       const current = byClub.get(record.clubId) ?? {
@@ -5452,6 +5457,10 @@ export default function Home() {
         awards: 0,
         firstSeason: record.season,
         lastSeason: record.season,
+        peakOverall: record.overall,
+        entryOverall: record.overall,
+        exitOverall: record.overall,
+        records: [],
       };
       current.seasons += 1;
       current.appearances += record.appearances;
@@ -5462,10 +5471,26 @@ export default function Home() {
       current.awards += record.awards.length;
       current.firstSeason = Math.min(current.firstSeason, record.season);
       current.lastSeason = Math.max(current.lastSeason, record.season);
+      current.peakOverall = Math.max(current.peakOverall, record.overall);
+      if (record.season <= current.firstSeason) current.entryOverall = record.overall;
+      if (record.season >= current.lastSeason) current.exitOverall = record.overall;
+      current.records.push(record);
       byClub.set(record.clubId, current);
     }
     return [...byClub.values()].sort((a, b) => b.appearances - a.appearances || b.trophies - a.trophies);
   }, [displayGame.history]);
+  const selectedClubCareer = useMemo(
+    () => clubCareerSummary.find((entry) => entry.clubId === summaryClubId) ?? clubCareerSummary[0] ?? null,
+    [clubCareerSummary, summaryClubId],
+  );
+  const shareTitleHighlights = useMemo(() => {
+    const clubTitles = TROPHY_PRESENTATIONS
+      .map((presentation) => ({ label: presentation.label, shortLabel: presentation.shortLabel, count: displayGame.trophyCabinet[presentation.id] }))
+      .filter((entry) => entry.count > 0)
+      .sort((a, b) => b.count - a.count);
+    if (displayGame.nationalTrophies > 0) clubTitles.push({ label: "Títulos pela Seleção", shortLabel: "SEL", count: displayGame.nationalTrophies });
+    return clubTitles.slice(0, 5);
+  }, [displayGame.trophyCabinet, displayGame.nationalTrophies]);
   const statistics = useMemo(() => {
     const history = game.history;
     const by = <K extends keyof SeasonRecord>(key: K) => [...history].sort((a, b) => Number(b[key] ?? 0) - Number(a[key] ?? 0))[0] ?? null;
@@ -6829,11 +6854,217 @@ export default function Home() {
   }
 
   async function shareCareer() {
-    const text = `Minha carreira no Futbobo: ${displayGame.name}, ${position.name} de ${nationCountry.name}, ${displayGame.stats.appearances} jogos, ${displayGame.stats.goals} gols, ${displayGame.trophies + displayGame.nationalTrophies} taça(s) e pico de ${Math.max(displayGame.overall, ...displayGame.history.map((item) => item.overall), 0)} OVR. Você faria melhor?`;
+    const peakOverall = Math.max(displayGame.overall, ...displayGame.history.map((item) => item.overall), 0);
+    const ballonDor = displayGame.awardCabinet["Bola de Ouro"] ?? 0;
+    const worldXi = displayGame.awardCabinet["FIFPRO World XI"] ?? 0;
+    const totalTitles = displayGame.trophies + displayGame.nationalTrophies;
+    const titleLine = shareTitleHighlights.length
+      ? shareTitleHighlights.map((entry) => `${entry.count}× ${entry.label}`).join(" · ")
+      : "Uma carreira construída além das taças";
+    const clubLine = Array.from(new Set(displayGame.history.map((item) => clubById(item.clubId).shortName))).join(" → ");
+    const productionLine = displayGame.position === "GOL"
+      ? `${displayGame.stats.cleanSheets} jogos sem sofrer · ${displayGame.stats.goalsConceded} gols sofridos`
+      : `${displayGame.stats.goals} gols · ${displayGame.stats.assists} assistências`;
+    const text = [
+      `⚽ ${displayGame.name} encerrou a carreira no FUTBOBO`,
+      `${position.name} · ${nationCountry.name} · pico de ${peakOverall} OVR`,
+      `${displayGame.stats.appearances} jogos · ${productionLine}`,
+      `🏆 ${totalTitles} títulos — ${titleLine}`,
+      `🥇 ${ballonDor}× Bola de Ouro · ${worldXi}× World XI · ${totalIndividualAwards} prêmios individuais`,
+      `🏟️ ${clubLine || currentClub.shortName}`,
+      `⭐ ${legacyStanding.label} · ${displayGame.legacyPoints} pontos de legado`,
+      "Você faria melhor?",
+    ].join("\n");
+
+    const makePoster = async () => {
+      await document.fonts?.ready;
+      const canvas = document.createElement("canvas");
+      canvas.width = 1080;
+      canvas.height = 1350;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas indisponível");
+      const roundRect = (x: number, y: number, width: number, height: number, radius: number) => {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + width, y, x + width, y + height, r);
+        ctx.arcTo(x + width, y + height, x, y + height, r);
+        ctx.arcTo(x, y + height, x, y, r);
+        ctx.arcTo(x, y, x + width, y, r);
+        ctx.closePath();
+      };
+      const fitText = (value: string, maxWidth: number, startSize: number, minSize: number, weight = 900) => {
+        let size = startSize;
+        do {
+          ctx.font = `${weight} ${size}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+          if (ctx.measureText(value).width <= maxWidth) break;
+          size -= 2;
+        } while (size > minSize);
+        return size;
+      };
+      const card = (x: number, y: number, width: number, height: number, fill = "#0d2118") => {
+        roundRect(x, y, width, height, 22);
+        ctx.fillStyle = fill;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,.12)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      };
+
+      ctx.fillStyle = "#06130d";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "rgba(244,196,48,.035)";
+      for (let x = -300; x < 1300; x += 180) {
+        ctx.save();
+        ctx.translate(x, 0);
+        ctx.transform(1, 0, -.35, 1, 0, 0);
+        ctx.fillRect(0, 0, 82, 1350);
+        ctx.restore();
+      }
+      ctx.fillStyle = "#f4c430";
+      ctx.fillRect(0, 0, 1080, 14);
+
+      ctx.fillStyle = "#f4c430";
+      ctx.font = '900 42px "Barlow Condensed", "Arial Narrow", sans-serif';
+      ctx.fillText("F⚽ FUTBOBO", 64, 86);
+      ctx.fillStyle = "#91a79c";
+      ctx.font = '800 22px Manrope, Arial, sans-serif';
+      ctx.textAlign = "right";
+      ctx.fillText("ARQUIVO DE CARREIRA", 1016, 80);
+      ctx.textAlign = "left";
+
+      card(64, 124, 952, 320, "#0b1d15");
+      ctx.fillStyle = currentClub.primary || "#1a5e42";
+      ctx.beginPath();
+      ctx.arc(172, 268, 76, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = currentClub.secondary || "#f4c430";
+      ctx.lineWidth = 8;
+      ctx.stroke();
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.font = '900 38px "Barlow Condensed", "Arial Narrow", sans-serif';
+      ctx.fillText(currentClub.abbr.slice(0, 4), 172, 281);
+      ctx.textAlign = "left";
+
+      ctx.fillStyle = "#f4c430";
+      ctx.font = '900 20px Manrope, Arial, sans-serif';
+      ctx.fillText(displayGame.archetype.toLocaleUpperCase("pt-BR"), 280, 193);
+      const nameSize = fitText(displayGame.name.toLocaleUpperCase("pt-BR"), 570, 76, 42);
+      ctx.fillStyle = "#f3f6f4";
+      ctx.font = `900 ${nameSize}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+      ctx.fillText(displayGame.name.toLocaleUpperCase("pt-BR"), 280, 265);
+      ctx.fillStyle = "#91a79c";
+      ctx.font = '700 24px Manrope, Arial, sans-serif';
+      ctx.fillText(`#${displayGame.number} · ${position.name} · ${nationCountry.name}`, 280, 307);
+      ctx.fillText(`${displayGame.history.length} temporadas · aposentou aos ${displayGame.age}`, 280, 346);
+      ctx.fillStyle = "#f4c430";
+      ctx.font = '900 76px "Barlow Condensed", "Arial Narrow", sans-serif';
+      ctx.textAlign = "right";
+      ctx.fillText(String(peakOverall), 960, 379);
+      ctx.fillStyle = "#91a79c";
+      ctx.font = '800 17px Manrope, Arial, sans-serif';
+      ctx.fillText("PICO OVR", 960, 407);
+      ctx.textAlign = "left";
+
+      const metrics = [
+        ["JOGOS", displayGame.stats.appearances],
+        [displayGame.position === "GOL" ? "SEM SOFRER" : "GOLS", displayGame.position === "GOL" ? displayGame.stats.cleanSheets : displayGame.stats.goals],
+        ["ASSISTÊNCIAS", displayGame.stats.assists],
+        ["TAÇAS", totalTitles],
+      ] as const;
+      metrics.forEach(([label, value], index) => {
+        const x = 64 + index * 242;
+        card(x, 468, 226, 132);
+        ctx.fillStyle = "#91a79c";
+        ctx.font = '800 17px Manrope, Arial, sans-serif';
+        ctx.fillText(label, x + 22, 508);
+        ctx.fillStyle = index === 3 ? "#f4c430" : "#f3f6f4";
+        ctx.font = '900 50px "Barlow Condensed", "Arial Narrow", sans-serif';
+        ctx.fillText(String(value), x + 22, 568);
+      });
+
+      card(64, 624, 952, 226, "#102218");
+      ctx.fillStyle = "#f4c430";
+      ctx.font = '900 20px Manrope, Arial, sans-serif';
+      ctx.fillText("PRINCIPAIS CONQUISTAS", 88, 664);
+      const posterHonours = shareTitleHighlights.slice(0, 4);
+      if (posterHonours.length) {
+        posterHonours.forEach((entry, index) => {
+          const col = index % 2;
+          const row = Math.floor(index / 2);
+          const x = 88 + col * 452;
+          const y = 714 + row * 66;
+          ctx.fillStyle = "#f4c430";
+          ctx.font = '900 34px "Barlow Condensed", "Arial Narrow", sans-serif';
+          ctx.fillText(`${entry.count}×`, x, y);
+          ctx.fillStyle = "#f3f6f4";
+          ctx.font = '800 20px Manrope, Arial, sans-serif';
+          ctx.fillText(entry.label, x + 58, y - 2);
+        });
+      } else {
+        ctx.fillStyle = "#91a79c";
+        ctx.font = '700 24px Manrope, Arial, sans-serif';
+        ctx.fillText("Uma história construída além das taças.", 88, 732);
+      }
+
+      card(64, 874, 952, 174, "#151f18");
+      ctx.fillStyle = "#cdb9ff";
+      ctx.font = '900 19px Manrope, Arial, sans-serif';
+      ctx.fillText("PRÊMIOS INDIVIDUAIS", 88, 916);
+      const awards = [
+        ["BOLAS DE OURO", ballonDor],
+        ["WORLD XI", worldXi],
+        ["TOTAL", totalIndividualAwards],
+      ] as const;
+      awards.forEach(([label, value], index) => {
+        const x = 88 + index * 300;
+        ctx.fillStyle = value > 0 ? "#f3f6f4" : "#617269";
+        ctx.font = '900 44px "Barlow Condensed", "Arial Narrow", sans-serif';
+        ctx.fillText(String(value), x, 982);
+        ctx.fillStyle = "#91a79c";
+        ctx.font = '800 15px Manrope, Arial, sans-serif';
+        ctx.fillText(label, x + 50, 979);
+      });
+
+      ctx.fillStyle = "#91a79c";
+      ctx.font = '800 17px Manrope, Arial, sans-serif';
+      ctx.fillText("CAMINHO", 64, 1096);
+      ctx.fillStyle = "#f3f6f4";
+      const pathSize = fitText(clubLine || currentClub.shortName, 952, 30, 19, 800);
+      ctx.font = `800 ${pathSize}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+      ctx.fillText(clubLine || currentClub.shortName, 64, 1140);
+
+      ctx.fillStyle = "#f4c430";
+      ctx.font = '900 48px "Barlow Condensed", "Arial Narrow", sans-serif';
+      ctx.fillText(legacyStanding.label.toLocaleUpperCase("pt-BR"), 64, 1222);
+      ctx.fillStyle = "#91a79c";
+      ctx.font = '800 19px Manrope, Arial, sans-serif';
+      ctx.fillText(`${displayGame.legacyPoints} pontos de legado · ${displayGame.unlockedAchievements.length}/${ACHIEVEMENTS.length} conquistas`, 64, 1260);
+      ctx.textAlign = "right";
+      ctx.fillText("erereck.github.io/futbobo", 1016, 1300);
+
+      return new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Falha ao criar pôster")), "image/png"));
+    };
+
     try {
-      if (navigator.share) await navigator.share({ title: "Minha carreira no Futbobo", text, url: window.location.href });
-      else await navigator.clipboard.writeText(`${text} ${window.location.href}`);
-      setToast("Carreira pronta para compartilhar");
+      const blob = await makePoster();
+      const safeName = displayGame.name.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "carreira";
+      const file = new File([blob], `futbobo-${safeName}.png`, { type: "image/png" });
+      const shareData = { title: `A carreira de ${displayGame.name} no Futbobo`, text, url: window.location.href, files: [file] };
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share(shareData);
+        setToast("Pôster da carreira compartilhado");
+        return;
+      }
+      const imageUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = imageUrl;
+      link.download = file.name;
+      link.click();
+      URL.revokeObjectURL(imageUrl);
+      await navigator.clipboard.writeText(`${text}\n${window.location.href}`);
+      setToast("Pôster salvo e resumo copiado");
     } catch {
       setToast("Compartilhamento cancelado");
     }
@@ -7659,7 +7890,7 @@ export default function Home() {
               <div className="event-art" data-icon={currentEvent.icon}><span className="event-tag">{currentEvent.tag}</span><div className="event-watermark">{currentEvent.icon}</div></div>
               <article className="event-card">
                 <div className="event-heading"><span>{game.currentEventId === "debut" ? "PRIMEIRO CAPÍTULO" : `TEMPORADA ${game.season}`}</span><h1>{currentEvent.title}</h1><p>{currentEvent.description}</p></div>
-                <div className="choice-list">
+                <div className="choice-list" data-choice-count={currentEvent.choices.length}>
                   {currentEvent.choices.map((choice, index) => <button key={choice.label} className="decision-button" onClick={() => chooseEvent(index)}><span><strong>{choice.label}</strong><small>{choice.hint}</small></span><b>→</b></button>)}
                 </div>
               </article>
@@ -8434,11 +8665,15 @@ export default function Home() {
             <div className="share-player"><ClubBadge club={currentClub} size="lg" /><div><span>{displayGame.archetype}</span><h2>{displayGame.name}</h2><p>#{displayGame.number} · {position.name} · {nationCountry.abbr}</p></div><strong>{Math.max(displayGame.overall, ...displayGame.history.map((item) => item.overall), 0)}<small>PICO OVR</small></strong></div>
             <div className="share-numbers"><Metric label="Jogos" value={displayGame.stats.appearances} /><Metric label={displayGame.position === "GOL" ? "Sem sofrer" : "Gols"} value={displayGame.position === "GOL" ? displayGame.stats.cleanSheets : displayGame.stats.goals} /><Metric label={displayGame.position === "GOL" ? "Sofridos" : "Assistências"} value={displayGame.position === "GOL" ? displayGame.stats.goalsConceded : displayGame.stats.assists} /><Metric label="Taças" value={displayGame.trophies + displayGame.nationalTrophies} tone="gold" /></div>
             <div className="share-legacy-line"><span>LEGADO {displayGame.legacyPoints}</span><strong>{legacyStanding.label}</strong><span>{displayGame.unlockedAchievements.length}/{ACHIEVEMENTS.length} CONQUISTAS</span></div>
+            <div className="share-honours">
+              <article><span>◉</span><div><small>BOLA DE OURO</small><strong>{displayGame.awardCabinet["Bola de Ouro"] ?? 0}</strong></div></article>
+              <article><span>✪</span><div><small>WORLD XI</small><strong>{displayGame.awardCabinet["FIFPRO World XI"] ?? 0}</strong></div></article>
+              <article><span>✦</span><div><small>PRÊMIOS</small><strong>{totalIndividualAwards}</strong></div></article>
+            </div>
             <div className="share-trophies">
-              {TROPHY_PRESENTATIONS.filter((presentation) => displayGame.trophyCabinet[presentation.id] > 0).slice(0, 7).map((presentation) => (
-                <span key={presentation.id}>{presentation.shortLabel} {displayGame.trophyCabinet[presentation.id]}</span>
+              {shareTitleHighlights.map((entry) => (
+                <span key={entry.shortLabel}>{entry.shortLabel} {entry.count}</span>
               ))}
-              {displayGame.nationalTrophies > 0 && <span>SEL {displayGame.nationalTrophies}</span>}
               {displayGame.trophies + displayGame.nationalTrophies === 0 && <span>EM BUSCA DA PRIMEIRA TAÇA</span>}
             </div>
             <div className="share-path"><span>12</span><div />{Array.from(new Set(displayGame.history.map((item) => item.clubId))).map((clubId) => <ClubBadge key={clubId} club={clubById(clubId)} size="sm" />)}<div /><span>{displayGame.age}</span></div>
@@ -8489,27 +8724,64 @@ export default function Home() {
             )}
           </section>
           <section className="career-club-summary">
-            <div className="summary-section-heading"><span>PASSAGEM POR CLUBES</span><strong>Onde sua história aconteceu</strong></div>
-            <div className="career-club-list">
-              {clubCareerSummary.map((entry) => {
-                const club = clubById(entry.clubId);
-                return (
-                  <article key={entry.clubId}>
-                    <ClubBadge club={club} size="md" />
-                    <div className="club-summary-copy">
-                      <strong>{club.shortName}</strong>
-                      <small>{entry.firstSeason === entry.lastSeason ? entry.firstSeason : `${entry.firstSeason}–${entry.lastSeason}`} · {entry.seasons} temporada{entry.seasons > 1 ? "s" : ""}</small>
-                    </div>
-                    <div className="club-summary-numbers">
-                      <span><b>{entry.appearances}</b>J</span>
-                      <span><b>{displayGame.position === "GOL" ? entry.cleanSheets : entry.goals}</b>{displayGame.position === "GOL" ? "SG" : "G"}</span>
-                      <span><b>{entry.assists}</b>A</span>
-                      <span><b>{entry.trophies}</b>🏆</span>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+            <div className="summary-section-heading club-archive-heading"><div><span>ARQUIVO POR CLUBE</span><strong>Reviva cada camisa da carreira</strong></div><b>{clubCareerSummary.length}<small>CLUBES</small></b></div>
+            {selectedClubCareer ? (
+              <div className="club-archive-layout">
+                <nav className="club-archive-tabs" aria-label="Escolher clube da carreira">
+                  {clubCareerSummary.map((entry) => {
+                    const club = clubById(entry.clubId);
+                    const selected = entry.clubId === selectedClubCareer.clubId;
+                    return (
+                      <button type="button" className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => setSummaryClubId(entry.clubId)} key={entry.clubId}>
+                        <ClubBadge club={club} size="sm" />
+                        <span><strong>{club.shortName}</strong><small>{entry.firstSeason === entry.lastSeason ? entry.firstSeason : `${entry.firstSeason}–${entry.lastSeason}`} · {entry.seasons} temp.</small></span>
+                        <b>{entry.trophies}<small>TAÇAS</small></b>
+                      </button>
+                    );
+                  })}
+                </nav>
+                <article className="club-archive-dossier">
+                  {(() => {
+                    const club = clubById(selectedClubCareer.clubId);
+                    const selectedTitles = selectedClubCareer.records.flatMap((record) => record.competitions.filter((competition) => competition.champion).map((competition) => ({ ...competition, season: record.season, leagueId: record.leagueId || club.leagueId })));
+                    const selectedAwards = selectedClubCareer.records.flatMap((record) => record.awards.map((award) => ({ award, season: record.season })));
+                    return <>
+                      <header>
+                        <ClubBadge club={club} size="lg" />
+                        <div><span>{leagueById(club.leagueId).name}</span><h3>{club.name}</h3><p>{selectedClubCareer.firstSeason === selectedClubCareer.lastSeason ? selectedClubCareer.firstSeason : `${selectedClubCareer.firstSeason}–${selectedClubCareer.lastSeason}`} · {selectedClubCareer.seasons} temporada{selectedClubCareer.seasons > 1 ? "s" : ""}</p></div>
+                        <b>{selectedClubCareer.peakOverall}<small>PICO OVR</small></b>
+                      </header>
+                      <div className="club-archive-metrics">
+                        <Metric label="Jogos" value={selectedClubCareer.appearances} />
+                        <Metric label={displayGame.position === "GOL" ? "Sem sofrer" : "Gols"} value={displayGame.position === "GOL" ? selectedClubCareer.cleanSheets : selectedClubCareer.goals} tone="green" />
+                        <Metric label="Assistências" value={selectedClubCareer.assists} />
+                        <Metric label="Taças" value={selectedClubCareer.trophies} tone="gold" />
+                        <Metric label="Prêmios" value={selectedClubCareer.awards} />
+                        <Metric label="Evolução" value={`${selectedClubCareer.entryOverall}→${selectedClubCareer.exitOverall}`} />
+                      </div>
+                      {(selectedTitles.length > 0 || selectedAwards.length > 0) && <div className="club-archive-honours">
+                        {selectedTitles.map((title) => <span key={`${title.season}-${title.id}`}><CompetitionBadge competition={title} leagueId={title.leagueId} /><b>{title.name}</b><small>{title.season}</small></span>)}
+                        {selectedAwards.slice(0, 8).map((entry, index) => <span className="individual" key={`${entry.season}-${entry.award}-${index}`}><i>{awardPresentation(entry.award).icon}</i><b>{entry.award}</b><small>{entry.season}</small></span>)}
+                      </div>}
+                      <section className="club-season-ledger">
+                        <header><span>TEMPORADA POR TEMPORADA</span><small>O arquivo completo desta passagem</small></header>
+                        <div>
+                          {[...selectedClubCareer.records].reverse().map((record) => {
+                            const titles = record.competitions.filter((competition) => competition.champion);
+                            return <article key={`${record.season}-${record.clubId}`}>
+                              <time>{record.season}<small>{record.age} ANOS</small></time>
+                              <div><strong>{record.appearances} jogos · {record.position === "GOL" ? `${record.cleanSheets} sem sofrer` : `${record.goals} gols · ${record.assists} assist.`}</strong><small>{ROLE_LABELS[record.squadRole]} · nota {(record.averageRating ?? seasonAverageRating(record.performanceScore ?? 0, displayGame.seed, record.season)).toFixed(1)}</small>{record.eventTitle && <p>{record.eventTitle}</p>}</div>
+                              <span className="club-season-ovr">{record.overall}<small>OVR</small></span>
+                              {(titles.length > 0 || record.awards.length > 0) && <footer>{titles.map((title) => <CompetitionBadge key={title.id} competition={title} leagueId={record.leagueId || club.leagueId} />)}{record.awards.slice(0, 3).map((award, index) => <em key={`${award}-${index}`} title={award}>{awardPresentation(award).icon}</em>)}</footer>}
+                            </article>;
+                          })}
+                        </div>
+                      </section>
+                    </>;
+                  })()}
+                </article>
+              </div>
+            ) : <div className="empty-panel">Nenhuma temporada profissional foi registrada.</div>}
           </section>
           <section className="final-hall-of-fame">
             <div className="summary-section-heading"><span>HALL DA FAMA</span><strong>As maiores carreiras deste aparelho</strong></div>
@@ -8538,7 +8810,7 @@ export default function Home() {
             </div>
             {filteredCountries.length === 0 && <div className="empty-panel">Nenhuma seleção encontrada.</div>}
           </section>
-          <div className="summary-actions"><button className="primary-button" onClick={shareCareer}>Compartilhar carreira <span>↗</span></button><button className="secondary-button" onClick={displayGame.challengeId ? startChallenge : startNew}>{displayGame.challengeId ? "Tentar o mesmo desafio novamente" : "Jogar novamente"}</button></div>
+          <div className="summary-actions"><button className="primary-button" onClick={shareCareer}>Compartilhar pôster da carreira <span>↗</span></button><button className="secondary-button" onClick={displayGame.challengeId ? startChallenge : startNew}>{displayGame.challengeId ? "Tentar o mesmo desafio novamente" : "Jogar novamente"}</button></div>
         </section>
       )}
     </main>
