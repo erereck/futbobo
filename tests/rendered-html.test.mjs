@@ -1261,6 +1261,13 @@ test("mantem menu desktop e mesa de decisoes mobile dentro da viewport", async (
   assert.match(styles, /\.career-phase-career\.career-tab-event > \.career-status-strip \{[\s\S]*?overflow: hidden;/);
   assert.match(styles, /\.career-phase-career\.career-tab-event \.choice-list \{[\s\S]*?grid-auto-rows: minmax\(44px,1fr\)/);
   assert.match(styles, /@media \(max-width: 540px\) and \(max-height: 700px\)/);
+  assert.match(styles, /v89 — mobile decision deck/);
+  assert.match(styles, /\.app-shell-career \.career-phase-career\.career-tab-event \{[\s\S]*?padding-bottom: calc\(66px \+ env\(safe-area-inset-bottom\)\);/);
+  assert.match(styles, /\.career-phase-career\.career-tab-event > \.event-stage \{[\s\S]*?align-content: stretch;/);
+  assert.match(styles, /\.career-phase-career\.career-tab-event \.objective-card > small \{[\s\S]*?display: block;/);
+  assert.match(styles, /\.career-phase-career\.career-tab-event \.event-card \{[\s\S]*?grid-template-rows: minmax\(0, 1fr\) max-content;[\s\S]*?border-radius: 18px;/);
+  assert.match(styles, /\.career-phase-career\.career-tab-event \.choice-list,[\s\S]*?align-self: end;[\s\S]*?grid-auto-rows: minmax\(44px, max-content\);/);
+  assert.match(styles, /\.career-phase-career\.career-tab-event \.decision-button \{[\s\S]*?border-radius: 10px;/);
 });
 
 test("oferece uma Copa do Mundo independente que respeita as regras atuais e campo horizontal apenas no PC", async () => {

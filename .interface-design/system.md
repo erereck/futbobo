@@ -84,6 +84,8 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - O HUD é estrutural, não `sticky`: ocupa linhas fixas do shell; o capítulo recebe o restante por `minmax(0,1fr)` e reduz densidade em aparelhos de até 700px de altura.
 - Arte puramente decorativa sai no mobile desta tela para preservar texto e alvos mínimos de 44px. As outras abas e o resultado de temporada continuam roláveis.
 - Toda opção de evento ocupa uma linha real de no mínimo 44px; descrição e metadados cedem espaço antes que qualquer escolha seja cortada.
+- A meta nunca é truncada ou escondida, inclusive em telas de até 700px de altura. Título e consequência podem quebrar linha dentro de uma faixa de altura natural.
+- O capítulo ocupa todo o espaço restante e as escolhas se ancoram na borda inferior do card. O card usa raio externo de 18px; as escolhas, com 8px de respiro interno, usam 10px para manter curvas concêntricas.
 - A criação do jogador no desktop é uma cabine de uma viewport: ficha à esquerda, campo de posições à direita e avanço integrado no rodapé, sempre visível.
 - A mesa mobile mede o espaço restante entre placar e comando. O tamanho cheio é padrão; reduzir a mesa é uma escolha explícita e reversível.
 
