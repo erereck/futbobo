@@ -50,7 +50,7 @@ try {
         $payload = @{
             tag_name = $tag
             name = "Futbobo Android $version"
-            body = "Futbobo Android 1.2.3: personagens aleatórios agora usam cores naturais de cabelo em 97% dos casos, reservando as cores fantasia para aparições raras. O jogo completo continua disponível offline e avisa quando houver uma nova atualização."
+            body = "Futbobo Android ${version}: 8 novas ligas completas, 125 novos clubes, CAF Champions League, mercado saudita muito mais rico e 35 novas selecoes, incluindo Vaticano e San Marino. O jogo completo continua offline e avisa quando houver uma nova atualizacao."
             draft = $false
             prerelease = $false
         } | ConvertTo-Json
