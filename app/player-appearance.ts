@@ -25,6 +25,8 @@ export const HAIR_COLORS = [
   "#12110f", "#28201b", "#473023", "#69422a", "#925d36", "#bd8654", "#d3b17d", "#ded8cc", "#8c2525", "#23426b",
   "#8d4aa3", "#f1eee5", "#e7c79b", "#cf6f38", "#6f1738", "#e05a9d", "#2a9db0", "#3e8050", "#ed8b28", "#9aa8c4",
 ];
+const NATURAL_HAIR_COLOR_INDICES = [0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 13];
+const COLORED_HAIR_COLOR_INDICES = [8, 9, 10, 14, 15, 16, 17, 18, 19];
 export const EYE_COLORS = ["#111816", "#35251d", "#31505b", "#49633c", "#765139", "#7c8f98", "#5c3f76"];
 export const HAIR_STYLE_NAMES = [
   "Clássico", "Franja", "Cacheado", "Moicano", "Black power", "Raspado", "Tranças", "Lateral", "Topete", "Dreads", "Coque", "Descolorido", "Careca",
@@ -100,10 +102,11 @@ function randomFromSeed(seed: number) {
 
 export function randomPlayerAppearance(seed = Math.floor(Math.random() * 2147483647)): PlayerAppearance {
   const random = randomFromSeed(hashParts("futbobo-player", seed));
+  const hairColorPool = random() < 0.03 ? COLORED_HAIR_COLOR_INDICES : NATURAL_HAIR_COLOR_INDICES;
   return {
     version: 2,
     skin: Math.floor(random() * SKIN_COLORS.length),
-    hairColor: Math.floor(random() * HAIR_COLORS.length),
+    hairColor: hairColorPool[Math.floor(random() * hairColorPool.length)],
     eyeColor: Math.floor(random() * EYE_COLORS.length),
     hairStyle: Math.floor(random() * HAIR_STYLE_NAMES.length),
     face: Math.floor(random() * FACE_NAMES.length),

@@ -1375,3 +1375,11 @@ test("vencer uma copa nacional jogavel recalcula a vaga continental", async () =
   assert.match(page, /competitionId === "domesticCup"[\s\S]*continentalSlotAfterSeason/);
   assert.match(page, /continentalSlot: resolvedContinentalSlot/);
 });
+
+test("personagens aleatorios reservam cores fantasia para tres por cento dos casos", async () => {
+  const appearance = await readFile(new URL("../app/player-appearance.ts", import.meta.url), "utf8");
+
+  assert.match(appearance, /NATURAL_HAIR_COLOR_INDICES/);
+  assert.match(appearance, /COLORED_HAIR_COLOR_INDICES/);
+  assert.match(appearance, /random\(\) < 0\.03 \? COLORED_HAIR_COLOR_INDICES : NATURAL_HAIR_COLOR_INDICES/);
+});

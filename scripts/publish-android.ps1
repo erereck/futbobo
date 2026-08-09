@@ -50,7 +50,7 @@ try {
         $payload = @{
             tag_name = $tag
             name = "Futbobo Android $version"
-            body = "Futbobo Android 1.2.2: criador de personagem completo, jogadores visíveis no futebol de botão, elencos persistentes por clube, uniformes automáticos e cabelos, barbas, expressões e tons revisados. O jogo completo continua disponível offline e avisa quando houver uma nova atualização."
+            body = "Futbobo Android 1.2.3: personagens aleatórios agora usam cores naturais de cabelo em 97% dos casos, reservando as cores fantasia para aparições raras. O jogo completo continua disponível offline e avisa quando houver uma nova atualização."
             draft = $false
             prerelease = $false
         } | ConvertTo-Json
