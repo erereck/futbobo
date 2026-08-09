@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v89 · ROSTOS EM CAMPO/);
+  assert.match(pageSource, /v90 · MUNDO SEM FRONTEIRAS/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -869,7 +869,7 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /PATROCINADOR PESSOAL/);
   assert.match(page, /LINHA DO TEMPO/);
   assert.match(page, /setUpdateNoticePage\("previous"\)/);
-  assert.match(page, /v88 · ARQUIVO DE LENDA/);
+  assert.match(page, /v89 · ROSTOS EM CAMPO/);
   assert.match(page, /FORA DAS QUATRO LINHAS/);
   assert.match(gameData, /followers\?: number/);
   assert.match(gameData, /sponsorBrand\?: string/);
@@ -1452,4 +1452,14 @@ test("abre a carreira para microestados e novos azarões internacionais", async 
     assert.match(page, new RegExp(`(?:"${countryId}"|${countryId}): \\[`));
     assert.match(assetSync, new RegExp(`(?:"${countryId}"|${countryId}): "`));
   }
+});
+
+test("recorta estampas do uniforme dentro da camisa", async () => {
+  const appearance = await readFile(new URL("../app/player-appearance.ts", import.meta.url), "utf8");
+  const drawKit = appearance.slice(appearance.indexOf("function drawKit"), appearance.indexOf("function drawBeard"));
+
+  assert.match(drawKit, /ctx\.rect\(-22 \* scale, 7 \* scale, 44 \* scale, 27 \* scale\);/);
+  assert.match(drawKit, /ctx\.clip\(\);/);
+  assert.match(drawKit, /ctx\.rotate\(-\.56\)/, "a faixa diagonal continua existindo dentro do recorte");
+  assert.match(drawKit, /ctx\.restore\(\);\s*\}/);
 });

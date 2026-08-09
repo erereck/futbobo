@@ -50,7 +50,7 @@ try {
         $payload = @{
             tag_name = $tag
             name = "Futbobo Android $version"
-            body = "Futbobo Android ${version}: 8 novas ligas completas, 125 novos clubes, CAF Champions League, mercado saudita muito mais rico e 35 novas selecoes, incluindo Vaticano e San Marino. O jogo completo continua offline e avisa quando houver uma nova atualizacao."
+            body = "Futbobo v90 para Android (${version}): 637 clubes, 36 ligas, 139 selecoes, CAF Champions League, mercado saudita renovado e o uniforme diagonal corrigido. O jogo completo continua offline e avisa quando houver uma nova atualizacao."
             draft = $false
             prerelease = $false
         } | ConvertTo-Json

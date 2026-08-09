@@ -281,6 +281,13 @@ function drawHair(ctx: CanvasRenderingContext2D, style: number, color: string, s
 }
 
 function drawKit(ctx: CanvasRenderingContext2D, pattern: number, primary: string, secondary: string, scale: number) {
+  // Cada estampa pertence ao tecido. Sem este recorte, padrões rotacionados
+  // (principalmente a faixa diagonal) continuam sendo pintados por trás do
+  // pescoço e da cabeça, mesmo que o busto externo esteja dentro do disco.
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-22 * scale, 7 * scale, 44 * scale, 27 * scale);
+  ctx.clip();
   ctx.fillStyle = primary; ctx.fillRect(-22 * scale, 7 * scale, 44 * scale, 27 * scale);
   ctx.fillStyle = secondary;
   switch (pattern) {
@@ -300,6 +307,7 @@ function drawKit(ctx: CanvasRenderingContext2D, pattern: number, primary: string
     case 11: ctx.fillRect(-22 * scale, 7 * scale, 9 * scale, 27 * scale); ctx.fillRect(13 * scale, 7 * scale, 9 * scale, 27 * scale); break;
   }
   ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.fillRect(-22 * scale, 7 * scale, 44 * scale, 2 * scale);
+  ctx.restore();
 }
 
 function drawBeard(ctx: CanvasRenderingContext2D, beard: number, color: string, scale: number) {

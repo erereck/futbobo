@@ -7552,44 +7552,44 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v89 · ROSTOS EM CAMPO</span>
-                    <h1 id="update-title">Agora cada botão carrega alguém da sua história.</h1>
+                    <span className="update-version">v90 · MUNDO SEM FRONTEIRAS</span>
+                    <h1 id="update-title">O mapa do Futbobo ficou muito maior.</h1>
                   </div>
                 </header>
-                <p>Crie seu personagem e reconheça o elenco dentro da mesa. Rostos, cabelos, barbas, tons, uniformes e companheiros agora acompanham sua carreira.</p>
+                <p>Novas ligas, clubes e seleções transformam cada carreira em uma viagem diferente — até o Vaticano pode tentar conquistar o mundo.</p>
                 <div className="update-mega-stats" aria-label="Resumo do update">
-                  <span><b>22</b> cortes de cabelo</span>
-                  <span><b>20</b> cores disponíveis</span>
-                  <span><b>1</b> elenco com memória</span>
+                  <span><b>637</b> clubes</span>
+                  <span><b>36</b> ligas</span>
+                  <span><b>139</b> seleções</span>
                 </div>
                 <span className="update-section-label">O GRANDE DESTAQUE</span>
                 <div className="update-grid update-mega-grid">
-                  <article className="update-featured"><b>☺</b><span><strong>Seu jogador dentro da mesa</strong><small>Monte rosto, cabelo, barba, expressão, pele e olhos antes da estreia — e personalize novamente pela aba Jogador.</small></span></article>
-                  <article><b>5</b><span><strong>Companheiros com identidade</strong><small>O elenco do seu clube permanece reconhecível e muda silenciosamente ao longo das temporadas.</small></span></article>
-                  <article><b>⚽</b><span><strong>Adversários consistentes</strong><small>Se você reencontrar um clube na mesma temporada, os mesmos personagens voltam para o campo.</small></span></article>
-                  <article><b>▥</b><span><strong>Camisas automáticas</strong><small>Cada clube recebe um padrão próprio e persistente. Você troca de camisa quando troca de time.</small></span></article>
-                  <article><b>◉</b><span><strong>Mais variedade humana</strong><small>Novos tons, cores, cortes, barbas e expressões deixam cada escalação muito menos repetitiva.</small></span></article>
-                  <article><b>◎</b><span><strong>Mundial jogável</strong><small>A campanha do Mundial de Clubes entrou de vez na ordem das partidas decisivas.</small></span></article>
+                  <article className="update-featured"><b>8</b><span><strong>Novas ligas completas</strong><small>Egito, África do Sul, Austrália, Marrocos, Grécia, Bolívia, Venezuela e Tchéquia entram com elencos inteiros.</small></span></article>
+                  <article><b>CAF</b><span><strong>África tem seu próprio topo</strong><small>A CAF Champions League ganhou classificação, campanha, taça e vaga no Mundial de Clubes.</small></span></article>
+                  <article><b>€</b><span><strong>Arábia realmente milionária</strong><small>Clubes sauditas agora convencem pelo salário: propostas podem superar em muito contratos europeus equivalentes.</small></span></article>
+                  <article><b>⚑</b><span><strong>Seleções improváveis</strong><small>Vaticano, San Marino, Nepal, Butão e dezenas de novos países podem escrever a carreira impossível.</small></span></article>
+                  <article><b>125</b><span><strong>Novos clubes com escudo</strong><small>Dos gigantes africanos aos azarões bolivianos, todos entram no mercado com identidade visual local.</small></span></article>
+                  <article><b>✓</b><span><strong>Camisas bem acabadas</strong><small>A faixa diagonal agora respeita o tecido e nunca mais atravessa o pescoço ou a cabeça do personagem.</small></span></article>
                 </div>
                 <span className="update-section-label">O QUE CONTINUA INTACTO</span>
                 <div className="update-grid update-mega-grid">
-                  <article><b>◆</b><span><strong>Saves antigos protegidos</strong><small>Aparências anteriores são migradas automaticamente para o novo catálogo.</small></span></article>
-                  <article><b>↔</b><span><strong>Modo clássico disponível</strong><small>Quem preferir os discos numerados pode desligar os personagens nas configurações.</small></span></article>
-                  <article><b>▣</b><span><strong>Leve e offline</strong><small>Os personagens continuam vetoriais: sem fotos pesadas e funcionando integralmente no APK.</small></span></article>
+                  <article><b>◆</b><span><strong>Saves antigos protegidos</strong><small>As novas competições e seleções entram sem apagar ou reiniciar nenhuma carreira salva.</small></span></article>
+                  <article><b>↔</b><span><strong>Mercado continua coerente</strong><small>Cada nova liga possui força, economia e rotas regionais próprias em vez de propostas aleatórias.</small></span></article>
+                  <article><b>▣</b><span><strong>Leve e offline</strong><small>Escudos e bandeiras ficam dentro do jogo e funcionam integralmente também no APK.</small></span></article>
                 </div>
-                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Arquivo de Lenda e o novo dossiê da carreira</strong><b>→</b></button>
+                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Rostos em Campo e elencos com identidade</strong><b>→</b></button>
               </>
             ) : (
               <>
-                <span className="update-version previous">v88 · ARQUIVO DE LENDA</span>
-                <div className="update-symbol previous">4:5</div>
-                <h1 id="update-title">Toda carreira merece um arquivo à altura.</h1>
-                <p>O encerramento ganhou pôster compartilhável, dossiê completo por clube e uma organização editorial para títulos, prêmios e temporadas.</p>
+                <span className="update-version previous">v89 · ROSTOS EM CAMPO</span>
+                <div className="update-symbol previous">☺</div>
+                <h1 id="update-title">Cada botão passou a carregar alguém da sua história.</h1>
+                <p>O criador de personagem e os elencos persistentes trocaram os discos anônimos por jogadores reconhecíveis dentro da mesa.</p>
                 <div className="update-grid previous-grid">
-                  <article><b>4:5</b><span><strong>Pôster compartilhável</strong><small>Principais taças, Bolas de Ouro, clubes e legado reunidos em uma imagem.</small></span></article>
-                  <article><b>100%</b><span><strong>Histórico por clube</strong><small>Cada camisa abre temporadas, números, títulos, prêmios e evolução de OVR.</small></span></article>
+                  <article><b>22</b><span><strong>Cortes e identidade</strong><small>Rosto, cabelo, barba, expressão, pele e olhos passaram a acompanhar toda a carreira.</small></span></article>
+                  <article><b>5+5</b><span><strong>Elencos reconhecíveis</strong><small>Companheiros persistem no clube e adversários retornam iguais durante a mesma temporada.</small></span></article>
                 </div>
-                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Rostos em Campo</strong><b>←</b></button>
+                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Mundo sem Fronteiras</strong><b>←</b></button>
               </>
             )}
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
@@ -7845,7 +7845,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v89 · ROSTOS EM CAMPO</b>
+            <span>FUTBOBO</span><b>v90 · MUNDO SEM FRONTEIRAS</b>
           </footer>
         </section>
       )}
