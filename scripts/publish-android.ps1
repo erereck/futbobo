@@ -50,7 +50,7 @@ try {
         $payload = @{
             tag_name = $tag
             name = "Futbobo Android $version"
-            body = "Futbobo v88 no Android: Arquivo de Lenda, pôster compartilhável, histórico completo por clube e a rodada mais recente de polimento da carreira, Copa e futebol de botão. O jogo completo continua disponível offline e avisa quando houver uma nova atualização."
+            body = "Futbobo Android 1.2.1: HUD mobile reorganizado, objetivo do treinador totalmente legível, escolhas ancoradas no rodapé e acabamento responsivo revisado em celulares compactos. O jogo completo continua disponível offline e avisa quando houver uma nova atualização."
             draft = $false
             prerelease = $false
         } | ConvertTo-Json
