@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-03T01:14:17.713Z",
+  "generatedAt": "2026-08-09T22:35:33.011Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -2556,8 +2556,7 @@
     },
     "river-plate-uru": {
       "providerName": "Club Atlético River Plate",
-      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/vstxtq1473541083.png",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/vstxtq1473541083.png"
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/vstxtq1473541083.png"
     },
     "alianza-universidad": {
       "providerName": "Club Social Deportivo Alianza Universidad",
@@ -2574,6 +2573,674 @@
     "goias": {
       "providerName": "Goiás Esporte Clube",
       "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/3395.png"
+    },
+    "al-ahly-cairo": {
+      "providerId": "138995",
+      "providerName": "Al Ahly",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/x8753q1751421890.png"
+    },
+    "al-masry": {
+      "providerId": "139844",
+      "providerName": "Al Masry",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/3aw86h1589807260.png"
+    },
+    "ceramica-cleopatra": {
+      "providerId": "140795",
+      "providerName": "Ceramica Cleopatra",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xy4shs1751422167.png"
+    },
+    "enppi": {
+      "providerId": "139841",
+      "providerName": "ENPPI",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uht79n1589807327.png"
+    },
+    "al-ittihad-alexandria": {
+      "providerId": "139839",
+      "providerName": "Al Ittihad Alexandria",
+      "source": "https://www.thesportsdb.com/images/media/team/badge/bqnmfm1786058466.png"
+    },
+    "el-gouna": {
+      "providerId": "139845",
+      "providerName": "El Gouna",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/6vdj631589807310.png"
+    },
+    "al-mokawloon": {
+      "providerId": "139837",
+      "providerName": "Al-Mokawloon al-Arab",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gi170k1589807275.png"
+    },
+    "melbourne-city": {
+      "providerId": "134634",
+      "providerName": "Melbourne City",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rkeqme1603301840.png"
+    },
+    "sydney-fc": {
+      "providerId": "134473",
+      "providerName": "Sydney FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/utgq8z1546110747.png"
+    },
+    "melbourne-victory": {
+      "providerId": "134477",
+      "providerName": "Melbourne Victory",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wwvsqx1473454564.png"
+    },
+    "auckland-fc": {
+      "providerId": "149411",
+      "providerName": "Auckland FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/f36lst1730017502.png"
+    },
+    "adelaide-united": {
+      "providerId": "134472",
+      "providerName": "Adelaide United",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wpyuwv1473454602.png"
+    },
+    "central-coast-mariners": {
+      "providerId": "134479",
+      "providerName": "Central Coast Mariners",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ncdx4p1759642161.png"
+    },
+    "newcastle-jets": {
+      "providerId": "134474",
+      "providerName": "Newcastle Jets",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/5jevk91653487832.png"
+    },
+    "macarthur-fc": {
+      "providerId": "138063",
+      "providerName": "Macarthur FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9gr66g1579348350.png"
+    },
+    "brisbane-roar": {
+      "providerId": "134476",
+      "providerName": "Brisbane Roar",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/sypxsu1473454634.png"
+    },
+    "perth-glory": {
+      "providerId": "134481",
+      "providerName": "Perth Glory",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2c9k5p1679114095.png"
+    },
+    "mamelodi-sundowns": {
+      "providerId": "espn:7084",
+      "providerName": "Mamelodi Sundowns",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/7084.png"
+    },
+    "orlando-pirates": {
+      "providerId": "espn:7085",
+      "providerName": "Orlando Pirates",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/7085.png"
+    },
+    "kaizer-chiefs": {
+      "providerId": "espn:7081",
+      "providerName": "Kaizer Chiefs",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/7081.png"
+    },
+    "stellenbosch": {
+      "providerId": "espn:18615",
+      "providerName": "Stellenbosch",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/18615.png"
+    },
+    "sekhukhune-united": {
+      "providerId": "espn:20814",
+      "providerName": "Sekhukhune United FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/20814.png"
+    },
+    "ts-galaxy": {
+      "providerId": "espn:19298",
+      "providerName": "TS Galaxy FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/19298.png"
+    },
+    "amazulu": {
+      "providerId": "espn:7079",
+      "providerName": "AmaZulu",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/7079.png"
+    },
+    "polokwane-city": {
+      "providerId": "espn:7099",
+      "providerName": "Polokwane City FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/7099.png"
+    },
+    "golden-arrows": {
+      "providerId": "espn:7077",
+      "providerName": "Golden Arrows",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/7077.png"
+    },
+    "richards-bay": {
+      "providerId": "espn:18825",
+      "providerName": "Richards Bay FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/18825.png"
+    },
+    "chippa-united": {
+      "providerId": "espn:11913",
+      "providerName": "Chippa United",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/11913.png"
+    },
+    "marumo-gallants": {
+      "providerId": "espn:13317",
+      "providerName": "Marumo Gallants",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/13317.png"
+    },
+    "durban-city": {
+      "providerId": "espn:22348",
+      "providerName": "Durban City",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/22348.png"
+    },
+    "siwelele": {
+      "providerId": "espn:131361",
+      "providerName": "Siwelele",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/131361.png"
+    },
+    "wellington-phoenix": {
+      "providerId": "espn:8352",
+      "providerName": "Wellington Phoenix FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/8352.png"
+    },
+    "pyramids-fc": {
+      "providerId": "139838",
+      "providerName": "Pyramids",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/8liy611607352549.png"
+    },
+    "zamalek": {
+      "providerId": "138997",
+      "providerName": "Zamalek",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tgekj81580930027.png"
+    },
+    "national-bank-egypt": {
+      "providerId": "140796",
+      "providerName": "National Bank of Egypt",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/p0j65z1614891546.png"
+    },
+    "modern-sport": {
+      "providerId": "144160",
+      "providerName": "Modern Sport",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/larnky1729784569.png"
+    },
+    "zed-fc": {
+      "providerId": "139852",
+      "providerName": "ZED",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/dfpdle1729784943.png"
+    },
+    "pharco": {
+      "providerId": "144159",
+      "providerName": "Pharco",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/kmgfun1751422815.png"
+    },
+    "smouha": {
+      "providerId": "139840",
+      "providerName": "Smouha",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qq4pkd1589807413.png"
+    },
+    "petrojet": {
+      "providerId": "149410",
+      "providerName": "Petrojet",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gy9ge11729783347.png"
+    },
+    "ghazl-el-mahalla": {
+      "providerId": "140794",
+      "providerName": "Ghazl El Mahalla",
+      "source": "https://www.thesportsdb.com/images/media/team/badge/18f9091786058467.png"
+    },
+    "ismaily": {
+      "providerId": "139843",
+      "providerName": "Ismaily",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1g46qo1589807617.png"
+    },
+    "talaea-el-gaish": {
+      "providerId": "139848",
+      "providerName": "Tala'ea El Gaish",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/a4scm31589807423.png"
+    },
+    "wadi-degla": {
+      "providerId": "139850",
+      "providerName": "Wadi Degla",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2rchzz1589807440.png"
+    },
+    "kahrabaa-ismailia": {
+      "providerId": "153475",
+      "providerName": "Kahrabaa Ismailia",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1g9fdn1759560731.png"
+    },
+    "magesi": {
+      "providerId": "149285",
+      "providerName": "Magesi",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yemva91726171566.png"
+    },
+    "orbit-college": {
+      "providerId": "152823",
+      "providerName": "Orbit College",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mw7vd11754524869.png"
+    },
+    "haras-el-hodood": {
+      "providerName": "Haras El Hodood Sporting Club",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/jbz3fc1729784423.png"
+    },
+    "bolivar": {
+      "providerId": "138200",
+      "providerName": "Bolívar",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0o5jrz1579798499.png"
+    },
+    "always-ready": {
+      "providerId": "138209",
+      "providerName": "Always Ready",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/g7rlnw1618943620.png"
+    },
+    "blooming": {
+      "providerId": "138203",
+      "providerName": "Blooming",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mslln91766423827.png"
+    },
+    "oriente-petrolero": {
+      "providerId": "138210",
+      "providerName": "Oriente Petrolero",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yfvkiz1774884306.png"
+    },
+    "aurora-bol": {
+      "providerId": "138199",
+      "providerName": "Aurora",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9jmurg1579798447.png"
+    },
+    "nacional-potosi": {
+      "providerId": "138208",
+      "providerName": "Nacional Potosí",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/exe2i31579798886.png"
+    },
+    "independiente-petrolero": {
+      "providerId": "140718",
+      "providerName": "Independiente Petrolero",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/v0t6g61614284889.png"
+    },
+    "gv-san-jose": {
+      "providerId": "148051",
+      "providerName": "GV San José",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/nwqcop1706108669.png"
+    },
+    "guabira": {
+      "providerId": "138201",
+      "providerName": "Guabirá",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/84bxl51579798562.png"
+    },
+    "abb-bolivia": {
+      "providerId": "146957",
+      "providerName": "ABB",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mbaccx1730933659.png"
+    },
+    "banik-ostrava": {
+      "providerId": "136684",
+      "providerName": "Baník Ostrava",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/y1pij41691419087.png"
+    },
+    "sigma-olomouc": {
+      "providerId": "136677",
+      "providerName": "Sigma Olomouc",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/cbcg021578836711.png"
+    },
+    "jablonec": {
+      "providerId": "134395",
+      "providerName": "Jablonec",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1fvoty1781843588.png"
+    },
+    "hradec-kralove": {
+      "providerId": "141109",
+      "providerName": "Hradec Králové",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ckjzy41691419056.png"
+    },
+    "bohemians-1905": {
+      "providerId": "136681",
+      "providerName": "Bohemians 1905",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/shnvm91578836748.png"
+    },
+    "mlada-boleslav": {
+      "providerId": "134000",
+      "providerName": "Mladá Boleslav",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/o8x4y51578836726.png"
+    },
+    "slovacko": {
+      "providerId": "136685",
+      "providerName": "Slovácko",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2fmeix1578836703.png"
+    },
+    "pardubice": {
+      "providerId": "140093",
+      "providerName": "Pardubice",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vpjqq11596471599.png"
+    },
+    "artis-brno": {
+      "providerId": "141110",
+      "providerName": "Artis Brno",
+      "source": "https://www.thesportsdb.com/images/media/team/badge/ambnck1784000159.png"
+    },
+    "olympiacos": {
+      "providerId": "espn:435",
+      "providerName": "Olympiacos",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/435.png"
+    },
+    "paok": {
+      "providerId": "espn:605",
+      "providerName": "PAOK",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/605.png"
+    },
+    "aek-athens": {
+      "providerId": "espn:887",
+      "providerName": "AEK Athens",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/887.png"
+    },
+    "panathinaikos": {
+      "providerId": "espn:443",
+      "providerName": "Panathinaikos",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/443.png"
+    },
+    "aris-thessaloniki": {
+      "providerId": "espn:11553",
+      "providerName": "Aris",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/11553.png"
+    },
+    "levadiakos": {
+      "providerId": "espn:5276",
+      "providerName": "Levadiakos",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/5276.png"
+    },
+    "ofi-crete": {
+      "providerId": "espn:1010",
+      "providerName": "OFI Crete",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/1010.png"
+    },
+    "atromitos": {
+      "providerId": "espn:6790",
+      "providerName": "Atromitos",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/6790.png"
+    },
+    "volos": {
+      "providerId": "espn:20043",
+      "providerName": "Volos NFC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/20043.png"
+    },
+    "panetolikos": {
+      "providerId": "espn:11431",
+      "providerName": "Panetolikos",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/11431.png"
+    },
+    "kifisia": {
+      "providerId": "espn:21969",
+      "providerName": "Kifisia",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/21969.png"
+    },
+    "the-strongest": {
+      "providerId": "espn:2687",
+      "providerName": "The Strongest",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/2687.png"
+    },
+    "universitario-vinto": {
+      "providerId": "espn:21379",
+      "providerName": "Universitario de Vinto",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/21379.png"
+    },
+    "san-antonio-bulo-bulo": {
+      "providerId": "espn:22137",
+      "providerName": "San Antonio Bulo Bulo",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/22137.png"
+    },
+    "real-tomayapo": {
+      "providerId": "espn:20890",
+      "providerName": "Real Tomayapo",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/20890.png"
+    },
+    "real-oruro": {
+      "providerId": "espn:22523",
+      "providerName": "Real Oruro",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/22523.png"
+    },
+    "real-potosi": {
+      "providerId": "espn:6051",
+      "providerName": "Real Potosí",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/6051.png"
+    },
+    "deportivo-tachira": {
+      "providerId": "espn:4818",
+      "providerName": "Deportivo Táchira",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/4818.png"
+    },
+    "caracas-fc": {
+      "providerId": "espn:4811",
+      "providerName": "Caracas FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/4811.png"
+    },
+    "carabobo": {
+      "providerId": "espn:6037",
+      "providerName": "Carabobo",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/6037.png"
+    },
+    "deportivo-la-guaira": {
+      "providerId": "espn:17090",
+      "providerName": "Deportivo La Guaira",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/17090.png"
+    },
+    "ucv-fc": {
+      "providerId": "espn:10094",
+      "providerName": "UCV FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10094.png"
+    },
+    "metropolitanos": {
+      "providerId": "espn:13481",
+      "providerName": "Metropolitanos",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/13481.png"
+    },
+    "academia-puerto-cabello": {
+      "providerId": "espn:18995",
+      "providerName": "Academia Puerto Cabello",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/18995.png"
+    },
+    "monagas": {
+      "providerId": "espn:6041",
+      "providerName": "Monagas SC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/6041.png"
+    },
+    "portuguesa-ven": {
+      "providerId": "espn:6762",
+      "providerName": "Portuguesa",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/6762.png"
+    },
+    "estudiantes-merida": {
+      "providerId": "espn:6038",
+      "providerName": "Estudiantes de Mérida",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/6038.png"
+    },
+    "zamora-ven": {
+      "providerId": "espn:6763",
+      "providerName": "Zamora FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/6763.png"
+    },
+    "anzoategui-fc": {
+      "providerId": "espn:13783",
+      "providerName": "Anzoátegui FC",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/13783.png"
+    },
+    "trujillanos": {
+      "providerId": "espn:5268",
+      "providerName": "Trujillanos",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/5268.png"
+    },
+    "rs-berkane": {
+      "providerId": "137425",
+      "providerName": "RS Berkane",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/f296p91743053568.png"
+    },
+    "wydad-casablanca": {
+      "providerId": "138840",
+      "providerName": "Wydad de Fès",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/t2xqqm1674614389.png"
+    },
+    "raja-casablanca": {
+      "providerId": "136404",
+      "providerName": "Raja Casablanca",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1cg64m1551428003.png"
+    },
+    "far-rabat": {
+      "providerId": "136403",
+      "providerName": "FAR Rabat",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/jkjp961777421509.png"
+    },
+    "fus-rabat": {
+      "providerId": "136410",
+      "providerName": "FUS Rabat",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vxk3aj1551518378.png"
+    },
+    "olympic-safi": {
+      "providerId": "137427",
+      "providerName": "Olympic Safi",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wi7sq01653313694.png"
+    },
+    "difaa-el-jadida": {
+      "providerId": "137426",
+      "providerName": "Difaâ Hassani El Jadidi",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/v8y3qa1638560041.png"
+    },
+    "hassania-agadir": {
+      "providerId": "136409",
+      "providerName": "Hassania Agadir",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0ps0811573417879.png"
+    },
+    "codm-meknes": {
+      "providerId": "136417",
+      "providerName": "CODM de Meknès",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/fp6qrh1580335119.png"
+    },
+    "union-touarga": {
+      "providerId": "140801",
+      "providerName": "Union Touarga Sport",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/y9wy0z1743053322.png"
+    },
+    "renaissance-zemamra": {
+      "providerId": "137428",
+      "providerName": "RCA Zemamra",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/luy0cy1743054549.png"
+    },
+    "kawkab-marrakech": {
+      "providerId": "136407",
+      "providerName": "Kawkab Marrakech",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7qfuus1551898115.png"
+    },
+    "olympique-dcheira": {
+      "providerId": "138841",
+      "providerName": "Olympique Dcheira",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/o4v33g1727196921.png"
+    },
+    "yacoub-el-mansour": {
+      "providerId": "149360",
+      "providerName": "Yacoub El Mansour",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yhort91727195942.png"
+    },
+    "yaracuyanos": {
+      "providerId": "138813",
+      "providerName": "Yaracuyanos",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/mgz2ed1771778333.png"
+    },
+    "viktoria-plzen": {
+      "providerId": "134015",
+      "providerName": "Viktoria Plzeň",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/at8i2h1679265942.png"
+    },
+    "slovan-liberec": {
+      "providerId": "133954",
+      "providerName": "Slovan Liberec",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/00k5891718287162.png"
+    },
+    "zlin": {
+      "providerId": "155510",
+      "providerName": "Zlín B",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/8ajis31777852938.png"
+    },
+    "ittihad-tanger": {
+      "providerName": "Ittihad Riadhi de Tanger",
+      "externalSource": "https://www.irtfoot.ma/assets/logo.png"
+    },
+    "western-sydney-wanderers": {
+      "providerName": "Western Sydney Wanderers Football Club",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/yotugj1759632879.png",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yotugj1759632879.png"
+    },
+    "maghreb-fes": {
+      "providerName": "Maghreb Association Sportive de Fès",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/l8ma1e1653314001.png",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/l8ma1e1653314001.png"
+    },
+    "asteras-aktor": {
+      "providerName": "Asteras Aktor Football Club",
+      "externalSource": "https://www.thesportsdb.com/images/media/team/badge/eaf2vb1785777279.png",
+      "source": "https://www.thesportsdb.com/images/media/team/badge/eaf2vb1785777279.png"
+    },
+    "ael-larissa": {
+      "providerName": "Athlitiki Enosi Larissa Football Club",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/xlln3b1782459015.png",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xlln3b1782459015.png"
+    },
+    "panserraikos": {
+      "providerName": "Panserraikos Football Club",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/uz7slk1689689598.png",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uz7slk1689689598.png"
+    },
+    "slavia-prague": {
+      "providerName": "Sportovní Klub Slavia Praha",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/l7kl4n1759252139.png",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/l7kl4n1759252139.png"
+    },
+    "sparta-prague": {
+      "providerName": "Athletic Club Sparta Praha",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/j00qct1718287150.png",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/j00qct1718287150.png"
+    },
+    "karvina": {
+      "providerName": "Městský Fotbalový Klub Karviná",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/5w2blo1578836734.png",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/5w2blo1578836734.png"
+    },
+    "teplice": {
+      "providerName": "Fotbalový Klub Teplice",
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/0hnqi61777766291.png",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0hnqi61777766291.png"
     }
   },
   "flags": {
@@ -2992,6 +3659,146 @@
     "taiti": {
       "code": "pf",
       "source": "https://flagcdn.com/w160/pf.png"
+    },
+    "armenia": {
+      "code": "am",
+      "source": "https://flagcdn.com/w160/am.png"
+    },
+    "azerbaijao": {
+      "code": "az",
+      "source": "https://flagcdn.com/w160/az.png"
+    },
+    "cazaquistao": {
+      "code": "kz",
+      "source": "https://flagcdn.com/w160/kz.png"
+    },
+    "luxemburgo": {
+      "code": "lu",
+      "source": "https://flagcdn.com/w160/lu.png"
+    },
+    "siria": {
+      "code": "sy",
+      "source": "https://flagcdn.com/w160/sy.png"
+    },
+    "libano": {
+      "code": "lb",
+      "source": "https://flagcdn.com/w160/lb.png"
+    },
+    "palestina": {
+      "code": "ps",
+      "source": "https://flagcdn.com/w160/ps.png"
+    },
+    "malasia": {
+      "code": "my",
+      "source": "https://flagcdn.com/w160/my.png"
+    },
+    "filipinas": {
+      "code": "ph",
+      "source": "https://flagcdn.com/w160/ph.png"
+    },
+    "benim": {
+      "code": "bj",
+      "source": "https://flagcdn.com/w160/bj.png"
+    },
+    "uganda": {
+      "code": "ug",
+      "source": "https://flagcdn.com/w160/ug.png"
+    },
+    "tanzania": {
+      "code": "tz",
+      "source": "https://flagcdn.com/w160/tz.png"
+    },
+    "quenia": {
+      "code": "ke",
+      "source": "https://flagcdn.com/w160/ke.png"
+    },
+    "guine-equatorial": {
+      "code": "gq",
+      "source": "https://flagcdn.com/w160/gq.png"
+    },
+    "suriname": {
+      "code": "sr",
+      "source": "https://flagcdn.com/w160/sr.png"
+    },
+    "nicaragua": {
+      "code": "ni",
+      "source": "https://flagcdn.com/w160/ni.png"
+    },
+    "republica-dominicana": {
+      "code": "do",
+      "source": "https://flagcdn.com/w160/do.png"
+    },
+    "papua-nova-guine": {
+      "code": "pg",
+      "source": "https://flagcdn.com/w160/pg.png"
+    },
+    "vanuatu": {
+      "code": "vu",
+      "source": "https://flagcdn.com/w160/vu.png"
+    },
+    "nova-caledonia": {
+      "code": "nc",
+      "source": "https://flagcdn.com/w160/nc.png"
+    },
+    "vaticano": {
+      "code": "va",
+      "source": "https://flagcdn.com/w160/va.png"
+    },
+    "san-marino": {
+      "code": "sm",
+      "source": "https://flagcdn.com/w160/sm.png"
+    },
+    "andorra": {
+      "code": "ad",
+      "source": "https://flagcdn.com/w160/ad.png"
+    },
+    "liechtenstein": {
+      "code": "li",
+      "source": "https://flagcdn.com/w160/li.png"
+    },
+    "malta": {
+      "code": "mt",
+      "source": "https://flagcdn.com/w160/mt.png"
+    },
+    "gibraltar": {
+      "code": "gi",
+      "source": "https://flagcdn.com/w160/gi.png"
+    },
+    "ilhas-faroe": {
+      "code": "fo",
+      "source": "https://flagcdn.com/w160/fo.png"
+    },
+    "moldavia": {
+      "code": "md",
+      "source": "https://flagcdn.com/w160/md.png"
+    },
+    "estonia": {
+      "code": "ee",
+      "source": "https://flagcdn.com/w160/ee.png"
+    },
+    "letonia": {
+      "code": "lv",
+      "source": "https://flagcdn.com/w160/lv.png"
+    },
+    "lituania": {
+      "code": "lt",
+      "source": "https://flagcdn.com/w160/lt.png"
+    },
+    "nepal": {
+      "code": "np",
+      "source": "https://flagcdn.com/w160/np.png"
+    },
+    "butao": {
+      "code": "bt",
+      "source": "https://flagcdn.com/w160/bt.png"
+    },
+    "mongolia": {
+      "code": "mn",
+      "source": "https://flagcdn.com/w160/mn.png"
+    },
+    "bangladesh": {
+      "code": "bd",
+      "source": "https://flagcdn.com/w160/bd.png"
     }
   },
   "competitions": {
@@ -3321,6 +4128,10 @@
     "afcChampions": {
       "providerName": "AFC Champions League Elite",
       "source": "https://assets.fclogo.top/png/acl-elite-v2024.png"
+    },
+    "cafChampions": {
+      "providerName": "CAF Champions League",
+      "source": "https://upload.wikimedia.org/wikipedia/en/thumb/7/7e/CAF_Champions_League_logo.svg/512px-CAF_Champions_League_logo.svg.png"
     }
   }
 }

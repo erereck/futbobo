@@ -42,6 +42,14 @@ const LEAGUE_SEARCH_NAMES = {
   csl: "Chinese Super League",
   "brasileirao-b": "Brazilian Serie B",
   championship: "English League Championship",
+  "egypt-premier": "Egyptian Premier League",
+  "south-africa-premiership": "South African Premier Division",
+  "a-league": "Australian A-League",
+  "botola-pro": "Moroccan Botola Pro",
+  "super-league-greece": "Greek Super League",
+  "liga-boliviana": "Bolivian Primera Division",
+  "liga-futve": "Venezuelan Primera Division",
+  "chance-liga": "Czech First League",
 };
 
 const COUNTRY_NAMES = {
@@ -74,6 +82,12 @@ const COUNTRY_NAMES = {
   japao: ["japan"],
   "coreia-do-sul": ["south korea", "korea"],
   china: ["china"],
+  egito: ["egypt"],
+  "africa-do-sul": ["south africa"],
+  australia: ["australia"],
+  marrocos: ["morocco"],
+  bolivia: ["bolivia"],
+  venezuela: ["venezuela"],
 };
 
 const FLAG_CODES = {
@@ -181,6 +195,41 @@ const FLAG_CODES = {
   fiji: "fj",
   "ilhas-salomao": "sb",
   taiti: "pf",
+  armenia: "am",
+  azerbaijao: "az",
+  cazaquistao: "kz",
+  luxemburgo: "lu",
+  siria: "sy",
+  libano: "lb",
+  palestina: "ps",
+  malasia: "my",
+  filipinas: "ph",
+  benim: "bj",
+  uganda: "ug",
+  tanzania: "tz",
+  quenia: "ke",
+  "guine-equatorial": "gq",
+  suriname: "sr",
+  nicaragua: "ni",
+  "republica-dominicana": "do",
+  "papua-nova-guine": "pg",
+  vanuatu: "vu",
+  "nova-caledonia": "nc",
+  vaticano: "va",
+  "san-marino": "sm",
+  andorra: "ad",
+  liechtenstein: "li",
+  malta: "mt",
+  gibraltar: "gi",
+  "ilhas-faroe": "fo",
+  moldavia: "md",
+  estonia: "ee",
+  letonia: "lv",
+  lituania: "lt",
+  nepal: "np",
+  butao: "bt",
+  mongolia: "mn",
+  bangladesh: "bd",
 };
 
 // Segunda fonte para clubes que não estão disponíveis ou estão desatualizados no TheSportsDB.
@@ -205,6 +254,14 @@ const ESPN_LEAGUE_IDS = {
   "saudi-pro-league": "ksa.1",
   "j1-league": "jpn.1",
   "brasileirao-b": "bra.2",
+  "egypt-premier": "egy.1",
+  "south-africa-premiership": "rsa.1",
+  "a-league": "aus.1",
+  "botola-pro": "mar.1",
+  "super-league-greece": "gre.1",
+  "liga-boliviana": "bol.1",
+  "liga-futve": "ven.1",
+  "chance-liga": "cze.1",
 };
 
 const SUPER_CUP_SEARCH_NAMES = {
@@ -284,6 +341,17 @@ const EXTERNAL_COMPETITION_ASSETS = {
 };
 
 const EXTERNAL_CLUB_ASSETS = {
+  "western-sydney-wanderers": "https://r2.thesportsdb.com/images/media/team/badge/yotugj1759632879.png",
+  "maghreb-fes": "https://r2.thesportsdb.com/images/media/team/badge/l8ma1e1653314001.png",
+  "asteras-aktor": "https://www.thesportsdb.com/images/media/team/badge/eaf2vb1785777279.png",
+  "ael-larissa": "https://r2.thesportsdb.com/images/media/team/badge/xlln3b1782459015.png",
+  panserraikos: "https://r2.thesportsdb.com/images/media/team/badge/uz7slk1689689598.png",
+  "slavia-prague": "https://r2.thesportsdb.com/images/media/team/badge/l7kl4n1759252139.png",
+  "sparta-prague": "https://r2.thesportsdb.com/images/media/team/badge/j00qct1718287150.png",
+  karvina: "https://r2.thesportsdb.com/images/media/team/badge/5w2blo1578836734.png",
+  teplice: "https://r2.thesportsdb.com/images/media/team/badge/0hnqi61777766291.png",
+  "ittihad-tanger": "https://www.irtfoot.ma/assets/logo.png",
+  "haras-el-hodood": "https://r2.thesportsdb.com/images/media/team/badge/jbz3fc1729784423.png",
   "al-shabab-riyadh": "https://assets.football-logos.cc/logos/saudi-arabia/1500x1500/al-shabab.787733e5.png",
   "zhejiang-fc": "https://assets.football-logos.cc/logos/china/1500x1500/zhejiang-professional.dc402788.png",
   swansea: "https://assets.football-logos.cc/logos/england/1500x1500/swansea-city.fff229fe.png",

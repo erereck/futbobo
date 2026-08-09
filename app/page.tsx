@@ -120,6 +120,7 @@ type CompetitionId =
   | "conferenceLeague"
   | "concacafChampions"
   | "afcChampions"
+  | "cafChampions"
   | "campeonesCup";
 
 type CompetitionResult = {
@@ -163,6 +164,7 @@ type TrophyCabinet = {
   conferenceLeague: number;
   concacafChampions: number;
   afcChampions: number;
+  cafChampions: number;
   campeonesCup: number;
 };
 
@@ -1059,6 +1061,7 @@ function initialState(seedOverride?: number): GameState {
       conferenceLeague: 0,
       concacafChampions: 0,
       afcChampions: 0,
+      cafChampions: 0,
       campeonesCup: 0,
     },
     awards: 0,
@@ -1288,6 +1291,7 @@ function normalizeSave(value: unknown): GameState {
       conferenceLeague: saved.trophyCabinet?.conferenceLeague ?? 0,
       concacafChampions: saved.trophyCabinet?.concacafChampions ?? 0,
       afcChampions: saved.trophyCabinet?.afcChampions ?? 0,
+      cafChampions: saved.trophyCabinet?.cafChampions ?? 0,
       campeonesCup: saved.trophyCabinet?.campeonesCup ?? 0,
     },
     awardCabinet: { ...base.awardCabinet, ...saved.awardCabinet },
@@ -1683,6 +1687,41 @@ const REGIONAL_ACADEMY_ROUTES: Record<string, string[]> = {
   fiji: ["japao", "eua"],
   "ilhas-salomao": ["japao", "eua"],
   taiti: ["franca", "eua"],
+  armenia: ["turquia", "alemanha"],
+  azerbaijao: ["turquia", "alemanha"],
+  cazaquistao: ["turquia", "alemanha"],
+  luxemburgo: ["belgica", "franca"],
+  siria: ["arabia-saudita", "turquia"],
+  libano: ["arabia-saudita", "turquia"],
+  palestina: ["arabia-saudita", "turquia"],
+  malasia: ["australia", "japao"],
+  filipinas: ["australia", "japao"],
+  benim: ["egito", "africa-do-sul"],
+  uganda: ["africa-do-sul", "egito"],
+  tanzania: ["africa-do-sul", "egito"],
+  quenia: ["africa-do-sul", "egito"],
+  "guine-equatorial": ["egito", "africa-do-sul"],
+  suriname: ["eua", "mexico"],
+  nicaragua: ["mexico", "eua"],
+  "republica-dominicana": ["eua", "mexico"],
+  "papua-nova-guine": ["australia", "nova-zelandia"],
+  vanuatu: ["australia", "nova-zelandia"],
+  "nova-caledonia": ["australia", "nova-zelandia"],
+  vaticano: ["italia"],
+  "san-marino": ["italia"],
+  andorra: ["espanha", "franca"],
+  liechtenstein: ["suica", "austria"],
+  malta: ["italia", "inglaterra"],
+  gibraltar: ["espanha", "inglaterra"],
+  "ilhas-faroe": ["inglaterra", "escocia"],
+  moldavia: ["romenia", "ucrania", "italia"],
+  estonia: ["alemanha"],
+  letonia: ["alemanha"],
+  lituania: ["alemanha"],
+  nepal: ["japao", "india"],
+  butao: ["japao", "india"],
+  mongolia: ["china", "japao"],
+  bangladesh: ["japao", "india"],
 };
 
 const PLAYABLE_ACADEMY_COUNTRIES = Array.from(new Set(LEAGUES.map((league) => league.countryId)));
@@ -1690,10 +1729,10 @@ const PLAYABLE_ACADEMY_COUNTRIES = Array.from(new Set(LEAGUES.map((league) => le
 const CONFEDERATION_ACADEMY_ROUTES: Record<Country["confederation"], string[]> = {
   SOUTH_AMERICA: ["argentina", "brasil", "colombia", "uruguai", "chile"],
   NORTH_AMERICA: ["eua", "mexico"],
-  EUROPE: ["franca", "alemanha", "portugal", "italia", "inglaterra"],
-  ASIA: ["japao", "coreia-do-sul", "arabia-saudita", "china"],
-  AFRICA: ["franca", "portugal", "belgica"],
-  OCEANIA: ["japao", "eua"],
+  EUROPE: ["franca", "alemanha", "portugal", "italia", "inglaterra", "grecia", "republica-tcheca"],
+  ASIA: ["japao", "coreia-do-sul", "arabia-saudita", "china", "australia"],
+  AFRICA: ["egito", "africa-do-sul", "marrocos", "franca", "portugal"],
+  OCEANIA: ["australia", "japao", "eua"],
 };
 
 function sortedCountries(countries: Country[]) {
@@ -1809,6 +1848,12 @@ const DOMESTIC_SUPER_CUP_NAMES: Record<string, string> = {
   "j1-league": "Supercopa do Japão",
   "k-league": "Supercopa da Coreia",
   csl: "Supercopa da China",
+  "egypt-premier": "Supercopa do Egito",
+  "botola-pro": "Supercopa do Marrocos",
+  "super-league-greece": "Supercopa da Grécia",
+  "liga-boliviana": "Supercopa da Bolívia",
+  "liga-futve": "Supercopa da Venezuela",
+  "chance-liga": "Supercopa da Tchéquia",
 };
 
 function isEuropeanClub(club: Club) {
@@ -1821,6 +1866,7 @@ function initialContinentalSlot(club: Club): ContinentalSlot | null {
   if (confederation === "SOUTH_AMERICA") return club.reputation >= 4 ? "libertadores" : null;
   if (confederation === "NORTH_AMERICA") return club.reputation >= 4 ? "concacaf" : null;
   if (confederation === "ASIA") return club.reputation >= 4 ? "asian" : null;
+  if (confederation === "AFRICA") return club.reputation >= 4 ? "african" : null;
   // Só a Europa entra nas competições da UEFA. Antes qualquer confederação sem
   // caso próprio caía aqui, e clube asiático de reputação alta ganhava Champions.
   if (confederation !== "EUROPE") return null;
@@ -1845,6 +1891,7 @@ function continentalSlotAfterSeason(
   if (confederation === "SOUTH_AMERICA") return leagueChampion || cupChampion || leaguePosition <= 6 ? "libertadores" : null;
   if (confederation === "NORTH_AMERICA") return leagueChampion || cupChampion || leaguePosition <= (league.championsPlaces || 4) ? "concacaf" : null;
   if (confederation === "ASIA") return leagueChampion || cupChampion || leaguePosition <= (league.championsPlaces || 3) ? "asian" : null;
+  if (confederation === "AFRICA") return leagueChampion || cupChampion || leaguePosition <= (league.championsPlaces || 2) ? "african" : null;
   if (confederation !== "EUROPE") return null;
   if (leagueChampion || leaguePosition <= league.championsPlaces) return "champions";
   if (cupChampion || leaguePosition <= league.europaPlaces) return "europa";
@@ -1947,6 +1994,14 @@ const LEAGUE_MARKET_MULTIPLIER: Record<string, number> = {
   "j1-league": 0.6,
   "k-league": 0.44,
   csl: 0.62,
+  "egypt-premier": 0.36,
+  "south-africa-premiership": 0.34,
+  "a-league": 0.48,
+  "botola-pro": 0.42,
+  "super-league-greece": 0.58,
+  "liga-boliviana": 0.24,
+  "liga-futve": 0.22,
+  "chance-liga": 0.55,
   "brasileirao-b": 0.2,
   championship: 0.66,
 };
@@ -2439,6 +2494,11 @@ const ALTERNATIVE_EXILE_LEAGUES = new Set([
   "csl",
   "brasileirao-b",
   "championship",
+  "botola-pro",
+  "super-league-greece",
+  "liga-boliviana",
+  "liga-futve",
+  "chance-liga",
 ]);
 
 function selectAlternativeExileOffers(state: GameState, salt: number) {
@@ -3528,6 +3588,7 @@ function simulateSeason(
     conference: { id: "conferenceLeague", name: "Conference League", icon: "UECL" },
     concacaf: { id: "concacafChampions", name: "Copa de Campeões Concacaf", icon: "CCC" },
     asian: { id: "afcChampions", name: "AFC Champions League Elite", icon: "ACL" },
+    african: { id: "cafChampions", name: "CAF Champions League", icon: "CAF" },
   };
   if (playsContinental) {
     const info = continentalNames[playsContinental];
@@ -4066,6 +4127,7 @@ function simulateSeason(
       libertadores: 94,
       concacafChampions: 90,
       afcChampions: 90,
+      cafChampions: 90,
       europaLeague: 85,
       conferenceLeague: 80,
       domesticCup: 70,
@@ -4223,7 +4285,7 @@ function simulateSeason(
   const seenEvents = event.oneTime || event.id === FIRST_MATCH_EVENT.id ? Array.from(new Set([...affected.seenEvents, event.id])) : affected.seenEvents;
   const nextCabinet = { ...affected.trophyCabinet };
   competitions.forEach((competition) => { if (competition.champion) nextCabinet[competition.id] += 1; });
-  const wonContinentalForWorld = continentalChampion && (playsContinental === "libertadores" || playsContinental === "champions" || playsContinental === "concacaf" || playsContinental === "asian");
+  const wonContinentalForWorld = continentalChampion && (playsContinental === "libertadores" || playsContinental === "champions" || playsContinental === "concacaf" || playsContinental === "asian" || playsContinental === "african");
   const nextWorldQualifiedSeason = wonContinentalForWorld ? affected.season + 1 : affected.worldQualifiedSeason === affected.season ? 0 : affected.worldQualifiedSeason;
   const nextWorldQualifiedClubId = wonContinentalForWorld ? club.id : affected.worldQualifiedSeason === affected.season ? "" : affected.worldQualifiedClubId;
   const nextAwardCabinet = { ...affected.awardCabinet };
@@ -4485,6 +4547,7 @@ function simulateSeason(
       nextBase.trophyCabinet.conferenceLeague +
       nextBase.trophyCabinet.concacafChampions +
       nextBase.trophyCabinet.afcChampions +
+      nextBase.trophyCabinet.cafChampions +
       nextBase.trophyCabinet.campeonesCup,
     worldTitles: nextBase.trophyCabinet.mundial,
     nationalCaps: nextBase.nationalCaps,
@@ -4912,6 +4975,8 @@ function CompetitionBadge({ competition, leagueId }: { competition: CompetitionR
       ? `/assets/competitions/cups/${leagueId}.png`
       : competition.id === "domesticSuperCup"
         ? `/assets/competitions/supercups/${leagueId}.png`
+      : competition.id === "cafChampions"
+        ? "/assets/competitions/cafChampions.svg"
       : `/assets/competitions/${competition.id}.png`;
 
   return (
@@ -4941,6 +5006,7 @@ const TROPHY_PRESENTATIONS: {
   { id: "conferenceLeague", label: "Conference League", shortLabel: "UECL", group: "CONTINENTAIS", symbol: "C", imagePath: "/assets/competitions/conferenceLeague.png" },
   { id: "concacafChampions", label: "Copa dos Campeões Concacaf", shortLabel: "CCC", group: "CONTINENTAIS", symbol: "N", imagePath: "/assets/competitions/concacafChampions.png" },
   { id: "afcChampions", label: "AFC Champions League Elite", shortLabel: "ACL", group: "CONTINENTAIS", symbol: "A", imagePath: "/assets/competitions/afcChampions.png" },
+  { id: "cafChampions", label: "CAF Champions League", shortLabel: "CAF", group: "CONTINENTAIS", symbol: "Á", imagePath: "/assets/competitions/cafChampions.svg" },
   { id: "campeonesCup", label: "Campeones Cup", shortLabel: "CAM", group: "CONTINENTAIS", symbol: "C", imagePath: "/assets/competitions/campeonesCup.png" },
   { id: "mundial", label: "Mundial de Clubes", shortLabel: "MUN", group: "MUNDIAIS", symbol: "◉", imagePath: "/assets/competitions/mundial.png" },
 ];
@@ -6223,7 +6289,7 @@ export default function Home() {
             previousOpponentIds: excludedClubIds,
           }, ...remainingMatches];
         }
-        const continentalFinal = ["libertadores", "championsLeague", "concacafChampions", "afcChampions"].includes(competitionId);
+        const continentalFinal = ["libertadores", "championsLeague", "concacafChampions", "afcChampions", "cafChampions"].includes(competitionId);
         const qualifiesForWorld = continentalFinal && resolvedChampion;
         const lostWorldTicket =
           continentalFinal &&

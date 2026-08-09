@@ -55,7 +55,10 @@ export function createContract(
   seedValue: number,
 ) {
   const prime = age >= 22 && age <= 29 ? 1.18 : age >= 34 ? 0.68 : 1;
-  const abroad = club.countryId === "brasil" ? 1 : 2.8;
+  // A Saudi Pro League precisa competir pelo jogador através do dinheiro, não
+  // de uma força esportiva artificial. Um contrato saudita paga em média mais
+  // que o dobro do equivalente europeu e ainda varia pela negociação.
+  const abroad = club.countryId === "brasil" ? 1 : club.countryId === "arabia-saudita" ? 7.4 : 2.8;
   let salaryHash = Math.abs(Math.trunc(seedValue)) || 1;
   for (let index = 0; index < club.id.length; index += 1) {
     salaryHash = Math.imul(salaryHash ^ club.id.charCodeAt(index), 16_777_619);

@@ -47,7 +47,7 @@ export type League = {
   conferencePlaces: number;
 };
 
-export type ContinentalSlot = "libertadores" | "champions" | "europa" | "conference" | "concacaf" | "asian";
+export type ContinentalSlot = "libertadores" | "champions" | "europa" | "conference" | "concacaf" | "asian" | "african";
 
 export type Club = {
   id: string;
@@ -283,6 +283,43 @@ export const COUNTRIES: Country[] = [
   { id: "fiji", name: "Fiji", demonym: "fijiano", abbr: "FIJ", confederation: "OCEANIA", strength: 1, primary: "#68bfe5", secondary: "#002868" },
   { id: "ilhas-salomao", name: "Ilhas Salomão", demonym: "salomonense", abbr: "SAL", confederation: "OCEANIA", strength: 1, primary: "#0051ba", secondary: "#1eb53a" },
   { id: "taiti", name: "Taiti", demonym: "taitiano", abbr: "TAH", confederation: "OCEANIA", strength: 1, primary: "#d21034", secondary: "#ffffff" },
+  { id: "armenia", name: "Armênia", demonym: "armênio", abbr: "ARM", confederation: "EUROPE", strength: 1, primary: "#d90012", secondary: "#f2a800" },
+  { id: "azerbaijao", name: "Azerbaijão", demonym: "azerbaijano", abbr: "AZE", confederation: "EUROPE", strength: 1, primary: "#00b5e2", secondary: "#ef3340" },
+  { id: "cazaquistao", name: "Cazaquistão", demonym: "cazaque", abbr: "CAZ", confederation: "EUROPE", strength: 2, primary: "#00afca", secondary: "#f7d117" },
+  { id: "luxemburgo", name: "Luxemburgo", demonym: "luxemburguês", abbr: "LUX", confederation: "EUROPE", strength: 1, primary: "#ed2939", secondary: "#00a1de" },
+  { id: "siria", name: "Síria", demonym: "sírio", abbr: "SIR", confederation: "ASIA", strength: 2, primary: "#ce1126", secondary: "#007a3d" },
+  { id: "libano", name: "Líbano", demonym: "libanês", abbr: "LIB", confederation: "ASIA", strength: 1, primary: "#ed1c24", secondary: "#00a651" },
+  { id: "palestina", name: "Palestina", demonym: "palestino", abbr: "PAL", confederation: "ASIA", strength: 1, primary: "#007a3d", secondary: "#ce1126" },
+  { id: "malasia", name: "Malásia", demonym: "malaio", abbr: "MAS", confederation: "ASIA", strength: 1, primary: "#010066", secondary: "#cc0001" },
+  { id: "filipinas", name: "Filipinas", demonym: "filipino", abbr: "FIL", confederation: "ASIA", strength: 1, primary: "#0038a8", secondary: "#ce1126" },
+  { id: "benim", name: "Benim", demonym: "beninense", abbr: "BEN", confederation: "AFRICA", strength: 2, primary: "#008751", secondary: "#fcd116" },
+  { id: "uganda", name: "Uganda", demonym: "ugandense", abbr: "UGA", confederation: "AFRICA", strength: 2, primary: "#fcdc04", secondary: "#d90000" },
+  { id: "tanzania", name: "Tanzânia", demonym: "tanzaniano", abbr: "TAN", confederation: "AFRICA", strength: 2, primary: "#1eb53a", secondary: "#00a3dd" },
+  { id: "quenia", name: "Quênia", demonym: "queniano", abbr: "QUE", confederation: "AFRICA", strength: 2, primary: "#bb0000", secondary: "#006600" },
+  { id: "guine-equatorial", name: "Guiné Equatorial", demonym: "guinéu-equatoriano", abbr: "GEQ", confederation: "AFRICA", strength: 2, primary: "#3e9a00", secondary: "#e32118" },
+  { id: "suriname", name: "Suriname", demonym: "surinamês", abbr: "SUR", confederation: "NORTH_AMERICA", strength: 1, primary: "#377e3f", secondary: "#b40a2d" },
+  { id: "nicaragua", name: "Nicarágua", demonym: "nicaraguense", abbr: "NIC", confederation: "NORTH_AMERICA", strength: 1, primary: "#0067c6", secondary: "#ffffff" },
+  { id: "republica-dominicana", name: "República Dominicana", demonym: "dominicano", abbr: "DOM", confederation: "NORTH_AMERICA", strength: 1, primary: "#002d62", secondary: "#ce1126" },
+  { id: "papua-nova-guine", name: "Papua-Nova Guiné", demonym: "papuásio", abbr: "PNG", confederation: "OCEANIA", strength: 1, primary: "#ce1126", secondary: "#000000" },
+  { id: "vanuatu", name: "Vanuatu", demonym: "vanuatuense", abbr: "VAN", confederation: "OCEANIA", strength: 1, primary: "#d21034", secondary: "#009543" },
+  { id: "nova-caledonia", name: "Nova Caledônia", demonym: "neocaledônio", abbr: "NCL", confederation: "OCEANIA", strength: 1, primary: "#009543", secondary: "#ed4135" },
+  // O pacote das seleções improváveis: microestados europeus e azarões
+  // asiáticos também podem produzir a carreira impossível do jogador.
+  { id: "vaticano", name: "Vaticano", demonym: "vaticano", abbr: "VAT", confederation: "EUROPE", strength: 1, primary: "#ffe000", secondary: "#ffffff" },
+  { id: "san-marino", name: "San Marino", demonym: "são-marinense", abbr: "SMR", confederation: "EUROPE", strength: 1, primary: "#5eb6e4", secondary: "#ffffff" },
+  { id: "andorra", name: "Andorra", demonym: "andorrano", abbr: "AND", confederation: "EUROPE", strength: 1, primary: "#10069f", secondary: "#fedd00" },
+  { id: "liechtenstein", name: "Liechtenstein", demonym: "liechtensteinense", abbr: "LIE", confederation: "EUROPE", strength: 1, primary: "#002b7f", secondary: "#ce1126" },
+  { id: "malta", name: "Malta", demonym: "maltês", abbr: "MLT", confederation: "EUROPE", strength: 1, primary: "#cf142b", secondary: "#ffffff" },
+  { id: "gibraltar", name: "Gibraltar", demonym: "gibraltino", abbr: "GIB", confederation: "EUROPE", strength: 1, primary: "#da000c", secondary: "#ffffff" },
+  { id: "ilhas-faroe", name: "Ilhas Faroe", demonym: "feroês", abbr: "FRO", confederation: "EUROPE", strength: 1, primary: "#ffffff", secondary: "#0065bd" },
+  { id: "moldavia", name: "Moldávia", demonym: "moldávio", abbr: "MOL", confederation: "EUROPE", strength: 1, primary: "#0046ae", secondary: "#ffd200" },
+  { id: "estonia", name: "Estônia", demonym: "estoniano", abbr: "EST", confederation: "EUROPE", strength: 1, primary: "#4891d9", secondary: "#111111" },
+  { id: "letonia", name: "Letônia", demonym: "letão", abbr: "LET", confederation: "EUROPE", strength: 1, primary: "#9e3039", secondary: "#ffffff" },
+  { id: "lituania", name: "Lituânia", demonym: "lituano", abbr: "LIT", confederation: "EUROPE", strength: 1, primary: "#fdb913", secondary: "#006a44" },
+  { id: "nepal", name: "Nepal", demonym: "nepalês", abbr: "NEP", confederation: "ASIA", strength: 1, primary: "#dc143c", secondary: "#003893" },
+  { id: "butao", name: "Butão", demonym: "butanês", abbr: "BUT", confederation: "ASIA", strength: 1, primary: "#ffcc00", secondary: "#ff4e12" },
+  { id: "mongolia", name: "Mongólia", demonym: "mongol", abbr: "MON", confederation: "ASIA", strength: 1, primary: "#c4272f", secondary: "#015197" },
+  { id: "bangladesh", name: "Bangladesh", demonym: "bangladês", abbr: "BAN", confederation: "ASIA", strength: 1, primary: "#006a4e", secondary: "#f42a41" },
 ];
 
 export function countryById(id: string): Country {
@@ -322,6 +359,16 @@ export const LEAGUES: League[] = [
   // vale — time da Série B que ganha a Copa do Brasil vai à Libertadores.
   { id: "brasileirao-b", countryId: "brasil", name: "Brasileirão Série B", cupName: "Copa do Brasil", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   { id: "championship", countryId: "inglaterra", name: "EFL Championship", cupName: "FA Cup", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  // Novas rotas fora do eixo tradicional. Na África e na Austrália,
+  // `championsPlaces` representa vagas na competição continental local.
+  { id: "egypt-premier", countryId: "egito", name: "Egyptian Premier League", cupName: "Copa do Egito", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "south-africa-premiership", countryId: "africa-do-sul", name: "Betway Premiership", cupName: "Nedbank Cup", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "a-league", countryId: "australia", name: "A-League Men", cupName: "Australia Cup", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "botola-pro", countryId: "marrocos", name: "Botola Pro", cupName: "Copa do Trono", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "super-league-greece", countryId: "grecia", name: "Super League Greece", cupName: "Copa da Grécia", prestige: 2, championsPlaces: 1, europaPlaces: 3, conferencePlaces: 5 },
+  { id: "liga-boliviana", countryId: "bolivia", name: "División Profesional", cupName: "Copa Bolivia", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "liga-futve", countryId: "venezuela", name: "Liga FUTVE", cupName: "Copa Venezuela", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "chance-liga", countryId: "republica-tcheca", name: "Chance Liga", cupName: "Copa MOL", prestige: 2, championsPlaces: 1, europaPlaces: 3, conferencePlaces: 5 },
 ];
 
 export function leagueById(id: string): League {
@@ -923,6 +970,160 @@ const ENGLAND_B_CLUBS: Club[] = [
   { id: "luton", name: "Luton Town Football Club", shortName: "Luton", abbr: "LUT", city: "Luton", countryId: "inglaterra", leagueId: "championship", primary: "#f78f1e", secondary: "#002d5b", reputation: 1, strength: 63, academy: 3 },
 ];
 
+// Egyptian Premier League 2025/26. Al Ahly, Zamalek e Pyramids formam o pote
+// continental; a cauda longa deixa a carreira africana ter degraus de verdade.
+const EGYPT_CLUBS: Club[] = [
+  { id: "al-ahly-cairo", name: "Al Ahly Sporting Club", shortName: "Al Ahly", abbr: "AHL", city: "Cairo", countryId: "egito", leagueId: "egypt-premier", primary: "#d71920", secondary: "#ffffff", reputation: 5, strength: 81, academy: 5 },
+  { id: "pyramids-fc", name: "Pyramids Football Club", shortName: "Pyramids", abbr: "PYR", city: "Cairo", countryId: "egito", leagueId: "egypt-premier", primary: "#27a9e1", secondary: "#ffffff", reputation: 4, strength: 79, academy: 3 },
+  { id: "zamalek", name: "Zamalek Sporting Club", shortName: "Zamalek", abbr: "ZAM", city: "Giza", countryId: "egito", leagueId: "egypt-premier", primary: "#ffffff", secondary: "#d71920", reputation: 5, strength: 78, academy: 5 },
+  { id: "al-masry", name: "Al Masry Sporting Club", shortName: "Al Masry", abbr: "MAS", city: "Port Said", countryId: "egito", leagueId: "egypt-premier", primary: "#08783e", secondary: "#ffffff", reputation: 3, strength: 72, academy: 4 },
+  { id: "ceramica-cleopatra", name: "Ceramica Cleopatra Football Club", shortName: "Ceramica", abbr: "CER", city: "Giza", countryId: "egito", leagueId: "egypt-premier", primary: "#d71920", secondary: "#f2b705", reputation: 3, strength: 70, academy: 3 },
+  { id: "national-bank-egypt", name: "National Bank of Egypt Sporting Club", shortName: "National Bank", abbr: "NBE", city: "Cairo", countryId: "egito", leagueId: "egypt-premier", primary: "#ef7d00", secondary: "#111111", reputation: 2, strength: 69, academy: 2 },
+  { id: "modern-sport", name: "Modern Sport Football Club", shortName: "Modern Sport", abbr: "MOD", city: "Cairo", countryId: "egito", leagueId: "egypt-premier", primary: "#d71920", secondary: "#274b9f", reputation: 2, strength: 68, academy: 3 },
+  { id: "zed-fc", name: "ZED Football Club", shortName: "ZED FC", abbr: "ZED", city: "Giza", countryId: "egito", leagueId: "egypt-premier", primary: "#ff7a1a", secondary: "#111111", reputation: 2, strength: 68, academy: 4 },
+  { id: "enppi", name: "Engineering for the Petroleum and Process Industries Sporting Club", shortName: "ENPPI", abbr: "ENP", city: "Cairo", countryId: "egito", leagueId: "egypt-premier", primary: "#0072bc", secondary: "#f2b705", reputation: 2, strength: 67, academy: 4 },
+  { id: "pharco", name: "Pharco Football Club", shortName: "Pharco", abbr: "PHA", city: "Alexandria", countryId: "egito", leagueId: "egypt-premier", primary: "#f58220", secondary: "#111111", reputation: 2, strength: 66, academy: 2 },
+  { id: "smouha", name: "Smouha Sporting Club", shortName: "Smouha", abbr: "SMO", city: "Alexandria", countryId: "egito", leagueId: "egypt-premier", primary: "#0072bc", secondary: "#ffffff", reputation: 2, strength: 66, academy: 3 },
+  { id: "petrojet", name: "Petrojet Sporting Club", shortName: "Petrojet", abbr: "PET", city: "Suez", countryId: "egito", leagueId: "egypt-premier", primary: "#d71920", secondary: "#274b9f", reputation: 2, strength: 65, academy: 2 },
+  { id: "al-ittihad-alexandria", name: "Al Ittihad Alexandria Club", shortName: "Al Ittihad", abbr: "ITA", city: "Alexandria", countryId: "egito", leagueId: "egypt-premier", primary: "#08783e", secondary: "#ffffff", reputation: 3, strength: 65, academy: 3 },
+  { id: "el-gouna", name: "El Gouna Football Club", shortName: "El Gouna", abbr: "GOU", city: "El Gouna", countryId: "egito", leagueId: "egypt-premier", primary: "#f58220", secondary: "#ffffff", reputation: 2, strength: 64, academy: 2 },
+  { id: "ghazl-el-mahalla", name: "Ghazl El Mahalla Sporting Club", shortName: "Ghazl El Mahalla", abbr: "GHA", city: "El Mahalla El Kubra", countryId: "egito", leagueId: "egypt-premier", primary: "#4a9fd6", secondary: "#ffffff", reputation: 2, strength: 64, academy: 3 },
+  { id: "ismaily", name: "Ismaily Sporting Club", shortName: "Ismaily", abbr: "ISM", city: "Ismailia", countryId: "egito", leagueId: "egypt-premier", primary: "#f2b705", secondary: "#274b9f", reputation: 3, strength: 64, academy: 4 },
+  { id: "talaea-el-gaish", name: "Tala'ea El Gaish Sporting Club", shortName: "Tala'ea El Gaish", abbr: "TEG", city: "Cairo", countryId: "egito", leagueId: "egypt-premier", primary: "#d71920", secondary: "#111111", reputation: 2, strength: 63, academy: 2 },
+  { id: "haras-el-hodood", name: "Haras El Hodood Sporting Club", shortName: "Haras El Hodood", abbr: "HAR", city: "Alexandria", countryId: "egito", leagueId: "egypt-premier", primary: "#111111", secondary: "#d71920", reputation: 1, strength: 62, academy: 2 },
+  { id: "al-mokawloon", name: "Al Mokawloon Al Arab Sporting Club", shortName: "Al Mokawloon", abbr: "MOK", city: "Cairo", countryId: "egito", leagueId: "egypt-premier", primary: "#f2b705", secondary: "#111111", reputation: 3, strength: 62, academy: 5 },
+  { id: "wadi-degla", name: "Wadi Degla Sporting Club", shortName: "Wadi Degla", abbr: "WAD", city: "Cairo", countryId: "egito", leagueId: "egypt-premier", primary: "#f2b705", secondary: "#111111", reputation: 2, strength: 61, academy: 4 },
+  { id: "kahrabaa-ismailia", name: "Kahrabaa Ismailia Sporting Club", shortName: "Kahrabaa Ismailia", abbr: "KIS", city: "Ismailia", countryId: "egito", leagueId: "egypt-premier", primary: "#f2b705", secondary: "#08783e", reputation: 1, strength: 59, academy: 2 },
+];
+
+// Betway Premiership 2025/26.
+const SOUTH_AFRICA_CLUBS: Club[] = [
+  { id: "mamelodi-sundowns", name: "Mamelodi Sundowns Football Club", shortName: "Mamelodi Sundowns", abbr: "SUN", city: "Pretoria", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#f2b705", secondary: "#274b9f", reputation: 5, strength: 78, academy: 5 },
+  { id: "orlando-pirates", name: "Orlando Pirates Football Club", shortName: "Orlando Pirates", abbr: "ORL", city: "Johannesburg", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#111111", secondary: "#ffffff", reputation: 5, strength: 77, academy: 5 },
+  { id: "kaizer-chiefs", name: "Kaizer Chiefs Football Club", shortName: "Kaizer Chiefs", abbr: "KAI", city: "Johannesburg", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#f2b705", secondary: "#111111", reputation: 5, strength: 73, academy: 5 },
+  { id: "stellenbosch", name: "Stellenbosch Football Club", shortName: "Stellenbosch", abbr: "STE", city: "Stellenbosch", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#8c1b3f", secondary: "#ffffff", reputation: 3, strength: 71, academy: 4 },
+  { id: "sekhukhune-united", name: "Sekhukhune United Football Club", shortName: "Sekhukhune", abbr: "SEK", city: "Polokwane", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#8c1b3f", secondary: "#f2b705", reputation: 3, strength: 70, academy: 3 },
+  { id: "ts-galaxy", name: "TS Galaxy Football Club", shortName: "TS Galaxy", abbr: "TSG", city: "Mbombela", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#d71920", secondary: "#111111", reputation: 3, strength: 69, academy: 3 },
+  { id: "amazulu", name: "AmaZulu Football Club", shortName: "AmaZulu", abbr: "AMA", city: "Durban", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#08783e", secondary: "#ffffff", reputation: 3, strength: 68, academy: 4 },
+  { id: "polokwane-city", name: "Polokwane City Football Club", shortName: "Polokwane City", abbr: "POL", city: "Polokwane", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#f58220", secondary: "#111111", reputation: 2, strength: 67, academy: 3 },
+  { id: "golden-arrows", name: "Lamontville Golden Arrows Football Club", shortName: "Golden Arrows", abbr: "GOL", city: "Durban", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#08783e", secondary: "#f2b705", reputation: 2, strength: 66, academy: 4 },
+  { id: "richards-bay", name: "Richards Bay Football Club", shortName: "Richards Bay", abbr: "RBY", city: "Richards Bay", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#0072bc", secondary: "#ffffff", reputation: 2, strength: 65, academy: 2 },
+  { id: "chippa-united", name: "Chippa United Football Club", shortName: "Chippa United", abbr: "CHI", city: "Gqeberha", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#274b9f", secondary: "#ffffff", reputation: 2, strength: 65, academy: 3 },
+  { id: "marumo-gallants", name: "Marumo Gallants Football Club", shortName: "Marumo Gallants", abbr: "MAR", city: "Bloemfontein", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#08783e", secondary: "#f2b705", reputation: 2, strength: 64, academy: 2 },
+  { id: "durban-city", name: "Durban City Football Club", shortName: "Durban City", abbr: "DUR", city: "Durban", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#274b9f", secondary: "#ffffff", reputation: 2, strength: 64, academy: 3 },
+  { id: "siwelele", name: "Siwelele Football Club", shortName: "Siwelele", abbr: "SIW", city: "Bloemfontein", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#08783e", secondary: "#ffffff", reputation: 2, strength: 63, academy: 3 },
+  { id: "magesi", name: "Magesi Football Club", shortName: "Magesi", abbr: "MAG", city: "Polokwane", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#274b9f", secondary: "#f2b705", reputation: 1, strength: 62, academy: 2 },
+  { id: "orbit-college", name: "Orbit College Football Club", shortName: "Orbit College", abbr: "ORB", city: "Rustenburg", countryId: "africa-do-sul", leagueId: "south-africa-premiership", primary: "#7a1f2b", secondary: "#f2b705", reputation: 1, strength: 60, academy: 3 },
+];
+
+// A-League Men 2025/26: os dois clubes neozelandeses disputam a liga australiana,
+// mas preservam país e identidade para mercado, base e Mundial.
+const AUSTRALIA_CLUBS: Club[] = [
+  { id: "melbourne-city", name: "Melbourne City Football Club", shortName: "Melbourne City", abbr: "MCY", city: "Melbourne", countryId: "australia", leagueId: "a-league", primary: "#69b3e7", secondary: "#ffffff", reputation: 4, strength: 73, academy: 4 },
+  { id: "sydney-fc", name: "Sydney Football Club", shortName: "Sydney FC", abbr: "SYD", city: "Sydney", countryId: "australia", leagueId: "a-league", primary: "#69b3e7", secondary: "#274b9f", reputation: 4, strength: 72, academy: 4 },
+  { id: "melbourne-victory", name: "Melbourne Victory Football Club", shortName: "Melbourne Victory", abbr: "MVC", city: "Melbourne", countryId: "australia", leagueId: "a-league", primary: "#0a2240", secondary: "#ffffff", reputation: 4, strength: 71, academy: 4 },
+  { id: "auckland-fc", name: "Auckland Football Club", shortName: "Auckland FC", abbr: "AUC", city: "Auckland", countryId: "nova-zelandia", leagueId: "a-league", primary: "#111111", secondary: "#69b3e7", reputation: 3, strength: 71, academy: 3 },
+  { id: "adelaide-united", name: "Adelaide United Football Club", shortName: "Adelaide United", abbr: "ADL", city: "Adelaide", countryId: "australia", leagueId: "a-league", primary: "#d71920", secondary: "#f2b705", reputation: 3, strength: 69, academy: 4 },
+  { id: "central-coast-mariners", name: "Central Coast Mariners Football Club", shortName: "Central Coast", abbr: "CCM", city: "Gosford", countryId: "australia", leagueId: "a-league", primary: "#f2b705", secondary: "#274b9f", reputation: 3, strength: 69, academy: 4 },
+  { id: "newcastle-jets", name: "Newcastle Jets Football Club", shortName: "Newcastle Jets", abbr: "NEW", city: "Newcastle", countryId: "australia", leagueId: "a-league", primary: "#274b9f", secondary: "#d71920", reputation: 3, strength: 68, academy: 4 },
+  { id: "western-sydney-wanderers", name: "Western Sydney Wanderers Football Club", shortName: "Western Sydney", abbr: "WSW", city: "Sydney", countryId: "australia", leagueId: "a-league", primary: "#d71920", secondary: "#111111", reputation: 3, strength: 68, academy: 4 },
+  { id: "macarthur-fc", name: "Macarthur Football Club", shortName: "Macarthur FC", abbr: "MAC", city: "Sydney", countryId: "australia", leagueId: "a-league", primary: "#111111", secondary: "#f2b705", reputation: 2, strength: 67, academy: 3 },
+  { id: "wellington-phoenix", name: "Wellington Phoenix Football Club", shortName: "Wellington Phoenix", abbr: "WEL", city: "Wellington", countryId: "nova-zelandia", leagueId: "a-league", primary: "#f2b705", secondary: "#111111", reputation: 3, strength: 67, academy: 3 },
+  { id: "brisbane-roar", name: "Brisbane Roar Football Club", shortName: "Brisbane Roar", abbr: "BRI", city: "Brisbane", countryId: "australia", leagueId: "a-league", primary: "#f58220", secondary: "#111111", reputation: 2, strength: 65, academy: 3 },
+  { id: "perth-glory", name: "Perth Glory Football Club", shortName: "Perth Glory", abbr: "PER", city: "Perth", countryId: "australia", leagueId: "a-league", primary: "#5c2d91", secondary: "#f58220", reputation: 1, strength: 63, academy: 3 },
+];
+
+const MOROCCO_CLUBS: Club[] = [
+  { id: "rs-berkane", name: "Renaissance Sportive de Berkane", shortName: "RS Berkane", abbr: "RSB", city: "Berkane", countryId: "marrocos", leagueId: "botola-pro", primary: "#f58220", secondary: "#111111", reputation: 4, strength: 77, academy: 4 },
+  { id: "wydad-casablanca", name: "Wydad Athletic Club", shortName: "Wydad", abbr: "WYD", city: "Casablanca", countryId: "marrocos", leagueId: "botola-pro", primary: "#d71920", secondary: "#ffffff", reputation: 5, strength: 76, academy: 5 },
+  { id: "raja-casablanca", name: "Raja Club Athletic", shortName: "Raja Casablanca", abbr: "RCA", city: "Casablanca", countryId: "marrocos", leagueId: "botola-pro", primary: "#08783e", secondary: "#ffffff", reputation: 5, strength: 76, academy: 5 },
+  { id: "far-rabat", name: "Association Sportive des Forces Armées Royales", shortName: "FAR Rabat", abbr: "FAR", city: "Rabat", countryId: "marrocos", leagueId: "botola-pro", primary: "#111111", secondary: "#d71920", reputation: 4, strength: 75, academy: 5 },
+  { id: "maghreb-fes", name: "Maghreb Association Sportive de Fès", shortName: "Maghreb Fès", abbr: "MAS", city: "Fès", countryId: "marrocos", leagueId: "botola-pro", primary: "#f2b705", secondary: "#111111", reputation: 3, strength: 71, academy: 4 },
+  { id: "fus-rabat", name: "Fath Union Sport", shortName: "FUS Rabat", abbr: "FUS", city: "Rabat", countryId: "marrocos", leagueId: "botola-pro", primary: "#d71920", secondary: "#ffffff", reputation: 3, strength: 70, academy: 5 },
+  { id: "olympic-safi", name: "Olympic Club de Safi", shortName: "Olympic Safi", abbr: "OCS", city: "Safi", countryId: "marrocos", leagueId: "botola-pro", primary: "#274b9f", secondary: "#d71920", reputation: 3, strength: 69, academy: 3 },
+  { id: "ittihad-tanger", name: "Ittihad Riadhi de Tanger", shortName: "Ittihad Tanger", abbr: "IRT", city: "Tânger", countryId: "marrocos", leagueId: "botola-pro", primary: "#274b9f", secondary: "#ffffff", reputation: 3, strength: 69, academy: 3 },
+  { id: "difaa-el-jadida", name: "Difaâ Hassani El Jadidi", shortName: "Difaâ El Jadida", abbr: "DHJ", city: "El Jadida", countryId: "marrocos", leagueId: "botola-pro", primary: "#08783e", secondary: "#ffffff", reputation: 3, strength: 68, academy: 4 },
+  { id: "hassania-agadir", name: "Hassania Union Sport d'Agadir", shortName: "Hassania Agadir", abbr: "HUSA", city: "Agadir", countryId: "marrocos", leagueId: "botola-pro", primary: "#d71920", secondary: "#ffffff", reputation: 3, strength: 68, academy: 4 },
+  { id: "codm-meknes", name: "Club Omnisports de Meknès", shortName: "CODM Meknès", abbr: "COD", city: "Meknès", countryId: "marrocos", leagueId: "botola-pro", primary: "#d71920", secondary: "#ffffff", reputation: 2, strength: 67, academy: 3 },
+  { id: "union-touarga", name: "Union Touarga Sportif", shortName: "Union Touarga", abbr: "UTS", city: "Rabat", countryId: "marrocos", leagueId: "botola-pro", primary: "#d71920", secondary: "#111111", reputation: 2, strength: 66, academy: 4 },
+  { id: "renaissance-zemamra", name: "Renaissance Club Athletic Zemamra", shortName: "RCA Zemamra", abbr: "RCZ", city: "Zemamra", countryId: "marrocos", leagueId: "botola-pro", primary: "#274b9f", secondary: "#ffffff", reputation: 2, strength: 65, academy: 2 },
+  { id: "kawkab-marrakech", name: "Kawkab Athlétique Club de Marrakech", shortName: "Kawkab Marrakech", abbr: "KAC", city: "Marrakech", countryId: "marrocos", leagueId: "botola-pro", primary: "#d71920", secondary: "#ffffff", reputation: 3, strength: 65, academy: 4 },
+  { id: "olympique-dcheira", name: "Olympique Dcheira", shortName: "Olympique Dcheira", abbr: "ODC", city: "Dcheira", countryId: "marrocos", leagueId: "botola-pro", primary: "#08783e", secondary: "#ffffff", reputation: 1, strength: 62, academy: 2 },
+  { id: "yacoub-el-mansour", name: "Union Sportive Yacoub El Mansour", shortName: "Yacoub El Mansour", abbr: "USYM", city: "Rabat", countryId: "marrocos", leagueId: "botola-pro", primary: "#f2b705", secondary: "#111111", reputation: 1, strength: 61, academy: 3 },
+];
+
+const GREECE_CLUBS: Club[] = [
+  { id: "olympiacos", name: "Olympiacos Football Club", shortName: "Olympiacos", abbr: "OLY", city: "Pireu", countryId: "grecia", leagueId: "super-league-greece", primary: "#d71920", secondary: "#ffffff", reputation: 5, strength: 80, academy: 5 },
+  { id: "paok", name: "PAOK Football Club", shortName: "PAOK", abbr: "PAO", city: "Salônica", countryId: "grecia", leagueId: "super-league-greece", primary: "#111111", secondary: "#ffffff", reputation: 4, strength: 78, academy: 5 },
+  { id: "aek-athens", name: "AEK Athens Football Club", shortName: "AEK Atenas", abbr: "AEK", city: "Atenas", countryId: "grecia", leagueId: "super-league-greece", primary: "#f2b705", secondary: "#111111", reputation: 4, strength: 77, academy: 5 },
+  { id: "panathinaikos", name: "Panathinaikos Football Club", shortName: "Panathinaikos", abbr: "PAN", city: "Atenas", countryId: "grecia", leagueId: "super-league-greece", primary: "#08783e", secondary: "#ffffff", reputation: 5, strength: 76, academy: 5 },
+  { id: "aris-thessaloniki", name: "Aris Thessaloniki Football Club", shortName: "Aris", abbr: "ARI", city: "Salônica", countryId: "grecia", leagueId: "super-league-greece", primary: "#f2b705", secondary: "#111111", reputation: 3, strength: 72, academy: 4 },
+  { id: "levadiakos", name: "Levadiakos Football Club", shortName: "Levadiakos", abbr: "LEV", city: "Livadeia", countryId: "grecia", leagueId: "super-league-greece", primary: "#08783e", secondary: "#274b9f", reputation: 2, strength: 70, academy: 3 },
+  { id: "ofi-crete", name: "OFI Crete Football Club", shortName: "OFI Creta", abbr: "OFI", city: "Heraclião", countryId: "grecia", leagueId: "super-league-greece", primary: "#111111", secondary: "#ffffff", reputation: 3, strength: 69, academy: 4 },
+  { id: "asteras-aktor", name: "Asteras Aktor Football Club", shortName: "Asteras Aktor", abbr: "AST", city: "Trípoli", countryId: "grecia", leagueId: "super-league-greece", primary: "#f2b705", secondary: "#274b9f", reputation: 2, strength: 68, academy: 3 },
+  { id: "atromitos", name: "Atromitos Football Club", shortName: "Atromitos", abbr: "ATR", city: "Peristeri", countryId: "grecia", leagueId: "super-league-greece", primary: "#274b9f", secondary: "#ffffff", reputation: 2, strength: 67, academy: 3 },
+  { id: "volos", name: "Volos New Football Club", shortName: "Volos", abbr: "VOL", city: "Volos", countryId: "grecia", leagueId: "super-league-greece", primary: "#274b9f", secondary: "#d71920", reputation: 2, strength: 66, academy: 3 },
+  { id: "panetolikos", name: "Panetolikos Football Club", shortName: "Panetolikos", abbr: "PNT", city: "Agrínio", countryId: "grecia", leagueId: "super-league-greece", primary: "#f2b705", secondary: "#274b9f", reputation: 2, strength: 65, academy: 3 },
+  { id: "kifisia", name: "Athlitiki Enosi Kifisia Football Club", shortName: "Kifisia", abbr: "KIF", city: "Kifisia", countryId: "grecia", leagueId: "super-league-greece", primary: "#274b9f", secondary: "#ffffff", reputation: 1, strength: 64, academy: 3 },
+  { id: "ael-larissa", name: "Athlitiki Enosi Larissa Football Club", shortName: "AEL Larissa", abbr: "AEL", city: "Larissa", countryId: "grecia", leagueId: "super-league-greece", primary: "#8c1b3f", secondary: "#ffffff", reputation: 2, strength: 63, academy: 4 },
+  { id: "panserraikos", name: "Panserraikos Football Club", shortName: "Panserraikos", abbr: "PNS", city: "Serres", countryId: "grecia", leagueId: "super-league-greece", primary: "#d71920", secondary: "#ffffff", reputation: 1, strength: 61, academy: 3 },
+];
+
+const BOLIVIA_CLUBS: Club[] = [
+  { id: "bolivar", name: "Club Bolívar", shortName: "Bolívar", abbr: "BOL", city: "La Paz", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#4a9fd6", secondary: "#ffffff", reputation: 5, strength: 76, academy: 5 },
+  { id: "always-ready", name: "Club Always Ready", shortName: "Always Ready", abbr: "ALW", city: "El Alto", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#d71920", secondary: "#ffffff", reputation: 4, strength: 75, academy: 4 },
+  { id: "the-strongest", name: "The Strongest", shortName: "The Strongest", abbr: "STR", city: "La Paz", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#f2b705", secondary: "#111111", reputation: 5, strength: 74, academy: 5 },
+  { id: "blooming", name: "Club Social, Cultural y Deportivo Blooming", shortName: "Blooming", abbr: "BLO", city: "Santa Cruz", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#4a9fd6", secondary: "#ffffff", reputation: 4, strength: 69, academy: 4 },
+  { id: "oriente-petrolero", name: "Club Deportivo Oriente Petrolero", shortName: "Oriente Petrolero", abbr: "ORI", city: "Santa Cruz", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#08783e", secondary: "#ffffff", reputation: 4, strength: 68, academy: 5 },
+  { id: "aurora-bol", name: "Club Aurora", shortName: "Aurora", abbr: "AUR", city: "Cochabamba", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#4a9fd6", secondary: "#ffffff", reputation: 3, strength: 68, academy: 4 },
+  { id: "nacional-potosi", name: "Club Atlético Nacional Potosí", shortName: "Nacional Potosí", abbr: "NAP", city: "Potosí", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#d71920", secondary: "#ffffff", reputation: 3, strength: 67, academy: 3 },
+  { id: "independiente-petrolero", name: "Club Independiente Petrolero", shortName: "Independiente Petrolero", abbr: "IND", city: "Sucre", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#d71920", secondary: "#111111", reputation: 3, strength: 66, academy: 3 },
+  { id: "universitario-vinto", name: "Fútbol Club Universitario", shortName: "Universitario Vinto", abbr: "UNI", city: "Vinto", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#d71920", secondary: "#274b9f", reputation: 2, strength: 65, academy: 4 },
+  { id: "gv-san-jose", name: "Gualberto Villarroel Club Deportivo San José", shortName: "GV San José", abbr: "GVS", city: "Oruro", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#274b9f", secondary: "#ffffff", reputation: 2, strength: 65, academy: 3 },
+  { id: "guabira", name: "Club Deportivo Guabirá", shortName: "Guabirá", abbr: "GUA", city: "Montero", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#d71920", secondary: "#ffffff", reputation: 2, strength: 64, academy: 3 },
+  { id: "san-antonio-bulo-bulo", name: "Club Deportivo San Antonio Bulo Bulo", shortName: "San Antonio", abbr: "SAB", city: "Entre Ríos", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#08783e", secondary: "#ffffff", reputation: 2, strength: 64, academy: 2 },
+  { id: "real-tomayapo", name: "Club Deportivo Real Tomayapo", shortName: "Real Tomayapo", abbr: "TOM", city: "Tarija", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#d71920", secondary: "#274b9f", reputation: 2, strength: 63, academy: 2 },
+  { id: "real-oruro", name: "Club Deportivo Totora Real Oruro", shortName: "Real Oruro", abbr: "ROR", city: "Oruro", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#d71920", secondary: "#f2b705", reputation: 1, strength: 62, academy: 3 },
+  { id: "real-potosi", name: "Club Bamin Real Potosí", shortName: "Real Potosí", abbr: "RPO", city: "Potosí", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#5c2d91", secondary: "#ffffff", reputation: 2, strength: 61, academy: 3 },
+  { id: "abb-bolivia", name: "Academia del Balompié Boliviano", shortName: "ABB", abbr: "ABB", city: "La Paz", countryId: "bolivia", leagueId: "liga-boliviana", primary: "#f2b705", secondary: "#274b9f", reputation: 1, strength: 59, academy: 4 },
+];
+
+const VENEZUELA_CLUBS: Club[] = [
+  { id: "deportivo-tachira", name: "Deportivo Táchira Fútbol Club", shortName: "Deportivo Táchira", abbr: "TAC", city: "San Cristóbal", countryId: "venezuela", leagueId: "liga-futve", primary: "#f2b705", secondary: "#111111", reputation: 5, strength: 72, academy: 5 },
+  { id: "caracas-fc", name: "Caracas Fútbol Club", shortName: "Caracas FC", abbr: "CAR", city: "Caracas", countryId: "venezuela", leagueId: "liga-futve", primary: "#d71920", secondary: "#111111", reputation: 5, strength: 71, academy: 5 },
+  { id: "carabobo", name: "Carabobo Fútbol Club", shortName: "Carabobo", abbr: "CAB", city: "Valencia", countryId: "venezuela", leagueId: "liga-futve", primary: "#8c1b3f", secondary: "#ffffff", reputation: 3, strength: 70, academy: 4 },
+  { id: "deportivo-la-guaira", name: "Deportivo La Guaira Fútbol Club", shortName: "Deportivo La Guaira", abbr: "DLG", city: "Caracas", countryId: "venezuela", leagueId: "liga-futve", primary: "#f58220", secondary: "#ffffff", reputation: 4, strength: 70, academy: 5 },
+  { id: "ucv-fc", name: "Universidad Central de Venezuela Fútbol Club", shortName: "UCV FC", abbr: "UCV", city: "Caracas", countryId: "venezuela", leagueId: "liga-futve", primary: "#274b9f", secondary: "#d71920", reputation: 3, strength: 69, academy: 5 },
+  { id: "metropolitanos", name: "Metropolitanos Fútbol Club", shortName: "Metropolitanos", abbr: "MET", city: "Caracas", countryId: "venezuela", leagueId: "liga-futve", primary: "#5c2d91", secondary: "#ffffff", reputation: 3, strength: 68, academy: 4 },
+  { id: "academia-puerto-cabello", name: "Academia Puerto Cabello", shortName: "Puerto Cabello", abbr: "APC", city: "Puerto Cabello", countryId: "venezuela", leagueId: "liga-futve", primary: "#f58220", secondary: "#274b9f", reputation: 3, strength: 68, academy: 4 },
+  { id: "monagas", name: "Monagas Sport Club", shortName: "Monagas", abbr: "MON", city: "Maturín", countryId: "venezuela", leagueId: "liga-futve", primary: "#274b9f", secondary: "#8c1b3f", reputation: 3, strength: 67, academy: 4 },
+  { id: "portuguesa-ven", name: "Portuguesa Fútbol Club", shortName: "Portuguesa FC", abbr: "POR", city: "Acarigua", countryId: "venezuela", leagueId: "liga-futve", primary: "#d71920", secondary: "#111111", reputation: 3, strength: 66, academy: 4 },
+  { id: "estudiantes-merida", name: "Estudiantes de Mérida Fútbol Club", shortName: "Estudiantes Mérida", abbr: "EME", city: "Mérida", countryId: "venezuela", leagueId: "liga-futve", primary: "#d71920", secondary: "#274b9f", reputation: 3, strength: 66, academy: 5 },
+  { id: "zamora-ven", name: "Zamora Fútbol Club", shortName: "Zamora FC", abbr: "ZAM", city: "Barinas", countryId: "venezuela", leagueId: "liga-futve", primary: "#111111", secondary: "#ffffff", reputation: 3, strength: 65, academy: 4 },
+  { id: "anzoategui-fc", name: "Anzoátegui Fútbol Club", shortName: "Anzoátegui", abbr: "ANZ", city: "Puerto La Cruz", countryId: "venezuela", leagueId: "liga-futve", primary: "#f2b705", secondary: "#d71920", reputation: 2, strength: 63, academy: 3 },
+  { id: "trujillanos", name: "Trujillanos Fútbol Club", shortName: "Trujillanos", abbr: "TRU", city: "Valera", countryId: "venezuela", leagueId: "liga-futve", primary: "#f2b705", secondary: "#8c1b3f", reputation: 2, strength: 61, academy: 4 },
+  { id: "yaracuyanos", name: "Yaracuyanos Fútbol Club", shortName: "Yaracuyanos", abbr: "YAR", city: "San Felipe", countryId: "venezuela", leagueId: "liga-futve", primary: "#274b9f", secondary: "#ffffff", reputation: 1, strength: 59, academy: 3 },
+];
+
+const CZECH_CLUBS: Club[] = [
+  { id: "slavia-prague", name: "Sportovní Klub Slavia Praha", shortName: "Slavia Praga", abbr: "SLA", city: "Praga", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#d71920", secondary: "#ffffff", reputation: 4, strength: 80, academy: 5 },
+  { id: "sparta-prague", name: "Athletic Club Sparta Praha", shortName: "Sparta Praga", abbr: "SPA", city: "Praga", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#8c1b3f", secondary: "#ffffff", reputation: 4, strength: 79, academy: 5 },
+  { id: "viktoria-plzen", name: "Football Club Viktoria Plzeň", shortName: "Viktoria Plzeň", abbr: "PLZ", city: "Plzeň", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#d71920", secondary: "#274b9f", reputation: 4, strength: 77, academy: 5 },
+  { id: "banik-ostrava", name: "Football Club Baník Ostrava", shortName: "Baník Ostrava", abbr: "BAN", city: "Ostrava", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#274b9f", secondary: "#ffffff", reputation: 3, strength: 73, academy: 5 },
+  { id: "sigma-olomouc", name: "Sportovní Klub Sigma Olomouc", shortName: "Sigma Olomouc", abbr: "SIG", city: "Olomouc", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#274b9f", secondary: "#ffffff", reputation: 3, strength: 72, academy: 5 },
+  { id: "jablonec", name: "Football Club Jablonec", shortName: "Jablonec", abbr: "JAB", city: "Jablonec nad Nisou", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#08783e", secondary: "#ffffff", reputation: 3, strength: 71, academy: 4 },
+  { id: "slovan-liberec", name: "Football Club Slovan Liberec", shortName: "Slovan Liberec", abbr: "LIB", city: "Liberec", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#274b9f", secondary: "#ffffff", reputation: 3, strength: 70, academy: 5 },
+  { id: "hradec-kralove", name: "Football Club Hradec Králové", shortName: "Hradec Králové", abbr: "HKR", city: "Hradec Králové", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#111111", secondary: "#ffffff", reputation: 2, strength: 69, academy: 4 },
+  { id: "bohemians-1905", name: "Bohemians Praha 1905", shortName: "Bohemians 1905", abbr: "BOH", city: "Praga", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#08783e", secondary: "#ffffff", reputation: 3, strength: 68, academy: 4 },
+  { id: "mlada-boleslav", name: "Fotbalový Klub Mladá Boleslav", shortName: "Mladá Boleslav", abbr: "MLB", city: "Mladá Boleslav", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#274b9f", secondary: "#ffffff", reputation: 3, strength: 68, academy: 4 },
+  { id: "karvina", name: "Městský Fotbalový Klub Karviná", shortName: "Karviná", abbr: "KAR", city: "Karviná", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#08783e", secondary: "#ffffff", reputation: 2, strength: 67, academy: 4 },
+  { id: "teplice", name: "Fotbalový Klub Teplice", shortName: "Teplice", abbr: "TEP", city: "Teplice", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#f2b705", secondary: "#274b9f", reputation: 2, strength: 66, academy: 4 },
+  { id: "slovacko", name: "Football Club Slovácko", shortName: "Slovácko", abbr: "SLO", city: "Uherské Hradiště", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#274b9f", secondary: "#ffffff", reputation: 2, strength: 65, academy: 4 },
+  { id: "pardubice", name: "Fotbalový Klub Pardubice", shortName: "Pardubice", abbr: "PAR", city: "Pardubice", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#d71920", secondary: "#ffffff", reputation: 2, strength: 64, academy: 4 },
+  { id: "zlin", name: "Football Club Zlín", shortName: "Zlín", abbr: "ZLI", city: "Zlín", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#f2b705", secondary: "#274b9f", reputation: 2, strength: 63, academy: 4 },
+  { id: "artis-brno", name: "Sportovní Klub Artis Brno", shortName: "Artis Brno", abbr: "ART", city: "Brno", countryId: "republica-tcheca", leagueId: "chance-liga", primary: "#274b9f", secondary: "#ffffff", reputation: 1, strength: 61, academy: 4 },
+];
+
 export const CLUBS: Club[] = [
   ...BRAZIL_CLUBS,
   ...BRAZIL_B_CLUBS,
@@ -941,6 +1142,14 @@ export const CLUBS: Club[] = [
   ...PERU_CLUBS,
   ...MEXICO_CLUBS,
   ...MLS_CLUBS,
+  ...EGYPT_CLUBS,
+  ...SOUTH_AFRICA_CLUBS,
+  ...AUSTRALIA_CLUBS,
+  ...MOROCCO_CLUBS,
+  ...GREECE_CLUBS,
+  ...BOLIVIA_CLUBS,
+  ...VENEZUELA_CLUBS,
+  ...CZECH_CLUBS,
 ];
 
 export const FORMATIONS: Formation[] = [

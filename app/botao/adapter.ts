@@ -145,7 +145,7 @@ export function pickClubWorldOpponent(args: {
     pool = strong(eligible.filter((candidate) => confed(candidate) === "EUROPE"), 4);
   } else if (args.stageName === "Final") {
     const roll = createRng(hashSeed(args.seed, args.season, "club-world-region", club.id)).next();
-    const target = roll < .5 ? "SOUTH_AMERICA" : roll < .65 ? "NORTH_AMERICA" : roll < .9 ? "ASIA" : "OCEANIA";
+    const target = roll < .5 ? "SOUTH_AMERICA" : roll < .65 ? "NORTH_AMERICA" : roll < .9 ? "ASIA" : roll < .95 ? "AFRICA" : "OCEANIA";
     pool = eligible.filter((candidate) => confed(candidate) === target);
     if (target === "SOUTH_AMERICA") pool = strong(pool, 4);
     if (!pool.length) pool = eligible.filter((candidate) => confed(candidate) !== "EUROPE");

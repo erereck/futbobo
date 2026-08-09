@@ -649,7 +649,7 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
     "todos os clubes da base precisam ter escudo local verificado",
   );
   assert.equal(assetManifest.clubs.liverpool.providerId, "133602", "Liverpool precisa usar o escudo do clube inglês");
-  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 104, "todas as seleções precisam ter bandeira");
+  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 139, "todas as seleções precisam ter bandeira");
   assert.ok(competitionAssets.filter((file) => file.pathname.endsWith(".png")).length >= 12, "as principais competições precisam ter emblema");
   assert.equal(new Set(providerIds).size, providerIds.length, "um mesmo escudo não pode representar clubes diferentes");
   assert.equal(new Set(externalSources).size, externalSources.length, "assets externos não podem representar clubes diferentes");
@@ -1382,4 +1382,74 @@ test("personagens aleatorios reservam cores fantasia para tres por cento dos cas
   assert.match(appearance, /NATURAL_HAIR_COLOR_INDICES/);
   assert.match(appearance, /COLORED_HAIR_COLOR_INDICES/);
   assert.match(appearance, /random\(\) < 0\.03 \? COLORED_HAIR_COLOR_INDICES : NATURAL_HAIR_COLOR_INDICES/);
+});
+
+test("expande o mapa com Egito, Africa do Sul, Australia e vinte novas selecoes", async () => {
+  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
+
+  assert.match(gameData, /id: "egypt-premier"[\s\S]*name: "Egyptian Premier League"/);
+  assert.match(gameData, /id: "south-africa-premiership"[\s\S]*name: "Betway Premiership"/);
+  assert.match(gameData, /id: "a-league"[\s\S]*name: "A-League Men"/);
+  assert.equal((gameData.match(/leagueId: "egypt-premier"/g) ?? []).length, 21);
+  assert.equal((gameData.match(/leagueId: "south-africa-premiership"/g) ?? []).length, 16);
+  assert.equal((gameData.match(/leagueId: "a-league"/g) ?? []).length, 12);
+
+  for (const countryId of [
+    "armenia", "azerbaijao", "cazaquistao", "luxemburgo", "siria", "libano",
+    "palestina", "malasia", "filipinas", "benim", "uganda", "tanzania", "quenia",
+    "guine-equatorial", "suriname", "nicaragua", "republica-dominicana",
+    "papua-nova-guine", "vanuatu", "nova-caledonia",
+  ]) {
+    assert.match(gameData, new RegExp(`id: "${countryId}"`));
+  }
+
+  assert.match(gameData, /\| "african"/);
+  assert.match(page, /african: \{ id: "cafChampions", name: "CAF Champions League", icon: "CAF" \}/);
+  assert.match(page, /confederation === "AFRICA"[\s\S]*?"african"/);
+  assert.match(page, /cafChampions: saved\.trophyCabinet\?\.cafChampions \?\? 0/);
+  assert.match(adapter, /roll < \.95 \? "AFRICA" : "OCEANIA"/);
+});
+
+test("abre cinco novas ligas completas e transforma a Arabia no mercado de salarios gigantes", async () => {
+  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const careerSystems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
+
+  const expectedLeagueSizes = new Map([
+    ["botola-pro", 16],
+    ["super-league-greece", 14],
+    ["liga-boliviana", 16],
+    ["liga-futve", 14],
+    ["chance-liga", 16],
+  ]);
+  for (const [leagueId, expectedSize] of expectedLeagueSizes) {
+    assert.match(gameData, new RegExp(`id: "${leagueId}"`));
+    assert.equal((gameData.match(new RegExp(`leagueId: "${leagueId}"`, "g")) ?? []).length, expectedSize);
+  }
+
+  assert.match(page, /"botola-pro": 0\.42/);
+  assert.match(page, /"super-league-greece": 0\.58/);
+  assert.match(page, /"liga-boliviana": 0\.24/);
+  assert.match(page, /"liga-futve": 0\.22/);
+  assert.match(page, /"chance-liga": 0\.55/);
+  assert.match(page, /AFRICA: \["egito", "africa-do-sul", "marrocos"/);
+  assert.match(careerSystems, /club\.countryId === "arabia-saudita" \? 7\.4 : 2\.8/);
+});
+
+test("abre a carreira para microestados e novos azarões internacionais", async () => {
+  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const assetSync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
+
+  for (const countryId of [
+    "vaticano", "san-marino", "andorra", "liechtenstein", "malta", "gibraltar",
+    "ilhas-faroe", "moldavia", "estonia", "letonia", "lituania", "nepal", "butao",
+    "mongolia", "bangladesh",
+  ]) {
+    assert.match(gameData, new RegExp(`id: "${countryId}"`));
+    assert.match(page, new RegExp(`(?:"${countryId}"|${countryId}): \\[`));
+    assert.match(assetSync, new RegExp(`(?:"${countryId}"|${countryId}): "`));
+  }
 });
