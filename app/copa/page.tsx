@@ -8,6 +8,7 @@ import BotaoMatch from "../botao/BotaoMatch";
 import { buildNationalMatchSetup } from "../botao/adapter";
 import { createRng, hashSeed } from "../botao/rng";
 import { DEFAULT_BOTAO_RULES, type BotaoMatchResult, type BotaoMatchSetup, type BotaoRules } from "../botao/types";
+import { randomPlayerAppearance, visualRosterForMatch } from "../player-appearance";
 import "../botao/botao.css";
 import "./world-cup.css";
 
@@ -43,7 +44,18 @@ type StoredBotaoSettings = {
   botaoHalfSeconds?: 90 | 120 | 180;
   botaoExtraSeconds?: 30 | 45 | 60;
   botaoPenaltyRounds?: 3 | 5;
+  characterButtonsEnabled?: boolean;
 };
+
+function characterButtonsEnabled() {
+  if (typeof window === "undefined") return true;
+  try {
+    const settings = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) ?? "{}") as StoredBotaoSettings;
+    return settings.characterButtonsEnabled !== false;
+  } catch {
+    return true;
+  }
+}
 
 function currentCupRules(groupStage: boolean): BotaoRules {
   const base = groupStage ? GROUP_RULES : KNOCKOUT_RULES;
@@ -182,19 +194,31 @@ export default function WorldCupModePage() {
   function buildCurrentSetup(activeCampaign: CupCampaign) {
     const game = activeCampaign.games[activeCampaign.currentIndex];
     const groupStage = game.stage.startsWith("Grupo");
+    const country = countryById(activeCampaign.countryId);
+    const opponent = countryById(game.opponentId);
     return buildNationalMatchSetup({
       seed: activeCampaign.seed + activeCampaign.currentIndex * 997,
       season: 2026,
       competitionId: "world-cup-mode",
       competitionName: "Copa do Mundo",
       stageName: game.stage,
-      country: countryById(activeCampaign.countryId),
-      opponent: countryById(game.opponentId),
+      country,
+      opponent,
       playerName: activeCampaign.playerName,
       playerNumber: activeCampaign.playerNumber,
       position: activeCampaign.position,
       overall: 86,
       rules: currentCupRules(groupStage),
+      visuals: visualRosterForMatch({
+        enabled: characterButtonsEnabled(),
+        seed: activeCampaign.seed,
+        season: 2026,
+        userTeamId: country.id,
+        cpuTeamId: opponent.id,
+        player: randomPlayerAppearance(activeCampaign.seed),
+        userNationalCountryId: country.id,
+        cpuNationalCountryId: opponent.id,
+      }),
     });
   }
 

@@ -120,6 +120,8 @@ export type BotaoMatchSetup = {
   cpuTeam: BotaoTeam;
   difficulty: BotaoDifficulty;
   rules: BotaoRules;
+  /** Optional vector characters. Missing or disabled keeps classic shirt numbers. */
+  visuals?: BotaoVisualRoster;
   /** Quando presente, a partida começa com o jogador saindo do banco. */
   entry?: BotaoMatchEntry;
 };
@@ -195,3 +197,4 @@ export type BotaoShot = {
   vx: number;
   vy: number;
 };
+import type { BotaoVisualRoster } from "../player-appearance";

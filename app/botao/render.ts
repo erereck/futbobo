@@ -14,11 +14,26 @@ import {
 } from "./engine";
 import { readableInk } from "./kits";
 import type { BotaoGoalReplay, BotaoMatchSetup, BotaoSide } from "./types";
+import { drawPlayerBust, type PlayerAppearance } from "../player-appearance";
 
 export const VIEW_PAD_X = 8;
 export const VIEW_PAD_Y = FIELD.goalDepth + 8;
 export const VIEW_WIDTH = FIELD.width + VIEW_PAD_X * 2;
 export const VIEW_HEIGHT = FIELD.height + VIEW_PAD_Y * 2;
+
+const MATCH_BALL_SRC = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/assets/botao/match-ball.png`;
+let matchBallSprite: HTMLImageElement | null = null;
+const liveBallSpin = new WeakMap<BotaoBody, { x: number; y: number; angle: number }>();
+
+function loadedBallSprite(): HTMLImageElement | null {
+  if (typeof Image === "undefined") return null;
+  if (!matchBallSprite) {
+    matchBallSprite = new Image();
+    matchBallSprite.decoding = "async";
+    matchBallSprite.src = MATCH_BALL_SRC;
+  }
+  return matchBallSprite.complete && matchBallSprite.naturalWidth > 0 ? matchBallSprite : null;
+}
 
 export type BotaoAimView = {
   bodyId: string;
@@ -39,6 +54,8 @@ export type BotaoRenderView = {
   /** 1 = acabou de sair o gol, 0 = sem comemoração. */
   goalFlash: number;
   goalFlashSide: BotaoSide | null;
+  /** Mantém números e o selo "VC" legíveis quando a mesa gira no desktop. */
+  uprightLabels?: boolean;
 };
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
@@ -145,7 +162,12 @@ function drawField(ctx: CanvasRenderingContext2D, userColor: string, cpuColor: s
   ctx.restore();
 }
 
-function drawDisc(ctx: CanvasRenderingContext2D, body: BotaoBody, colors: { primary: string; secondary: string }, options: { selected: boolean; ready: boolean; pulse: number }) {
+function drawDisc(
+  ctx: CanvasRenderingContext2D,
+  body: BotaoBody,
+  colors: { primary: string; secondary: string },
+  options: { selected: boolean; ready: boolean; pulse: number; uprightLabel?: boolean; appearance?: PlayerAppearance | null },
+) {
   ctx.save();
   ctx.translate(body.x, body.y);
 
@@ -181,6 +203,13 @@ function drawDisc(ctx: CanvasRenderingContext2D, body: BotaoBody, colors: { prim
   ctx.fill();
   ctx.globalAlpha = 1;
 
+  if (options.appearance) {
+    ctx.save();
+    if (options.uprightLabel) ctx.rotate(-Math.PI / 2);
+    drawPlayerBust(ctx, options.appearance, colors.primary, colors.secondary, body.radius);
+    ctx.restore();
+  }
+
   ctx.strokeStyle = body.isUserPlayer ? "#ffc72c" : colors.secondary;
   ctx.lineWidth = body.isUserPlayer ? 3 : 2;
   ctx.beginPath();
@@ -195,11 +224,17 @@ function drawDisc(ctx: CanvasRenderingContext2D, body: BotaoBody, colors: { prim
     ctx.stroke();
   }
 
-  ctx.fillStyle = body.isUserPlayer ? "#ffc72c" : readableInk(colors.primary);
-  ctx.font = `700 ${body.radius * 0.92}px ui-sans-serif, system-ui, sans-serif`;
+  // O canvas inteiro gira no modo horizontal. Contra-rotacionar somente a
+  // tipografia preserva a orientação física dos discos e deixa a camisa legível.
+  ctx.save();
+  if (options.uprightLabel) ctx.rotate(-Math.PI / 2);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(String(body.number), 0, 0.5);
+  if (!options.appearance) {
+    ctx.fillStyle = body.isUserPlayer ? "#ffc72c" : readableInk(colors.primary);
+    ctx.font = `700 ${body.radius * 0.92}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.fillText(String(body.number), 0, 0.5);
+  }
 
   if (body.isUserPlayer) {
     ctx.fillStyle = "#ffc72c";
@@ -208,27 +243,94 @@ function drawDisc(ctx: CanvasRenderingContext2D, body: BotaoBody, colors: { prim
     ctx.fillText("VC", 0, body.radius + 4);
   }
   ctx.restore();
+  ctx.restore();
 }
 
-function drawBall(ctx: CanvasRenderingContext2D, ball: BotaoBody) {
+function bodyAppearance(setup: BotaoMatchSetup, body: BotaoBody): PlayerAppearance | null {
+  if (!setup.visuals?.enabled || !body.side) return null;
+  if (body.isUserPlayer) return setup.visuals.player;
+  const slot = Number.parseInt(body.id.split("-").at(-1) ?? "", 10);
+  if (!Number.isFinite(slot)) return null;
+  return body.side === "user" ? setup.visuals.user[slot] ?? null : setup.visuals.cpu[slot] ?? null;
+}
+
+function liveSpinAngle(ball: BotaoBody): number {
+  const previous = liveBallSpin.get(ball);
+  if (!previous) {
+    liveBallSpin.set(ball, { x: ball.x, y: ball.y, angle: 0 });
+    return 0;
+  }
+  const travel = Math.min(24, Math.hypot(ball.x - previous.x, ball.y - previous.y));
+  previous.angle = (previous.angle + travel / Math.max(1, ball.radius) * 0.72) % (Math.PI * 2);
+  previous.x = ball.x;
+  previous.y = ball.y;
+  return previous.angle;
+}
+
+function drawBall(ctx: CanvasRenderingContext2D, ball: BotaoBody, rotation = liveSpinAngle(ball)) {
   ctx.save();
   ctx.translate(ball.x, ball.y);
   ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
   ctx.beginPath();
   ctx.ellipse(1, 2, ball.radius, ball.radius * 0.8, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.beginPath();
-  ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
-  ctx.fillStyle = "#f7f9f4";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(10, 24, 16, 0.55)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = "rgba(12, 28, 18, 0.8)";
-  ctx.beginPath();
-  ctx.arc(0, 0, ball.radius * 0.34, 0, Math.PI * 2);
-  ctx.fill();
+  const sprite = loadedBallSprite();
+  if (sprite) {
+    // A silhueta mantém o tamanho original. Só o miolo da textura recebe
+    // zoom, para os gomos continuarem legíveis sem mudar colisões ou alcance.
+    const diameter = ball.radius * 2.2;
+    const textureInset = 18;
+    ctx.rotate(rotation);
+    ctx.beginPath();
+    ctx.arc(0, 0, diameter / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(
+      sprite,
+      textureInset,
+      textureInset,
+      sprite.naturalWidth - textureInset * 2,
+      sprite.naturalHeight - textureInset * 2,
+      -diameter / 2,
+      -diameter / 2,
+      diameter,
+      diameter,
+    );
+  } else {
+    // Fallback instantâneo enquanto o PNG carrega ou se o asset falhar.
+    ctx.beginPath();
+    ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = "#f7f9f4";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(10, 24, 16, 0.55)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = "rgba(12, 28, 18, 0.8)";
+    ctx.beginPath();
+    ctx.arc(0, 0, ball.radius * 0.34, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
+}
+
+function replayBallSpin(replay: BotaoGoalReplay, bodyIndex: number, frameIndex: number, blend: number, radius: number): number {
+  const scale = Math.max(1, replay.coordinateScale ?? 1);
+  let travel = 0;
+  for (let index = 1; index <= frameIndex; index += 1) {
+    const previous = replay.frames[index - 1];
+    const current = replay.frames[index];
+    if (!previous || !current) continue;
+    const dx = ((current.positions[bodyIndex * 2] ?? 0) - (previous.positions[bodyIndex * 2] ?? 0)) / scale;
+    const dy = ((current.positions[bodyIndex * 2 + 1] ?? 0) - (previous.positions[bodyIndex * 2 + 1] ?? 0)) / scale;
+    travel += Math.hypot(dx, dy);
+  }
+  const current = replay.frames[frameIndex];
+  const next = replay.frames[Math.min(replay.frames.length - 1, frameIndex + 1)];
+  if (current && next) {
+    const dx = ((next.positions[bodyIndex * 2] ?? 0) - (current.positions[bodyIndex * 2] ?? 0)) / scale;
+    const dy = ((next.positions[bodyIndex * 2 + 1] ?? 0) - (current.positions[bodyIndex * 2 + 1] ?? 0)) / scale;
+    travel += Math.hypot(dx, dy) * Math.max(0, Math.min(1, blend));
+  }
+  return travel / Math.max(1, radius) * 0.72;
 }
 
 function drawAim(ctx: CanvasRenderingContext2D, disc: BotaoBody, aim: BotaoAimView) {
@@ -372,6 +474,8 @@ export function drawMatch(
       selected: view.selectedId === body.id,
       ready: view.highlight && body.side === state.turn,
       pulse,
+      uprightLabel: view.uprightLabels,
+      appearance: bodyAppearance(state.setup, body),
     });
   }
 
@@ -419,10 +523,13 @@ export function drawReplayFrame(
     const colors = rendered.side === "user"
       ? { primary: setup.userTeam.primary, secondary: setup.userTeam.secondary }
       : { primary: setup.cpuTeam.primary, secondary: setup.cpuTeam.secondary };
-    drawDisc(ctx, rendered, colors, { selected: false, ready: false, pulse: 0 });
+    drawDisc(ctx, rendered, colors, { selected: false, ready: false, pulse: 0, appearance: bodyAppearance(setup, rendered) });
   });
   const ball = renderedBodies.find((body) => body.kind === "ball");
-  if (ball) drawBall(ctx, ball);
+  if (ball) {
+    const ballIndex = renderedBodies.indexOf(ball);
+    drawBall(ctx, ball, replayBallSpin(replay, ballIndex, frameIndex, interpolation, ball.radius));
+  }
 }
 
 /** No pênalti só ficam na mesa a bola, o batedor e o goleiro. */

@@ -51,6 +51,15 @@ import BotaoMatch from "./botao/BotaoMatch";
 import GoalReplay from "./botao/GoalReplay";
 import TeamCrest from "./botao/TeamCrest";
 import AndroidInstallDialog from "./AndroidInstallDialog";
+import PlayerAppearanceEditor, { PlayerAppearancePortrait } from "./PlayerAppearanceEditor";
+import {
+  DEFAULT_PLAYER_APPEARANCE,
+  normalizePlayerAppearance,
+  randomPlayerAppearance,
+  teamKitPattern,
+  visualRosterForMatch,
+  type PlayerAppearance,
+} from "./player-appearance";
 import {
   checkForAndroidUpdate,
   isAndroidDevice,
@@ -66,6 +75,7 @@ import {
   formatGoalMinute,
   isMatchGoal,
   nationalMatchRole,
+  pickClubWorldOpponent,
   pickFinalOpponent,
   pickNationalOpponent,
   ratingsFromAttributes,
@@ -79,6 +89,7 @@ import { STORY_CHAPTER_BEATS } from "./story-chapters";
 type Phase =
   | "welcome"
   | "identity"
+  | "appearance"
   | "nationality"
   | "academy"
   | "formation"
@@ -131,6 +142,7 @@ type PendingBotaoMatch = {
   originalStage: string;
   nationalTier?: NationalTier;
   previousOpponentIds?: string[];
+  worldCampaign?: boolean;
 };
 
 type StoredBotaoResult = {
@@ -360,6 +372,7 @@ type AppSettings = {
   botaoHalfSeconds?: 90 | 120 | 180;
   botaoExtraSeconds?: 30 | 45 | 60;
   botaoPenaltyRounds?: 3 | 5;
+  characterButtonsEnabled?: boolean;
 };
 
 type InstallPromptEvent = Event & {
@@ -427,6 +440,7 @@ type GameState = {
   seed: number;
   name: string;
   number: number;
+  playerAppearance: PlayerAppearance;
   foot: "Direita" | "Esquerda";
   position: PositionKey;
   nationality: string;
@@ -754,8 +768,18 @@ function applyCustomClubDefinitions(definitions: CustomClubDefinition[]) {
   });
 }
 
-const RANDOM_NAME_FIRST_PART = ["Lionel", "Rayan", "Enzo", "Thiago", "Neyvan", "Kaoru", "Joanderson", "Lauta", "Marlon", "Kenji", "Noah", "Zico", "Mateus", "Santi", "Davi", "Keirrison", "Rivaldo", "Gael", "Axl", "Juninho"];
-const RANDOM_NAME_LAST_PART = ["Kishimoto", "Ferreyra", "Montiel", "da Colina", "Okafor", "Sakamoto", "Bensaid", "van Bronze", "do Valle", "Moretti", "Zanetti", "Nakamura", "Pereirinha", "Alcazar", "Matsubara", "de la Vega", "dos Pampas", "Silveirinha", "Kronberg", "Batistuta Jr"];
+const RANDOM_NAME_FIRST_PART = [
+  "Lionel", "Rayan", "Enzo", "Thiago", "Neyvan", "Kaoru", "Joanderson", "Lauta", "Marlon", "Kenji", "Noah", "Zico", "Mateus", "Santi", "Davi", "Keirrison", "Rivaldo", "Gael", "Axl", "Juninho",
+  "Akira", "Amadou", "Breno", "Caíque", "Dante", "Elias", "Fabrizio", "Gohan", "Hiro", "Ibrahim", "Jamal", "Kauã", "Lorenzo", "Malik", "Nicolás", "Orlando", "Pablo", "Quim", "Rael", "Tobias",
+  "Ubiratan", "Vinícius", "Wesley", "Yuri", "Zayan", "Ademir", "Biel", "Cássio", "Denzel", "Eren", "Falcão", "Gianni", "Héctor", "Ismael", "Jorginho", "Kylian", "Leandro", "Mamadou", "Nando", "Ousmane",
+  "Pedrinho", "Ravi", "Shinji", "Talles", "Umberto", "Vitorino", "Wellington", "Xande", "Yago", "Zinedino", "Apollo", "Baltazar", "Cristiano", "Dieguito", "Endrickson", "Franz", "Gustavinho", "Habib", "Ícaro", "Júnior",
+];
+const RANDOM_NAME_LAST_PART = [
+  "Kishimoto", "Ferreyra", "Montiel", "da Colina", "Okafor", "Sakamoto", "Bensaid", "van Bronze", "do Valle", "Moretti", "Zanetti", "Nakamura", "Pereirinha", "Alcazar", "Matsubara", "de la Vega", "dos Pampas", "Silveirinha", "Kronberg", "Batistuta Jr",
+  "Aboubakar", "Bellandi", "Carvalhoso", "Dembélé dos Reis", "Escobar", "Fujimoto", "Gonçalvinho", "Haalanderson", "Ibrahimović da Silva", "Jabuti", "Keïta", "Lombardi", "Menezes Jr", "N'Dour", "Onizuka", "Pachecão", "Quaresma Neto", "Rossi", "Starling", "Tsubasa",
+  "Ueda", "Valderrama Jr", "Watanabe", "Ximenes", "Yamamoto", "Zagallo Neto", "Antunes", "Beckenbauer da Costa", "Cavalcanti", "Delacroix", "El Fenómeno", "Figueiroa", "Gamarra", "Hernández", "Imperador", "Jardim", "Kovačić", "Lima-Lima", "Montenegro", "Nascimento",
+  "Oliveirinha", "Puskás Filho", "Reis de Tóquio", "Santoro", "Torres do Norte", "Uribe", "van Helsing", "Wakabayashi", "Xavierson", "Yıldız", "Zé Europa", "Africano", "Baggio Filho", "Cruyff da Gama", "Drácula", "Eto'o Mineiro", "Futebolino", "Garrinchinha", "Honda Civic", "Inzaghi dos Santos",
+];
 const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS];
 const FICTIONAL_FINALISTS = [
   "Mateo Alcázar",
@@ -978,6 +1002,7 @@ function initialState(seedOverride?: number): GameState {
     seed,
     name: "",
     number: 10,
+    playerAppearance: DEFAULT_PLAYER_APPEARANCE,
     foot: "Direita",
     position: "MEI",
     nationality: "brasil",
@@ -1133,6 +1158,7 @@ function normalizeSave(value: unknown): GameState {
         ? "season-result"
         : saved.phase ?? base.phase,
     nationality: saved.nationality ?? "brasil",
+    playerAppearance: normalizePlayerAppearance(saved.playerAppearance ?? randomPlayerAppearance(saved.seed ?? base.seed)),
     academyCountryId: saved.academyCountryId ?? saved.nationality ?? "brasil",
     playerStoryId: saved.playerStoryId ?? "open-book",
     storyFlags: Array.isArray(saved.storyFlags) ? saved.storyFlags : [],
@@ -1800,6 +1826,29 @@ function initialContinentalSlot(club: Club): ContinentalSlot | null {
   if (confederation !== "EUROPE") return null;
   if (club.reputation >= 5) return "champions";
   if (club.reputation >= 4) return "europa";
+  return null;
+}
+
+function continentalSlotAfterSeason(
+  club: Club,
+  league: ReturnType<typeof leagueById>,
+  leagueChampion: boolean,
+  cupChampion: boolean,
+  leaguePosition: number,
+): ContinentalSlot | null {
+  const isSecondDivision = league.id === "brasileirao-b" || league.id === "championship";
+  if (isSecondDivision) {
+    if (!cupChampion) return null;
+    return league.id === "brasileirao-b" ? "libertadores" : "europa";
+  }
+  const confederation = clubConfederation(club);
+  if (confederation === "SOUTH_AMERICA") return leagueChampion || cupChampion || leaguePosition <= 6 ? "libertadores" : null;
+  if (confederation === "NORTH_AMERICA") return leagueChampion || cupChampion || leaguePosition <= (league.championsPlaces || 4) ? "concacaf" : null;
+  if (confederation === "ASIA") return leagueChampion || cupChampion || leaguePosition <= (league.championsPlaces || 3) ? "asian" : null;
+  if (confederation !== "EUROPE") return null;
+  if (leagueChampion || leaguePosition <= league.championsPlaces) return "champions";
+  if (cupChampion || leaguePosition <= league.europaPlaces) return "europa";
+  if (leaguePosition <= league.conferencePlaces) return "conference";
   return null;
 }
 
@@ -4025,8 +4074,40 @@ function simulateSeason(
       domesticSuperCup: 55,
       campeonesCup: 55,
     };
+    const worldCompetition = competitions.find((competition) => competition.id === "mundial");
+    if (playsWorld && worldCompetition) {
+      const confederation = clubConfederation(club);
+      const worldStages = confederation === "EUROPE"
+        ? ["Final"]
+        : confederation === "SOUTH_AMERICA"
+          ? ["Semifinal", "Final"]
+          : confederation === "OCEANIA"
+            ? ["Playoff Mundial", "Quartas de final", "Semifinal", "Final"]
+            : ["Quartas de final", "Semifinal", "Final"];
+      const stageName = worldStages[0];
+      const opponent = pickClubWorldOpponent({
+        clubId: club.id,
+        seed: affected.seed,
+        season: affected.season,
+        stageName,
+      });
+      pendingBotaoMatches.push({
+        id: `club-mundial-${stageName}-${affected.season}`,
+        source: "club",
+        competitionId: "mundial",
+        competitionName: worldCompetition.name,
+        stageName,
+        opponentId: opponent.id,
+        season: affected.season,
+        rngChampion: worldCompetition.champion,
+        originalStage: worldCompetition.stage,
+        previousOpponentIds: [],
+        worldCampaign: true,
+      });
+    }
     competitions
       .filter((competition) =>
+        competition.id !== "mundial" &&
         competition.id !== "domesticLeague" &&
         (competition.champion || competition.stage === "Vice"),
       )
@@ -4147,25 +4228,7 @@ function simulateSeason(
   const nextWorldQualifiedClubId = wonContinentalForWorld ? club.id : affected.worldQualifiedSeason === affected.season ? "" : affected.worldQualifiedClubId;
   const nextAwardCabinet = { ...affected.awardCabinet };
   awards.forEach((award) => { nextAwardCabinet[award] = (nextAwardCabinet[award] ?? 0) + 1; });
-  const clubConfed = clubConfederation(club);
-  const isSecondDivision = league.id === "brasileirao-b" || league.id === "championship";
-  const nextContinentalSlot: ContinentalSlot | null = isSecondDivision
-    ? (cupChampion ? (league.id === "brasileirao-b" ? "libertadores" : "europa") : null)
-    : clubConfed === "SOUTH_AMERICA"
-    ? (leagueChampion || cupChampion || leaguePosition <= 6 ? "libertadores" : null)
-    : clubConfed === "NORTH_AMERICA"
-      ? (leagueChampion || leaguePosition <= (league.championsPlaces || 4) ? "concacaf" : null)
-      : clubConfed === "ASIA"
-        ? (leagueChampion || cupChampion || leaguePosition <= (league.championsPlaces || 3) ? "asian" : null)
-        : clubConfed !== "EUROPE"
-          ? null
-          : (leagueChampion || leaguePosition <= league.championsPlaces
-              ? "champions"
-              : cupChampion || leaguePosition <= league.europaPlaces
-                ? "europa"
-                : leaguePosition <= league.conferencePlaces
-                  ? "conference"
-                  : null);
+  const nextContinentalSlot = continentalSlotAfterSeason(club, league, leagueChampion, cupChampion, leaguePosition);
   const fitnessTarget =
     91 -
     Math.max(0, appearances - 30) * 0.55 -
@@ -4188,7 +4251,12 @@ function simulateSeason(
     24,
     98,
   );
-  const organicFollowerGain = Math.max(500, Math.round(
+  const overallVisibility = Math.pow(clamp((nextOverall - 50) / 36, 0.08, 1.22), 1.7);
+  const followerSoftCeiling = Math.round(30_000 * Math.pow(1.32, clamp(nextOverall - 55, 0, 40)));
+  const audienceSaturation = affected.followers <= followerSoftCeiling
+    ? 1
+    : clamp((followerSoftCeiling / Math.max(1, affected.followers)) * 0.72, 0.1, 1);
+  const organicFollowerGain = Math.max(250, Math.round(
     (
       1_200 +
       performanceScore * performanceScore * 34 +
@@ -4197,6 +4265,8 @@ function simulateSeason(
       europeanSpotlight * 14_000 +
       (calledUp ? 26_000 : 0)
     ) *
+    overallVisibility *
+    audienceSaturation *
     (0.62 + affected.reputation / 125) *
     (affected.socialSentiment < 35 ? 0.55 : affected.socialSentiment > 75 ? 1.18 : 1),
   ));
@@ -5056,6 +5126,7 @@ function Progress({ label, value, color }: { label: string; value: number; color
 export default function Home() {
   const [game, setGame] = useState<GameState>(() => initialState());
   const nameRollRef = useRef(0);
+  const shirtRollRef = useRef(0);
   const [hasSave, setHasSave] = useState(false);
   const [hasChallengeSave, setHasChallengeSave] = useState(false);
   const [challengeResults, setChallengeResults] = useState<ChallengeResult[]>([]);
@@ -5065,6 +5136,7 @@ export default function Home() {
   const [toast, setToast] = useState("");
   const [luckSpin, setLuckSpin] = useState<{ event: GameEvent; choiceIndex: number; succeeded: boolean } | null>(null);
   const [positionChangeOpen, setPositionChangeOpen] = useState(false);
+  const [appearanceEditorOpen, setAppearanceEditorOpen] = useState(false);
   const [positionChangeTarget, setPositionChangeTarget] = useState<PositionKey | null>(null);
   const [positionChangeFeedback, setPositionChangeFeedback] = useState<{ success: boolean; headline: string; text: string } | null>(null);
   const [nationalitySearch, setNationalitySearch] = useState("");
@@ -5083,6 +5155,7 @@ export default function Home() {
     botaoHalfSeconds: 120,
     botaoExtraSeconds: 45,
     botaoPenaltyRounds: 5,
+    characterButtonsEnabled: true,
   });
   const [characterName, setCharacterName] = useState("");
   const [characterPosition, setCharacterPosition] = useState<PositionKey>("MEI");
@@ -5156,6 +5229,7 @@ export default function Home() {
         botaoHalfSeconds: [90, 120, 180].includes(storedSettings.botaoHalfSeconds ?? 120) ? storedSettings.botaoHalfSeconds ?? 120 : 120,
         botaoExtraSeconds: [30, 45, 60].includes(storedSettings.botaoExtraSeconds ?? 45) ? storedSettings.botaoExtraSeconds ?? 45 : 45,
         botaoPenaltyRounds: storedSettings.botaoPenaltyRounds === 3 ? 3 : 5,
+        characterButtonsEnabled: storedSettings.characterButtonsEnabled !== false,
       };
       applyCustomClubDefinitions(sanitizedSettings.customClubs ?? []);
       queueMicrotask(() => setAppSettings(sanitizedSettings));
@@ -5167,6 +5241,12 @@ export default function Home() {
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
   }, [appSettings]);
+
+  useEffect(() => {
+    if (appSettings.characterButtonsEnabled === false && game.phase === "appearance") {
+      queueMicrotask(() => setGame((current) => current.phase === "appearance" ? { ...current, phase: "nationality" } : current));
+    }
+  }, [appSettings.characterButtonsEnabled, game.phase]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -5334,8 +5414,20 @@ export default function Home() {
       extraSeconds: appSettings.botaoExtraSeconds ?? 45,
       penaltyRounds: appSettings.botaoPenaltyRounds ?? 5,
     };
+    const matchVisuals = (userTeamId: string, cpuTeamId: string, national = false) => visualRosterForMatch({
+      enabled: appSettings.characterButtonsEnabled !== false,
+      seed: state.seed,
+      season: match.season,
+      userTeamId,
+      cpuTeamId,
+      player: state.playerAppearance,
+      careerStartSeason: state.history[0]?.season ?? state.season,
+      userNationalCountryId: national ? userTeamId : undefined,
+      cpuNationalCountryId: national ? cpuTeamId : undefined,
+    });
     if (match.source === "national") {
       const country = countryById(state.nationality);
+      const opponent = countryById(match.opponentId);
       return buildNationalMatchSetup({
         seed: state.seed,
         season: match.season,
@@ -5343,7 +5435,7 @@ export default function Home() {
         competitionName: match.competitionName,
         stageName: match.stageName,
         country,
-        opponent: countryById(match.opponentId),
+        opponent,
         playerName: state.name,
         playerNumber: state.number,
         position: state.position,
@@ -5356,22 +5448,26 @@ export default function Home() {
         ),
         ratings,
         rules,
+        visuals: matchVisuals(country.id, opponent.id, true),
       });
     }
+    const club = clubById(state.currentClubId);
+    const opponent = clubById(match.opponentId);
     return buildFinalSetup({
       seed: state.seed,
       season: match.season,
       competitionId: match.competitionId,
       competitionName: match.competitionName,
       stageName: match.stageName,
-      club: clubById(state.currentClubId),
-      opponent: clubById(match.opponentId),
+      club,
+      opponent,
       playerName: state.name,
       playerNumber: state.number,
       position: state.position,
       overall: state.overall,
       ratings,
       rules,
+      visuals: matchVisuals(club.id, opponent.id),
     });
   }
   const currentBotaoSetup = currentBotaoMatch
@@ -5584,6 +5680,15 @@ export default function Home() {
       }
       return { ...current, name: nextName };
     });
+    vibrate();
+  }
+
+  function rollShirtNumber() {
+    shirtRollRef.current += 1;
+    const popularNumbers = [7, 9, 10, 11, 8, 6, 5, 4, 3, 2, 1, 12, 14, 17, 18, 19, 20, 21, 22, 23, 27, 30, 33, 37, 42, 66, 77, 80, 88, 99];
+    const nextNumber = pick(popularNumbers, game.seed, game.season * 149 + shirtRollRef.current * 67);
+    setShirtNumberInput(String(nextNumber));
+    setGame((current) => ({ ...current, number: nextNumber }));
     vibrate();
   }
 
@@ -5803,6 +5908,7 @@ export default function Home() {
         botaoHalfSeconds: payload.settings?.botaoHalfSeconds ?? 120,
         botaoExtraSeconds: payload.settings?.botaoExtraSeconds ?? 45,
         botaoPenaltyRounds: payload.settings?.botaoPenaltyRounds ?? 5,
+        characterButtonsEnabled: payload.settings?.characterButtonsEnabled !== false,
       };
       const importedHall = Array.isArray(payload.hallOfFame)
         ? (payload.hallOfFame as CareerHallEntry[])
@@ -5904,6 +6010,11 @@ export default function Home() {
       };
     });
     vibrate();
+  }
+
+  function selectRandomPlayerStory() {
+    const story = PLAYER_STORIES[Math.floor(Math.random() * PLAYER_STORIES.length)] ?? PLAYER_STORIES[0];
+    selectPlayerStory(story.id);
   }
 
   function signProfessional(clubId: string) {
@@ -6028,11 +6139,29 @@ export default function Home() {
       if (match.source === "club") {
         const competitionId = match.competitionId as CompetitionId;
         const outcome = finalOutcome(matchResult);
-        const titleDelta = Number(outcome.champion) - Number(match.rngChampion);
+        const worldStages = ["Playoff Mundial", "Quartas de final", "Semifinal", "Final"];
+        const worldStageIndex = worldStages.indexOf(match.stageName);
+        const worldRoundWon = match.worldCampaign && matchResult.champion;
+        const worldFinalWon = Boolean(worldRoundWon && match.stageName === "Final");
+        const resolvedChampion = match.worldCampaign ? worldFinalWon : outcome.champion;
+        const nextWorldStage = match.worldCampaign && worldRoundWon && match.stageName !== "Final"
+          ? worldStages[worldStageIndex + 1]
+          : "";
+        const resolvedStage = match.worldCampaign
+          ? worldFinalWon
+            ? "CAMPEÃO"
+            : nextWorldStage
+              ? `Classificado — ${nextWorldStage}`
+              : match.stageName === "Final"
+                ? "Vice"
+                : `Eliminado — ${match.stageName}`
+          : outcome.stage;
+        const titleResolved = !match.worldCampaign || !nextWorldStage;
+        const titleDelta = titleResolved ? Number(resolvedChampion) - Number(match.rngChampion) : 0;
         const updateCompetitions = (competitions: CompetitionResult[]) =>
           competitions.map((competition) =>
             competition.id === competitionId
-              ? { ...competition, champion: outcome.champion, stage: outcome.stage }
+              ? { ...competition, champion: resolvedChampion, stage: resolvedStage }
               : competition,
           );
         const updatedLastCompetitions = updateCompetitions(current.lastResult?.competitions ?? []);
@@ -6062,16 +6191,49 @@ export default function Home() {
               botaoResults: [...(current.lastResult.botaoResults ?? []), { match, result: matchResult }],
             }
           : null;
+        const qualificationClub = clubById(current.currentClubId);
+        const qualificationLeague = leagueById(current.lastResult?.leagueId ?? qualificationClub.leagueId);
+        const resolvedLeagueResult = updatedLastCompetitions.find((competition) => competition.id === "domesticLeague");
+        const resolvedLeaguePosition = resolvedLeagueResult?.champion
+          ? 1
+          : Number.parseInt(resolvedLeagueResult?.stage ?? "", 10) || Number.MAX_SAFE_INTEGER;
+        const resolvedContinentalSlot = competitionId === "domesticCup"
+          ? continentalSlotAfterSeason(
+              qualificationClub,
+              qualificationLeague,
+              Boolean(resolvedLeagueResult?.champion),
+              resolvedChampion,
+              resolvedLeaguePosition,
+            )
+          : current.continentalSlot;
+        if (nextWorldStage) {
+          const excludedClubIds = Array.from(new Set([...(match.previousOpponentIds ?? []), match.opponentId]));
+          const opponent = pickClubWorldOpponent({
+            clubId: current.currentClubId,
+            seed: current.seed,
+            season: match.season,
+            stageName: nextWorldStage,
+            excludedClubIds,
+          });
+          remainingMatches = [{
+            ...match,
+            id: `club-mundial-${nextWorldStage}-${match.season}`,
+            stageName: nextWorldStage,
+            opponentId: opponent.id,
+            previousOpponentIds: excludedClubIds,
+          }, ...remainingMatches];
+        }
         const continentalFinal = ["libertadores", "championsLeague", "concacafChampions", "afcChampions"].includes(competitionId);
-        const qualifiesForWorld = continentalFinal && outcome.champion;
+        const qualifiesForWorld = continentalFinal && resolvedChampion;
         const lostWorldTicket =
           continentalFinal &&
           match.rngChampion &&
-          !outcome.champion &&
+          !resolvedChampion &&
           current.worldQualifiedSeason === match.season + 1 &&
           current.worldQualifiedClubId === current.currentClubId;
         nextState = {
           ...nextState,
+          pendingBotaoMatches: remainingMatches,
           history: updatedHistory,
           lastResult: updatedLastResult,
           stats: {
@@ -6081,9 +6243,10 @@ export default function Home() {
           },
           trophies: Math.max(0, current.trophies + titleDelta),
           trophyCabinet: updatedCabinet,
-          reputation: clamp(current.reputation + (outcome.champion ? 3 : -1)),
-          fanSupport: clamp(current.fanSupport + (outcome.champion ? 6 : -3)),
-          morale: clamp(current.morale + (outcome.champion ? 4 : -2)),
+          continentalSlot: resolvedContinentalSlot,
+          reputation: clamp(current.reputation + (resolvedChampion ? 3 : nextWorldStage ? 1 : -1)),
+          fanSupport: clamp(current.fanSupport + (resolvedChampion ? 6 : nextWorldStage ? 2 : -3)),
+          morale: clamp(current.morale + (resolvedChampion ? 4 : nextWorldStage ? 2 : -2)),
           worldQualifiedSeason: qualifiesForWorld
             ? match.season + 1
             : lostWorldTicket
@@ -6095,9 +6258,11 @@ export default function Home() {
               ? ""
               : current.worldQualifiedClubId,
           newsFeed: [
-            resolvedSetup
+            match.worldCampaign
+              ? `${match.competitionName} · ${match.stageName}: ${matchResult.champion ? (nextWorldStage ? `classificado para ${nextWorldStage}` : "campeão do mundo") : "eliminado"} contra ${clubById(match.opponentId).shortName}.`
+              : resolvedSetup
               ? describeFinal(resolvedSetup, matchResult)
-              : `${match.competitionName}: ${outcome.champion ? "campeão" : "vice"}.`,
+              : `${match.competitionName}: ${resolvedChampion ? "campeão" : "vice"}.`,
             ...current.newsFeed,
           ].slice(0, 16),
         };
@@ -7180,47 +7345,7 @@ export default function Home() {
 
   if (game.phase === "botao-result" && game.lastBotaoResult) {
     const { match, result } = game.lastBotaoResult;
-    const setup = match.source === "national"
-      ? buildNationalMatchSetup({
-          seed: game.seed,
-          season: match.season,
-          competitionId: match.competitionId,
-          competitionName: match.competitionName,
-          stageName: match.stageName,
-          country: countryById(game.nationality),
-          opponent: countryById(match.opponentId),
-          playerName: game.name,
-          playerNumber: game.number,
-          position: game.position,
-          overall: game.overall,
-          playerRole: nationalMatchRole(
-            game.overall,
-            countryById(game.nationality),
-            match.nationalTier ?? game.nationalCategory,
-            game.nationalCaptain,
-          ),
-          ratings: ratingsFromAttributes(game.attributes, game.overall),
-          rules: {
-            goalLimit: appSettings.botaoGoalLimit ?? 3,
-            halfSeconds: appSettings.botaoHalfSeconds ?? 120,
-            extraSeconds: appSettings.botaoExtraSeconds ?? 45,
-            penaltyRounds: appSettings.botaoPenaltyRounds ?? 5,
-          },
-        })
-      : buildFinalSetup({
-          seed: game.seed,
-          season: match.season,
-          competitionId: match.competitionId,
-          competitionName: match.competitionName,
-          stageName: match.stageName,
-          club: clubById(game.currentClubId),
-          opponent: clubById(match.opponentId),
-          playerName: game.name,
-          playerNumber: game.number,
-          position: game.position,
-          overall: game.overall,
-          ratings: ratingsFromAttributes(game.attributes, game.overall),
-        });
+    const setup = setupForPendingBotaoMatch(game, match);
     return (
       <main className="botao-lobby botao-career-result screen-enter">
         <p className="botao-lobby-lead">
@@ -7361,44 +7486,44 @@ export default function Home() {
                 <header className="update-mega-hero">
                   <div className="update-symbol">⚽</div>
                   <div>
-                    <span className="update-version">v88 · ARQUIVO DE LENDA</span>
-                    <h1 id="update-title">Sua carreira agora termina como uma história que merece ser guardada.</h1>
+                    <span className="update-version">v89 · ROSTOS EM CAMPO</span>
+                    <h1 id="update-title">Agora cada botão carrega alguém da sua história.</h1>
                   </div>
                 </header>
-                <p>O arquivo final ganhou pôster compartilhável, dossiê completo por clube e uma nova rodada de acabamento em carreira, Copa e futebol de botão.</p>
+                <p>Crie seu personagem e reconheça o elenco dentro da mesa. Rostos, cabelos, barbas, tons, uniformes e companheiros agora acompanham sua carreira.</p>
                 <div className="update-mega-stats" aria-label="Resumo do update">
-                  <span><b>4:5</b> pôster da carreira</span>
-                  <span><b>100%</b> histórico por clube</span>
-                  <span><b>50+</b> verificações automáticas</span>
+                  <span><b>22</b> cortes de cabelo</span>
+                  <span><b>20</b> cores disponíveis</span>
+                  <span><b>1</b> elenco com memória</span>
                 </div>
                 <span className="update-section-label">O GRANDE DESTAQUE</span>
                 <div className="update-grid update-mega-grid">
-                  <article className="update-featured"><b>▥</b><span><strong>Dossiê de cada camisa</strong><small>Abra qualquer clube da carreira e reveja temporadas, números, taças, prêmios e evolução de OVR.</small></span></article>
-                  <article><b>↗</b><span><strong>Pôster pronto para compartilhar</strong><small>Principais títulos, Bolas de Ouro, World XI, clubes e legado agora viajam juntos em uma imagem.</small></span></article>
-                  <article><b>90</b><span><strong>Tipografia de placar</strong><small>Barlow Condensed e Manrope locais dão ritmo esportivo e continuam funcionando sem internet.</small></span></article>
-                  <article><b>◆</b><span><strong>Uma ação por tela</strong><small>Escolha, resultado, transferência ou prêmio sempre dominam a hierarquia certa.</small></span></article>
-                  <article><b>≡</b><span><strong>Arquivo editorial</strong><small>Histórico, troféus, carreira final e prêmios agora contam uma história em vez de formar uma pilha.</small></span></article>
-                  <article><b>●</b><span><strong>Futebol de botão integrado</strong><small>Mesa, placar, controles e replays passam a falar a mesma língua visual da carreira.</small></span></article>
+                  <article className="update-featured"><b>☺</b><span><strong>Seu jogador dentro da mesa</strong><small>Monte rosto, cabelo, barba, expressão, pele e olhos antes da estreia — e personalize novamente pela aba Jogador.</small></span></article>
+                  <article><b>5</b><span><strong>Companheiros com identidade</strong><small>O elenco do seu clube permanece reconhecível e muda silenciosamente ao longo das temporadas.</small></span></article>
+                  <article><b>⚽</b><span><strong>Adversários consistentes</strong><small>Se você reencontrar um clube na mesma temporada, os mesmos personagens voltam para o campo.</small></span></article>
+                  <article><b>▥</b><span><strong>Camisas automáticas</strong><small>Cada clube recebe um padrão próprio e persistente. Você troca de camisa quando troca de time.</small></span></article>
+                  <article><b>◉</b><span><strong>Mais variedade humana</strong><small>Novos tons, cores, cortes, barbas e expressões deixam cada escalação muito menos repetitiva.</small></span></article>
+                  <article><b>◎</b><span><strong>Mundial jogável</strong><small>A campanha do Mundial de Clubes entrou de vez na ordem das partidas decisivas.</small></span></article>
                 </div>
                 <span className="update-section-label">O QUE CONTINUA INTACTO</span>
                 <div className="update-grid update-mega-grid">
-                  <article><b>◆</b><span><strong>Toda a lógica preservada</strong><small>O redesign reorganiza a experiência sem alterar saves, decisões, atributos ou resultados.</small></span></article>
-                  <article><b>↔</b><span><strong>Saves separados</strong><small>O desafio diário nunca apaga nem substitui sua carreira normal.</small></span></article>
-                  <article><b>▣</b><span><strong>Backup completo</strong><small>Desafios, resultados, carreira, Hall da Fama e configurações entram na exportação.</small></span></article>
+                  <article><b>◆</b><span><strong>Saves antigos protegidos</strong><small>Aparências anteriores são migradas automaticamente para o novo catálogo.</small></span></article>
+                  <article><b>↔</b><span><strong>Modo clássico disponível</strong><small>Quem preferir os discos numerados pode desligar os personagens nas configurações.</small></span></article>
+                  <article><b>▣</b><span><strong>Leve e offline</strong><small>Os personagens continuam vetoriais: sem fotos pesadas e funcionando integralmente no APK.</small></span></article>
                 </div>
-                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>W.O. anti-reload e o futebol de botão consolidado</strong><b>→</b></button>
+                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Arquivo de Lenda e o novo dossiê da carreira</strong><b>→</b></button>
               </>
             ) : (
               <>
-                <span className="update-version previous">v80 · W.O. ANTI-RELOAD</span>
-                <div className="update-symbol previous">24H</div>
-                <h1 id="update-title">Entrou em campo, a partida vale.</h1>
-                <p>Atualizar ou fechar uma partida em andamento passou a registrar derrota administrativa por 3–0, fechando o último grande exploit das finais.</p>
+                <span className="update-version previous">v88 · ARQUIVO DE LENDA</span>
+                <div className="update-symbol previous">4:5</div>
+                <h1 id="update-title">Toda carreira merece um arquivo à altura.</h1>
+                <p>O encerramento ganhou pôster compartilhável, dossiê completo por clube e uma organização editorial para títulos, prêmios e temporadas.</p>
                 <div className="update-grid previous-grid">
-                  <article><b>3–0</b><span><strong>W.O. persistente</strong><small>Fechar, atualizar ou travar depois de entrar em campo conta como abandono.</small></span></article>
-                  <article><b>44</b><span><strong>Regressões protegidas</strong><small>A regra entrou sem quebrar carreira normal ou Desafio Futbobo.</small></span></article>
+                  <article><b>4:5</b><span><strong>Pôster compartilhável</strong><small>Principais taças, Bolas de Ouro, clubes e legado reunidos em uma imagem.</small></span></article>
+                  <article><b>100%</b><span><strong>Histórico por clube</strong><small>Cada camisa abre temporadas, números, títulos, prêmios e evolução de OVR.</small></span></article>
                 </div>
-                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Matchday Editorial</strong><b>←</b></button>
+                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Rostos em Campo</strong><b>←</b></button>
               </>
             )}
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
@@ -7458,6 +7583,18 @@ export default function Home() {
                   </select>
                 </label>
               </div>
+            </section>
+            <section className="character-button-settings">
+              <div className="settings-section-heading"><span>JOGADORES NA MESA</span><strong>Bonecos ou números clássicos</strong></div>
+              <button
+                type="button"
+                className={appSettings.characterButtonsEnabled !== false ? "selected" : ""}
+                aria-pressed={appSettings.characterButtonsEnabled !== false}
+                onClick={() => setAppSettings((current) => ({ ...current, characterButtonsEnabled: current.characterButtonsEnabled === false }))}
+              >
+                <b>{appSettings.characterButtonsEnabled !== false ? "●" : "10"}</b>
+                <span><strong>{appSettings.characterButtonsEnabled !== false ? "Personagens ativados" : "Números clássicos"}</strong><small>{appSettings.characterButtonsEnabled !== false ? "Ativa o criador e coloca os elencos dentro dos botões." : "Remove o criador e restaura integralmente a visualização antiga."}</small></span>
+              </button>
             </section>
             <div className="settings-section-heading"><span>PERSONAGENS</span><strong>Rivais e nomes do seu universo</strong></div>
             <div className="character-creator">
@@ -7521,6 +7658,26 @@ export default function Home() {
               </div>
             </section>
             <small className="settings-note">As alterações valem para carreiras novas e ficam salvas neste aparelho.</small>
+          </section>
+        </div>
+      )}
+
+      {appearanceEditorOpen && appSettings.characterButtonsEnabled !== false && game.phase === "career" && (
+        <div className="modal-backdrop appearance-editor-backdrop" role="presentation" onMouseDown={() => setAppearanceEditorOpen(false)}>
+          <section className="appearance-editor-sheet" role="dialog" aria-modal="true" aria-labelledby="appearance-editor-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header><div><span>VESTIÁRIO</span><h2 id="appearance-editor-title">Personalizar jogador</h2></div><button type="button" className="icon-button" aria-label="Fechar editor" onClick={() => setAppearanceEditorOpen(false)}>×</button></header>
+            <p>Altere quando quiser. A nova aparência entra em campo já na próxima partida.</p>
+            <PlayerAppearanceEditor
+              compact
+              value={game.playerAppearance}
+              onChange={(playerAppearance) => setGame((current) => ({ ...current, playerAppearance }))}
+              playerName={game.name}
+              number={game.number}
+              primary={currentClub.primary}
+              secondary={currentClub.secondary}
+              kitPattern={teamKitPattern(game.seed, currentClub.id)}
+            />
+            <button type="button" className="primary-button" onClick={() => setAppearanceEditorOpen(false)}>Salvar visual <span>✓</span></button>
           </section>
         </div>
       )}
@@ -7622,7 +7779,7 @@ export default function Home() {
           </div>
           <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
           <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v88 · ARQUIVO DE LENDA</b>
+            <span>FUTBOBO</span><b>v89 · ROSTOS EM CAMPO</b>
           </footer>
         </section>
       )}
@@ -7631,7 +7788,7 @@ export default function Home() {
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "welcome" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 1 DE 5</span><strong>Quem vai vestir a camisa?</strong></div>
+            <div><span>PASSO 1 DE {appSettings.characterButtonsEnabled !== false ? 6 : 5}</span><strong>Quem vai vestir a camisa?</strong></div>
             <div className="step-count">01</div>
           </header>
           <div className="setup-content">
@@ -7641,19 +7798,22 @@ export default function Home() {
             </div>
             <div className="field-label">
               <label htmlFor="player-name">Nome do jogador</label>
-              <div className="name-input-wrap">
+              <div className="input-action-wrap name-input-wrap">
                 <input id="player-name" className="text-input" value={game.name} maxLength={18} placeholder="Como a torcida vai te chamar?" onChange={(event) => setGame((current) => ({ ...current, name: event.target.value }))} />
-                <button className="random-name-die" type="button" aria-label="Sortear outro nome" title="Sortear outro nome" onClick={rollPlayerName}>⚄</button>
+                <button className="input-random-die random-name-die" type="button" aria-label="Sortear outro nome" title="Sortear outro nome" onClick={rollPlayerName}>⚄</button>
               </div>
             </div>
             <div className="two-fields">
               <label className="field-label">Camisa
-                <input className="text-input" type="number" inputMode="numeric" min={1} max={99} value={shirtNumberInput} onChange={(event) => {
-                  const nextValue = event.target.value;
-                  setShirtNumberInput(nextValue);
-                  if (!nextValue) return;
-                  setGame((current) => ({ ...current, number: clamp(Number(nextValue) || 10, 1, 99) }));
-                }} />
+                <span className="input-action-wrap shirt-input-wrap">
+                  <input className="text-input" type="number" inputMode="numeric" min={1} max={99} value={shirtNumberInput} onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setShirtNumberInput(nextValue);
+                    if (!nextValue) return;
+                    setGame((current) => ({ ...current, number: clamp(Number(nextValue) || 10, 1, 99) }));
+                  }} />
+                  <button className="input-random-die" type="button" aria-label="Sortear número da camisa" title="Sortear número da camisa" onClick={rollShirtNumber}>⚄</button>
+                </span>
               </label>
               <fieldset className="field-label foot-field"><legend>Pé dominante</legend>
                 <div className="segmented">
@@ -7661,7 +7821,7 @@ export default function Home() {
                 </div>
               </fieldset>
             </div>
-            <div className="section-heading"><div><span>POSIÇÃO</span><h2>Onde você quer fazer história?</h2></div><span className="selected-pill">{position.key}</span></div>
+            <div className="section-heading position-heading"><div><span>POSIÇÃO</span><h2>Onde você quer fazer história?</h2></div><span className="position-selection-summary"><b>{position.key}</b><small>{position.name}</small></span></div>
             <div className="position-grid">
               {POSITIONS.map((item) => (
                 <button key={item.key} type="button" aria-pressed={game.position === item.key} className={`position-button ${game.position === item.key ? "selected" : ""}`} onClick={() => setGame((current) => ({ ...current, position: item.key }))} style={{ "--position-color": item.color, ...POSITION_FIELD_SPOTS[item.key] } as CSSProperties}>
@@ -7670,16 +7830,36 @@ export default function Home() {
               ))}
             </div>
           </div>
-          <div className="sticky-action"><button className="primary-button" disabled={!game.name.trim()} onClick={() => setGame((current) => ({ ...current, name: current.name.trim(), number: clamp(Number(shirtNumberInput) || 10, 1, 99), phase: "nationality" }))}>Escolher nacionalidade <span>→</span></button></div>
+          <div className="sticky-action"><button className="primary-button" disabled={!game.name.trim()} onClick={() => setGame((current) => ({ ...current, name: current.name.trim(), number: clamp(Number(shirtNumberInput) || 10, 1, 99), phase: appSettings.characterButtonsEnabled !== false ? "appearance" : "nationality" }))}>{appSettings.characterButtonsEnabled !== false ? "Criar meu jogador" : "Escolher nacionalidade"} <span>→</span></button></div>
+        </section>
+      )}
+
+      {game.phase === "appearance" && appSettings.characterButtonsEnabled !== false && (
+        <section className="setup-screen appearance-setup-screen screen-enter">
+          <header className="step-header">
+            <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "identity" }))} aria-label="Voltar">←</button>
+            <div><span>PASSO 2 DE 6</span><strong>Como você aparece dentro da mesa?</strong></div>
+            <div className="step-count">02</div>
+          </header>
+          <div className="setup-content">
+            <div className="appearance-setup-heading"><span>SEU PERSONAGEM</span><h2>Crie um rosto que você reconheça no primeiro toque.</h2><p>O uniforme começa neutro. Assim que você escolher um clube, ele assume automaticamente as cores da nova camisa.</p></div>
+            <PlayerAppearanceEditor
+              value={game.playerAppearance}
+              onChange={(playerAppearance) => setGame((current) => ({ ...current, playerAppearance }))}
+              playerName={game.name}
+              number={game.number}
+            />
+          </div>
+          <div className="sticky-action"><button className="primary-button" onClick={() => setGame((current) => ({ ...current, phase: "nationality" }))}>Escolher nacionalidade <span>→</span></button></div>
         </section>
       )}
 
       {game.phase === "nationality" && (
         <section className="setup-screen screen-enter">
           <header className="step-header">
-            <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "identity" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 2 DE 5</span><strong>Por qual país você vai jogar?</strong></div>
-            <div className="step-count">02</div>
+            <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: appSettings.characterButtonsEnabled !== false ? "appearance" : "identity" }))} aria-label="Voltar">←</button>
+            <div><span>PASSO {appSettings.characterButtonsEnabled !== false ? 3 : 2} DE {appSettings.characterButtonsEnabled !== false ? 6 : 5}</span><strong>Por qual país você vai jogar?</strong></div>
+            <div className="step-count">{appSettings.characterButtonsEnabled !== false ? "03" : "02"}</div>
           </header>
           <div className="setup-content">
             <div className="intro-card"><span className="intro-icon">◇</span><div><strong>Sua Seleção vai te acompanhar a carreira toda.</strong><p>A nacionalidade define sua rota de base, as categorias Sub-17, Sub-20 e Olímpica, além da Copa do Mundo e do torneio continental da sua região.</p></div></div>
@@ -7704,8 +7884,8 @@ export default function Home() {
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "nationality" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 3 DE 5</span><strong>Escolha sua base</strong></div>
-            <div className="step-count">03</div>
+            <div><span>PASSO {appSettings.characterButtonsEnabled !== false ? 4 : 3} DE {appSettings.characterButtonsEnabled !== false ? 6 : 5}</span><strong>Escolha sua base</strong></div>
+            <div className="step-count">{appSettings.characterButtonsEnabled !== false ? "04" : "03"}</div>
           </header>
           <div className="setup-content">
             <div className={`intro-card academy-route-card ${hasLocalAcademyRoute(game.academyCountryId) ? "local" : "international"}`}><NationBadge country={countryById(game.academyCountryId)} size="sm" /><div><small>{academyRoute.label}</small><strong>{academyRoute.title}</strong><p>{academyRoute.text}</p></div></div>
@@ -7741,8 +7921,8 @@ export default function Home() {
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "academy" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 4 DE 5</span><strong>Que jogador você será?</strong></div>
-            <div className="step-count">04</div>
+            <div><span>PASSO {appSettings.characterButtonsEnabled !== false ? 5 : 4} DE {appSettings.characterButtonsEnabled !== false ? 6 : 5}</span><strong>Que jogador você será?</strong></div>
+            <div className="step-count">{appSettings.characterButtonsEnabled !== false ? "05" : "04"}</div>
           </header>
           <div className="setup-content">
             <div className="section-heading"><div><span>PRIMEIRA DECISÃO</span><h2>Seu foco até virar profissional</h2></div></div>
@@ -7765,14 +7945,15 @@ export default function Home() {
         <section className="setup-screen story-setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "formation" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 5 DE 5</span><strong>Qual história trouxe você até aqui?</strong></div>
-            <div className="step-count">05</div>
+            <div><span>PASSO {appSettings.characterButtonsEnabled !== false ? 6 : 5} DE {appSettings.characterButtonsEnabled !== false ? 6 : 5}</span><strong>Qual história trouxe você até aqui?</strong></div>
+            <div className="step-count">{appSettings.characterButtonsEnabled !== false ? "06" : "05"}</div>
           </header>
           <div className="setup-content">
             <div className="story-intro">
               <span>ORIGEM DO JOGADOR</span>
               <h2>Uma carreira começa antes da estreia.</h2>
               <p>Sua origem altera o começo, muda eventos da carreira e abre capítulos exclusivos durante os anos. Não existe opção perfeita.</p>
+              <button type="button" className="secondary-button story-random-button" onClick={selectRandomPlayerStory}>⚄ Escolher história aleatória</button>
             </div>
             <div className="player-story-grid">
               {PLAYER_STORIES.map((story) => (
@@ -7875,7 +8056,7 @@ export default function Home() {
           </div>
           <div className={`career-status-strip ${game.phase === "retirement-confirm" ? "retirement-open" : ""}`}>
             <span><small>STATUS</small><strong>{ROLE_LABELS[game.squadRole]}</strong></span>
-            <span><small>TREINADOR</small><strong>{game.managerTrust}%</strong></span>
+            <span><small>TREINADOR</small><strong>{Math.round(game.managerTrust)}%</strong></span>
             <span><small>CONTRATO</small><strong>{game.contractYears ? `${game.contractYears} ano${game.contractYears > 1 ? "s" : ""}` : "Expirado"}</strong></span>
             {game.phase !== "retirement-confirm" && <button className="retirement-trigger" onClick={requestRetirement}><small>CARREIRA</small><strong>⌛ Aposentar</strong></button>}
           </div>
@@ -8207,6 +8388,13 @@ export default function Home() {
           {activeTab === "profile" && game.phase === "career" && (
             <div className="panel-screen screen-enter">
               <div className="profile-hero"><div className="academy-avatar"><span>{game.number}</span><small>{game.position}</small></div><div><span>{game.archetype}</span><h2>{game.name}</h2><p>{position.style} · {game.foot}</p></div></div>
+              {appSettings.characterButtonsEnabled !== false && (
+                <section className="player-appearance-profile">
+                  <PlayerAppearancePortrait appearance={{ ...game.playerAppearance, kitPattern: teamKitPattern(game.seed, currentClub.id) }} primary={currentClub.primary} secondary={currentClub.secondary} size={112} label={`Visual de ${game.name}`} />
+                  <div><span>IDENTIDADE VISUAL</span><strong>Seu rosto dentro da mesa</strong><p>O personagem permanece; o uniforme muda com cada transferência.</p></div>
+                  <button type="button" className="secondary-button" onClick={() => setAppearanceEditorOpen(true)}>Personalizar</button>
+                </section>
+              )}
               <section className={`player-story-profile story-${playerStoryById(game.playerStoryId).tone}`}>
                 <header><b>{playerStoryById(game.playerStoryId).icon}</b><div><span>HISTÓRIA DO JOGADOR</span><strong>{playerStoryById(game.playerStoryId).title}</strong></div><em>{game.storyLog.length} capítulo{game.storyLog.length === 1 ? "" : "s"}</em></header>
                 <p>{playerStoryById(game.playerStoryId).description}</p>

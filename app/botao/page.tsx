@@ -17,6 +17,7 @@ import "./botao.css";
 import { buildFinalSetup, clubSubtitle, formatGoalMinute, isMatchGoal, pickFinalOpponent } from "./adapter";
 import { simulateBotaoMatch } from "./simulate";
 import { DEFAULT_BOTAO_RULES, type BotaoMatchResult, type BotaoMatchSetup } from "./types";
+import { randomPlayerAppearance, visualRosterForMatch } from "../player-appearance";
 
 type Screen = "lobby" | "match" | "result";
 
@@ -42,6 +43,15 @@ const RULE_PRESETS = [
     rules: { ...DEFAULT_BOTAO_RULES, goalLimit: 0, halfSeconds: 180 },
   },
 ];
+
+function characterPlayersEnabled() {
+  if (typeof window === "undefined") return true;
+  try {
+    return JSON.parse(window.localStorage.getItem("futbobo-settings") ?? "{}").characterButtonsEnabled !== false;
+  } catch {
+    return true;
+  }
+}
 
 export default function BotaoStandalonePage() {
   const clubs = useMemo(() => CLUBS.slice().sort((a, b) => a.name.localeCompare(b.name, "pt-BR")), []);
@@ -83,6 +93,14 @@ export default function BotaoStandalonePage() {
       position,
       overall,
       rules: preset.rules,
+      visuals: visualRosterForMatch({
+        enabled: characterPlayersEnabled(),
+        seed,
+        season: 1,
+        userTeamId: club.id,
+        cpuTeamId: opponent.id,
+        player: randomPlayerAppearance(seed),
+      }),
     });
 
   const play = (penaltiesOnly = false) => {

@@ -1436,8 +1436,271 @@
   .botao-table-wrapper { border-color: rgba(244,196,48,.2); }
 }
 
+/* v90 — desktop landscape is a real table-first mode. The pitch takes the
+   complete left stage while score and commands become one compact touchline. */
+@media (min-width:900px) {
+  .botao-root-landscape {
+    grid-template-columns: minmax(0,1fr) clamp(244px,19vw,320px);
+    grid-template-rows: minmax(0,1fr) max-content;
+    align-items: stretch;
+    gap: 16px;
+    width: 100%;
+    max-width: none;
+    padding: 16px;
+  }
+
+  .botao-root-landscape .botao-table-wrapper {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    width: min(100%,calc((100dvh - 32px) * 516 / 316));
+    max-width: none;
+    max-height: calc(100dvh - 32px);
+    align-self: center;
+    justify-self: center;
+    margin: 0;
+    aspect-ratio: 516 / 316;
+    border-radius: 18px;
+  }
+
+  .botao-root-landscape .botao-hud {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 0;
+    align-self: start;
+    padding: 18px;
+    overflow-y: auto;
+    border-radius: 16px 16px 5px 16px;
+  }
+
+  .botao-root-landscape .botao-controls {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--line,rgba(226,239,228,.09));
+    border-radius: 16px 5px 16px 16px;
+    background: var(--surface,#0b1812);
+  }
+
+  .botao-root-landscape .botao-team strong { font-size: 18px; }
+  .botao-root-landscape .botao-score { padding-block: 12px; font-size: 52px; }
+  .botao-root-landscape .botao-turn { min-height: 56px; padding: 10px 12px; font-size: 20px; }
+
+  .botao-root-landscape .botao-controls-meta {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 8px;
+  }
+
+  .botao-root-landscape .botao-controls-meta > span {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+
+  .botao-root-landscape .botao-controls-meta .botao-ghost {
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 8px;
+    white-space: normal;
+  }
+}
+
+@media (min-width:900px) and (max-height:760px) {
+  .botao-root-landscape {
+    grid-template-columns: minmax(0,1fr) clamp(228px,18vw,280px);
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .botao-root-landscape .botao-table-wrapper {
+    width: min(100%,calc((100dvh - 24px) * 516 / 316));
+    max-height: calc(100dvh - 24px);
+  }
+
+  .botao-root-landscape .botao-hud,
+  .botao-root-landscape .botao-controls { padding: 12px; }
+  .botao-root-landscape .botao-score { padding-block: 8px; font-size: 44px; }
+  .botao-root-landscape .botao-turn { min-height: 48px; font-size: 17px; }
+}
+
 @media (prefers-reduced-motion:reduce) {
   .botao-root *,
   .botao-root *::before,
   .botao-root *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* v91 — mesa em transmissão: placar lido num relance e pausa real. */
+.botao-table-wrapper {
+  isolation: isolate;
+  border: 0;
+  background: #0b2517;
+  box-shadow: 0 0 0 6px var(--bg, #050b08);
+}
+
+.botao-root-paused .botao-canvas { cursor: default; }
+
+.botao-table-wrapper .botao-canvas {
+  position: relative;
+  z-index: 0;
+}
+
+.botao-pause-overlay {
+  position: absolute;
+  z-index: 9;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  background: rgba(5, 11, 8, .84);
+  color: var(--text, #f2f5ed);
+  text-align: center;
+  animation: botao-pause-in 180ms cubic-bezier(.23, 1, .32, 1) both;
+}
+
+.botao-pause-overlay small {
+  color: var(--gold, #f4c430);
+  font: 800 10px/1 var(--sans, "Manrope", sans-serif);
+  letter-spacing: .16em;
+}
+
+.botao-pause-overlay strong {
+  font: 800 clamp(28px, 6vw, 44px)/.95 var(--display, "Barlow Condensed", sans-serif);
+  letter-spacing: -.025em;
+}
+
+.botao-pause-overlay p {
+  max-width: 280px;
+  margin: 0 0 8px;
+  color: var(--muted, #aab8ac);
+  font-size: 12px;
+  text-wrap: balance;
+}
+
+.botao-pause-overlay .botao-primary {
+  min-width: 184px;
+  min-height: 44px;
+  border-radius: 8px;
+  font: 800 16px/1 var(--display, "Barlow Condensed", sans-serif);
+}
+
+.botao-pause-mark {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 1px solid rgba(244, 196, 48, .32);
+  border-radius: 12px;
+  background: rgba(244, 196, 48, .1);
+  color: var(--gold, #f4c430);
+  font: 900 20px/1 var(--display, "Barlow Condensed", sans-serif);
+  letter-spacing: 3px;
+  text-indent: 3px;
+}
+
+.botao-turn-paused {
+  border-color: rgba(244, 196, 48, .22);
+  color: var(--text, #f2f5ed);
+}
+
+.botao-pause-toggle {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-color: rgba(244, 196, 48, .24);
+  color: var(--text, #f2f5ed);
+}
+
+.botao-controls-meta .botao-pause-toggle { min-height: 44px; }
+
+.botao-pause-toggle > span {
+  color: var(--gold, #f4c430);
+  font-family: var(--display, "Barlow Condensed", sans-serif);
+  font-weight: 900;
+}
+
+.botao-pause-toggle[aria-pressed="true"] {
+  background: rgba(244, 196, 48, .1);
+  color: var(--gold, #f4c430);
+}
+
+@keyframes botao-pause-in {
+  from { opacity: 0; transform: scale(.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (min-width:900px) {
+  .botao-hud {
+    position: relative;
+  }
+
+  .botao-hud::before {
+    position: absolute;
+    top: 0;
+    right: 18px;
+    left: 18px;
+    height: 2px;
+    background: var(--gold, #f4c430);
+    content: "";
+    opacity: .72;
+  }
+
+  .botao-root-landscape .botao-hud {
+    gap: 12px;
+    overflow-x: hidden;
+  }
+
+  .botao-root-landscape .botao-hud-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  .botao-root-landscape .botao-competition {
+    overflow: visible;
+    line-height: 1.35;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .botao-root-landscape .botao-period {
+    justify-self: start;
+  }
+
+  .botao-root-landscape .botao-scoreboard {
+    gap: 8px;
+  }
+
+  .botao-root-landscape .botao-team {
+    min-height: 52px;
+    padding: 8px 10px;
+    border: 1px solid var(--line, rgba(226, 239, 228, .09));
+    border-radius: 10px;
+    background: var(--surface-2, #102219);
+  }
+
+  .botao-root-landscape .botao-score {
+    border-block: 1px solid var(--line, rgba(226, 239, 228, .09));
+    font-variant-numeric: tabular-nums;
+  }
+
+  .botao-root-landscape .botao-pause-toggle {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width:899px) {
+  .botao-pause-overlay {
+    gap: 6px;
+    padding: 18px;
+  }
+
+  .botao-pause-overlay strong { font-size: 30px; }
+  .botao-pause-overlay p { font-size: 11px; }
+  .botao-pause-mark { width: 44px; height: 44px; }
 }

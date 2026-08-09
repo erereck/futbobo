@@ -120,6 +120,54 @@ export function pickFinalOpponent(args: {
   return contenders[contenders.length - 1];
 }
 
+/** Sorteio regional do Mundial: campeões sul-americanos dominam o pote de uma
+ * final contra europeu; nas fases anteriores a chave evita entregar outro
+ * europeu antes da decisão. */
+export function pickClubWorldOpponent(args: {
+  clubId: string;
+  seed: number;
+  season: number;
+  stageName: string;
+  excludedClubIds?: string[];
+}): Club {
+  const club = CLUBS.find((candidate) => candidate.id === args.clubId) ?? CLUBS[0];
+  const userConfederation = countryById(club.countryId).confederation;
+  const excluded = new Set([club.id, ...(args.excludedClubIds ?? [])]);
+  const eligible = CLUBS.filter((candidate) => !excluded.has(candidate.id));
+  const confed = (candidate: Club) => countryById(candidate.countryId).confederation;
+  const strong = (pool: Club[], minimumReputation = 3) => {
+    const filtered = pool.filter((candidate) => candidate.reputation >= minimumReputation);
+    return filtered.length ? filtered : pool;
+  };
+  let pool: Club[] = [];
+
+  if (args.stageName === "Final" && userConfederation !== "EUROPE") {
+    pool = strong(eligible.filter((candidate) => confed(candidate) === "EUROPE"), 4);
+  } else if (args.stageName === "Final") {
+    const roll = createRng(hashSeed(args.seed, args.season, "club-world-region", club.id)).next();
+    const target = roll < .5 ? "SOUTH_AMERICA" : roll < .65 ? "NORTH_AMERICA" : roll < .9 ? "ASIA" : "OCEANIA";
+    pool = eligible.filter((candidate) => confed(candidate) === target);
+    if (target === "SOUTH_AMERICA") pool = strong(pool, 4);
+    if (!pool.length) pool = eligible.filter((candidate) => confed(candidate) !== "EUROPE");
+  } else {
+    pool = eligible.filter((candidate) => {
+      const candidateConfed = confed(candidate);
+      if (userConfederation === "SOUTH_AMERICA") return candidateConfed === "ASIA" || candidateConfed === "NORTH_AMERICA";
+      return candidateConfed !== "EUROPE" && candidateConfed !== userConfederation;
+    });
+  }
+
+  const fallback = pool.length ? pool : eligible;
+  const weights = fallback.map((candidate) => Math.pow(Math.max(1, candidate.strength - 48), 2.2));
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  let roll = createRng(hashSeed(args.seed, args.season, "club-world", args.stageName, club.id)).next() * total;
+  for (let index = 0; index < fallback.length; index += 1) {
+    roll -= weights[index];
+    if (roll <= 0) return fallback[index];
+  }
+  return fallback[fallback.length - 1];
+}
+
 export function pickNationalOpponent(args: {
   countryId: string;
   seed: number;
@@ -253,6 +301,7 @@ export function buildFinalSetup(args: {
   userIsHost?: boolean;
   neutralVenue?: boolean;
   rules?: Partial<BotaoRules>;
+  visuals?: BotaoMatchSetup["visuals"];
 }): BotaoMatchSetup {
   const kits = ensureContrastingKits(botaoTeamFromClub(args.club), botaoTeamFromClub(args.opponent));
   return {
@@ -274,6 +323,7 @@ export function buildFinalSetup(args: {
     cpuTeam: kits.cpu,
     difficulty: difficultyFromStrength(args.opponent.strength),
     rules: { ...CAREER_FINAL_RULES, ...args.rules },
+    visuals: args.visuals,
   };
 }
 
@@ -292,6 +342,7 @@ export function buildNationalMatchSetup(args: {
   playerRole?: "starter" | "reserve";
   ratings?: { power?: number; control?: number };
   rules?: Partial<BotaoRules>;
+  visuals?: BotaoMatchSetup["visuals"];
 }): BotaoMatchSetup {
   const kits = ensureContrastingKits(
     botaoTeamFromCountry(args.country),
@@ -317,6 +368,7 @@ export function buildNationalMatchSetup(args: {
     cpuTeam: kits.cpu,
     difficulty: difficultyFromStrength(kits.cpu.strength),
     rules,
+    visuals: args.visuals,
     entry: args.playerRole === "reserve"
       ? reserveEntry({
           seed: args.seed,

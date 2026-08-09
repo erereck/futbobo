@@ -10,10 +10,11 @@ import type { BotaoTeam } from "./types";
 export default function TeamCrest({ team, size = 30 }: { team: BotaoTeam; size?: number }) {
   const [failed, setFailed] = useState(false);
   const showBadge = Boolean(team.badge) && !failed;
+  const badgeBackground = team.id === "liverpool" ? "#f2ead8" : team.primary;
   return (
     <span
       className="botao-crest"
-      style={{ background: team.primary, borderColor: team.secondary, width: size, height: size }}
+      style={{ background: badgeBackground, borderColor: team.secondary, width: size, height: size }}
       aria-hidden="true"
     >
       {showBadge ? (

@@ -68,7 +68,8 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Menu desktop: uma cabine de lançamento contida em `100dvh`; em monitores baixos a densidade diminui, nunca a informação nem a legibilidade.
 - Menu desktop: a arte nunca determina a altura da cabine. O grid externo distribui cabeçalho, lançamento, assinatura e versão dentro de `100dvh` em zoom real de 100%; a arte apenas ocupa o espaço restante.
 - Futebol de botão desktop: mesa sempre inteira na viewport, proporção `316/516`, largura máxima de 400px e respiro mínimo de 80px acima/abaixo.
-- Futebol de botão horizontal: no desktop, o usuário pode girar a mesa em 90 graus sem alterar regras nem coordenadas do motor. O canvas passa a `516/316`, permanece inteiro na viewport e o mesmo controle nunca aparece no mobile.
+- Futebol de botão horizontal: no desktop, o usuário pode girar a mesa em 90 graus sem alterar regras nem coordenadas do motor. O canvas passa a `516/316` e ocupa todo o palco esquerdo; placar e comandos se empilham num rail lateral de 244–320px. O campo usa simultaneamente a largura e a altura disponíveis e o mesmo controle nunca aparece no mobile.
+- Partida ao vivo: campo é sempre o foco; placar/tempo formam a leitura secundária e a pausa abre um intervalo técnico sobre a mesa. Pausar congela relógio, física, CPU, inatividade e linha do tempo do replay. No campo girado, os discos mantêm sua posição, mas números e selo `VC` permanecem orientados para a tela.
 - Painéis longos: rolagem pertence ao canvas da direita; galerias nunca usam a altura do card vizinho como limite.
 
 ### Copa instantânea

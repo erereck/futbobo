@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v88 · ARQUIVO DE LENDA/);
+  assert.match(pageSource, /v89 · ROSTOS EM CAMPO/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -869,7 +869,7 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /PATROCINADOR PESSOAL/);
   assert.match(page, /LINHA DO TEMPO/);
   assert.match(page, /setUpdateNoticePage\("previous"\)/);
-  assert.match(page, /v80 · W\.O\. ANTI-RELOAD/);
+  assert.match(page, /v88 · ARQUIVO DE LENDA/);
   assert.match(page, /FORA DAS QUATRO LINHAS/);
   assert.match(gameData, /followers\?: number/);
   assert.match(gameData, /sponsorBrand\?: string/);
@@ -921,6 +921,20 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   assert.match(match, /const USER_DECISION_SECONDS = 10/);
   assert.match(match, /const USER_WARNING_SECONDS = 3/);
   assert.match(match, /botao-inactivity-countdown/);
+  assert.match(match, /const \[paused, setPaused\] = useState\(false\)/);
+  assert.match(match, /pausedRef\.current/);
+  assert.match(match, /commitWhenRunning/);
+  assert.match(match, /uprightLabels: desktopLandscape/);
+  assert.match(match, /Partida pausada/);
+  assert.match(renderer, /ctx\.rotate\(-Math\.PI \/ 2\)/);
+  assert.match(renderer, /assets\/botao\/match-ball\.png/);
+  assert.match(renderer, /ctx\.drawImage\(\s*sprite/);
+  assert.match(renderer, /const diameter = ball\.radius \* 2\.2/);
+  assert.match(renderer, /const textureInset = 18/);
+  assert.match(renderer, /function liveSpinAngle/);
+  assert.match(renderer, /function replayBallSpin/);
+  assert.match(styles, /\.botao-pause-overlay/);
+  assert.match(styles, /\.botao-pause-toggle/);
   assert.doesNotMatch(renderer, /drawGoalLabels/);
   assert.doesNotMatch(page, /o sorteio da temporada para aqui/i);
   assert.doesNotMatch(page, /Dificuldade \{currentBotaoSetup/);
@@ -1170,9 +1184,10 @@ test("grava replays vetoriais leves dos gols sem reexecutar a partida", async ()
   assert.match(replay, /const blend =/);
   assert.match(replay, /LANCE \{activeTurn \+ 1\}/);
   assert.match(render, /export function drawReplayFrame/);
+  const replayRendererStart = render.indexOf("export function drawReplayFrame");
   assert.ok(
-    render.indexOf("drawDisc(ctx, rendered", render.indexOf("export function drawReplayFrame"))
-      < render.indexOf("if (ball) drawBall", render.indexOf("export function drawReplayFrame")),
+    render.indexOf("drawDisc(ctx, rendered", replayRendererStart)
+      < render.indexOf("drawBall(ctx, ball,", replayRendererStart),
     "a bola precisa ser desenhada por cima dos botões no replay",
   );
   assert.match(page, /Ver replay/);
@@ -1300,6 +1315,11 @@ test("oferece uma Copa do Mundo independente que respeita as regras atuais e cam
   assert.match(styles, /\.botao-desktop-only,\s*\.botao-mobile-size-toggle \{ display: none; \}/);
   assert.match(styles, /\.botao-mobile-size-toggle \{ display: inline-flex;/);
   assert.match(styles, /\.botao-root-landscape \.botao-canvas \{ aspect-ratio: 516 \/ 316; \}/);
+  assert.match(styles, /v90 — desktop landscape is a real table-first mode/);
+  assert.match(styles, /\.botao-root-landscape \{[\s\S]*?grid-template-columns: minmax\(0,1fr\) clamp\(244px,19vw,320px\);[\s\S]*?grid-template-rows: minmax\(0,1fr\) max-content;/);
+  assert.match(styles, /\.botao-root-landscape \.botao-table-wrapper \{[\s\S]*?grid-column: 1;[\s\S]*?grid-row: 1 \/ 3;[\s\S]*?width: min\(100%,calc\(\(100dvh - 32px\) \* 516 \/ 316\)\);/);
+  assert.match(styles, /\.botao-root-landscape \.botao-hud \{[\s\S]*?grid-column: 2;[\s\S]*?grid-row: 1;/);
+  assert.match(styles, /\.botao-root-landscape \.botao-controls \{[\s\S]*?grid-column: 2;[\s\S]*?grid-row: 2;/);
 });
 
 test("corrige competicoes, bola de ouro, rivais e numeros persistentes", async () => {
@@ -1323,4 +1343,35 @@ test("corrige competicoes, bola de ouro, rivais e numeros persistentes", async (
   assert.match(engine, /hashSeed\("futbobo-squad-numbers", teamId\)/);
   assert.match(engine, /persistentSquadNumbers\(\s*setup\.userTeam\.id,\s*\[setup\.player\.number\]/);
   assert.match(match, /state\.setup\.stageName === "Final" \? "CAMPEÃO!" : "CLASSIFICADO!"/);
+});
+
+test("expande personagens e transforma o Mundial em campanha jogavel", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const appearance = await readFile(new URL("../app/player-appearance.ts", import.meta.url), "utf8");
+  const editor = await readFile(new URL("../app/PlayerAppearanceEditor.tsx", import.meta.url), "utf8");
+  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
+
+  assert.match(appearance, /"Mini afro"/);
+  assert.match(appearance, /export const KIT_PATTERN_NAMES/);
+  assert.match(appearance, /customSkinColor/);
+  assert.match(appearance, /SUB_SAHARAN_COUNTRIES/);
+  assert.match(appearance, /export function teamKitPattern/);
+  assert.match(editor, /COR PERSONALIZADA/);
+  assert.doesNotMatch(editor, /label="Uniforme"/);
+  assert.match(page, /function rollShirtNumber/);
+  assert.match(page, /Math\.round\(game\.managerTrust\)\}%/);
+  assert.match(page, /overallVisibility/);
+  assert.match(page, /worldCampaign: true/);
+  assert.match(page, /\["Playoff Mundial", "Quartas de final", "Semifinal", "Final"\]/);
+  assert.match(adapter, /function pickClubWorldOpponent/);
+  assert.match(adapter, /roll < \.5 \? "SOUTH_AMERICA" : roll < \.65 \? "NORTH_AMERICA" : roll < \.9 \? "ASIA"/);
+});
+
+test("vencer uma copa nacional jogavel recalcula a vaga continental", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /function continentalSlotAfterSeason/);
+  assert.match(page, /league\.id === "brasileirao-b" \? "libertadores" : "europa"/);
+  assert.match(page, /competitionId === "domesticCup"[\s\S]*continentalSlotAfterSeason/);
+  assert.match(page, /continentalSlot: resolvedContinentalSlot/);
 });

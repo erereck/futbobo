@@ -130,6 +130,7 @@ export default function BotaoMatch({
   const replayLastSampleRef = useRef(0);
   const replayWasResolvingRef = useRef(false);
   const replayGoalCapturedRef = useRef(false);
+  const pausedAtRef = useRef<number | null>(null);
   // Timers guardados em ref: efeitos sem lista de dependências rodam a cada
   // render, e limpar no cleanup cancelaria a transição no meio do caminho.
   const timersRef = useRef<{ goal: number | null; cpu: number | null; penalty: number | null; finish: number | null }>({
@@ -152,8 +153,40 @@ export default function BotaoMatch({
   const [idleCountdown, setIdleCountdown] = useState<number | null>(null);
   const [desktopLandscape, setDesktopLandscape] = useState(false);
   const [compactMobileTable, setCompactMobileTable] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
+
+  const togglePause = useCallback(() => {
+    setPaused((current) => {
+      const next = !current;
+      pausedRef.current = next;
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+    const now = performance.now();
+    if (paused) {
+      pausedAtRef.current = now;
+    } else if (pausedAtRef.current !== null) {
+      // O tempo de leitura da pausa não vira um buraco no replay do lance.
+      replayShotStartedAtRef.current += now - pausedAtRef.current;
+      replayLastSampleRef.current = now;
+      pausedAtRef.current = null;
+    }
+    lastFrameRef.current = 0;
+    idleDeadlineRef.current = null;
+    idleCountdownRef.current = null;
+    setIdleCountdown(null);
+    pointerRef.current = null;
+    aimRef.current = null;
+    selectedRef.current = null;
+    if (paused) setCpuThinking(false);
+    bump();
+  }, [paused, bump]);
 
   /**
    * Todo aviso some sozinho. Antes o "NA TRAVE!" não tinha quem o apagasse e
@@ -312,6 +345,9 @@ export default function BotaoMatch({
       lastFrameRef.current = time;
       frameCountRef.current += 1;
 
+      const pausedNow = pausedRef.current;
+
+      if (!pausedNow) {
       const resolvingForReplay = state.phase === "resolving";
       if (resolvingForReplay) {
         if (!replayWasResolvingRef.current) {
@@ -409,16 +445,22 @@ export default function BotaoMatch({
             const shooting = state.penalties.turn;
             vibrate(scored ? [0, 50, 40, 90] : 30);
             showFlash(scored ? "NA REDE!" : "PEGOU!", scored === (shooting === "user") ? "goal" : "bad", PENALTY_PAUSE_MS);
-            timersRef.current.penalty = window.setTimeout(() => {
+            const commitWhenRunning = () => {
+              if (pausedRef.current) {
+                timersRef.current.penalty = window.setTimeout(commitWhenRunning, 120);
+                return;
+              }
               timersRef.current.penalty = null;
               const current = matchRef.current;
               if (!current) return;
               handleEvents(commitPenalty(current, scored));
-            }, PENALTY_PAUSE_MS);
+            };
+            timersRef.current.penalty = window.setTimeout(commitWhenRunning, PENALTY_PAUSE_MS);
           }
         } else {
           stepPenaltyKeeper(state, elapsed);
         }
+      }
       }
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -430,11 +472,20 @@ export default function BotaoMatch({
         canvas.width = targetWidth;
         canvas.height = targetHeight;
       }
-      const scale = ((desktopLandscape ? rect.height / VIEW_WIDTH : rect.width / VIEW_WIDTH) * dpr);
+      // Mede em pixels reais e pinta todo o bitmap antes do transform. Isso
+      // elimina a fresta de subpixel que aparecia na borda da mesa girada.
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.fillStyle = "#0b2517";
+      context.fillRect(0, 0, targetWidth, targetHeight);
+      const logicalWidth = desktopLandscape ? VIEW_HEIGHT : VIEW_WIDTH;
+      const logicalHeight = desktopLandscape ? VIEW_WIDTH : VIEW_HEIGHT;
+      const scale = Math.min(targetWidth / logicalWidth, targetHeight / logicalHeight);
+      const offsetX = (targetWidth - logicalWidth * scale) / 2;
+      const offsetY = (targetHeight - logicalHeight * scale) / 2;
       if (desktopLandscape) {
-        context.setTransform(0, scale, -scale, 0, (VIEW_HEIGHT - VIEW_PAD_Y) * scale, VIEW_PAD_X * scale);
+        context.setTransform(0, scale, -scale, 0, offsetX + (VIEW_HEIGHT - VIEW_PAD_Y) * scale, offsetY + VIEW_PAD_X * scale);
       } else {
-        context.setTransform(scale, 0, 0, scale, VIEW_PAD_X * scale, VIEW_PAD_Y * scale);
+        context.setTransform(scale, 0, 0, scale, offsetX + VIEW_PAD_X * scale, offsetY + VIEW_PAD_Y * scale);
       }
       drawMatch(
         context,
@@ -447,6 +498,7 @@ export default function BotaoMatch({
           trail: trailRef.current,
           goalFlash: goalFlashRef.current,
           goalFlashSide: goalFlashSideRef.current,
+          uprightLabels: desktopLandscape,
         },
         time,
       );
@@ -458,7 +510,11 @@ export default function BotaoMatch({
   useEffect(() => {
     const state = matchRef.current;
     if (!state || state.phase !== "goal" || timersRef.current.goal !== null) return;
-    timersRef.current.goal = window.setTimeout(() => {
+    const resumeGoal = () => {
+      if (pausedRef.current) {
+        timersRef.current.goal = window.setTimeout(resumeGoal, 120);
+        return;
+      }
       timersRef.current.goal = null;
       const current = matchRef.current;
       if (!current) return;
@@ -467,8 +523,9 @@ export default function BotaoMatch({
         const formation = formationById(current.formationId.user);
         showFlash(`Formação ${formation.name} · ${formation.shape}`, "info", 1400);
       }
-    }, GOAL_PAUSE_MS);
-  }, [signature, handleEvents, showFlash]);
+    };
+    timersRef.current.goal = window.setTimeout(resumeGoal, GOAL_PAUSE_MS);
+  }, [signature, handleEvents, showFlash, paused]);
 
   // -------------------------------------------------------------- vez da CPU
   useEffect(() => {
@@ -484,7 +541,11 @@ export default function BotaoMatch({
     // timer em ref, junto com a assinatura nas dependências do efeito.
 
     setCpuThinking(true);
-    timersRef.current.cpu = window.setTimeout(() => {
+    const playCpuTurn = () => {
+      if (pausedRef.current) {
+        timersRef.current.cpu = window.setTimeout(playCpuTurn, 120);
+        return;
+      }
       timersRef.current.cpu = null;
       const current = matchRef.current;
       if (!current) return;
@@ -507,8 +568,9 @@ export default function BotaoMatch({
       }
       setCpuThinking(false);
       bump();
-    }, CPU_THINK_MS);
-  }, [signature, bump]);
+    };
+    timersRef.current.cpu = window.setTimeout(playCpuTurn, CPU_THINK_MS);
+  }, [signature, bump, paused]);
 
   // ------------------------------------------------------------------- fim
   useEffect(() => {
@@ -553,6 +615,7 @@ export default function BotaoMatch({
 
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLCanvasElement>) => {
+      if (pausedRef.current) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
       unlockAudio();
@@ -573,6 +636,7 @@ export default function BotaoMatch({
   );
 
   const onPointerMove = useCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (pausedRef.current) return;
     if (pointerRef.current !== event.pointerId) return;
     const canvas = canvasRef.current;
     const state = matchRef.current;
@@ -587,6 +651,7 @@ export default function BotaoMatch({
 
   const onPointerUp = useCallback(
     (event: ReactPointerEvent<HTMLCanvasElement>) => {
+      if (pausedRef.current) return;
       if (pointerRef.current !== event.pointerId) return;
       pointerRef.current = null;
       const state = matchRef.current;
@@ -623,7 +688,7 @@ export default function BotaoMatch({
   const penalties = state.penalties;
 
   return (
-    <div className={`botao-root ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""}`}>
+    <div className={`botao-root ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""}`}>
       <header className="botao-hud">
         <div className="botao-hud-top">
           <span className="botao-competition">
@@ -634,7 +699,7 @@ export default function BotaoMatch({
               ? state.penaltyReason === "inactivity"
                 ? "Pênalti por demora"
                 : "Pênaltis"
-              : `${periodName(state)} · ${formatClock(state.clock)}`}
+              : `${paused ? "Pausado" : periodName(state)} · ${formatClock(state.clock)}`}
           </span>
         </div>
         <div className="botao-scoreboard">
@@ -711,7 +776,18 @@ export default function BotaoMatch({
             <span>ou o adversário ganha um pênalti</span>
           </div>
         ) : null}
-        {state.phase === "interval" ? (
+        {paused ? (
+          <div className="botao-pause-overlay" role="status" aria-live="polite">
+            <span className="botao-pause-mark" aria-hidden="true">II</span>
+            <small>INTERVALO TÉCNICO</small>
+            <strong>Partida pausada</strong>
+            <p>Relógio, adversário e bola estão congelados.</p>
+            <button type="button" className="botao-primary" onClick={togglePause}>
+              Retomar partida <span aria-hidden="true">▶</span>
+            </button>
+          </div>
+        ) : null}
+        {!paused && state.phase === "interval" ? (
           <div className="botao-overlay">
             <strong>{state.period >= setup.rules.halves ? "Empate no tempo normal" : `Fim do ${state.period}º tempo`}</strong>
             <p>
@@ -733,7 +809,7 @@ export default function BotaoMatch({
             </button>
           </div>
         ) : null}
-        {state.phase === "penalty-setup" && penalties ? (
+        {!paused && state.phase === "penalty-setup" && penalties ? (
           <div className="botao-overlay">
             <strong>Disputa de pênaltis</strong>
             <p>
@@ -777,7 +853,9 @@ export default function BotaoMatch({
       </div>
 
       <footer className="botao-controls">
-        {state.phase === "penalty-setup" ? (
+        {paused ? (
+          <p className="botao-turn botao-turn-paused">Jogo congelado · retome quando estiver pronto</p>
+        ) : state.phase === "penalty-setup" ? (
           <p className="botao-turn">Escolha a sua cobrança</p>
         ) : penalties ? (
           <p className={`botao-turn ${penalties.turn === "user" ? "botao-turn-active" : ""}`}>
@@ -797,12 +875,18 @@ export default function BotaoMatch({
           <p className="botao-turn">{cpuThinking ? `${setup.cpuTeam.shortName} está pensando…` : "Vez do adversário"}</p>
         )}
         <div className="botao-controls-meta">
-          <span>Toque {state.turns}</span>
-          {player ? (
-            <span>
-              Você: {Math.round(player.power)} força · {Math.round(player.control)} controle
-            </span>
+          {state.phase !== "finished" ? (
+            <button
+              type="button"
+              className="botao-ghost botao-pause-toggle"
+              aria-pressed={paused}
+              onClick={togglePause}
+            >
+              <span aria-hidden="true">{paused ? "▶" : "II"}</span>
+              {paused ? "Retomar" : "Pausar"}
+            </button>
           ) : null}
+          <span>Toque {state.turns}</span>
           <button
             type="button"
             className="botao-ghost"
