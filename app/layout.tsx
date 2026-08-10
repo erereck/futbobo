@@ -22,7 +22,7 @@ const barlowCondensed = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://erereck.github.io/futbobo/"),
+  metadataBase: new URL("https://futbobo.top/"),
   title: "Futbobo — Sua carreira, seu legado",
   description:
     "Construa uma carreira dos 12 anos à aposentadoria: contratos, metas, rivalidades, 402 clubes, 22 ligas e as maiores competições do mundo.",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     description:
       "Contratos, treinador, rivalidades, conquistas, Brasil, Europa e Seleção. Cada carreira vira uma história diferente.",
     type: "website",
-    url: "https://erereck.github.io/futbobo/",
+    url: "https://futbobo.top/",
     siteName: "Futbobo",
     images: [{ url: "og-v6.png", width: 1200, height: 630, alt: "Futbobo — Sua carreira, seu legado" }],
   },

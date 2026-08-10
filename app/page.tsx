@@ -7277,7 +7277,7 @@ export default function Home() {
       ctx.font = '800 19px Manrope, Arial, sans-serif';
       ctx.fillText(`${displayGame.legacyPoints} pontos de legado · ${displayGame.unlockedAchievements.length}/${ACHIEVEMENTS.length} conquistas`, 64, 1260);
       ctx.textAlign = "right";
-      ctx.fillText("erereck.github.io/futbobo", 1016, 1300);
+      ctx.fillText("futbobo.top", 1016, 1300);
 
       return new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Falha ao criar pôster")), "image/png"));
     };
@@ -8939,7 +8939,7 @@ export default function Home() {
               {displayGame.trophies + displayGame.nationalTrophies === 0 && <span>EM BUSCA DA PRIMEIRA TAÇA</span>}
             </div>
             <div className="share-path"><span>12</span><div />{Array.from(new Set(displayGame.history.map((item) => item.clubId))).map((clubId) => <ClubBadge key={clubId} club={clubById(clubId)} size="sm" />)}<div /><span>{displayGame.age}</span></div>
-            <small className="share-url">erereck.github.io/futbobo</small>
+            <small className="share-url">futbobo.top</small>
           </div>
           <TrophyGallery state={displayGame} final />
           <section className={`final-player-story story-${playerStoryById(displayGame.playerStoryId).tone}`}>

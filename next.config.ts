@@ -1,11 +1,13 @@
 import type { NextConfig } from "next";
 
 const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
+const hasCustomDomain = process.env.GITHUB_PAGES_CUSTOM_DOMAIN === "true";
 const isItchBuild = process.env.ITCH_BUILD === "true";
 const isCapacitorBuild = process.env.CAPACITOR_BUILD === "true";
-const basePath = isGitHubPages && !isCapacitorBuild ? "/futbobo" : "";
-const assetPrefix = isGitHubPages && !isCapacitorBuild ? "/futbobo/" : isItchBuild ? "./" : "";
-const publicBasePath = isGitHubPages && !isCapacitorBuild ? "/futbobo" : isItchBuild ? "." : "";
+const usesRepositoryPath = isGitHubPages && !isCapacitorBuild && !hasCustomDomain;
+const basePath = usesRepositoryPath ? "/futbobo" : "";
+const assetPrefix = usesRepositoryPath ? "/futbobo/" : isItchBuild ? "./" : "";
+const publicBasePath = usesRepositoryPath ? "/futbobo" : isItchBuild ? "." : "";
 
 const nextConfig: NextConfig = {
   output: "export",

@@ -34,6 +34,8 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Gerar site estático
         run: npm run build
+        env:
+          GITHUB_PAGES_CUSTOM_DOMAIN: "true"
       - name: Preparar artefato
         uses: actions/upload-pages-artifact@v3
         with:
