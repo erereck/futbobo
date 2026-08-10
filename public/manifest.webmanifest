@@ -1,9 +1,9 @@
 {
-  "name": "Futbobo — Sua carreira, seu legado",
+  "name": "Futbobo — Simulador de Carreira de Jogador",
   "short_name": "Futbobo",
-  "description": "Uma carreira mundial com contratos, metas, rivalidades, conquistas e Seleção.",
-  "start_url": "/futbobo/",
-  "scope": "/futbobo/",
+  "description": "Crie um jogador aos 12 anos e construa uma carreira mundial em 36 ligas e 139 seleções.",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0b1f17",
   "theme_color": "#0b1f17",

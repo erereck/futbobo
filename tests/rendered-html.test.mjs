@@ -1463,3 +1463,20 @@ test("recorta estampas do uniforme dentro da camisa", async () => {
   assert.match(drawKit, /ctx\.rotate\(-\.56\)/, "a faixa diagonal continua existindo dentro do recorte");
   assert.match(drawKit, /ctx\.restore\(\);\s*\}/);
 });
+
+test("publica metadados completos para buscadores no dominio oficial", async () => {
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  const robots = await readFile(new URL("../app/robots.ts", import.meta.url), "utf8");
+  const sitemap = await readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8");
+  const manifest = await readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8");
+
+  assert.match(layout, /Simulador de Carreira de Jogador de Futebol/);
+  assert.match(layout, /"@type": "VideoGame"/);
+  assert.match(layout, /alternates:[\s\S]*canonical: "\/"/);
+  assert.match(layout, /637 clubes, 36 ligas, 139 seleções/);
+  assert.match(robots, /https:\/\/futbobo\.top\/sitemap\.xml/);
+  assert.match(sitemap, /https:\/\/futbobo\.top\/copa\//);
+  assert.match(sitemap, /https:\/\/futbobo\.top\/botao\//);
+  assert.match(manifest, /"start_url": "\/"/);
+  assert.doesNotMatch(manifest, /\/futbobo\//);
+});
