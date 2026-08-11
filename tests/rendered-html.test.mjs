@@ -1488,16 +1488,23 @@ test("abre um X1 local real e reorganiza o menu por tipo de gameplay", async () 
   const styles = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
   const versusStyles = await readFile(new URL("../app/x1/x1.css", import.meta.url), "utf8");
 
-  assert.match(home, /className="welcome-game-hub"/);
-  assert.match(home, /CARREGAR CARREIRA/);
+  assert.match(home, /className="welcome-mode-menu"/);
+  assert.match(home, /className="mode-menu-grid"/);
+  assert.match(home, /Voltar ao vestiário/);
+  assert.match(home, /Resolver no sofá/);
+  assert.match(home, /Carregar carreira/);
   assert.match(home, /DESAFIO FUTBOBO/);
   assert.match(home, /href="\/copa"/);
   assert.match(home, /href="\/x1"/);
   assert.match(match, /controlMode\?: "cpu" \| "local"/);
   assert.match(match, /const activeSide = localMatch \? state\.turn : "user"/);
   assert.match(match, /if \(localMatch\) return;/);
+  assert.match(match, /hideUserMarker: localMatch/);
+  assert.match(match, /TOQUE NA TELA/);
   assert.match(versus, /controlMode="local"/);
   assert.match(versus, /Dois jogadores\./);
-  assert.match(styles, /\.quick-play-deck/);
+  assert.doesNotMatch(versus, /setFirstName|setSecondName/);
+  assert.match(versus, /Passe o aparelho/);
+  assert.match(styles, /\.mode-menu-grid/);
   assert.match(versusStyles, /\.x1-versus-builder/);
 });

@@ -1,6 +1,7 @@
 :root { --x1-blue: #58a9e8; }
 body:has(.x1-shell) { min-height: 100dvh; background: #050b08; }
 .x1-shell { min-height: 100dvh; max-width: 1260px; margin: 0 auto; padding: 24px 28px 36px; color: var(--text,#f2f5ed); }
+.x1-pointer-touch { display: none; }
 .x1-brand { display: flex; align-items: center; justify-content: space-between; padding-bottom: 18px; border-bottom: 1px solid var(--line,rgba(226,239,228,.09)); }
 .x1-brand a { color: var(--text,#f2f5ed); font: 900 21px var(--display,"Barlow Condensed",sans-serif); letter-spacing: -.02em; text-decoration: none; }
 .x1-brand span { color: var(--x1-blue); font-size: 9px; font-weight: 800; letter-spacing: .16em; }
@@ -56,6 +57,25 @@ body:has(.x1-shell) { min-height: 100dvh; background: #050b08; }
 .botao-root-local .botao-chip-local { color: var(--x1-blue); }
 .botao-root-local .botao-local-turn-chip { border-color: rgba(88,169,232,.28); background: rgba(88,169,232,.08); color: var(--text,#f2f5ed); }
 .botao-root-local .botao-turn-local b { color: var(--x1-blue); }
+
+/* Antessala compacta: o confronto ocupa o centro, não as bordas do monitor. */
+.x1-lobby-shell { display: grid; min-height: 100dvh; grid-template-rows: max-content max-content max-content max-content max-content; align-content: center; }
+.x1-lobby-shell .x1-brand { position: absolute; top: 24px; left: max(28px,calc(50% - 630px)); right: max(28px,calc(50% - 630px)); }
+.x1-lobby-shell .x1-intro { grid-template-columns: 1fr; justify-items: center; gap: 20px; padding: 28px 0 24px; text-align: center; }
+.x1-lobby-shell .x1-intro h1 { margin-block: 8px 12px; font-size: clamp(58px,6.3vw,84px); }
+.x1-lobby-shell .x1-intro p { max-width: 650px; }
+.x1-lobby-shell .x1-intro aside { width: min(620px,100%); grid-template-columns: 28px 1fr 28px 1fr 28px 1fr; text-align: left; }
+.x1-lobby-shell .x1-versus-builder,
+.x1-lobby-shell .x1-launch-strip { width: min(1000px,100%); margin-inline: auto; }
+.x1-lobby-shell .x1-versus-builder { grid-template-columns: minmax(0,1fr) 72px minmax(0,1fr); }
+.x1-lobby-shell .x1-player-card { grid-template-columns: 96px minmax(0,1fr); align-items: center; padding: 20px; }
+.x1-lobby-shell .x1-player-card > span { grid-column: 1 / -1; }
+.x1-lobby-shell .x1-player-card > .botao-crest { grid-row: 2 / 4; }
+.x1-lobby-shell .x1-player-card label,
+.x1-lobby-shell .x1-player-card > button { grid-column: 2; }
+.x1-lobby-shell .x1-launch-strip { margin-top: 12px; }
+.x1-lobby-shell .x1-back { width: min(1000px,100%); margin: 14px auto 0; }
+
 @media (max-width: 760px) {
   .x1-shell { padding: 16px 14px calc(24px + env(safe-area-inset-bottom)); }
   .x1-intro { grid-template-columns: 1fr; gap: 18px; padding-block: 28px 18px; }
@@ -75,6 +95,19 @@ body:has(.x1-shell) { min-height: 100dvh; background: #050b08; }
   .x1-result-score strong { font-size: 15px; }
   .x1-stat-grid { grid-template-columns: 1fr; }
   .x1-result-actions { grid-template-columns: 1fr; }
+  .x1-lobby-shell { display: block; }
+  .x1-lobby-shell .x1-brand { position: static; }
+  .x1-lobby-shell .x1-intro { padding-block: 28px 18px; }
+  .x1-lobby-shell .x1-intro > div { width: 100%; min-width: 0; }
+  .x1-lobby-shell .x1-intro h1 { width: 100%; font-size: clamp(48px,14vw,58px); overflow-wrap: anywhere; }
+  .x1-lobby-shell .x1-intro p { width: 100%; }
+  .x1-lobby-shell .x1-intro aside { min-width: 0; }
+  .x1-lobby-shell .x1-versus-builder { grid-template-columns: 1fr; }
+  .x1-lobby-shell .x1-player-card { grid-template-columns: 70px minmax(0,1fr); padding: 16px; }
+}
+@media (pointer: coarse) {
+  .x1-pointer-desktop { display: none; }
+  .x1-pointer-touch { display: inline; }
 }
 @media (prefers-reduced-motion: reduce) {
   .x1-shell * { scroll-behavior: auto !important; }

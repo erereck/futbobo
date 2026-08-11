@@ -521,6 +521,7 @@ export default function BotaoMatch({
           goalFlash: goalFlashRef.current,
           goalFlashSide: goalFlashSideRef.current,
           uprightLabels: desktopLandscape,
+          hideUserMarker: localMatch,
         },
         time,
       );
@@ -765,7 +766,7 @@ export default function BotaoMatch({
         ) : (
           <div className="botao-formation-row">
             <span className={`botao-chip ${localMatch ? "botao-chip-local" : ""}`}>
-              {localMatch ? "X1 LOCAL · UM MOUSE" : `${userFormation.name} · ${userFormation.shape}`}
+              {localMatch ? <>X1 LOCAL · <span className="botao-pointer-desktop">UM MOUSE</span><span className="botao-pointer-touch">TOQUE NA TELA</span></> : `${userFormation.name} · ${userFormation.shape}`}
             </span>
             {localMatch ? (
               <span className={`botao-chip botao-local-turn-chip botao-local-turn-${activeLocalSide}`}>

@@ -54,8 +54,6 @@ export default function LocalVersusPage() {
   const [screen, setScreen] = useState<Screen>("lobby");
   const [firstClubId, setFirstClubId] = useState(firstDefault.id);
   const [secondClubId, setSecondClubId] = useState(secondDefault.id);
-  const [firstName, setFirstName] = useState("Jogador 1");
-  const [secondName, setSecondName] = useState("Jogador 2");
   const [setup, setSetup] = useState<BotaoMatchSetup | null>(null);
   const [result, setResult] = useState<BotaoMatchResult | null>(null);
   const [activeReplay, setActiveReplay] = useState<number | null>(null);
@@ -68,10 +66,7 @@ export default function LocalVersusPage() {
 
   const firstClub = clubs.find((club) => club.id === firstClubId) ?? firstDefault;
   const secondClub = clubs.find((club) => club.id === secondClubId) ?? secondDefault;
-  const playerNames = useMemo(
-    () => ({ user: firstName.trim() || "Jogador 1", cpu: secondName.trim() || "Jogador 2" }),
-    [firstName, secondName],
-  );
+  const playerNames = useMemo(() => ({ user: "Jogador 1", cpu: "Jogador 2" }), []);
 
   const startMatch = () => {
     const seed = Math.floor(Math.random() * 1_000_000_000);
@@ -173,17 +168,16 @@ export default function LocalVersusPage() {
   }
 
   return (
-    <main className="x1-shell">
+    <main className="x1-shell x1-lobby-shell">
       <header className="x1-brand"><Link href="/">FUTBOBO</Link><span>X1 LOCAL</span></header>
       <section className="x1-intro">
-        <div><span>DUELO DE SOFÁ</span><h1>Dois jogadores.<br />Um mouse.</h1><p>Cada pessoa faz um toque e passa o mouse. Sem CPU, sem carreira e sem desculpa para a derrota.</p></div>
-        <aside><b>01</b><span>Jogue seu toque</span><b>02</b><span>Passe o mouse</span><b>03</b><span>Repita até o apito</span></aside>
+        <div><span>DUELO DE SOFÁ</span><h1>Dois jogadores.<br /><span className="x1-pointer-desktop">Um mouse.</span><span className="x1-pointer-touch">Uma tela.</span></h1><p>Cada pessoa faz um toque e passa <span className="x1-pointer-desktop">o mouse</span><span className="x1-pointer-touch">o aparelho</span>. Sem CPU, sem carreira e sem desculpa para a derrota.</p></div>
+        <aside><b>01</b><span>Jogue seu toque</span><b>02</b><span className="x1-pointer-desktop">Passe o mouse</span><span className="x1-pointer-touch">Passe o aparelho</span><b>03</b><span>Repita até o apito</span></aside>
       </section>
       <section className="x1-versus-builder">
         <article className="x1-player-card x1-player-one">
           <span>JOGADOR 1 · COMEÇA</span>
           <TeamCrest team={botaoTeamFromClub(firstClub)} size={78} />
-          <label>Nome<input value={firstName} maxLength={16} onChange={(event) => setFirstName(event.target.value)} /></label>
           <label>Clube<select value={firstClubId} onChange={(event) => {
             const id = event.target.value;
             setFirstClubId(id);
@@ -191,11 +185,10 @@ export default function LocalVersusPage() {
           }}>{clubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}</select></label>
           <button type="button" onClick={() => setFirstClubId(chooseDifferentClub(clubs, secondClubId).id)}>Sortear clube</button>
         </article>
-        <div className="x1-versus-mark"><small>UM MOUSE</small><strong>×</strong><span>TURNOS</span></div>
+        <div className="x1-versus-mark"><small><span className="x1-pointer-desktop">UM MOUSE</span><span className="x1-pointer-touch">UMA TELA</span></small><strong>×</strong><span>TURNOS</span></div>
         <article className="x1-player-card x1-player-two">
           <span>JOGADOR 2 · RESPONDE</span>
           <TeamCrest team={botaoTeamFromClub(secondClub)} size={78} />
-          <label>Nome<input value={secondName} maxLength={16} onChange={(event) => setSecondName(event.target.value)} /></label>
           <label>Clube<select value={secondClubId} onChange={(event) => {
             const id = event.target.value;
             setSecondClubId(id);

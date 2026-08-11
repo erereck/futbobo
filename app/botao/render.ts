@@ -56,6 +56,8 @@ export type BotaoRenderView = {
   goalFlashSide: BotaoSide | null;
   /** Mantém números e o selo "VC" legíveis quando a mesa gira no desktop. */
   uprightLabels?: boolean;
+  /** Duelo local controla os dois lados, então nenhum disco representa "você". */
+  hideUserMarker?: boolean;
 };
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
@@ -166,7 +168,7 @@ function drawDisc(
   ctx: CanvasRenderingContext2D,
   body: BotaoBody,
   colors: { primary: string; secondary: string },
-  options: { selected: boolean; ready: boolean; pulse: number; uprightLabel?: boolean; appearance?: PlayerAppearance | null },
+  options: { selected: boolean; ready: boolean; pulse: number; uprightLabel?: boolean; appearance?: PlayerAppearance | null; hideUserMarker?: boolean },
 ) {
   ctx.save();
   ctx.translate(body.x, body.y);
@@ -177,7 +179,7 @@ function drawDisc(
   ctx.ellipse(1.5, 3, body.radius * 0.95, body.radius * 0.78, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  if (body.isUserPlayer) {
+  if (body.isUserPlayer && !options.hideUserMarker) {
     ctx.strokeStyle = `rgba(255, 199, 44, ${0.35 + options.pulse * 0.35})`;
     ctx.lineWidth = 2.4;
     ctx.beginPath();
@@ -236,7 +238,7 @@ function drawDisc(
     ctx.fillText(String(body.number), 0, 0.5);
   }
 
-  if (body.isUserPlayer) {
+  if (body.isUserPlayer && !options.hideUserMarker) {
     ctx.fillStyle = "#ffc72c";
     ctx.font = "800 8px ui-sans-serif, system-ui, sans-serif";
     ctx.textBaseline = "top";
@@ -476,6 +478,7 @@ export function drawMatch(
       pulse,
       uprightLabel: view.uprightLabels,
       appearance: bodyAppearance(state.setup, body),
+      hideUserMarker: view.hideUserMarker,
     });
   }
 

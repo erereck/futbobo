@@ -1704,3 +1704,8 @@
   .botao-pause-overlay p { font-size: 11px; }
   .botao-pause-mark { width: 44px; height: 44px; }
 }
+.botao-pointer-touch { display: none; }
+@media (pointer: coarse) {
+  .botao-pointer-desktop { display: none; }
+  .botao-pointer-touch { display: inline; }
+}

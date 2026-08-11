@@ -7774,59 +7774,93 @@ export default function Home() {
               <button type="button" aria-label="Ver novidades do jogo" onClick={() => { setUpdateNoticePage("current"); setUpdateNoticeOpen(true); }}><b>⚽</b><span>Novidades</span></button>
             </nav>
           </header>
-          <div className="welcome-game-hub">
-            <section className="career-launch-card">
-              <div className="career-launch-art">
-                <Image
-                  className="welcome-hero-image"
-                  src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/assets/futbobo-hero-v6-background.webp`}
-                  alt=""
-                  fill
-                  priority
-                  sizes="(max-width: 760px) calc(100vw - 40px), 680px"
-                  unoptimized
-                />
-                <div className="career-launch-emblem" aria-hidden="true">
-                  <BrandMark size="hero" />
-                  <span>FUTBOBO</span>
-                  <small>MODO CARREIRA</small>
+          <main className="welcome-mode-menu">
+            <header className="mode-menu-heading">
+              <div>
+                <span>CENTRAL DE JOGO</span>
+                <h1>Onde a bola vai rolar?</h1>
+              </div>
+              <p>Continue uma história ou escolha uma partida rápida.</p>
+            </header>
+
+            <div className="mode-menu-grid">
+              <section className="mode-group career-mode-group" aria-labelledby="career-mode-title">
+                <header className="mode-group-heading">
+                  <span>01</span>
+                  <div><small>SUA HISTÓRIA</small><strong id="career-mode-title">Modo carreira</strong></div>
+                </header>
+                <div className="career-mode-choices">
+                  <button
+                    type="button"
+                    className={`game-mode-tile career-load-tile ${hasSave ? "is-primary" : "is-unavailable"}`}
+                    onClick={continueSave}
+                    disabled={!hasSave}
+                  >
+                    <span className="mode-tile-art" aria-hidden="true">
+                      <Image
+                        src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/assets/futbobo-hero-v6-background.webp`}
+                        alt=""
+                        fill
+                        priority
+                        sizes="(max-width: 640px) 35vw, 360px"
+                        unoptimized
+                      />
+                      <BrandMark size="hero" />
+                    </span>
+                    <span className="mode-tile-copy">
+                      <small>{hasSave ? "CARREIRA EM ANDAMENTO" : "ESPAÇO DE SAVE"}</small>
+                      <strong>{hasSave ? "Voltar ao vestiário" : "Nenhuma carreira salva"}</strong>
+                      <em>{hasSave ? "Continue exatamente do último capítulo." : "Comece uma nova história para liberar este espaço."}</em>
+                    </span>
+                    <span className="mode-tile-action">{hasSave ? "Carregar carreira" : "Indisponível"}<b>{hasSave ? "→" : "—"}</b></span>
+                  </button>
+
+                  <button type="button" className={`game-mode-tile career-new-tile ${hasSave ? "" : "is-primary"}`} onClick={startNew}>
+                    <span className="mode-tile-symbol" aria-hidden="true">＋</span>
+                    <span className="mode-tile-copy">
+                      <small>NOVO SAVE</small>
+                      <strong>Começar do zero</strong>
+                      <em>Crie jogador, origem e a carreira inteira.</em>
+                    </span>
+                    <span className="mode-tile-action">Nova carreira <b>→</b></span>
+                  </button>
                 </div>
-              </div>
-              <div className="career-launch-copy welcome-copy">
-                <span className="eyebrow">MODO CARREIRA · SUA HISTÓRIA COMPLETA</span>
-                <h1>Seu nome na camisa. O resto é história.</h1>
-                <p>Comece aos 12, atravesse clubes e continentes e decida quem você será quando a bola parar de rolar.</p>
-              </div>
-              <div className="career-launch-actions welcome-actions">
-                {hasSave ? (
-                  <button className="primary-button continue-career-button" onClick={continueSave}><small>CARREGAR CARREIRA</small>Continuar de onde parou <span>→</span></button>
-                ) : (
-                  <div className="empty-save-slot"><small>CARREGAR CARREIRA</small><strong>Nenhum save neste aparelho</strong></div>
-                )}
-                <button className={hasSave ? "secondary-button new-career-button" : "primary-button"} onClick={startNew}><small>NOVO SAVE</small>Começar nova carreira <span>＋</span></button>
-              </div>
-            </section>
-            <section className="quick-play-deck">
-              <header><div><span>JOGAR AGORA</span><strong>Escolha o ritmo da sessão</strong></div><small>3 MODOS RÁPIDOS</small></header>
-              <article className="challenge-card quick-mode-card quick-mode-challenge">
-                <div className="quick-mode-index"><b>24H</b><small>{todayChallenge.id}</small></div>
-                <div className="quick-mode-copy"><span>DESAFIO FUTBOBO</span><strong>Todos começam iguais.</strong><p>A mesma promessa diária; suas decisões definem o placar.</p></div>
-                <div className="quick-mode-record"><small>RECORDE</small><b>{todayChallengeBest?.score ?? "—"}</b><em>{todayChallengeResults.length} tentativas</em></div>
-                <button type="button" onClick={hasChallengeSave ? continueChallenge : startChallenge}>{hasChallengeSave ? "Continuar" : "Jogar"}<span>→</span></button>
-                {hasChallengeSave && <button className="challenge-restart" type="button" onClick={startChallenge}>Recomeçar</button>}
-              </article>
-              <Link className="quick-mode-card quick-mode-world" href="/copa" aria-label="Jogar uma Copa do Mundo">
-                <span className="quick-mode-index"><b>◎</b><small>MUNDIAL</small></span>
-                <span className="quick-mode-copy"><small>MODO COPA</small><strong>Uma campanha inteira.</strong><em>Fase de grupos ao título, sem precisar de save.</em></span>
-                <b className="quick-mode-arrow">→</b>
-              </Link>
-              <Link className="quick-mode-card quick-mode-local" href="/x1">
-                <span className="quick-mode-index"><b>1×1</b><small>LOCAL</small></span>
-                <span className="quick-mode-copy"><small>DOIS JOGADORES</small><strong>Um mouse. Zero CPU.</strong><em>Cada pessoa faz um toque e passa o controle.</em></span>
-                <b className="quick-mode-arrow">→</b>
-              </Link>
-            </section>
-          </div>
+              </section>
+
+              <section className="mode-group instant-mode-group" aria-labelledby="instant-mode-title">
+                <header className="mode-group-heading">
+                  <span>02</span>
+                  <div><small>SEM COMPROMISSO</small><strong id="instant-mode-title">Jogar agora</strong></div>
+                </header>
+                <div className="instant-mode-choices">
+                  <article className="game-mode-tile challenge-mode-tile">
+                    <span className="mode-tile-symbol" aria-hidden="true">24H</span>
+                    <span className="mode-tile-copy">
+                      <small>DESAFIO FUTBOBO · {todayChallenge.id}</small>
+                      <strong>Todos começam iguais.</strong>
+                      <em>Uma promessa por dia. Seu recorde: {todayChallengeBest?.score ?? "—"}.</em>
+                    </span>
+                    <div className="challenge-mode-actions">
+                      <button type="button" onClick={hasChallengeSave ? continueChallenge : startChallenge}>{hasChallengeSave ? "Continuar desafio" : "Jogar desafio"}<b>→</b></button>
+                      {hasChallengeSave && <button type="button" onClick={startChallenge} aria-label="Recomeçar desafio">↻</button>}
+                    </div>
+                  </article>
+
+                  <Link className="game-mode-tile cup-mode-tile" href="/copa" aria-label="Jogar uma Copa do Mundo">
+                    <span className="mode-tile-symbol" aria-hidden="true">◎</span>
+                    <span className="mode-tile-copy"><small>MODO COPA</small><strong>Buscar o mundo</strong><em>Da fase de grupos até a final.</em></span>
+                    <span className="mode-tile-action">Jogar Copa <b>→</b></span>
+                  </Link>
+
+                  <Link className="game-mode-tile local-mode-tile" href="/x1">
+                    <span className="mode-tile-symbol" aria-hidden="true">1×1</span>
+                    <span className="mode-tile-copy"><small>DUELO LOCAL</small><strong>Resolver no sofá</strong><em>Dois jogadores alternando o mouse.</em></span>
+                    <span className="mode-tile-action">Abrir X1 <b>→</b></span>
+                  </Link>
+                </div>
+              </section>
+            </div>
+          </main>
           {hallOfFame.length > 0 && (
             <div className="welcome-hall welcome-hall-rail">
               <div><span>HALL DA FAMA LOCAL</span><strong>Suas melhores carreiras</strong></div>
