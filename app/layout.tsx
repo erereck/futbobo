@@ -98,7 +98,7 @@ const structuredData = {
   operatingSystem: ["Web", "Android", "Windows"],
   applicationCategory: "Game",
   inLanguage: "pt-BR",
-  playMode: "SinglePlayer",
+  playMode: ["SinglePlayer", "MultiPlayer"],
   isAccessibleForFree: true,
   offers: {
     "@type": "Offer",
@@ -109,7 +109,7 @@ const structuredData = {
   author: { "@type": "Organization", name: "EriLab" },
   publisher: { "@type": "Organization", name: "EriLab" },
   datePublished: "2026-07-21",
-  dateModified: "2026-08-10",
+  dateModified: "2026-08-11",
 };
 
 export const viewport: Viewport = {

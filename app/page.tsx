@@ -7550,46 +7550,38 @@ export default function Home() {
             {updateNoticePage === "current" ? (
               <>
                 <header className="update-mega-hero">
-                  <div className="update-symbol">⚽</div>
+                  <div className="update-symbol">1×1</div>
                   <div>
-                    <span className="update-version">v90 · MUNDO SEM FRONTEIRAS</span>
-                    <h1 id="update-title">O mapa do Futbobo ficou muito maior.</h1>
+                    <span className="update-version">v91 · DUELO LOCAL</span>
+                    <h1 id="update-title">Agora a resenha cabe na mesma mesa.</h1>
                   </div>
                 </header>
-                <p>Novas ligas, clubes e seleções transformam cada carreira em uma viagem diferente — até o Vaticano pode tentar conquistar o mundo.</p>
+                <p>Dois jogadores usam o mesmo mouse, alternam um toque por vez e resolvem a rivalidade sem CPU, sem save e sem desculpa.</p>
                 <div className="update-mega-stats" aria-label="Resumo do update">
-                  <span><b>637</b> clubes</span>
-                  <span><b>36</b> ligas</span>
-                  <span><b>139</b> seleções</span>
+                  <span><b>2</b> jogadores</span>
+                  <span><b>1</b> mouse</span>
+                  <span><b>0</b> CPU</span>
                 </div>
                 <span className="update-section-label">O GRANDE DESTAQUE</span>
                 <div className="update-grid update-mega-grid">
-                  <article className="update-featured"><b>8</b><span><strong>Novas ligas completas</strong><small>Egito, África do Sul, Austrália, Marrocos, Grécia, Bolívia, Venezuela e Tchéquia entram com elencos inteiros.</small></span></article>
-                  <article><b>CAF</b><span><strong>África tem seu próprio topo</strong><small>A CAF Champions League ganhou classificação, campanha, taça e vaga no Mundial de Clubes.</small></span></article>
-                  <article><b>€</b><span><strong>Arábia realmente milionária</strong><small>Clubes sauditas agora convencem pelo salário: propostas podem superar em muito contratos europeus equivalentes.</small></span></article>
-                  <article><b>⚑</b><span><strong>Seleções improváveis</strong><small>Vaticano, San Marino, Nepal, Butão e dezenas de novos países podem escrever a carreira impossível.</small></span></article>
-                  <article><b>125</b><span><strong>Novos clubes com escudo</strong><small>Dos gigantes africanos aos azarões bolivianos, todos entram no mercado com identidade visual local.</small></span></article>
-                  <article><b>✓</b><span><strong>Camisas bem acabadas</strong><small>A faixa diagonal agora respeita o tecido e nunca mais atravessa o pescoço ou a cabeça do personagem.</small></span></article>
+                  <article className="update-featured"><b>↔</b><span><strong>X1 local por turnos</strong><small>Somente os botões do jogador da vez respondem. Faça a jogada, passe o mouse e veja seu amigo tentar responder.</small></span></article>
+                  <article><b>637</b><span><strong>Qualquer duelo</strong><small>Escolha dois clubes de toda a base ou sorteie confrontos completamente improváveis.</small></span></article>
+                  <article><b>II</b><span><strong>Pausa compartilhada</strong><small>Placar, pênaltis, replays e campo horizontal continuam completos no novo modo.</small></span></article>
+                  <article><b>⌂</b><span><strong>Menu reconstruído</strong><small>Carreira, save, desafio diário, Copa e X1 agora possuem lugares claros e proporções coerentes.</small></span></article>
                 </div>
-                <span className="update-section-label">O QUE CONTINUA INTACTO</span>
-                <div className="update-grid update-mega-grid">
-                  <article><b>◆</b><span><strong>Saves antigos protegidos</strong><small>As novas competições e seleções entram sem apagar ou reiniciar nenhuma carreira salva.</small></span></article>
-                  <article><b>↔</b><span><strong>Mercado continua coerente</strong><small>Cada nova liga possui força, economia e rotas regionais próprias em vez de propostas aleatórias.</small></span></article>
-                  <article><b>▣</b><span><strong>Leve e offline</strong><small>Escudos e bandeiras ficam dentro do jogo e funcionam integralmente também no APK.</small></span></article>
-                </div>
-                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Rostos em Campo e elencos com identidade</strong><b>→</b></button>
+                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Mundo sem Fronteiras</strong><b>→</b></button>
               </>
             ) : (
               <>
-                <span className="update-version previous">v89 · ROSTOS EM CAMPO</span>
-                <div className="update-symbol previous">☺</div>
-                <h1 id="update-title">Cada botão passou a carregar alguém da sua história.</h1>
-                <p>O criador de personagem e os elencos persistentes trocaram os discos anônimos por jogadores reconhecíveis dentro da mesa.</p>
+                <span className="update-version previous">v90 · MUNDO SEM FRONTEIRAS</span>
+                <div className="update-symbol previous">◎</div>
+                <h1 id="update-title">O mapa do Futbobo ficou muito maior.</h1>
+                <p>Novas ligas, clubes e seleções transformaram cada carreira em uma viagem diferente — até o Vaticano pode tentar conquistar o mundo.</p>
                 <div className="update-grid previous-grid">
-                  <article><b>22</b><span><strong>Cortes e identidade</strong><small>Rosto, cabelo, barba, expressão, pele e olhos passaram a acompanhar toda a carreira.</small></span></article>
-                  <article><b>5+5</b><span><strong>Elencos reconhecíveis</strong><small>Companheiros persistem no clube e adversários retornam iguais durante a mesma temporada.</small></span></article>
+                  <article><b>637</b><span><strong>Clubes pelo mundo</strong><small>36 ligas completas abriram novas rotas de mercado e de categorias de base.</small></span></article>
+                  <article><b>139</b><span><strong>Seleções jogáveis</strong><small>Gigantes, azarões e microestados entraram no universo internacional.</small></span></article>
                 </div>
-                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Mundo sem Fronteiras</strong><b>←</b></button>
+                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Duelo Local</strong><b>←</b></button>
               </>
             )}
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
@@ -7770,14 +7762,21 @@ export default function Home() {
 
       {game.phase === "welcome" && !hallPreview && (
         <section className="welcome-screen screen-enter">
-          <div className="brand-lockup" aria-label="Futbobo">
-            <BrandMark />
-            <span>FUTBOBO</span>
-            <small>CARREIRA</small>
-          </div>
-          <div className="welcome-layout">
-            <div className="welcome-main">
-              <div className="hero-pitch">
+          <header className="welcome-command-bar">
+            <div className="brand-lockup" aria-label="Futbobo">
+              <BrandMark />
+              <span>FUTBOBO</span>
+              <small>CENTRAL DE JOGO</small>
+            </div>
+            <nav className="welcome-utilities" aria-label="Ferramentas">
+              <button type="button" onClick={() => setSettingsOpen(true)}><b>⚙</b><span>Configurações</span></button>
+              <button type="button" onClick={installWebApp}><b>{nativeAndroid ? "↻" : "▣"}</b><span>{nativeAndroid ? "Atualizar" : androidPhone ? "Baixar APK" : "Instalar"}</span></button>
+              <button type="button" aria-label="Ver novidades do jogo" onClick={() => { setUpdateNoticePage("current"); setUpdateNoticeOpen(true); }}><b>⚽</b><span>Novidades</span></button>
+            </nav>
+          </header>
+          <div className="welcome-game-hub">
+            <section className="career-launch-card">
+              <div className="career-launch-art">
                 <Image
                   className="welcome-hero-image"
                   src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/assets/futbobo-hero-v6-background.webp`}
@@ -7787,65 +7786,62 @@ export default function Home() {
                   sizes="(max-width: 760px) calc(100vw - 40px), 680px"
                   unoptimized
                 />
-                <div className="welcome-hero-brand" aria-label="Futbobo">
+                <div className="career-launch-emblem" aria-hidden="true">
                   <BrandMark size="hero" />
-                  <div>
-                    <strong><span>FUT</span>BOBO</strong>
-                    <small>SUA CARREIRA. SEU LEGADO.</small>
-                  </div>
+                  <span>FUTBOBO</span>
+                  <small>MODO CARREIRA</small>
                 </div>
               </div>
-              <div className="welcome-copy">
-                <span className="eyebrow">SIMULADOR DE CARREIRA · FUTEBOL DE BOTÃO</span>
+              <div className="career-launch-copy welcome-copy">
+                <span className="eyebrow">MODO CARREIRA · SUA HISTÓRIA COMPLETA</span>
                 <h1>Seu nome na camisa. O resto é história.</h1>
                 <p>Comece aos 12, atravesse clubes e continentes e decida quem você será quando a bola parar de rolar.</p>
               </div>
-              <div className="welcome-actions">
-                {hasSave && <button className="primary-button continue-career-button" onClick={continueSave}><small>SEU SAVE</small>Continuar carreira <span>→</span></button>}
-                <button className={hasSave ? "secondary-button new-career-button" : "primary-button"} onClick={startNew}>Começar nova carreira <span>→</span></button>
+              <div className="career-launch-actions welcome-actions">
+                {hasSave ? (
+                  <button className="primary-button continue-career-button" onClick={continueSave}><small>CARREGAR CARREIRA</small>Continuar de onde parou <span>→</span></button>
+                ) : (
+                  <div className="empty-save-slot"><small>CARREGAR CARREIRA</small><strong>Nenhum save neste aparelho</strong></div>
+                )}
+                <button className={hasSave ? "secondary-button new-career-button" : "primary-button"} onClick={startNew}><small>NOVO SAVE</small>Começar nova carreira <span>＋</span></button>
               </div>
-            </div>
-            <aside className="welcome-side">
-              <section className="challenge-card">
-                <header><div><span>DESAFIO FUTBOBO</span><strong>Mesma promessa. Destinos opostos.</strong></div><b>24H</b></header>
-                <p>A semente de hoje é igual em todos os aparelhos. Escolhas diferentes, carreiras comparáveis.</p>
-                <div className="challenge-code"><small>CÓDIGO DE HOJE</small><strong>{todayChallenge.id}</strong></div>
-                <div className="challenge-score-row">
-                  <span><small>Seu recorde hoje</small><strong>{todayChallengeBest?.score ?? "—"}</strong></span>
-                  <span><small>Tentativas concluídas</small><strong>{todayChallengeResults.length}</strong></span>
-                </div>
-                <button type="button" onClick={hasChallengeSave ? continueChallenge : startChallenge}>
-                  {hasChallengeSave ? "Continuar desafio de hoje" : "Jogar o desafio de hoje"} <span>→</span>
-                </button>
-                {hasChallengeSave && <button className="challenge-restart" type="button" onClick={startChallenge}>Recomeçar com a mesma semente</button>}
-              </section>
-              <Link className="world-cup-quick-card" href="/copa">
-                <span className="world-cup-quick-mark">◎</span>
-                <span><small>MODO RÁPIDO</small><strong>Jogar uma Copa do Mundo</strong><em>Da fase de grupos à final · fora da carreira</em></span>
-                <b>→</b>
+            </section>
+            <section className="quick-play-deck">
+              <header><div><span>JOGAR AGORA</span><strong>Escolha o ritmo da sessão</strong></div><small>3 MODOS RÁPIDOS</small></header>
+              <article className="challenge-card quick-mode-card quick-mode-challenge">
+                <div className="quick-mode-index"><b>24H</b><small>{todayChallenge.id}</small></div>
+                <div className="quick-mode-copy"><span>DESAFIO FUTBOBO</span><strong>Todos começam iguais.</strong><p>A mesma promessa diária; suas decisões definem o placar.</p></div>
+                <div className="quick-mode-record"><small>RECORDE</small><b>{todayChallengeBest?.score ?? "—"}</b><em>{todayChallengeResults.length} tentativas</em></div>
+                <button type="button" onClick={hasChallengeSave ? continueChallenge : startChallenge}>{hasChallengeSave ? "Continuar" : "Jogar"}<span>→</span></button>
+                {hasChallengeSave && <button className="challenge-restart" type="button" onClick={startChallenge}>Recomeçar</button>}
+              </article>
+              <Link className="quick-mode-card quick-mode-world" href="/copa" aria-label="Jogar uma Copa do Mundo">
+                <span className="quick-mode-index"><b>◎</b><small>MUNDIAL</small></span>
+                <span className="quick-mode-copy"><small>MODO COPA</small><strong>Uma campanha inteira.</strong><em>Fase de grupos ao título, sem precisar de save.</em></span>
+                <b className="quick-mode-arrow">→</b>
               </Link>
-              {hallOfFame.length > 0 && (
-                <div className="welcome-hall">
-                  <div><span>HALL DA FAMA LOCAL</span><strong>Suas melhores carreiras</strong></div>
-                  {hallOfFame.slice(0, 3).map((entry, index) => (
-                    <button type="button" className="hall-career-link" key={entry.id} aria-label={`Ver carreira completa de ${entry.name}`} onClick={() => openHallCareer(entry)}>
-                      <b>#{index + 1}</b><ClubBadge club={clubById(entry.finalClubId)} size="sm" />
-                      <div className="welcome-hall-copy"><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.peakOverall} OVR</small></div><em>{entry.legacyPoints}</em>
-                    </button>
-                  ))}
-                </div>
-              )}
-              <nav className="welcome-utilities" aria-label="Ferramentas">
-                <button type="button" onClick={() => setSettingsOpen(true)}><b>⚙</b><span>Configurações</span></button>
-                <button type="button" onClick={installWebApp}><b>{nativeAndroid ? "↻" : "▣"}</b><span>{nativeAndroid ? "Atualizar" : androidPhone ? "Baixar APK" : "Instalar"}</span></button>
-                <button type="button" aria-label="Ver novidades do jogo" onClick={() => { setUpdateNoticePage("current"); setUpdateNoticeOpen(true); }}><b>⚽</b><span>Novidades</span></button>
-              </nav>
-              {installHelp && <div className="install-help">Use o menu do navegador e toque em <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>.</div>}
-            </aside>
+              <Link className="quick-mode-card quick-mode-local" href="/x1">
+                <span className="quick-mode-index"><b>1×1</b><small>LOCAL</small></span>
+                <span className="quick-mode-copy"><small>DOIS JOGADORES</small><strong>Um mouse. Zero CPU.</strong><em>Cada pessoa faz um toque e passa o controle.</em></span>
+                <b className="quick-mode-arrow">→</b>
+              </Link>
+            </section>
           </div>
-          <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
-          <footer className="welcome-version">
-            <span>FUTBOBO</span><b>v90 · MUNDO SEM FRONTEIRAS</b>
+          {hallOfFame.length > 0 && (
+            <div className="welcome-hall welcome-hall-rail">
+              <div><span>HALL DA FAMA LOCAL</span><strong>Suas melhores carreiras</strong></div>
+              {hallOfFame.slice(0, 3).map((entry, index) => (
+                <button type="button" className="hall-career-link" key={entry.id} aria-label={`Ver carreira completa de ${entry.name}`} onClick={() => openHallCareer(entry)}>
+                  <b>#{index + 1}</b><ClubBadge club={clubById(entry.finalClubId)} size="sm" />
+                  <div className="welcome-hall-copy"><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.peakOverall} OVR</small></div><em>{entry.legacyPoints}</em>
+                </button>
+              ))}
+            </div>
+          )}
+          {installHelp && <div className="install-help">Use o menu do navegador e toque em <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>.</div>}
+          <footer className="welcome-meta-footer">
+            <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
+            <div className="welcome-version"><span>FUTBOBO</span><b>v91 · DUELO LOCAL</b></div>
           </footer>
         </section>
       )}

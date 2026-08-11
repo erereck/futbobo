@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export const dynamic = "force-static";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date("2026-08-10T00:00:00-03:00");
+  const lastModified = new Date("2026-08-11T00:00:00-03:00");
 
   return [
     {
@@ -23,6 +23,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
       changeFrequency: "monthly",
       priority: 0.7,
+    },
+    {
+      url: "https://futbobo.top/x1/",
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.8,
     },
   ];
 }

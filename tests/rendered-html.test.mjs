@@ -7,8 +7,8 @@ const outputRoot = new URL("../out/", import.meta.url);
 test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  assert.match(pageSource, /<footer className="welcome-version">/);
-  assert.match(pageSource, /v90 · MUNDO SEM FRONTEIRAS/);
+  assert.match(pageSource, /className="welcome-version"/);
+  assert.match(pageSource, /v91 · DUELO LOCAL/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -49,7 +49,7 @@ test("adiciona desafio diario, avaliacao e departamento medico sem alterar a nav
 
   assert.match(page, /const CHALLENGE_SAVE_KEY = "futbobo:challenge-save:v1"/);
   assert.match(page, /function dailyChallenge/);
-  assert.match(page, /Mesma promessa\. Destinos opostos\./);
+  assert.match(page, /Todos começam iguais\./);
   assert.match(page, /function seasonAverageRating/);
   assert.match(page, /AVALIAÇÃO MÉDIA/);
   assert.match(page, /type MedicalRecord/);
@@ -869,7 +869,7 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /PATROCINADOR PESSOAL/);
   assert.match(page, /LINHA DO TEMPO/);
   assert.match(page, /setUpdateNoticePage\("previous"\)/);
-  assert.match(page, /v89 · ROSTOS EM CAMPO/);
+  assert.match(page, /v90 · MUNDO SEM FRONTEIRAS/);
   assert.match(page, /FORA DAS QUATRO LINHAS/);
   assert.match(gameData, /followers\?: number/);
   assert.match(gameData, /sponsorBrand\?: string/);
@@ -1479,4 +1479,25 @@ test("publica metadados completos para buscadores no dominio oficial", async () 
   assert.match(sitemap, /https:\/\/futbobo\.top\/botao\//);
   assert.match(manifest, /"start_url": "\/"/);
   assert.doesNotMatch(manifest, /\/futbobo\//);
+});
+
+test("abre um X1 local real e reorganiza o menu por tipo de gameplay", async () => {
+  const home = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
+  const versus = await readFile(new URL("../app/x1/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
+  const versusStyles = await readFile(new URL("../app/x1/x1.css", import.meta.url), "utf8");
+
+  assert.match(home, /className="welcome-game-hub"/);
+  assert.match(home, /CARREGAR CARREIRA/);
+  assert.match(home, /DESAFIO FUTBOBO/);
+  assert.match(home, /href="\/copa"/);
+  assert.match(home, /href="\/x1"/);
+  assert.match(match, /controlMode\?: "cpu" \| "local"/);
+  assert.match(match, /const activeSide = localMatch \? state\.turn : "user"/);
+  assert.match(match, /if \(localMatch\) return;/);
+  assert.match(versus, /controlMode="local"/);
+  assert.match(versus, /Dois jogadores\./);
+  assert.match(styles, /\.quick-play-deck/);
+  assert.match(versusStyles, /\.x1-versus-builder/);
 });

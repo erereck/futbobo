@@ -58,6 +58,7 @@ const REPLAY_MAX_TURNS = 3;
 const REPLAY_TURN_GAP_MS = 140;
 const REPLAY_COORDINATE_SCALE = 4;
 const SIDES: BotaoSide[] = ["user", "cpu"];
+const DEFAULT_LOCAL_PLAYER_NAMES: Record<BotaoSide, string> = { user: "Jogador 1", cpu: "Jogador 2" };
 
 type Flash = { text: string; tone: "goal" | "info" | "bad" } | null;
 
@@ -96,12 +97,19 @@ export default function BotaoMatch({
   setup,
   onFinish,
   startInPenalties = false,
+  controlMode = "cpu",
+  localPlayerNames,
 }: {
   setup: BotaoMatchSetup;
   onFinish: (result: BotaoMatchResult) => void;
   /** Pula direto para a decisão por pênaltis (modo de teste). */
   startInPenalties?: boolean;
+  /** No modo local, os dois lados usam o mesmo mouse em turnos alternados. */
+  controlMode?: "cpu" | "local";
+  localPlayerNames?: Record<BotaoSide, string>;
 }) {
+  const localMatch = controlMode === "local";
+  const playerNames = localPlayerNames ?? DEFAULT_LOCAL_PLAYER_NAMES;
   const matchRef = useRef<BotaoMatchState | null>(null);
   const machine =
     matchRef.current ??
@@ -267,7 +275,11 @@ export default function BotaoMatch({
         if (event.type === "idle-reset") showFlash("Bola ao centro", "info", 1100);
         if (event.type === "inactivity-penalty") {
           showFlash("PÊNALTI POR DEMORA!", "bad", 1700);
-          setAnnouncement(`Você demorou para jogar. Pênalti para ${machine.setup.cpuTeam.shortName}.`);
+          setAnnouncement(
+            localMatch
+              ? "O tempo da jogada terminou."
+              : `Você demorou para jogar. Pênalti para ${machine.setup.cpuTeam.shortName}.`,
+          );
         }
         if (event.type === "period-end") {
           playBotaoSound("whistle");
@@ -320,14 +332,20 @@ export default function BotaoMatch({
           goalFlashSideRef.current = event.side;
           setShaking(true);
           window.setTimeout(() => setShaking(false), 560);
-          const text = event.ownGoal ? "GOL CONTRA" : mine ? (event.byUser ? "SEU GOL!" : "GOL!") : "TOMOU GOL";
-          showFlash(text, mine ? "goal" : "bad", GOAL_PAUSE_MS - 200);
+          const text = event.ownGoal
+            ? "GOL CONTRA"
+            : localMatch
+              ? `GOL · ${playerNames[event.side].toLocaleUpperCase("pt-BR")}`
+              : mine
+                ? (event.byUser ? "SEU GOL!" : "GOL!")
+                : "TOMOU GOL";
+          showFlash(text, localMatch || mine ? "goal" : "bad", GOAL_PAUSE_MS - 200);
           setAnnouncement(`${text} ${event.scorer}. Placar ${machine.score.user} a ${machine.score.cpu}.`);
         }
       }
       bump();
     },
-    [bump, machine, showFlash],
+    [bump, localMatch, machine, playerNames, showFlash],
   );
 
   // ------------------------------------------------------------- loop de jogo
@@ -388,7 +406,7 @@ export default function BotaoMatch({
         goalFlashRef.current = Math.max(0, goalFlashRef.current - elapsed * 1.6);
       }
 
-      const waitingForUser = (state.phase === "aim" || state.phase === "kickoff") && state.turn === "user";
+      const waitingForUser = !localMatch && (state.phase === "aim" || state.phase === "kickoff") && state.turn === "user";
       if (!waitingForUser) {
         idleDeadlineRef.current = null;
         if (idleCountdownRef.current !== null) {
@@ -444,7 +462,11 @@ export default function BotaoMatch({
             const scored = outcome.scored;
             const shooting = state.penalties.turn;
             vibrate(scored ? [0, 50, 40, 90] : 30);
-            showFlash(scored ? "NA REDE!" : "PEGOU!", scored === (shooting === "user") ? "goal" : "bad", PENALTY_PAUSE_MS);
+            showFlash(
+              scored ? "NA REDE!" : "PEGOU!",
+              localMatch ? (scored ? "goal" : "bad") : scored === (shooting === "user") ? "goal" : "bad",
+              PENALTY_PAUSE_MS,
+            );
             const commitWhenRunning = () => {
               if (pausedRef.current) {
                 timersRef.current.penalty = window.setTimeout(commitWhenRunning, 120);
@@ -504,7 +526,7 @@ export default function BotaoMatch({
       );
     });
     return () => cancelAnimationFrame(frame);
-  }, [handleEvents, bump, showFlash, desktopLandscape]);
+  }, [handleEvents, bump, showFlash, desktopLandscape, localMatch]);
 
   // -------------------------------------------------------- gol e intervalo
   useEffect(() => {
@@ -530,6 +552,7 @@ export default function BotaoMatch({
   // -------------------------------------------------------------- vez da CPU
   useEffect(() => {
     const state = matchRef.current;
+    if (localMatch) return;
     if (!state || timersRef.current.cpu !== null) return;
     const openPlay = (state.phase === "aim" || state.phase === "kickoff") && state.turn === "cpu";
     const penalty = state.phase === "penalties" && state.penalties?.turn === "cpu" && !state.penalties.shotInFlight;
@@ -570,7 +593,7 @@ export default function BotaoMatch({
       bump();
     };
     timersRef.current.cpu = window.setTimeout(playCpuTurn, CPU_THINK_MS);
-  }, [signature, bump, paused]);
+  }, [signature, bump, paused, localMatch]);
 
   // ------------------------------------------------------------------- fim
   useEffect(() => {
@@ -585,33 +608,34 @@ export default function BotaoMatch({
     state.result = result;
     const won = result.outcome === "win";
     const victoryLabel = state.setup.stageName === "Final" ? "CAMPEÃO!" : "CLASSIFICADO!";
-    showFlash(won ? victoryLabel : "FIM DE JOGO", won ? "goal" : "bad", 2400);
+    showFlash(localMatch ? "FIM DE JOGO" : won ? victoryLabel : "FIM DE JOGO", localMatch || won ? "goal" : "bad", 2400);
     vibrate(won ? [0, 90, 60, 90, 60, 160] : [0, 200]);
     timersRef.current.finish = window.setTimeout(() => {
       timersRef.current.finish = null;
       onFinishRef.current(result);
     }, 1800);
-  }, [signature, showFlash]);
+  }, [signature, showFlash, localMatch]);
 
   // -------------------------------------------------------------- interação
   const shootableAt = useCallback((x: number, y: number) => {
     const state = matchRef.current;
     if (!state) return null;
     if (state.phase === "penalties") {
-      if (!state.penalties || state.penalties.shotInFlight || state.penalties.turn !== "user") return null;
+      if (!state.penalties || state.penalties.shotInFlight || (!localMatch && state.penalties.turn !== "user")) return null;
       const shooter = penaltyShooter(state);
       return Math.hypot(shooter.x - x, shooter.y - y) <= shooter.radius + 16 ? shooter : null;
     }
-    if (state.turn !== "user") return null;
+    if (!localMatch && state.turn !== "user") return null;
+    const activeSide = localMatch ? state.turn : "user";
     let best: { id: string; distance: number } | null = null;
     for (const body of state.bodies) {
-      if (body.kind !== "disc" || body.side !== "user") continue;
+      if (body.kind !== "disc" || body.side !== activeSide) continue;
       const distance = Math.hypot(body.x - x, body.y - y);
       if (distance <= body.radius + 12 && (!best || distance < best.distance)) best = { id: body.id, distance };
     }
     if (!best || !canShoot(state, best.id)) return null;
     return state.bodies.find((body) => body.id === best?.id) ?? null;
-  }, []);
+  }, [localMatch]);
 
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -685,10 +709,12 @@ export default function BotaoMatch({
   const userFormation = formationById(state.formationId.user);
   const roleLabel = player ? slotRoleLabel(userFormation.slots[player.slot] ?? userFormation.slots[0]) : "";
   const yourTurn = (state.phase === "aim" || state.phase === "kickoff") && state.turn === "user";
+  const activeLocalSide = state.penalties?.turn ?? state.turn;
+  const activeLocalName = playerNames[activeLocalSide];
   const penalties = state.penalties;
 
   return (
-    <div className={`botao-root ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""}`}>
+    <div className={`botao-root ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""}`}>
       <header className="botao-hud">
         <div className="botao-hud-top">
           <span className="botao-competition">
@@ -738,10 +764,14 @@ export default function BotaoMatch({
           </div>
         ) : (
           <div className="botao-formation-row">
-            <span className="botao-chip">
-              {userFormation.name} · {userFormation.shape}
+            <span className={`botao-chip ${localMatch ? "botao-chip-local" : ""}`}>
+              {localMatch ? "X1 LOCAL · UM MOUSE" : `${userFormation.name} · ${userFormation.shape}`}
             </span>
-            {player ? (
+            {localMatch ? (
+              <span className={`botao-chip botao-local-turn-chip botao-local-turn-${activeLocalSide}`}>
+                {activeLocalName} · {activeLocalSide === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr}
+              </span>
+            ) : player ? (
               <span className="botao-chip botao-chip-you">
                 VC #{player.number} · {roleLabel}
               </span>
@@ -762,14 +792,14 @@ export default function BotaoMatch({
         <canvas
           ref={canvasRef}
           className="botao-canvas"
-          aria-label={`Mesa de futebol de botão. ${setup.userTeam.shortName} ${state.score.user}, ${setup.cpuTeam.shortName} ${state.score.cpu}. ${yourTurn ? "Sua vez de tacar." : "Vez do adversário."}`}
+          aria-label={`Mesa de futebol de botão. ${setup.userTeam.shortName} ${state.score.user}, ${setup.cpuTeam.shortName} ${state.score.cpu}. ${localMatch ? `Vez de ${activeLocalName}.` : yourTurn ? "Sua vez de tacar." : "Vez do adversário."}`}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         />
         {flash ? <div className={`botao-flash botao-flash-${flash.tone}`}>{flash.text}</div> : null}
-        {idleCountdown !== null ? (
+        {!localMatch && idleCountdown !== null ? (
           <div className="botao-inactivity-countdown" role="alert" aria-live="assertive">
             <small>JOGUE AGORA</small>
             <strong>{idleCountdown}</strong>
@@ -781,7 +811,7 @@ export default function BotaoMatch({
             <span className="botao-pause-mark" aria-hidden="true">II</span>
             <small>INTERVALO TÉCNICO</small>
             <strong>Partida pausada</strong>
-            <p>Relógio, adversário e bola estão congelados.</p>
+            <p>{localMatch ? "Relógio e bola estão congelados." : "Relógio, adversário e bola estão congelados."}</p>
             <button type="button" className="botao-primary" onClick={togglePause}>
               Retomar partida <span aria-hidden="true">▶</span>
             </button>
@@ -812,29 +842,35 @@ export default function BotaoMatch({
         {!paused && state.phase === "penalty-setup" && penalties ? (
           <div className="botao-overlay">
             <strong>Disputa de pênaltis</strong>
-            <p>
-              Cada botão bate uma cobrança, alternado. Em qual delas{" "}
-              <b>{player ? `${player.label} (#${player.number})` : "você"}</b> vai bater?
-            </p>
-            <div className="botao-round-picker">
-              {Array.from({ length: Math.min(setup.rules.penaltyRounds, 5) }).map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  className="botao-option"
-                  aria-pressed={penalties.playerRound === index + 1}
-                  onClick={() => {
-                    const current = matchRef.current;
-                    if (!current?.penalties) return;
-                    current.penalties.playerRound = index + 1;
-                    bump();
-                  }}
-                >
-                  {index + 1}ª
-                  {index + 1 === setup.rules.penaltyRounds ? <small>decisiva</small> : null}
-                </button>
-              ))}
-            </div>
+            {localMatch ? (
+              <p>Os jogadores alternam as cobranças com o mesmo mouse. <b>{playerNames.user}</b> começa.</p>
+            ) : (
+              <>
+                <p>
+                  Cada botão bate uma cobrança, alternado. Em qual delas{" "}
+                  <b>{player ? `${player.label} (#${player.number})` : "você"}</b> vai bater?
+                </p>
+                <div className="botao-round-picker">
+                  {Array.from({ length: Math.min(setup.rules.penaltyRounds, 5) }).map((_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      className="botao-option"
+                      aria-pressed={penalties.playerRound === index + 1}
+                      onClick={() => {
+                        const current = matchRef.current;
+                        if (!current?.penalties) return;
+                        current.penalties.playerRound = index + 1;
+                        bump();
+                      }}
+                    >
+                      {index + 1}ª
+                      {index + 1 === setup.rules.penaltyRounds ? <small>decisiva</small> : null}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <button
               type="button"
               className="botao-primary"
@@ -846,7 +882,7 @@ export default function BotaoMatch({
                 bump();
               }}
             >
-              Começar a disputa
+              {localMatch ? "Começar o desempate" : "Começar a disputa"}
             </button>
           </div>
         ) : null}
@@ -856,12 +892,18 @@ export default function BotaoMatch({
         {paused ? (
           <p className="botao-turn botao-turn-paused">Jogo congelado · retome quando estiver pronto</p>
         ) : state.phase === "penalty-setup" ? (
-          <p className="botao-turn">Escolha a sua cobrança</p>
+          <p className="botao-turn">{localMatch ? "Preparem as cobranças" : "Escolha a sua cobrança"}</p>
         ) : penalties ? (
-          <p className={`botao-turn ${penalties.turn === "user" ? "botao-turn-active" : ""}`}>
-            {penalties.turn === "user"
-              ? `${penalties.round}ª cobrança · bate ${penaltyShooter(state).label} — arraste e solte no tempo do goleiro`
-              : `${penalties.round}ª cobrança · ${setup.cpuTeam.shortName} ${penaltyShooter(state).label} vai bater`}
+          <p className={`botao-turn ${localMatch || penalties.turn === "user" ? "botao-turn-active" : ""}`}>
+            {localMatch
+              ? `${activeLocalName} · ${penalties.round}ª cobrança — arraste e solte no tempo do goleiro`
+              : penalties.turn === "user"
+                ? `${penalties.round}ª cobrança · bate ${penaltyShooter(state).label} — arraste e solte no tempo do goleiro`
+                : `${penalties.round}ª cobrança · ${setup.cpuTeam.shortName} ${penaltyShooter(state).label} vai bater`}
+          </p>
+        ) : localMatch && (state.phase === "aim" || state.phase === "kickoff") ? (
+          <p className={`botao-turn botao-turn-active botao-turn-local botao-turn-local-${activeLocalSide}`}>
+            <b>{activeLocalName}</b> · passe o mouse e faça seu toque
           </p>
         ) : yourTurn ? (
           <p className="botao-turn botao-turn-active">Sua vez — arraste um botão para trás e solte</p>
