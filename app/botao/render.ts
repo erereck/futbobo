@@ -212,8 +212,9 @@ function drawDisc(
     ctx.restore();
   }
 
-  ctx.strokeStyle = body.isUserPlayer ? "#ffc72c" : colors.secondary;
-  ctx.lineWidth = body.isUserPlayer ? 3 : 2;
+  const highlightedPlayer = body.isUserPlayer && !options.hideUserMarker;
+  ctx.strokeStyle = highlightedPlayer ? "#ffc72c" : colors.secondary;
+  ctx.lineWidth = highlightedPlayer ? 3 : 2;
   ctx.beginPath();
   ctx.arc(0, 0, body.radius - 1.4, 0, Math.PI * 2);
   ctx.stroke();
@@ -233,7 +234,7 @@ function drawDisc(
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   if (!options.appearance) {
-    ctx.fillStyle = body.isUserPlayer ? "#ffc72c" : readableInk(colors.primary);
+    ctx.fillStyle = highlightedPlayer ? "#ffc72c" : readableInk(colors.primary);
     ctx.font = `700 ${body.radius * 0.92}px ui-sans-serif, system-ui, sans-serif`;
     ctx.fillText(String(body.number), 0, 0.5);
   }
@@ -526,7 +527,7 @@ export function drawReplayFrame(
     const colors = rendered.side === "user"
       ? { primary: setup.userTeam.primary, secondary: setup.userTeam.secondary }
       : { primary: setup.cpuTeam.primary, secondary: setup.cpuTeam.secondary };
-    drawDisc(ctx, rendered, colors, { selected: false, ready: false, pulse: 0, appearance: bodyAppearance(setup, rendered) });
+    drawDisc(ctx, rendered, colors, { selected: false, ready: false, pulse: 0, appearance: bodyAppearance(setup, rendered), hideUserMarker: setup.localControl });
   });
   const ball = renderedBodies.find((body) => body.kind === "ball");
   if (ball) {

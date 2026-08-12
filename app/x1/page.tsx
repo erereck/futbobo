@@ -14,6 +14,7 @@ import "../botao/botao.css";
 import "./x1.css";
 
 type Screen = "lobby" | "match" | "result";
+type X1RulePresetId = "settings" | "flash" | "classic" | "marathon";
 type StoredSettings = {
   botaoGoalLimit?: 0 | 3 | 5;
   botaoHalfSeconds?: 90 | 120 | 180;
@@ -21,6 +22,13 @@ type StoredSettings = {
   botaoPenaltyRounds?: 3 | 5;
   characterButtonsEnabled?: boolean;
 };
+
+const X1_RULE_PRESETS: Array<{ id: X1RulePresetId; label: string; detail: string; rules: BotaoRules | null }> = [
+  { id: "settings", label: "Minhas regras", detail: "Usar configuração atual", rules: null },
+  { id: "flash", label: "Relâmpago", detail: "2 gols · 90 segundos", rules: { ...DEFAULT_BOTAO_RULES, goalLimit: 2, halfSeconds: 90, extraSeconds: 30, penaltyRounds: 3 } },
+  { id: "classic", label: "Clássico", detail: "3 gols · 2 minutos", rules: { ...DEFAULT_BOTAO_RULES, goalLimit: 3, halfSeconds: 120, extraSeconds: 45, penaltyRounds: 5 } },
+  { id: "marathon", label: "Maratona", detail: "5 gols · 3 minutos", rules: { ...DEFAULT_BOTAO_RULES, goalLimit: 5, halfSeconds: 180, extraSeconds: 60, penaltyRounds: 5 } },
+];
 
 function loadMatchSettings(rawSettings = "{}"): { rules: BotaoRules; characters: boolean } {
   try {
@@ -54,6 +62,7 @@ export default function LocalVersusPage() {
   const [screen, setScreen] = useState<Screen>("lobby");
   const [firstClubId, setFirstClubId] = useState(firstDefault.id);
   const [secondClubId, setSecondClubId] = useState(secondDefault.id);
+  const [rulePresetId, setRulePresetId] = useState<X1RulePresetId>("settings");
   const [setup, setSetup] = useState<BotaoMatchSetup | null>(null);
   const [result, setResult] = useState<BotaoMatchResult | null>(null);
   const [activeReplay, setActiveReplay] = useState<number | null>(null);
@@ -63,6 +72,10 @@ export default function LocalVersusPage() {
     () => "{}",
   );
   const matchSettings = useMemo(() => loadMatchSettings(settingsSnapshot), [settingsSnapshot]);
+  const selectedRules = useMemo(
+    () => X1_RULE_PRESETS.find((preset) => preset.id === rulePresetId)?.rules ?? matchSettings.rules,
+    [matchSettings.rules, rulePresetId],
+  );
 
   const firstClub = clubs.find((club) => club.id === firstClubId) ?? firstDefault;
   const secondClub = clubs.find((club) => club.id === secondClubId) ?? secondDefault;
@@ -87,7 +100,8 @@ export default function LocalVersusPage() {
       userTeam: contrasted.user,
       cpuTeam: contrasted.cpu,
       difficulty: 3,
-      rules: matchSettings.rules,
+      rules: selectedRules,
+      localControl: true,
       visuals: visualRosterForMatch({
         enabled: matchSettings.characters,
         seed,
@@ -197,8 +211,18 @@ export default function LocalVersusPage() {
           <button type="button" onClick={() => setSecondClubId(chooseDifferentClub(clubs, firstClubId).id)}>Sortear clube</button>
         </article>
       </section>
+      <section className="x1-rule-presets" aria-labelledby="x1-rule-preset-title">
+        <header><span>FORMATO DA PARTIDA</span><strong id="x1-rule-preset-title">Escolha o ritmo</strong></header>
+        <div>
+          {X1_RULE_PRESETS.map((preset) => (
+            <button key={preset.id} type="button" aria-pressed={rulePresetId === preset.id} onClick={() => setRulePresetId(preset.id)}>
+              <strong>{preset.label}</strong><small>{preset.id === "settings" ? (matchSettings.rules.goalLimit ? `${matchSettings.rules.goalLimit} gols · ${matchSettings.rules.halfSeconds}s` : `${matchSettings.rules.halfSeconds}s · sem limite`) : preset.detail}</small>
+            </button>
+          ))}
+        </div>
+      </section>
       <section className="x1-launch-strip">
-        <div><span>REGRAS ATUAIS</span><strong>{matchSettings.rules.goalLimit ? `Primeiro a ${matchSettings.rules.goalLimit} gols` : `${matchSettings.rules.halfSeconds}s de jogo`} · pênaltis ligados</strong></div>
+        <div><span>REGRAS DESTE X1</span><strong>{selectedRules.goalLimit ? `Primeiro a ${selectedRules.goalLimit} gols` : `${selectedRules.halfSeconds}s de jogo`} · pênaltis ligados</strong></div>
         <button type="button" onClick={startMatch}>Começar o X1 <span>→</span></button>
       </section>
       <Link className="x1-back" href="/">← Voltar ao menu principal</Link>

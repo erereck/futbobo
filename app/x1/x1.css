@@ -59,7 +59,7 @@ body:has(.x1-shell) { min-height: 100dvh; background: #050b08; }
 .botao-root-local .botao-turn-local b { color: var(--x1-blue); }
 
 /* Antessala compacta: o confronto ocupa o centro, não as bordas do monitor. */
-.x1-lobby-shell { display: grid; min-height: 100dvh; grid-template-rows: max-content max-content max-content max-content max-content; align-content: center; }
+.x1-lobby-shell { display: grid; min-height: 100dvh; grid-template-rows: repeat(6,max-content); align-content: center; }
 .x1-lobby-shell .x1-brand { position: absolute; top: 24px; left: max(28px,calc(50% - 630px)); right: max(28px,calc(50% - 630px)); }
 .x1-lobby-shell .x1-intro { grid-template-columns: 1fr; justify-items: center; gap: 20px; padding: 28px 0 24px; text-align: center; }
 .x1-lobby-shell .x1-intro h1 { margin-block: 8px 12px; font-size: clamp(58px,6.3vw,84px); }
@@ -68,11 +68,50 @@ body:has(.x1-shell) { min-height: 100dvh; background: #050b08; }
 .x1-lobby-shell .x1-versus-builder,
 .x1-lobby-shell .x1-launch-strip { width: min(1000px,100%); margin-inline: auto; }
 .x1-lobby-shell .x1-versus-builder { grid-template-columns: minmax(0,1fr) 72px minmax(0,1fr); }
-.x1-lobby-shell .x1-player-card { grid-template-columns: 96px minmax(0,1fr); align-items: center; padding: 20px; }
+.x1-lobby-shell .x1-player-card { grid-template-columns: minmax(0,1fr); grid-template-rows: max-content 86px max-content max-content; align-items: center; justify-items: center; gap: 10px; padding: 18px 24px; }
 .x1-lobby-shell .x1-player-card > span { grid-column: 1 / -1; }
-.x1-lobby-shell .x1-player-card > .botao-crest { grid-row: 2 / 4; }
+.x1-lobby-shell .x1-player-card > .botao-crest { grid-row: auto; grid-column: 1; align-self: center; }
 .x1-lobby-shell .x1-player-card label,
-.x1-lobby-shell .x1-player-card > button { grid-column: 2; }
+.x1-lobby-shell .x1-player-card > button { grid-column: 1; width: min(330px,100%); }
+.x1-lobby-shell .x1-player-card label { width: min(330px,100%); }
+.x1-lobby-shell .x1-player-card label select { width: 100%; }
+.x1-rule-presets {
+  display: grid;
+  width: min(1000px,100%);
+  grid-template-columns: 148px minmax(0,1fr);
+  align-items: stretch;
+  gap: 10px;
+  margin: 12px auto 0;
+  padding: 10px;
+  border: 1px solid var(--line,rgba(226,239,228,.09));
+  border-radius: 12px;
+  background: rgba(11,24,18,.62);
+}
+.x1-rule-presets > header { display: grid; align-content: center; gap: 3px; padding: 4px 8px; }
+.x1-rule-presets > header span { color: var(--x1-blue); font-size: 7px; font-weight: 800; letter-spacing: .14em; }
+.x1-rule-presets > header strong { font: 800 18px/.95 var(--display,"Barlow Condensed",sans-serif); }
+.x1-rule-presets > div { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; }
+.x1-rule-presets button {
+  display: grid;
+  min-width: 0;
+  min-height: 58px;
+  align-content: center;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--line,rgba(226,239,228,.09));
+  border-radius: 8px;
+  background: #07110d;
+  color: var(--text,#f2f5ed);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms cubic-bezier(.23,1,.32,1), border-color 140ms cubic-bezier(.23,1,.32,1), background-color 140ms cubic-bezier(.23,1,.32,1);
+}
+.x1-rule-presets button:hover { border-color: var(--line-strong,rgba(226,239,228,.16)); }
+.x1-rule-presets button:active { transform: scale(.98); }
+.x1-rule-presets button:focus-visible { outline: 2px solid var(--x1-blue); outline-offset: 2px; }
+.x1-rule-presets button[aria-pressed="true"] { border-color: rgba(88,169,232,.55); background: rgba(88,169,232,.1); }
+.x1-rule-presets button strong { overflow: hidden; font: 800 14px var(--display,"Barlow Condensed",sans-serif); text-overflow: ellipsis; white-space: nowrap; }
+.x1-rule-presets button small { overflow: hidden; color: var(--muted,#aab8ac); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
 .x1-lobby-shell .x1-launch-strip { margin-top: 12px; }
 .x1-lobby-shell .x1-back { width: min(1000px,100%); margin: 14px auto 0; }
 
@@ -103,7 +142,12 @@ body:has(.x1-shell) { min-height: 100dvh; background: #050b08; }
   .x1-lobby-shell .x1-intro p { width: 100%; }
   .x1-lobby-shell .x1-intro aside { min-width: 0; }
   .x1-lobby-shell .x1-versus-builder { grid-template-columns: 1fr; }
-  .x1-lobby-shell .x1-player-card { grid-template-columns: 70px minmax(0,1fr); padding: 16px; }
+  .x1-lobby-shell .x1-player-card { grid-template-columns: 1fr; grid-template-rows: max-content 86px max-content max-content; padding: 16px; }
+  .x1-lobby-shell .x1-player-card label,
+  .x1-lobby-shell .x1-player-card > button { grid-column: 1; width: 100%; }
+  .x1-rule-presets { grid-template-columns: 1fr; margin-top: 8px; }
+  .x1-rule-presets > header { padding: 2px 4px 5px; }
+  .x1-rule-presets > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 @media (pointer: coarse) {
   .x1-pointer-desktop { display: none; }

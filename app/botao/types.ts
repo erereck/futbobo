@@ -120,6 +120,8 @@ export type BotaoMatchSetup = {
   cpuTeam: BotaoTeam;
   difficulty: BotaoDifficulty;
   rules: BotaoRules;
+  /** Partida local sem protagonista: os dois lados pertencem a jogadores reais. */
+  localControl?: boolean;
   /** Optional vector characters. Missing or disabled keeps classic shirt numbers. */
   visuals?: BotaoVisualRoster;
   /** Quando presente, a partida começa com o jogador saindo do banco. */

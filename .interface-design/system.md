@@ -80,6 +80,12 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Azul `broadcast` identifica seleção e Copa; amarelo `referee` permanece reservado para a ação imediata e a taça.
 - No mobile, a lista de países rola dentro do próprio painel e a chamada para jogar continua visível sem competir com o seletor.
 
+### Duelo local
+
+- A antessala do X1 usa dois cartões de clube rigorosamente espelhados; escudo, seletor e sorteio compartilham as mesmas linhas e larguras nos dois lados.
+- Presets de ritmo ficam entre os clubes e a ação de começar. São ajustes descartáveis do X1 e nunca escrevem nas configurações globais.
+- Não existe protagonista no X1: nenhum disco recebe selo `VC`, aro amarelo ou tinta especial de jogador da carreira.
+
 ### Mesa de decisão mobile
 
 - A aba Carreira/decisão é a única tela de conteúdo que não rola: cabeçalho, quatro barras, contrato, mercado, meta, capítulo e opções cabem juntos em `100dvh`.

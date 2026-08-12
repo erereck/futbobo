@@ -1502,6 +1502,10 @@ test("abre um X1 local real e reorganiza o menu por tipo de gameplay", async () 
   assert.match(match, /hideUserMarker: localMatch/);
   assert.match(match, /TOQUE NA TELA/);
   assert.match(versus, /controlMode="local"/);
+  assert.match(versus, /localControl: true/);
+  assert.match(versus, /Relâmpago/);
+  assert.match(versus, /Maratona/);
+  assert.match(versus, /setRulePresetId/);
   assert.match(versus, /Dois jogadores\./);
   assert.doesNotMatch(versus, /setFirstName|setSecondName/);
   assert.match(versus, /Passe o aparelho/);
