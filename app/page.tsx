@@ -85,6 +85,7 @@ import { simulateBotaoMatch } from "./botao/simulate";
 import type { BotaoMatchResult, BotaoMatchSetup } from "./botao/types";
 import { PLAYER_STORIES, playerStoryById, type PlayerStoryId } from "./player-stories";
 import { STORY_CHAPTER_BEATS } from "./story-chapters";
+import { GOALKEEPER_EVENTS, GOALKEEPER_YOUTH_EVENTS } from "./goalkeeper-events";
 
 type Phase =
   | "welcome"
@@ -678,7 +679,7 @@ function awardPresentation(award: string): AwardPresentation {
   }
   if (award.includes("Artilheiro") || award.includes("Chuteira")) return { icon: "◎", tier: "regular", kicker: "DESTAQUE OFENSIVO", description: "Ninguém marcou mais que você." };
   if (award.includes("Assistências") || award.includes("Meio-Campista")) return { icon: "✦", tier: "regular", kicker: "MESTRE DA CRIAÇÃO", description: "A temporada passou pelos seus pés." };
-  if (award.includes("Yashin") || award.includes("Luva")) return { icon: "◆", tier: "elite", kicker: "PAREDE DA TEMPORADA", description: "Você dominou a área e decidiu jogos." };
+  if (award.includes("Yashin") || award.includes("Luva") || award.includes("Goleiro") || award.includes("Muralha")) return { icon: "◆", tier: "elite", kicker: "PAREDE DA TEMPORADA", description: "Você dominou a área e decidiu jogos." };
   if (award.includes("Defensor")) return { icon: "⬡", tier: "regular", kicker: "PILAR DEFENSIVO", description: "Sua segurança mudou o nível da equipe." };
   if (award.includes("Puskás")) return { icon: "↗", tier: "elite", kicker: "GOL DO ANO", description: "Um lance para ser lembrado por décadas." };
   if (award.includes("Jogador do Ano") || award.includes("Craque") || award.includes("MVP") || award.includes("FIFPRO")) {
@@ -782,7 +783,7 @@ const RANDOM_NAME_LAST_PART = [
   "Ueda", "Valderrama Jr", "Watanabe", "Ximenes", "Yamamoto", "Zagallo Neto", "Antunes", "Beckenbauer da Costa", "Cavalcanti", "Delacroix", "El Fenómeno", "Figueiroa", "Gamarra", "Hernández", "Imperador", "Jardim", "Kovačić", "Lima-Lima", "Montenegro", "Nascimento",
   "Oliveirinha", "Puskás Filho", "Reis de Tóquio", "Santoro", "Torres do Norte", "Uribe", "van Helsing", "Wakabayashi", "Xavierson", "Yıldız", "Zé Europa", "Africano", "Baggio Filho", "Cruyff da Gama", "Drácula", "Eto'o Mineiro", "Futebolino", "Garrinchinha", "Honda Civic", "Inzaghi dos Santos",
 ];
-const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS];
+const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS, ...GOALKEEPER_EVENTS];
 const FICTIONAL_FINALISTS = [
   "Mateo Alcázar",
   "Noah van Dijk",
@@ -2587,6 +2588,10 @@ function selectNextEvent(state: GameState, salt: number) {
   if (unseenFutboboMoments.length && seeded(state.seed, state.season * 2137 + salt) < 0.22) {
     return pick(unseenFutboboMoments, state.seed + state.season, salt + 73).id;
   }
+  const unseenGoalkeeperEvents = events.filter((event) => event.id.startsWith("keeper-") && !state.seenEvents.includes(event.id));
+  if (state.position === "GOL" && unseenGoalkeeperEvents.length && seeded(state.seed, state.season * 2371 + salt) < 0.64) {
+    return pick(unseenGoalkeeperEvents, state.seed + state.season, salt + 91).id;
+  }
   const unseen = events.filter((event) => !state.seenEvents.includes(event.id));
   return pick(unseen.length ? unseen : events, state.seed + state.season, salt)?.id ?? "extra-training";
 }
@@ -2940,14 +2945,15 @@ function createYouthJourney(state: GameState, formationId: string) {
           ? 89 + Math.floor(ceilingRoll * 6)
           : 95 + Math.floor(ceilingRoll * 5);
   const potential = clamp(hiddenCeiling, overall + 1, 99);
+  const youthEventPool = state.position === "GOL" ? GOALKEEPER_YOUTH_EVENTS : YOUTH_EVENTS;
   const used = new Set<number>();
   const youthYears: YouthYear[] = [];
   let previousOverall = startingOverall;
   for (let age = 12; age <= revealAge; age += 1) {
-    let eventIndex = Math.floor(seeded(state.seed, age * 13) * YOUTH_EVENTS.length);
-    while (used.has(eventIndex)) eventIndex = (eventIndex + 1) % YOUTH_EVENTS.length;
+    let eventIndex = Math.floor(seeded(state.seed, age * 13) * youthEventPool.length);
+    while (used.has(eventIndex)) eventIndex = (eventIndex + 1) % youthEventPool.length;
     used.add(eventIndex);
-    const event = YOUTH_EVENTS[eventIndex];
+    const event = youthEventPool[eventIndex];
     const positive = seeded(state.seed, age * 19) < score / 110;
     const progress = (age - 12) / Math.max(1, revealAge - 12);
     const yearOverall = age === revealAge
@@ -3860,6 +3866,8 @@ function simulateSeason(
   if (!isKeeper && goals >= leagueGoldenBootLine) awards.push(`Artilheiro do ${leagueLabel}`);
   if (!isKeeper && assists >= leagueAssistKingLine) awards.push("Rei das Assistências");
   if (isKeeper && cleanSheets >= 14) awards.push("Luva de Ouro");
+  if (isKeeper && appearances >= 26 && cleanSheets >= 10 && performanceScore >= 72 && awardRoll > 0.28) awards.push(`Melhor Goleiro do ${leagueLabel}`);
+  if (isKeeper && appearances >= 30 && cleanSheets >= 16 && goalsConceded <= appearances * 0.82 && performanceScore >= 82) awards.push("Muralha da Temporada");
   if (position.zone === "defesa" && appearances >= 28 && nextOverall >= 80 && leaguePosition <= 6) awards.push("Melhor Defensor");
   if (position.zone === "meio" && appearances >= 26 && goals + assists >= 16 && performanceScore >= 72 && awardRoll > 0.32) awards.push(`Melhor Meio-Campista do ${leagueLabel}`);
   if (position.zone === "ataque" && appearances >= 26 && goals >= 20 && performanceScore >= 74 && awardRoll > 0.3) awards.push(`Melhor Atacante do ${leagueLabel}`);
@@ -3871,7 +3879,8 @@ function simulateSeason(
   if (playsContinental === "libertadores" && continentalChampion && nextOverall >= 89 && seeded(state.seed, state.season * 101) > 0.7) awards.push("Rei da América");
   if (inEurope && affected.age <= 21 && nextOverall >= 80 && appearances >= 18 && seeded(state.seed, state.season * 167) > 0.55) awards.push("Golden Boy");
   if (inEurope && affected.age <= 21 && playsContinental && nextOverall >= 82 && seeded(state.seed, state.season * 173) > 0.65) awards.push("Troféu Kopa");
-  if (inEurope && isKeeper && cleanSheets >= 16 && nextOverall >= 85 && seeded(state.seed, state.season * 179) > 0.7) awards.push("Troféu Yashin");
+  if (inEurope && isKeeper && cleanSheets >= 14 && nextOverall >= 84 && performanceScore >= 80 && seeded(state.seed, state.season * 179) > 0.48) awards.push("Troféu Yashin");
+  if (isKeeper && playsContinental && continentalChampion && cleanSheets >= 13 && performanceScore >= 80) awards.push(`Luva de Ouro da ${continentalNames[playsContinental].name}`);
   if (inEurope && !isKeeper && goals >= europeanGoldenShoeLine && league.prestige >= 4) awards.push("Chuteira de Ouro Europeia");
   if (!isKeeper && playsContinental && continentalChampion && goals >= continentalGoldenBootLine) {
     awards.push(`Artilheiro da ${continentalNames[playsContinental].name}`);
@@ -3892,16 +3901,20 @@ function simulateSeason(
   const hasEuropeanGoldenShoe = awards.includes("Chuteira de Ouro Europeia");
   const hasAssistKingAward = awards.some((award) => award.includes("Assistências"));
   const hasGoalsOrAssistsAward = hasLeagueGoldenBoot || hasEuropeanGoldenShoe || hasAssistKingAward;
+  const hasGoalkeeperAward = isKeeper && awards.some((award) => award.includes("Goleiro") || award.includes("Luva") || award.includes("Yashin") || award.includes("Muralha"));
   const worldXiMerit =
     inEurope &&
     appearances >= 25 &&
     (
+      (isKeeper && nextOverall >= 84 && performanceScore >= 79 && (hasGoalkeeperAward || cleanSheets >= 16)) ||
       (nextOverall >= 87 && performanceScore >= 84) ||
       (hasEuropeanGoldenShoe && nextOverall >= 82 && performanceScore >= 76) ||
       (hasLeagueGoldenBoot && league.prestige >= 3 && nextOverall >= 83 && performanceScore >= 78) ||
       (hasAssistKingAward && league.prestige >= 3 && nextOverall >= 83 && performanceScore >= 80)
     );
   const worldXiChance =
+    isKeeper && awards.includes("Troféu Yashin") ? 90 :
+    isKeeper && hasGoalkeeperAward ? 72 :
     hasEuropeanGoldenShoe ? 88 :
     hasLeagueGoldenBoot || hasAssistKingAward ? 68 :
     48;
@@ -7550,38 +7563,38 @@ export default function Home() {
             {updateNoticePage === "current" ? (
               <>
                 <header className="update-mega-hero">
-                  <div className="update-symbol">1×1</div>
+                  <div className="update-symbol">GK</div>
                   <div>
-                    <span className="update-version">v91 · DUELO LOCAL</span>
-                    <h1 id="update-title">Agora a resenha cabe na mesma mesa.</h1>
+                    <span className="update-version">v92 · DONO DA ÁREA</span>
+                    <h1 id="update-title">Goleiro agora vive outra carreira.</h1>
                   </div>
                 </header>
-                <p>Dois jogadores usam o mesmo mouse, alternam um toque por vez e resolvem a rivalidade sem CPU, sem save e sem desculpa.</p>
+                <p>Da primeira luva à disputa pela camisa 1 da Seleção, a posição ganhou capítulos, riscos, metas e prêmios que não aparecem para jogadores de linha.</p>
                 <div className="update-mega-stats" aria-label="Resumo do update">
-                  <span><b>2</b> jogadores</span>
-                  <span><b>1</b> mouse</span>
-                  <span><b>0</b> CPU</span>
+                  <span><b>20</b> capítulos profissionais</span>
+                  <span><b>12</b> momentos da base</span>
+                  <span><b>4</b> novas honrarias</span>
                 </div>
                 <span className="update-section-label">O GRANDE DESTAQUE</span>
                 <div className="update-grid update-mega-grid">
-                  <article className="update-featured"><b>↔</b><span><strong>X1 local por turnos</strong><small>Somente os botões do jogador da vez respondem. Faça a jogada, passe o mouse e veja seu amigo tentar responder.</small></span></article>
-                  <article><b>637</b><span><strong>Qualquer duelo</strong><small>Escolha dois clubes de toda a base ou sorteie confrontos completamente improváveis.</small></span></article>
-                  <article><b>II</b><span><strong>Pausa compartilhada</strong><small>Placar, pênaltis, replays e campo horizontal continuam completos no novo modo.</small></span></article>
-                  <article><b>⌂</b><span><strong>Menu reconstruído</strong><small>Carreira, save, desafio diário, Copa e X1 agora possuem lugares claros e proporções coerentes.</small></span></article>
+                  <article className="update-featured"><b>1</b><span><strong>A camisa tem peso</strong><small>Concorrência no gol, falhas, pênaltis, chuva, jogo com os pés e liderança mudam o rumo da temporada.</small></span></article>
+                  <article><b>0</b><span><strong>Metas de goleiro</strong><small>Jogos sem sofrer e limite de gols sofridos agora decidem confiança, espaço e evolução.</small></span></article>
+                  <article><b>◆</b><span><strong>Prêmios próprios</strong><small>Melhor Goleiro, Muralha, Luvas continentais, Yashin e World XI valorizam temporadas históricas.</small></span></article>
+                  <article><b>⌛</b><span><strong>Uma carreira inteira</strong><small>A história acompanha o goleiro da base à chegada do sucessor e à reinvenção depois dos 32.</small></span></article>
                 </div>
-                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Mundo sem Fronteiras</strong><b>→</b></button>
+                <button className="previous-update-button" onClick={() => setUpdateNoticePage("previous")}><span>UPDATE ANTERIOR</span><strong>Duelo Local</strong><b>→</b></button>
               </>
             ) : (
               <>
-                <span className="update-version previous">v90 · MUNDO SEM FRONTEIRAS</span>
-                <div className="update-symbol previous">◎</div>
-                <h1 id="update-title">O mapa do Futbobo ficou muito maior.</h1>
-                <p>Novas ligas, clubes e seleções transformaram cada carreira em uma viagem diferente — até o Vaticano pode tentar conquistar o mundo.</p>
+                <span className="update-version previous">v91 · DUELO LOCAL</span>
+                <div className="update-symbol previous">1×1</div>
+                <h1 id="update-title">A resenha cabe na mesma mesa.</h1>
+                <p>Dois jogadores usam o mesmo mouse ou aparelho, alternam um toque por vez e resolvem a rivalidade sem CPU.</p>
                 <div className="update-grid previous-grid">
-                  <article><b>637</b><span><strong>Clubes pelo mundo</strong><small>36 ligas completas abriram novas rotas de mercado e de categorias de base.</small></span></article>
-                  <article><b>139</b><span><strong>Seleções jogáveis</strong><small>Gigantes, azarões e microestados entraram no universo internacional.</small></span></article>
+                  <article><b>2</b><span><strong>Jogadores locais</strong><small>Escolha os clubes, o ritmo da partida e passe o controle depois de cada toque.</small></span></article>
+                  <article><b>4</b><span><strong>Presets rápidos</strong><small>Minhas regras, Relâmpago, Clássico e Maratona sem alterar a carreira.</small></span></article>
                 </div>
-                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Duelo Local</strong><b>←</b></button>
+                <button className="previous-update-button back" onClick={() => setUpdateNoticePage("current")}><span>UPDATE ATUAL</span><strong>Voltar para Dono da Área</strong><b>←</b></button>
               </>
             )}
             <button className="primary-button" onClick={() => setUpdateNoticeOpen(false)}>Entrar no jogo <span>→</span></button>
@@ -7875,7 +7888,7 @@ export default function Home() {
           {installHelp && <div className="install-help">Use o menu do navegador e toque em <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>.</div>}
           <footer className="welcome-meta-footer">
             <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
-            <div className="welcome-version"><span>FUTBOBO</span><b>v91 · DUELO LOCAL</b></div>
+            <div className="welcome-version"><span>FUTBOBO</span><b>v92 · DONO DA ÁREA</b></div>
           </footer>
         </section>
       )}

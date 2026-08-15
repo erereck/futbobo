@@ -8,7 +8,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /className="welcome-version"/);
-  assert.match(pageSource, /v91 · DUELO LOCAL/);
+  assert.match(pageSource, /v92 · DONO DA ÁREA/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -869,8 +869,8 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /PATROCINADOR PESSOAL/);
   assert.match(page, /LINHA DO TEMPO/);
   assert.match(page, /setUpdateNoticePage\("previous"\)/);
-  assert.match(page, /v90 · MUNDO SEM FRONTEIRAS/);
-  assert.match(page, /FORA DAS QUATRO LINHAS/);
+  assert.match(page, /v91 · DUELO LOCAL/);
+  assert.match(page, /A resenha cabe na mesma mesa/);
   assert.match(gameData, /followers\?: number/);
   assert.match(gameData, /sponsorBrand\?: string/);
   assert.match(styles, /\.life-screen/);
@@ -1511,4 +1511,25 @@ test("abre um X1 local real e reorganiza o menu por tipo de gameplay", async () 
   assert.match(versus, /Passe o aparelho/);
   assert.match(styles, /\.mode-menu-grid/);
   assert.match(versusStyles, /\.x1-versus-builder/);
+});
+
+test("dá ao goleiro uma carreira própria da base ao fim da trajetória", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const keeperEvents = await readFile(new URL("../app/goalkeeper-events.ts", import.meta.url), "utf8");
+  const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
+  const exclusiveEventIds = keeperEvents.match(/id: "keeper-/g) ?? [];
+
+  assert.ok(exclusiveEventIds.length >= 18, `esperava pelo menos 18 eventos exclusivos, recebeu ${exclusiveEventIds.length}`);
+  assert.match(keeperEvents, /GOALKEEPER_YOUTH_EVENTS/);
+  assert.match(keeperEvents, /A disputa pelo gol virou um campeonato à parte/);
+  assert.match(keeperEvents, /O país inteiro espera uma defesa/);
+  assert.match(keeperEvents, /O clube contratou quem dizem ser seu sucessor/);
+  assert.match(page, /state\.position === "GOL" && unseenGoalkeeperEvents\.length/);
+  assert.match(page, /< 0\.64/);
+  assert.match(page, /state\.position === "GOL" \? GOALKEEPER_YOUTH_EVENTS : YOUTH_EVENTS/);
+  assert.match(page, /Melhor Goleiro do/);
+  assert.match(page, /Muralha da Temporada/);
+  assert.match(page, /isKeeper && hasGoalkeeperAward \? 72/);
+  assert.match(systems, /metric: "goalsConceded"/);
+  assert.match(systems, /metrics\.cleanSheets \* 2\.2/);
 });

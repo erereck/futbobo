@@ -6,7 +6,7 @@ export type CareerObjective = {
   id: string;
   label: string;
   description: string;
-  metric: "appearances" | "goals" | "assists" | "cleanSheets" | "goalContributions" | "titles" | "discipline";
+  metric: "appearances" | "goals" | "assists" | "cleanSheets" | "goalsConceded" | "goalContributions" | "titles" | "discipline";
   target: number;
   reward: number;
   penalty: number;
@@ -93,6 +93,14 @@ export function createSeasonObjective(
     return { ...base, metric: "appearances", target, label: "Conquistar espaço", description: `Disputar pelo menos ${target} partidas oficiais.` };
   }
   if (position.key === "GOL") {
+    if (selector === 2) {
+      const target = starter ? 31 : 24;
+      return { ...base, metric: "goalsConceded", target, label: "Proteger a meta", description: `Sofrer no máximo ${target} gols na temporada.` };
+    }
+    if (selector === 4) {
+      const target = starter ? 14 : 9;
+      return { ...base, metric: "cleanSheets", target, label: "Disputar a Luva de Ouro", description: `Terminar ${target} jogos sem sofrer gols.` };
+    }
     const target = starter ? 12 : 8;
     return { ...base, metric: "cleanSheets", target, label: "Fechar o gol", description: `Terminar ${target} jogos sem sofrer gols.` };
   }
@@ -113,7 +121,7 @@ export function createSeasonObjective(
 
 export function evaluateObjective(
   objective: CareerObjective,
-  stats: { appearances: number; goals: number; assists: number; cleanSheets: number; yellowCards: number; redCards: number },
+  stats: { appearances: number; goals: number; assists: number; cleanSheets: number; goalsConceded: number; yellowCards: number; redCards: number },
   titles: number,
 ): ObjectiveResult {
   const values: Record<CareerObjective["metric"], number> = {
@@ -121,12 +129,14 @@ export function evaluateObjective(
     goals: stats.goals,
     assists: stats.assists,
     cleanSheets: stats.cleanSheets,
+    goalsConceded: stats.goalsConceded,
     goalContributions: stats.goals + stats.assists,
     titles,
     discipline: stats.yellowCards + stats.redCards * 3,
   };
   const value = values[objective.metric];
-  const completed = objective.metric === "discipline" ? value <= objective.target : value >= objective.target;
+  const lowerIsBetter = objective.metric === "discipline" || objective.metric === "goalsConceded";
+  const completed = lowerIsBetter ? value <= objective.target : value >= objective.target;
   return {
     completed,
     progress: value,
@@ -155,7 +165,7 @@ export function calculateLegacyScore(metrics: {
     metrics.appearances * 0.5 +
     metrics.goals * 1.5 +
     metrics.assists * 1.2 +
-    metrics.cleanSheets * 1.1 +
+    metrics.cleanSheets * 2.2 +
     metrics.trophies * 32 +
     metrics.nationalTrophies * 48 +
     metrics.awards * 15 +
