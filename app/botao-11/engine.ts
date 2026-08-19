@@ -3,33 +3,33 @@ import { createRng, hashSeed } from "./rng";
 import type { Body, MatchSetup, MatchState, Shot, Side } from "./types";
 
 export const FIELD = {
-  width: 1160,
-  height: 720,
-  inset: 34,
-  goalWidth: 196,
-  goalDepth: 36,
+  width: 1480,
+  height: 860,
+  inset: 42,
+  goalWidth: 216,
+  goalDepth: 42,
   discRadius: 15,
   keeperRadius: 17,
   ballRadius: 8,
   postRadius: 5,
-  centerRadius: 92,
-  areaDepth: 176,
-  areaWidth: 356,
+  centerRadius: 104,
+  areaDepth: 218,
+  areaWidth: 420,
 };
 
 export const GOAL_TOP = (FIELD.height - FIELD.goalWidth) / 2;
 export const GOAL_BOTTOM = GOAL_TOP + FIELD.goalWidth;
-export const MAX_PULL = 154;
+export const MAX_PULL = 172;
 
-const DISC_FRICTION = 1.36;
-const BALL_FRICTION = 0.93;
-const STOP_SPEED = 10;
-const MAX_SPEED = 1080;
-const MAX_RESOLVE_SECONDS = 7.5;
-const RESTITUTION_DISC_DISC = 0.86;
-const RESTITUTION_DISC_BALL = 0.95;
-const RESTITUTION_WALL = 0.68;
-const RESTITUTION_POST = 0.78;
+const DISC_FRICTION = 1.48;
+const BALL_FRICTION = 1.82;
+const STOP_SPEED = 15;
+const MAX_SPEED = 1120;
+const MAX_RESOLVE_SECONDS = 4.6;
+const RESTITUTION_DISC_DISC = 0.84;
+const RESTITUTION_DISC_BALL = 0.89;
+const RESTITUTION_WALL = 0.52;
+const RESTITUTION_POST = 0.67;
 const MIN_SHOT_RATIO = 0.075;
 
 export function otherSide(side: Side): Side {
@@ -71,7 +71,7 @@ function teamControl(strength: number) {
 }
 
 export function shotSpeedFor(power: number) {
-  return 510 + clamp(power, 0, 100) * 2.65;
+  return 555 + clamp(power, 0, 100) * 2.72;
 }
 
 export function minShotSpeed(power: number) {
@@ -388,6 +388,7 @@ function walls(body: Body) {
       body.vx = -Math.abs(body.vx) * RESTITUTION_WALL;
     }
   } else if (body.kind === "disc") {
+    // Peças não entram dentro da rede; só a bola cruza a linha de gol.
     if (body.x - body.radius < 0) {
       body.x = body.radius;
       body.vx = Math.abs(body.vx) * RESTITUTION_WALL;
@@ -403,7 +404,15 @@ function friction(body: Body, dt: number) {
   const factor = Math.exp(-body.friction * dt);
   body.vx *= factor;
   body.vy *= factor;
-  const speed = Math.hypot(body.vx, body.vy);
+  let speed = Math.hypot(body.vx, body.vy);
+  // A bola perde o restinho de embalo mais rápido para o jogador não ficar
+  // contemplando 2 segundos de rolagem inútil depois que o lance acabou.
+  if (body.kind === "ball" && speed < 105) {
+    const lowSpeedBrake = Math.exp(-2.25 * dt);
+    body.vx *= lowSpeedBrake;
+    body.vy *= lowSpeedBrake;
+    speed = Math.hypot(body.vx, body.vy);
+  }
   if (speed < STOP_SPEED) {
     body.vx = 0;
     body.vy = 0;
@@ -462,8 +471,11 @@ export function stepMatch(state: MatchState, dt: number) {
   integrate(state, safeDt);
   if (checkGoal(state)) return;
 
-  const stillMoving = movingBodies(state).some((body) => body.vx !== 0 || body.vy !== 0);
-  if (!stillMoving || state.resolveElapsed >= MAX_RESOLVE_SECONDS) {
+  const moving = movingBodies(state);
+  const stillMoving = moving.some((body) => body.vx !== 0 || body.vy !== 0);
+  const peakSpeed = moving.reduce((max, body) => Math.max(max, Math.hypot(body.vx, body.vy)), 0);
+  const quietTail = state.resolveElapsed >= 2.15 && peakSpeed < 30;
+  if (!stillMoving || quietTail || state.resolveElapsed >= MAX_RESOLVE_SECONDS) {
     movingBodies(state).forEach((body) => {
       body.vx = 0;
       body.vy = 0;
