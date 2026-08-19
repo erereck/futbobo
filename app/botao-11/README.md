@@ -36,3 +36,5 @@ uma pergunta antes de integrar qualquer coisa à carreira: **futebol de botão c
 Se a sensação de jogo passar no teste, o passo seguinte é extrair câmera e
 `ruleset` para um contrato comum e decidir o que pode voltar para `app/botao`
 sem mudar o comportamento clássico.
+
+<!-- preview deployment trigger: 2026-08-18 -->
