@@ -18,6 +18,7 @@ import { createRng, hashSeed, type Rng } from "./rng";
 import type { Body, MatchState, Shot, Side } from "./types";
 
 type Point = { x: number; y: number };
+
 type Candidate = Shot & { kind: "attack" | "pass" | "clear" | "shape" };
 
 function shotTowards(disc: Body, point: Point, ratio: number, kind: Candidate["kind"]): Candidate {
@@ -31,7 +32,11 @@ function shotTowards(disc: Body, point: Point, ratio: number, kind: Candidate["k
 function goalTargets(side: Side): Point[] {
   const x = attackGoalX(side);
   const mid = (GOAL_TOP + GOAL_BOTTOM) / 2;
-  return [{ x, y: mid }, { x, y: GOAL_TOP + 34 }, { x, y: GOAL_BOTTOM - 34 }];
+  return [
+    { x, y: mid },
+    { x, y: GOAL_TOP + 34 },
+    { x, y: GOAL_BOTTOM - 34 },
+  ];
 }
 
 function contactPoint(ball: Body, disc: Body, target: Point): Point {
@@ -67,7 +72,8 @@ function buildCandidates(state: MatchState, side: Side, rng: Rng): Candidate[] {
     .sort((a, b) => a.distance - b.distance);
   const candidates: Candidate[] = [];
 
-  for (const { disc } of byDistance.slice(0, 6)) {
+  // 1) As peças mais próximas tentam finalizar ou progredir a bola.
+  for (const { disc } of byDistance.slice(0, 7)) {
     const attackTargets = goalTargets(side);
     const forwardMates = discs
       .filter((mate) => mate.id !== disc.id)
@@ -82,15 +88,25 @@ function buildCandidates(state: MatchState, side: Side, rng: Rng): Candidate[] {
       candidates.push(shotTowards(disc, contact, 1, kind));
       candidates.push(shotTowards(disc, contact, kind === "attack" ? 0.72 : 0.56, kind));
     });
-    if (lineCanReachBall(disc, ball, ball)) candidates.push(shotTowards(disc, ball, 0.9, "clear"));
+
+    if (lineCanReachBall(disc, ball, ball)) {
+      candidates.push(shotTowards(disc, ball, 0.9, "clear"));
+    }
   }
 
+  // 2) Peças distantes fecham linhas ou avançam a estrutura.
   const ownX = ownGoalX(side);
   const attackX = attackGoalX(side);
   for (const { disc, distance } of byDistance.slice(4)) {
-    if (disc.role === "GK" && distance > 220) continue;
-    const towardOwnGoal = { x: ball.x * 0.62 + ownX * 0.38, y: ball.y * 0.72 + FIELD.height / 2 * 0.28 };
-    const forward = { x: disc.x + (attackX > ownX ? 1 : -1) * 74, y: disc.y + rng.range(-54, 54) };
+    if (disc.role === "GK" && distance > 280) continue;
+    const towardOwnGoal = {
+      x: ball.x * 0.62 + ownX * 0.38,
+      y: ball.y * 0.72 + FIELD.height / 2 * 0.28,
+    };
+    const forward = {
+      x: disc.x + (attackX > ownX ? 1 : -1) * 112,
+      y: disc.y + rng.range(-76, 76),
+    };
     [towardOwnGoal, forward].forEach((target) => {
       const dx = target.x - disc.x;
       const dy = target.y - disc.y;
@@ -101,11 +117,15 @@ function buildCandidates(state: MatchState, side: Side, rng: Rng): Candidate[] {
     });
   }
 
-  if (!candidates.length && byDistance[0]) candidates.push(shotTowards(byDistance[0].disc, ball, 0.75, "clear"));
+  if (!candidates.length && byDistance[0]) {
+    candidates.push(shotTowards(byDistance[0].disc, ball, 0.75, "clear"));
+  }
+
+  // Mantém variedade sem transformar cada turno em um benchmark de física.
   const attack = candidates.filter((candidate) => candidate.kind === "attack").slice(0, 12);
   const others = candidates.filter((candidate) => candidate.kind !== "attack");
   const picked = [...attack];
-  while (picked.length < 28 && others.length) {
+  while (picked.length < 30 && others.length) {
     const index = Math.floor(rng.next() * others.length);
     picked.push(others.splice(index, 1)[0]);
   }
@@ -118,20 +138,27 @@ function evaluate(state: MatchState, side: Side, before: Record<Side, number>) {
   const attackX = attackGoalX(side);
   const ownX = ownGoalX(side);
   let score = 0;
+
   score += (state.score[side] - before[side]) * 100_000;
   score -= (state.score[opponent] - before[opponent]) * 120_000;
+
   const goalY = (GOAL_TOP + GOAL_BOTTOM) / 2;
   const attackDistance = Math.hypot(ball.x - attackX, (ball.y - goalY) * 0.65);
   const ownDistance = Math.hypot(ball.x - ownX, (ball.y - goalY) * 0.65);
   score -= attackDistance * 2.2;
-  if (ownDistance < 280) score -= (280 - ownDistance) * 4.8;
+  if (ownDistance < 360) score -= (360 - ownDistance) * 4.8;
+
   const mine = discsOf(state, side);
   const theirs = discsOf(state, opponent);
   const nearestMine = Math.min(...mine.map((disc) => Math.hypot(disc.x - ball.x, disc.y - ball.y)));
   const nearestTheirs = Math.min(...theirs.map((disc) => Math.hypot(disc.x - ball.x, disc.y - ball.y)));
   score += (nearestTheirs - nearestMine) * 1.4;
+
+  // Presença entre bola e gol próprio, mas sem premiar ônibus completo.
   const covering = mine.filter((disc) => side === "user" ? disc.x < ball.x : disc.x > ball.x).length;
   score += Math.min(covering, 5) * 34;
+
+  // Espalhamento: evita onze peças amontoadas no mesmo ponto.
   let spacing = 0;
   for (let i = 0; i < mine.length; i += 1) {
     let nearest = Number.POSITIVE_INFINITY;
@@ -139,7 +166,7 @@ function evaluate(state: MatchState, side: Side, before: Record<Side, number>) {
       if (i === j) continue;
       nearest = Math.min(nearest, Math.hypot(mine[i].x - mine[j].x, mine[i].y - mine[j].y));
     }
-    spacing += Math.min(nearest, 120);
+    spacing += Math.min(nearest, 165);
   }
   score += spacing * 0.08;
   return score;
@@ -162,7 +189,7 @@ function jitter(candidate: Candidate, disc: Body, strength: number, rng: Rng): S
   const angle = Math.atan2(candidate.vy, candidate.vx);
   const skill = Math.max(0, Math.min(1, (strength - 58) / 34));
   const control = disc.control / 100;
-  const error = 1 - skill * 0.62 - control * 0.25;
+  const error = (1 - skill * 0.62 - control * 0.25);
   const nextAngle = angle + rng.range(-0.055, 0.055) * Math.max(0.15, error);
   const nextSpeed = speed * (1 + rng.range(-0.09, 0.09) * Math.max(0.2, error));
   return { bodyId: candidate.bodyId, vx: Math.cos(nextAngle) * nextSpeed, vy: Math.sin(nextAngle) * nextSpeed };
@@ -174,6 +201,7 @@ export function chooseCpuShot(state: MatchState, side: Side = "cpu") {
   let best: Candidate | null = null;
   let bestScore = Number.NEGATIVE_INFINITY;
   const strength = side === "cpu" ? state.setup.cpuTeam.strength : state.setup.userTeam.strength;
+
   for (const candidate of candidates) {
     const noise = rng.range(-1, 1) * (92 - strength) * 5.5;
     const score = rollout(state, candidate, side) + noise;
