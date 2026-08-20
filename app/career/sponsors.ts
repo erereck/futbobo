@@ -1,0 +1,16 @@
+export const SPONSOR_BRANDS = [
+  { name: "Nike", tier: 5, minReputation: 76, baseValue: 1_250_000 },
+  { name: "adidas", tier: 5, minReputation: 74, baseValue: 1_180_000 },
+  { name: "Puma", tier: 4, minReputation: 61, baseValue: 810_000 },
+  { name: "New Balance", tier: 4, minReputation: 56, baseValue: 650_000 },
+  { name: "Under Armour", tier: 3, minReputation: 47, baseValue: 440_000 },
+  { name: "Mizuno", tier: 3, minReputation: 42, baseValue: 340_000 },
+  { name: "ASICS", tier: 3, minReputation: 38, baseValue: 310_000 },
+  { name: "Umbro", tier: 2, minReputation: 29, baseValue: 220_000 },
+  { name: "Kappa", tier: 2, minReputation: 24, baseValue: 180_000 },
+  { name: "Diadora", tier: 2, minReputation: 20, baseValue: 150_000 },
+  { name: "Lotto", tier: 1, minReputation: 12, baseValue: 110_000 },
+  { name: "bet365", tier: 4, minReputation: 40, baseValue: 1_050_000, controversial: true },
+  { name: "Stake", tier: 3, minReputation: 34, baseValue: 760_000, controversial: true },
+  { name: "Betano", tier: 3, minReputation: 31, baseValue: 680_000, controversial: true },
+] as const;

@@ -3,9 +3,37 @@ import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 const outputRoot = new URL("../out/", import.meta.url);
+const careerSourceFiles = [
+  "../app/page.tsx",
+  "../app/components/career/CareerGame.tsx",
+  "../app/components/career/CareerPrimitives.tsx",
+  "../app/career/model.ts",
+  "../app/career/shared.ts",
+  "../app/career/sponsors.ts",
+  "../app/career/state.ts",
+  "../app/career/academy.ts",
+  "../app/career/performance.ts",
+  "../app/career/transfer-market.ts",
+  "../app/career/events.ts",
+  "../app/career/simulation.ts",
+];
+
+async function readCareerSource() {
+  return (await Promise.all(careerSourceFiles.map((file) => readFile(new URL(file, import.meta.url), "utf8")))).join("\n");
+}
+
+test("mantém a rota da carreira pequena e separa o monólito por domínio", async () => {
+  const route = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const architecture = await readFile(new URL("../app/career/README.md", import.meta.url), "utf8");
+  assert.ok(route.split("\n").length <= 10);
+  assert.match(route, /import CareerGame from "\.\/components\/career\/CareerGame"/);
+  for (const moduleName of ["model", "shared", "sponsors", "state", "academy", "performance", "transfer-market", "events", "simulation"]) {
+    assert.ok(architecture.includes("`" + moduleName + ".ts`"));
+  }
+});
 
 test("mostra a versao comunitaria no rodape do menu inicial", async () => {
-  const pageSource = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const pageSource = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /className="welcome-version"/);
   assert.match(pageSource, /v92 · DONO DA ÁREA/);
@@ -44,7 +72,7 @@ test("aplica o redesign Matchday Editorial com fontes offline e layouts realment
 });
 
 test("adiciona desafio diario, avaliacao e departamento medico sem alterar a navegacao da carreira", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /const CHALLENGE_SAVE_KEY = "futbobo:challenge-save:v1"/);
@@ -63,7 +91,7 @@ test("adiciona desafio diario, avaliacao e departamento medico sem alterar a nav
 });
 
 test("fecha a Copa do Mundo com estatisticas completas e impacto forte na Bola de Ouro", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /type TournamentStats/);
@@ -82,7 +110,7 @@ test("fecha a Copa do Mundo com estatisticas completas e impacto forte na Bola d
 
 test("fecha as seis novas ligas com acesso e torneio asiatico", async () => {
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const sync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
 
   for (const leagueId of [
@@ -187,7 +215,7 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
 
 test("mantém o novo equilíbrio de progressão, mercado e clubes brasileiros", async () => {
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const brazilBlock = gameData.slice(
     gameData.indexOf("const BRAZIL_CLUBS"),
     gameData.indexOf("const EUROPE_CLUBS"),
@@ -207,7 +235,7 @@ test("mantém o novo equilíbrio de progressão, mercado e clubes brasileiros", 
 });
 
 test("mantém a carreira encaixada na tela mobile com ações fixas", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /mobile-action-dock/);
@@ -220,7 +248,7 @@ test("mantém a carreira encaixada na tela mobile com ações fixas", async () =
 });
 
 test("aplica o equilíbrio levemente mais favorável sem liberar títulos fáceis", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
 
   assert.match(page, /fateRoll < 0\.18/);
@@ -235,7 +263,7 @@ test("aplica o equilíbrio levemente mais favorável sem liberar títulos fácei
 });
 
 test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcançável", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 74[\s\S]*nextOverall === 82[\s\S]*performanceScore >= 80/);
@@ -279,7 +307,7 @@ test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcanç�
 });
 
 test("registra o Hall da Fama local e resume a carreira por clube", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
@@ -313,7 +341,7 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
 });
 
 test("reserva espaço real para os escudos no Hall da Fama mobile", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(styles, /\.hall-ranking > article \{[^}]*grid-template-columns: 24px 64px minmax\(0,1fr\) auto/);
@@ -334,7 +362,7 @@ test("mantém o gramado contínuo atrás da meta do treinador", async () => {
 });
 
 test("deixa o fim de temporada rolar sem o rodapé cobrir o conteúdo", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /futbobo-viewport-locked/);
@@ -354,7 +382,7 @@ test("deixa o fim de temporada rolar sem o rodapé cobrir o conteúdo", async ()
 });
 
 test("mostra o resultado da última temporada antes de concluir a aposentadoria", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
 
   assert.match(page, /current\.phase === "consequence"[\s\S]*current\.pendingBotaoMatches\.length \? "botao-final" : "season-result"/);
   assert.match(page, /function continueAfterConsequence\(\) \{[\s\S]*current\.pendingBotaoMatches\.length \? "botao-final" : "season-result"/);
@@ -364,7 +392,7 @@ test("mostra o resultado da última temporada antes de concluir a aposentadoria"
 });
 
 test("classifica para supercopas e recopás e exibe uma galeria completa de títulos", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const assetSync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
 
@@ -391,7 +419,7 @@ test("classifica para supercopas e recopás e exibe uma galeria completa de tít
 });
 
 test("protege o OVR jovem e permite explosões raras de talento", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /affected\.age <= 29\) development = growthRoll < 0\.58 \? 0/);
@@ -406,7 +434,7 @@ test("protege o OVR jovem e permite explosões raras de talento", async () => {
 });
 
 test("prioriza clubes europeus quando a carreira já está na Europa", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /isEuropeanClub\(current\) && !opts\.forceDomestic/);
@@ -425,7 +453,7 @@ test("prioriza clubes europeus quando a carreira já está na Europa", async () 
 });
 
 test("mostra de cinco a dez propostas na janela de transferências", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
 
   assert.match(page, /performanceScore >= 90 \? 5/);
   assert.match(page, /selectOffers\(state, 5, salt/);
@@ -435,7 +463,7 @@ test("mostra de cinco a dez propostas na janela de transferências", async () =>
 });
 
 test("garante uma proposta europeia compatível até para carreiras em baixa", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /function guaranteedEuropeanOffer/);
@@ -448,7 +476,7 @@ test("garante uma proposta europeia compatível até para carreiras em baixa", a
 });
 
 test("oculta a reputação dos clubes no mercado e varia salários por negociação", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
 
   assert.doesNotMatch(page, /reputação \{club\.reputation\}\/5/);
@@ -459,7 +487,7 @@ test("oculta a reputação dos clubes no mercado e varia salários por negociaç
 });
 
 test("gera temporadas com mais gols e assistências sem igualar todas as posições", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
 
   assert.match(page, /const productionMomentum = clamp\(/);
@@ -472,7 +500,7 @@ test("gera temporadas com mais gols e assistências sem igualar todas as posiç�
 });
 
 test("impede ficar no clube depois de um pedido de transferência aceito", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/);
@@ -617,7 +645,7 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
 
 test("usa escudos, bandeiras e emblemas locais com fallback visual", async () => {
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const clubAssets = await readdir(new URL("../public/assets/clubs/", import.meta.url));
   const flagAssets = await readdir(new URL("../public/assets/flags/", import.meta.url));
@@ -657,7 +685,7 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
 });
 
 test("prioriza destinos sul-americanos e norte-americanos por proximidade geográfica", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
 
   assert.match(page, /function regionAffinity/);
   assert.match(page, /originConfederation === "SOUTH_AMERICA"/);
@@ -669,7 +697,7 @@ test("prioriza destinos sul-americanos e norte-americanos por proximidade geogr�
 });
 
 test("adiciona a Copa de Campeões Concacaf sem quebrar o gabinete de troféus", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
 
   assert.match(page, /concacafChampions: number/);
   assert.match(page, /concacaf: \{ id: "concacafChampions", name: "Copa de Campeões Concacaf", icon: "CCC" \}/);
@@ -677,7 +705,7 @@ test("adiciona a Copa de Campeões Concacaf sem quebrar o gabinete de troféus",
 });
 
 test("clube pode recusar renovar contrato após temporada ruim, forçando escolha de novo clube", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
 
   assert.match(page, /const renewalDenied = nonRenewalChance > 0 && seeded\(/);
   assert.match(page, /nonRenewalRiskFactors >= 2/);
@@ -687,7 +715,7 @@ test("clube pode recusar renovar contrato após temporada ruim, forçando escolh
 });
 
 test("atributos influenciam a simulação, premiações têm suspense e o escândalo força exílio", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
   const drama = await readFile(new URL("../app/career-drama.ts", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
@@ -713,7 +741,7 @@ test("atributos influenciam a simulação, premiações têm suspense e o escân
 });
 
 test("convites raros de outras seleções respeitam proximidade geográfica e nunca se repetem", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
 
   assert.match(page, /const NATIONALITY_SWITCH_EVENT_ID = "dynamic-nationality-switch"/);
   assert.match(page, /function pickNationalitySwitchTarget/);
@@ -728,7 +756,7 @@ test("convites raros de outras seleções respeitam proximidade geográfica e nu
 });
 
 test("integra o novo campo de posições, base sorteada, roleta e simulação por mérito", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /function randomAcademyClubs\(seed: number, countryId: string\)/);
@@ -750,7 +778,7 @@ test("integra o novo campo de posições, base sorteada, roleta e simulação po
 });
 
 test("liga a nacionalidade à base local, regional ou europeia", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
@@ -776,7 +804,7 @@ test("liga a nacionalidade à base local, regional ou europeia", async () => {
 });
 
 test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da carreira", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /function simulateMonteCarloCareer/);
@@ -796,7 +824,7 @@ test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da
 
 test("adiciona o pacote de eventos de drama com filtros de carreira", async () => {
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const drama = await readFile(new URL("../app/career-drama.ts", import.meta.url), "utf8");
 
   assert.match(gameData, /needsConfederation\?: Confederation/);
@@ -818,7 +846,7 @@ test("adiciona o pacote de eventos de drama com filtros de carreira", async () =
 });
 
 test("adiciona central estatística, empréstimos, rivais, personagens, agente livre e traits", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
@@ -848,7 +876,7 @@ test("mantem os cards da Central inteiros e libera rolagem no celular", async ()
 });
 
 test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
@@ -880,7 +908,7 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
 });
 
 test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundial", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
   const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
   const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
@@ -945,7 +973,7 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
 });
 
 test("fecha o patch de mercado, economia, personalização e futebol de botão", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
   const drama = await readFile(new URL("../app/career-drama.ts", import.meta.url), "utf8");
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
@@ -1000,7 +1028,7 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
 });
 
 test("mostra o minuto de cada gol no resultado do futebol de botão", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const standalone = await readFile(new URL("../app/botao/page.tsx", import.meta.url), "utf8");
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
   const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
@@ -1033,7 +1061,7 @@ test("mantém vivo o rebote do goleiro que ainda segue em direção ao gol", asy
 });
 
 test("usa uma central de carreira própria no computador sem alterar o layout mobile", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /desktop-career-nav-brand/);
@@ -1071,7 +1099,7 @@ test("organiza o arquivo final da carreira em faixas largas no desktop", async (
 });
 
 test("compartilha a carreira como pôster rico com fallback local", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const premium = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
 
   assert.match(page, /canvas\.width = 1080/);
@@ -1084,7 +1112,7 @@ test("compartilha a carreira como pôster rico com fallback local", async () => 
 });
 
 test("fecha a rodada de polimento com controles semânticos e leitura acessível", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const premium = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
   const botao = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
   const worldCup = await readFile(new URL("../app/copa/world-cup.css", import.meta.url), "utf8");
@@ -1101,7 +1129,7 @@ test("fecha a rodada de polimento com controles semânticos e leitura acessível
 });
 
 test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
   const types = await readFile(new URL("../app/botao/types.ts", import.meta.url), "utf8");
 
@@ -1123,7 +1151,7 @@ test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
 });
 
 test("cria origens persistentes que mudam a carreira e abrem capitulos proprios", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const stories = await readFile(new URL("../app/player-stories.ts", import.meta.url), "utf8");
   const chapters = await readFile(new URL("../app/story-chapters.ts", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
@@ -1164,7 +1192,7 @@ test("grava replays vetoriais leves dos gols sem reexecutar a partida", async ()
   const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
   const replay = await readFile(new URL("../app/botao/GoalReplay.tsx", import.meta.url), "utf8");
   const render = await readFile(new URL("../app/botao/render.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const standalone = await readFile(new URL("../app/botao/page.tsx", import.meta.url), "utf8");
 
   assert.match(types, /export type BotaoGoalReplay/);
@@ -1198,7 +1226,7 @@ test("coloca convocados de OVR baixo no banco e preserva o placar anterior", asy
   const types = await readFile(new URL("../app/botao/types.ts", import.meta.url), "utf8");
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
   const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
 
   assert.match(types, /export type BotaoMatchEntry/);
   assert.match(types, /beforePlayerEntry\?: boolean/);
@@ -1213,7 +1241,7 @@ test("coloca convocados de OVR baixo no banco e preserva o placar anterior", asy
 });
 
 test("entrega um APK offline sem criar uma segunda versão do jogo", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const android = await readFile(new URL("../app/android-app.ts", import.meta.url), "utf8");
   const dialog = await readFile(new URL("../app/AndroidInstallDialog.tsx", import.meta.url), "utf8");
   const capacitor = await readFile(new URL("../capacitor.config.ts", import.meta.url), "utf8");
@@ -1235,7 +1263,7 @@ test("entrega um APK offline sem criar uma segunda versão do jogo", async () =>
 
 test("modera o melhor da partida e transforma o destaque em coletiva", async () => {
   const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const styles = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
 
   assert.match(engine, /const contributions = state\.playerGoals \+ state\.playerAssists/);
@@ -1252,7 +1280,7 @@ test("modera o melhor da partida e transforma o destaque em coletiva", async () 
 
 test("cria momentos engraçados e específicos com espaço próprio na carreira", async () => {
   const moments = await readFile(new URL("../app/futbobo-moments.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const ids = [...moments.matchAll(/id: "(funny-[^"]+)"/g)].map((match) => match[1]);
 
   assert.equal(ids.length, 22, "o pacote precisa manter variedade suficiente para várias carreiras");
@@ -1261,7 +1289,7 @@ test("cria momentos engraçados e específicos com espaço próprio na carreira"
   assert.match(moments, /Seu companheiro quer abrir um canal de gameplay com você/);
   assert.match(moments, /O papagaio do vizinho aprendeu sua comemoração/);
   assert.match(moments, /campeonato de futebol de botão na concentração/);
-  assert.match(page, /import \{ FUTBOBO_MOMENTS \} from "\.\/futbobo-moments"/);
+  assert.match(page, /import \{ FUTBOBO_MOMENTS \} from "\.\.\/futbobo-moments"/);
   assert.match(page, /event\.id\.startsWith\("funny-"\)/);
   assert.match(page, /< 0\.22/);
 });
@@ -1286,7 +1314,7 @@ test("mantem menu desktop e mesa de decisoes mobile dentro da viewport", async (
 });
 
 test("oferece uma Copa do Mundo independente que respeita as regras atuais e campo horizontal apenas no PC", async () => {
-  const home = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const home = await readCareerSource();
   const cup = await readFile(new URL("../app/copa/page.tsx", import.meta.url), "utf8");
   const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
   const render = await readFile(new URL("../app/botao/render.ts", import.meta.url), "utf8");
@@ -1323,7 +1351,7 @@ test("oferece uma Copa do Mundo independente que respeita as regras atuais e cam
 });
 
 test("corrige competicoes, bola de ouro, rivais e numeros persistentes", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
   const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
   const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
@@ -1346,7 +1374,7 @@ test("corrige competicoes, bola de ouro, rivais e numeros persistentes", async (
 });
 
 test("expande personagens e transforma o Mundial em campanha jogavel", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const appearance = await readFile(new URL("../app/player-appearance.ts", import.meta.url), "utf8");
   const editor = await readFile(new URL("../app/PlayerAppearanceEditor.tsx", import.meta.url), "utf8");
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
@@ -1368,7 +1396,7 @@ test("expande personagens e transforma o Mundial em campanha jogavel", async () 
 });
 
 test("vencer uma copa nacional jogavel recalcula a vaga continental", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
 
   assert.match(page, /function continentalSlotAfterSeason/);
   assert.match(page, /league\.id === "brasileirao-b" \? "libertadores" : "europa"/);
@@ -1386,7 +1414,7 @@ test("personagens aleatorios reservam cores fantasia para tres por cento dos cas
 
 test("expande o mapa com Egito, Africa do Sul, Australia e vinte novas selecoes", async () => {
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
 
   assert.match(gameData, /id: "egypt-premier"[\s\S]*name: "Egyptian Premier League"/);
@@ -1414,7 +1442,7 @@ test("expande o mapa com Egito, Africa do Sul, Australia e vinte novas selecoes"
 
 test("abre cinco novas ligas completas e transforma a Arabia no mercado de salarios gigantes", async () => {
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const careerSystems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
 
   const expectedLeagueSizes = new Map([
@@ -1440,7 +1468,7 @@ test("abre cinco novas ligas completas e transforma a Arabia no mercado de salar
 
 test("abre a carreira para microestados e novos azarões internacionais", async () => {
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const assetSync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
 
   for (const countryId of [
@@ -1482,7 +1510,7 @@ test("publica metadados completos para buscadores no dominio oficial", async () 
 });
 
 test("abre um X1 local real e reorganiza o menu por tipo de gameplay", async () => {
-  const home = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const home = await readCareerSource();
   const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
   const versus = await readFile(new URL("../app/x1/page.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
@@ -1514,7 +1542,7 @@ test("abre um X1 local real e reorganiza o menu por tipo de gameplay", async () 
 });
 
 test("dá ao goleiro uma carreira própria da base ao fim da trajetória", async () => {
-  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const page = await readCareerSource();
   const keeperEvents = await readFile(new URL("../app/goalkeeper-events.ts", import.meta.url), "utf8");
   const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
   const exclusiveEventIds = keeperEvents.match(/id: "keeper-/g) ?? [];
