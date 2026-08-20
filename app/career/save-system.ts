@@ -73,7 +73,7 @@ function sanitizeIndex(value: unknown): CareerSaveMeta[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter((item): item is CareerSaveMeta => Boolean(item && typeof item === "object" && typeof item.id === "string"))
-    .map((item) => ({
+    .map((item): CareerSaveMeta => ({
       ...item,
       mode: item.mode === "manager" ? "manager" : "player",
       createdAt: Number(item.createdAt) || Date.now(),
