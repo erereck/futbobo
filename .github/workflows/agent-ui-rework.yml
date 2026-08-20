@@ -19,18 +19,21 @@ jobs:
           ref: agent/futbobo-ux-rework
           fetch-depth: 0
 
-      - name: Apply guarded transform
+      - name: Keep original guarded transform compatible
         run: node scripts/agent-ui-rework.mjs
 
-      - name: Commit transformed CareerGame
+      - name: Apply literal-safe QA polish
+        run: node scripts/agent-ui-polish-safe.mjs
+
+      - name: Commit transformed UX
         shell: bash
         run: |
-          if git diff --quiet -- app/components/career/CareerGame.tsx; then
+          if git diff --quiet; then
             echo "No transform changes required."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- app/components/career/CareerGame.tsx
-          git commit -m "refactor: wire focused Futbobo UX"
+          git add -- app/components/career/CareerGame.tsx app/components/shell/FutboboShell.tsx app/components/shell/FutboboShell.module.css app/PlayerAppearanceEditor.tsx app/components/career/PlayerCreationV2.tsx app/components/career/PlayerCreationV2.module.css app/components/career/CareerReworkPanels.tsx app/components/career/CareerReworkPanels.module.css app/components/career/CareerExtraStats.module.css app/player-stories.ts app/career/events.ts app/player-appearance.ts
+          git commit -m "polish: tighten responsive Futbobo UX"
           git push origin HEAD:agent/futbobo-ux-rework
