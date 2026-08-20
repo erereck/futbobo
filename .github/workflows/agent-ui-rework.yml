@@ -1,0 +1,36 @@
+name: Apply Futbobo UX rework
+
+on:
+  push:
+    branches:
+      - agent/futbobo-ux-rework
+
+permissions:
+  contents: write
+
+jobs:
+  transform:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/futbobo-ux-rework
+          fetch-depth: 0
+
+      - name: Apply guarded transform
+        run: node scripts/agent-ui-rework.mjs
+
+      - name: Commit transformed CareerGame
+        shell: bash
+        run: |
+          if git diff --quiet -- app/components/career/CareerGame.tsx; then
+            echo "No transform changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- app/components/career/CareerGame.tsx
+          git commit -m "refactor: wire focused Futbobo UX"
+          git push origin HEAD:agent/futbobo-ux-rework
