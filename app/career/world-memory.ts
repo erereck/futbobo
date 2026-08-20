@@ -102,6 +102,7 @@ const HISTORIC_RECENT_WORLD_CUP: WorldCompetitionChampion = {
 const MAJOR_COMPETITIONS = new Set([
   "championsLeague",
   "libertadores",
+  "sudamericana",
   "mundial",
   "domesticLeague",
 ]);

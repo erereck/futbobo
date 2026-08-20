@@ -47,7 +47,7 @@ export type League = {
   conferencePlaces: number;
 };
 
-export type ContinentalSlot = "libertadores" | "champions" | "europa" | "conference" | "concacaf" | "asian" | "african";
+export type ContinentalSlot = "libertadores" | "sudamericana" | "champions" | "europa" | "conference" | "concacaf" | "asian" | "african";
 
 export type Club = {
   id: string;

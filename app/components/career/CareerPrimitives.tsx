@@ -121,6 +121,7 @@ export const TROPHY_PRESENTATIONS: {
   { id: "domesticCup", label: "Copas nacionais", shortLabel: "COPAS", group: "NACIONAIS", symbol: "♜" },
   { id: "domesticSuperCup", label: "Supercopas nacionais", shortLabel: "SUP.", group: "NACIONAIS", symbol: "✦" },
   { id: "libertadores", label: "Libertadores", shortLabel: "LIB", group: "CONTINENTAIS", symbol: "L", imagePath: "/assets/competitions/libertadores.png" },
+  { id: "sudamericana", label: "Copa Sul-Americana", shortLabel: "SULA", group: "CONTINENTAIS", symbol: "S" },
   { id: "recopaSudamericana", label: "Recopa Sul-Americana", shortLabel: "REC", group: "CONTINENTAIS", symbol: "R", imagePath: "/assets/competitions/recopaSudamericana.png" },
   { id: "championsLeague", label: "Champions League", shortLabel: "UCL", group: "CONTINENTAIS", symbol: "★", imagePath: "/assets/competitions/championsLeague.png" },
   { id: "uefaSuperCup", label: "Supercopa da UEFA", shortLabel: "USC", group: "CONTINENTAIS", symbol: "U", imagePath: "/assets/competitions/uefaSuperCup.png" },
