@@ -1,0 +1,31 @@
+
+> futbobo@1.2.5 build
+> next build
+
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+▲ Next.js 16.2.11 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.6s
+  Running TypeScript ...
+Failed to type check.
+
+./app/career/save-system.ts:74:3
+Type error: Type '{ mode: string; createdAt: number; lastPlayedAt: number; name: string; clubId: string; season: number; position: string; overall: number; phase: string; achievementsEligible: boolean; id: string; }[]' is not assignable to type 'CareerSaveMeta[]'.
+  Type '{ mode: string; createdAt: number; lastPlayedAt: number; name: string; clubId: string; season: number; position: string; overall: number; phase: string; achievementsEligible: boolean; id: string; }' is not assignable to type 'CareerSaveMeta'.
+    Types of property 'mode' are incompatible.
+      Type 'string' is not assignable to type 'CareerMode'.
+
+  [90m72 |[0m [36mfunction[0m sanitizeIndex(value: unknown): [33mCareerSaveMeta[0m[] {
+  [90m73 |[0m   [36mif[0m (![33mArray[0m.isArray(value)) [36mreturn[0m [];
+[31m[1m>[0m [90m74 |[0m   [36mreturn[0m value
+  [90m   |[0m   [31m[1m^[0m
+  [90m75 |[0m     .filter((item): item is [33mCareerSaveMeta[0m => [33mBoolean[0m(item && [36mtypeof[0m item === [32m"object"[0m && [36m...[0m
+  [90m76 |[0m     .map((item) => ({
+  [90m77 |[0m       ...item,
+Next.js build worker exited with code: 1 and signal: null
