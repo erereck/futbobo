@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { countryById } from "../../game-data";
 import type { GameState } from "../../career/model";
+import { OFFICIAL_FOOTBALL_RANKINGS } from "../../career/official-football-records";
 import { buildWorldSnapshot, worldPulseForState } from "../../career/world-memory";
 import { NationBadge } from "./CareerPrimitives";
 import styles from "./CareerWorld.module.css";
@@ -30,6 +31,7 @@ export function WorldPulseButton({ state, onOpen }: { state: GameState; onOpen: 
 
 export default function CareerWorld({ state }: { state: GameState }) {
   const [rankingOpen, setRankingOpen] = useState(false);
+  const [officialOpen, setOfficialOpen] = useState<string>("");
   const snapshot = useMemo(() => buildWorldSnapshot(state), [state]);
   const featured = snapshot.news[0];
   const ranking = snapshot.worldCupRanking;
@@ -51,7 +53,10 @@ export default function CareerWorld({ state }: { state: GameState }) {
           <p>{featured.summary}</p>
         </article>
       ) : (
-        <div className={styles.empty}>As primeiras manchetes aparecem quando a carreira profissional começa.</div>
+        <div className={styles.empty}>
+          <strong>O arquivo já está aberto.</strong>
+          <span>Sua carreira ainda não virou manchete.</span>
+        </div>
       )}
 
       {snapshot.news.length > 1 && (
@@ -81,13 +86,16 @@ export default function CareerWorld({ state }: { state: GameState }) {
         </button>
 
         <div className={styles.recentChampions}>
-          {recentWorldCups.map((champion) => (
-            <span key={`${champion.season}-${champion.winnerCountryId}`}>
-              <NationBadge country={countryById(champion.winnerCountryId)} size="sm" />
-              <small>{champion.season}</small>
-              <strong>{countryById(champion.winnerCountryId).name}</strong>
-            </span>
-          ))}
+          {recentWorldCups.map((champion) => {
+            const country = countryById(champion.winnerCountryId);
+            return (
+              <span key={`${champion.season}-${champion.winnerCountryId}`}>
+                <span className={styles.flagWrap}><NationBadge country={country} size="sm" /></span>
+                <small>{champion.season}</small>
+                <strong>{country.name}</strong>
+              </span>
+            );
+          })}
         </div>
 
         {rankingOpen && (
@@ -97,7 +105,7 @@ export default function CareerWorld({ state }: { state: GameState }) {
               return (
                 <article className={entry.countryId === state.nationality ? styles.playerCountry : ""} key={entry.countryId}>
                   <b>#{entry.rank}</b>
-                  <NationBadge country={country} size="sm" />
+                  <span className={styles.rankingFlag}><NationBadge country={country} size="sm" /></span>
                   <strong>{country.name}</strong>
                   <span>{entry.titles}</span>
                 </article>
@@ -105,6 +113,43 @@ export default function CareerWorld({ state }: { state: GameState }) {
             })}
           </div>
         )}
+      </section>
+
+      <section className={styles.officialSection}>
+        <header>
+          <span>ARQUIVO OFICIAL</span>
+          <small>História real antes do seu save</small>
+        </header>
+        <div>
+          {OFFICIAL_FOOTBALL_RANKINGS.map((board) => {
+            const open = officialOpen === board.id;
+            const leaderEntry = board.entries[0];
+            return (
+              <article className={styles.officialCard} key={board.id}>
+                <button type="button" onClick={() => setOfficialOpen((current) => current === board.id ? "" : board.id)} aria-expanded={open}>
+                  <span>
+                    <small>{board.eyebrow}</small>
+                    <strong>{board.label}</strong>
+                    <em>{leaderEntry.label} · {leaderEntry.value} {board.unit}</em>
+                  </span>
+                  <b>{open ? "−" : "+"}</b>
+                </button>
+                {open && (
+                  <div className={styles.officialRanking}>
+                    {board.entries.map((entry, index) => (
+                      <div key={`${board.id}-${entry.label}`}>
+                        <b>#{index + 1}</b>
+                        <strong>{entry.label}</strong>
+                        <span>{entry.value}</span>
+                      </div>
+                    ))}
+                    <small>{board.cutoff}</small>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
       </section>
     </div>
   );
