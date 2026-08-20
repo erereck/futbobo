@@ -2660,3 +2660,15 @@ button:active:not(:disabled) { transform: scale(0.975); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* WORLD MEMORY EVENT FLOW */
+@media (max-width:899px) {
+  .career-shell > .event-stage {
+    display:block !important;
+    min-height:0 !important;
+    height:auto !important;
+  }
+  .event-stage .event-card {
+    margin:8px 10px 14px !important;
+  }
+}
