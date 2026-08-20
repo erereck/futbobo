@@ -1,33 +1,13 @@
-name: Materialize club events and world tuning
+name: Temporary materializer (disabled)
 
+# Temporary QA scaffold. Product changes are already committed.
+# Remove this file before merging PR #4.
 on:
-  push:
-    branches:
-      - agent/futbobo-world-memory
-
-permissions:
-  contents: write
+  workflow_dispatch:
 
 jobs:
-  materialize:
-    if: github.actor != 'github-actions[bot]'
+  disabled:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: agent/futbobo-world-memory
-          fetch-depth: 0
-      - name: Apply guarded product changes
-        run: node scripts/agent-club-world-rankings.mjs
-      - name: Commit product changes
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "No changes required."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- app/game-data.ts app/career/events.ts app/career/state.ts app/career/world-memory.ts app/career/official-football-records.ts
-          git commit -m "feat: add club events and living global records"
-          git push origin HEAD:agent/futbobo-world-memory
+      - run: echo "Disabled. Remove before merge."
