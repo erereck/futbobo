@@ -62,7 +62,7 @@ export function eligibleEvents(state: GameState) {
 
 export function selectNextEvent(state: GameState, salt: number) {
   const offFieldRoll = seeded(state.seed, state.season * 1237 + salt);
-  if (seeded(state.seed, state.season * 1871 + salt) < 0.18) return DYNAMIC_STORY_EVENT_ID;
+  if (state.playerStoryId !== "open-book" && seeded(state.seed, state.season * 1871 + salt) < 0.18) return DYNAMIC_STORY_EVENT_ID;
   if (!state.activeSponsor && state.age >= 16 && state.reputation >= 10 && offFieldRoll < 0.34) {
     return DYNAMIC_SPONSOR_EVENT_ID;
   }
@@ -611,6 +611,7 @@ export function buildStorySeasonDecision(
   state: GameState,
   context: { performanceScore: number; titleCount: number; club: Club },
 ): StoryDecision | null {
+  if (state.playerStoryId === "open-book") return null;
   const story = playerStoryById(state.playerStoryId);
   const chapter = state.storyLog.length + 1;
   if (chapter > 8) return null;

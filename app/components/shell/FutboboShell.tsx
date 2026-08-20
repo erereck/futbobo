@@ -205,7 +205,7 @@ export default function FutboboShell() {
   }
 
   return (
-    <main className={styles.shell}>
+    <main className={styles.shell} data-screen={screen}>
       <div className={styles.backdrop} aria-hidden="true" />
       <div className={styles.vignette} aria-hidden="true" />
 
@@ -230,7 +230,7 @@ export default function FutboboShell() {
 
       {screen === "modes" && (
         <section className={styles.panelScreen}>
-          <header className={styles.panelHeading}><span>JOGAR</span><h2>Escolha seu futebol.</h2><p>Carreira longa, copa rápida ou o sofá contra alguém.</p></header>
+          <header className={styles.panelHeading}><span>JOGAR</span><h2>Escolher seu futbobo.</h2><p>Carreira longa, copa rápida ou o sofá contra alguém.</p></header>
           <div className={styles.modeList}>
             <button type="button" className={styles.modeCard} onClick={() => setScreen("saves")}>
               <span className={styles.modeIndex}>01</span><div><small>MODO PRINCIPAL</small><strong>Rumo ao Estrelato</strong><p>Crie seu jogador do zero, ganhe títulos e prêmios individuais.</p></div><b>→</b>

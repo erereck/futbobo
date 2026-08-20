@@ -12,3 +12,7 @@
 .discipline header { min-height:44px; align-content:center; }
 
 @media (max-width:650px) { .grid { grid-template-columns:1fr; } }
+
+/* UX POLISH SAFE V2 */
+.grid { grid-template-columns:1fr; }
+.grid > article { min-height:0; }

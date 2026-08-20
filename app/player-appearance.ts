@@ -27,7 +27,7 @@ export const HAIR_COLORS = [
 ];
 const NATURAL_HAIR_COLOR_INDICES = [0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 13];
 const COLORED_HAIR_COLOR_INDICES = [8, 9, 10, 14, 15, 16, 17, 18, 19];
-export const EYE_COLORS = ["#111816", "#35251d", "#31505b", "#49633c", "#765139", "#7c8f98", "#5c3f76"];
+export const EYE_COLORS = ["#111816", "#35251d", "#31505b", "#49633c", "#765139", "#7c8f98", "#5c3f76", "#1f6a74", "#9a742d", "#9eb4cf"];
 export const HAIR_STYLE_NAMES = [
   "Clássico", "Franja", "Cacheado", "Moicano", "Black power", "Raspado", "Tranças", "Lateral", "Topete", "Dreads", "Coque", "Descolorido", "Careca",
   "Mullet", "Corte tigelinha", "Faux hawk", "Twists", "Franja longa", "Undercut", "Rabo de cavalo", "Risca dupla", "Mini afro",

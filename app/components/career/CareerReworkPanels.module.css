@@ -100,3 +100,10 @@
   .awardsArchive > div { grid-template-columns:1fr; }
   .archiveHeading { align-items:start; }
 }
+
+/* UX POLISH SAFE V2 */
+.playerStack { width:100%; min-width:0; display:grid; grid-template-columns:1fr; gap:12px; }
+.playerStack .playerEssentials, .playerStack .publicProfile { margin:0; }
+.publicProfile { grid-template-columns:1fr !important; }
+.publicProfile > * { min-height:0; }
+.statisticsArchive { width:100%; min-width:0; }

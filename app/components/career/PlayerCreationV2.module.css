@@ -127,3 +127,161 @@
   .appearanceWrap :global(.appearance-palette button) { width:27px !important; height:27px !important; min-width:27px !important; }
   .contractOffers button { grid-template-columns:62px minmax(0,1fr) 20px; padding-inline:11px; }
 }
+
+/* UX POLISH SAFE V2 */
+.positionPage { height:100dvh; min-height:100dvh; overflow:hidden; }
+.positionPage .fieldStage { height:calc(100dvh - 68px); min-height:0; padding:clamp(7px,1.4dvh,14px) 0 8px; grid-template-rows:minmax(0,1fr) auto; align-items:center; }
+.positionPage .pitch { min-height:0; height:min(680px,calc(100dvh - 116px)); width:auto; max-width:min(100%,470px); }
+.position { width:clamp(44px,7.2dvh,61px); height:clamp(44px,7.2dvh,61px); }
+
+.shirtStepper { display:grid; grid-template-columns:58px minmax(0,180px) 58px; align-items:stretch; justify-content:center; gap:8px; }
+.shirtStepper input { width:100%; min-width:0; border:0; border-bottom:2px solid #f4c430; outline:0; background:transparent; color:white; text-align:center; font:1000 104px/.9 "Arial Narrow",Impact,sans-serif; -moz-appearance:textfield; }
+.shirtStepper button { align-self:center; width:58px; height:58px; border:1px solid rgba(244,196,48,.28); border-radius:12px; background:#111a15; color:#f4c430; font-size:28px; font-weight:900; cursor:pointer; }
+.shirtStepper button:hover { border-color:#f4c430; background:#1a2116; }
+
+.identityStage { width:min(1180px,calc(100% - 28px)); grid-template-columns:1fr; padding-top:18px; }
+.appearanceWrap { width:100%; min-width:0; }
+.appearanceWrap :global(.appearance-editor) { width:100% !important; max-width:none !important; }
+.appearanceWrap :global(.appearance-preview-extras) { width:100%; }
+.previewOptions { width:100%; display:grid; gap:7px; margin-top:7px; }
+.previewOption { width:100%; min-height:54px; border:1px solid rgba(255,255,255,.11); border-radius:9px; background:#101914; color:white; display:grid; grid-template-columns:40px minmax(0,1fr) 14px; align-items:center; gap:8px; padding:7px 9px; text-align:left; cursor:pointer; }
+.previewOption > span:nth-child(2) { display:grid; gap:3px; min-width:0; }
+.previewOption small { color:#789083; font:800 7px/1 ui-monospace,monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.previewOption strong { font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.previewOption > b { justify-self:end; }
+.previewOption .storyIcon, .storyIcon { width:34px; height:34px; font-size:14px; }
+.previewOption :global(.nation-badge) { max-width:36px; max-height:36px; }
+.previewContinue { width:100%; min-height:48px; }
+
+.picker { display:flex; flex-direction:column; grid-template-rows:none; }
+.picker > header, .warning, .search { flex:0 0 auto; }
+.pickerGrid, .allClubs, .storyList { min-height:0; flex:1 1 auto; }
+
+@media (max-width:760px) {
+  .positionPage .fieldStage { padding-top:6px; }
+  .positionPage .pitch { height:min(590px,calc(100dvh - 112px)); max-width:calc(100% - 4px); padding:18px 13px; }
+  .position { width:clamp(42px,7dvh,53px); height:clamp(42px,7dvh,53px); }
+  .shirtStepper { grid-template-columns:52px minmax(0,160px) 52px; }
+  .shirtStepper input { font-size:88px; }
+  .shirtStepper button { width:52px; height:52px; }
+  .identityStage { width:min(100% - 18px,760px); padding-top:9px; }
+  .appearanceWrap { max-height:calc(100dvh - 88px); }
+  .appearanceWrap :global(.appearance-editor) { grid-template-columns:150px minmax(0,1fr) !important; }
+  .appearanceWrap :global(.appearance-preview) { z-index:2; }
+  .previewOptions { gap:5px; margin-top:5px; }
+  .previewOption { min-height:44px; grid-template-columns:32px minmax(0,1fr) 10px; gap:5px; padding:5px 6px; }
+  .previewOption :global(.nation-badge) { width:30px !important; height:30px !important; min-width:30px !important; }
+  .previewOption .storyIcon, .storyIcon { width:30px; height:30px; }
+  .previewOption strong { font-size:9px; }
+  .previewOption small { font-size:6px; }
+  .previewContinue { min-height:44px; font-size:10px; padding-inline:9px; }
+  .clubCards > button { grid-template-columns:46px minmax(0,1fr) 20px; min-width:0; }
+  .clubCards :global(.club-badge-md) { width:44px !important; height:44px !important; min-width:44px !important; }
+  .allClubs button { min-width:0; }
+  .allClubs button > span { min-width:0; }
+  .allClubs strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .allClubs :global(.club-badge-sm) { width:40px !important; height:40px !important; min-width:40px !important; }
+  .contractOffers button { grid-template-columns:58px minmax(0,1fr) 20px; gap:10px; min-width:0; }
+  .contractOffers :global(.club-badge-lg) { width:58px !important; height:58px !important; min-width:58px !important; }
+  .contractOffers span { min-width:0; }
+  .contractOffers strong { font-size:16px; overflow-wrap:anywhere; }
+}
+
+@media (max-width:480px) {
+  .positionPage .pitch { height:min(520px,calc(100dvh - 108px)); }
+  .position { width:clamp(39px,6.7dvh,49px); height:clamp(39px,6.7dvh,49px); }
+  .position small { display:none; }
+  .appearanceWrap :global(.appearance-editor) { grid-template-columns:140px minmax(0,1fr) !important; }
+  .appearanceWrap :global(.appearance-preview canvas) { width:116px !important; height:116px !important; }
+  .appearanceWrap :global(.appearance-preview strong), .appearanceWrap :global(.appearance-preview small) { max-width:122px; }
+  .appearanceWrap :global(.appearance-palette button) { width:26px !important; height:26px !important; min-width:26px !important; }
+  .contractOffers button { grid-template-columns:52px minmax(0,1fr) 18px; padding:11px 9px; }
+  .contractOffers :global(.club-badge-lg) { width:52px !important; height:52px !important; min-width:52px !important; }
+}
+
+/* UX FINAL POLISH V3 */
+/* Swatches are rigid squares before border-radius, so flex/grid compression can never turn them into ovals. */
+.appearanceWrap :global(.appearance-palette button) {
+  width:30px !important;
+  height:30px !important;
+  min-width:30px !important;
+  min-height:30px !important;
+  max-width:30px !important;
+  max-height:30px !important;
+  flex:0 0 30px !important;
+  aspect-ratio:1 / 1 !important;
+  border-radius:50% !important;
+  box-sizing:border-box !important;
+}
+
+/* Desktop identity is a viewport screen: no page scroll, with a slightly tighter preview to guarantee fit. */
+@media (min-width:761px) {
+  .identityPage {
+    height:100dvh;
+    min-height:100dvh;
+    overflow:hidden;
+  }
+  .identityPage .identityStage {
+    height:calc(100dvh - 68px);
+    min-height:0;
+    padding:8px 0 10px;
+    align-content:center;
+    overflow:hidden;
+  }
+  .identityPage .appearanceWrap {
+    max-height:calc(100dvh - 86px);
+    overflow:hidden;
+  }
+  .identityPage .appearanceWrap :global(.appearance-editor) {
+    max-height:100%;
+    overflow:hidden;
+  }
+  .identityPage .appearanceWrap :global(.appearance-preview canvas) {
+    width:min(240px,32dvh) !important;
+    height:min(240px,32dvh) !important;
+  }
+  .identityPage .previewOptions { gap:5px; margin-top:5px; }
+  .identityPage .previewOption { min-height:48px; }
+  .identityPage .previewContinue { min-height:44px; }
+}
+
+/* On phones give the preview/country/story column a little more room and let controls take the remainder. */
+@media (max-width:760px) {
+  .appearanceWrap :global(.appearance-editor) {
+    grid-template-columns:minmax(168px,44%) minmax(0,1fr) !important;
+  }
+  .appearanceWrap :global(.appearance-preview canvas) {
+    width:142px !important;
+    height:142px !important;
+  }
+  .appearanceWrap :global(.appearance-palette button) {
+    width:28px !important;
+    height:28px !important;
+    min-width:28px !important;
+    min-height:28px !important;
+    max-width:28px !important;
+    max-height:28px !important;
+    flex-basis:28px !important;
+  }
+}
+
+@media (max-width:480px) {
+  .appearanceWrap :global(.appearance-editor) {
+    grid-template-columns:minmax(152px,46%) minmax(0,1fr) !important;
+  }
+  .appearanceWrap :global(.appearance-preview canvas) {
+    width:128px !important;
+    height:128px !important;
+  }
+  .appearanceWrap :global(.appearance-preview strong),
+  .appearanceWrap :global(.appearance-preview small) { max-width:142px; }
+  .appearanceWrap :global(.appearance-palette button) {
+    width:26px !important;
+    height:26px !important;
+    min-width:26px !important;
+    min-height:26px !important;
+    max-width:26px !important;
+    max-height:26px !important;
+    flex-basis:26px !important;
+  }
+}

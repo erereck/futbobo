@@ -158,3 +158,55 @@
   .legacyScore { grid-column: 3; font-size: 17px; text-align: left; }
   .footer { font-size: 8px; }
 }
+
+/* UX POLISH SAFE V2 */
+.shell[data-screen="home"], .shell[data-screen="modes"] { height:100dvh; min-height:100dvh; overflow:hidden; }
+.shell[data-screen="home"] .home { min-height:0; padding:clamp(10px,2dvh,24px) 0; gap:clamp(14px,3dvh,34px); }
+.shell[data-screen="home"] .heroLogo h1 { font-size:clamp(48px,min(8.5vw,10dvh),96px); }
+.shell[data-screen="home"] .heroLogo > span { margin-top:clamp(8px,1.6dvh,15px); }
+.shell[data-screen="home"] .mainActions .playButton { min-height:clamp(54px,8dvh,70px); }
+.shell[data-screen="home"] .mainActions button:not(.playButton) { min-height:clamp(40px,5.8dvh,48px); }
+
+.shell[data-screen="modes"] .panelScreen { min-height:0; height:100%; padding:clamp(10px,2.2dvh,24px) 0; display:grid; grid-template-rows:auto minmax(0,1fr); overflow:hidden; }
+.shell[data-screen="modes"] .panelHeading { margin-bottom:clamp(8px,1.6dvh,16px); }
+.shell[data-screen="modes"] .panelHeading h2 { font-size:clamp(31px,min(5vw,7dvh),58px); }
+.shell[data-screen="modes"] .modeList { min-height:0; grid-template-rows:repeat(4,minmax(0,1fr)); gap:clamp(5px,.8dvh,8px); }
+.shell[data-screen="modes"] .modeCard { min-height:0; height:100%; padding-block:clamp(7px,1.25dvh,13px); }
+
+@media (min-width:761px) {
+  .careerHost :global(.career-tab-profile .panel-screen), .careerHost :global(.career-tab-stats .panel-screen) { display:flex !important; flex-direction:column !important; align-items:stretch !important; gap:12px !important; }
+  .careerHost :global(.career-tab-profile .panel-screen > *), .careerHost :global(.career-tab-stats .panel-screen > *) { width:100% !important; max-width:none !important; min-width:0 !important; margin:0 !important; }
+}
+
+.careerHost :global(.event-stage) { min-height:0 !important; }
+.careerHost :global(.event-card) { min-height:0 !important; height:auto !important; grid-template-rows:auto auto !important; align-content:start !important; }
+.careerHost :global(.event-card .choice-list) { align-self:start !important; margin-top:clamp(14px,2.2vh,24px) !important; }
+
+@media (max-height:720px) {
+  .shell[data-screen="home"] .home { gap:10px; padding-block:6px; }
+  .shell[data-screen="home"] .heroLogo h1 { font-size:clamp(42px,8dvh,66px); }
+  .shell[data-screen="home"] .heroLogo > span { margin-top:6px; }
+  .shell[data-screen="modes"] .modeCard p { display:none; }
+  .shell[data-screen="modes"] .modeCard strong { font-size:18px; }
+}
+
+@media (max-width:800px) {
+  .shell[data-screen="home"] .mainActions { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .shell[data-screen="home"] .mainActions .playButton { grid-column:1/-1; }
+  .shell[data-screen="home"] .home { padding-top:10px; }
+  .careerHost :global(.bottom-nav) { grid-template-columns:repeat(3,minmax(0,1fr)) !important; justify-content:center !important; justify-items:stretch !important; }
+  .careerHost :global(.bottom-nav .desktop-career-nav-brand) { display:none !important; }
+  .careerHost :global(.bottom-nav > button) { width:100% !important; min-width:0 !important; }
+  .careerHost :global(.club-badge-lg) { width:62px !important; height:62px !important; min-width:62px !important; }
+}
+
+@media (max-width:520px) {
+  .shell[data-screen="home"] .mainActions { gap:6px; }
+  .shell[data-screen="home"] .mainActions button { padding-inline:10px; font-size:11px; }
+  .shell[data-screen="home"] .mainActions .playButton { font-size:17px; }
+  .shell[data-screen="home"] .heroLogo h1 { font-size:clamp(46px,16vw,64px); }
+  .shell[data-screen="modes"] .panelHeading p, .shell[data-screen="modes"] .modeCard p { display:none; }
+  .shell[data-screen="modes"] .modeCard { grid-template-columns:34px minmax(0,1fr) 22px; padding-inline:10px; }
+  .shell[data-screen="modes"] .modeCard strong { font-size:16px; }
+  .shell[data-screen="modes"] .modeIndex { font-size:13px; }
+}

@@ -24,7 +24,7 @@ export function PlayerReworkPanels({ state }: { state: GameState }) {
     + (state.activeSponsor ? state.activeSponsor.annualValue * Math.max(1, state.activeSponsor.endSeason - state.season) : 0);
 
   return (
-    <>
+    <div className={styles.playerStack}>
       <section className={styles.playerEssentials}>
         <header className={styles.sectionHeading}>
           <div><span>JOGADOR</span><strong>O que importa em campo.</strong></div>
@@ -108,7 +108,7 @@ export function PlayerReworkPanels({ state }: { state: GameState }) {
           </section>
         </div>
       )}
-    </>
+    </div>
   );
 }
 

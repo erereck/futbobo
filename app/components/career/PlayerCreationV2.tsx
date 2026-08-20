@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { CLUBS, COUNTRIES, FORMATIONS, POSITIONS } from "../../game-data";
+import { CLUBS, COUNTRIES, FORMATIONS, LEAGUES, POSITIONS } from "../../game-data";
 import type { PositionKey } from "../../game-data";
 import type { GameState } from "../../career/model";
 import { defaultAcademyCountry } from "../../career/academy";
@@ -80,10 +80,30 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
     ?? COUNTRIES.find((country) => country.id === defaultAcademyCountry(game.nationality))
     ?? COUNTRIES.find((country) => playableCountryIds.has(country.id))
     ?? COUNTRIES[0];
-  const academyClubs = useMemo(() => CLUBS
-    .filter((club) => club.countryId === academyCountry.id)
-    .sort((a, b) => a.reputation - b.reputation || a.strength - b.strength)
-    .slice(0, 12), [academyCountry.id]);
+  const academyClubs = useMemo(() => {
+    const limit = 6;
+    const countryClubs = CLUBS
+      .filter((club) => club.countryId === academyCountry.id)
+      .sort((a, b) => a.reputation - b.reputation || a.strength - b.strength);
+    const divisions = LEAGUES
+      .filter((league) => league.countryId === academyCountry.id)
+      .sort((a, b) => b.prestige - a.prestige);
+
+    if (divisions.length < 2) return countryClubs.slice(0, limit);
+
+    const perDivision = Math.floor(limit / 2);
+    const selected = [
+      ...countryClubs.filter((club) => club.leagueId === divisions[0].id).slice(0, perDivision),
+      ...countryClubs.filter((club) => club.leagueId === divisions[1].id).slice(0, perDivision),
+    ];
+
+    if (selected.length < limit) {
+      const selectedIds = new Set(selected.map((club) => club.id));
+      selected.push(...countryClubs.filter((club) => !selectedIds.has(club.id)).slice(0, limit - selected.length));
+    }
+
+    return selected.slice(0, limit);
+  }, [academyCountry.id]);
   const filteredCountries = useMemo(() => {
     const needle = countrySearch.trim().toLocaleLowerCase("pt-BR");
     return COUNTRIES
@@ -100,6 +120,17 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
       .sort((a, b) => b.reputation - a.reputation || b.strength - a.strength)
       .slice(0, 80);
   }, [clubSearch]);
+
+  const updateShirtNumber = (raw: string | number) => {
+    const number = Math.max(1, Math.min(99, Number(raw) || DEFAULT_NUMBER[game.position]));
+    setShirtNumberInput(String(number));
+    setGame((current) => ({ ...current, number }));
+  };
+
+  const adjustShirtNumber = (delta: number) => {
+    const current = Math.max(1, Math.min(99, Number(shirtNumberInput) || DEFAULT_NUMBER[game.position]));
+    updateShirtNumber(current + delta);
+  };
 
   if (!SETUP_PHASES.has(game.phase)) return null;
 
@@ -167,7 +198,7 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
 
   if (game.phase === "appearance") {
     return (
-      <section className={styles.page}>
+      <section className={`${styles.page} ${styles.positionPage}`}>
         <SetupHeader step="2 · POSIÇÃO" title="Onde você quer jogar?" onBack={() => setGame((current) => ({ ...current, phase: "identity" }))} />
         <div className={styles.fieldStage}>
           <div className={styles.pitch}>
@@ -176,7 +207,7 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
               <button
                 type="button"
                 key={item.key}
-                className={`${styles.position} ${game.position === item.key ? styles.positionSelected : ""}`}
+                className={styles.position}
                 style={POSITION_FIELD_SPOTS[item.key]}
                 onClick={() => choosePosition(item.key)}
               >
@@ -195,7 +226,14 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
       <section className={styles.page}>
         <SetupHeader step="3 · CAMISA" title="Seu número e seu pé." onBack={() => setGame((current) => ({ ...current, phase: "appearance" }))} />
         <div className={`${styles.centerStage} ${styles.shirtStage}`}>
-          <div className={styles.shirtNumber}><small>CAMISA</small><input type="number" min={1} max={99} inputMode="numeric" value={shirtNumberInput} onChange={(event) => { const value = event.target.value; setShirtNumberInput(value); if (value) setGame((current) => ({ ...current, number: Math.max(1, Math.min(99, Number(value) || DEFAULT_NUMBER[current.position])) })); }} /></div>
+          <div className={styles.shirtNumber}>
+            <small>CAMISA</small>
+            <div className={styles.shirtStepper}>
+              <button type="button" onClick={() => adjustShirtNumber(-1)} aria-label="Diminuir número da camisa">−</button>
+              <input type="text" inputMode="numeric" pattern="[0-9]*" value={shirtNumberInput} onChange={(event) => { const clean = event.target.value.replace(/\D/g, "").slice(0, 2); setShirtNumberInput(clean); if (clean) setGame((current) => ({ ...current, number: Math.max(1, Math.min(99, Number(clean) || DEFAULT_NUMBER[current.position])) })); }} onBlur={() => updateShirtNumber(shirtNumberInput)} />
+              <button type="button" onClick={() => adjustShirtNumber(1)} aria-label="Aumentar número da camisa">＋</button>
+            </div>
+          </div>
           <fieldset className={styles.footChoice}><legend>PÉ DOMINANTE</legend>{(["Esquerda", "Direita"] as const).map((foot) => <button type="button" key={foot} className={game.foot === foot ? styles.selectedChoice : ""} onClick={() => setGame((current) => ({ ...current, foot }))}>{foot}</button>)}</fieldset>
           <button className={styles.primary} type="button" onClick={() => { const number = Math.max(1, Math.min(99, Number(shirtNumberInput) || DEFAULT_NUMBER[game.position])); setGame((current) => ({ ...current, number, phase: "academy" })); setShirtNumberInput(String(number)); }}>Confirmar <b>→</b></button>
         </div>
@@ -205,17 +243,36 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
 
   if (game.phase === "academy") {
     return (
-      <section className={styles.page}>
+      <section className={`${styles.page} ${styles.identityPage}`}>
         <SetupHeader step="4 · IDENTIDADE" title="Monte seu jogador." onBack={() => setGame((current) => ({ ...current, phase: "nationality" }))} />
         <div className={styles.identityStage}>
           {appearanceEnabled ? (
-            <div className={styles.appearanceWrap}><PlayerAppearanceEditor compact value={game.playerAppearance} onChange={(playerAppearance) => setGame((current) => ({ ...current, playerAppearance }))} playerName={game.name} number={game.number} /></div>
-          ) : <div className={styles.appearanceDisabled}><b>#{game.number}</b><strong>{game.name}</strong><small>Personagens personalizados estão desativados nas configurações.</small></div>}
-          <aside className={styles.identityOptions}>
-            <button type="button" className={styles.optionCard} onClick={() => setCountryPickerOpen(true)}><NationBadge country={selectedCountry} size="md" /><span><small>PAÍS</small><strong>{selectedCountry.name}</strong></span><b>›</b></button>
-            <button type="button" className={`${styles.optionCard} ${styles.storyOption}`} onClick={() => setStoryPickerOpen(true)}><span className={styles.storyIcon}>{selectedStory.icon}</span><span><small>{selectedStory.tagline}</small><strong>{displayStoryTitle(selectedStory.id, selectedStory.title)}</strong></span><b>›</b></button>
-            <button className={styles.primary} type="button" onClick={goClub}>Escolher primeiro clube <b>→</b></button>
-          </aside>
+            <div className={styles.appearanceWrap}>
+              <PlayerAppearanceEditor
+                compact
+                value={game.playerAppearance}
+                onChange={(playerAppearance) => setGame((current) => ({ ...current, playerAppearance }))}
+                playerName={game.name}
+                number={game.number}
+                previewExtras={(
+                  <div className={styles.previewOptions}>
+                    <button type="button" className={styles.previewOption} onClick={() => setCountryPickerOpen(true)}><NationBadge country={selectedCountry} size="sm" /><span><small>PAÍS</small><strong>{selectedCountry.name}</strong></span><b>›</b></button>
+                    <button type="button" className={`${styles.previewOption} ${styles.storyOption}`} onClick={() => setStoryPickerOpen(true)}><span className={styles.storyIcon}>{selectedStory.icon}</span><span><small>{selectedStory.tagline}</small><strong>{displayStoryTitle(selectedStory.id, selectedStory.title)}</strong></span><b>›</b></button>
+                    <button className={`${styles.primary} ${styles.previewContinue}`} type="button" onClick={goClub}>Escolher primeiro clube <b>→</b></button>
+                  </div>
+                )}
+              />
+            </div>
+          ) : (
+            <div className={styles.appearanceDisabled}>
+              <b>#{game.number}</b><strong>{game.name}</strong><small>Personagens personalizados estão desativados nas configurações.</small>
+              <div className={styles.previewOptions}>
+                <button type="button" className={styles.previewOption} onClick={() => setCountryPickerOpen(true)}><NationBadge country={selectedCountry} size="sm" /><span><small>PAÍS</small><strong>{selectedCountry.name}</strong></span><b>›</b></button>
+                <button type="button" className={`${styles.previewOption} ${styles.storyOption}`} onClick={() => setStoryPickerOpen(true)}><span className={styles.storyIcon}>{selectedStory.icon}</span><span><small>{selectedStory.tagline}</small><strong>{displayStoryTitle(selectedStory.id, selectedStory.title)}</strong></span><b>›</b></button>
+                <button className={`${styles.primary} ${styles.previewContinue}`} type="button" onClick={goClub}>Escolher primeiro clube <b>→</b></button>
+              </div>
+            </div>
+          )}
         </div>
         {countryPickerOpen && <Picker title="Escolha seu país" onClose={() => setCountryPickerOpen(false)}><input className={styles.search} autoFocus placeholder="Pesquisar país" value={countrySearch} onChange={(event) => setCountrySearch(event.target.value)} /><div className={styles.pickerGrid}>{filteredCountries.map((country) => <button type="button" key={country.id} onClick={() => chooseCountry(country.id)}><NationBadge country={country} size="sm" /><strong>{country.name}</strong></button>)}</div></Picker>}
         {storyPickerOpen && <Picker title="Escolha sua história" onClose={() => setStoryPickerOpen(false)}><div className={styles.storyList}>{PLAYER_STORIES.map((story) => <button type="button" key={story.id} className={game.playerStoryId === story.id ? styles.activeStory : ""} onClick={() => { setGame((current) => ({ ...current, playerStoryId: story.id })); setStoryPickerOpen(false); }}><b>{story.icon}</b><span><small>{story.tagline}</small><strong>{displayStoryTitle(story.id, story.title)}</strong></span></button>)}</div></Picker>}
