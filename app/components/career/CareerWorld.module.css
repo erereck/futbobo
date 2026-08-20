@@ -1,0 +1,61 @@
+.page { width:100%; display:grid; gap:12px; }
+.heading { display:flex; align-items:end; justify-content:space-between; gap:12px; padding:0 2px 4px; }
+.heading span { color:#f4c430; font:900 9px/1 ui-monospace,monospace; letter-spacing:.16em; }
+.heading strong { font-size:24px; letter-spacing:-.03em; }
+
+.featured { padding:17px 18px; border:1px solid rgba(255,255,255,.09); border-radius:14px; background:#0d1711; display:grid; gap:6px; }
+.featured.major { border-color:rgba(244,196,48,.24); background:linear-gradient(135deg,rgba(244,196,48,.08),#0d1711 62%); }
+.featured small { color:#7d9084; font:900 8px/1 ui-monospace,monospace; letter-spacing:.1em; }
+.featured strong { font-size:22px; line-height:1.05; }
+.featured p { margin:0; color:#9eada4; font-size:11px; line-height:1.45; }
+.empty { padding:18px; border:1px dashed rgba(255,255,255,.1); border-radius:13px; color:#7e8d84; font-size:11px; }
+
+.newsSection { overflow:hidden; border:1px solid rgba(255,255,255,.08); border-radius:13px; background:#0d1711; }
+.newsSection > header { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; border-bottom:1px solid rgba(255,255,255,.06); }
+.newsSection > header span { color:#8ca096; font:900 8px/1 ui-monospace,monospace; letter-spacing:.12em; }
+.newsSection > header small { color:#65766c; font-size:8px; }
+.newsSection > div { display:grid; }
+.newsSection article { min-height:58px; display:grid; grid-template-columns:48px minmax(0,1fr) 12px; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.045); }
+.newsSection article:last-child { border-bottom:0; }
+.newsSection time { color:#718178; font:800 9px/1 ui-monospace,monospace; }
+.newsSection article > span { min-width:0; display:grid; gap:2px; }
+.newsSection article small { color:#718178; font:800 7px/1 ui-monospace,monospace; }
+.newsSection article strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+.newsSection article p { margin:0; overflow:hidden; color:#88998f; font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
+.newsSection article > b { color:#f4c430; font-size:8px; }
+
+.worldCupCard { overflow:hidden; border:1px solid rgba(255,255,255,.09); border-radius:13px; background:#0d1711; }
+.worldCupCard > button { width:100%; min-height:76px; display:grid; grid-template-columns:42px minmax(0,1fr) 24px; align-items:center; gap:10px; padding:11px 13px; border:0; background:transparent; color:white; text-align:left; cursor:pointer; }
+.trophy { width:38px; height:38px; display:grid; place-items:center; border-radius:50%; background:rgba(244,196,48,.1); color:#f4c430; font-size:19px; }
+.worldCupCard > button > span:nth-child(2) { min-width:0; display:grid; gap:3px; }
+.worldCupCard button small { color:#7d9084; font:900 7px/1 ui-monospace,monospace; letter-spacing:.1em; }
+.worldCupCard button strong { font-size:13px; }
+.worldCupCard button em { color:#91a097; font-size:9px; font-style:normal; }
+.worldCupCard button > b { justify-self:end; color:#f4c430; font-size:18px; }
+.recentChampions { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; border-top:1px solid rgba(255,255,255,.05); background:rgba(255,255,255,.03); }
+.recentChampions > span { min-width:0; padding:9px 7px; background:#0c1510; display:grid; grid-template-columns:28px minmax(0,1fr); grid-template-rows:auto auto; column-gap:6px; align-items:center; }
+.recentChampions :global(.nation-badge) { grid-row:1/3; }
+.recentChampions small { color:#6f8076; font:800 7px/1 ui-monospace,monospace; }
+.recentChampions strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }
+.ranking { border-top:1px solid rgba(255,255,255,.06); display:grid; }
+.ranking article { min-height:44px; display:grid; grid-template-columns:34px 32px minmax(0,1fr) 34px; align-items:center; gap:7px; padding:6px 11px; border-bottom:1px solid rgba(255,255,255,.04); }
+.ranking article:last-child { border-bottom:0; }
+.ranking article > b { color:#708077; font:900 8px/1 ui-monospace,monospace; }
+.ranking article > strong { font-size:10px; }
+.ranking article > span { justify-self:end; color:#f4c430; font-weight:900; }
+.playerCountry { background:rgba(244,196,48,.055); }
+.playerCountry > b { color:#f4c430 !important; }
+
+.pulse { width:100%; margin-top:10px; padding:9px 0 0; display:grid; grid-template-columns:auto minmax(0,1fr) 16px; align-items:center; gap:8px; border:0; border-top:1px solid rgba(255,255,255,.08); background:transparent; color:white; text-align:left; cursor:pointer; }
+.pulse > span { display:flex; align-items:center; gap:5px; color:#84968b; font:900 7px/1 ui-monospace,monospace; letter-spacing:.08em; }
+.pulse i { width:5px; height:5px; border-radius:50%; background:#f4c430; box-shadow:0 0 0 3px rgba(244,196,48,.08); }
+.pulse strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }
+.pulse > b { justify-self:end; color:#f4c430; }
+
+@media (max-width:560px) {
+  .heading strong { font-size:20px; }
+  .featured { padding:14px; }
+  .featured strong { font-size:18px; }
+  .recentChampions { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .newsSection article { grid-template-columns:42px minmax(0,1fr) 10px; padding-inline:10px; }
+}
