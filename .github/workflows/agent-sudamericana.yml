@@ -1,5 +1,7 @@
 name: Temporary Sul-Americana materializer (disabled)
 
+# Temporary QA scaffold. Product changes are already committed.
+# Remove this file before merging PR #4.
 on:
   workflow_dispatch:
 
@@ -8,4 +10,4 @@ jobs:
     if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Product changes are already materialized; this workflow is intentionally inert."
+      - run: echo "Disabled. Remove before merge."
