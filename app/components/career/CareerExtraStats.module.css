@@ -1,0 +1,18 @@
+:global(.legacy-ui-hidden) { display: none !important; }
+
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.grid > article { min-height:126px; padding:14px; border:1px solid rgba(255,255,255,.09); border-radius:11px; background:#0e1711; color:white; }
+.national header { display:flex; align-items:center; gap:10px; }
+.national header span, .discipline header { display:grid; gap:3px; }
+.grid small { color:#7c8d82; font:800 7px/1 ui-monospace,monospace; letter-spacing:.1em; }
+.national header strong, .discipline header strong { font-size:16px; }
+.grid article > div { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; margin-top:12px; }
+.grid article > div > b { display:grid; gap:4px; padding:8px; border-radius:8px; background:#121e16; color:#f4c430; font-size:17px; }
+.grid article > div > b small { color:#829087; }
+.discipline header { min-height:44px; align-content:center; }
+
+@media (max-width:650px) { .grid { grid-template-columns:1fr; } }
+
+/* UX POLISH SAFE V2 */
+.grid { grid-template-columns:1fr; }
+.grid > article { min-height:0; }

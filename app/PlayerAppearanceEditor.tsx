@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import {
   BEARD_NAMES,
   EYE_COLORS,
@@ -106,6 +106,7 @@ export default function PlayerAppearanceEditor({
   secondary = "#717b75",
   kitPattern,
   compact = false,
+  previewExtras,
 }: {
   value: PlayerAppearance;
   onChange: (value: PlayerAppearance) => void;
@@ -115,6 +116,7 @@ export default function PlayerAppearanceEditor({
   secondary?: string;
   kitPattern?: number;
   compact?: boolean;
+  previewExtras?: ReactNode;
 }) {
   function setIndex(key: AppearanceKey, length: number, direction: number) {
     onChange({ ...value, [key]: cycle(value[key], length, direction) });
@@ -128,6 +130,7 @@ export default function PlayerAppearanceEditor({
         <strong>{playerName || "Seu jogador"}</strong>
         <small>O uniforme acompanha automaticamente o clube.</small>
         <button type="button" className="appearance-random" onClick={() => onChange(randomPlayerAppearance())}>⚄ Sortear visual</button>
+        {previewExtras && <div className="appearance-preview-extras">{previewExtras}</div>}
       </div>
 
       <div className="appearance-controls">
