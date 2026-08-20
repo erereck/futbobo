@@ -1,0 +1,23 @@
+name: Validate Futbobo UX branch
+
+on:
+  push:
+    branches:
+      - agent/futbobo-ux-rework
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/futbobo-ux-rework
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - run: npm ci
+      - run: npm run build
