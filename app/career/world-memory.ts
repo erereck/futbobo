@@ -256,28 +256,23 @@ function rivalNews(state: GameState): WorldNewsItem[] {
 export function buildWorldSnapshot(state: GameState): WorldSnapshot {
   const titles = { ...HISTORIC_WORLD_CUP_TITLES };
   const champions: WorldCompetitionChampion[] = [HISTORIC_RECENT_WORLD_CUP];
+  const worldCupNews: WorldNewsItem[] = [];
   const latestCompletedSeason = Math.max(2026, ...state.history.map((record) => record.season));
 
   for (let season = 2034; season <= latestCompletedSeason; season += 4) {
     const result = resolveWorldCup(state, season, titles);
     champions.push(result);
     titles[result.winnerCountryId] = (titles[result.winnerCountryId] ?? 0) + 1;
-  }
-
-  const worldCupNews = champions
-    .filter((champion) => champion.season >= 2034)
-    .map<WorldNewsItem>((champion) => {
-      const winner = countryById(champion.winnerCountryId);
-      const titleCount = titles[champion.winnerCountryId] ?? 1;
-      return {
-        id: `world-cup-${champion.season}-${champion.winnerCountryId}`,
-        season: champion.season,
-        category: "world-cup",
-        priority: "major",
-        title: `${winner.name} é campeão do mundo`,
-        summary: `${champion.season} · agora soma ${titleCount} título(s) na história.`,
-      };
+    const winner = countryById(result.winnerCountryId);
+    worldCupNews.push({
+      id: `world-cup-${result.season}-${result.winnerCountryId}`,
+      season: result.season,
+      category: "world-cup",
+      priority: "major",
+      title: `${winner.name} é campeão do mundo`,
+      summary: `${result.season} · agora soma ${titles[result.winnerCountryId]} título(s) na história.`,
     });
+  }
 
   const careerNews = state.history.flatMap((record) => [
     ...competitionNews(record),
