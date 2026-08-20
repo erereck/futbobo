@@ -1,0 +1,33 @@
+name: Materialize Copa Sul-Americana
+
+on:
+  push:
+    branches:
+      - agent/futbobo-world-memory
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/futbobo-world-memory
+          fetch-depth: 0
+      - name: Apply guarded Sul-Americana changes
+        run: node scripts/agent-sudamericana.mjs
+      - name: Commit product changes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- app/game-data.ts app/career/model.ts app/career/academy.ts app/career/state.ts app/career/simulation.ts app/components/career/CareerPrimitives.tsx app/career/world-memory.ts
+          git commit -m "feat: add Copa Sul-Americana to career"
+          git push origin HEAD:agent/futbobo-world-memory
