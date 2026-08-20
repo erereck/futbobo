@@ -21,8 +21,9 @@ import { clubById } from "../../career/shared";
 import CareerGame from "../career/CareerGame";
 import { BrandMark, ClubBadge } from "../career/CareerPrimitives";
 import styles from "./FutboboShell.module.css";
+import { InstallScreen, NewsScreen, SettingsScreen } from "./ShellUtilityScreens";
 
-type ShellScreen = "home" | "modes" | "saves" | "achievements" | "hall" | "career" | "legacy-tool";
+type ShellScreen = "home" | "modes" | "saves" | "achievements" | "hall" | "settings" | "install" | "news" | "career" | "legacy-tool";
 type BootAction = "new" | "continue" | "settings" | "install" | "news" | null;
 
 function safeHall() {
@@ -219,14 +220,18 @@ export default function FutboboShell() {
           <div className={styles.heroLogo}><BrandMark size="hero" /><h1>FUTBOBO</h1><span>FAÇA SUA HISTÓRIA</span></div>
           <nav className={styles.mainActions} aria-label="Menu principal">
             <button type="button" className={styles.playButton} onClick={() => setScreen("modes")}><span>▶</span><strong>JOGAR</strong><b>→</b></button>
-            <button type="button" onClick={() => openLegacyTool("settings")}><span>⚙</span>Configurações</button>
+            <button type="button" onClick={() => setScreen("settings")}><span>⚙</span>Configurações</button>
             <button type="button" onClick={() => setScreen("hall")}><span>★</span>Hall da Fama</button>
             <button type="button" onClick={() => setScreen("achievements")}><span>🏆</span>Conquistas</button>
-            <button type="button" onClick={() => openLegacyTool("install")}><span>▣</span>Instalar</button>
-            <button type="button" onClick={() => openLegacyTool("news")}><span>●</span>Novidades</button>
+            <button type="button" onClick={() => setScreen("install")}><span>▣</span>Instalar</button>
+            <button type="button" onClick={() => setScreen("news")}><span>●</span>Novidades</button>
           </nav>
         </section>
       )}
+
+      {screen === "settings" && <SettingsScreen />}
+      {screen === "install" && <InstallScreen />}
+      {screen === "news" && <NewsScreen />}
 
       {screen === "modes" && (
         <section className={styles.panelScreen}>
