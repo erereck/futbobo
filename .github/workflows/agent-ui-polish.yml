@@ -1,9 +1,6 @@
 name: Materialize Futbobo UX polish
 
 on:
-  push:
-    branches:
-      - agent/futbobo-ux-rework
   pull_request:
     branches:
       - main
@@ -24,12 +21,13 @@ jobs:
           ref: agent/futbobo-ux-rework
           fetch-depth: 0
 
-      - name: Apply approved polish
+      - name: Apply approved polish and compatibility fixes
         run: |
           node scripts/agent-ui-polish-safe.mjs
           node scripts/agent-ui-final-polish.mjs
+          node scripts/agent-finalize-rework.mjs
 
-      - name: Commit materialized UI
+      - name: Commit materialized rework
         shell: bash
         run: |
           if git diff --quiet; then
@@ -38,6 +36,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- app/components/shell/FutboboShell.tsx app/components/shell/FutboboShell.module.css app/PlayerAppearanceEditor.tsx app/components/career/PlayerCreationV2.tsx app/components/career/PlayerCreationV2.module.css app/components/career/CareerReworkPanels.tsx app/components/career/CareerReworkPanels.module.css app/components/career/CareerExtraStats.module.css app/player-stories.ts app/career/events.ts app/player-appearance.ts
-          git commit -m "polish: materialize approved Futbobo UX"
+          git add -- app/components/shell/FutboboShell.tsx app/components/shell/FutboboShell.module.css app/PlayerAppearanceEditor.tsx app/components/career/PlayerCreationV2.tsx app/components/career/PlayerCreationV2.module.css app/components/career/CareerReworkPanels.tsx app/components/career/CareerReworkPanels.module.css app/components/career/CareerExtraStats.module.css app/player-stories.ts app/career/events.ts app/player-appearance.ts app/career/save-system.ts app/components/career/CareerGame.tsx
+          git commit -m "polish: finalize Futbobo rework"
           git push origin HEAD:agent/futbobo-ux-rework
