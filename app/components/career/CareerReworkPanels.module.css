@@ -1,0 +1,102 @@
+.sectionHeading { display:flex; justify-content:space-between; align-items:end; gap:16px; margin-bottom:14px; }
+.sectionHeading > div { display:grid; gap:4px; }
+.sectionHeading span, .archiveHeading span, .seasonArchive header span, .awardsArchive header span { color:#7ea88a; font:900 9px/1 ui-monospace,monospace; letter-spacing:.16em; }
+.sectionHeading strong, .archiveHeading strong { font-size:21px; }
+.sectionHeading > b { display:grid; color:#f4c430; font-size:31px; line-height:.8; text-align:right; }
+.sectionHeading > b small { margin-top:7px; color:#819087; font:800 7px/1 ui-monospace,monospace; }
+.playerEssentials { border:1px solid rgba(255,255,255,.09); border-radius:13px; background:#0e1711; padding:17px; margin:0 0 12px; }
+.keyAttributes { display:grid; grid-template-columns:repeat(auto-fit,minmax(105px,1fr)); gap:6px; margin-bottom:11px; }
+.keyAttributes article { min-height:64px; padding:9px 10px; display:grid; align-content:center; gap:5px; border-radius:8px; background:#121e16; border:1px solid rgba(244,196,48,.12); }
+.keyAttributes span { color:#8d9d92; font-size:9px; }
+.keyAttributes strong { font-size:22px; }
+.attributeGroups { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+.attributeGroups > article { border:1px solid rgba(255,255,255,.07); border-radius:9px; background:#0b130e; overflow:hidden; }
+.attributeGroups > article > header { padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.06); color:#7f9085; font:800 8px/1 ui-monospace,monospace; letter-spacing:.1em; }
+.attributeGroups > article > div { display:grid; gap:0; }
+.attributeGroups > article > div > div { display:grid; grid-template-columns:105px minmax(50px,1fr) 28px; align-items:center; gap:8px; min-height:31px; padding:0 9px; border-bottom:1px solid rgba(255,255,255,.035); }
+.attributeGroups > article > div > div:last-child { border-bottom:0; }
+.attributeGroups span { color:#a6b2aa; font-size:9px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.attributeGroups i { height:4px; border-radius:10px; overflow:hidden; background:rgba(255,255,255,.07); }
+.attributeGroups i em { display:block; height:100%; border-radius:inherit; }
+.attributeGroups b { text-align:right; font:900 10px/1 ui-monospace,monospace; }
+.primaryAttribute { background:rgba(244,196,48,.045); }
+.primaryAttribute > span::before { content:"◆ "; color:#f4c430; font-size:7px; }
+
+.publicProfile { display:grid; grid-template-columns:1.05fr 1.45fr .9fr; gap:7px; margin-bottom:12px; }
+.publicProfile > * { min-height:118px; border:1px solid rgba(255,255,255,.09); border-radius:11px; background:#0e1711; color:white; padding:13px; text-align:left; }
+.followersCard { cursor:pointer; display:grid; align-content:center; gap:3px; }
+.followersCard small, .playerValueCard span, .sponsorCard header span { color:#7e9185; font:850 8px/1 ui-monospace,monospace; letter-spacing:.11em; }
+.followersCard > strong { font-size:30px; letter-spacing:-.04em; }
+.followersCard > span { margin-top:5px; color:#a9b8ae; font-size:9px; }
+.followersCard > span b { color:#f4c430; }
+.sponsorCard { display:grid; align-content:center; gap:5px; }
+.sponsorCard header { display:flex; justify-content:space-between; }
+.sponsorCard header b { color:#f4c430; }
+.sponsorCard > strong { font-size:19px; }
+.sponsorCard p { margin:0; color:#a0aea5; font-size:10px; }
+.sponsorCard footer { margin-top:6px; color:#718177; font-size:8px; }
+.playerValueCard { display:grid; align-content:center; gap:4px; }
+.playerValueCard strong { font-size:20px; color:#f4c430; }
+.playerValueCard small { color:#8b9b91; }
+
+.modalBackdrop { position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:18px; background:rgba(0,0,0,.72); backdrop-filter:blur(8px); }
+.followersModal { width:min(610px,100%); max-height:82dvh; overflow:auto; border:1px solid rgba(255,255,255,.12); border-radius:14px; background:#0b130e; padding:17px; box-shadow:0 30px 90px rgba(0,0,0,.55); }
+.followersModal > header { display:flex; justify-content:space-between; align-items:start; margin-bottom:17px; }
+.followersModal > header > div { display:grid; gap:4px; }
+.followersModal header span, .milestones > span { color:#79a787; font:900 8px/1 ui-monospace,monospace; letter-spacing:.14em; }
+.followersModal header strong { font-size:24px; }
+.followersModal header button { border:0; background:transparent; color:#8c9991; font-size:22px; cursor:pointer; }
+.audienceHistory { display:grid; gap:6px; }
+.audienceHistory article { display:grid; grid-template-columns:45px minmax(0,1fr) 65px; align-items:center; gap:8px; }
+.audienceHistory small { color:#7b8c81; font:800 8px/1 ui-monospace,monospace; }
+.audienceHistory i { height:7px; background:rgba(255,255,255,.06); border-radius:8px; overflow:hidden; }
+.audienceHistory i em { display:block; height:100%; background:#f4c430; border-radius:inherit; }
+.audienceHistory strong { text-align:right; font-size:9px; }
+.milestones { margin-top:18px; padding-top:14px; border-top:1px solid rgba(255,255,255,.08); display:flex; flex-wrap:wrap; gap:6px; }
+.milestones > span { width:100%; margin-bottom:3px; }
+.milestones > strong { padding:7px 9px; border-radius:8px; background:#121c15; color:#cdd8d0; font-size:9px; font-weight:750; }
+.milestones p, .emptyText { margin:0; color:#7e8d84; font-size:10px; }
+
+.statisticsArchive { display:grid; gap:12px; margin-top:12px; }
+.archiveHeading { display:flex; align-items:end; justify-content:space-between; gap:14px; padding:16px; border:1px solid rgba(255,255,255,.09); border-radius:12px; background:#0e1711; }
+.archiveHeading > div { display:grid; gap:4px; }
+.archiveHeading aside { display:grid; grid-template-columns:auto auto; gap:2px 9px; align-items:end; text-align:right; }
+.archiveHeading aside b { color:#f4c430; font-size:22px; }
+.archiveHeading aside small { color:#7b8a80; font:800 7px/1 ui-monospace,monospace; }
+.seasonArchive, .awardsArchive { border:1px solid rgba(255,255,255,.08); border-radius:12px; background:#0e1711; overflow:hidden; }
+.seasonArchive > header, .awardsArchive > header { padding:13px 15px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,.07); }
+.seasonArchive > header strong { font-size:15px; }
+.seasonArchive > div { display:grid; }
+.seasonArchive article { min-height:61px; display:grid; grid-template-columns:55px 45px minmax(0,1fr) 48px auto; align-items:center; gap:8px; padding:7px 12px; border-bottom:1px solid rgba(255,255,255,.045); }
+.seasonArchive article:last-child { border-bottom:0; }
+.seasonArchive time { color:#7f8f85; font:800 9px/1 ui-monospace,monospace; }
+.seasonArchive article > span { display:grid; gap:2px; min-width:0; }
+.seasonArchive article > span strong { font-size:11px; }
+.seasonArchive article > span small { color:#85958b; font-size:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.seasonArchive article > b { display:grid; text-align:center; font-size:15px; }
+.seasonArchive article > b small { color:#78877d; font:700 6px/1 ui-monospace,monospace; }
+.seasonArchive article > em { font-style:normal; color:#f4c430; font-size:9px; }
+.awardsArchive > header > strong { color:#f4c430; font-size:22px; }
+.awardsArchive > div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.awardsArchive article { min-height:43px; padding:7px 11px; display:flex; justify-content:space-between; align-items:center; border-right:1px solid rgba(255,255,255,.045); border-bottom:1px solid rgba(255,255,255,.045); }
+.awardsArchive article span { font-size:9px; color:#a8b4ac; }
+.awardsArchive article b { color:#f4c430; font-size:11px; }
+.awardsArchive > p, .seasonArchive > div > p { padding:16px; }
+
+@media (max-width:760px) {
+  .attributeGroups { grid-template-columns:1fr; }
+  .publicProfile { grid-template-columns:1fr 1fr; }
+  .sponsorCard { grid-column:1/-1; }
+  .seasonArchive article { grid-template-columns:46px 38px minmax(0,1fr) 42px; }
+  .seasonArchive article > em { grid-column:3; }
+}
+
+@media (max-width:480px) {
+  .playerEssentials { padding:12px; }
+  .keyAttributes { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .publicProfile { grid-template-columns:1fr; }
+  .sponsorCard { grid-column:auto; }
+  .attributeGroups > article > div > div { grid-template-columns:88px minmax(42px,1fr) 25px; }
+  .awardsArchive > div { grid-template-columns:1fr; }
+  .archiveHeading { align-items:start; }
+}
