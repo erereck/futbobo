@@ -9,6 +9,8 @@ export type OfficialFootballRankingEntry = {
 
 export type OfficialFootballRanking = {
   id:
+    | "all-time-goals"
+    | "all-time-assists"
     | "ballon-dor-wins"
     | "champions-titles"
     | "champions-goals"
@@ -31,6 +33,40 @@ export type OfficialFootballRanking = {
 // A carreira pode acrescentar resultados posteriores ao corte, mas nunca altera
 // retroativamente o que aconteceu no futebol real.
 const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
+  {
+    id: "all-time-goals",
+    eyebrow: "FUTEBOL · HISTÓRIA VIVA",
+    label: "Maiores artilheiros da história",
+    unit: "gols",
+    cutoff: "RSSSF · jogos oficiais de alto nível · 19 jul 2026 + seu save",
+    living: true,
+    entries: [
+      { label: "Cristiano Ronaldo", value: 978 },
+      { label: "Lionel Messi", value: 921 },
+      { label: "Pelé", value: 770 },
+      { label: "Romário", value: 761 },
+      { label: "Ferenc Puskás", value: 760 },
+      { label: "Josef Bican", value: 743 },
+      { label: "Robert Lewandowski", value: 697 },
+      { label: "James Jones", value: 659 },
+      { label: "Abe Lenstra", value: 645 },
+      { label: "Gerd Müller", value: 640 },
+    ],
+  },
+  {
+    id: "all-time-assists",
+    eyebrow: "FUTEBOL · HISTÓRIA VIVA",
+    label: "Maiores assistentes da história",
+    unit: "assistências",
+    cutoff: "IFFHS · jogos oficiais de alto nível · base nov 2025 + seu save",
+    living: true,
+    entries: [
+      { label: "Lionel Messi", value: 400 },
+      { label: "Pelé", value: 369 },
+      { label: "Ferenc Puskás", value: 359 },
+      { label: "Johan Cruyff", value: 346 },
+    ],
+  },
   {
     id: "ballon-dor-wins",
     eyebrow: "BOLA DE OURO · HISTÓRIA VIVA",
@@ -285,9 +321,14 @@ function playerWorldCupGoals(state: GameState) {
 export function footballRankingsForState(state: GameState): OfficialFootballRanking[] {
   const ballonWinners = ballonDorWinnersFromSave(state);
   const worldCupGoals = playerWorldCupGoals(state);
+  const careerGoals = state.stats.goals;
+  const careerAssists = state.stats.assists;
 
   return OFFICIAL_FOOTBALL_RANKINGS.map((board) => {
     const entries = board.entries.map((entry) => ({ ...entry }));
+
+    if (board.id === "all-time-goals") addEntry(entries, state.name, careerGoals, true);
+    if (board.id === "all-time-assists") addEntry(entries, state.name, careerAssists, true);
 
     if (board.id === "ballon-dor-wins") {
       ballonWinners.forEach((count, name) => addEntry(entries, name, count, name === state.name));
