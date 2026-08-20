@@ -1,1 +1,2 @@
 Futbobo UX rework transform trigger — 2026-08-20
+UX polish v2 trigger — responsive QA pass
