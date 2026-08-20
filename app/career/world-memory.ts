@@ -79,9 +79,8 @@ export type WorldSnapshot = {
   transferRecords: WorldTransferRecord[];
 };
 
-// Títulos reconhecidos até a Copa de 2026. O save diverge da realidade a partir
-// de 2034; a Copa de 2030 fica propositalmente fora do ledger para não criar um
-// fato mundial enquanto o jogador ainda está atravessando a base.
+// Títulos reconhecidos até a Copa de 2026. A partir de 2030 o universo de cada
+// save diverge da realidade e passa a registrar seu próprio campeão mundial.
 const HISTORIC_WORLD_CUP_TITLES: Record<string, number> = {
   brasil: 5,
   alemanha: 4,
@@ -339,7 +338,7 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
   const worldCupNews: WorldNewsItem[] = [];
   const latestCompletedSeason = Math.max(2026, ...state.history.map((record) => record.season));
 
-  for (let season = 2034; season <= latestCompletedSeason; season += 4) {
+  for (let season = 2030; season <= latestCompletedSeason; season += 4) {
     const result = resolveWorldCup(state, season, titles);
     champions.push(result);
     titles[result.winnerCountryId] = (titles[result.winnerCountryId] ?? 0) + 1;

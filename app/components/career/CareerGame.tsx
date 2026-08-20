@@ -907,7 +907,8 @@ export default function CareerGame() {
         youthYears: journey.youthYears,
         proOffers: journey.offers,
         age: revealAge,
-        season: current.season + revealAge - 12,
+        // A base é uma introdução sem calendário rígido; toda carreira nova entra no profissional em 2027.
+        season: 2027,
         overall: journey.overall,
         potential: journey.potential,
         attributes: createPlayerAttributes(current.position, journey.overall, current.seed),
