@@ -62,4 +62,29 @@ replaceOnce(
   "World Cup picker calls",
 );
 
-console.log("Applied club-specific event support and stronger World Cup simulation.");
+replaceOnce(
+  "app/career/official-football-records.ts",
+  '  id:\n    | "ballon-dor-wins"',
+  '  id:\n    | "all-time-goals"\n    | "all-time-assists"\n    | "ballon-dor-wins"',
+  "global ranking IDs",
+);
+replaceOnce(
+  "app/career/official-football-records.ts",
+  'const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [\n  {\n    id: "ballon-dor-wins",',
+  'const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [\n  {\n    id: "all-time-goals",\n    eyebrow: "FUTEBOL · HISTÓRIA VIVA",\n    label: "Maiores artilheiros da história",\n    unit: "gols",\n    cutoff: "RSSSF · jogos oficiais de alto nível · 19 jul 2026 + seu save",\n    living: true,\n    entries: [\n      { label: "Cristiano Ronaldo", value: 978 },\n      { label: "Lionel Messi", value: 921 },\n      { label: "Pelé", value: 770 },\n      { label: "Romário", value: 761 },\n      { label: "Ferenc Puskás", value: 760 },\n      { label: "Josef Bican", value: 743 },\n      { label: "Robert Lewandowski", value: 697 },\n      { label: "James Jones", value: 659 },\n      { label: "Abe Lenstra", value: 645 },\n      { label: "Gerd Müller", value: 640 },\n    ],\n  },\n  {\n    id: "all-time-assists",\n    eyebrow: "FUTEBOL · HISTÓRIA VIVA",\n    label: "Maiores assistentes da história",\n    unit: "assistências",\n    cutoff: "IFFHS · jogos oficiais de alto nível · base nov 2025 + seu save",\n    living: true,\n    entries: [\n      { label: "Lionel Messi", value: 400 },\n      { label: "Pelé", value: 369 },\n      { label: "Ferenc Puskás", value: 359 },\n      { label: "Johan Cruyff", value: 346 },\n    ],\n  },\n  {\n    id: "ballon-dor-wins",',
+  "global ranking boards",
+);
+replaceOnce(
+  "app/career/official-football-records.ts",
+  "  const ballonWinners = ballonDorWinnersFromSave(state);\n  const worldCupGoals = playerWorldCupGoals(state);",
+  "  const ballonWinners = ballonDorWinnersFromSave(state);\n  const worldCupGoals = playerWorldCupGoals(state);\n  const careerGoals = state.stats.goals;\n  const careerAssists = state.stats.assists;",
+  "career totals for global rankings",
+);
+replaceOnce(
+  "app/career/official-football-records.ts",
+  '    if (board.id === "ballon-dor-wins") {',
+  '    if (board.id === "all-time-goals") addEntry(entries, state.name, careerGoals, true);\n    if (board.id === "all-time-assists") addEntry(entries, state.name, careerAssists, true);\n\n    if (board.id === "ballon-dor-wins") {',
+  "inject player into global rankings",
+);
+
+console.log("Applied club-specific events, stronger World Cup simulation and global living records.");
