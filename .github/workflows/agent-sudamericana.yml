@@ -1,13 +1,33 @@
-name: Temporary Sul-Americana materializer (disabled)
+name: Materialize club events and world tuning
 
-# Temporary QA scaffold. Product changes are already committed.
-# Remove this file before merging PR #4.
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - agent/futbobo-world-memory
+
+permissions:
+  contents: write
 
 jobs:
-  disabled:
-    if: ${{ false }}
+  materialize:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Disabled. Remove before merge."
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/futbobo-world-memory
+          fetch-depth: 0
+      - name: Apply guarded product changes
+        run: node scripts/agent-club-world-rankings.mjs
+      - name: Commit product changes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- app/game-data.ts app/career/events.ts app/career/state.ts app/career/world-memory.ts
+          git commit -m "feat: add club-specific events and tune world simulation"
+          git push origin HEAD:agent/futbobo-world-memory
