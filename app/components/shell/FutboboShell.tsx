@@ -296,7 +296,7 @@ export default function FutboboShell() {
 
       <footer className={styles.footer}>
         <div><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
-        <strong>v92 · DONO DA ÁREA</strong>
+        <strong>v93 · DONO DA ÁREA</strong>
       </footer>
     </main>
   );
