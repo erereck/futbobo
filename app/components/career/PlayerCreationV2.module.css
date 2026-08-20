@@ -181,9 +181,9 @@
   .allClubs button > span { min-width:0; }
   .allClubs strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .allClubs :global(.club-badge-sm) { width:40px !important; height:40px !important; min-width:40px !important; }
-  .contractOffers button { grid-template-columns:44px minmax(0,1fr) 20px; gap:10px; min-width:0; }
+  .contractOffers button { grid-template-columns:44px minmax(0,1fr) 20px; gap:12px; min-width:0; }
   .contractOffers :global(.club-badge-lg) { width:44px !important; height:44px !important; min-width:44px !important; max-width:44px !important; max-height:44px !important; }
-  .contractOffers span { min-width:0; }
+  .contractOffers span { min-width:0; padding-left:6px; }
   .contractOffers strong { font-size:16px; overflow-wrap:anywhere; }
 }
 
@@ -195,7 +195,7 @@
   .appearanceWrap :global(.appearance-preview canvas) { width:116px !important; height:116px !important; }
   .appearanceWrap :global(.appearance-preview strong), .appearanceWrap :global(.appearance-preview small) { max-width:122px; }
   .appearanceWrap :global(.appearance-palette button) { width:26px !important; height:26px !important; min-width:26px !important; }
-  .contractOffers button { grid-template-columns:40px minmax(0,1fr) 18px; padding:11px 9px; }
+  .contractOffers button { grid-template-columns:40px minmax(0,1fr) 18px; gap:12px; padding:11px 9px; }
   .contractOffers :global(.club-badge-lg) { width:40px !important; height:40px !important; min-width:40px !important; max-width:40px !important; max-height:40px !important; }
 }
 
