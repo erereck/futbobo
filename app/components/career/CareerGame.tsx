@@ -30,6 +30,9 @@ import { POSITION_FIELD_SPOTS, careerTrend, fanMood, formatFollowers, formatMone
 import { AwardCeremony, AwardReveal, BrandMark, ClubBadge, CompetitionBadge, Metric, NationBadge, Progress, TROPHY_PRESENTATIONS, TrophyGallery } from "./CareerPrimitives";
 import { applyEffect, applyStoryOrigin, buildPressConference, createYouthJourney, selectNextEvent, storyClubCandidate } from "../../career/events";
 import { selectTransferOffers } from "../../career/transfer-market";
+import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
+import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanels";
+import CareerExtraStats from "./CareerExtraStats";
 
 export default function CareerGame() {
   const [game, setGame] = useState<GameState>(() => initialState());
@@ -2722,7 +2725,19 @@ export default function CareerGame() {
         </section>
       )}
 
-      {game.phase === "identity" && (
+      {(["identity", "appearance", "nationality", "academy", "formation", "story"] as Phase[]).includes(game.phase) && (
+        <PlayerCreationV2
+          game={game}
+          setGame={setGame}
+          shirtNumberInput={shirtNumberInput}
+          setShirtNumberInput={setShirtNumberInput}
+          rollPlayerName={rollPlayerName}
+          selectPlayerStory={selectPlayerStory}
+          appearanceEnabled={appSettings.characterButtonsEnabled !== false}
+        />
+      )}
+
+      {false && game.phase === "identity" && (
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "welcome" }))} aria-label="Voltar">←</button>
@@ -2772,7 +2787,7 @@ export default function CareerGame() {
         </section>
       )}
 
-      {game.phase === "appearance" && appSettings.characterButtonsEnabled !== false && (
+      {false && game.phase === "appearance" && appSettings.characterButtonsEnabled !== false && (
         <section className="setup-screen appearance-setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "identity" }))} aria-label="Voltar">←</button>
@@ -2792,7 +2807,7 @@ export default function CareerGame() {
         </section>
       )}
 
-      {game.phase === "nationality" && (
+      {false && game.phase === "nationality" && (
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: appSettings.characterButtonsEnabled !== false ? "appearance" : "identity" }))} aria-label="Voltar">←</button>
@@ -2818,7 +2833,7 @@ export default function CareerGame() {
         </section>
       )}
 
-      {game.phase === "academy" && (
+      {false && game.phase === "academy" && (
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "nationality" }))} aria-label="Voltar">←</button>
@@ -2855,7 +2870,7 @@ export default function CareerGame() {
         </section>
       )}
 
-      {game.phase === "formation" && (
+      {false && game.phase === "formation" && (
         <section className="setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "academy" }))} aria-label="Voltar">←</button>
@@ -2879,7 +2894,7 @@ export default function CareerGame() {
         </section>
       )}
 
-      {game.phase === "story" && (
+      {false && game.phase === "story" && (
         <section className="setup-screen story-setup-screen screen-enter">
           <header className="step-header">
             <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "formation" }))} aria-label="Voltar">←</button>
@@ -2934,14 +2949,13 @@ export default function CareerGame() {
             <p className="simulating-label"><span /> Simulando sua formação...</p>
           ) : (
             <div className="youth-continue">
-              <span>A simulação terminou. Leia sua trajetória com calma.</span>
-              <button className="primary-button" onClick={() => setGame((current) => ({ ...current, phase: "youth-complete" }))}>Continuar <b>→</b></button>
+              <button className="primary-button" onClick={() => setGame((current) => ({ ...current, phase: "revelation" }))}>Continuar <b>→</b></button>
             </div>
           )}
         </section>
       )}
 
-      {game.phase === "youth-complete" && (
+      {false && game.phase === "youth-complete" && (
         <section className="youth-complete-screen screen-enter">
           <div className="brand-mini"><BrandMark size="sm" /> FUTBOBO</div>
           <div className="youth-finish-icon">✓</div>
@@ -2958,7 +2972,9 @@ export default function CareerGame() {
         </section>
       )}
 
-      {game.phase === "revelation" && (
+      {game.phase === "revelation" && <FirstContractV2 game={game} onBack={() => setGame((current) => ({ ...current, phase: "youth" }))} onSign={signProfessional} />}
+
+      {false && game.phase === "revelation" && (
         <section className="revelation-screen screen-enter">
           <div className="reveal-rays" aria-hidden="true" />
           <div className="reveal-top"><span>JOGADOR REVELADO</span><small>{game.season}</small></div>
@@ -3094,7 +3110,7 @@ export default function CareerGame() {
               </section>
               <section className="season-result-section">
                 <header className="season-result-section-heading"><span>BASTIDORES</span><small>Dinheiro, meta e contrato</small></header>
-                <section className="season-finance-card">
+                <section className="season-finance-card legacy-ui-hidden">
                   <header><span>PATRIMÔNIO ATUAL</span><strong>{formatMoney(game.lastResult.balanceAfter ?? game.money)}</strong></header>
                   <div>
                     <span><small>Salário</small><b>+{formatMoney(game.lastResult.salaryIncome ?? 0)}</b></span>
@@ -3333,7 +3349,8 @@ export default function CareerGame() {
                   <button type="button" className="secondary-button" onClick={() => setAppearanceEditorOpen(true)}>Personalizar</button>
                 </section>
               )}
-              <section className={`player-story-profile story-${playerStoryById(game.playerStoryId).tone}`}>
+              <PlayerReworkPanels state={game} />
+              <section className={`player-story-profile legacy-ui-hidden story-${playerStoryById(game.playerStoryId).tone}`}>
                 <header><b>{playerStoryById(game.playerStoryId).icon}</b><div><span>HISTÓRIA DO JOGADOR</span><strong>{playerStoryById(game.playerStoryId).title}</strong></div><em>{game.storyLog.length} capítulo{game.storyLog.length === 1 ? "" : "s"}</em></header>
                 <p>{playerStoryById(game.playerStoryId).description}</p>
                 {game.storyLog.length > 0 && (
@@ -3379,7 +3396,7 @@ export default function CareerGame() {
                   </div>
                 )}
               </div>
-              <div className="profile-metrics"><Metric label="OVR" value={game.overall} tone="gold" /><Metric label="Momento" value={careerTrend(game.history)} /><Metric label="Valor" value={formatMoney(marketValue(game.overall, game.age, currentClub, game.reputation, game.history.at(-1)))} /></div>
+              <div className="profile-metrics legacy-ui-hidden"><Metric label="OVR" value={game.overall} tone="gold" /><Metric label="Momento" value={careerTrend(game.history)} /><Metric label="Valor" value={formatMoney(marketValue(game.overall, game.age, currentClub, game.reputation, game.history.at(-1)))} /></div>
               <section className="medical-department">
                 <header><div><span>DEPARTAMENTO MÉDICO</span><strong>Prontuário da carreira</strong></div><b className={game.medicalHistory.length ? "has-history" : ""}>✚</b></header>
                 <div className="medical-overview">
@@ -3395,7 +3412,7 @@ export default function CareerGame() {
                   </div>
                 ) : <p>Nenhuma lesão séria registrada. O histórico começa a ser construído temporada por temporada.</p>}
               </section>
-              <section className="trait-card">
+              <section className="trait-card legacy-ui-hidden">
                 <div><span>CARACTERÍSTICAS ESPECIAIS</span><strong>O que torna seu jogo diferente</strong></div>
                 <section>
                   {game.traits.map((traitId) => {
@@ -3405,8 +3422,8 @@ export default function CareerGame() {
                 </section>
                 {game.traits.length === 0 && <p>Este save começou antes do sistema de características. Uma nova carreira já nasce com identidade própria.</p>}
               </section>
-              <div className="market-context"><span>{currentClub.countryId === "brasil" ? "MERCADO BRASILEIRO" : "MERCADO INTERNACIONAL"}</span><p>{currentClub.countryId === "brasil" ? "O mesmo jogador costuma valer menos no Brasil. Uma ida à Europa pode multiplicar sua cotação — e também a cobrança." : `${leagueById(game.currentLeagueId || currentClub.leagueId).name} amplia sua vitrine e o valor do seu passe.`}</p></div>
-              <section className="career-economy">
+              <div className="market-context legacy-ui-hidden"><span>{currentClub.countryId === "brasil" ? "MERCADO BRASILEIRO" : "MERCADO INTERNACIONAL"}</span><p>{currentClub.countryId === "brasil" ? "O mesmo jogador costuma valer menos no Brasil. Uma ida à Europa pode multiplicar sua cotação — e também a cobrança." : `${leagueById(game.currentLeagueId || currentClub.leagueId).name} amplia sua vitrine e o valor do seu passe.`}</p></div>
+              <section className="career-economy legacy-ui-hidden">
                 <header>
                   <div><span>VIDA FINANCEIRA</span><strong>Patrimônio: {formatMoney(game.money)}</strong></div>
                   <small>Caixa livre: {formatMoney(game.spendableMoney)}</small>
@@ -3434,7 +3451,7 @@ export default function CareerGame() {
                 </div>
                 {economyFeedback && <div className="economy-feedback">{economyFeedback}</div>}
               </section>
-              <section className="football-attributes-card">
+              <section className="football-attributes-card legacy-ui-hidden">
                 <div className="football-attributes-heading">
                   <div><span>ATRIBUTOS DE CAMPO</span><strong>Seu estilo em números</strong></div>
                   <b>{Math.round(attributeAverage(game.attributes, POSITION_PRIMARY_ATTRIBUTES[game.position]))}<small>MÉDIA-CHAVE</small></b>
@@ -3458,9 +3475,9 @@ export default function CareerGame() {
                 </div>
                 <small>◆ atributo-chave para {position.name}</small>
               </section>
-              <div className="contract-card"><span>CONTRATO E ELENCO</span><div><strong>{ROLE_LABELS[game.squadRole]}{game.clubCaptain ? " · Capitão" : ""}</strong><small>{game.isFreeAgent ? "Agente livre" : game.loanParentClubId ? `Emprestado pelo ${clubById(game.loanParentClubId).shortName}` : game.contractYears ? `${game.contractYears} ano(s) restantes` : "Contrato encerrado"} · {formatMoney(game.annualSalary)}/ano</small></div><Progress label="Confiança do treinador" value={game.managerTrust} color="#a675ff" /></div>
-              <div className="supporter-card"><span>RELAÇÃO COM A TORCIDA</span><strong style={{ color: supporterMood.color }}>{supporterMood.label}</strong><p>{game.fanSupport < 38 ? "Cada toque pode virar vaia. Títulos e entrega reconquistam a arquibancada." : game.fanSupport >= 82 ? "Seu nome já faz parte da identidade do clube." : "A arquibancada ainda está decidindo que história contará sobre você."}</p></div>
-              <div className="attribute-card">
+              <div className="contract-card legacy-ui-hidden"><span>CONTRATO E ELENCO</span><div><strong>{ROLE_LABELS[game.squadRole]}{game.clubCaptain ? " · Capitão" : ""}</strong><small>{game.isFreeAgent ? "Agente livre" : game.loanParentClubId ? `Emprestado pelo ${clubById(game.loanParentClubId).shortName}` : game.contractYears ? `${game.contractYears} ano(s) restantes` : "Contrato encerrado"} · {formatMoney(game.annualSalary)}/ano</small></div><Progress label="Confiança do treinador" value={game.managerTrust} color="#a675ff" /></div>
+              <div className="supporter-card legacy-ui-hidden"><span>RELAÇÃO COM A TORCIDA</span><strong style={{ color: supporterMood.color }}>{supporterMood.label}</strong><p>{game.fanSupport < 38 ? "Cada toque pode virar vaia. Títulos e entrega reconquistam a arquibancada." : game.fanSupport >= 82 ? "Seu nome já faz parte da identidade do clube." : "A arquibancada ainda está decidindo que história contará sobre você."}</p></div>
+              <div className="attribute-card legacy-ui-hidden">
                 <Progress label="Moral" value={game.morale} color="#2ca8ff" />
                 <Progress label="Condição" value={game.fitness} color="#63e36b" />
                 <Progress label="Prestígio" value={game.reputation} color="#ffc72c" />
@@ -3470,9 +3487,9 @@ export default function CareerGame() {
                 <Progress label="Disciplina" value={game.discipline} color={game.discipline < 45 ? "#ff5a4e" : "#63e36b"} />
                 {isOutsideAcademyHome(game, currentClub) && <Progress label="Adaptação" value={game.adaptation} color="#2ca8ff" />}
               </div>
-              <div className="career-total-card"><span>TOTAIS DA CARREIRA</span><div><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label={game.position === "GOL" ? "Defesas" : "Desarmes"} value={game.position === "GOL" ? game.stats.cleanSheets * 3 : game.stats.tackles} /><Metric label="Taças" value={game.trophies + game.nationalTrophies} tone="gold" /></div></div>
-              <TrophyGallery state={game} />
-              <div className="national-team-card">
+              <div className="career-total-card legacy-ui-hidden"><span>TOTAIS DA CARREIRA</span><div><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label={game.position === "GOL" ? "Defesas" : "Desarmes"} value={game.position === "GOL" ? game.stats.cleanSheets * 3 : game.stats.tackles} /><Metric label="Taças" value={game.trophies + game.nationalTrophies} tone="gold" /></div></div>
+              <div className="legacy-ui-hidden"><TrophyGallery state={game} /></div>
+              <div className="national-team-card legacy-ui-hidden">
                 <span>CENTRAL DA SELEÇÃO</span>
                 <div className="national-team-head">
                   <NationBadge country={nationCountry} size="md" />
@@ -3494,9 +3511,9 @@ export default function CareerGame() {
                   </div>
                 )}
               </div>
-              <div className="career-fortune"><span>TRAJETÓRIA</span><div><Metric label="Baques" value={game.setbacks} tone="danger" /><Metric label="Viradas de sorte" value={game.luckyBreaks} tone="green" /></div></div>
-              <div className="discipline-card"><span>HISTÓRICO DISCIPLINAR</span><div><Metric label="Amarelos" value={game.stats.yellowCards} /><Metric label="Vermelhos" value={game.stats.redCards} tone="danger" /><Metric label="Suspensão" value={`${game.suspensionMatches}J`} tone={game.suspensionMatches ? "danger" : "default"} /><Metric label="Metas" value={`${game.objectivesCompleted}/${game.objectivesCompleted + game.objectivesFailed}`} tone="green" /></div></div>
-              <div className="award-cabinet">
+              <div className="career-fortune legacy-ui-hidden"><span>TRAJETÓRIA</span><div><Metric label="Baques" value={game.setbacks} tone="danger" /><Metric label="Viradas de sorte" value={game.luckyBreaks} tone="green" /></div></div>
+              <div className="discipline-card legacy-ui-hidden"><span>HISTÓRICO DISCIPLINAR</span><div><Metric label="Amarelos" value={game.stats.yellowCards} /><Metric label="Vermelhos" value={game.stats.redCards} tone="danger" /><Metric label="Suspensão" value={`${game.suspensionMatches}J`} tone={game.suspensionMatches ? "danger" : "default"} /><Metric label="Metas" value={`${game.objectivesCompleted}/${game.objectivesCompleted + game.objectivesFailed}`} tone="green" /></div></div>
+              <div className="award-cabinet legacy-ui-hidden">
                 <div className="award-cabinet-title">
                   <div><span>PRÊMIOS INDIVIDUAIS</span><strong>Sua galeria pessoal</strong></div>
                   <b>{totalIndividualAwards}<small>{totalAwardNominations} INDICAÇÕES</small></b>
@@ -3695,7 +3712,9 @@ export default function CareerGame() {
                 </>
               ) : <div className="statistics-empty"><span>▥</span><strong>A central abre depois da estreia</strong><p>Complete a primeira temporada para começar seu arquivo estatístico.</p></div>}
 
-              <section className="rival-center">
+              <CareerStatisticsArchive state={game} />
+              <CareerExtraStats state={game} />
+              <section className="rival-center legacy-ui-hidden">
                 <div><span>RIVAIS DE GERAÇÃO</span><strong>{game.rivals.length ? "Eles também estão construindo uma carreira" : "Esta carreira não ganhou um rival"}</strong></div>
                 {game.rivals.length === 0 ? <p>Nem toda história precisa de um antagonista. Em outra carreira — ou com seus Personagens — alguém pode aparecer.</p> : (
                   <section>
@@ -3762,11 +3781,8 @@ export default function CareerGame() {
                 <span><small>CENTRAL DO JOGADOR</small><strong>{game.name}</strong><em>{position.name} · {leagueById(game.currentLeagueId || currentClub.leagueId).name}</em></span>
               </div>
               <button aria-pressed={activeTab === "event"} className={activeTab === "event" ? "selected" : ""} onClick={() => changeTab("event")}><span>◆</span>Carreira</button>
-              <button aria-pressed={activeTab === "history"} className={activeTab === "history" ? "selected" : ""} onClick={() => changeTab("history")}><span>≡</span>Histórico</button>
               <button aria-pressed={activeTab === "profile"} className={activeTab === "profile" ? "selected" : ""} onClick={() => changeTab("profile")}><span>●</span>Jogador</button>
-              <button aria-pressed={activeTab === "life"} className={activeTab === "life" ? "selected" : ""} onClick={() => changeTab("life")}><span>@</span>Vida</button>
-              <button aria-pressed={activeTab === "stats"} className={activeTab === "stats" ? "selected" : ""} onClick={() => changeTab("stats")}><span>▥</span>Central</button>
-              <button aria-pressed={activeTab === "legacy"} className={activeTab === "legacy" ? "selected" : ""} onClick={() => changeTab("legacy")}><span>★</span>Legado</button>
+              <button aria-pressed={activeTab === "stats"} className={activeTab === "stats" ? "selected" : ""} onClick={() => changeTab("stats")}><span>▥</span>Estatísticas</button>
             </nav>
           )}
         </section>
