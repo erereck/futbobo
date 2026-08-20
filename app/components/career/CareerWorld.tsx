@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { countryById } from "../../game-data";
 import type { GameState } from "../../career/model";
-import { OFFICIAL_FOOTBALL_RANKINGS } from "../../career/official-football-records";
+import { footballRankingsForState } from "../../career/official-football-records";
 import { buildWorldSnapshot, worldPulseForState } from "../../career/world-memory";
 import { NationBadge } from "./CareerPrimitives";
 import styles from "./CareerWorld.module.css";
@@ -16,6 +16,11 @@ const CATEGORY_LABELS = {
   rival: "GERAÇÃO",
   record: "RECORDE",
 } as const;
+
+function rankingPosition(entries: Array<{ value: number }>, index: number) {
+  if (index <= 0) return 1;
+  return entries.findIndex((entry) => entry.value === entries[index].value) + 1;
+}
 
 export function WorldPulseButton({ state, onOpen }: { state: GameState; onOpen: () => void }) {
   const pulse = useMemo(() => worldPulseForState(state), [state]);
@@ -33,6 +38,7 @@ export default function CareerWorld({ state }: { state: GameState }) {
   const [rankingOpen, setRankingOpen] = useState(false);
   const [officialOpen, setOfficialOpen] = useState<string>("");
   const snapshot = useMemo(() => buildWorldSnapshot(state), [state]);
+  const officialRankings = useMemo(() => footballRankingsForState(state), [state]);
   const featured = snapshot.news[0];
   const ranking = snapshot.worldCupRanking;
   const leader = ranking[0];
@@ -117,32 +123,40 @@ export default function CareerWorld({ state }: { state: GameState }) {
 
       <section className={styles.officialSection}>
         <header>
-          <span>ARQUIVO OFICIAL</span>
-          <small>História real antes do seu save</small>
+          <span>ARQUIVO VIVO</span>
+          <small>História real + sua carreira</small>
         </header>
         <div>
-          {OFFICIAL_FOOTBALL_RANKINGS.map((board) => {
+          {officialRankings.map((board) => {
             const open = officialOpen === board.id;
             const leaderEntry = board.entries[0];
+            const highlightedIndex = board.entries.findIndex((entry) => entry.highlight);
+            const highlighted = highlightedIndex >= 0 ? board.entries[highlightedIndex] : null;
+            const highlightedRank = highlighted ? rankingPosition(board.entries, highlightedIndex) : 0;
             return (
-              <article className={styles.officialCard} key={board.id}>
+              <article className={`${styles.officialCard} ${board.living ? styles.livingCard : ""}`} key={board.id}>
                 <button type="button" onClick={() => setOfficialOpen((current) => current === board.id ? "" : board.id)} aria-expanded={open}>
                   <span>
                     <small>{board.eyebrow}</small>
                     <strong>{board.label}</strong>
-                    <em>{leaderEntry.label} · {leaderEntry.value} {board.unit}</em>
+                    <em>
+                      {leaderEntry.label} · {leaderEntry.value} {board.unit}
+                      {highlighted && highlighted.label !== leaderEntry.label ? ` · ${highlighted.label} #${highlightedRank}` : ""}
+                    </em>
                   </span>
                   <b>{open ? "−" : "+"}</b>
                 </button>
                 {open && (
                   <div className={styles.officialRanking}>
-                    {board.entries.map((entry, index) => (
-                      <div key={`${board.id}-${entry.label}`}>
-                        <b>#{index + 1}</b>
-                        <strong>{entry.label}</strong>
-                        <span>{entry.value}</span>
-                      </div>
-                    ))}
+                    <div className={styles.officialRows}>
+                      {board.entries.map((entry, index) => (
+                        <div className={entry.highlight ? styles.livingEntry : ""} key={`${board.id}-${entry.label}`}>
+                          <b>#{rankingPosition(board.entries, index)}</b>
+                          <strong>{entry.label}</strong>
+                          <span>{entry.value}</span>
+                        </div>
+                      ))}
+                    </div>
                     <small>{board.cutoff}</small>
                   </div>
                 )}
