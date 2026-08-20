@@ -43,7 +43,7 @@
 .flagWrap :global(.nation-badge img), .rankingFlag :global(.nation-badge img) { display:block !important; width:100% !important; height:100% !important; max-width:100% !important; object-fit:cover !important; }
 .recentChampions small { min-width:0; color:#6f8076; font:800 7px/1 ui-monospace,monospace; }
 .recentChampions strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }
-.ranking { border-top:1px solid rgba(255,255,255,.06); display:grid; }
+.ranking { border-top:1px solid rgba(255,255,255,.06); display:grid; max-height:55dvh; overflow-y:auto; overscroll-behavior:contain; }
 .ranking article { min-height:44px; display:grid; grid-template-columns:34px 32px minmax(0,1fr) 34px; align-items:center; gap:7px; padding:6px 11px; border-bottom:1px solid rgba(255,255,255,.04); }
 .ranking article:last-child { border-bottom:0; }
 .ranking article > b { color:#708077; font:900 8px/1 ui-monospace,monospace; }
@@ -56,17 +56,21 @@
 .officialSection > div { display:grid; }
 .officialCard { border-bottom:1px solid rgba(255,255,255,.045); }
 .officialCard:last-child { border-bottom:0; }
-.officialCard > button { width:100%; min-height:64px; display:grid; grid-template-columns:minmax(0,1fr) 22px; align-items:center; gap:10px; padding:10px 14px; border:0; background:transparent; color:white; text-align:left; cursor:pointer; }
+.officialCard > button { width:100%; min-height:58px; display:grid; grid-template-columns:minmax(0,1fr) 22px; align-items:center; gap:10px; padding:9px 14px; border:0; background:transparent; color:white; text-align:left; cursor:pointer; }
 .officialCard > button > span { min-width:0; display:grid; gap:3px; }
 .officialCard > button small { color:#718178; font:800 7px/1 ui-monospace,monospace; letter-spacing:.09em; }
+.livingCard > button small { color:#bfa334; }
 .officialCard > button strong { font-size:12px; }
 .officialCard > button em { overflow:hidden; color:#8f9e95; font-size:9px; font-style:normal; text-overflow:ellipsis; white-space:nowrap; }
 .officialCard > button > b { justify-self:end; color:#f4c430; font-size:17px; }
 .officialRanking { display:grid; border-top:1px solid rgba(255,255,255,.045); background:rgba(255,255,255,.012); }
-.officialRanking > div { min-height:38px; display:grid; grid-template-columns:34px minmax(0,1fr) 44px; align-items:center; gap:7px; padding:5px 14px; border-bottom:1px solid rgba(255,255,255,.035); }
-.officialRanking > div > b { color:#718178; font:900 8px/1 ui-monospace,monospace; }
-.officialRanking > div > strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
-.officialRanking > div > span { justify-self:end; color:#f4c430; font-weight:900; }
+.officialRows { display:grid; max-height:min(360px,52dvh); overflow-y:auto; overscroll-behavior:contain; }
+.officialRows > div { min-height:38px; display:grid; grid-template-columns:34px minmax(0,1fr) 44px; align-items:center; gap:7px; padding:5px 14px; border-bottom:1px solid rgba(255,255,255,.035); }
+.officialRows > div > b { color:#718178; font:900 8px/1 ui-monospace,monospace; }
+.officialRows > div > strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
+.officialRows > div > span { justify-self:end; color:#f4c430; font-weight:900; }
+.officialRows > .livingEntry { background:rgba(244,196,48,.065); }
+.officialRows > .livingEntry > b, .officialRows > .livingEntry > strong { color:#f4c430; }
 .officialRanking > small { padding:8px 14px 10px; color:#596960; font-size:7px; text-align:right; }
 
 .pulse { width:100%; margin-top:10px; padding:9px 0 0; display:grid; grid-template-columns:auto minmax(0,1fr) 16px; align-items:center; gap:8px; border:0; border-top:1px solid rgba(255,255,255,.08); background:transparent; color:white; text-align:left; cursor:pointer; }
@@ -82,4 +86,7 @@
   .recentChampions { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .newsSection article { grid-template-columns:42px minmax(0,1fr) 10px; padding-inline:10px; }
   .officialSection > header { align-items:flex-start; flex-direction:column; gap:3px; }
+  .officialCard > button { min-height:54px; padding:8px 11px; }
+  .officialRows > div { grid-template-columns:30px minmax(0,1fr) 38px; padding-inline:11px; }
+  .officialRows { max-height:46dvh; }
 }
