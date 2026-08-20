@@ -4,6 +4,7 @@ import { clubById, seeded } from "./shared";
 
 export type WorldNewsPriority = "major" | "normal";
 export type WorldNewsCategory = "world-cup" | "career" | "transfer" | "award" | "rival" | "record";
+export type WorldCompetitionKey = "world-cup" | "champions-league" | "libertadores";
 
 export type WorldNewsItem = {
   id: string;
@@ -25,6 +26,19 @@ export type WorldCupRankingEntry = {
   countryId: string;
   titles: number;
   rank: number;
+};
+
+export type WorldCompetitionLedger = {
+  id: WorldCompetitionKey;
+  label: string;
+  entityType: "country" | "club";
+  champions: Array<{
+    season: number;
+    winnerId: string;
+    runnerUpId?: string;
+    source: "historic" | "generated" | "player";
+  }>;
+  titleTable: Array<{ entityId: string; titles: number; rank: number }>;
 };
 
 // Estrutura deixada pronta para recordes de clubes, artilheiros históricos,
@@ -60,6 +74,7 @@ export type WorldSnapshot = {
   news: WorldNewsItem[];
   worldCupChampions: WorldCompetitionChampion[];
   worldCupRanking: WorldCupRankingEntry[];
+  competitionLedgers: WorldCompetitionLedger[];
   recordBoards: WorldRecordBoard[];
   transferRecords: WorldTransferRecord[];
 };
@@ -224,6 +239,57 @@ function transferNews(state: GameState) {
   return news;
 }
 
+function formerClubNews(state: GameState): WorldNewsItem[] {
+  const news: WorldNewsItem[] = [];
+  const previouslyRepresented = new Set<string>();
+  for (const record of state.history) {
+    const seenOpponents = new Set<string>();
+    for (const stored of record.botaoResults ?? []) {
+      if (stored.match.source !== "club" || !previouslyRepresented.has(stored.match.opponentId) || seenOpponents.has(stored.match.opponentId)) continue;
+      seenOpponents.add(stored.match.opponentId);
+      const opponent = clubById(stored.match.opponentId);
+      news.push({
+        id: `former-club-${record.season}-${record.clubId}-${opponent.id}`,
+        season: record.season,
+        category: "career",
+        priority: "major",
+        title: `${state.name} reencontra o ${opponent.shortName}`,
+        summary: `${stored.match.competitionName} · ${stored.result.goalsFor} × ${stored.result.goalsAgainst}.`,
+      });
+    }
+    previouslyRepresented.add(record.clubId);
+  }
+  return news;
+}
+
+function careerMilestoneNews(state: GameState): WorldNewsItem[] {
+  if (state.position === "GOL") return [];
+  const thresholds = [100, 200, 300, 400, 500, 600, 700, 800];
+  const news: WorldNewsItem[] = [];
+  let total = 0;
+  let nextThresholdIndex = 0;
+  for (const record of state.history) {
+    const before = total;
+    total += record.goals;
+    while (nextThresholdIndex < thresholds.length) {
+      const threshold = thresholds[nextThresholdIndex];
+      if (total < threshold) break;
+      if (before < threshold) {
+        news.push({
+          id: `career-goals-${threshold}`,
+          season: record.season,
+          category: "record",
+          priority: threshold >= 300 ? "major" : "normal",
+          title: `${state.name} chega a ${threshold} gols`,
+          summary: `${clubById(record.clubId).shortName} · marca histórica da carreira.`,
+        });
+      }
+      nextThresholdIndex += 1;
+    }
+  }
+  return news;
+}
+
 function nationalNews(state: GameState) {
   return state.nationalHistory
     .filter((record) => record.champion && record.name !== "Copa do Mundo")
@@ -238,19 +304,33 @@ function nationalNews(state: GameState) {
 }
 
 function rivalNews(state: GameState): WorldNewsItem[] {
-  if (!state.rivals.length || !state.history.length) return [];
-  return [...state.rivals]
-    .filter((rival) => rival.active)
-    .sort((a, b) => b.awards - a.awards || b.overall - a.overall)
-    .slice(0, 2)
-    .map((rival, index) => ({
-      id: `rival-${state.season}-${rival.id}`,
-      season: state.season,
-      category: "rival" as const,
-      priority: rival.awards >= 3 || rival.overall >= 90 ? "major" as const : "normal" as const,
-      title: index === 0 && rival.awards > 0 ? `${rival.name} também está colecionando prêmios` : `${rival.name} segue em alta`,
-      summary: `${clubById(rival.currentClubId).shortName} · ${rival.overall} OVR · ${rival.awards} prêmio(s)`,
-    }));
+  if (!state.rivals.length || !state.history.length || seeded(state.seed, state.season * 1291 + 17) < 0.62) return [];
+  const rival = [...state.rivals]
+    .filter((item) => item.active)
+    .sort((a, b) => b.awards - a.awards || b.overall - a.overall)[0];
+  if (!rival || (rival.awards === 0 && rival.overall < 84)) return [];
+  return [{
+    id: `rival-${state.season}-${rival.id}`,
+    season: state.season,
+    category: "rival",
+    priority: rival.awards >= 3 || rival.overall >= 90 ? "major" : "normal",
+    title: rival.awards > 0 ? `${rival.name} também está colecionando prêmios` : `${rival.name} chama atenção`,
+    summary: `${clubById(rival.currentClubId).shortName} · ${rival.overall} OVR · ${rival.awards} prêmio(s)`,
+  }];
+}
+
+function rankedWorldCupTable(titles: Record<string, number>, playerCountryId: string) {
+  let previousTitles = -1;
+  let previousRank = 0;
+  return COUNTRIES
+    .map((country) => ({ countryId: country.id, titles: titles[country.id] ?? 0 }))
+    .filter((entry) => entry.titles > 0 || entry.countryId === playerCountryId)
+    .sort((a, b) => b.titles - a.titles || countryById(a.countryId).name.localeCompare(countryById(b.countryId).name, "pt-BR"))
+    .map((entry, index) => {
+      if (entry.titles !== previousTitles) previousRank = index + 1;
+      previousTitles = entry.titles;
+      return { ...entry, rank: previousRank };
+    });
 }
 
 export function buildWorldSnapshot(state: GameState): WorldSnapshot {
@@ -283,6 +363,8 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     ...worldCupNews,
     ...careerNews,
     ...transferNews(state),
+    ...formerClubNews(state),
+    ...careerMilestoneNews(state),
     ...nationalNews(state),
     ...rivalNews(state),
   ];
@@ -292,16 +374,25 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     b.season - a.season || Number(b.priority === "major") - Number(a.priority === "major") || a.title.localeCompare(b.title, "pt-BR"),
   );
 
-  const ranking = COUNTRIES
-    .map((country) => ({ countryId: country.id, titles: titles[country.id] ?? 0 }))
-    .filter((entry) => entry.titles > 0 || entry.countryId === state.nationality)
-    .sort((a, b) => b.titles - a.titles || countryById(a.countryId).name.localeCompare(countryById(b.countryId).name, "pt-BR"))
-    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+  const ranking = rankedWorldCupTable(titles, state.nationality);
+  const worldCupLedger: WorldCompetitionLedger = {
+    id: "world-cup",
+    label: "Copa do Mundo",
+    entityType: "country",
+    champions: champions.map((champion) => ({
+      season: champion.season,
+      winnerId: champion.winnerCountryId,
+      runnerUpId: champion.runnerUpCountryId,
+      source: champion.source,
+    })),
+    titleTable: ranking.map((entry) => ({ entityId: entry.countryId, titles: entry.titles, rank: entry.rank })),
+  };
 
   return {
     news: sortedNews,
     worldCupChampions: champions,
     worldCupRanking: ranking,
+    competitionLedgers: [worldCupLedger],
     recordBoards: [],
     transferRecords: [],
   };
