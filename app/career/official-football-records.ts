@@ -1,10 +1,15 @@
+import type { GameState } from "./model";
+import { clubById } from "./shared";
+
 export type OfficialFootballRankingEntry = {
   label: string;
   value: number;
+  highlight?: boolean;
 };
 
 export type OfficialFootballRanking = {
   id:
+    | "ballon-dor-wins"
     | "champions-titles"
     | "champions-goals"
     | "champions-appearances"
@@ -18,22 +23,41 @@ export type OfficialFootballRanking = {
   label: string;
   unit: string;
   cutoff: string;
+  living?: boolean;
   entries: OfficialFootballRankingEntry[];
 };
 
 // Snapshot real usado como chão histórico do Mundo.
-// UEFA: atualizado após a temporada 2025/26.
-// CONMEBOL: Libertadores/Sudamericana até 2025; as edições 2026 estão em andamento.
-// FIFA: Copa do Mundo atualizada após a edição de 2026.
-// O universo de cada save acrescenta sua própria história por cima destes dados;
-// nunca reescreve retroativamente o arquivo real.
-export const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
+// A carreira pode acrescentar resultados posteriores ao corte, mas nunca altera
+// retroativamente o que aconteceu no futebol real.
+const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
+  {
+    id: "ballon-dor-wins",
+    eyebrow: "BOLA DE OURO · HISTÓRIA VIVA",
+    label: "Maiores vencedores",
+    unit: "prêmios",
+    cutoff: "France Football · histórico até 2025 + seu save",
+    living: true,
+    entries: [
+      { label: "Lionel Messi", value: 8 },
+      { label: "Cristiano Ronaldo", value: 5 },
+      { label: "Michel Platini", value: 3 },
+      { label: "Johan Cruyff", value: 3 },
+      { label: "Marco van Basten", value: 3 },
+      { label: "Franz Beckenbauer", value: 2 },
+      { label: "Ronaldo", value: 2 },
+      { label: "Alfredo Di Stéfano", value: 2 },
+      { label: "Kevin Keegan", value: 2 },
+      { label: "Karl-Heinz Rummenigge", value: 2 },
+    ],
+  },
   {
     id: "world-cup-goals",
-    eyebrow: "COPA DO MUNDO · JOGADORES",
+    eyebrow: "COPA DO MUNDO · HISTÓRIA VIVA",
     label: "Maiores artilheiros",
     unit: "gols",
-    cutoff: "FIFA · após 2026",
+    cutoff: "FIFA · após 2026 + seu save",
+    living: true,
     entries: [
       { label: "Kylian Mbappé", value: 22 },
       { label: "Lionel Messi", value: 21 },
@@ -50,10 +74,11 @@ export const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
   },
   {
     id: "champions-titles",
-    eyebrow: "EUROPA · HISTÓRICO",
-    label: "Champions · títulos",
+    eyebrow: "CHAMPIONS · HISTÓRIA VIVA",
+    label: "Maiores campeões",
     unit: "títulos",
-    cutoff: "UEFA · até 2026",
+    cutoff: "UEFA · até 2026 + seu save",
+    living: true,
     entries: [
       { label: "Real Madrid", value: 15 },
       { label: "Milan", value: 7 },
@@ -74,7 +99,7 @@ export const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
   {
     id: "champions-goals",
     eyebrow: "CHAMPIONS · JOGADORES",
-    label: "Champions · artilheiros",
+    label: "Maiores artilheiros",
     unit: "gols",
     cutoff: "UEFA · 2026",
     entries: [
@@ -93,7 +118,7 @@ export const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
   {
     id: "champions-appearances",
     eyebrow: "CHAMPIONS · JOGADORES",
-    label: "Champions · mais jogos",
+    label: "Mais jogos",
     unit: "jogos",
     cutoff: "UEFA · 2026",
     entries: [
@@ -104,10 +129,11 @@ export const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
   },
   {
     id: "europa-titles",
-    eyebrow: "EUROPA LEAGUE · HISTÓRICO",
-    label: "Europa League · títulos",
+    eyebrow: "EUROPA LEAGUE · HISTÓRIA VIVA",
+    label: "Maiores campeões",
     unit: "títulos",
-    cutoff: "UEFA · até 2026",
+    cutoff: "UEFA · até 2026 + seu save",
+    living: true,
     entries: [
       { label: "Sevilla", value: 7 },
       { label: "Liverpool", value: 3 },
@@ -128,7 +154,7 @@ export const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
   {
     id: "europa-goals",
     eyebrow: "EUROPA LEAGUE · JOGADORES",
-    label: "Europa League · artilheiros",
+    label: "Maiores artilheiros",
     unit: "gols",
     cutoff: "UEFA · Taça UEFA + Europa League · 2026",
     entries: [
@@ -146,10 +172,11 @@ export const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
   },
   {
     id: "libertadores-titles",
-    eyebrow: "AMÉRICA DO SUL · HISTÓRICO",
-    label: "Libertadores · títulos",
+    eyebrow: "LIBERTADORES · HISTÓRIA VIVA",
+    label: "Maiores campeões",
     unit: "títulos",
-    cutoff: "CONMEBOL · até 2025",
+    cutoff: "CONMEBOL · até 2025 + seu save",
+    living: true,
     entries: [
       { label: "Independiente", value: 7 },
       { label: "Boca Juniors", value: 6 },
@@ -168,7 +195,7 @@ export const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
   {
     id: "libertadores-goals",
     eyebrow: "LIBERTADORES · JOGADORES",
-    label: "Libertadores · artilheiros",
+    label: "Maiores artilheiros",
     unit: "gols",
     cutoff: "CONMEBOL · abril de 2026",
     entries: [
@@ -187,10 +214,11 @@ export const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
   },
   {
     id: "sudamericana-titles",
-    eyebrow: "SUL-AMERICANA · HISTÓRICO",
-    label: "Sul-Americana · títulos",
+    eyebrow: "SUL-AMERICANA · HISTÓRIA VIVA",
+    label: "Maiores campeões",
     unit: "títulos",
-    cutoff: "CONMEBOL · até 2025",
+    cutoff: "CONMEBOL · até 2025 + seu save",
+    living: true,
     entries: [
       { label: "Boca Juniors", value: 2 },
       { label: "Independiente", value: 2 },
@@ -201,3 +229,83 @@ export const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
     ],
   },
 ];
+
+function normalizedLabel(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function addEntry(entries: OfficialFootballRankingEntry[], label: string, amount: number, highlight = false) {
+  if (amount <= 0 || !label) return;
+  const normalized = normalizedLabel(label);
+  const found = entries.find((entry) => normalizedLabel(entry.label) === normalized);
+  if (found) {
+    found.value += amount;
+    found.highlight = found.highlight || highlight;
+  } else {
+    entries.push({ label, value: amount, highlight });
+  }
+}
+
+function sortRanking(entries: OfficialFootballRankingEntry[]) {
+  return entries.sort((a, b) => b.value - a.value || a.label.localeCompare(b.label, "pt-BR"));
+}
+
+function clubTitleCompetition(boardId: OfficialFootballRanking["id"]) {
+  if (boardId === "champions-titles") return "championsLeague";
+  if (boardId === "europa-titles") return "europaLeague";
+  if (boardId === "libertadores-titles") return "libertadores";
+  if (boardId === "sudamericana-titles") return "sudamericana";
+  return "";
+}
+
+function ballonDorWinnersFromSave(state: GameState) {
+  const winners = new Map<string, number>();
+  for (const record of state.history) {
+    if (record.awards.includes("Bola de Ouro")) {
+      winners.set(state.name, (winners.get(state.name) ?? 0) + 1);
+      continue;
+    }
+    const nomination = record.awardNominations.find((item) => item.award === "Bola de Ouro" && !item.won);
+    if (nomination?.winner) winners.set(nomination.winner, (winners.get(nomination.winner) ?? 0) + 1);
+  }
+  return winners;
+}
+
+function playerWorldCupGoals(state: GameState) {
+  return state.nationalHistory
+    .filter((record) => record.name === "Copa do Mundo")
+    .reduce((total, record) => total + (record.tournamentStats?.goals ?? 0), 0);
+}
+
+export function footballRankingsForState(state: GameState): OfficialFootballRanking[] {
+  const ballonWinners = ballonDorWinnersFromSave(state);
+  const worldCupGoals = playerWorldCupGoals(state);
+
+  return OFFICIAL_FOOTBALL_RANKINGS.map((board) => {
+    const entries = board.entries.map((entry) => ({ ...entry }));
+
+    if (board.id === "ballon-dor-wins") {
+      ballonWinners.forEach((count, name) => addEntry(entries, name, count, name === state.name));
+    }
+
+    if (board.id === "world-cup-goals") {
+      addEntry(entries, state.name, worldCupGoals, true);
+    }
+
+    const competitionId = clubTitleCompetition(board.id);
+    if (competitionId) {
+      for (const record of state.history) {
+        if (!record.competitions.some((competition) => competition.id === competitionId && competition.champion)) continue;
+        const club = clubById(record.clubId);
+        addEntry(entries, club.name, 1, record.clubId === state.currentClubId);
+      }
+    }
+
+    return { ...board, entries: sortRanking(entries) };
+  });
+}
