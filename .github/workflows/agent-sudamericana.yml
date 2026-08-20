@@ -28,6 +28,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- app/game-data.ts app/career/events.ts app/career/state.ts app/career/world-memory.ts
-          git commit -m "feat: add club-specific events and tune world simulation"
+          git add -- app/game-data.ts app/career/events.ts app/career/state.ts app/career/world-memory.ts app/career/official-football-records.ts
+          git commit -m "feat: add club events and living global records"
           git push origin HEAD:agent/futbobo-world-memory
