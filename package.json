@@ -7,8 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/agent-ui-polish-safe.mjs",
-    "build": "next build",
+    "build": "node scripts/agent-ui-polish-safe.mjs && node scripts/agent-ui-final-polish.mjs && next build",
     "android:prepare": "node scripts/prepare-android.mjs",
     "android:open": "npx cap open android",
     "android:apk": "npm run android:prepare && cd android && gradlew assembleRelease",
