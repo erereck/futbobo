@@ -279,3 +279,79 @@ export function readCareerSlotState(id: string) {
     return null;
   }
 }
+
+export type CareerStorageSnapshot = {
+  version: 2;
+  index: CareerSaveMeta[];
+  activeId: string;
+  slots: Record<string, GameState>;
+  achievements: GlobalAchievementUnlock[];
+};
+
+export type CareerStorageImportResult = {
+  imported: boolean;
+  activeState: GameState | null;
+};
+
+export function exportCareerStorageSnapshot(): CareerStorageSnapshot {
+  const index = listCareerSaves();
+  const slots: Record<string, GameState> = {};
+  for (const meta of index) {
+    const state = readCareerSlotState(meta.id);
+    if (state) slots[meta.id] = state;
+  }
+  const usableIndex = index.filter((meta) => Boolean(slots[meta.id]));
+  const activeId = usableIndex.some((meta) => meta.id === getActiveCareerId())
+    ? getActiveCareerId()
+    : usableIndex[0]?.id ?? "";
+  return {
+    version: 2,
+    index: usableIndex,
+    activeId,
+    slots,
+    achievements: readUnlocks(),
+  };
+}
+
+export function importCareerStorageSnapshot(value: unknown): CareerStorageImportResult {
+  if (typeof window === "undefined" || !value || typeof value !== "object") {
+    return { imported: false, activeState: null };
+  }
+  const snapshot = value as Partial<CareerStorageSnapshot>;
+  if (snapshot.version !== 2 || !Array.isArray(snapshot.index) || !snapshot.slots || typeof snapshot.slots !== "object") {
+    return { imported: false, activeState: null };
+  }
+
+  const rawSlots = snapshot.slots as Record<string, unknown>;
+  const importedIndex = sanitizeIndex(snapshot.index).filter((meta) => isUsableState(rawSlots[meta.id]));
+  const currentIndex = listCareerSaves();
+  for (const meta of currentIndex) localStorage.removeItem(slotKey(meta.id));
+
+  for (const meta of importedIndex) {
+    localStorage.setItem(slotKey(meta.id), JSON.stringify(rawSlots[meta.id]));
+  }
+  writeIndex(importedIndex);
+
+  const importedUnlocks = Array.isArray(snapshot.achievements)
+    ? snapshot.achievements.filter((item): item is GlobalAchievementUnlock => Boolean(
+        item && typeof item === "object" && typeof item.achievementId === "string" && typeof item.careerId === "string",
+      ))
+    : [];
+  writeJson(ACHIEVEMENTS_KEY, importedUnlocks);
+
+  const activeId = typeof snapshot.activeId === "string" && importedIndex.some((meta) => meta.id === snapshot.activeId)
+    ? snapshot.activeId
+    : importedIndex[0]?.id ?? "";
+  if (!activeId) {
+    localStorage.removeItem(ACTIVE_KEY);
+    localStorage.removeItem(SAVE_KEY);
+    lastSyncedPayload = "";
+    return { imported: true, activeState: null };
+  }
+
+  const activeState = rawSlots[activeId] as GameState;
+  localStorage.setItem(ACTIVE_KEY, activeId);
+  localStorage.setItem(SAVE_KEY, JSON.stringify(activeState));
+  lastSyncedPayload = "";
+  return { imported: true, activeState };
+}

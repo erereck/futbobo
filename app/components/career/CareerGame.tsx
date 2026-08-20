@@ -30,6 +30,7 @@ import { POSITION_FIELD_SPOTS, careerTrend, fanMood, formatFollowers, formatMone
 import { AwardCeremony, AwardReveal, BrandMark, ClubBadge, CompetitionBadge, Metric, NationBadge, Progress, TROPHY_PRESENTATIONS, TrophyGallery } from "./CareerPrimitives";
 import { applyEffect, applyStoryOrigin, buildPressConference, createYouthJourney, selectNextEvent, storyClubCandidate } from "../../career/events";
 import { selectTransferOffers } from "../../career/transfer-market";
+import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../career/save-system";
 import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
 import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanels";
 import CareerExtraStats from "./CareerExtraStats";
@@ -780,8 +781,9 @@ export default function CareerGame() {
   function exportSavedData() {
     const payload = {
       format: "futbobo-backup",
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
+      careerStorage: exportCareerStorageSnapshot(),
       save: JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null"),
       challengeSave: JSON.parse(localStorage.getItem(CHALLENGE_SAVE_KEY) ?? "null"),
       challengeResults: JSON.parse(localStorage.getItem(CHALLENGE_RESULTS_KEY) ?? "[]"),
@@ -805,12 +807,17 @@ export default function CareerGame() {
       const payload = JSON.parse(await file.text()) as {
         format?: string;
         save?: unknown;
+        careerStorage?: unknown;
         challengeSave?: unknown;
         challengeResults?: unknown;
         hallOfFame?: unknown;
         settings?: Partial<AppSettings>;
       };
       if (payload.format !== "futbobo-backup") throw new Error("Formato inválido");
+      const multiCareerImport = payload.careerStorage === undefined
+        ? { imported: false, activeState: null }
+        : importCareerStorageSnapshot(payload.careerStorage);
+      if (payload.careerStorage !== undefined && !multiCareerImport.imported) throw new Error("Backup de carreiras inválido");
       const importedSettings: AppSettings = {
         customCharacters: Array.isArray(payload.settings?.customCharacters) ? payload.settings.customCharacters.slice(0, 12) : [],
         customClubs: Array.isArray(payload.settings?.customClubs) ? payload.settings.customClubs.slice(0, 8) : [],
@@ -853,6 +860,9 @@ export default function CareerGame() {
         setGame(importedGame);
         setHasSave(importedGame.phase !== "welcome");
         localStorage.setItem(SAVE_KEY, JSON.stringify(importedGame));
+      } else if (multiCareerImport.activeState) {
+        setGame(multiCareerImport.activeState);
+        setHasSave(multiCareerImport.activeState.phase !== "welcome");
       } else {
         localStorage.removeItem(SAVE_KEY);
         setHasSave(false);
@@ -2553,7 +2563,7 @@ export default function CareerGame() {
             </section>
             <section className="save-data-settings">
               <div className="settings-section-heading"><span>DADOS SALVOS</span><strong>Leve suas carreiras para outro aparelho</strong></div>
-              <p>O backup inclui carreira atual, Hall da Fama, personagens, times personalizados e configurações.</p>
+              <p>O backup inclui todas as carreiras, conquistas globais, Hall da Fama, personagens, times personalizados e configurações.</p>
               <div>
                 <button className="secondary-button" onClick={exportSavedData}>Exportar dados</button>
                 <button className="secondary-button" onClick={() => saveImportRef.current?.click()}>Importar dados</button>
@@ -3714,6 +3724,7 @@ export default function CareerGame() {
 
               <CareerStatisticsArchive state={game} />
               <CareerExtraStats state={game} />
+              {/* Rivais continuam no GameState e na simulação para alimentar memória/notícias em updates futuros; somente a UI está oculta. */}
               <section className="rival-center legacy-ui-hidden">
                 <div><span>RIVAIS DE GERAÇÃO</span><strong>{game.rivals.length ? "Eles também estão construindo uma carreira" : "Esta carreira não ganhou um rival"}</strong></div>
                 {game.rivals.length === 0 ? <p>Nem toda história precisa de um antagonista. Em outra carreira — ou com seus Personagens — alguém pode aparecer.</p> : (
