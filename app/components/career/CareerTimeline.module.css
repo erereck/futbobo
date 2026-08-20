@@ -27,7 +27,8 @@
 
 @media (max-width:560px) {
   .heading strong { font-size:20px; }
-  .row { grid-template-columns:46px 14px 38px minmax(0,1fr) 40px; gap:6px; min-height:76px; padding-right:6px; }
+  .row { grid-template-columns:46px 14px 32px minmax(0,1fr) 40px; gap:7px; min-height:76px; padding-right:6px; }
+  .row :global(.club-badge-sm) { width:32px !important; height:32px !important; min-width:32px !important; max-width:32px !important; max-height:32px !important; }
   .copy > strong { font-size:11px; }
   .copy > p { font-size:8px; }
   .highlights span { font-size:5px; }
