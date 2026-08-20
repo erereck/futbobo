@@ -210,3 +210,10 @@
   .shell[data-screen="modes"] .modeCard strong { font-size:16px; }
   .shell[data-screen="modes"] .modeIndex { font-size:13px; }
 }
+
+/* WORLD MEMORY V1 */
+.mainActions .playButton:hover { color:#fff; }
+@media (max-width:800px) {
+  .careerHost :global(.bottom-nav) { grid-template-columns:repeat(5,minmax(0,1fr)) !important; }
+  .careerHost :global(.bottom-nav > button) { min-width:0 !important; padding-inline:1px !important; font-size:6px !important; }
+}

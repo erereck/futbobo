@@ -47,7 +47,7 @@ export type League = {
   conferencePlaces: number;
 };
 
-export type ContinentalSlot = "libertadores" | "champions" | "europa" | "conference" | "concacaf" | "asian" | "african";
+export type ContinentalSlot = "libertadores" | "sudamericana" | "champions" | "europa" | "conference" | "concacaf" | "asian" | "african";
 
 export type Club = {
   id: string;
@@ -85,6 +85,7 @@ export type Effect = {
   potential?: number;
   morale?: number;
   fitness?: number;
+  physicalBoost?: number;
   reputation?: number;
   leadership?: number;
   money?: number;
@@ -139,6 +140,7 @@ export type GameEvent = {
   nationalWindow?: "major" | "continental" | "olympics" | "qualifiers";
   needsDomestic?: boolean;
   needsRivalry?: boolean;
+  needsClubIds?: string[];
   maxContractYears?: number;
   seasonParity?: "even" | "odd";
   oneTime?: boolean;

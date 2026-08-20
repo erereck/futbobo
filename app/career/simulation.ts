@@ -163,7 +163,7 @@ export function simulateSeason(
   const wonLastSeason = (ids: CompetitionId[]) => previousClubCompetitions.some((competition) => ids.includes(competition.id) && competition.champion);
   const playsDomesticSuperCup = wonLastSeason(["domesticLeague", "domesticCup"]) && Boolean(DOMESTIC_SUPER_CUP_NAMES[league.id]);
   const playsUefaSuperCup = clubConfederation(club) === "EUROPE" && wonLastSeason(["championsLeague", "europaLeague"]);
-  const playsRecopaSudamericana = clubConfederation(club) === "SOUTH_AMERICA" && wonLastSeason(["libertadores"]);
+  const playsRecopaSudamericana = clubConfederation(club) === "SOUTH_AMERICA" && wonLastSeason(["libertadores", "sudamericana"]);
   const playsCampeonesCup = ["liga-mx", "mls"].includes(league.id) && wonLastSeason(["domesticLeague"]);
   const superCupChance = clamp(34 + (strength - 70) * 1.15 + playerImpact * 0.7 + boost * 0.4, 12, 82);
   const domesticSuperCupChampion = playsDomesticSuperCup && seeded(state.seed, state.season * 73) * 100 < superCupChance;
@@ -198,6 +198,7 @@ export function simulateSeason(
   ];
   const continentalNames: Record<ContinentalSlot, { id: CompetitionId; name: string; icon: string }> = {
     libertadores: { id: "libertadores", name: "Libertadores", icon: "LIB" },
+    sudamericana: { id: "sudamericana", name: "Copa Sul-Americana", icon: "SULA" },
     champions: { id: "championsLeague", name: "Champions League", icon: "UCL" },
     europa: { id: "europaLeague", name: "Europa League", icon: "UEL" },
     conference: { id: "conferenceLeague", name: "Conference League", icon: "UECL" },
@@ -747,6 +748,7 @@ export function simulateSeason(
       mundial: 100,
       championsLeague: 95,
       libertadores: 94,
+      sudamericana: 86,
       concacafChampions: 90,
       afcChampions: 90,
       cafChampions: 90,
@@ -912,7 +914,10 @@ export function simulateSeason(
   const nextWorldQualifiedClubId = wonContinentalForWorld ? club.id : affected.worldQualifiedSeason === affected.season ? "" : affected.worldQualifiedClubId;
   const nextAwardCabinet = { ...affected.awardCabinet };
   awards.forEach((award) => { nextAwardCabinet[award] = (nextAwardCabinet[award] ?? 0) + 1; });
-  const nextContinentalSlot = continentalSlotAfterSeason(club, league, leagueChampion, cupChampion, leaguePosition);
+  const qualifiedBySudamericana = continentalChampion && playsContinental === "sudamericana";
+  const nextContinentalSlot = qualifiedBySudamericana
+    ? "libertadores"
+    : continentalSlotAfterSeason(club, league, leagueChampion, cupChampion, leaguePosition);
   const fitnessTarget =
     91 -
     Math.max(0, appearances - 30) * 0.55 -

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { GameState } from "../../career/model";
 import {
   ATTRIBUTE_GROUPS,
@@ -89,7 +90,7 @@ export function PlayerReworkPanels({ state }: { state: GameState }) {
         </article>
       </section>
 
-      {followersOpen && (
+      {followersOpen && typeof document !== "undefined" && createPortal((
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.currentTarget === event.target) setFollowersOpen(false); }}>
           <section className={styles.followersModal}>
             <header><div><span>ALCANCE</span><strong>{formatFollowers(state.followers)} seguidores</strong></div><button type="button" onClick={() => setFollowersOpen(false)}>×</button></header>
@@ -107,7 +108,7 @@ export function PlayerReworkPanels({ state }: { state: GameState }) {
             </div>
           </section>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }

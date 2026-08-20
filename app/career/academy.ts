@@ -250,7 +250,7 @@ export function isEuropeanClub(club: Club) {
 export function initialContinentalSlot(club: Club): ContinentalSlot | null {
   if (club.leagueId === "brasileirao-b" || club.leagueId === "championship") return null;
   const confederation = clubConfederation(club);
-  if (confederation === "SOUTH_AMERICA") return club.reputation >= 4 ? "libertadores" : null;
+  if (confederation === "SOUTH_AMERICA") return club.reputation >= 4 ? "libertadores" : club.reputation >= 3 ? "sudamericana" : null;
   if (confederation === "NORTH_AMERICA") return club.reputation >= 4 ? "concacaf" : null;
   if (confederation === "ASIA") return club.reputation >= 4 ? "asian" : null;
   if (confederation === "AFRICA") return club.reputation >= 4 ? "african" : null;
@@ -275,7 +275,11 @@ export function continentalSlotAfterSeason(
     return league.id === "brasileirao-b" ? "libertadores" : "europa";
   }
   const confederation = clubConfederation(club);
-  if (confederation === "SOUTH_AMERICA") return leagueChampion || cupChampion || leaguePosition <= 6 ? "libertadores" : null;
+  if (confederation === "SOUTH_AMERICA") {
+    if (leagueChampion || cupChampion || leaguePosition <= 6) return "libertadores";
+    if (leaguePosition <= 12) return "sudamericana";
+    return null;
+  }
   if (confederation === "NORTH_AMERICA") return leagueChampion || cupChampion || leaguePosition <= (league.championsPlaces || 4) ? "concacaf" : null;
   if (confederation === "ASIA") return leagueChampion || cupChampion || leaguePosition <= (league.championsPlaces || 3) ? "asian" : null;
   if (confederation === "AFRICA") return leagueChampion || cupChampion || leaguePosition <= (league.championsPlaces || 2) ? "african" : null;

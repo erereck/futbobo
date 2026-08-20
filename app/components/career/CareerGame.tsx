@@ -34,6 +34,8 @@ import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../
 import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
 import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanels";
 import CareerExtraStats from "./CareerExtraStats";
+import CareerTimeline from "./CareerTimeline";
+import CareerWorld, { WorldPulseButton } from "./CareerWorld";
 
 export default function CareerGame() {
   const [game, setGame] = useState<GameState>(() => initialState());
@@ -44,7 +46,7 @@ export default function CareerGame() {
   const [challengeResults, setChallengeResults] = useState<ChallengeResult[]>([]);
   const [youthStep, setYouthStep] = useState(0);
   const [youthFinished, setYouthFinished] = useState(false);
-  const [activeTab, setActiveTab] = useState<"event" | "history" | "profile" | "life" | "stats" | "legacy">("event");
+  const [activeTab, setActiveTab] = useState<"event" | "history" | "profile" | "life" | "stats" | "world" | "legacy">("event");
   const [toast, setToast] = useState("");
   const [luckSpin, setLuckSpin] = useState<{ event: GameEvent; choiceIndex: number; succeeded: boolean } | null>(null);
   const [positionChangeOpen, setPositionChangeOpen] = useState(false);
@@ -576,7 +578,7 @@ export default function CareerGame() {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(18);
   }
 
-  function changeTab(tab: "event" | "history" | "profile" | "life" | "stats" | "legacy") {
+  function changeTab(tab: "event" | "history" | "profile" | "life" | "stats" | "world" | "legacy") {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
     vibrate();
@@ -905,7 +907,8 @@ export default function CareerGame() {
         youthYears: journey.youthYears,
         proOffers: journey.offers,
         age: revealAge,
-        season: current.season + revealAge - 12,
+        // A base é uma introdução sem calendário rígido; toda carreira nova entra no profissional em 2027.
+        season: 2027,
         overall: journey.overall,
         potential: journey.potential,
         attributes: createPlayerAttributes(current.position, journey.overall, current.seed),
@@ -3039,7 +3042,13 @@ export default function CareerGame() {
           {game.phase === "career" && activeTab === "event" && (
             <div className="event-stage">
               <div className="market-strip"><span><small>MERCADO</small><strong>{game.transferCooldownSeason >= game.season ? "Pedido já feito nesta temporada" : "Quer mudar de camisa?"}</strong></span><button onClick={requestTransfer} disabled={game.transferCooldownSeason >= game.season}>⇄ Pedir transferência</button></div>
-              {game.currentObjective && <div className="objective-card"><span>META DO TREINADOR</span><strong>{game.currentObjective.label}</strong><p>{game.currentObjective.description}</p><small>Recompensa: +{game.currentObjective.reward} confiança · Falha: −{game.currentObjective.penalty}</small></div>}
+              {game.currentObjective && <div className="objective-card">
+                <span>META DO TREINADOR</span>
+                <strong>{game.currentObjective.label}</strong>
+                <p>{game.currentObjective.description}</p>
+                <small>Recompensa: +{game.currentObjective.reward} confiança · Falha: −{game.currentObjective.penalty}</small>
+                <WorldPulseButton state={game} onOpen={() => changeTab("world")} />
+              </div>}
               <div className="event-art" data-icon={currentEvent.icon}><span className="event-tag">{currentEvent.tag}</span><div className="event-watermark">{currentEvent.icon}</div></div>
               <article className="event-card">
                 <div className="event-heading"><span>{game.currentEventId === "debut" ? "PRIMEIRO CAPÍTULO" : `TEMPORADA ${game.season}`}</span><h1>{currentEvent.title}</h1><p>{currentEvent.description}</p></div>
@@ -3340,15 +3349,8 @@ export default function CareerGame() {
           )}
 
           {activeTab === "history" && game.phase === "career" && (
-            <div className="panel-screen screen-enter">
-              <div className="section-heading"><div><span>LINHA DO TEMPO</span><h2>Sua carreira até aqui</h2></div></div>
-              <div className="timeline-list">
-                {game.history.length === 0 && <div className="empty-panel">Sua estreia será o primeiro capítulo desta história.</div>}
-                {[...game.history].reverse().map((record) => { const club = clubById(record.clubId); const titles = record.competitions.filter((competition) => competition.champion); return <article className="timeline-row" key={`${record.season}-${record.clubId}`}><span className="timeline-year">{record.season}</span><ClubBadge club={club} size="sm" /><div><strong>{club.shortName}</strong><small>{record.position} · {record.appearances}J · {record.position === "GOL" ? `${record.cleanSheets}SG` : `${record.goals}G · ${record.assists}A`} · nota {(record.averageRating ?? seasonAverageRating(record.performanceScore ?? 0, game.seed, record.season)).toFixed(1)}</small>{record.medicalRecord && <i className="timeline-medical">✚ {record.medicalRecord.matchesMissed} jogos fora</i>}{titles.length > 0 && <em className="timeline-title-badges">{titles.map((title) => <CompetitionBadge key={title.id} competition={title} leagueId={record.leagueId || club.leagueId} />)}</em>}</div><span className="timeline-ovr">{record.overall}</span>{record.title && <span className="timeline-trophy">🏆</span>}</article>; })}
-              </div>
-            </div>
+            <CareerTimeline state={game} />
           )}
-
           {activeTab === "profile" && game.phase === "career" && (
             <div className="panel-screen screen-enter">
               <div className="profile-hero"><div className="academy-avatar"><span>{game.number}</span><small>{game.position}</small></div><div><span>{game.archetype}</span><h2>{game.name}</h2><p>{position.style} · {game.foot}</p></div></div>
@@ -3747,6 +3749,9 @@ export default function CareerGame() {
             </div>
           )}
 
+          {activeTab === "world" && game.phase === "career" && (
+            <CareerWorld state={game} />
+          )}
           {activeTab === "legacy" && game.phase === "career" && (
             <div className="panel-screen legacy-screen screen-enter">
               <div className="legacy-hero">
@@ -3793,7 +3798,9 @@ export default function CareerGame() {
               </div>
               <button aria-pressed={activeTab === "event"} className={activeTab === "event" ? "selected" : ""} onClick={() => changeTab("event")}><span>◆</span>Carreira</button>
               <button aria-pressed={activeTab === "profile"} className={activeTab === "profile" ? "selected" : ""} onClick={() => changeTab("profile")}><span>●</span>Jogador</button>
+              <button aria-pressed={activeTab === "history"} className={activeTab === "history" ? "selected" : ""} onClick={() => changeTab("history")}><span>│</span>Histórico</button>
               <button aria-pressed={activeTab === "stats"} className={activeTab === "stats" ? "selected" : ""} onClick={() => changeTab("stats")}><span>▥</span>Estatísticas</button>
+              <button aria-pressed={activeTab === "world"} className={activeTab === "world" ? "selected" : ""} onClick={() => changeTab("world")}><span>◎</span>Mundo</button>
             </nav>
           )}
         </section>

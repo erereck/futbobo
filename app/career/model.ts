@@ -30,6 +30,7 @@ export type CompetitionId =
   | "domesticCup"
   | "domesticSuperCup"
   | "libertadores"
+  | "sudamericana"
   | "recopaSudamericana"
   | "mundial"
   | "championsLeague"
@@ -74,6 +75,7 @@ export type TrophyCabinet = {
   domesticCup: number;
   domesticSuperCup: number;
   libertadores: number;
+  sudamericana: number;
   recopaSudamericana: number;
   mundial: number;
   championsLeague: number;
