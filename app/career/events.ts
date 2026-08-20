@@ -36,6 +36,7 @@ export function eligibleEvents(state: GameState) {
     }
     if (event.needsDomestic && club.countryId !== "brasil") return false;
     if (event.needsRivalry && !RIVALRIES.some((rivalry) => rivalry.clubIds.includes(club.id))) return false;
+    if (event.needsClubIds && !event.needsClubIds.includes(club.id)) return false;
     if (event.maxContractYears !== undefined && state.contractYears > event.maxContractYears) return false;
     if (event.seasonParity === "even" && state.season % 2 !== 0) return false;
     if (event.seasonParity === "odd" && state.season % 2 === 0) return false;
@@ -831,10 +832,21 @@ export function applyEffect(state: GameState, effect: Effect) {
         status: "active",
       }
     : null;
+  const shiftedAttributes = shiftPlayerAttributes(state.attributes, effect.ovr ?? 0, state.position, state.seed + state.season);
+  const physicalBoost = effect.physicalBoost ?? 0;
+  const attributes = physicalBoost === 0
+    ? shiftedAttributes
+    : {
+        ...shiftedAttributes,
+        pace: clamp(shiftedAttributes.pace + physicalBoost, 15, 99),
+        acceleration: clamp(shiftedAttributes.acceleration + physicalBoost, 15, 99),
+        strength: clamp(shiftedAttributes.strength + physicalBoost, 15, 99),
+        stamina: clamp(shiftedAttributes.stamina + physicalBoost, 15, 99),
+      };
   return {
     ...state,
     overall,
-    attributes: shiftPlayerAttributes(state.attributes, effect.ovr ?? 0, state.position, state.seed + state.season),
+    attributes,
     potential: clamp(state.potential + (effect.potential ?? 0), 45, 99),
     morale: clamp(state.morale + (effect.morale ?? 0)),
     fitness: clamp(state.fitness + (effect.fitness ?? 0)),

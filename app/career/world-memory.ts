@@ -126,11 +126,18 @@ function weightedCountryPick(
   salt: number,
   titles: Record<string, number>,
   excluded: Set<string>,
+  role: "winner" | "runner-up",
 ) {
-  const candidates = COUNTRIES.filter((country) => !excluded.has(country.id));
+  const available = COUNTRIES.filter((country) => !excluded.has(country.id));
+  const upsetRoll = seeded(state.seed, season * 2017 + salt * 13);
+  const elitePool = available.filter((country) => country.strength >= 4 || (titles[country.id] ?? 0) >= 2);
+  const strongPool = available.filter((country) => country.strength >= 3 || (titles[country.id] ?? 0) >= 1);
+  const candidates = role === "winner"
+    ? upsetRoll < 0.08 && strongPool.length ? strongPool : elitePool.length ? elitePool : strongPool.length ? strongPool : available
+    : strongPool.length ? strongPool : available;
   const scored = candidates.map((country, index) => {
     const historicPull = titles[country.id] ?? 0;
-    const weight = Math.max(0.75, country.strength * country.strength + historicPull * 1.45);
+    const weight = Math.max(1, country.strength ** 4 + historicPull * 10);
     const roll = Math.max(0.000001, seeded(state.seed, season * 977 + salt + index * 43));
     return { country, score: Math.pow(roll, 1 / weight) };
   });
@@ -163,10 +170,10 @@ function resolveWorldCup(state: GameState, season: number, titles: Record<string
 
   const excluded = new Set(eliminatedByPlayer);
   if (nationalRecord && nationalRecord.stage !== "Não classificado") excluded.add(state.nationality);
-  const winnerCountryId = weightedCountryPick(state, season, 31, titles, excluded);
+  const winnerCountryId = weightedCountryPick(state, season, 31, titles, excluded, "winner");
   const runnerUpCountryId = nationalRecord?.stage === "Vice"
     ? state.nationality
-    : weightedCountryPick(state, season, 79, titles, new Set([...excluded, winnerCountryId]));
+    : weightedCountryPick(state, season, 79, titles, new Set([...excluded, winnerCountryId]), "runner-up");
 
   return { season, winnerCountryId, runnerUpCountryId, source: "generated" };
 }

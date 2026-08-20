@@ -7,6 +7,7 @@ import { BACKSTAGE_EVENTS } from "../backstage-saga";
 import { FUTBOBO_MOMENTS } from "../futbobo-moments";
 import { DEFAULT_PLAYER_APPEARANCE, normalizePlayerAppearance, randomPlayerAppearance } from "../player-appearance";
 import { GOALKEEPER_EVENTS } from "../goalkeeper-events";
+import { CLUB_SPECIFIC_EVENTS } from "./club-specific-events";
 import type { AttributeKey, AwardPresentation, CareerHallEntry, CareerRival, CompetitionId, CustomCharacter, CustomClubDefinition, GameState, MonteCarloReport, PlayerAttributes, PlayerStats, SeasonRecord, SpecialTraitId } from "./model";
 import { positionByKey } from "./academy";
 import { competitiveStrength } from "./performance";
@@ -135,7 +136,7 @@ export const RANDOM_NAME_LAST_PART = [
   "Oliveirinha", "Puskás Filho", "Reis de Tóquio", "Santoro", "Torres do Norte", "Uribe", "van Helsing", "Wakabayashi", "Xavierson", "Yıldız", "Zé Europa", "Africano", "Baggio Filho", "Cruyff da Gama", "Drácula", "Eto'o Mineiro", "Futebolino", "Garrinchinha", "Honda Civic", "Inzaghi dos Santos",
 ];
 
-export const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS, ...GOALKEEPER_EVENTS];
+export const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS, ...GOALKEEPER_EVENTS, ...CLUB_SPECIFIC_EVENTS];
 
 export const FICTIONAL_FINALISTS = [
   "Mateo Alcázar",
