@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/agent-ui-polish-safe.mjs",
     "build": "next build",
     "android:prepare": "node scripts/prepare-android.mjs",
     "android:open": "npx cap open android",
