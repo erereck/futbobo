@@ -1,5 +1,5 @@
-import CareerGame from "./components/career/CareerGame";
+import FutboboShell from "./components/shell/FutboboShell";
 
 export default function HomePage() {
-  return <CareerGame />;
+  return <FutboboShell />;
 }
