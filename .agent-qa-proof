@@ -1,0 +1,1 @@
+npm test + npm run lint passed before cleanup; product diff unchanged afterward.
