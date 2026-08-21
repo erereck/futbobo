@@ -1,6 +1,7 @@
 import { CLUBS, leagueById } from "../game-data";
 import type { Country } from "../game-data";
 import type { GameState, SeasonRecord } from "./model";
+import type { WorldPlayer } from "./world-player-model";
 import { clubConfederation } from "./academy";
 import { seeded } from "./shared";
 
@@ -205,12 +206,23 @@ function historicalTitles(config: CompetitionConfig) {
   return titles;
 }
 
-function worldPlayerSquadBoost(state: GameState, clubId: string) {
+function worldPlayerWasAtClub(player: WorldPlayer, clubId: string, season: number) {
+  return player.clubHistory.some((spell) =>
+    spell.clubId === clubId &&
+    spell.joinedSeason <= season &&
+    (spell.leftSeason === null || spell.leftSeason >= season)
+  );
+}
+
+function worldPlayerSquadBoost(state: GameState, clubId: string, season: number) {
   return Object.values(state.worldPlayers?.players ?? {})
-    .filter((player) => player.status !== "retired" && player.currentClubId === clubId)
-    .sort((a, b) => b.overall - a.overall)
+    .filter((player) => player.generatedSeason <= season && worldPlayerWasAtClub(player, clubId, season))
+    .sort((a, b) => b.potential - a.potential || a.id.localeCompare(b.id))
     .slice(0, 4)
-    .reduce((total, player) => total + Math.max(0, player.overall - 76) * 1.45, 0);
+    .reduce((total, player) => {
+      const honorsAtTheTime = player.honors.filter((honor) => honor.season <= season).length;
+      return total + Math.max(0, player.potential - 76) * 1.25 + Math.min(12, honorsAtTheTime * 1.5);
+    }, 0);
 }
 
 function pickWinner(
@@ -233,7 +245,7 @@ function pickWinner(
     .map((club, index) => {
       const league = leagueById(club.leagueId);
       const historyPull = titles[club.id] ?? 0;
-      const squadBoost = worldPlayerSquadBoost(state, club.id);
+      const squadBoost = worldPlayerSquadBoost(state, club.id, season);
       const weight = Math.max(
         1,
         club.reputation ** 4 * 4 +
@@ -271,7 +283,7 @@ function buildContinentalCompetition(state: GameState, config: CompetitionConfig
     const playerWon = Boolean(playerRecord && playerCompetition?.champion);
     const winnerId = playerWon
       ? playerRecord!.clubId
-      : pickWinner(state, config, season, titles, playerCompetition ? playerRecord?.clubId ?? "" : "");
+      : pickWinner(state, config, season, titles, playerRecord?.clubId ?? "");
     const source: LivingClubChampion["source"] = playerWon ? "player" : "generated";
 
     titles[winnerId] = (titles[winnerId] ?? 0) + 1;
@@ -341,7 +353,7 @@ function pickMundialUpsetWinner(
   return available
     .map((club, index) => {
       const league = leagueById(club.leagueId);
-      const squadBoost = worldPlayerSquadBoost(state, club.id);
+      const squadBoost = worldPlayerSquadBoost(state, club.id, season);
       const wonLibertadores = continentalChampions.some((entry) => entry.competitionId === "libertadores" && entry.clubId === club.id);
       const wonContinental = continentalChampions.some((entry) => entry.clubId === club.id);
       const continentalBoost = wonLibertadores ? 340 : wonContinental ? 170 : 0;

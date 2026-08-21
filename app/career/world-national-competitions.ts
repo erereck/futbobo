@@ -31,6 +31,8 @@ type NationalCompetitionConfig = {
   label: string;
   confederation: Country["confederation"];
   historyNames: string[];
+  startSeason: number;
+  interval: number;
   historicTitles: Record<string, number>;
 };
 
@@ -40,6 +42,8 @@ const CONFIGS: NationalCompetitionConfig[] = [
     label: "Euro",
     confederation: "EUROPE",
     historyNames: ["euro", "eurocopa", "campeonato europeu"],
+    startSeason: 2028,
+    interval: 4,
     historicTitles: {
       Espanha: 4,
       Alemanha: 3,
@@ -56,6 +60,8 @@ const CONFIGS: NationalCompetitionConfig[] = [
     label: "Copa América",
     confederation: "SOUTH_AMERICA",
     historyNames: ["copa america", "copa américa"],
+    startSeason: 2028,
+    interval: 4,
     historicTitles: {
       Argentina: 16,
       Uruguai: 15,
@@ -72,6 +78,8 @@ const CONFIGS: NationalCompetitionConfig[] = [
     label: "Copa Ouro",
     confederation: "NORTH_AMERICA",
     historyNames: ["copa ouro", "gold cup"],
+    startSeason: 2027,
+    interval: 2,
     historicTitles: {
       México: 10,
       "Estados Unidos": 7,
@@ -83,6 +91,8 @@ const CONFIGS: NationalCompetitionConfig[] = [
     label: "Copa da Ásia",
     confederation: "ASIA",
     historyNames: ["copa da asia", "copa da ásia", "asian cup"],
+    startSeason: 2027,
+    interval: 4,
     historicTitles: {
       Japão: 4,
       "Arábia Saudita": 3,
@@ -100,6 +110,8 @@ const CONFIGS: NationalCompetitionConfig[] = [
     label: "Copa Africana de Nações",
     confederation: "AFRICA",
     historyNames: ["copa africana de nacoes", "copa africana de nações", "afcon"],
+    startSeason: 2027,
+    interval: 2,
     historicTitles: {
       Egito: 7,
       Camarões: 5,
@@ -123,6 +135,8 @@ const CONFIGS: NationalCompetitionConfig[] = [
     label: "Copa das Nações da OFC",
     confederation: "OCEANIA",
     historyNames: ["copa das nacoes da ofc", "copa das nações da ofc", "ofc nations cup"],
+    startSeason: 2028,
+    interval: 4,
     historicTitles: {
       "Nova Zelândia": 6,
       Austrália: 4,
@@ -158,12 +172,15 @@ function historicalTitles(config: NationalCompetitionConfig) {
   return titles;
 }
 
-function worldPlayerNationBoost(state: GameState, countryId: string) {
+function worldPlayerNationBoost(state: GameState, countryId: string, season: number) {
   return Object.values(state.worldPlayers?.players ?? {})
-    .filter((player) => player.status !== "retired" && player.nationality === countryId)
-    .sort((a, b) => b.overall - a.overall)
+    .filter((player) => player.generatedSeason <= season && player.nationality === countryId)
+    .sort((a, b) => b.potential - a.potential || a.id.localeCompare(b.id))
     .slice(0, 6)
-    .reduce((total, player) => total + Math.max(0, player.overall - 75) * 1.25, 0);
+    .reduce((total, player) => {
+      const honorsAtTheTime = player.honors.filter((honor) => honor.season <= season).length;
+      return total + Math.max(0, player.potential - 75) * 1.1 + Math.min(10, honorsAtTheTime);
+    }, 0);
 }
 
 function playerRecordFor(state: GameState, config: NationalCompetitionConfig, season: number) {
@@ -193,7 +210,7 @@ function pickWinner(
   return candidates
     .map((country, index) => {
       const historyPull = titles[country.id] ?? 0;
-      const generationBoost = worldPlayerNationBoost(state, country.id);
+      const generationBoost = worldPlayerNationBoost(state, country.id, season);
       const weight = Math.max(1, country.strength ** 4 * 5 + historyPull * 20 + generationBoost);
       const roll = Math.max(0.000001, seeded(state.seed, season * 6301 + index * 71 + salt));
       return { countryId: country.id, score: Math.pow(roll, 1 / weight) };
@@ -222,7 +239,7 @@ export function buildLivingNationalCompetitions(state: GameState): LivingNationa
     const champions: LivingNationalCompetition["champions"] = [];
     const news: LivingNationalCompetition["news"] = [];
 
-    for (let season = 2028; season <= latestCompletedSeason; season += 4) {
+    for (let season = config.startSeason; season <= latestCompletedSeason; season += config.interval) {
       const playerRecord = playerRecordFor(state, config, season);
       const playerWon = Boolean(playerRecord?.champion);
       const winnerId = playerWon

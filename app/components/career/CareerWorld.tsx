@@ -147,7 +147,7 @@ export default function CareerWorld({ state }: { state: GameState }) {
               <b>{open ? "−" : "+"}</b>
             </button>
 
-            {recentChampions.length > 0 && (
+            {open && recentChampions.length > 0 && (
               <div className={styles.recentChampions}>
                 {recentChampions.map((champion) => {
                   const country = countryById(champion.winnerId);
@@ -199,7 +199,7 @@ export default function CareerWorld({ state }: { state: GameState }) {
               <b>{open ? "−" : "+"}</b>
             </button>
 
-            {recentChampions.length > 0 && (
+            {open && recentChampions.length > 0 && (
               <div className={styles.recentChampions}>
                 {recentChampions.map((champion) => {
                   const club = clubById(champion.winnerId);

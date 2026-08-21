@@ -939,7 +939,7 @@ export function simulateSeason(
     injuryProne: hasTrait("injury-prone"),
     twistFitness,
   });
-  const nextFitness = physicalLoad.fitness;
+  const nextFitness = clamp(physicalLoad.fitness, 24, 99);
   const moraleTarget =
     64 +
     performanceScore * 0.16 +
