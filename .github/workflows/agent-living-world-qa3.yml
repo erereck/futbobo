@@ -1,0 +1,50 @@
+name: Living world QA 3
+
+on:
+  push:
+    branches: [agent/futbobo-world-players-live-world]
+
+permissions:
+  contents: write
+
+jobs:
+  qa:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/futbobo-world-players-live-world
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - run: npm ci
+      - name: Test and lint
+        shell: bash
+        run: |
+          set +e
+          npm test > /tmp/test.log 2>&1
+          TEST_CODE=$?
+          npm run lint > /tmp/lint.log 2>&1
+          LINT_CODE=$?
+          set -e
+          {
+            echo "test=$TEST_CODE"
+            echo "lint=$LINT_CODE"
+            echo "--- failing context ---"
+            grep -n -B 12 -A 28 "not ok" /tmp/test.log || true
+            echo "--- test tail ---"
+            tail -n 35 /tmp/test.log
+            echo "--- lint tail ---"
+            tail -n 25 /tmp/lint.log
+          } > .agent-living-world-qa3
+      - name: Commit result
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .agent-living-world-qa3
+          git commit -m "chore: record final living-world QA" || true
+          git push origin HEAD:agent/futbobo-world-players-live-world
