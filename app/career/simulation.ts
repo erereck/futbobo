@@ -11,6 +11,7 @@ import { DOMESTIC_SUPER_CUP_NAMES, clubConfederation, continentalSlotAfterSeason
 import { addStats, competitiveStrength, describeEffects, isIdolAtClub, marketValue, medicalRecordForSeason, mergeEffects, seasonAverageRating, seasonPerformanceScore, simulatedWorldCupStats, worldCupGamesThroughStage } from "./performance";
 import { applyAcceptedTransfer, completeLoanReturn, materializeTransferOffers, selectAlternativeExileOffers, selectTransferOffers } from "./transfer-market";
 import { advanceWorldPlayerUniverse } from "./world-players";
+import { seasonFitnessAfterLoad } from "./fatigue";
 
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
@@ -919,17 +920,26 @@ export function simulateSeason(
   const nextContinentalSlot = qualifiedBySudamericana
     ? "libertadores"
     : continentalSlotAfterSeason(club, league, leagueChampion, cupChampion, leaguePosition);
-  const fitnessTarget =
-    91 -
-    Math.max(0, appearances - 30) * 0.55 -
-    Math.max(0, nextAge - 30) * 0.7 +
-    (objectiveResult.completed ? 2 : -1) +
-    (seeded(state.seed, state.season * 307) * 8 - 4);
-  const nextFitness = clamp(
-    Math.round(affected.fitness * 0.42 + fitnessTarget * 0.58 + twistFitness),
-    32,
-    98,
-  );
+  const physicalLoad = seasonFitnessAfterLoad({
+    seed: state.seed,
+    season: affected.season,
+    startingFitness: affected.fitness,
+    age: nextAge,
+    stamina: affected.attributes.stamina,
+    lifeBalance: affected.lifeBalance,
+    appearances,
+    nationalAppearances: nationalHistoryAdd?.tournamentStats?.appearances ?? (calledUp ? 2 : 0),
+    continentalCampaign: Boolean(playsContinental),
+    continentalChampion,
+    clubWorldCampaign: playsWorld,
+    titles: titleCount,
+    injuryMatchesMissed: medicalRecord?.matchesMissed ?? 0,
+    suspensionMatches: affected.suspensionMatches,
+    ironLungs: hasTrait("iron-lungs"),
+    injuryProne: hasTrait("injury-prone"),
+    twistFitness,
+  });
+  const nextFitness = physicalLoad.fitness;
   const moraleTarget =
     64 +
     performanceScore * 0.16 +

@@ -1,0 +1,48 @@
+test=1
+lint=0
+--- test tail ---
+  ...
+# Subtest: dá ao goleiro uma carreira própria da base ao fim da trajetória
+ok 69 - dá ao goleiro uma carreira própria da base ao fim da trajetória
+  ---
+  duration_ms: 5.225534
+  ...
+# Subtest: mantém World Players persistentes, compactos e determinísticos por carreira
+ok 70 - mantém World Players persistentes, compactos e determinísticos por carreira
+  ---
+  duration_ms: 1.49188
+  ...
+# Subtest: liga rivais e premiações ao mundo sem substituir seus sistemas atuais
+ok 71 - liga rivais e premiações ao mundo sem substituir seus sistemas atuais
+  ---
+  duration_ms: 0.716656
+  ...
+# Subtest: World Players usam o mesmo motor central de mercado
+ok 72 - World Players usam o mesmo motor central de mercado
+  ---
+  duration_ms: 0.851456
+  ...
+1..72
+# tests 72
+# suites 0
+# pass 71
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 613.681179
+--- lint tail ---
+
+> futbobo@1.2.5 lint
+> eslint app next.config.ts tests eslint.config.mjs
+
+
+/home/runner/work/futbobo/futbobo/app/components/career/PlayerCreationV2.tsx
+  138:9  warning  'goShirt' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  139:9  warning  'goIdentityMix' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/runner/work/futbobo/futbobo/app/components/shell/FutboboShell.tsx
+  193:9  warning  'openLegacyTool' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 3 problems (0 errors, 3 warnings)
+
