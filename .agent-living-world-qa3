@@ -1,42 +1,42 @@
-test=1
+test=0
 lint=0
 --- failing context ---
 --- test tail ---
-> futbobo@1.2.5 test
-> npm run build && node --test tests/rendered-html.test.mjs
-
-
-> futbobo@1.2.5 build
-> next build
-
-⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
-Attention: Next.js now collects completely anonymous telemetry regarding usage.
-This information is used to shape Next.js' roadmap and prioritize features.
-You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
-https://nextjs.org/telemetry
-
-▲ Next.js 16.2.11 (Turbopack)
-
-  Creating an optimized production build ...
-✓ Compiled successfully in 2.9s
-  Running TypeScript ...
-Failed to type check.
-
-./app/career/world-memory.ts:426:7
-Type error: Type '{ id: LivingNationalCompetitionId; label: string; entityType: "country"; champions: { season: number; winnerId: string; source: "generated" | "player"; }[]; titleTable: { ...; }[]; } | { ...; }' is not assignable to type 'WorldCompetitionLedger'.
-  Type '{ id: LivingClubCompetitionId; label: string; entityType: "club"; champions: { season: number; winnerId: string; source: "generated" | "player"; }[]; titleTable: { ...; }[]; }' is not assignable to type 'WorldCompetitionLedger'.
-    Types of property 'id' are incompatible.
-      Type 'LivingClubCompetitionId' is not assignable to type 'WorldCompetitionKey'.
-        Type '"sudamericana"' is not assignable to type 'WorldCompetitionKey'.
-
-  [90m424 |[0m     competitionLedgers: [
-  [90m425 |[0m       worldCupLedger,
-[31m[1m>[0m [90m426 |[0m       ...livingNationalCompetitions.map((competition) => ({
-  [90m    |[0m       [31m[1m^[0m
-  [90m427 |[0m         id: competition.id,
-  [90m428 |[0m         label: competition.label,
-  [90m429 |[0m         entityType: [32m"country"[0m [36mas[0m [36mconst[0m,
-Next.js build worker exited with code: 1 and signal: null
+  ...
+# Subtest: abre um X1 local real e reorganiza o menu por tipo de gameplay
+ok 68 - abre um X1 local real e reorganiza o menu por tipo de gameplay
+  ---
+  duration_ms: 6.971829
+  ...
+# Subtest: dá ao goleiro uma carreira própria da base ao fim da trajetória
+ok 69 - dá ao goleiro uma carreira própria da base ao fim da trajetória
+  ---
+  duration_ms: 5.568428
+  ...
+# Subtest: mantém World Players persistentes, compactos e determinísticos por carreira
+ok 70 - mantém World Players persistentes, compactos e determinísticos por carreira
+  ---
+  duration_ms: 1.700027
+  ...
+# Subtest: liga rivais e premiações ao mundo sem substituir seus sistemas atuais
+ok 71 - liga rivais e premiações ao mundo sem substituir seus sistemas atuais
+  ---
+  duration_ms: 0.705152
+  ...
+# Subtest: World Players usam o mesmo motor central de mercado
+ok 72 - World Players usam o mesmo motor central de mercado
+  ---
+  duration_ms: 0.924653
+  ...
+1..72
+# tests 72
+# suites 0
+# pass 72
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 557.317295
 --- lint tail ---
 
 > futbobo@1.2.5 lint
