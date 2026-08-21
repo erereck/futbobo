@@ -217,7 +217,15 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
   const firstChance = clamp(60 + Math.max(0, score - 61) * 2.5, 60, 97);
   const repeatBase = clamp(18 + Math.max(0, score - 74) * 1.8, 18, 60);
   const stageMultiplier = stageChanceMultiplier(stage, globalBreakthrough, input.mundialChampion, input.majorNationalTitle);
-  let chance = (input.previousBallonDor === 0 ? firstChance : repeatBase) * repeatMultiplier(input.previousBallonDor) * stageMultiplier;
+  const domesticOutsideEurope =
+    !input.inEurope &&
+    input.league.prestige >= 4 &&
+    input.majorClubTitleCount > 0 &&
+    !input.continentalChampion &&
+    !input.mundialChampion &&
+    !input.majorNationalTitle;
+  const contextMultiplier = domesticOutsideEurope ? 0.55 : 1;
+  let chance = (input.previousBallonDor === 0 ? firstChance : repeatBase) * repeatMultiplier(input.previousBallonDor) * stageMultiplier * contextMultiplier;
 
   if (historicSeason) {
     const historicFloor = input.previousBallonDor === 0 ? 60 : input.previousBallonDor === 1 ? 25 : input.previousBallonDor === 2 ? 12 : Math.max(0.18, 5 * 0.44 ** (input.previousBallonDor - 3));
