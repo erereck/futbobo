@@ -100,14 +100,16 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
     input.reputation >= 82 &&
     input.majorClubTitleCount > 0;
 
-  // A Bola de Ouro precisa ser alcançável por estilos diferentes. Atacantes
-  // costumam chegar pela produção; goleiros, defensores e meias podem chegar
-  // por excelência específica da posição. O palco da temporada decide o quão
-  // fácil é transformar essa excelência em candidatura real.
   const positionalRecognition =
     (input.isKeeper && input.overall >= 73 && input.performanceScore >= 67) ||
     (input.positionZone === "defesa" && input.overall >= 73 && input.performanceScore >= 67) ||
-    (input.positionZone === "meio" && input.overall >= 74 && input.performanceScore >= 69);
+    (input.positionZone === "meio" && input.overall >= 74 && input.performanceScore >= 69) ||
+    (
+      input.positionZone === "ataque" &&
+      input.overall >= 75 &&
+      input.performanceScore >= 70 &&
+      (input.goals >= 24 || input.goals + input.assists >= 35)
+    );
   const worldClassRecognition =
     input.hasProductionAward ||
     input.supportingAwardBonus >= 2.5 ||
@@ -146,9 +148,6 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
       worldClassRecognition &&
       (globalBreakthrough || domesticMiracle);
   } else if (input.inEurope) {
-    // Süper Lig, Bélgica, Áustria, Suíça, Escócia etc.: dominar só a liga não
-    // basta. Sem um feito global, a única brecha é uma temporada estatística
-    // literalmente histórica, com OVR/reputação de superestrela e múltiplos títulos.
     eligible =
       input.hasProductionAward &&
       input.appearances >= 26 &&
@@ -157,9 +156,6 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
       input.reputation >= 76 &&
       (globalBreakthrough || (domesticMiracle && input.titleCount >= 2));
   } else if (isBrasileirao) {
-    // No Brasil não existe atalho por prestígio doméstico: a candidatura só
-    // nasce numa temporada quase absurda. É preciso empilhar 50+ gols e ganhar
-    // Copa do Brasil + Libertadores no mesmo ano; mesmo então o prêmio segue raro.
     eligible =
       input.hasProductionAward &&
       input.appearances >= 28 &&
