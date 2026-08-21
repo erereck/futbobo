@@ -77,13 +77,13 @@ function stageChanceMultiplier(
 
 function repeatMultiplier(previous: number) {
   if (previous <= 0) return 1;
-  if (previous === 1) return 0.5;
-  if (previous === 2) return 0.25;
-  if (previous === 3) return 0.11;
-  if (previous === 4) return 0.045;
-  if (previous === 5) return 0.018;
-  if (previous === 6) return 0.007;
-  return Math.max(0.00035, 0.0035 * 0.52 ** (previous - 7));
+  if (previous === 1) return 0.42;
+  if (previous === 2) return 0.2;
+  if (previous === 3) return 0.085;
+  if (previous === 4) return 0.032;
+  if (previous === 5) return 0.012;
+  if (previous === 6) return 0.0045;
+  return Math.max(0.0003, 0.0028 * 0.5 ** (previous - 7));
 }
 
 export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEvaluation {
@@ -98,55 +98,49 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
     input.reputation >= 82 &&
     input.majorClubTitleCount > 0;
 
-  // Atacantes entram normalmente por produção/prêmios. Goleiros, defensores e
-  // meio-campistas também podem construir uma candidatura por excelência na
-  // própria função, sem precisar virar artilheiros artificiais.
+  // A Bola de Ouro precisa ser alcançável por estilos diferentes. Atacantes
+  // costumam chegar pela produção; goleiros, defensores e meias podem chegar
+  // por excelência específica da posição. O palco da temporada decide o quão
+  // fácil é transformar essa excelência em candidatura real.
   const positionalRecognition =
-    (input.isKeeper && input.overall >= 79 && input.performanceScore >= 77) ||
-    (input.positionZone === "defesa" && input.overall >= 79 && input.performanceScore >= 77) ||
-    (input.positionZone === "meio" && input.overall >= 79 && input.performanceScore >= 79);
+    (input.isKeeper && input.overall >= 76 && input.performanceScore >= 72) ||
+    (input.positionZone === "defesa" && input.overall >= 76 && input.performanceScore >= 72) ||
+    (input.positionZone === "meio" && input.overall >= 77 && input.performanceScore >= 74);
   const worldClassRecognition =
     input.hasProductionAward ||
     input.supportingAwardBonus >= 2.5 ||
     historicSeason ||
     positionalRecognition;
-  const baseAvailability = input.appearances >= 20;
-  const eliteNoTitleCase =
-    input.overall >= 82 &&
-    input.performanceScore >= 80 &&
-    input.reputation >= 52 &&
-    worldClassRecognition;
-  const majorNoTitleCase =
-    input.overall >= 84 &&
-    input.performanceScore >= 82 &&
-    input.reputation >= 60 &&
-    worldClassRecognition;
+  const baseAvailability = input.appearances >= 19;
 
   let eligible = false;
   if (input.inEurope && stage === "elite") {
     eligible =
       baseAvailability &&
-      input.overall >= 77 &&
-      input.performanceScore >= 68 &&
-      input.reputation >= 30 &&
-      worldClassRecognition &&
-      (input.majorClubTitleCount > 0 || input.majorNationalTitle || globalBreakthrough || eliteNoTitleCase);
+      input.overall >= 75 &&
+      input.performanceScore >= 64 &&
+      input.reputation >= 22 &&
+      (input.majorClubTitleCount > 0 || input.majorNationalTitle || globalBreakthrough || worldClassRecognition);
   } else if (input.inEurope && stage === "major") {
     eligible =
       baseAvailability &&
-      input.appearances >= 21 &&
-      input.overall >= 78 &&
-      input.performanceScore >= 70 &&
-      input.reputation >= 36 &&
-      worldClassRecognition &&
-      (input.majorClubTitleCount > 0 || input.majorNationalTitle || globalBreakthrough || majorNoTitleCase);
+      input.appearances >= 20 &&
+      input.overall >= 76 &&
+      input.performanceScore >= 66 &&
+      input.reputation >= 28 &&
+      (
+        input.majorClubTitleCount > 0 ||
+        input.majorNationalTitle ||
+        globalBreakthrough ||
+        (worldClassRecognition && input.overall >= 79 && input.performanceScore >= 72)
+      );
   } else if (input.inEurope && stage === "secondary") {
     eligible =
       baseAvailability &&
-      input.appearances >= 23 &&
-      input.overall >= 82 &&
-      input.performanceScore >= 77 &&
-      input.reputation >= 52 &&
+      input.appearances >= 22 &&
+      input.overall >= 81 &&
+      input.performanceScore >= 75 &&
+      input.reputation >= 48 &&
       worldClassRecognition &&
       (globalBreakthrough || domesticMiracle);
   } else if (input.inEurope) {
@@ -163,10 +157,10 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
   } else {
     eligible =
       baseAvailability &&
-      input.appearances >= 22 &&
-      input.overall >= 84 &&
-      input.performanceScore >= 80 &&
-      input.reputation >= 64 &&
+      input.appearances >= 21 &&
+      input.overall >= 82 &&
+      input.performanceScore >= 77 &&
+      input.reputation >= 58 &&
       worldClassRecognition &&
       (input.continentalChampion || input.mundialChampion || input.majorNationalTitle);
   }
@@ -200,26 +194,26 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
 
   if (!eligible) return { eligible: false, score, chance: 0, historicSeason, stage };
 
-  const firstChance = clamp(24 + Math.max(0, score - 70) * 2.2, 24, 72);
-  const repeatBase = clamp(13 + Math.max(0, score - 76) * 1.8, 13, 54);
+  const firstChance = clamp(36 + Math.max(0, score - 66) * 2.3, 36, 88);
+  const repeatBase = clamp(18 + Math.max(0, score - 74) * 1.8, 18, 60);
   const stageMultiplier = stageChanceMultiplier(stage, globalBreakthrough, input.mundialChampion, input.majorNationalTitle);
   let chance = (input.previousBallonDor === 0 ? firstChance : repeatBase) * repeatMultiplier(input.previousBallonDor) * stageMultiplier;
 
   if (historicSeason) {
-    const historicFloor = input.previousBallonDor === 0 ? 46 : input.previousBallonDor === 1 ? 24 : input.previousBallonDor === 2 ? 12 : Math.max(0.2, 6 * 0.45 ** (input.previousBallonDor - 3));
+    const historicFloor = input.previousBallonDor === 0 ? 52 : input.previousBallonDor === 1 ? 25 : input.previousBallonDor === 2 ? 12 : Math.max(0.18, 5 * 0.44 ** (input.previousBallonDor - 3));
     // Liga menor sem feito global continua sendo um conto de fadas, não um atalho.
     const adjustedHistoricFloor = stage === "minor" && !globalBreakthrough ? historicFloor * 0.18 : historicFloor;
     chance = Math.max(chance, adjustedHistoricFloor);
   }
   if (input.worldCupGoals >= 8) {
-    const worldCupFloor = input.previousBallonDor === 0 ? 68 : input.previousBallonDor === 1 ? 42 : input.previousBallonDor === 2 ? 24 : input.previousBallonDor === 3 ? 12 : Math.max(0.25, 6 * 0.48 ** (input.previousBallonDor - 4));
+    const worldCupFloor = input.previousBallonDor === 0 ? 74 : input.previousBallonDor === 1 ? 44 : input.previousBallonDor === 2 ? 24 : input.previousBallonDor === 3 ? 11 : Math.max(0.22, 5 * 0.46 ** (input.previousBallonDor - 4));
     chance = Math.max(chance, worldCupFloor);
   }
 
   return {
     eligible: true,
     score,
-    chance: Math.max(0.03, Number(clamp(chance, 0.03, 72).toFixed(3))),
+    chance: Math.max(0.03, Number(clamp(chance, 0.03, 88).toFixed(3))),
     historicSeason,
     stage,
   };
