@@ -18,6 +18,7 @@
 .offer { overflow: hidden; border: 1px solid rgba(128, 169, 151, .2); border-radius: 18px; background: rgba(14, 38, 29, .84); }
 .offerMain { width: 100%; min-height: 92px; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 14px; color: inherit; text-align: left; border: 0; background: transparent; cursor: pointer; }
 .offerMain:hover { background: rgba(44, 168, 255, .055); }
+.offerMain:disabled { opacity: .62; cursor: wait; }
 .identity, .deal { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .identity strong { overflow: hidden; font-size: 19px; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
 .identity em, .deal small { color: #92a99f; font-size: 12px; font-style: normal; }
@@ -38,6 +39,215 @@
 .secondaryAction strong { display: flex; align-items: center; gap: 7px; }
 .secondaryAction:disabled { opacity: .45; cursor: not-allowed; }
 
+.travelOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: clamp(10px, 2.5vw, 28px);
+  background: rgba(2, 10, 7, .92);
+  backdrop-filter: blur(16px);
+  animation: travelBackdropIn .22s ease-out both;
+}
+.travelCard {
+  position: relative;
+  isolation: isolate;
+  width: min(96vw, 1020px);
+  min-height: min(82dvh, 720px);
+  max-height: 92dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 8% 40%, color-mix(in srgb, var(--journey-from) 28%, transparent), transparent 34%),
+    radial-gradient(circle at 92% 42%, color-mix(in srgb, var(--journey-to) 32%, transparent), transparent 35%),
+    linear-gradient(145deg, #07140f 0%, #0a1c15 46%, #07150f 100%);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, .48);
+  animation: travelCardIn .34s cubic-bezier(.2,.8,.2,1) both;
+}
+.travelCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .25;
+  background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+.travelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 28px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.09);
+  background: rgba(5, 18, 13, .54);
+}
+.travelHeader div { display: grid; gap: 5px; }
+.travelHeader span { color: #f8c932; font-size: 11px; font-weight: 950; letter-spacing: .16em; }
+.travelHeader strong { font-size: clamp(24px, 3vw, 34px); line-height: 1; letter-spacing: -.02em; }
+.travelHeader small { padding: 7px 10px; color: #b8cac1; font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; background: rgba(255,255,255,.04); }
+.travelStage {
+  position: relative;
+  min-height: 430px;
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(300px, 2.4fr) minmax(160px, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 36px 34px;
+}
+.travelGlow {
+  position: absolute;
+  top: 50%;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: .12;
+  pointer-events: none;
+}
+.travelGlowFrom { left: -80px; background: var(--journey-from); transform: translateY(-50%); }
+.travelGlowTo { right: -80px; background: var(--journey-to); transform: translateY(-50%); }
+.terminal {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.badgeShell {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 24px;
+  background: rgba(255,255,255,.055);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
+}
+.terminal > span { margin-bottom: 5px; color: #789289; font-size: 10px; font-weight: 950; letter-spacing: .13em; }
+.terminal > strong { max-width: 180px; font-size: clamp(19px, 2.8vw, 30px); line-height: .95; letter-spacing: -.025em; }
+.terminal > small { margin-top: 8px; color: #a9bbb3; font-size: 11px; }
+.destinationTerminal { opacity: .46; animation: destinationArrival .42s ease-out 2.05s forwards; }
+.destinationTerminal .badgeShell { box-shadow: 0 0 0 0 color-mix(in srgb, var(--journey-to-secondary) 65%, transparent); animation: arrivalRing .7s ease-out 2.02s both; }
+.route {
+  position: relative;
+  height: 230px;
+  min-width: 0;
+  align-self: center;
+}
+.routeSvg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.routeShadow, .routeLine { fill: none; vector-effect: non-scaling-stroke; }
+.routeShadow { stroke: rgba(0,0,0,.45); stroke-width: 5; }
+.routeLine { stroke: rgba(232, 244, 238, .48); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 5 10; animation: routeDash 1s linear infinite; }
+.route::before, .route::after {
+  content: "";
+  position: absolute;
+  bottom: 38px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.7);
+  background: #0a1a14;
+}
+.route::before { left: 2%; }
+.route::after { right: 2%; }
+.vehicle {
+  position: absolute;
+  z-index: 4;
+  left: 1%;
+  top: 68%;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  filter: drop-shadow(0 8px 12px rgba(0,0,0,.42));
+}
+.vehiclePlane { animation: planeJourney 2.25s cubic-bezier(.4,.08,.15,1) .16s forwards; }
+.vehicleBus { width: 58px; height: 58px; animation: busJourney 2.25s cubic-bezier(.4,.08,.15,1) .16s forwards; }
+.vehicleSvg { width: 100%; height: 100%; overflow: visible; fill: rgba(8, 28, 20, .96); stroke: currentColor; stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; }
+.routeStatus {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  padding: 6px 9px;
+  color: #9db1a8;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: .14em;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  background: rgba(5, 18, 13, .8);
+  transform: translateX(-50%);
+}
+.travelFooter {
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: auto 88px auto 1fr;
+  align-items: center;
+  gap: 13px;
+  padding: 16px 28px;
+  border-top: 1px solid rgba(255,255,255,.09);
+  background: rgba(5, 18, 13, .62);
+}
+.travelFooter > span, .travelFooter > strong { font-size: 16px; font-weight: 950; letter-spacing: .08em; }
+.travelFooter > strong { color: #f8c932; }
+.travelFooter > div { display: flex; align-items: center; gap: 6px; }
+.travelFooter i { width: 18px; height: 3px; display: block; border-radius: 999px; background: rgba(255,255,255,.17); animation: progressBlink .9s ease-in-out infinite alternate; }
+.travelFooter i:nth-child(2) { animation-delay: .18s; }
+.travelFooter i:nth-child(3) { animation-delay: .36s; }
+.travelFooter small { justify-self: end; color: #849b91; font-size: 11px; }
+
+@keyframes travelBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes travelCardIn { from { opacity: 0; transform: scale(.97) translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes routeDash { to { stroke-dashoffset: -15; } }
+@keyframes destinationArrival { to { opacity: 1; transform: translateY(-4px); } }
+@keyframes arrivalRing { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--journey-to-secondary) 70%, transparent); } 100% { box-shadow: 0 0 0 22px transparent; } }
+@keyframes progressBlink { from { opacity: .3; } to { opacity: 1; background: #f8c932; } }
+@keyframes planeJourney {
+  0% { left: 1%; top: 67%; transform: translate(-20%, -50%) rotate(-17deg) scale(.82); }
+  18% { left: 18%; top: 35%; transform: translate(-50%, -50%) rotate(-12deg) scale(.96); }
+  48% { left: 49%; top: 10%; transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+  78% { left: 80%; top: 35%; transform: translate(-50%, -50%) rotate(12deg) scale(.96); }
+  100% { left: 99%; top: 67%; transform: translate(-80%, -50%) rotate(17deg) scale(.82); }
+}
+@keyframes busJourney {
+  0% { left: 1%; top: 68%; transform: translate(-20%, -50%) rotate(-5deg) scale(.86); }
+  24% { left: 24%; top: 54%; transform: translate(-50%, -50%) rotate(-3deg) scale(.97); }
+  50% { left: 50%; top: 47%; transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+  76% { left: 76%; top: 54%; transform: translate(-50%, -50%) rotate(3deg) scale(.97); }
+  100% { left: 99%; top: 68%; transform: translate(-80%, -50%) rotate(5deg) scale(.86); }
+}
+
+@media (max-width: 700px) {
+  .travelOverlay { padding: 8px; }
+  .travelCard { width: 100%; min-height: min(86dvh, 690px); max-height: 96dvh; border-radius: 22px; }
+  .travelHeader { padding: 18px 17px 14px; }
+  .travelHeader strong { font-size: 22px; }
+  .travelHeader small { font-size: 9px; }
+  .travelStage { min-height: 440px; grid-template-columns: 96px minmax(130px, 1fr) 96px; gap: 6px; padding: 26px 10px 20px; }
+  .badgeShell { width: 68px; height: 68px; margin-bottom: 12px; border-radius: 18px; }
+  .terminal > span { font-size: 8px; }
+  .terminal > strong { max-width: 100px; font-size: 17px; }
+  .terminal > small { max-width: 104px; font-size: 9px; line-height: 1.25; }
+  .route { height: 210px; }
+  .vehicle { width: 48px; height: 48px; }
+  .vehicleBus { width: 44px; height: 44px; }
+  .routeStatus { bottom: 10px; font-size: 8px; }
+  .travelFooter { min-height: 68px; grid-template-columns: auto 58px auto; gap: 8px; padding: 14px 16px; }
+  .travelFooter i { width: 12px; }
+  .travelFooter small { grid-column: 1 / -1; justify-self: start; margin-top: -3px; }
+}
+
 @media (max-width: 600px) {
   .screen { padding: 18px 14px 110px; }
   .header h1 { font-size: 38px; }
@@ -50,4 +260,20 @@
   .reason { padding-right: 12px; }
   .details div { grid-template-columns: 1fr 1fr; padding-left: 70px; }
   .secondaryAction { align-items: flex-start; flex-direction: column; gap: 3px; }
+}
+
+@media (max-width: 420px) {
+  .travelStage { grid-template-columns: 82px minmax(112px, 1fr) 82px; min-height: 410px; }
+  .badgeShell { width: 58px; height: 58px; }
+  .terminal > strong { max-width: 84px; font-size: 15px; }
+  .terminal > small { max-width: 88px; font-size: 8px; }
+  .route { height: 190px; }
+  .vehicle { width: 42px; height: 42px; }
+  .vehicleBus { width: 38px; height: 38px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .travelOverlay, .travelCard, .routeLine, .destinationTerminal, .destinationTerminal .badgeShell, .travelFooter i { animation: none; }
+  .destinationTerminal { opacity: 1; }
+  .vehiclePlane, .vehicleBus { animation: none; left: 94%; top: 66%; transform: translate(-50%, -50%); }
 }
