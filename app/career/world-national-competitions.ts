@@ -78,8 +78,8 @@ const CONFIGS: NationalCompetitionConfig[] = [
     label: "Copa Ouro",
     confederation: "NORTH_AMERICA",
     historyNames: ["copa ouro", "gold cup"],
-    startSeason: 2027,
-    interval: 2,
+    startSeason: 2028,
+    interval: 4,
     historicTitles: {
       México: 10,
       "Estados Unidos": 7,
@@ -91,7 +91,7 @@ const CONFIGS: NationalCompetitionConfig[] = [
     label: "Copa da Ásia",
     confederation: "ASIA",
     historyNames: ["copa da asia", "copa da ásia", "asian cup"],
-    startSeason: 2027,
+    startSeason: 2028,
     interval: 4,
     historicTitles: {
       Japão: 4,
@@ -110,8 +110,8 @@ const CONFIGS: NationalCompetitionConfig[] = [
     label: "Copa Africana de Nações",
     confederation: "AFRICA",
     historyNames: ["copa africana de nacoes", "copa africana de nações", "afcon"],
-    startSeason: 2027,
-    interval: 2,
+    startSeason: 2028,
+    interval: 4,
     historicTitles: {
       Egito: 7,
       Camarões: 5,
@@ -241,10 +241,13 @@ export function buildLivingNationalCompetitions(state: GameState): LivingNationa
 
     for (let season = config.startSeason; season <= latestCompletedSeason; season += config.interval) {
       const playerRecord = playerRecordFor(state, config, season);
-      const playerWon = Boolean(playerRecord?.champion);
+      const currentNationality = countryById(state.nationality);
+      const playerCountryId = playerRecord?.countryId
+        ?? (currentNationality.confederation === config.confederation ? state.nationality : "");
+      const playerWon = Boolean(playerRecord?.champion && playerCountryId);
       const winnerId = playerWon
-        ? state.nationality
-        : pickWinner(state, config, season, titles, playerRecord ? state.nationality : "");
+        ? playerCountryId
+        : pickWinner(state, config, season, titles, playerRecord && playerCountryId ? playerCountryId : "");
       const source: "generated" | "player" = playerWon ? "player" : "generated";
 
       titles[winnerId] = (titles[winnerId] ?? 0) + 1;

@@ -166,13 +166,14 @@ function weightedCountryPick(
 
 function resolveWorldCup(state: GameState, season: number, titles: Record<string, number>): WorldCompetitionChampion {
   const nationalRecord = state.nationalHistory.find((record) => record.season === season && record.name === "Copa do Mundo");
+  const playerCountryId = nationalRecord?.countryId ?? state.nationality;
   const matches = worldCupMatches(state, season);
   const eliminatedByPlayer = new Set(
     matches.filter(({ result }) => result.champion).map(({ match }) => match.opponentId),
   );
 
   if (nationalRecord?.champion) {
-    return { season, winnerCountryId: state.nationality, source: "player" };
+    return { season, winnerCountryId: playerCountryId, source: "player" };
   }
 
   if (nationalRecord?.stage === "Vice") {
@@ -181,17 +182,17 @@ function resolveWorldCup(state: GameState, season: number, titles: Record<string
       return {
         season,
         winnerCountryId: finalLoss.match.opponentId,
-        runnerUpCountryId: state.nationality,
+        runnerUpCountryId: playerCountryId,
         source: "player",
       };
     }
   }
 
   const excluded = new Set(eliminatedByPlayer);
-  if (nationalRecord && nationalRecord.stage !== "Não classificado") excluded.add(state.nationality);
+  if (nationalRecord && nationalRecord.stage !== "Não classificado") excluded.add(playerCountryId);
   const winnerCountryId = weightedCountryPick(state, season, 31, titles, excluded, "winner");
   const runnerUpCountryId = nationalRecord?.stage === "Vice"
-    ? state.nationality
+    ? playerCountryId
     : weightedCountryPick(state, season, 79, titles, new Set([...excluded, winnerCountryId]), "runner-up");
 
   return { season, winnerCountryId, runnerUpCountryId, source: "generated" };
@@ -324,7 +325,7 @@ function nationalNews(state: GameState) {
       season: record.season,
       category: "career",
       priority: "major",
-      title: `${countryById(state.nationality).name} vence ${record.name}`,
+      title: `${countryById(record.countryId ?? state.nationality).name} vence ${record.name}`,
       summary: `${state.name} fez parte do título.`,
     }));
 }

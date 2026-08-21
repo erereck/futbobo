@@ -210,7 +210,7 @@ function worldPlayerWasAtClub(player: WorldPlayer, clubId: string, season: numbe
   return player.clubHistory.some((spell) =>
     spell.clubId === clubId &&
     spell.joinedSeason <= season &&
-    (spell.leftSeason === null || spell.leftSeason >= season)
+    (spell.leftSeason === null || spell.leftSeason > season)
   );
 }
 

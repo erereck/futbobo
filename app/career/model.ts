@@ -98,6 +98,7 @@ export type NationalRecord = {
   icon: string;
   stage: string;
   champion: boolean;
+  countryId?: string;
   tournamentStats?: TournamentStats;
 };
 

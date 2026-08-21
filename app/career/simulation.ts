@@ -39,7 +39,7 @@ export function simulateSeason(
     affected.nationalCaptain = false;
     affected.nationalCategory = "none";
     affected.nationalLevel = Math.round(affected.nationalLevel * 0.4);
-    nationalitySwitchRecord = { season: state.season, tier: "none", name: "Troca de Seleção", icon: "↔", stage: `Deixou a Seleção de ${fromCountry.name} para defender a Seleção de ${toCountry.name}`, champion: false };
+    nationalitySwitchRecord = { season: state.season, tier: "none", name: "Troca de Seleção", icon: "↔", stage: `Deixou a Seleção de ${fromCountry.name} para defender a Seleção de ${toCountry.name}`, champion: false, countryId: effect.switchNationalityTo };
   }
   const club = clubById(affected.currentClubId);
   const league = leagueById(affected.currentLeagueId || club.leagueId);
@@ -411,10 +411,10 @@ export function simulateSeason(
         const qualifyChance = clamp(40 + nation.strength * 8 + (effect.nationalTitleBoost ?? 0) * 0.7 + Math.max(0, affected.overall - 78) * 0.4, 38, 95);
         const qualified = seeded(state.seed, state.season * 149) * 100 < qualifyChance;
         qualifiedNextMajor = qualified;
-        nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage: qualified ? "Classificado" : "Eliminado", champion: false };
+        nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage: qualified ? "Classificado" : "Eliminado", champion: false, countryId: affected.nationality };
       } else if (tournament) {
         if (tournament.scope === "world" && !affected.qualifiedNextMajor) {
-          nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage: "Não classificado", champion: false };
+          nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage: "Não classificado", champion: false, countryId: affected.nationality };
           qualifiedNextMajor = true;
         } else {
           const titleBoostN = effect.nationalTitleBoost ?? 0;
@@ -426,7 +426,7 @@ export function simulateSeason(
             ? ["Fase de grupos", "16 avos", "Oitavas", "Quartas", "Semifinal", "Vice"]
             : ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"];
           const stage = champion ? "CAMPEÃO" : knockoutStage(157, false, knockoutStages);
-          nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage, champion };
+          nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage, champion, countryId: affected.nationality };
           if (tournament.scope === "world") {
             const fullPlayableRun =
               finalMatchMode === "play-key-matches" &&
