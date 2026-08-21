@@ -1612,3 +1612,14 @@ test("World Players usam o mesmo motor central de mercado", async () => {
   assert.match(domain, /moveType: loan \? "loan" : contractExpired \? "free-agent" : "permanent"/);
   assert.match(domain, /moveType: "loan-return"/);
 });
+
+test("mantém a janela de transferências rolável dentro do shell travado", async () => {
+  const screen = await readFile(new URL("../app/components/career/TransferMarketScreen.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/components/career/TransferMarketScreen.module.css", import.meta.url), "utf8");
+
+  assert.match(screen, /styles\.screen} transfer-stage screen-enter/);
+  assert.match(styles, /min-height: 0/);
+  assert.match(styles, /overflow-y: auto/);
+  assert.match(styles, /touch-action: pan-y/);
+  assert.match(styles, /-webkit-overflow-scrolling: touch/);
+});

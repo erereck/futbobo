@@ -40,7 +40,7 @@ export default function TransferMarketScreen({ state, currentClub, offers, renew
   const copy = windowCopy(state, currentClub, offers.length);
   const canStay = !state.transferRequested && !state.renewalDenied && !state.forcedClubExit && !state.forcedAlternativeTransfer && state.pendingTransferMode !== "loan";
   return (
-    <section className={`${styles.screen} screen-enter`}>
+    <section className={`${styles.screen} transfer-stage screen-enter`}>
       <header className={styles.header}>
         <span>{copy.eyebrow}</span>
         <h1>{copy.title}</h1>
