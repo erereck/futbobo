@@ -35,11 +35,12 @@ function replaceOnce(source, from, to, label) {
 {
   const path = "app/career/world-memory.ts";
   let source = fs.readFileSync(path, "utf8");
-  source = replaceOnce(
-    source,
-    'export type WorldCompetitionKey = "world-cup" | "champions-league" | "libertadores" | "mundial" | "euro" | "copa-america";',
-    'export type WorldCompetitionKey = "world-cup" | "champions-league" | "libertadores" | "mundial" | "euro" | "copa-america" | "gold-cup" | "asian-cup" | "afcon" | "ofc-nations-cup";',
-    "world competition ids",
-  );
+  const target = 'export type WorldCompetitionKey = "world-cup" | "champions-league" | "libertadores" | "mundial" | "euro" | "copa-america" | "gold-cup" | "asian-cup" | "afcon" | "ofc-nations-cup" | "concacaf-champions" | "afc-champions" | "caf-champions";';
+  if (!source.includes(target)) {
+    source = source.replace(
+      /export type WorldCompetitionKey = [^;]+;/,
+      target,
+    );
+  }
   fs.writeFileSync(path, source);
 }
