@@ -12,6 +12,7 @@ import { addStats, competitiveStrength, describeEffects, isIdolAtClub, marketVal
 import { applyAcceptedTransfer, completeLoanReturn, materializeTransferOffers, selectAlternativeExileOffers, selectTransferOffers } from "./transfer-market";
 import { advanceWorldPlayerUniverse } from "./world-players";
 import { seasonFitnessAfterLoad } from "./fatigue";
+import { worldFinalOpponentForSeason } from "./world-club-competitions";
 
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
@@ -773,7 +774,10 @@ export function simulateSeason(
             ? ["Playoff Mundial", "Quartas de final", "Semifinal", "Final"]
             : ["Quartas de final", "Semifinal", "Final"];
       const stageName = worldStages[0];
-      const opponent = pickClubWorldOpponent({
+      const archivedOpponentId = stageName === "Final"
+        ? worldFinalOpponentForSeason(affected, club.id, affected.season)
+        : "";
+      const opponent = archivedOpponentId ? clubById(archivedOpponentId) : pickClubWorldOpponent({
         clubId: club.id,
         seed: affected.seed,
         season: affected.season,

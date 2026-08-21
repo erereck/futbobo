@@ -229,6 +229,31 @@ export function generateTransferOffers(state: GameState, salt: number, options: 
       selected = [...selected.slice(0, Math.max(0, wanted - 1)), alternative];
     }
   }
+  // Porta europeia: um jogador pronto para esse salto nunca fica preso só porque
+  // o ranking normal priorizou o mercado local. A segunda consulta continua rara.
+  if (
+    state.overall >= 72 &&
+    !isEuropeanClub(context.sourceClub) &&
+    context.mode !== "loan" &&
+    !options.forceDomestic &&
+    !options.forceForeign
+  ) {
+    const europeanDoors = CLUBS
+      .filter((club) =>
+        isEuropeanClub(club) &&
+        club.id !== context.sourceClub.id &&
+        candidateRole(state, club) !== "reserva" &&
+        competitiveStrength(club) <= Math.max(72, state.overall + (context.standout ? 8 : 4)) &&
+        (state.age < 35 || competitiveStrength(club) <= competitiveStrength(context.sourceClub) + 3)
+      )
+      .sort((a, b) => candidateScore(state, a, context, salt + 12_701) - candidateScore(state, b, context, salt + 12_701));
+    const doorCount = 1 + Number(seeded(state.seed, salt + 12_733) < 0.38);
+    const doors = europeanDoors.slice(0, doorCount);
+    if (doors.length) {
+      const withoutDoors = selected.filter((club) => !doors.some((door) => door.id === club.id));
+      selected = [...withoutDoors.slice(0, Math.max(0, wanted - doors.length)), ...doors];
+    }
+  }
   return selected.map((club, index) => {
     const offer = materializeOffer(state, club, club.id === loanId ? { ...context, mode: "loan" } : context, salt + index * 41);
     return club.id === alternativeId ? {

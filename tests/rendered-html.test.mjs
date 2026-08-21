@@ -1623,3 +1623,23 @@ test("mantém a janela de transferências rolável dentro do shell travado", asy
   assert.match(styles, /touch-action: pan-y/);
   assert.match(styles, /-webkit-overflow-scrolling: touch/);
 });
+
+test("abre a Europa, organiza o Mundo e sincroniza o Mundial com o campeão anterior", async () => {
+  const market = await readFile(new URL("../app/career/transfer-market.ts", import.meta.url), "utf8");
+  const competitions = await readFile(new URL("../app/career/world-club-competitions.ts", import.meta.url), "utf8");
+  const simulation = await readFile(new URL("../app/career/simulation.ts", import.meta.url), "utf8");
+  const world = await readFile(new URL("../app/components/career/CareerWorld.tsx", import.meta.url), "utf8");
+  const shell = await readFile(new URL("../app/components/shell/FutboboShell.tsx", import.meta.url), "utf8");
+
+  assert.match(market, /state\.overall >= 72/);
+  assert.match(market, /const doorCount = 1 \+ Number/);
+  assert.match(competitions, /const feederSeason = season - 1/);
+  assert.match(competitions, /worldFinalOpponentForSeason/);
+  assert.match(competitions, /config\.id === "conference-league"/);
+  assert.match(simulation, /worldFinalOpponentForSeason\(affected/);
+  assert.match(world, /"now" \| "national" \| "clubs" \| "players" \| "archive"/);
+  assert.match(world, /worldPlayerStatLeaders\(state, "assists", 16\)/);
+  assert.match(world, /slice\(0, 10\)/);
+  assert.match(shell, /"hall-career"/);
+  assert.match(shell, /initialHallEntry=\{selectedHallEntry\}/);
+});

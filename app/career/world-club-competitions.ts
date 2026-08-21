@@ -232,9 +232,20 @@ function pickWinner(
   titles: Record<string, number>,
   excludedClubId: string,
 ) {
-  const available = CLUBS.filter((club) =>
+  const confederationPool = CLUBS.filter((club) =>
     club.id !== excludedClubId && clubConfederation(club) === config.confederation
   );
+  const available = config.id === "conference-league"
+    ? confederationPool.filter((club) =>
+        club.reputation <= 3 ||
+        (club.reputation === 4 && seeded(state.seed, season * 8111 + CLUBS.indexOf(club) * 17) < 0.06) ||
+        (club.reputation >= 5 && seeded(state.seed, season * 8111 + CLUBS.indexOf(club) * 17) < 0.002)
+      )
+    : config.id === "europa-league"
+      ? confederationPool.filter((club) =>
+          club.reputation <= 4 || seeded(state.seed, season * 8123 + CLUBS.indexOf(club) * 19) < 0.018
+        )
+      : confederationPool;
   const elite = available.filter((club) => club.reputation >= 4 || (titles[club.id] ?? 0) >= 2);
   const strong = available.filter((club) => club.reputation >= 3 || (titles[club.id] ?? 0) >= 1);
   const salt = config.id.length * 71;
@@ -385,8 +396,9 @@ function buildMundialCompetition(
     const playerMundial = playerRecord?.competitions.find((competition) => competition.id === "mundial");
     const playerCompeted = Boolean(playerMundial);
     const playerWon = Boolean(playerRecord && playerMundial?.champion);
-    const championsWinnerId = championsLeague.champions.find((entry) => entry.season === season)?.winnerId ?? "";
-    const continentalChampions = continentalChampionIdsForSeason(continentalCompetitions, season);
+    const feederSeason = season - 1;
+    const championsWinnerId = championsLeague.champions.find((entry) => entry.season === feederSeason)?.winnerId ?? "";
+    const continentalChampions = continentalChampionIdsForSeason(continentalCompetitions, feederSeason);
 
     let winnerId = "";
     let source: LivingClubChampion["source"] = "generated";
@@ -431,7 +443,7 @@ function buildMundialCompetition(
           priority: "major",
           title: `${club.shortName} é campeão mundial`,
           summary: championsFavored
-            ? `${season} · campeão da Champions confirmou os 93% de favoritismo.`
+            ? `${season} · campeão da Champions de ${feederSeason} confirmou o favoritismo.`
             : continentalOrigin
               ? `${season} · campeão continental derrubou o favorito europeu.`
               : `${season} · o Mundial fugiu do favorito europeu.`,
@@ -454,4 +466,25 @@ export function buildLivingClubCompetitions(state: GameState): LivingClubCompeti
   const continental = CONFIGS.map((config) => buildContinentalCompetition(state, config, latestCompletedSeason));
   const mundial = buildMundialCompetition(state, latestCompletedSeason, continental);
   return [...continental, mundial];
+}
+
+export function continentalChampionForWorldSeason(
+  state: GameState,
+  competitionId: ContinentalLivingClubCompetitionId,
+  worldSeason: number,
+) {
+  const config = CONFIGS.find((item) => item.id === competitionId);
+  if (!config) return "";
+  const feederSeason = worldSeason - 1;
+  return buildContinentalCompetition(state, config, feederSeason)
+    .champions.find((entry) => entry.season === feederSeason)?.winnerId ?? "";
+}
+
+/** Mesma fonte usada pelo Arquivo Vivo e pela partida jogável. */
+export function worldFinalOpponentForSeason(state: GameState, playerClubId: string, worldSeason: number) {
+  const playerClub = CLUBS.find((club) => club.id === playerClubId);
+  if (!playerClub) return "";
+  const feeder = clubConfederation(playerClub) === "EUROPE" ? "libertadores" : "champions-league";
+  const winnerId = continentalChampionForWorldSeason(state, feeder, worldSeason);
+  return winnerId === playerClubId ? "" : winnerId;
 }
