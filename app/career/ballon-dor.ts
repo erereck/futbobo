@@ -154,14 +154,39 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
       input.performanceScore >= 88 &&
       input.reputation >= 76 &&
       (globalBreakthrough || (domesticMiracle && input.titleCount >= 2));
-  } else {
+  } else if (input.league.prestige >= 4) {
+    // O Brasileirão é um palco grande o bastante para produzir um vencedor sem
+    // obrigar uma Libertadores em toda candidatura. Ainda exige temporada de
+    // elite; o multiplicador fora da Europa mantém a vantagem do eixo europeu.
+    const domesticWorldClass =
+      worldClassRecognition &&
+      input.overall >= 79 &&
+      input.performanceScore >= 75 &&
+      input.reputation >= 42;
     eligible =
       baseAvailability &&
-      input.appearances >= 21 &&
-      input.overall >= 82 &&
-      input.performanceScore >= 77 &&
-      input.reputation >= 58 &&
+      input.appearances >= 20 &&
+      input.overall >= 75 &&
+      input.performanceScore >= 66 &&
+      input.reputation >= 26 &&
       worldClassRecognition &&
+      (input.majorClubTitleCount > 0 || input.continentalChampion || input.mundialChampion || input.majorNationalTitle || domesticWorldClass);
+  } else if (input.league.prestige === 3) {
+    eligible =
+      baseAvailability &&
+      input.appearances >= 22 &&
+      input.overall >= 81 &&
+      input.performanceScore >= 76 &&
+      input.reputation >= 50 &&
+      worldClassRecognition &&
+      (input.continentalChampion || input.mundialChampion || input.majorNationalTitle || domesticMiracle);
+  } else {
+    eligible =
+      input.hasProductionAward &&
+      input.appearances >= 24 &&
+      input.overall >= 85 &&
+      input.performanceScore >= 82 &&
+      input.reputation >= 66 &&
       (input.continentalChampion || input.mundialChampion || input.majorNationalTitle);
   }
 
