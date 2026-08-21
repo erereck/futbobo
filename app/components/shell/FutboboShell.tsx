@@ -18,6 +18,7 @@ import {
 } from "../../career/save-system";
 import { ACHIEVEMENTS } from "../../mega-expansion";
 import { clubById } from "../../career/shared";
+import { legacySummaryForHallEntry } from "../../career/legacy-prestige";
 import CareerGame from "../career/CareerGame";
 import { BrandMark, ClubBadge } from "../career/CareerPrimitives";
 import styles from "./FutboboShell.module.css";
@@ -169,6 +170,9 @@ export default function FutboboShell() {
   const achievementMap = useMemo(() => new Map(unlocks.map((item) => [item.achievementId, item])), [unlocks]);
   const selectedAchievement = ACHIEVEMENTS.find((item) => item.id === selectedAchievementId) ?? null;
   const selectedUnlock = selectedAchievement ? achievementMap.get(selectedAchievement.id) : undefined;
+  const hallRows = useMemo(() => hall
+    .map((entry) => ({ entry, legacy: legacySummaryForHallEntry(entry) }))
+    .sort((a, b) => b.legacy.score - a.legacy.score || b.entry.finishedAt - a.entry.finishedAt), [hall]);
 
   const launchExisting = (id: string) => {
     if (!activateCareerSlot(id)) return;
@@ -289,11 +293,11 @@ export default function FutboboShell() {
 
       {screen === "hall" && (
         <section className={`${styles.panelScreen} ${styles.collectionScreen}`}>
-          <header className={styles.panelHeading}><span>HALL DA FAMA</span><h2>Carreiras que chegaram ao fim.</h2><p>O índice de legado fica guardado para a aposentadoria — aqui é onde ele importa.</p></header>
+          <header className={styles.panelHeading}><span>HALL DA FAMA</span><h2>Carreiras que chegaram ao fim.</h2><p>Prêmios e títulos grandes pesam de verdade. Quantidade sozinha não ganha da história.</p></header>
           <div className={styles.hallList}>
-            {hall.length === 0 ? <div className={styles.emptyCollection}><b>★</b><strong>Nenhuma carreira aposentada.</strong><span>Quando uma história terminar, ela aparece aqui.</span></div> : hall.map((entry, index) => {
+            {hallRows.length === 0 ? <div className={styles.emptyCollection}><b>★</b><strong>Nenhuma carreira aposentada.</strong><span>Quando uma história terminar, ela aparece aqui.</span></div> : hallRows.map(({ entry, legacy }, index) => {
               const club = CLUBS.find((item) => item.id === entry.finalClubId);
-              return <article key={entry.id}><b>#{index + 1}</b>{club ? <ClubBadge club={club} size="md" /> : null}<span><strong>{entry.name}</strong><small>{entry.position} · {entry.seasons} temporadas · pico {entry.peakOverall}</small><em>{entry.trophies} títulos · {entry.ballonDor} Bola(s) de Ouro</em></span><strong className={styles.legacyScore}>{entry.legacyPoints}<small>{entry.legacyLabel}</small></strong></article>;
+              return <article key={entry.id}><b>#{index + 1}</b>{club ? <ClubBadge club={club} size="md" /> : null}<span><strong>{entry.name}</strong><small>{entry.position} · {entry.seasons} temporadas · pico {entry.peakOverall}</small><em>{legacy.signature}</em></span><strong className={styles.legacyScore} style={{ color: legacy.color }}>{legacy.score}<small>{legacy.label}</small></strong></article>;
             })}
           </div>
         </section>

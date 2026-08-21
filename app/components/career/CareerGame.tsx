@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { CLUBS, COUNTRIES, FIRST_MATCH_EVENT, FORMATIONS, LEAGUES, POSITIONS, countryById, leagueById } from "../../game-data";
 import type { GameEvent, PositionKey } from "../../game-data";
-import { ROLE_LABELS, calculateLegacyScore, calculateSquadRole, createContract, createSeasonObjective, legacyTier } from "../../career-systems";
+import { ROLE_LABELS, calculateSquadRole, createContract, createSeasonObjective } from "../../career-systems";
+import { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prestige";
 import { ACHIEVEMENTS, NEWS_TEMPLATES, fillNewsTemplate, findRivalry } from "../../mega-expansion";
 import BotaoMatch from "../../botao/BotaoMatch";
 import GoalReplay from "../../botao/GoalReplay";
@@ -417,7 +418,7 @@ export default function CareerGame() {
     }, 0),
     [game.sponsorHistory, game.activeSponsor, game.season],
   );
-  const legacyStanding = useMemo(() => legacyTier(displayGame.legacyPoints), [displayGame.legacyPoints]);
+  const legacyStanding = useMemo(() => legacyTierV2(displayGame.legacyPoints), [displayGame.legacyPoints]);
   const marketOffers = useMemo(() => {
     const validIds = new Set(game.transferOffers);
     const rich = game.transferMarketOffers.filter((offer) => validIds.size === 0 || validIds.has(offer.clubId));
@@ -1447,19 +1448,7 @@ export default function CareerGame() {
 
       return {
         ...nextState,
-        legacyPoints: calculateLegacyScore({
-          appearances: nextState.stats.appearances,
-          goals: nextState.stats.goals,
-          assists: nextState.stats.assists,
-          cleanSheets: nextState.stats.cleanSheets,
-          trophies: nextState.trophies,
-          nationalTrophies: nextState.nationalTrophies,
-          awards: nextState.awards,
-          ballonDor: nextState.awardCabinet["Bola de Ouro"] ?? 0,
-          nationalCaps: nextState.nationalCaps,
-          peakOverall: Math.max(nextState.overall, ...nextState.history.map((item) => item.overall)),
-          setbacks: nextState.setbacks,
-        }),
+        legacyPoints: legacyBreakdownForState(nextState).total,
       };
     });
     setBotaoMatchStarted(false);

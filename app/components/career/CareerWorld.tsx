@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { countryById } from "../../game-data";
 import type { GameState } from "../../career/model";
 import { footballRankingsForState } from "../../career/official-football-records";
+import { historicalRecordBoardsForState } from "../../career/historical-records";
 import { buildWorldSnapshot, worldPulseForState } from "../../career/world-memory";
 import { NationBadge } from "./CareerPrimitives";
 import styles from "./CareerWorld.module.css";
@@ -38,7 +39,10 @@ export default function CareerWorld({ state }: { state: GameState }) {
   const [rankingOpen, setRankingOpen] = useState(false);
   const [officialOpen, setOfficialOpen] = useState<string>("");
   const snapshot = useMemo(() => buildWorldSnapshot(state), [state]);
-  const officialRankings = useMemo(() => footballRankingsForState(state), [state]);
+  const officialRankings = useMemo(
+    () => [...historicalRecordBoardsForState(state), ...footballRankingsForState(state)],
+    [state],
+  );
   const featured = snapshot.news[0];
   const ranking = snapshot.worldCupRanking;
   const leader = ranking[0];
