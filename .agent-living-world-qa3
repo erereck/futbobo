@@ -6,27 +6,27 @@ lint=0
 # Subtest: abre um X1 local real e reorganiza o menu por tipo de gameplay
 ok 68 - abre um X1 local real e reorganiza o menu por tipo de gameplay
   ---
-  duration_ms: 6.971829
+  duration_ms: 5.977571
   ...
 # Subtest: dá ao goleiro uma carreira própria da base ao fim da trajetória
 ok 69 - dá ao goleiro uma carreira própria da base ao fim da trajetória
   ---
-  duration_ms: 5.568428
+  duration_ms: 5.48375
   ...
 # Subtest: mantém World Players persistentes, compactos e determinísticos por carreira
 ok 70 - mantém World Players persistentes, compactos e determinísticos por carreira
   ---
-  duration_ms: 1.700027
+  duration_ms: 1.602139
   ...
 # Subtest: liga rivais e premiações ao mundo sem substituir seus sistemas atuais
 ok 71 - liga rivais e premiações ao mundo sem substituir seus sistemas atuais
   ---
-  duration_ms: 0.705152
+  duration_ms: 0.598006
   ...
 # Subtest: World Players usam o mesmo motor central de mercado
 ok 72 - World Players usam o mesmo motor central de mercado
   ---
-  duration_ms: 0.924653
+  duration_ms: 0.898266
   ...
 1..72
 # tests 72
@@ -36,7 +36,7 @@ ok 72 - World Players usam o mesmo motor central de mercado
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 557.317295
+# duration_ms 526.081387
 --- lint tail ---
 
 > futbobo@1.2.5 lint
