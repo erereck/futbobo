@@ -22,21 +22,22 @@ import { simulateBotaoMatch } from "../../botao/simulate";
 import type { BotaoMatchResult, BotaoMatchSetup } from "../../botao/types";
 import { PLAYER_STORIES, playerStoryById } from "../../player-stories";
 import type { PlayerStoryId } from "../../player-stories";
-import type { AppSettings, AwardNomination, CareerHallEntry, ChallengeResult, CompetitionId, CompetitionResult, CustomClubDefinition, GameState, InstallPromptEvent, MonteCarloReport, NationalTier, PendingBotaoMatch, Phase, SeasonRecord, SeasonResult, SocialPost } from "../../career/model";
+import type { AppSettings, AwardNomination, CareerHallEntry, ChallengeResult, CompetitionId, CompetitionResult, CustomClubDefinition, GameState, InstallPromptEvent, MonteCarloReport, NationalTier, PendingBotaoMatch, Phase, SeasonRecord, SeasonResult, SocialPost, TransferOffer } from "../../career/model";
 import { ATTRIBUTE_GROUPS, ATTRIBUTE_LABELS, BALLON_DOR_EXCLUDED_TROPHIES, BOTAO_IN_PROGRESS_KEY, CHALLENGE_RESULTS_KEY, CHALLENGE_SAVE_KEY, HALL_OF_FAME_KEY, ORIGINAL_CLUB_PRESENTATION, POSITION_PRIMARY_ATTRIBUTES, SAVE_KEY, SETTINGS_KEY, SPECIAL_TRAITS, applyCustomClubDefinitions, archivedCareerState, attributeAverage, attributeTone, awardFinalists, awardPresentation, awardTierWeight, careerHallEntry, createCareerRivals, createPlayerAttributes, dailyChallenge, fictionalAwardWinner, initialState, normalizeSave, randomPlayerName, selectCareerTraits, shiftPlayerAttributes } from "../../career/state";
 import { clamp, clubById, pick, seeded } from "../../career/shared";
 import { eventForState, isNegativeConsequence, runMonteCarloCareers, simulateSeason } from "../../career/simulation";
-import { PLAYABLE_ACADEMY_COUNTRIES, academyRouteCopy, clubConfederation, continentalNationalTournament, continentalSlotAfterSeason, defaultAcademyCountry, hasLocalAcademyRoute, initialAdaptation, initialContinentalSlot, isEuropeanClub, isOutsideAcademyHome, positionByKey, randomAcademyClubs, sortedCountries } from "../../career/academy";
-import { POSITION_FIELD_SPOTS, careerTrend, fanMood, formatFollowers, formatMoney, marketValue, mergeEffects, publicImageProfile, seasonAverageRating, simulatedWorldCupStats, transferMarketProfile, worldCupStatsForSeason } from "../../career/performance";
+import { PLAYABLE_ACADEMY_COUNTRIES, academyRouteCopy, continentalNationalTournament, continentalSlotAfterSeason, defaultAcademyCountry, hasLocalAcademyRoute, initialContinentalSlot, isEuropeanClub, isOutsideAcademyHome, positionByKey, randomAcademyClubs, sortedCountries } from "../../career/academy";
+import { POSITION_FIELD_SPOTS, careerTrend, fanMood, formatFollowers, formatMoney, marketValue, mergeEffects, publicImageProfile, seasonAverageRating, simulatedWorldCupStats, worldCupStatsForSeason } from "../../career/performance";
 import { AwardCeremony, AwardReveal, BrandMark, ClubBadge, CompetitionBadge, Metric, NationBadge, Progress, TROPHY_PRESENTATIONS, TrophyGallery } from "./CareerPrimitives";
 import { applyEffect, applyStoryOrigin, buildPressConference, createYouthJourney, selectNextEvent, storyClubCandidate } from "../../career/events";
-import { selectTransferOffers } from "../../career/transfer-market";
+import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, materializeTransferOffers, resolveTransferRequest } from "../../career/transfer-market";
 import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../career/save-system";
 import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
 import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanels";
 import CareerExtraStats from "./CareerExtraStats";
 import CareerTimeline from "./CareerTimeline";
 import CareerWorld, { WorldPulseButton } from "./CareerWorld";
+import TransferMarketScreen from "./TransferMarketScreen";
 
 export default function CareerGame() {
   const [game, setGame] = useState<GameState>(() => initialState());
@@ -418,7 +419,17 @@ export default function CareerGame() {
     [game.sponsorHistory, game.activeSponsor, game.season],
   );
   const legacyStanding = useMemo(() => legacyTierV2(displayGame.legacyPoints), [displayGame.legacyPoints]);
-  const marketProfile = useMemo(() => transferMarketProfile(game), [game]);
+  const marketOffers = useMemo(() => {
+    const validIds = new Set(game.transferOffers);
+    const rich = game.transferMarketOffers.filter((offer) => validIds.size === 0 || validIds.has(offer.clubId));
+    return rich.length === game.transferOffers.length
+      ? rich
+      : materializeTransferOffers(game, game.transferOffers, game.season * 43, {
+          includeForeign: true,
+          mode: game.pendingTransferMode === "loan" ? "loan" : game.isFreeAgent ? "free-agent" : "permanent",
+        });
+  }, [game]);
+  const renewalOffer = useMemo(() => game.contractYears === 0 ? buildRenewalOffer(game) : null, [game]);
   const awardEntries = useMemo(
     () => Object.entries(displayGame.awardCabinet).sort((a, b) =>
       awardTierWeight(b[0]) - awardTierWeight(a[0]) ||
@@ -527,26 +538,6 @@ export default function CareerGame() {
       manOfTheMatchAwards: history.reduce((total, record) => total + (record.manOfTheMatchAwards ?? 0), 0),
     };
   }, [game.history, game.seed, game.stats.appearances, game.stats.goals, game.stats.assists]);
-  const transferWindowProfile = useMemo(() => {
-    const offerClubs = game.transferOffers.map(clubById);
-    const foreignOfferClubs = offerClubs.filter((club) => club.countryId !== currentClub.countryId);
-    const europeanOffers = foreignOfferClubs.filter(isEuropeanClub).length;
-    const allForeignAreEurope = foreignOfferClubs.every((club) => clubConfederation(club) === "EUROPE");
-    const homeCountry = countryById(game.academyCountryId);
-    const homeOffers = offerClubs.filter((club) =>
-      club.countryId === game.academyCountryId &&
-      club.countryId !== currentClub.countryId
-    ).length;
-    return {
-      europeanOffers,
-      homeCountry,
-      homeOffers,
-      isEuropeanWindow: isEuropeanClub(currentClub) && europeanOffers > 0,
-      foreignMarketLabel: allForeignAreEurope ? "MERCADO EUROPEU" : "MERCADO INTERNACIONAL",
-      foreignMarketAdjective: allForeignAreEurope ? "europeu" : "internacional",
-      expandedOfferCount: Math.max(0, game.transferOffers.length - 5),
-    };
-  }, [game.transferOffers, game.academyCountryId, currentClub]);
   const currentEvent = eventForState(game);
 
   useEffect(() => {
@@ -1585,28 +1576,23 @@ export default function CareerGame() {
       vibrate();
       return;
     }
-    if (game.loanParentClubId && game.season >= game.loanEndSeason) {
+    if ((game.activeLoan || game.loanParentClubId) && game.season >= (game.activeLoan?.endSeason ?? game.loanEndSeason)) {
       setGame((current) => {
-        const parentClub = clubById(current.loanParentClubId);
+        const returned = completeLoanReturn(current);
+        const parentClub = clubById(returned.currentClubId);
         const league = leagueById(parentClub.leagueId);
         const managerTrust = 48;
-        const squadRole = calculateSquadRole(current.overall, parentClub, league.prestige, managerTrust, current.age);
+        const squadRole = calculateSquadRole(returned.overall, parentClub, league.prestige, managerTrust, returned.age);
         return {
-          ...current,
-          phase: current.transferOffers.length ? "transfer" : "career",
-          currentClubId: parentClub.id,
-          currentLeagueId: current.loanParentLeagueId || parentClub.leagueId,
-          currentEventId: current.nextEventId || "extra-training",
-          lastResult: current.transferOffers.length ? current.lastResult : null,
+          ...returned,
+          phase: returned.transferOffers.length ? "transfer" : "career",
+          currentEventId: returned.nextEventId || "extra-training",
+          lastResult: returned.transferOffers.length ? returned.lastResult : null,
           lastConsequence: null,
-          loanParentClubId: "",
-          loanParentLeagueId: "",
-          loanEndSeason: 0,
-          pendingTransferMode: "permanent",
           managerTrust,
           squadRole,
-          currentObjective: createSeasonObjective(positionByKey(current.position), squadRole, current.season, current.seed + 701),
-          newsFeed: [`${current.season}: retorno ao ${parentClub.shortName} após o fim do empréstimo.`, ...current.newsFeed].slice(0, 16),
+          currentObjective: createSeasonObjective(positionByKey(returned.position), squadRole, returned.season, returned.seed + 701),
+          newsFeed: [`${returned.season}: retorno ao ${parentClub.shortName} após o fim do empréstimo.`, ...returned.newsFeed].slice(0, 16),
         };
       });
       setActiveTab("event");
@@ -1632,25 +1618,19 @@ export default function CareerGame() {
     vibrate();
   }
 
-  function chooseTransfer(clubId: string | null) {
+  function chooseTransfer(offer: TransferOffer | null) {
     setGame((current) => {
-      if (!clubId && (current.transferRequested || current.renewalDenied || current.forcedClubExit || current.forcedAlternativeTransfer)) return current;
-      if (!clubId && (current.isFreeAgent || current.pendingTransferMode === "loan")) return current;
-      const newClub = clubId ? clubById(clubId) : null;
+      if (!offer && (current.transferRequested || current.renewalDenied || current.forcedClubExit || current.forcedAlternativeTransfer)) return current;
+      if (!offer && (current.isFreeAgent || current.pendingTransferMode === "loan")) return current;
+      const acceptedOffer = offer ?? (current.contractYears === 0 ? buildRenewalOffer(current) : null);
+      const newClub = acceptedOffer && acceptedOffer.type !== "renewal" ? clubById(acceptedOffer.clubId) : null;
       const oldClub = clubById(current.currentClubId);
       const targetClub = newClub ?? oldClub;
-      const isLoan = Boolean(newClub && current.pendingTransferMode === "loan");
       const targetLeague = leagueById(targetClub.leagueId);
-      const offerIndex = Math.max(0, current.transferOffers.indexOf(clubId ?? ""));
-      const signingContract = Boolean(!isLoan && (newClub || current.contractYears === 0));
-      const generatedContract = createContract(current.overall, current.age, targetClub, current.seed + current.season + offerIndex);
-      const contract = signingContract ? generatedContract : { years: current.contractYears, annualSalary: current.annualSalary };
-      const changingCountry = Boolean(newClub && newClub.countryId !== oldClub.countryId);
-      const managerTrust = newClub ? 50 : clamp(current.managerTrust + 5);
-      const squadRole = calculateSquadRole(current.overall, targetClub, targetLeague.prestige, managerTrust, current.age);
       const rivalry = newClub ? findRivalry(oldClub.id, newClub.id) : undefined;
       const pendingCareerEventId = current.nextEventId;
-      const transferNewsPool = NEWS_TEMPLATES.filter((item) => item.category === (clubId ? "transfer" : "contract"));
+      const offerIndex = Math.max(0, current.transferOffers.indexOf(acceptedOffer?.clubId ?? ""));
+      const transferNewsPool = NEWS_TEMPLATES.filter((item) => item.category === (newClub ? "transfer" : "contract"));
       const genericTransferNews = fillNewsTemplate(
         pick(transferNewsPool, current.seed, current.season + offerIndex)?.template ?? "{player} define o futuro no {club}",
         {
@@ -1661,42 +1641,28 @@ export default function CareerGame() {
           competition: targetLeague.name,
         },
       );
-      const transferHeadline = isLoan
+      const transferHeadline = acceptedOffer?.type === "loan"
         ? `${current.name} deixa o ${oldClub.shortName} por empréstimo e vai jogar no ${targetClub.shortName}.`
         : rivalry
         ? pick(rivalry.headlines, current.seed, current.season)
         : genericTransferNews;
+      const moved = acceptedOffer ? applyAcceptedTransfer(current, acceptedOffer) : current;
+      const managerTrust = acceptedOffer ? moved.managerTrust : clamp(current.managerTrust + 5);
+      const squadRole = acceptedOffer ? moved.squadRole : calculateSquadRole(current.overall, targetClub, targetLeague.prestige, managerTrust, current.age);
       const transferred: GameState = {
-        ...current,
+        ...moved,
         phase: "career",
-        currentClubId: clubId ?? current.currentClubId,
-        currentLeagueId: newClub ? newClub.leagueId : current.currentLeagueId,
         currentEventId: "",
         nextEventId: "",
         lastResult: null,
         lastConsequence: null,
         transferOffers: [],
-        morale: clamp(current.morale + (clubId ? 5 : 2)),
-        fanSupport: clubId ? 52 : clamp(current.fanSupport + (current.transferRequested ? -8 : 3)),
-        continentalSlot: newClub ? initialContinentalSlot(newClub) : current.continentalSlot,
-        adaptation: newClub ? (changingCountry ? initialAdaptation(oldClub.countryId, newClub.countryId) : current.adaptation) : current.adaptation,
-        abroadSeasons: changingCountry ? 0 : current.abroadSeasons,
-        transferStatus: null,
-        transferRequested: false,
-        renewalDenied: false,
-        forcedClubExit: false,
+        transferMarketOffers: [],
+        morale: clamp(current.morale + (newClub ? 5 : 2)),
         forcedAlternativeTransfer: false,
-        pendingTransferMode: "permanent",
-        loanParentClubId: isLoan ? oldClub.id : "",
-        loanParentLeagueId: isLoan ? (current.currentLeagueId || oldClub.leagueId) : "",
-        loanEndSeason: isLoan ? current.season + 1 : 0,
-        isFreeAgent: false,
-        freeAgentSinceSeason: 0,
         forcedFreeAgentUntilSeason: 0,
         managerTrust,
         squadRole,
-        contractYears: contract.years,
-        annualSalary: contract.annualSalary,
         clubCaptain: newClub ? false : current.clubCaptain,
         currentObjective: createSeasonObjective(positionByKey(current.position), squadRole, current.season, current.seed + current.season),
         newsFeed: [
@@ -1716,11 +1682,14 @@ export default function CareerGame() {
   function becomeFreeAgent() {
     setGame((current) => {
       if (current.contractYears > 0 || current.pendingTransferMode === "loan") return current;
-      const offers = selectTransferOffers(current, current.season * 509, { includeForeign: true }).slice(0, 10);
+      const prepared = { ...current, isFreeAgent: true, transferRequested: true };
+      const richOffers = generateTransferOffers(prepared, current.season * 509, { includeForeign: true, mode: "free-agent", trigger: "contract-expired", count: 10 });
+      const offers = richOffers.map((offer) => offer.clubId);
       return {
         ...current,
         phase: "transfer",
         transferOffers: offers,
+        transferMarketOffers: richOffers,
         transferRequested: true,
         isFreeAgent: true,
         freeAgentSinceSeason: current.season,
@@ -1764,9 +1733,16 @@ export default function CareerGame() {
         },
         newsFeed: [`${current.season}: ${current.name} passou a temporada como agente livre.`, ...current.newsFeed].slice(0, 16),
       };
+      const richOffers = stillBanned ? [] : generateTransferOffers(waited, waited.season * 521, {
+        includeForeign: true,
+        mode: "free-agent",
+        trigger: "free-agent-wait",
+        count: 10,
+      });
       return {
         ...waited,
-        transferOffers: stillBanned ? [] : selectTransferOffers(waited, waited.season * 521, { includeForeign: true }).slice(0, 10),
+        transferOffers: richOffers.map((offer) => offer.clubId),
+        transferMarketOffers: richOffers,
       };
     });
     setToast(game.forcedFreeAgentUntilSeason > game.season + 1 ? "Mais um ano cumprido longe dos clubes" : "Nova temporada, novas propostas — sem jogos registrados");
@@ -1849,22 +1825,20 @@ export default function CareerGame() {
   function requestTransfer() {
     setGame((current) => {
       if (current.transferCooldownSeason >= current.season) return current;
-      const club = clubById(current.currentClubId);
-      const requirement = 55 + club.reputation * 5;
-      const performance = transferMarketProfile(current);
-      const chance = clamp(Math.round(24 + current.reputation * 0.38 + (current.overall - requirement) * 1.8 + (current.fanSupport - 50) * 0.12 + Math.max(0, performance.performanceScore - 50) * 0.22), 8, 88);
-      const success = seeded(current.seed, current.season * 97 + current.transferRequests * 13) * 100 < chance;
-      if (success) {
-        const transferOffers = selectTransferOffers(current, current.season * 101, { includeForeign: true });
+      const decision = resolveTransferRequest(current, current.season * 97 + current.transferRequests * 13);
+      if (decision.accepted) {
         return {
           ...current,
           phase: "transfer",
-          transferOffers,
+          transferOffers: decision.offers.map((offer) => offer.clubId),
+          transferMarketOffers: decision.offers,
           transferRequests: current.transferRequests + 1,
           transferCooldownSeason: current.season,
           transferRequested: true,
-          managerTrust: clamp(current.managerTrust - 8),
-          transferStatus: { success: true, chance, headline: "A diretoria abriu a porta", text: `Seu pedido foi aceito — não há volta. O empresário encontrou ${transferOffers.length} projetos e agora você precisa escolher a próxima camisa.` },
+          morale: clamp(current.morale + decision.moraleDelta),
+          fanSupport: clamp(current.fanSupport + decision.fanSupportDelta),
+          managerTrust: clamp(current.managerTrust + decision.managerTrustDelta),
+          transferStatus: { success: true, chance: decision.chance, headline: decision.headline, text: decision.text },
         };
       }
       return {
@@ -1873,11 +1847,10 @@ export default function CareerGame() {
         transferRequests: current.transferRequests + 1,
         transferCooldownSeason: current.season,
         transferRequested: true,
-        morale: clamp(current.morale - 12),
-        reputation: clamp(current.reputation - 7),
-        fanSupport: Math.min(18, clamp(current.fanSupport - 40)),
-        managerTrust: clamp(current.managerTrust - 18),
-        transferStatus: { success: false, chance, headline: "O pedido vazou — e foi negado", text: "A diretoria recusou sua saída. A arquibancada entendeu o gesto como abandono e as vaias começaram." },
+        morale: clamp(current.morale + decision.moraleDelta),
+        fanSupport: clamp(current.fanSupport + decision.fanSupportDelta),
+        managerTrust: clamp(current.managerTrust + decision.managerTrustDelta),
+        transferStatus: { success: false, chance: decision.chance, headline: decision.headline, text: decision.text },
       };
     });
     vibrate();
@@ -3250,59 +3223,16 @@ export default function CareerGame() {
           )}
 
           {game.phase === "transfer" && (
-            <div className="transfer-stage screen-enter">
-              <span className="eyebrow">{game.forcedFreeAgentUntilSeason > game.season ? "BANIMENTO DO FUTEBOL" : game.pendingTransferMode === "loan" ? "MERCADO DE EMPRÉSTIMOS" : game.isFreeAgent ? "AGENTE LIVRE" : game.forcedAlternativeTransfer ? "RECOMEÇO FORÇADO" : "JANELA DE TRANSFERÊNCIAS"}</span>
-              <h1>{game.forcedFreeAgentUntilSeason > game.season ? "Nenhum clube pode contratar você" : game.pendingTransferMode === "loan" ? "Um ano para voltar jogando mais" : game.forcedAlternativeTransfer ? "As grandes ligas fecharam as portas" : game.forcedClubExit ? "O clube decidiu vender você" : game.transferStatus?.success ? game.transferStatus.headline : game.renewalDenied ? "Sem renovação — hora de escolher" : "Seu próximo passo"}</h1>
-              <p>{game.forcedFreeAgentUntilSeason > game.season ? `A punição pela tentativa de corrupção vai até ${game.forcedFreeAgentUntilSeason}. Você precisa atravessar os anos restantes sem disputar partidas.` : game.pendingTransferMode === "loan" ? `O ${currentClub.shortName} quer emprestar você por uma temporada. Escolha onde buscar minutos antes de retornar.` : game.forcedAlternativeTransfer ? "Depois da suspensão, seu empresário encontrou projetos dispostos a bancar sua reconstrução. Você precisa escolher um deles." : game.forcedClubExit ? `Seu nível já não acompanha a exigência do ${currentClub.shortName}. Como você ainda não virou ídolo, a diretoria tornou a saída obrigatória.` : game.transferStatus?.text ?? (game.renewalDenied ? `O ${currentClub.shortName} não renovou seu contrato. ${game.transferOffers.length} clube${game.transferOffers.length > 1 ? "s apareceram" : " apareceu"} com propostas.` : `${game.transferOffers.length} clubes chegaram com projetos diferentes. Você também pode ficar e construir seu nome aqui.`)}</p>
-              {game.pendingTransferMode === "loan" && <div className="transfer-lock-card loan"><span>EMPRÉSTIMO DE 1 TEMPORADA</span><strong>O vínculo com o {currentClub.shortName} continua</strong><p>Seu salário e contrato pertencem ao clube de origem. Ao fim da próxima temporada, o retorno será automático.</p></div>}
-              {game.renewalDenied && <div className="transfer-lock-card"><span>RENOVAÇÃO RECUSADA</span><strong>O {currentClub.shortName} decidiu não renovar seu contrato</strong><p>A diretoria avaliou a temporada e optou por não seguir com você. Escolha seu próximo destino.</p></div>}
-              {game.forcedClubExit && <div className="transfer-lock-card"><span>VENDA OBRIGATÓRIA</span><strong>Seu nível ficou abaixo do projeto esportivo</strong><p>Ídolos históricos recebem proteção. Sem esse status, permanecer no clube não está disponível.</p></div>}
-              {game.forcedAlternativeTransfer && <div className="transfer-lock-card exile"><span>PUNIÇÃO DISCIPLINAR</span><strong>Exílio esportivo obrigatório</strong><p>Ficar no clube atual ou assinar com uma potência não está disponível. Uma liga alternativa será seu único caminho de volta.</p></div>}
-              {game.transferRequested && !game.forcedClubExit && !game.forcedAlternativeTransfer && game.forcedFreeAgentUntilSeason <= game.season && <div className="transfer-lock-card"><span>SAÍDA SEM VOLTA</span><strong>Escolha seu próximo clube</strong><p>Depois que a diretoria aceita seu pedido, permanecer no time atual deixa de ser uma opção.</p></div>}
-              {!game.forcedAlternativeTransfer && game.forcedFreeAgentUntilSeason <= game.season && transferWindowProfile.isEuropeanWindow && <div className="european-market-card"><span>{transferWindowProfile.foreignMarketLabel}</span><strong>{transferWindowProfile.europeanOffers} clube{transferWindowProfile.europeanOffers > 1 ? `s ${transferWindowProfile.foreignMarketAdjective}s querem` : ` ${transferWindowProfile.foreignMarketAdjective} quer`} você</strong><p>{transferWindowProfile.homeOffers > 0 ? `Uma proposta rara de volta ao país da sua base, ${transferWindowProfile.homeCountry.name}, também apareceu.` : `Seu empresário prioriza projetos ${transferWindowProfile.foreignMarketAdjective}s de nível compatível.`}</p></div>}
-              {!game.forcedAlternativeTransfer && transferWindowProfile.expandedOfferCount > 0 && <div className="market-expansion-card"><span>DESEMPENHO ABRIU PORTAS</span><strong>{marketProfile.label} · nota {marketProfile.performanceScore}</strong><p>{transferWindowProfile.expandedOfferCount} clube{transferWindowProfile.expandedOfferCount > 1 ? "s extras apareceram" : " extra apareceu"} em um nível compatível com sua fase.</p></div>}
-              <div className="offer-list transfer-offers">
-                {game.transferOffers.map((clubId, index) => {
-                  const club = clubById(clubId);
-                  const league = leagueById(club.leagueId);
-                  const changesCountry = club.countryId !== currentClub.countryId;
-                  const offerContract = createContract(game.overall, game.age, club, game.seed + game.season + index);
-                  const offerRole = calculateSquadRole(game.overall, club, league.prestige, 50, game.age);
-                  const rivalry = findRivalry(currentClub.id, club.id);
-                  const rareHomeReturn =
-                    club.countryId === game.academyCountryId &&
-                    club.countryId !== currentClub.countryId &&
-                    transferWindowProfile.europeanOffers > 0;
-                  const europeanEntryOffer = !isEuropeanClub(currentClub) && isEuropeanClub(club);
-                  return (
-                    <button className="offer-card" key={clubId} onClick={() => chooseTransfer(clubId)}>
-                      <ClubBadge club={club} />
-                      <span>
-                        <small>{game.pendingTransferMode === "loan" ? "DESTINO DE EMPRÉSTIMO" : game.isFreeAgent ? "CONTRATAÇÃO SEM CUSTO" : game.forcedAlternativeTransfer ? "PROJETO DE RECONSTRUÇÃO" : rareHomeReturn ? "RETORNO IMPROVÁVEL" : europeanEntryOffer ? "PORTA DE ENTRADA NA EUROPA" : index >= 5 ? "DESTAQUE ABRIU ESTA PORTA" : index === 0 ? "MAIS PRESTÍGIO" : index === 1 ? "PROJETO DE TITULAR" : "NOVOS ARES"}</small>
-                        <strong>{club.shortName}</strong>
-                        <em>{club.city} · {league.name}</em>
-                        <em className="offer-contract">{game.pendingTransferMode === "loan" ? `${ROLE_LABELS[offerRole]} · 1 temporada · contrato de origem preservado` : `${ROLE_LABELS[offerRole]} · ${offerContract.years} anos · ${formatMoney(offerContract.annualSalary)}/ano`}</em>
-                        <em className="offer-market-value">Valor estimado na liga: {formatMoney(marketValue(game.overall, game.age, club, game.reputation, game.lastResult ?? undefined))}</em>
-                        {rivalry && <em className="offer-rivalry">⚔ Transferência explosiva: {rivalry.nickname}</em>}
-                        {rareHomeReturn ? <em className="offer-homecoming-tag">⌂ Volta rara ao país da sua base: {transferWindowProfile.homeCountry.name}</em> : europeanEntryOffer ? <em className="offer-european-door">★ Uma chance europeia compatível com o seu momento</em> : changesCountry && <em className="offer-abroad-tag">◇ Novo país — uma fase de adaptação começa</em>}
-                      </span>
-                      <b>→</b>
-                    </button>
-                  );
-                })}
-                {game.pendingTransferMode !== "loan" && <>
-                  {!game.transferRequested && !game.renewalDenied && !game.forcedClubExit && !game.forcedAlternativeTransfer && <button className="offer-card stay-card" onClick={() => chooseTransfer(null)}><ClubBadge club={currentClub} /><span><small>{game.contractYears === 0 ? "PROPOSTA DE RENOVAÇÃO" : "CONTINUAR O PROJETO"}</small><strong>{game.contractYears === 0 ? `Renovar com o ${currentClub.shortName}` : `Ficar no ${currentClub.shortName}`}</strong><em>{game.contractYears === 0 ? "Novo vínculo e salário recalculado" : `Manter o contrato atual de ${game.contractYears} ano(s)`}</em></span><b>✓</b></button>}
-                  {!game.transferRequested && !game.renewalDenied && !game.forcedClubExit && !game.forcedAlternativeTransfer && game.contractYears === 0 && <button className="offer-card free-agent-card" onClick={becomeFreeAgent}><span className="free-agent-symbol">◇</span><span><small>RECUSAR A RENOVAÇÃO</small><strong>Virar agente livre</strong><em>Mais liberdade de escolha, sem possibilidade de voltar ao clube atual</em></span><b>→</b></button>}
-                </>}
-              </div>
-              {game.isFreeAgent && (
-                <button className="wait-free-agent-button" disabled={game.age >= 42 && game.forcedFreeAgentUntilSeason <= game.season} onClick={waitAsFreeAgent}>
-                  <span>SEM PROJETO INTERESSANTE?</span>
-                  <strong>{game.forcedFreeAgentUntilSeason > game.season ? "Cumprir mais um ano do banimento" : "Simular um ano como agente livre"}</strong>
-                  <small>{game.forcedFreeAgentUntilSeason > game.season ? `Nenhuma estatística será registrada. Punição prevista até ${game.forcedFreeAgentUntilSeason}.` : "Você não registra jogos nem recebe salário; perde ritmo, paga €180 mil em custos e recebe propostas novas."}</small>
-                </button>
-              )}
-            </div>
+            <TransferMarketScreen
+              state={game}
+              currentClub={currentClub}
+              offers={marketOffers}
+              renewalOffer={renewalOffer}
+              onChoose={chooseTransfer}
+              onStay={() => chooseTransfer(null)}
+              onBecomeFreeAgent={becomeFreeAgent}
+              onWait={waitAsFreeAgent}
+            />
           )}
 
           {game.phase === "transfer-denied" && game.transferStatus && (
@@ -3311,7 +3241,7 @@ export default function CareerGame() {
               <div className="denied-symbol">×</div>
               <h1>{game.transferStatus.headline}</h1>
               <p>{game.transferStatus.text}</p>
-              <div className="fan-backlash"><span>REAÇÃO DA TORCIDA</span><strong>{supporterMood.label}</strong><div><i style={{ width: `${game.fanSupport}%` }} /></div><small>Relação destruída · −12 moral · −7 prestígio</small></div>
+              <div className="fan-backlash"><span>REAÇÃO DA TORCIDA</span><strong>{supporterMood.label}</strong><div><i style={{ width: `${game.fanSupport}%` }} /></div><small>Torcida e comissão perderam confiança</small></div>
               <div className="mobile-action-dock">
                 <button className="primary-button" onClick={continueAfterDeniedTransfer}>Encarar a temporada <span>→</span></button>
               </div>
