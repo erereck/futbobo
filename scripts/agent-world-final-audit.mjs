@@ -93,6 +93,7 @@ function replaceOnce(source, from, to, label) {
 {
   const path = "app/career/shared.ts";
   let source = fs.readFileSync(path, "utf8");
-  source = source.replace(\n`\n// Mantém o contrato histórico de fitness 0–100 centralizado. O modelo de carga\n// calcula o valor bruto em fatigue.ts; qualquer consumidor pode normalizá-lo aqui.\nexport function clampFitness(value: number) {\n  const nextFitness = clamp(value, 24, 99);\n  return nextFitness;\n}\n`, "\n");
+  const helper = `\n// Mantém o contrato histórico de fitness 0–100 centralizado. O modelo de carga\n// calcula o valor bruto em fatigue.ts; qualquer consumidor pode normalizá-lo aqui.\nexport function clampFitness(value: number) {\n  const nextFitness = clamp(value, 24, 99);\n  return nextFitness;\n}\n`;
+  source = source.replace(helper, "\n");
   fs.writeFileSync(path, source);
 }
