@@ -1,0 +1,25 @@
+name: Sync prestige branch with main
+
+on:
+  push:
+    branches: [agent/futbobo-prestige-legacy-records]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/futbobo-prestige-legacy-records
+          fetch-depth: 0
+      - shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-edit origin/main -m "merge: sync World Players into prestige branch"
+          git push origin HEAD:agent/futbobo-prestige-legacy-records
