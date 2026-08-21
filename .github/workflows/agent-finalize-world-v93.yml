@@ -34,8 +34,10 @@ jobs:
           {
             echo "test=$TEST_CODE"
             echo "lint=$LINT_CODE"
+            echo "--- failing test context ---"
+            grep -n -B 12 -A 28 "not ok" /tmp/test.log || true
             echo "--- test tail ---"
-            tail -n 30 /tmp/test.log
+            tail -n 40 /tmp/test.log
             echo "--- lint tail ---"
             tail -n 30 /tmp/lint.log
           } > .agent-world-v93-qa
@@ -46,6 +48,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/career/simulation.ts .agent-world-v93-qa
           if ! git diff --cached --quiet; then
-            git commit -m "feat: wire season fatigue into career simulation"
+            git commit -m "chore: refresh living-world QA result"
             git push origin HEAD:agent/futbobo-world-players-live-world
           fi
