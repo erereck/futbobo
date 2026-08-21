@@ -1,5 +1,6 @@
 import type { GameState } from "./model";
 import { clubById } from "./shared";
+import { worldPlayerBallonDorLeaders, worldPlayerGenerationLeaders, worldPlayerStatLeaders, worldPlayerTransferLeaders } from "./world-player-world";
 
 export type OfficialFootballRankingEntry = {
   label: string;
@@ -20,7 +21,9 @@ export type OfficialFootballRanking = {
     | "libertadores-titles"
     | "libertadores-goals"
     | "sudamericana-titles"
-    | "world-cup-goals";
+    | "world-cup-goals"
+    | "current-generation"
+    | "largest-world-transfers";
   eyebrow: string;
   label: string;
   unit: string;
@@ -323,15 +326,28 @@ export function footballRankingsForState(state: GameState): OfficialFootballRank
   const worldCupGoals = playerWorldCupGoals(state);
   const careerGoals = state.stats.goals;
   const careerAssists = state.stats.assists;
+  const worldGoalLeaders = worldPlayerStatLeaders(state, "goals");
+  const worldAssistLeaders = worldPlayerStatLeaders(state, "assists");
+  const worldBallonLeaders = worldPlayerBallonDorLeaders(state);
+  const historicBallonNames = new Set([...ballonWinners.keys()].map(normalizedLabel));
 
-  return OFFICIAL_FOOTBALL_RANKINGS.map((board) => {
+  const historicalBoards = OFFICIAL_FOOTBALL_RANKINGS.map((board) => {
     const entries = board.entries.map((entry) => ({ ...entry }));
 
-    if (board.id === "all-time-goals") addEntry(entries, state.name, careerGoals, true);
-    if (board.id === "all-time-assists") addEntry(entries, state.name, careerAssists, true);
+    if (board.id === "all-time-goals") {
+      addEntry(entries, state.name, careerGoals, true);
+      worldGoalLeaders.forEach((entry) => addEntry(entries, entry.label, entry.value));
+    }
+    if (board.id === "all-time-assists") {
+      addEntry(entries, state.name, careerAssists, true);
+      worldAssistLeaders.forEach((entry) => addEntry(entries, entry.label, entry.value));
+    }
 
     if (board.id === "ballon-dor-wins") {
       ballonWinners.forEach((count, name) => addEntry(entries, name, count, name === state.name));
+      worldBallonLeaders.forEach((entry) => {
+        if (!historicBallonNames.has(normalizedLabel(entry.label))) addEntry(entries, entry.label, entry.value);
+      });
     }
 
     if (board.id === "world-cup-goals") {
@@ -349,4 +365,41 @@ export function footballRankingsForState(state: GameState): OfficialFootballRank
 
     return { ...board, entries: sortRanking(entries) };
   });
+
+  const generationEntries: OfficialFootballRankingEntry[] = worldPlayerGenerationLeaders(state).map((entry) => ({
+    label: entry.label,
+    value: entry.value,
+  }));
+  if (state.name && state.overall > 0) generationEntries.push({ label: state.name, value: state.overall, highlight: true });
+
+  const generationBoard: OfficialFootballRanking | null = generationEntries.length ? {
+    id: "current-generation",
+    eyebrow: "GERAÇÃO DO SAVE",
+    label: "Maiores nomes da geração",
+    unit: "OVR",
+    cutoff: `Universo persistente · temporada ${state.season}`,
+    living: true,
+    entries: sortRanking(generationEntries),
+  } : null;
+
+  const transferEntries = worldPlayerTransferLeaders(state).map((entry) => ({
+    label: entry.label,
+    value: entry.value,
+    highlight: entry.highlight,
+  }));
+  const transferBoard: OfficialFootballRanking | null = transferEntries.length ? {
+    id: "largest-world-transfers",
+    eyebrow: "MERCADO · SEU UNIVERSO",
+    label: "Maiores transferências do universo",
+    unit: "mi €",
+    cutoff: "Transferências registradas neste save",
+    living: true,
+    entries: sortRanking(transferEntries),
+  } : null;
+
+  return [
+    ...historicalBoards,
+    ...(generationBoard ? [generationBoard] : []),
+    ...(transferBoard ? [transferBoard] : []),
+  ];
 }

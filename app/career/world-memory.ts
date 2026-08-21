@@ -1,6 +1,7 @@
 import { COUNTRIES, countryById } from "../game-data";
 import type { GameState, SeasonRecord, StoredBotaoResult } from "./model";
 import { clubById, seeded } from "./shared";
+import { worldPlayerNewsForState } from "./world-player-world";
 
 export type WorldNewsPriority = "major" | "normal";
 export type WorldNewsCategory = "world-cup" | "career" | "transfer" | "award" | "rival" | "record";
@@ -374,6 +375,7 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     ...careerMilestoneNews(state),
     ...nationalNews(state),
     ...rivalNews(state),
+    ...worldPlayerNewsForState(state),
   ];
 
   const unique = new Map(news.map((item) => [item.id, item]));

@@ -128,7 +128,7 @@ export default function CareerWorld({ state }: { state: GameState }) {
       <section className={styles.officialSection}>
         <header>
           <span>ARQUIVO VIVO</span>
-          <small>História real + sua carreira</small>
+          <small>História real + seu universo</small>
         </header>
         <div>
           {officialRankings.map((board) => {
