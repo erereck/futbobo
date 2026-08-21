@@ -13,6 +13,7 @@ import { applyAcceptedTransfer, completeLoanReturn, materializeTransferOffers, s
 import { advanceWorldPlayerUniverse } from "./world-players";
 import { seasonFitnessAfterLoad } from "./fatigue";
 import { worldFinalOpponentForSeason } from "./world-club-competitions";
+import { evaluateBallonDor } from "./ballon-dor";
 
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
@@ -540,41 +541,10 @@ export function simulateSeason(
     ["Copa do Mundo", "Eurocopa", "Copa América", "Copa Ouro", "Copa da Ásia", "Copa Africana de Nações", "Copa das Nações da OFC"].includes(nationalHistoryAdd.name),
   );
   if (majorNationalTitle && nextOverall >= 86 && performanceScore >= 80) awards.push(`Craque da ${nationalHistoryAdd?.name}`);
-  const europeanBallonEligible =
-    inEurope &&
-    (
-      (
-        nextOverall >= 74 &&
-        performanceScore >= 58 &&
-        affected.reputation >= 25 &&
-        appearances >= 18
-      ) ||
-      (
-        nextOverall === 82 &&
-        performanceScore >= 80 &&
-        affected.reputation >= 65 &&
-        appearances >= 24 &&
-        titleCount > 0
-      )
-    );
-  const americanBallonEligible =
-    !inEurope &&
-    nextOverall >= 86 &&
-    performanceScore >= 82 &&
-    affected.reputation >= 70 &&
-    (mundialChampion || continentalChampion);
-  const positionBallonModifier = isKeeper ? -7 : position.zone === "defesa" ? -4 : position.zone === "ataque" ? 3 : 0;
-  const previousBallonDor = affected.awardCabinet["Bola de Ouro"] ?? 0;
-  const ballonProduction =
-    isKeeper
-      ? cleanSheets * 1.8 - goalsConceded * 0.08
-      : position.zone === "defesa"
-        ? goals * 1.45 + assists * 1.2
-        : position.zone === "meio"
-          ? goals * 0.72 + assists
-          : goals + assists * 0.65;
-  const eliteProductionTarget = isKeeper ? 22 : position.zone === "defesa" ? 18 : position.zone === "meio" ? 34 : 40;
-  const productionBallonModifier = clamp((ballonProduction - eliteProductionTarget) / 1.5, -12, 18);
+  const hasBallonProductionAward =
+    hasGoalsOrAssistsAward ||
+    (isKeeper && hasGoalkeeperAward) ||
+    (position.zone === "defesa" && awards.includes("Melhor Defensor") && performanceScore >= 92);
   const supportingAwardBonus = Math.min(10, awards.reduce((bonus, award) => (
     bonus +
     (
@@ -591,71 +561,39 @@ export function simulateSeason(
           : 0
     )
   ), 0));
-  const ballonScore =
-    performanceScore * 0.33 +
-    nextOverall * 0.35 +
-    affected.reputation * 0.17 +
-    titleCount * 2.5 +
-    (playsContinental === "champions" && continentalChampion ? 9 : 0) +
-    (mundialChampion ? 12 : 0) +
-    (majorNationalTitle ? 8 : 0) +
-    (inEurope && worldCupGoals >= 8 ? 24 + Math.min(10, (worldCupGoals - 8) * 2 + worldCupAssists * 0.7) : 0) +
-    productionBallonModifier +
-    supportingAwardBonus +
-    positionBallonModifier;
-  const firstBallonChance = clamp(88 + Math.max(0, ballonScore - 58) * 3.2, 88, 98);
-  const repeatBallonBaseChance = clamp(16 + Math.max(0, ballonScore - 66) * 4.4, 16, 97);
-  const repeatBallonMultiplier =
-    previousBallonDor === 0 ? 1 :
-    previousBallonDor === 1 ? 0.78 :
-    previousBallonDor === 2 ? 0.58 :
-    previousBallonDor === 3 ? 0.25 :
-    previousBallonDor === 4 ? 0.08 :
-    previousBallonDor === 5 ? 0.03 :
-    previousBallonDor === 6 ? 0.012 :
-    Math.max(0.0004, 0.006 * 0.55 ** (previousBallonDor - 7));
-  const rawBallonChance = (previousBallonDor === 0 ? firstBallonChance : repeatBallonBaseChance) * repeatBallonMultiplier;
-  const baseBallonChance = previousBallonDor === 0
-    ? clamp(Math.round(rawBallonChance), 88, 98)
-    : Math.max(0.03, Number(rawBallonChance.toFixed(3)));
-  const historicBallonSeason =
-    (
-      position.zone === "ataque" &&
-      (goals >= 50 || goals + assists >= 68)
-    ) ||
-    (
-      position.zone === "meio" &&
-      goals + assists >= 55
-    ) ||
-    (
-      position.zone === "defesa" &&
-      goals + assists >= 30 &&
-      performanceScore >= 94
-    ) ||
-    (
-      isKeeper &&
-      cleanSheets >= 25 &&
-      performanceScore >= 94
-    );
-  const historicBallonChanceFloor = !historicBallonSeason
-    ? 0
-    : previousBallonDor <= 6
-      ? 98
-      : Math.max(0.25, 28 * 0.52 ** (previousBallonDor - 7));
-  const worldCupBallonChanceFloor = !(inEurope && worldCupGoals >= 8)
-    ? 0
-    : previousBallonDor === 0 ? 94
-    : previousBallonDor === 1 ? 82
-    : previousBallonDor === 2 ? 64
-    : previousBallonDor === 3 ? 38
-    : previousBallonDor === 4 ? 16
-    : Math.max(0.25, 8 * 0.5 ** (previousBallonDor - 5));
-  const ballonChance = Math.max(baseBallonChance, historicBallonChanceFloor, worldCupBallonChanceFloor);
+  const previousBallonDor = affected.awardCabinet["Bola de Ouro"] ?? 0;
+  const ballonEvaluation = evaluateBallonDor({
+    league,
+    inEurope,
+    positionZone: position.zone,
+    isKeeper,
+    overall: nextOverall,
+    performanceScore,
+    reputation: affected.reputation,
+    appearances,
+    goals,
+    assists,
+    cleanSheets,
+    goalsConceded,
+    titleCount,
+    majorClubTitleCount,
+    majorNationalTitle,
+    playsContinental: playsContinental ?? "",
+    continentalChampion,
+    mundialChampion,
+    worldCupGoals,
+    worldCupAssists,
+    supportingAwardBonus,
+    hasProductionAward: hasBallonProductionAward,
+    previousBallonDor,
+  });
+  const europeanBallonEligible = inEurope && ballonEvaluation.eligible;
+  const americanBallonEligible = !inEurope && ballonEvaluation.eligible;
+  const ballonScore = ballonEvaluation.score;
+  const historicBallonSeason = ballonEvaluation.historicSeason;
+  const ballonChance = ballonEvaluation.chance;
   const wonBallonDor =
     (europeanBallonEligible || americanBallonEligible) &&
-    hasGoalsOrAssistsAward &&
-    (majorClubTitleCount > 0 || majorNationalTitle) &&
-    ballonScore >= 58 &&
     seeded(state.seed, state.season * 109) * 100 < ballonChance;
   if (wonBallonDor) {
     if (!awards.includes("FIFPRO World XI")) awards.push("FIFPRO World XI");
@@ -681,13 +619,8 @@ export function simulateSeason(
   };
   addLostNomination(
     "Bola de Ouro",
-    hasGoalsOrAssistsAward &&
-      (majorClubTitleCount > 0 || majorNationalTitle) &&
-      (
-        (inEurope && nextOverall >= 81 && performanceScore >= 68 && affected.reputation >= 48 && appearances >= 20) ||
-        (!inEurope && nextOverall >= 85 && performanceScore >= 76 && affected.reputation >= 60 && Boolean(continentalChampion || mundialChampion))
-      ),
-    historicBallonSeason ? 100 : clamp(24 + Math.max(0, ballonScore - 66) * 4.2, 24, 88),
+    ballonEvaluation.eligible,
+    historicBallonSeason ? 92 : clamp(18 + Math.max(0, ballonScore - 70) * 2.6, 18, 82),
     313,
   );
   addLostNomination(

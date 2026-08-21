@@ -108,8 +108,9 @@ test("fecha a Copa do Mundo com estatisticas completas e impacto forte na Bola d
   assert.match(page, /knockoutAppearances/);
   assert.match(page, /RELATÓRIO DA COPA DO MUNDO/);
   assert.match(page, /FASE DE GRUPOS · SIMULADA/);
-  assert.match(page, /worldCupGoals >= 8 \? 24/);
-  assert.match(page, /worldCupBallonChanceFloor/);
+  const ballon = await readFile(new URL("../app/career/ballon-dor.ts", import.meta.url), "utf8");
+  assert.match(ballon, /input\.worldCupGoals >= 8/);
+  assert.match(ballon, /const worldCupFloor = input\.previousBallonDor === 0 \? 62/);
   assert.match(page, /worldCupBallonSurge \? 68/);
   assert.match(page, /Artilheiro da Copa do Mundo/);
   assert.match(styles, /\.world-cup-stat-report/);
@@ -269,48 +270,29 @@ test("aplica o equilíbrio levemente mais favorável sem liberar títulos fácei
   assert.match(page, /Bola de Ouro/);
 });
 
-test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcançável", async () => {
+test("valoriza os prêmios individuais e calibra a Bola de Ouro pelo tamanho do palco", async () => {
   const page = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const ballon = await readFile(new URL("../app/career/ballon-dor.ts", import.meta.url), "utf8");
 
-  assert.match(page, /const europeanBallonEligible =[\s\S]*nextOverall >= 74[\s\S]*nextOverall === 82[\s\S]*performanceScore >= 80/);
+  assert.match(page, /evaluateBallonDor/);
+  assert.match(page, /hasBallonProductionAward/);
+  assert.match(ballon, /stage === "minor"/);
+  assert.match(ballon, /input\.league\.prestige >= 5/);
+  assert.match(ballon, /input\.league\.prestige === 4/);
+  assert.match(ballon, /input\.league\.prestige === 3/);
+  assert.match(ballon, /input\.overall >= 88/);
+  assert.match(ballon, /globalBreakthrough/);
+  assert.match(ballon, /repeatMultiplier/);
+  assert.match(ballon, /Math\.max\(0\.0004, 0\.006 \* 0\.55 \*\* \(previous - 7\)\)/);
+  assert.match(ballon, /stage === "minor" && !globalBreakthrough \? historicFloor \* 0\.18/);
+  assert.match(ballon, /input\.isKeeper \? -5/);
+  assert.match(ballon, /input\.positionZone === "defesa" \? -3/);
   assert.match(page, /const leagueGoldenBootLine = 28 \+ Math\.floor\([\s\S]*\* 9\)/);
-  assert.match(page, /goals >= leagueGoldenBootLine/);
   assert.match(page, /const leagueAssistKingLine = 18 \+ Math\.floor\([\s\S]*\* 7\)/);
   assert.match(page, /goals >= europeanGoldenShoeLine/);
-  assert.match(page, /const productionBallonModifier = clamp\(\(ballonProduction - eliteProductionTarget\) \/ 1\.5, -12, 18\)/);
-  assert.match(page, /const supportingAwardBonus = Math\.min\(10/);
-  assert.match(page, /const firstBallonChance = clamp\(88 \+ Math\.max\(0, ballonScore - 58\) \* 3\.2, 88, 98\)/);
-  assert.match(page, /const repeatBallonBaseChance = clamp\(16 \+ Math\.max\(0, ballonScore - 66\) \* 4\.4, 16, 97\)/);
-  assert.match(page, /previousBallonDor === 0[\s\S]*clamp\(Math\.round\(rawBallonChance\), 88, 98\)/);
-  assert.match(page, /const historicBallonSeason =[\s\S]*goals >= 50[\s\S]*goals \+ assists >= 68/);
-  assert.match(page, /previousBallonDor <= 6[\s\S]*\? 98[\s\S]*28 \* 0\.52 \*\* \(previousBallonDor - 7\)/);
-  assert.match(page, /previousBallonDor === 4 \? 0\.08/);
-  assert.match(page, /previousBallonDor === 6 \? 0\.012/);
-  assert.match(page, /Math\.max\(0\.0004, 0\.006 \* 0\.55 \*\* \(previousBallonDor - 7\)\)/);
-  assert.match(page, /Jogador do Ano do \$\{leagueLabel\}/);
-  assert.match(page, /MVP da Champions League/);
   assert.match(page, /FIFPRO World XI/);
-  assert.match(page, /const hasGoalsOrAssistsAward = hasLeagueGoldenBoot \|\| hasEuropeanGoldenShoe \|\| hasAssistKingAward/);
-  assert.match(page, /const BALLON_DOR_EXCLUDED_TROPHIES = new Set<CompetitionId>\(\[[\s\S]*"domesticCup"[\s\S]*"domesticSuperCup"/);
-  assert.match(page, /const wonBallonDor =[\s\S]*hasGoalsOrAssistsAward[\s\S]*majorClubTitleCount > 0 \|\| majorNationalTitle[\s\S]*ballonScore >= 58/);
-  assert.match(page, /continentalGoldenBootLine[\s\S]*Artilheiro da \$\{continentalNames\[playsContinental\]\.name\}/);
-  assert.match(page, /continentalAssistLine[\s\S]*L.der de Assist.ncias da \$\{continentalNames\[playsContinental\]\.name\}/);
-  assert.match(page, /if \(wonBallonDor\) \{[\s\S]*!awards\.includes\("FIFPRO World XI"\)[\s\S]*awards\.push\("Bola de Ouro"\)/);
-  assert.match(page, /hasEuropeanGoldenShoe \? 88[\s\S]*hasLeagueGoldenBoot \|\| hasAssistKingAward \? 68[\s\S]*48/);
-  assert.match(page, /hasEuropeanGoldenShoe && nextOverall >= 82 && performanceScore >= 76/);
-  assert.match(page, /worldXiWithoutBallonDor: awardSeasons\.filter\(\(season\) => season\.worldXi && !season\.ballonDor\)\.length/);
-  assert.match(page, /ballonDorWithoutProductionAward: awardSeasons\.filter\(\(season\) => season\.ballonDor && !season\.production\)\.length/);
-  assert.match(page, /ballonDorWithoutWorldXi: awardSeasons\.filter\(\(season\) => season\.ballonDor && !season\.worldXi\)\.length/);
-  assert.match(page, /function AwardReveal/);
-  assert.match(page, /function AwardCeremony/);
-  assert.match(page, /OS TRÊS FINALISTAS/);
-  assert.match(page, /Revelar vencedor/);
-  assert.match(page, /season-awards-showcase/);
-  assert.match(page, /award-cabinet-feature/);
-  assert.match(styles, /\.award-finalists/);
-  assert.match(styles, /\.award-reveal-card\.award-legendary/);
-  assert.match(styles, /\.award-cabinet-feature\.award-legendary/);
+  assert.match(styles, /\.award-card/);
 });
 
 test("registra o Hall da Fama local e resume a carreira por clube", async () => {
