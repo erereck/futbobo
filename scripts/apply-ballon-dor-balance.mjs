@@ -39,9 +39,12 @@ function replaceOnce(source, from, to, label) {
   const path = "tests/rendered-html.test.mjs";
   let source = fs.readFileSync(path, "utf8");
 
-  const oldWorldCupAssertions = `  assert.match(page, /worldCupGoals >= 8 \\? 24/);\n  assert.match(page, /worldCupBallonChanceFloor/);`;
-  const newWorldCupAssertions = `  const ballon = await readFile(new URL("../app/career/ballon-dor.ts", import.meta.url), "utf8");\n  assert.match(ballon, /input\\.worldCupGoals >= 8/);\n  assert.match(ballon, /const worldCupFloor = input\\.previousBallonDor === 0 \\? 62/);`;
-  source = replaceOnce(source, oldWorldCupAssertions, newWorldCupAssertions, "World Cup Ballon assertions");
+  const worldCupStart = source.indexOf("  assert.match(page, /worldCupGoals >= 8");
+  const worldCupSecond = source.indexOf("  assert.match(page, /worldCupBallonChanceFloor/);", worldCupStart);
+  if (worldCupStart < 0 || worldCupSecond < 0) throw new Error("World Cup Ballon assertions not found");
+  const worldCupEnd = source.indexOf("\n", worldCupSecond);
+  const worldCupReplacement = `  const ballon = await readFile(new URL("../app/career/ballon-dor.ts", import.meta.url), "utf8");\n  assert.match(ballon, /input\\.worldCupGoals >= 8/);\n  assert.match(ballon, /const worldCupFloor = input\\.previousBallonDor === 0 \\? 62/);`;
+  source = source.slice(0, worldCupStart) + worldCupReplacement + source.slice(worldCupEnd);
 
   const testStart = source.indexOf('test("valoriza os prêmios individuais e deixa a Bola de Ouro rara, mas alcançável"');
   const testEnd = source.indexOf('\ntest("registra o Hall da Fama local', testStart);
