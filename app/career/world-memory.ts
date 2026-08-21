@@ -7,7 +7,7 @@ import { buildLivingNationalCompetitions } from "./world-national-competitions";
 
 export type WorldNewsPriority = "major" | "normal";
 export type WorldNewsCategory = "world-cup" | "career" | "transfer" | "award" | "rival" | "record";
-export type WorldCompetitionKey = "world-cup" | "champions-league" | "libertadores" | "euro" | "copa-america";
+export type WorldCompetitionKey = "world-cup" | "champions-league" | "libertadores" | "mundial" | "euro" | "copa-america";
 
 export type WorldNewsItem = {
   id: string;
