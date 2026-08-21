@@ -1,4 +1,15 @@
-.screen { width: min(100%, 860px); margin: 0 auto; padding: 24px 20px 120px; }
+.screen {
+  width: min(100%, 860px);
+  min-height: 0;
+  margin: 0 auto;
+  padding: 24px 20px 120px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
 .header { margin-bottom: 20px; }
 .header > span, .identity small { color: #2ca8ff; font-size: 11px; font-weight: 900; letter-spacing: .13em; }
 .header h1 { margin: 7px 0 6px; font-size: clamp(32px, 6vw, 58px); line-height: .96; letter-spacing: -.035em; }
