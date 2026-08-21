@@ -1,9 +1,10 @@
 import { CLUBS, leagueById } from "../game-data";
-import type { GameState } from "./model";
+import type { GameState, SeasonRecord } from "./model";
 import { clubConfederation } from "./academy";
 import { seeded } from "./shared";
 
-export type LivingClubCompetitionId = "champions-league" | "libertadores";
+export type LivingClubCompetitionId = "champions-league" | "libertadores" | "mundial";
+type ContinentalLivingClubCompetitionId = Exclude<LivingClubCompetitionId, "mundial">;
 
 export type LivingClubChampion = {
   season: number;
@@ -27,7 +28,7 @@ export type LivingClubCompetition = {
 };
 
 type CompetitionConfig = {
-  id: LivingClubCompetitionId;
+  id: ContinentalLivingClubCompetitionId;
   label: string;
   competitionId: "championsLeague" | "libertadores";
   confederation: "EUROPE" | "SOUTH_AMERICA";
@@ -160,47 +161,164 @@ function rankedTitles(titles: Record<string, number>) {
     });
 }
 
-export function buildLivingClubCompetitions(state: GameState): LivingClubCompetition[] {
-  const latestCompletedSeason = Math.max(2026, ...state.history.map((record) => record.season));
+function buildContinentalCompetition(state: GameState, config: CompetitionConfig, latestCompletedSeason: number): LivingClubCompetition {
+  const titles = historicalTitles(config);
+  const champions: LivingClubChampion[] = [];
+  const news: LivingClubCompetition["news"] = [];
 
-  return CONFIGS.map((config) => {
-    const titles = historicalTitles(config);
-    const champions: LivingClubChampion[] = [];
-    const news: LivingClubCompetition["news"] = [];
+  for (let season = 2027; season <= latestCompletedSeason; season += 1) {
+    const playerRecord = state.history.find((record) => record.season === season);
+    const playerCompetition = playerRecord?.competitions.find((competition) => competition.id === config.competitionId);
+    const playerWon = Boolean(playerRecord && playerCompetition?.champion);
+    const winnerId = playerWon
+      ? playerRecord!.clubId
+      : pickWinner(state, config, season, titles, playerRecord?.clubId ?? "");
+    const source: LivingClubChampion["source"] = playerWon ? "player" : "generated";
 
-    for (let season = 2027; season <= latestCompletedSeason; season += 1) {
-      const playerRecord = state.history.find((record) => record.season === season);
-      const playerCompetition = playerRecord?.competitions.find((competition) => competition.id === config.competitionId);
-      const playerWon = Boolean(playerRecord && playerCompetition?.champion);
-      const winnerId = playerWon
-        ? playerRecord!.clubId
-        : pickWinner(state, config, season, titles, playerRecord?.clubId ?? "");
-      const source: LivingClubChampion["source"] = playerWon ? "player" : "generated";
+    titles[winnerId] = (titles[winnerId] ?? 0) + 1;
+    champions.push({ season, winnerId, source });
 
-      titles[winnerId] = (titles[winnerId] ?? 0) + 1;
-      champions.push({ season, winnerId, source });
-
-      if (source === "generated") {
-        const club = CLUBS.find((item) => item.id === winnerId);
-        if (club) {
-          news.push({
-            id: `world-${config.id}-${season}-${winnerId}`,
-            season,
-            category: "career",
-            priority: "major",
-            title: `${club.shortName} conquista ${config.label}`,
-            summary: `${season} · ${titles[winnerId]} título(s) no histórico deste universo.`,
-          });
-        }
+    if (source === "generated") {
+      const club = CLUBS.find((item) => item.id === winnerId);
+      if (club) {
+        news.push({
+          id: `world-${config.id}-${season}-${winnerId}`,
+          season,
+          category: "career",
+          priority: "major",
+          title: `${club.shortName} conquista ${config.label}`,
+          summary: `${season} · ${titles[winnerId]} título(s) no histórico deste universo.`,
+        });
       }
     }
+  }
 
-    return {
-      id: config.id,
-      label: config.label,
-      champions,
-      titleTable: rankedTitles(titles),
-      news,
-    };
-  });
+  return {
+    id: config.id,
+    label: config.label,
+    champions,
+    titleTable: rankedTitles(titles),
+    news,
+  };
+}
+
+function actualMundialFinalWinner(record: SeasonRecord | undefined) {
+  if (!record) return "";
+  const finalLoss = record.botaoResults?.find(({ match, result }) =>
+    match.source === "club" &&
+    match.competitionId === "mundial" &&
+    match.stageName === "Final" &&
+    !result.champion
+  );
+  return finalLoss?.match.opponentId ?? "";
+}
+
+function pickMundialUpsetWinner(
+  state: GameState,
+  season: number,
+  excludedClubIds: Set<string>,
+  libertadoresChampionId: string,
+) {
+  const available = CLUBS.filter((club) => !excludedClubIds.has(club.id));
+  return available
+    .map((club, index) => {
+      const league = leagueById(club.leagueId);
+      const squadBoost = worldPlayerSquadBoost(state, club.id);
+      const libertadoresBoost = club.id === libertadoresChampionId ? 260 : 0;
+      const weight = Math.max(
+        1,
+        club.reputation ** 4 * 3.4 +
+        league.prestige ** 3 * 1.8 +
+        squadBoost +
+        libertadoresBoost,
+      );
+      const roll = Math.max(0.000001, seeded(state.seed, season * 6907 + index * 79 + 53));
+      return { clubId: club.id, score: Math.pow(roll, 1 / weight) };
+    })
+    .sort((a, b) => b.score - a.score)[0]?.clubId ?? available[0]?.id ?? CLUBS[0].id;
+}
+
+function buildMundialCompetition(
+  state: GameState,
+  latestCompletedSeason: number,
+  championsLeague: LivingClubCompetition,
+  libertadores: LivingClubCompetition,
+): LivingClubCompetition {
+  const titles: Record<string, number> = {};
+  const champions: LivingClubChampion[] = [];
+  const news: LivingClubCompetition["news"] = [];
+
+  for (let season = 2027; season <= latestCompletedSeason; season += 1) {
+    const playerRecord = state.history.find((record) => record.season === season);
+    const playerMundial = playerRecord?.competitions.find((competition) => competition.id === "mundial");
+    const playerCompeted = Boolean(playerMundial);
+    const playerWon = Boolean(playerRecord && playerMundial?.champion);
+    const championsWinnerId = championsLeague.champions.find((entry) => entry.season === season)?.winnerId ?? "";
+    const libertadoresWinnerId = libertadores.champions.find((entry) => entry.season === season)?.winnerId ?? "";
+
+    let winnerId = "";
+    let source: LivingClubChampion["source"] = "generated";
+
+    if (playerWon && playerRecord) {
+      winnerId = playerRecord.clubId;
+      source = "player";
+    } else if (playerCompeted) {
+      winnerId = actualMundialFinalWinner(playerRecord);
+      if (!winnerId) {
+        winnerId = pickMundialUpsetWinner(
+          state,
+          season,
+          new Set([playerRecord?.clubId ?? ""]),
+          libertadoresWinnerId,
+        );
+      }
+    } else {
+      const championsTakesIt = Boolean(championsWinnerId) && seeded(state.seed, season * 6803 + 37) < 0.93;
+      winnerId = championsTakesIt
+        ? championsWinnerId
+        : pickMundialUpsetWinner(
+          state,
+          season,
+          new Set(championsWinnerId ? [championsWinnerId] : []),
+          libertadoresWinnerId,
+        );
+    }
+
+    titles[winnerId] = (titles[winnerId] ?? 0) + 1;
+    champions.push({ season, winnerId, source });
+
+    if (source === "generated") {
+      const club = CLUBS.find((item) => item.id === winnerId);
+      if (club) {
+        const championsFavored = !playerCompeted && winnerId === championsWinnerId;
+        news.push({
+          id: `world-mundial-${season}-${winnerId}`,
+          season,
+          category: "career",
+          priority: "major",
+          title: `${club.shortName} é campeão mundial`,
+          summary: championsFavored
+            ? `${season} · campeão da Champions confirmou o favoritismo.`
+            : `${season} · o Mundial fugiu do favorito europeu.`,
+        });
+      }
+    }
+  }
+
+  return {
+    id: "mundial",
+    label: "Mundial de Clubes",
+    champions,
+    titleTable: rankedTitles(titles),
+    news,
+  };
+}
+
+export function buildLivingClubCompetitions(state: GameState): LivingClubCompetition[] {
+  const latestCompletedSeason = Math.max(2026, ...state.history.map((record) => record.season));
+  const continental = CONFIGS.map((config) => buildContinentalCompetition(state, config, latestCompletedSeason));
+  const championsLeague = continental.find((competition) => competition.id === "champions-league")!;
+  const libertadores = continental.find((competition) => competition.id === "libertadores")!;
+  const mundial = buildMundialCompetition(state, latestCompletedSeason, championsLeague, libertadores);
+  return [...continental, mundial];
 }
