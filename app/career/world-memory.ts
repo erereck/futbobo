@@ -10,7 +10,10 @@ export type WorldNewsCategory = "world-cup" | "career" | "transfer" | "award" | 
 export type WorldCompetitionKey =
   | "world-cup"
   | "champions-league"
+  | "europa-league"
+  | "conference-league"
   | "libertadores"
+  | "sudamericana"
   | "mundial"
   | "concacaf-champions"
   | "afc-champions"
