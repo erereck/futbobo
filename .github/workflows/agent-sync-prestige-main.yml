@@ -21,5 +21,92 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
-          git merge --no-edit origin/main -m "merge: sync World Players into prestige branch"
+
+          set +e
+          git merge --no-commit origin/main
+          merge_code=$?
+          set -e
+
+          if [ "$merge_code" -ne 0 ]; then
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            echo "Conflicts detected:"
+            echo "$conflicts"
+            unexpected="$(printf '%s\n' "$conflicts" | grep -vE '^(app/components/career/CareerGame.tsx|app/components/shell/FutboboShell.tsx)$' || true)"
+            if [ -n "$unexpected" ]; then
+              echo "Unexpected conflicts; refusing automatic resolution:"
+              echo "$unexpected"
+              exit 1
+            fi
+            while IFS= read -r file; do
+              [ -z "$file" ] && continue
+              git checkout --theirs -- "$file"
+            done <<< "$conflicts"
+          fi
+
+          node <<'NODE'
+          import fs from "node:fs";
+
+          function replaceOnce(source, from, to, label) {
+            if (source.includes(to)) return source;
+            const first = source.indexOf(from);
+            if (first < 0) throw new Error(`Missing ${label}`);
+            if (source.indexOf(from, first + from.length) >= 0) throw new Error(`Ambiguous ${label}`);
+            return source.slice(0, first) + to + source.slice(first + from.length);
+          }
+
+          {
+            const path = "app/components/career/CareerGame.tsx";
+            let source = fs.readFileSync(path, "utf8");
+            source = replaceOnce(
+              source,
+              'import { ROLE_LABELS, calculateLegacyScore, calculateSquadRole, createContract, createSeasonObjective, legacyTier } from "../../career-systems";',
+              'import { ROLE_LABELS, calculateSquadRole, createContract, createSeasonObjective } from "../../career-systems";\nimport { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prestige";',
+              "CareerGame prestige imports",
+            );
+            source = replaceOnce(
+              source,
+              '  const legacyStanding = useMemo(() => legacyTier(displayGame.legacyPoints), [displayGame.legacyPoints]);',
+              '  const legacyStanding = useMemo(() => legacyTierV2(displayGame.legacyPoints), [displayGame.legacyPoints]);',
+              "CareerGame legacy tier",
+            );
+            source = replaceOnce(
+              source,
+              `        legacyPoints: calculateLegacyScore({\n          appearances: nextState.stats.appearances,\n          goals: nextState.stats.goals,\n          assists: nextState.stats.assists,\n          cleanSheets: nextState.stats.cleanSheets,\n          trophies: nextState.trophies,\n          nationalTrophies: nextState.nationalTrophies,\n          awards: nextState.awards,\n          ballonDor: nextState.awardCabinet["Bola de Ouro"] ?? 0,\n          nationalCaps: nextState.nationalCaps,\n          peakOverall: Math.max(nextState.overall, ...nextState.history.map((item) => item.overall)),\n          setbacks: nextState.setbacks,\n        }),`,
+              '        legacyPoints: legacyBreakdownForState(nextState).total,',
+              "CareerGame prestige score",
+            );
+            fs.writeFileSync(path, source);
+          }
+
+          {
+            const path = "app/components/shell/FutboboShell.tsx";
+            let source = fs.readFileSync(path, "utf8");
+            source = replaceOnce(
+              source,
+              'import { clubById } from "../../career/shared";\n',
+              'import { clubById } from "../../career/shared";\nimport { legacySummaryForHallEntry } from "../../career/legacy-prestige";\n',
+              "shell prestige import",
+            );
+            source = replaceOnce(
+              source,
+              '  const selectedUnlock = selectedAchievement ? achievementMap.get(selectedAchievement.id) : undefined;\n',
+              '  const selectedUnlock = selectedAchievement ? achievementMap.get(selectedAchievement.id) : undefined;\n  const hallRows = useMemo(() => hall\n    .map((entry) => ({ entry, legacy: legacySummaryForHallEntry(entry) }))\n    .sort((a, b) => b.legacy.score - a.legacy.score || b.entry.finishedAt - a.entry.finishedAt), [hall]);\n',
+              "shell hall rows",
+            );
+            source = replaceOnce(
+              source,
+              '          <header className={styles.panelHeading}><span>HALL DA FAMA</span><h2>Carreiras que chegaram ao fim.</h2><p>O índice de legado fica guardado para a aposentadoria — aqui é onde ele importa.</p></header>\n          <div className={styles.hallList}>\n            {hall.length === 0 ? <div className={styles.emptyCollection}><b>★</b><strong>Nenhuma carreira aposentada.</strong><span>Quando uma história terminar, ela aparece aqui.</span></div> : hall.map((entry, index) => {\n              const club = CLUBS.find((item) => item.id === entry.finalClubId);\n              return <article key={entry.id}><b>#{index + 1}</b>{club ? <ClubBadge club={club} size="md" /> : null}<span><strong>{entry.name}</strong><small>{entry.position} · {entry.seasons} temporadas · pico {entry.peakOverall}</small><em>{entry.trophies} títulos · {entry.ballonDor} Bola(s) de Ouro</em></span><strong className={styles.legacyScore}>{entry.legacyPoints}<small>{entry.legacyLabel}</small></strong></article>;\n            })}',
+              '          <header className={styles.panelHeading}><span>HALL DA FAMA</span><h2>Carreiras que chegaram ao fim.</h2><p>Prêmios e títulos grandes pesam de verdade. Quantidade sozinha não ganha da história.</p></header>\n          <div className={styles.hallList}>\n            {hallRows.length === 0 ? <div className={styles.emptyCollection}><b>★</b><strong>Nenhuma carreira aposentada.</strong><span>Quando uma história terminar, ela aparece aqui.</span></div> : hallRows.map(({ entry, legacy }, index) => {\n              const club = CLUBS.find((item) => item.id === entry.finalClubId);\n              return <article key={entry.id}><b>#{index + 1}</b>{club ? <ClubBadge club={club} size="md" /> : null}<span><strong>{entry.name}</strong><small>{entry.position} · {entry.seasons} temporadas · pico {entry.peakOverall}</small><em>{legacy.signature}</em></span><strong className={styles.legacyScore} style={{ color: legacy.color }}>{legacy.score}<small>{legacy.label}</small></strong></article>;\n            })}',
+              "shell prestige hall",
+            );
+            fs.writeFileSync(path, source);
+          }
+          NODE
+
+          git add app/components/career/CareerGame.tsx app/components/shell/FutboboShell.tsx
+          if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+            git commit -m "merge: sync World Players into prestige branch"
+          elif ! git diff --cached --quiet; then
+            git commit -m "chore: preserve prestige integration after sync"
+          fi
           git push origin HEAD:agent/futbobo-prestige-legacy-records
