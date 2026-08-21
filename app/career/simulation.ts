@@ -11,6 +11,7 @@ import { DOMESTIC_SUPER_CUP_NAMES, clubConfederation, continentalSlotAfterSeason
 import { addStats, competitiveStrength, describeEffects, isIdolAtClub, marketValue, medicalRecordForSeason, mergeEffects, seasonAverageRating, seasonPerformanceScore, simulatedWorldCupStats, worldCupGamesThroughStage } from "./performance";
 import { applyAcceptedTransfer, completeLoanReturn, materializeTransferOffers, selectAlternativeExileOffers, selectTransferOffers } from "./transfer-market";
 import { advanceWorldPlayerUniverse } from "./world-players";
+import { seasonFitnessAfterLoad } from "./fatigue";
 
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
@@ -38,7 +39,7 @@ export function simulateSeason(
     affected.nationalCaptain = false;
     affected.nationalCategory = "none";
     affected.nationalLevel = Math.round(affected.nationalLevel * 0.4);
-    nationalitySwitchRecord = { season: state.season, tier: "none", name: "Troca de Seleção", icon: "↔", stage: `Deixou a Seleção de ${fromCountry.name} para defender a Seleção de ${toCountry.name}`, champion: false };
+    nationalitySwitchRecord = { season: state.season, tier: "none", name: "Troca de Seleção", icon: "↔", stage: `Deixou a Seleção de ${fromCountry.name} para defender a Seleção de ${toCountry.name}`, champion: false, countryId: effect.switchNationalityTo };
   }
   const club = clubById(affected.currentClubId);
   const league = leagueById(affected.currentLeagueId || club.leagueId);
@@ -410,10 +411,10 @@ export function simulateSeason(
         const qualifyChance = clamp(40 + nation.strength * 8 + (effect.nationalTitleBoost ?? 0) * 0.7 + Math.max(0, affected.overall - 78) * 0.4, 38, 95);
         const qualified = seeded(state.seed, state.season * 149) * 100 < qualifyChance;
         qualifiedNextMajor = qualified;
-        nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage: qualified ? "Classificado" : "Eliminado", champion: false };
+        nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage: qualified ? "Classificado" : "Eliminado", champion: false, countryId: affected.nationality };
       } else if (tournament) {
         if (tournament.scope === "world" && !affected.qualifiedNextMajor) {
-          nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage: "Não classificado", champion: false };
+          nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage: "Não classificado", champion: false, countryId: affected.nationality };
           qualifiedNextMajor = true;
         } else {
           const titleBoostN = effect.nationalTitleBoost ?? 0;
@@ -425,7 +426,7 @@ export function simulateSeason(
             ? ["Fase de grupos", "16 avos", "Oitavas", "Quartas", "Semifinal", "Vice"]
             : ["Fase de grupos", "Oitavas", "Quartas", "Semifinal", "Vice"];
           const stage = champion ? "CAMPEÃO" : knockoutStage(157, false, knockoutStages);
-          nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage, champion };
+          nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage, champion, countryId: affected.nationality };
           if (tournament.scope === "world") {
             const fullPlayableRun =
               finalMatchMode === "play-key-matches" &&
@@ -919,17 +920,26 @@ export function simulateSeason(
   const nextContinentalSlot = qualifiedBySudamericana
     ? "libertadores"
     : continentalSlotAfterSeason(club, league, leagueChampion, cupChampion, leaguePosition);
-  const fitnessTarget =
-    91 -
-    Math.max(0, appearances - 30) * 0.55 -
-    Math.max(0, nextAge - 30) * 0.7 +
-    (objectiveResult.completed ? 2 : -1) +
-    (seeded(state.seed, state.season * 307) * 8 - 4);
-  const nextFitness = clamp(
-    Math.round(affected.fitness * 0.42 + fitnessTarget * 0.58 + twistFitness),
-    32,
-    98,
-  );
+  const physicalLoad = seasonFitnessAfterLoad({
+    seed: state.seed,
+    season: affected.season,
+    startingFitness: affected.fitness,
+    age: nextAge,
+    stamina: affected.attributes.stamina,
+    lifeBalance: affected.lifeBalance,
+    appearances,
+    nationalAppearances: nationalHistoryAdd?.tournamentStats?.appearances ?? (calledUp ? 2 : 0),
+    continentalCampaign: Boolean(playsContinental),
+    continentalChampion,
+    clubWorldCampaign: playsWorld,
+    titles: titleCount,
+    injuryMatchesMissed: medicalRecord?.matchesMissed ?? 0,
+    suspensionMatches: affected.suspensionMatches,
+    ironLungs: hasTrait("iron-lungs"),
+    injuryProne: hasTrait("injury-prone"),
+    twistFitness,
+  });
+  const nextFitness = clamp(physicalLoad.fitness, 24, 99);
   const moraleTarget =
     64 +
     performanceScore * 0.16 +

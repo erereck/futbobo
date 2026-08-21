@@ -6,7 +6,8 @@ import type { GameState } from "../../career/model";
 import { footballRankingsForState } from "../../career/official-football-records";
 import { historicalRecordBoardsForState } from "../../career/historical-records";
 import { buildWorldSnapshot, worldPulseForState } from "../../career/world-memory";
-import { NationBadge } from "./CareerPrimitives";
+import { clubById } from "../../career/shared";
+import { ClubBadge, NationBadge } from "./CareerPrimitives";
 import styles from "./CareerWorld.module.css";
 
 const CATEGORY_LABELS = {
@@ -37,6 +38,7 @@ export function WorldPulseButton({ state, onOpen }: { state: GameState; onOpen: 
 
 export default function CareerWorld({ state }: { state: GameState }) {
   const [rankingOpen, setRankingOpen] = useState(false);
+  const [competitionOpen, setCompetitionOpen] = useState<string>("");
   const [officialOpen, setOfficialOpen] = useState<string>("");
   const snapshot = useMemo(() => buildWorldSnapshot(state), [state]);
   const officialRankings = useMemo(
@@ -48,6 +50,8 @@ export default function CareerWorld({ state }: { state: GameState }) {
   const leader = ranking[0];
   const playerNation = ranking.find((entry) => entry.countryId === state.nationality);
   const recentWorldCups = [...snapshot.worldCupChampions].reverse().slice(0, 4);
+  const clubCompetitions = snapshot.competitionLedgers.filter((ledger) => ledger.entityType === "club");
+  const nationalCompetitions = snapshot.competitionLedgers.filter((ledger) => ledger.entityType === "country" && ledger.id !== "world-cup");
 
   return (
     <div className={`panel-screen screen-enter ${styles.page}`}>
@@ -125,10 +129,114 @@ export default function CareerWorld({ state }: { state: GameState }) {
         )}
       </section>
 
+      {nationalCompetitions.map((ledger) => {
+        const open = competitionOpen === ledger.id;
+        const leaderEntry = ledger.titleTable[0];
+        const leaderCountry = leaderEntry ? countryById(leaderEntry.entityId) : null;
+        const playerEntry = ledger.titleTable.find((entry) => entry.entityId === state.nationality);
+        const recentChampions = [...ledger.champions].reverse().slice(0, 4);
+        return (
+          <section className={styles.worldCupCard} key={ledger.id}>
+            <button type="button" onClick={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} aria-expanded={open}>
+              <span className={styles.trophy}>◎</span>
+              <span>
+                <small>{ledger.label.toLocaleUpperCase("pt-BR")} · TÍTULOS</small>
+                <strong>{leaderCountry && leaderEntry ? `${leaderCountry.name} lidera com ${leaderEntry.titles}` : ledger.label}</strong>
+                {playerEntry && <em>{countryById(state.nationality).name}: #{playerEntry.rank} · {playerEntry.titles} título(s)</em>}
+              </span>
+              <b>{open ? "−" : "+"}</b>
+            </button>
+
+            {open && recentChampions.length > 0 && (
+              <div className={styles.recentChampions}>
+                {recentChampions.map((champion) => {
+                  const country = countryById(champion.winnerId);
+                  return (
+                    <span key={`${ledger.id}-${champion.season}-${champion.winnerId}`}>
+                      <span className={styles.flagWrap}><NationBadge country={country} size="sm" /></span>
+                      <small>{champion.season}</small>
+                      <strong>{country.name}</strong>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {open && (
+              <div className={styles.ranking}>
+                {ledger.titleTable.map((entry) => {
+                  const country = countryById(entry.entityId);
+                  return (
+                    <article className={entry.entityId === state.nationality ? styles.playerCountry : ""} key={entry.entityId}>
+                      <b>#{entry.rank}</b>
+                      <span className={styles.rankingFlag}><NationBadge country={country} size="sm" /></span>
+                      <strong>{country.name}</strong>
+                      <span>{entry.titles}</span>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        );
+      })}
+
+      {clubCompetitions.map((ledger) => {
+        const open = competitionOpen === ledger.id;
+        const leaderEntry = ledger.titleTable[0];
+        const leaderClub = leaderEntry ? clubById(leaderEntry.entityId) : null;
+        const currentClubEntry = ledger.titleTable.find((entry) => entry.entityId === state.currentClubId);
+        const recentChampions = [...ledger.champions].reverse().slice(0, 4);
+        return (
+          <section className={styles.worldCupCard} key={ledger.id}>
+            <button type="button" onClick={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} aria-expanded={open}>
+              <span className={styles.trophy}>◇</span>
+              <span>
+                <small>{ledger.label.toLocaleUpperCase("pt-BR")} · TÍTULOS</small>
+                <strong>{leaderClub && leaderEntry ? `${leaderClub.shortName} lidera com ${leaderEntry.titles}` : ledger.label}</strong>
+                {currentClubEntry && <em>{clubById(state.currentClubId).shortName}: #{currentClubEntry.rank} · {currentClubEntry.titles} título(s)</em>}
+              </span>
+              <b>{open ? "−" : "+"}</b>
+            </button>
+
+            {open && recentChampions.length > 0 && (
+              <div className={styles.recentChampions}>
+                {recentChampions.map((champion) => {
+                  const club = clubById(champion.winnerId);
+                  return (
+                    <span key={`${ledger.id}-${champion.season}-${champion.winnerId}`}>
+                      <span className={styles.flagWrap}><ClubBadge club={club} size="sm" /></span>
+                      <small>{champion.season}</small>
+                      <strong>{club.shortName}</strong>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {open && (
+              <div className={styles.ranking}>
+                {ledger.titleTable.map((entry) => {
+                  const club = clubById(entry.entityId);
+                  return (
+                    <article className={entry.entityId === state.currentClubId ? styles.playerCountry : ""} key={entry.entityId}>
+                      <b>#{entry.rank}</b>
+                      <span className={styles.rankingFlag}><ClubBadge club={club} size="sm" /></span>
+                      <strong>{club.shortName}</strong>
+                      <span>{entry.titles}</span>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        );
+      })}
+
       <section className={styles.officialSection}>
         <header>
           <span>ARQUIVO VIVO</span>
-          <small>História real + sua carreira</small>
+          <small>História real + seu universo</small>
         </header>
         <div>
           {officialRankings.map((board) => {

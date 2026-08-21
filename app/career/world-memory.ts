@@ -1,10 +1,29 @@
 import { COUNTRIES, countryById } from "../game-data";
 import type { GameState, SeasonRecord, StoredBotaoResult } from "./model";
 import { clubById, seeded } from "./shared";
+import { worldPlayerNewsForState } from "./world-player-world";
+import { buildLivingClubCompetitions } from "./world-club-competitions";
+import { buildLivingNationalCompetitions } from "./world-national-competitions";
 
 export type WorldNewsPriority = "major" | "normal";
 export type WorldNewsCategory = "world-cup" | "career" | "transfer" | "award" | "rival" | "record";
-export type WorldCompetitionKey = "world-cup" | "champions-league" | "libertadores";
+export type WorldCompetitionKey =
+  | "world-cup"
+  | "champions-league"
+  | "europa-league"
+  | "conference-league"
+  | "libertadores"
+  | "sudamericana"
+  | "mundial"
+  | "concacaf-champions"
+  | "afc-champions"
+  | "caf-champions"
+  | "euro"
+  | "copa-america"
+  | "gold-cup"
+  | "asian-cup"
+  | "afcon"
+  | "ofc-nations-cup";
 
 export type WorldNewsItem = {
   id: string;
@@ -147,13 +166,14 @@ function weightedCountryPick(
 
 function resolveWorldCup(state: GameState, season: number, titles: Record<string, number>): WorldCompetitionChampion {
   const nationalRecord = state.nationalHistory.find((record) => record.season === season && record.name === "Copa do Mundo");
+  const playerCountryId = nationalRecord?.countryId ?? state.nationality;
   const matches = worldCupMatches(state, season);
   const eliminatedByPlayer = new Set(
     matches.filter(({ result }) => result.champion).map(({ match }) => match.opponentId),
   );
 
   if (nationalRecord?.champion) {
-    return { season, winnerCountryId: state.nationality, source: "player" };
+    return { season, winnerCountryId: playerCountryId, source: "player" };
   }
 
   if (nationalRecord?.stage === "Vice") {
@@ -162,17 +182,17 @@ function resolveWorldCup(state: GameState, season: number, titles: Record<string
       return {
         season,
         winnerCountryId: finalLoss.match.opponentId,
-        runnerUpCountryId: state.nationality,
+        runnerUpCountryId: playerCountryId,
         source: "player",
       };
     }
   }
 
   const excluded = new Set(eliminatedByPlayer);
-  if (nationalRecord && nationalRecord.stage !== "Não classificado") excluded.add(state.nationality);
+  if (nationalRecord && nationalRecord.stage !== "Não classificado") excluded.add(playerCountryId);
   const winnerCountryId = weightedCountryPick(state, season, 31, titles, excluded, "winner");
   const runnerUpCountryId = nationalRecord?.stage === "Vice"
-    ? state.nationality
+    ? playerCountryId
     : weightedCountryPick(state, season, 79, titles, new Set([...excluded, winnerCountryId]), "runner-up");
 
   return { season, winnerCountryId, runnerUpCountryId, source: "generated" };
@@ -305,7 +325,7 @@ function nationalNews(state: GameState) {
       season: record.season,
       category: "career",
       priority: "major",
-      title: `${countryById(state.nationality).name} vence ${record.name}`,
+      title: `${countryById(record.countryId ?? state.nationality).name} vence ${record.name}`,
       summary: `${state.name} fez parte do título.`,
     }));
 }
@@ -361,6 +381,9 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     });
   }
 
+  const livingClubCompetitions = buildLivingClubCompetitions(state);
+  const livingNationalCompetitions = buildLivingNationalCompetitions(state);
+
   const careerNews = state.history.flatMap((record) => [
     ...competitionNews(record),
     ...awardNews(state, record),
@@ -374,6 +397,9 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     ...careerMilestoneNews(state),
     ...nationalNews(state),
     ...rivalNews(state),
+    ...worldPlayerNewsForState(state),
+    ...livingClubCompetitions.flatMap((competition) => competition.news),
+    ...livingNationalCompetitions.flatMap((competition) => competition.news),
   ];
 
   const unique = new Map(news.map((item) => [item.id, item]));
@@ -399,7 +425,31 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     news: sortedNews,
     worldCupChampions: champions,
     worldCupRanking: ranking,
-    competitionLedgers: [worldCupLedger],
+    competitionLedgers: [
+      worldCupLedger,
+      ...livingNationalCompetitions.map((competition) => ({
+        id: competition.id,
+        label: competition.label,
+        entityType: "country" as const,
+        champions: competition.champions.map((champion) => ({
+          season: champion.season,
+          winnerId: champion.winnerId,
+          source: champion.source,
+        })),
+        titleTable: competition.titleTable,
+      })),
+      ...livingClubCompetitions.map((competition) => ({
+        id: competition.id,
+        label: competition.label,
+        entityType: "club" as const,
+        champions: competition.champions.map((champion) => ({
+          season: champion.season,
+          winnerId: champion.winnerId,
+          source: champion.source,
+        })),
+        titleTable: competition.titleTable,
+      })),
+    ],
     recordBoards: [],
     transferRecords: [],
   };
