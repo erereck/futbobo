@@ -4,7 +4,6 @@ export function clamp(value: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
 }
 
-
 export function seeded(seed: number, salt = 0) {
   let value = (seed + salt * 2654435761) >>> 0;
   value += 0x6d2b79f5;
