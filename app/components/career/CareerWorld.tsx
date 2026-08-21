@@ -6,7 +6,8 @@ import type { GameState } from "../../career/model";
 import { footballRankingsForState } from "../../career/official-football-records";
 import { historicalRecordBoardsForState } from "../../career/historical-records";
 import { buildWorldSnapshot, worldPulseForState } from "../../career/world-memory";
-import { NationBadge } from "./CareerPrimitives";
+import { clubById } from "../../career/shared";
+import { ClubBadge, NationBadge } from "./CareerPrimitives";
 import styles from "./CareerWorld.module.css";
 
 const CATEGORY_LABELS = {
@@ -37,6 +38,7 @@ export function WorldPulseButton({ state, onOpen }: { state: GameState; onOpen: 
 
 export default function CareerWorld({ state }: { state: GameState }) {
   const [rankingOpen, setRankingOpen] = useState(false);
+  const [competitionOpen, setCompetitionOpen] = useState<string>("");
   const [officialOpen, setOfficialOpen] = useState<string>("");
   const snapshot = useMemo(() => buildWorldSnapshot(state), [state]);
   const officialRankings = useMemo(
@@ -48,6 +50,7 @@ export default function CareerWorld({ state }: { state: GameState }) {
   const leader = ranking[0];
   const playerNation = ranking.find((entry) => entry.countryId === state.nationality);
   const recentWorldCups = [...snapshot.worldCupChampions].reverse().slice(0, 4);
+  const clubCompetitions = snapshot.competitionLedgers.filter((ledger) => ledger.entityType === "club");
 
   return (
     <div className={`panel-screen screen-enter ${styles.page}`}>
@@ -124,6 +127,58 @@ export default function CareerWorld({ state }: { state: GameState }) {
           </div>
         )}
       </section>
+
+      {clubCompetitions.map((ledger) => {
+        const open = competitionOpen === ledger.id;
+        const leaderEntry = ledger.titleTable[0];
+        const leaderClub = leaderEntry ? clubById(leaderEntry.entityId) : null;
+        const currentClubEntry = ledger.titleTable.find((entry) => entry.entityId === state.currentClubId);
+        const recentChampions = [...ledger.champions].reverse().slice(0, 4);
+        return (
+          <section className={styles.worldCupCard} key={ledger.id}>
+            <button type="button" onClick={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} aria-expanded={open}>
+              <span className={styles.trophy}>◇</span>
+              <span>
+                <small>{ledger.label.toLocaleUpperCase("pt-BR")} · TÍTULOS</small>
+                <strong>{leaderClub && leaderEntry ? `${leaderClub.shortName} lidera com ${leaderEntry.titles}` : ledger.label}</strong>
+                {currentClubEntry && <em>{clubById(state.currentClubId).shortName}: #{currentClubEntry.rank} · {currentClubEntry.titles} título(s)</em>}
+              </span>
+              <b>{open ? "−" : "+"}</b>
+            </button>
+
+            {recentChampions.length > 0 && (
+              <div className={styles.recentChampions}>
+                {recentChampions.map((champion) => {
+                  const club = clubById(champion.winnerId);
+                  return (
+                    <span key={`${ledger.id}-${champion.season}-${champion.winnerId}`}>
+                      <span className={styles.flagWrap}><ClubBadge club={club} size="sm" /></span>
+                      <small>{champion.season}</small>
+                      <strong>{club.shortName}</strong>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {open && (
+              <div className={styles.ranking}>
+                {ledger.titleTable.map((entry) => {
+                  const club = clubById(entry.entityId);
+                  return (
+                    <article className={entry.entityId === state.currentClubId ? styles.playerCountry : ""} key={entry.entityId}>
+                      <b>#{entry.rank}</b>
+                      <span className={styles.rankingFlag}><ClubBadge club={club} size="sm" /></span>
+                      <strong>{club.shortName}</strong>
+                      <span>{entry.titles}</span>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        );
+      })}
 
       <section className={styles.officialSection}>
         <header>

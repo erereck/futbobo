@@ -2,6 +2,7 @@ import { COUNTRIES, countryById } from "../game-data";
 import type { GameState, SeasonRecord, StoredBotaoResult } from "./model";
 import { clubById, seeded } from "./shared";
 import { worldPlayerNewsForState } from "./world-player-world";
+import { buildLivingClubCompetitions } from "./world-club-competitions";
 
 export type WorldNewsPriority = "major" | "normal";
 export type WorldNewsCategory = "world-cup" | "career" | "transfer" | "award" | "rival" | "record";
@@ -362,6 +363,8 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     });
   }
 
+  const livingClubCompetitions = buildLivingClubCompetitions(state);
+
   const careerNews = state.history.flatMap((record) => [
     ...competitionNews(record),
     ...awardNews(state, record),
@@ -376,6 +379,7 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     ...nationalNews(state),
     ...rivalNews(state),
     ...worldPlayerNewsForState(state),
+    ...livingClubCompetitions.flatMap((competition) => competition.news),
   ];
 
   const unique = new Map(news.map((item) => [item.id, item]));
@@ -401,7 +405,20 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     news: sortedNews,
     worldCupChampions: champions,
     worldCupRanking: ranking,
-    competitionLedgers: [worldCupLedger],
+    competitionLedgers: [
+      worldCupLedger,
+      ...livingClubCompetitions.map((competition) => ({
+        id: competition.id,
+        label: competition.label,
+        entityType: "club" as const,
+        champions: competition.champions.map((champion) => ({
+          season: champion.season,
+          winnerId: champion.winnerId,
+          source: champion.source,
+        })),
+        titleTable: competition.titleTable,
+      })),
+    ],
     recordBoards: [],
     transferRecords: [],
   };
