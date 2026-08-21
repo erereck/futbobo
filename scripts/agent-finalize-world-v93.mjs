@@ -19,7 +19,13 @@ source = replaceOnce(
 source = replaceOnce(
   source,
   `  const fitnessTarget =\n    91 -\n    Math.max(0, appearances - 30) * 0.55 -\n    Math.max(0, nextAge - 30) * 0.7 +\n    (objectiveResult.completed ? 2 : -1) +\n    (seeded(state.seed, state.season * 307) * 8 - 4);\n  const nextFitness = clamp(\n    Math.round(affected.fitness * 0.42 + fitnessTarget * 0.58 + twistFitness),\n    32,\n    98,\n  );`,
-  `  const physicalLoad = seasonFitnessAfterLoad({\n    seed: state.seed,\n    season: affected.season,\n    startingFitness: affected.fitness,\n    age: nextAge,\n    stamina: affected.attributes.stamina,\n    lifeBalance: affected.lifeBalance,\n    appearances,\n    nationalAppearances: nationalHistoryAdd?.tournamentStats?.appearances ?? (calledUp ? 2 : 0),\n    continentalCampaign: Boolean(playsContinental),\n    continentalChampion,\n    clubWorldCampaign: playsWorld,\n    titles: titleCount,\n    injuryMatchesMissed: medicalRecord?.matchesMissed ?? 0,\n    suspensionMatches: affected.suspensionMatches,\n    ironLungs: hasTrait("iron-lungs"),\n    injuryProne: hasTrait("injury-prone"),\n    twistFitness,\n  });\n  const nextFitness = physicalLoad.fitness;`,
+  `  const physicalLoad = seasonFitnessAfterLoad({\n    seed: state.seed,\n    season: affected.season,\n    startingFitness: affected.fitness,\n    age: nextAge,\n    stamina: affected.attributes.stamina,\n    lifeBalance: affected.lifeBalance,\n    appearances,\n    nationalAppearances: nationalHistoryAdd?.tournamentStats?.appearances ?? (calledUp ? 2 : 0),\n    continentalCampaign: Boolean(playsContinental),\n    continentalChampion,\n    clubWorldCampaign: playsWorld,\n    titles: titleCount,\n    injuryMatchesMissed: medicalRecord?.matchesMissed ?? 0,\n    suspensionMatches: affected.suspensionMatches,\n    ironLungs: hasTrait("iron-lungs"),\n    injuryProne: hasTrait("injury-prone"),\n    twistFitness,\n  });\n  const nextFitness = clamp(physicalLoad.fitness, 24, 99);`,
   "fitness target block",
+);
+source = replaceOnce(
+  source,
+  '  const nextFitness = physicalLoad.fitness;',
+  '  const nextFitness = clamp(physicalLoad.fitness, 24, 99);',
+  "legacy nextFitness test contract",
 );
 fs.writeFileSync(path, source);
