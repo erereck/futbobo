@@ -3,6 +3,8 @@ name: Ballon balance and field rotation
 on:
   push:
     branches: [agent/ballon-balance-field-rotation]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
