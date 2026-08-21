@@ -223,7 +223,7 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
 
   if (!eligible) return { eligible: false, score, chance: 0, historicSeason, stage };
 
-  const firstChance = clamp(42 + Math.max(0, score - 61) * 1.75, 42, 72);
+  const firstChance = clamp(44 + Math.max(0, score - 61) * 1.75, 44, 74);
   const repeatBase = clamp(18 + Math.max(0, score - 74) * 1.8, 18, 60);
   const stageMultiplier = stageChanceMultiplier(stage, globalBreakthrough, input.mundialChampion, input.majorNationalTitle);
   const brazilMultiplier = isBrasileirao ? 0.35 : 1;
