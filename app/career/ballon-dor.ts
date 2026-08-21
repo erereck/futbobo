@@ -65,25 +65,25 @@ function stageChanceMultiplier(
   majorNationalTitle: boolean,
 ) {
   if (stage === "elite") return 1;
-  if (stage === "major") return 0.9;
-  if (stage === "secondary") return 0.72;
+  if (stage === "major") return 0.94;
+  if (stage === "secondary") return 0.74;
   if (stage === "minor") {
     if (mundialChampion || majorNationalTitle) return 0.78;
     return globalBreakthrough ? 0.5 : 0.16;
   }
-  if (mundialChampion || majorNationalTitle) return 0.88;
-  return globalBreakthrough ? 0.62 : 0.42;
+  if (mundialChampion || majorNationalTitle) return 0.9;
+  return globalBreakthrough ? 0.66 : 0.44;
 }
 
 function repeatMultiplier(previous: number) {
   if (previous <= 0) return 1;
-  if (previous === 1) return 0.58;
-  if (previous === 2) return 0.34;
-  if (previous === 3) return 0.17;
-  if (previous === 4) return 0.075;
-  if (previous === 5) return 0.03;
-  if (previous === 6) return 0.012;
-  return Math.max(0.0004, 0.006 * 0.55 ** (previous - 7));
+  if (previous === 1) return 0.5;
+  if (previous === 2) return 0.25;
+  if (previous === 3) return 0.11;
+  if (previous === 4) return 0.045;
+  if (previous === 5) return 0.018;
+  if (previous === 6) return 0.007;
+  return Math.max(0.00035, 0.0035 * 0.52 ** (previous - 7));
 }
 
 export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEvaluation {
@@ -98,21 +98,59 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
     input.reputation >= 82 &&
     input.majorClubTitleCount > 0;
 
-  const baseAvailability = input.appearances >= 22 && input.hasProductionAward;
+  // Em Premier/La Liga/Serie A/Bundesliga/Brasileirão, uma temporada de nível
+  // mundial pode entrar na votação mesmo sem artilharia: FIFPRO, MVP e Jogador
+  // do Ano também contam como reconhecimento. O palco continua pesando muito;
+  // ligas pequenas mantêm a barreira de feito global ou temporada histórica.
+  const baseAvailability = input.appearances >= 20;
+  const worldClassRecognition = input.hasProductionAward || input.supportingAwardBonus >= 2.5 || historicSeason;
   let eligible = false;
   if (input.inEurope && stage === "elite") {
-    eligible = baseAvailability && input.overall >= 81 && input.performanceScore >= 74 && input.reputation >= 42 && (input.majorClubTitleCount > 0 || input.majorNationalTitle);
+    eligible =
+      baseAvailability &&
+      input.overall >= 78 &&
+      input.performanceScore >= 70 &&
+      input.reputation >= 34 &&
+      worldClassRecognition &&
+      (input.majorClubTitleCount > 0 || input.majorNationalTitle || globalBreakthrough);
   } else if (input.inEurope && stage === "major") {
-    eligible = baseAvailability && input.overall >= 82 && input.performanceScore >= 76 && input.reputation >= 48 && (input.majorClubTitleCount > 0 || input.majorNationalTitle);
+    eligible =
+      baseAvailability &&
+      input.appearances >= 21 &&
+      input.overall >= 79 &&
+      input.performanceScore >= 72 &&
+      input.reputation >= 40 &&
+      worldClassRecognition &&
+      (input.majorClubTitleCount > 0 || input.majorNationalTitle || globalBreakthrough);
   } else if (input.inEurope && stage === "secondary") {
-    eligible = baseAvailability && input.appearances >= 24 && input.overall >= 84 && input.performanceScore >= 80 && input.reputation >= 58 && (globalBreakthrough || domesticMiracle);
+    eligible =
+      baseAvailability &&
+      input.appearances >= 23 &&
+      input.overall >= 83 &&
+      input.performanceScore >= 78 &&
+      input.reputation >= 55 &&
+      worldClassRecognition &&
+      (globalBreakthrough || domesticMiracle);
   } else if (input.inEurope) {
     // Süper Lig, Bélgica, Áustria, Suíça, Escócia etc.: dominar só a liga não
     // basta. Sem um feito global, a única brecha é uma temporada estatística
     // literalmente histórica, com OVR/reputação de superestrela e múltiplos títulos.
-    eligible = baseAvailability && input.appearances >= 26 && input.overall >= 88 && input.performanceScore >= 88 && input.reputation >= 76 && (globalBreakthrough || (domesticMiracle && input.titleCount >= 2));
+    eligible =
+      input.hasProductionAward &&
+      input.appearances >= 26 &&
+      input.overall >= 88 &&
+      input.performanceScore >= 88 &&
+      input.reputation >= 76 &&
+      (globalBreakthrough || (domesticMiracle && input.titleCount >= 2));
   } else {
-    eligible = baseAvailability && input.overall >= 86 && input.performanceScore >= 82 && input.reputation >= 68 && (input.continentalChampion || input.mundialChampion || input.majorNationalTitle);
+    eligible =
+      baseAvailability &&
+      input.appearances >= 22 &&
+      input.overall >= 84 &&
+      input.performanceScore >= 80 &&
+      input.reputation >= 64 &&
+      worldClassRecognition &&
+      (input.continentalChampion || input.mundialChampion || input.majorNationalTitle);
   }
 
   const production = input.isKeeper
@@ -144,19 +182,19 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
 
   if (!eligible) return { eligible: false, score, chance: 0, historicSeason, stage };
 
-  const firstChance = clamp(4 + Math.max(0, score - 76) * 1.65, 4, 46);
-  const repeatBase = clamp(5 + Math.max(0, score - 80) * 1.5, 5, 42);
+  const firstChance = clamp(24 + Math.max(0, score - 70) * 2.2, 24, 72);
+  const repeatBase = clamp(13 + Math.max(0, score - 76) * 1.8, 13, 54);
   const stageMultiplier = stageChanceMultiplier(stage, globalBreakthrough, input.mundialChampion, input.majorNationalTitle);
   let chance = (input.previousBallonDor === 0 ? firstChance : repeatBase) * repeatMultiplier(input.previousBallonDor) * stageMultiplier;
 
   if (historicSeason) {
-    const historicFloor = input.previousBallonDor === 0 ? 34 : input.previousBallonDor === 1 ? 20 : input.previousBallonDor === 2 ? 11 : Math.max(0.2, 7 * 0.48 ** (input.previousBallonDor - 3));
+    const historicFloor = input.previousBallonDor === 0 ? 46 : input.previousBallonDor === 1 ? 24 : input.previousBallonDor === 2 ? 12 : Math.max(0.2, 6 * 0.45 ** (input.previousBallonDor - 3));
     // Liga menor sem feito global continua sendo um conto de fadas, não um atalho.
     const adjustedHistoricFloor = stage === "minor" && !globalBreakthrough ? historicFloor * 0.18 : historicFloor;
     chance = Math.max(chance, adjustedHistoricFloor);
   }
   if (input.worldCupGoals >= 8) {
-    const worldCupFloor = input.previousBallonDor === 0 ? 62 : input.previousBallonDor === 1 ? 44 : input.previousBallonDor === 2 ? 28 : input.previousBallonDor === 3 ? 14 : Math.max(0.3, 8 * 0.5 ** (input.previousBallonDor - 4));
+    const worldCupFloor = input.previousBallonDor === 0 ? 68 : input.previousBallonDor === 1 ? 42 : input.previousBallonDor === 2 ? 24 : input.previousBallonDor === 3 ? 12 : Math.max(0.25, 6 * 0.48 ** (input.previousBallonDor - 4));
     chance = Math.max(chance, worldCupFloor);
   }
 
