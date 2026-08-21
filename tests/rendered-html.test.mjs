@@ -7,6 +7,14 @@ const careerSourceFiles = [
   "../app/page.tsx",
   "../app/components/career/CareerGame.tsx",
   "../app/components/career/CareerPrimitives.tsx",
+  "../app/components/career/TransferMarketScreen.tsx",
+  "../app/components/career/PlayerCreationV2.tsx",
+  "../app/components/career/CareerExtraStats.tsx",
+  "../app/components/career/CareerReworkPanels.tsx",
+  "../app/components/career/CareerTimeline.tsx",
+  "../app/components/career/CareerWorld.tsx",
+  "../app/components/shell/FutboboShell.tsx",
+  "../app/components/shell/ShellUtilityScreens.tsx",
   "../app/career/model.ts",
   "../app/career/shared.ts",
   "../app/career/sponsors.ts",
@@ -26,7 +34,7 @@ test("mantém a rota da carreira pequena e separa o monólito por domínio", asy
   const route = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const architecture = await readFile(new URL("../app/career/README.md", import.meta.url), "utf8");
   assert.ok(route.split("\n").length <= 10);
-  assert.match(route, /import CareerGame from "\.\/components\/career\/CareerGame"/);
+  assert.match(route, /import FutboboShell from "\.\/components\/shell\/FutboboShell"/);
   for (const moduleName of ["model", "shared", "sponsors", "state", "academy", "performance", "transfer-market", "events", "simulation"]) {
     assert.ok(architecture.includes("`" + moduleName + ".ts`"));
   }
@@ -177,7 +185,7 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
     "Remo",
     "Goleiro",
     "Centroavante",
-    "Escolha sua base",
+    "País da base",
     "Brasileirão",
     "Copa do Brasil",
     "Libertadores",
@@ -199,10 +207,9 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
     "Pedir transferência",
     "Aposentar",
     "Pendurar as chuteiras agora",
-    "DESTAQUE ABRIU ESTA PORTA",
+    "Rota alternativa",
     "VITRINE EUROPEIA",
     "CONSEQUÊNCIAS DA ESCOLHA",
-    "Ver propostas profissionais",
     "META DO TREINADOR",
     "CONTRATO E ELENCO",
     "ÍNDICE DE LEGADO",
@@ -403,7 +410,7 @@ test("classifica para supercopas e recopás e exibe uma galeria completa de tít
   assert.match(page, /previousClubSeason\?\.clubId === club\.id/);
   assert.match(page, /wonLastSeason\(\["domesticLeague", "domesticCup"\]\)/);
   assert.match(page, /wonLastSeason\(\["championsLeague", "europaLeague"\]\)/);
-  assert.match(page, /wonLastSeason\(\["libertadores"\]\)/);
+  assert.match(page, /wonLastSeason\(\["libertadores", "sudamericana"\]\)/);
   assert.match(page, /function TrophyGallery/);
   assert.match(page, /ÚLTIMAS VOLTAS OLÍMPICAS/);
   assert.match(page, /<TrophyGallery state=\{game\}/);
@@ -433,46 +440,32 @@ test("protege o OVR jovem e permite explosões raras de talento", async () => {
   assert.match(styles, /@keyframes breakout-glow/);
 });
 
-test("prioriza clubes europeus quando a carreira já está na Europa", async () => {
+test("mantém o mercado europeu coerente e reserva uma rota alternativa explicada", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /isEuropeanClub\(current\) && !opts\.forceDomestic/);
-  assert.match(page, /clubConfederation\(club\) === "EUROPE"/);
-  assert.match(page, /forceForeign: true/);
-  assert.match(page, /const homeCountryId = state\.academyCountryId/);
-  assert.match(page, /club\.countryId === originCountryId \|\| foreignEligible\(state, club, originCountryId\)/);
+  assert.match(page, /regionAffinity\(context\.sourceClub\.countryId, club\)/);
+  assert.match(page, /const domesticBonus = club\.countryId === context\.sourceClub\.countryId \? 4\.8 : 0/);
+  assert.match(page, /club\.countryId === "arabia-saudita"/);
+  assert.match(page, /club\.countryId === state\.academyCountryId/);
+  assert.match(page, /reason: "alternative-route"/);
   assert.match(page, /isOutsideAcademyHome\(affected, club\)/);
-  assert.match(page, /homeReturnChance = state\.age >= 34 \? 0\.78 : state\.age >= 30 \? 0\.12 : 0\.035/);
-  assert.match(page, /const homeOfferCount = state\.age >= 34 \? 2 : 1/);
-  assert.match(page, /isEuropeanClub\(current\) && confederation !== "EUROPE"/);
-  assert.match(page, /MERCADO EUROPEU/);
-  assert.match(page, /Volta rara ao país da sua base/);
-  assert.match(styles, /\.european-market-card/);
-  assert.match(styles, /\.offer-homecoming-tag/);
 });
 
 test("mostra de cinco a dez propostas na janela de transferências", async () => {
   const page = await readCareerSource();
 
-  assert.match(page, /performanceScore >= 90 \? 5/);
-  assert.match(page, /selectOffers\(state, 5, salt/);
-  assert.match(page, /const expandedOffers = Array\.from\(new Set\(\[\.\.\.baseOffers, \.\.\.foreignPool\]\)\)\.slice\(0, 10\)/);
-  assert.match(page, /expandedOfferCount: Math\.max\(0, game\.transferOffers\.length - 5\)/);
-  assert.match(page, /index >= 5 \? "DESTAQUE ABRIU ESTA PORTA"/);
+  assert.match(page, /clamp\(options\.count \?\? \(transferMarketProfile\(state\)\.extraMarketOffers \+ 6\), 5, 10\)/);
+  assert.match(page, /selected = \[\.\.\.selected\.slice\(0, Math\.max\(0, wanted - 1\)\), alternative\]/);
+  assert.match(page, /reason: "alternative-route"/);
 });
 
-test("garante uma proposta europeia compatível até para carreiras em baixa", async () => {
+test("bloqueia propostas europeias absurdas sem matar escolhas alternativas", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /function guaranteedEuropeanOffer/);
-  assert.match(page, /function ensureEuropeanOffer/);
-  assert.match(page, /baseOffers = ensureEuropeanOffer\(state, salt \+ 941, baseOffers\)/);
-  assert.match(page, /Math\.abs\(competitiveStrength\(a\) - targetStrength\)/);
-  assert.match(page, /PORTA DE ENTRADA NA EUROPA/);
-  assert.match(page, /Uma chance europeia compatível com o seu momento/);
-  assert.match(styles, /\.offer-european-door/);
+  assert.match(page, /state\.overall < 67 && isEuropeanClub\(club\) && !isEuropeanClub\(context\.sourceClub\)/);
+  assert.match(page, /role === "reserva" && strengthGap > 8 && !context\.standout/);
+  assert.match(page, /const noise = seeded[\s\S]*\* 2\.4/);
+  assert.match(page, /Rota alternativa/);
 });
 
 test("oculta a reputação dos clubes no mercado e varia salários por negociação", async () => {
@@ -501,14 +494,11 @@ test("gera temporadas com mais gols e assistências sem igualar todas as posiç�
 
 test("impede ficar no clube depois de um pedido de transferência aceito", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/);
-  assert.match(page, /\{!game\.transferRequested && !game\.renewalDenied && !game\.forcedClubExit && !game\.forcedAlternativeTransfer && <button className="offer-card stay-card"/);
-  assert.match(page, /SAÍDA SEM VOLTA/);
-  assert.match(page, /Seu pedido foi aceito — não há volta/);
-  assert.match(page, /transferStatus: null, transferRequested: false/);
-  assert.match(styles, /\.transfer-lock-card/);
+  assert.match(page, /if \(!offer && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/);
+  assert.match(page, /const canStay = !state\.transferRequested && !state\.renewalDenied && !state\.forcedClubExit/);
+  assert.match(page, /Permanecer não é mais uma opção/);
+  assert.match(page, /transferRequested: false, transferStatus: null/);
 });
 
 test("expande o mercado para ligas e clubes das Américas", async () => {
@@ -709,9 +699,26 @@ test("clube pode recusar renovar contrato após temporada ruim, forçando escolh
 
   assert.match(page, /const renewalDenied = nonRenewalChance > 0 && seeded\(/);
   assert.match(page, /nonRenewalRiskFactors >= 2/);
-  assert.match(page, /RENOVAÇÃO RECUSADA/);
+  assert.match(page, /CONTRATO ENCERRADO/);
   assert.match(page, /O clube optou por não renovar/);
-  assert.match(page, /if \(!clubId && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/);
+  assert.match(page, /if \(!offer && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/);
+});
+
+test("centraliza propostas reais, empréstimos e histórico de transferências sem poluir a janela", async () => {
+  const page = await readCareerSource();
+  const screen = await readFile(new URL("../app/components/career/TransferMarketScreen.tsx", import.meta.url), "utf8");
+  const architecture = await readFile(new URL("../app/career/README.md", import.meta.url), "utf8");
+
+  for (const contract of ["type TransferOffer", "type TransferRecord", "type LoanAgreement", "transferMarketOffers", "transferHistory", "activeLoan"]) assert.match(page, new RegExp(contract));
+  for (const rule of ["buildMarketContext", "clubPositionNeed", "generateTransferOffers", "applyAcceptedTransfer", "completeLoanReturn", "resolveTransferRequest"]) assert.match(page, new RegExp(`function ${rule}`));
+  assert.match(page, /transferFee: actualTransferFee/);
+  assert.match(page, /transferHistory: isRenewal \? state\.transferHistory : \[\.\.\.state\.transferHistory, transferRecord\(state, offer\)\]/);
+  assert.match(page, /contractYears: isLoan \? Math\.max\(2, state\.contractYears\) : offer\.contractYears/);
+  assert.match(page, /transferMarketOffers: Array\.isArray\(saved\.transferMarketOffers\)/);
+  assert.match(screen, /Proposta de \$\{formatMoney\(offer\.transferFee\)\}/);
+  assert.match(screen, /<details className=\{styles\.details\}>/);
+  assert.doesNotMatch(screen, /Valor estimado na liga/);
+  assert.match(architecture, /fonte futura para rankings mundiais/);
 });
 
 test("atributos influenciam a simulação, premiações têm suspense e o escândalo força exílio", async () => {
@@ -735,7 +742,7 @@ test("atributos influenciam a simulação, premiações têm suspense e o escân
   assert.match(drama, /id: "drama-drug-scandal"/);
   assert.match(drama, /rareChance: 0\.004/);
   assert.match(page, /function selectAlternativeExileOffers/);
-  assert.match(page, /Exílio esportivo obrigatório/);
+  assert.match(page, /Só projetos de reconstrução estão disponíveis/);
   assert.match(styles, /\.football-attributes-card/);
   assert.match(styles, /\.award-near-miss/);
 });
@@ -983,7 +990,7 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
 
   assert.match(page, /const SECOND_DIVISION_LEAGUES = new Set\(\["brasileirao-b", "championship"\]\)/);
   assert.match(page, /sourceLeagueId: league\.id/);
-  assert.match(page, /offersFromCountry\(state, current\.countryId, 7, salt\)/);
+  assert.match(page, /SECOND_DIVISION_LEAGUES\.has\(context\.sourceLeagueId\) && club\.countryId !== context\.sourceClub\.countryId/);
   assert.match(page, /domesticReturnCountryId = event\.id === "european-exit" \|\| event\.id === "return-home"[\s\S]*nextBase\.academyCountryId/);
   assert.doesNotMatch(page, /const brazilReturnChance/);
   assert.doesNotMatch(page, /Retorno raro ao Brasil/);
@@ -1560,4 +1567,48 @@ test("dá ao goleiro uma carreira própria da base ao fim da trajetória", async
   assert.match(page, /isKeeper && hasGoalkeeperAward \? 72/);
   assert.match(systems, /metric: "goalsConceded"/);
   assert.match(systems, /metrics\.cleanSheets \* 2\.2/);
+});
+
+test("mantém World Players persistentes, compactos e determinísticos por carreira", async () => {
+  const model = await readFile(new URL("../app/career/world-player-model.ts", import.meta.url), "utf8");
+  const domain = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
+  const state = await readFile(new URL("../app/career/state.ts", import.meta.url), "utf8");
+  const simulation = await readFile(new URL("../app/career/simulation.ts", import.meta.url), "utf8");
+
+  assert.match(model, /export type WorldPlayer = \{/);
+  assert.match(model, /birthSeason: number/);
+  assert.match(model, /clubHistory: WorldPlayerClubSpell\[\]/);
+  assert.match(model, /honors: WorldPlayerHonor\[\]/);
+  assert.match(model, /population: WorldPopulationBucket\[\]/);
+  assert.match(domain, /stablePlayerId\(universe\.seed, season, serial\)/);
+  assert.match(domain, /lastAdvancedSeason >= context\.season/);
+  assert.match(domain, /index < 42/);
+  assert.match(domain, /context\.season - player\.retiredSeason > 6/);
+  assert.match(state, /worldPlayers: normalizeWorldPlayerUniverse/);
+  assert.match(simulation, /advanceWorldPlayerUniverse\(nextBase\.worldPlayers/);
+});
+
+test("liga rivais e premiações ao mundo sem substituir seus sistemas atuais", async () => {
+  const domain = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
+
+  assert.match(domain, /export function syncRivalsToWorldPlayers/);
+  assert.match(domain, /rivalLinks\[rival\.id\]/);
+  assert.match(domain, /export function resolveWorldPlayerByName/);
+  assert.match(domain, /export function ensureKnownWorldPlayer/);
+  assert.match(domain, /export function recordWorldPlayerHonor/);
+  assert.match(domain, /if \(player\.honors\.some\(\(item\) => item\.id === id\)\) return universe/);
+  assert.match(domain, /nomination\.winner/);
+});
+
+test("World Players usam o mesmo motor central de mercado", async () => {
+  const market = await readFile(new URL("../app/career/transfer-market.ts", import.meta.url), "utf8");
+  const domain = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
+
+  assert.match(market, /export type MarketPlayerProfile/);
+  assert.match(market, /export function rankMarketDestinations/);
+  assert.match(market, /marketPositionNeed/);
+  assert.match(domain, /rankMarketDestinations\(/);
+  assert.match(domain, /status: loan \? "loaned" : "active"/);
+  assert.match(domain, /moveType: loan \? "loan" : contractExpired \? "free-agent" : "permanent"/);
+  assert.match(domain, /moveType: "loan-return"/);
 });

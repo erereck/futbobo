@@ -12,6 +12,7 @@ import type { AttributeKey, AwardPresentation, CareerHallEntry, CareerRival, Com
 import { positionByKey } from "./academy";
 import { competitiveStrength } from "./performance";
 import { clamp, clubById, pick, seeded } from "./shared";
+import { emptyWorldPlayerUniverse, normalizeWorldPlayerUniverse } from "./world-players";
 
 export function awardPresentation(award: string): AwardPresentation {
   if (award === "Bola de Ouro") return { icon: "◉", tier: "legendary", kicker: "MAIOR PRÊMIO DO FUTEBOL", description: "Você foi eleito o melhor jogador do mundo." };
@@ -432,6 +433,9 @@ export function initialState(seedOverride?: number): GameState {
     retireAfterSeason: false,
     retirementReturnPhase: "career",
     transferOffers: [],
+    transferMarketOffers: [],
+    transferHistory: [],
+    activeLoan: null,
     transferRequests: 0,
     transferCooldownSeason: 0,
     positionChangeCooldownSeason: 0,
@@ -450,6 +454,7 @@ export function initialState(seedOverride?: number): GameState {
     corruptionGuaranteedSeason: 0,
     traits: [],
     rivals: [],
+    worldPlayers: emptyWorldPlayerUniverse(seed, 2026),
     followers: 0,
     socialSentiment: 62,
     mediaRelation: 52,
@@ -522,6 +527,29 @@ export function normalizeSave(value: unknown): GameState {
     nationalTrophies: saved.nationalTrophies ?? 0,
     nationalHistory: saved.nationalHistory ?? [],
     qualifiedNextMajor: saved.qualifiedNextMajor ?? true,
+    transferOffers: Array.isArray(saved.transferOffers) ? saved.transferOffers : [],
+    transferMarketOffers: Array.isArray(saved.transferMarketOffers)
+      ? saved.transferMarketOffers.filter((offer) => offer && typeof offer.clubId === "string")
+      : [],
+    transferHistory: Array.isArray(saved.transferHistory)
+      ? saved.transferHistory.filter((record) => record && typeof record.id === "string")
+      : [],
+    activeLoan: saved.activeLoan ?? (
+      saved.loanParentClubId
+        ? {
+            id: `legacy-loan-${saved.season ?? base.season}-${saved.currentClubId ?? "club"}`,
+            parentClubId: saved.loanParentClubId,
+            parentLeagueId: saved.loanParentLeagueId ?? clubById(saved.loanParentClubId).leagueId,
+            destinationClubId: saved.currentClubId ?? "",
+            startSeason: Math.max(base.season, (saved.loanEndSeason ?? saved.season ?? base.season) - 1),
+            endSeason: saved.loanEndSeason ?? saved.season ?? base.season,
+            annualSalary: saved.annualSalary ?? 0,
+            parentSalaryShare: 70,
+            destinationSalaryShare: 30,
+            contractYearsAtStart: Math.max(1, saved.contractYears ?? 1),
+          }
+        : null
+    ),
     renewalDenied: saved.renewalDenied ?? false,
     forcedClubExit: saved.forcedClubExit ?? false,
     forcedAlternativeTransfer: saved.forcedAlternativeTransfer ?? false,
@@ -557,6 +585,20 @@ export function normalizeSave(value: unknown): GameState {
     })) : saved.currentClubId
       ? createCareerRivals(saved.seed ?? base.seed, saved.age ?? 18, saved.overall ?? 60, [])
       : [],
+    worldPlayers: normalizeWorldPlayerUniverse(saved.worldPlayers, saved.seed ?? base.seed, saved.season ?? base.season, Array.isArray(saved.rivals) ? saved.rivals.map((rival, index) => ({
+      id: rival.id ?? `legacy-rival-${index}`,
+      name: rival.name ?? FICTIONAL_FINALISTS[index % FICTIONAL_FINALISTS.length],
+      position: rival.position ?? "MEI",
+      nationality: rival.nationality ?? "brasil",
+      age: rival.age ?? saved.age ?? 18,
+      overall: rival.overall ?? Math.max(58, (saved.overall ?? 65) - 2),
+      currentClubId: rival.currentClubId ?? saved.currentClubId ?? "",
+      appearances: rival.appearances ?? 0,
+      goals: rival.goals ?? 0,
+      assists: rival.assists ?? 0,
+      awards: rival.awards ?? 0,
+      active: rival.active ?? true,
+    })) : []),
     followers: saved.followers ?? (saved.currentClubId ? Math.max(2_500, (saved.reputation ?? 0) * 12_000 + (saved.stats?.goals ?? 0) * 1_200) : 0),
     socialSentiment: saved.socialSentiment ?? 62,
     mediaRelation: saved.mediaRelation ?? 52,
