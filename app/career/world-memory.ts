@@ -3,10 +3,11 @@ import type { GameState, SeasonRecord, StoredBotaoResult } from "./model";
 import { clubById, seeded } from "./shared";
 import { worldPlayerNewsForState } from "./world-player-world";
 import { buildLivingClubCompetitions } from "./world-club-competitions";
+import { buildLivingNationalCompetitions } from "./world-national-competitions";
 
 export type WorldNewsPriority = "major" | "normal";
 export type WorldNewsCategory = "world-cup" | "career" | "transfer" | "award" | "rival" | "record";
-export type WorldCompetitionKey = "world-cup" | "champions-league" | "libertadores";
+export type WorldCompetitionKey = "world-cup" | "champions-league" | "libertadores" | "euro" | "copa-america";
 
 export type WorldNewsItem = {
   id: string;
@@ -364,6 +365,7 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
   }
 
   const livingClubCompetitions = buildLivingClubCompetitions(state);
+  const livingNationalCompetitions = buildLivingNationalCompetitions(state);
 
   const careerNews = state.history.flatMap((record) => [
     ...competitionNews(record),
@@ -380,6 +382,7 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     ...rivalNews(state),
     ...worldPlayerNewsForState(state),
     ...livingClubCompetitions.flatMap((competition) => competition.news),
+    ...livingNationalCompetitions.flatMap((competition) => competition.news),
   ];
 
   const unique = new Map(news.map((item) => [item.id, item]));
@@ -407,6 +410,17 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     worldCupRanking: ranking,
     competitionLedgers: [
       worldCupLedger,
+      ...livingNationalCompetitions.map((competition) => ({
+        id: competition.id,
+        label: competition.label,
+        entityType: "country" as const,
+        champions: competition.champions.map((champion) => ({
+          season: champion.season,
+          winnerId: champion.winnerId,
+          source: champion.source,
+        })),
+        titleTable: competition.titleTable,
+      })),
       ...livingClubCompetitions.map((competition) => ({
         id: competition.id,
         label: competition.label,
