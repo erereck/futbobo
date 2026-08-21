@@ -1,0 +1,35 @@
+name: Materialize season fatigue model
+
+on:
+  push:
+    branches: [agent/futbobo-world-players-live-world]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/futbobo-world-players-live-world
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - run: node scripts/agent-fatigue-model.mjs
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/career/simulation.ts app/career/world-memory.ts
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: add season load and annual Club World Cup"
+            git push origin HEAD:agent/futbobo-world-players-live-world
+          fi
