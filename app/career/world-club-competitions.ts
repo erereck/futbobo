@@ -6,7 +6,10 @@ import { seeded } from "./shared";
 
 export type LivingClubCompetitionId =
   | "champions-league"
+  | "europa-league"
+  | "conference-league"
   | "libertadores"
+  | "sudamericana"
   | "concacaf-champions"
   | "afc-champions"
   | "caf-champions"
@@ -16,7 +19,10 @@ type ContinentalLivingClubCompetitionId = Exclude<LivingClubCompetitionId, "mund
 
 type LivingCompetitionGameId =
   | "championsLeague"
+  | "europaLeague"
+  | "conferenceLeague"
   | "libertadores"
+  | "sudamericana"
   | "concacafChampions"
   | "afcChampions"
   | "cafChampions";
@@ -50,6 +56,14 @@ type CompetitionConfig = {
   historicTitles: Record<string, number>;
 };
 
+const PRIMARY_WORLD_FEEDERS = new Set<LivingClubCompetitionId>([
+  "champions-league",
+  "libertadores",
+  "concacaf-champions",
+  "afc-champions",
+  "caf-champions",
+]);
+
 const CONFIGS: CompetitionConfig[] = [
   {
     id: "champions-league",
@@ -74,6 +88,30 @@ const CONFIGS: CompetitionConfig[] = [
     },
   },
   {
+    id: "europa-league",
+    label: "Europa League",
+    competitionId: "europaLeague",
+    confederation: "EUROPE",
+    historicTitles: {
+      Sevilla: 7,
+      Liverpool: 3,
+      Juventus: 3,
+      "Inter de Milão": 3,
+      "Atlético de Madrid": 3,
+      Tottenham: 3,
+      Chelsea: 2,
+      Porto: 2,
+      "Eintracht Frankfurt": 2,
+    },
+  },
+  {
+    id: "conference-league",
+    label: "Conference League",
+    competitionId: "conferenceLeague",
+    confederation: "EUROPE",
+    historicTitles: {},
+  },
+  {
     id: "libertadores",
     label: "Libertadores",
     competitionId: "libertadores",
@@ -91,6 +129,20 @@ const CONFIGS: CompetitionConfig[] = [
       Santos: 3,
       "Grêmio": 3,
       Palmeiras: 3,
+    },
+  },
+  {
+    id: "sudamericana",
+    label: "Copa Sul-Americana",
+    competitionId: "sudamericana",
+    confederation: "SOUTH_AMERICA",
+    historicTitles: {
+      "Boca Juniors": 2,
+      Independiente: 2,
+      "Athletico Paranaense": 2,
+      "Independiente del Valle": 2,
+      "LDU Quito": 2,
+      Lanús: 2,
     },
   },
   {
@@ -262,7 +314,7 @@ function actualMundialFinalWinner(record: SeasonRecord | undefined) {
 
 function continentalChampionIdsForSeason(competitions: LivingClubCompetition[], season: number) {
   return competitions
-    .filter((competition) => competition.id !== "mundial")
+    .filter((competition) => PRIMARY_WORLD_FEEDERS.has(competition.id))
     .map((competition) => ({
       competitionId: competition.id,
       clubId: competition.champions.find((entry) => entry.season === season)?.winnerId ?? "",
