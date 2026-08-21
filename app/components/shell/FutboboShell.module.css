@@ -27,7 +27,7 @@
 
 .topline { display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(18px, 4vw, 62px); border-bottom: 1px solid rgba(255,255,255,.1); background: rgba(4,7,5,.38); backdrop-filter: blur(16px); }
 .wordmark { display: flex; align-items: center; gap: 10px; letter-spacing: .14em; font-size: 14px; }
-.topline > button { border: 0; background: transparent; color: var(--ink); font: 800 12px/1 inherit; letter-spacing: .05em; cursor: pointer; padding: 13px 0; }
+.topline > button { border: 0; background: transparent; color: var(--ink); font: 800 12px/1 inherit; letter-spacing: .05em; cursor: pointer; padding: 13px 0; display:flex; align-items:center; gap:7px; }
 
 .home { width: min(1080px, calc(100% - 36px)); margin: auto; display: grid; place-items: center; align-content: center; gap: clamp(32px, 6vh, 70px); padding: 54px 0 42px; }
 .heroLogo { display: grid; justify-items: center; text-align: center; filter: drop-shadow(0 12px 28px rgba(0,0,0,.65)); }
@@ -36,6 +36,7 @@
 
 .mainActions { width: min(510px, 100%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .mainActions button { min-height: 48px; border: 1px solid rgba(255,255,255,.13); background: rgba(7,12,9,.73); color: #e9eee9; border-radius: 10px; padding: 0 15px; display: flex; align-items: center; gap: 10px; font-weight: 800; cursor: pointer; backdrop-filter: blur(12px); transition: transform .15s ease, border-color .15s ease, background .15s ease; }
+.mainActions button > span { display:grid; place-items:center; width:24px; font-size:20px; }
 .mainActions button:hover { transform: translateY(-2px); border-color: rgba(244,196,48,.52); background: rgba(15,24,18,.88); }
 .mainActions .playButton { grid-column: 1 / -1; min-height: 70px; background: var(--gold); color: #11150f; border-color: var(--gold); font-size: 20px; padding: 0 22px; box-shadow: 0 16px 50px rgba(244,196,48,.17); }
 .playButton strong { flex: 1; text-align: left; letter-spacing: .08em; }
@@ -128,12 +129,13 @@
 
 .footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 0 clamp(18px, 4vw, 62px); border-top: 1px solid rgba(255,255,255,.09); background: rgba(4,7,5,.5); color: rgba(255,255,255,.55); font: 800 9px/1 ui-monospace, monospace; letter-spacing: .06em; backdrop-filter: blur(15px); }
 .footer > div { display: flex; flex-wrap: wrap; gap: 17px; }
+.footer > div > span { display: flex; align-items: center; gap: 5px; }
 .footer > strong { color: var(--gold); white-space: nowrap; }
 
 .careerHost { min-height: 100dvh; }
 .toolHost { min-height: 100dvh; position: relative; background: #060907; }
 .legacyToolMount :global(.welcome-screen) { opacity: 0 !important; pointer-events: none !important; }
-.toolBack { position: fixed; z-index: 80; top: 14px; left: 14px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; background: rgba(8,13,10,.9); color: white; padding: 10px 13px; font-weight: 800; cursor: pointer; }
+.toolBack { position: fixed; z-index: 80; top: 14px; left: 14px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; background: rgba(8,13,10,.9); color: white; padding: 10px 13px; font-weight: 800; cursor: pointer; display:flex; align-items:center; gap:7px; }
 
 @media (max-width: 800px) {
   .shell { grid-template-rows: 62px minmax(0, 1fr) auto; }

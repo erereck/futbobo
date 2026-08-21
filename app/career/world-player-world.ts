@@ -7,6 +7,8 @@ export type WorldPlayerRankingEntry = {
   label: string;
   value: number;
   playerId: string;
+  highlight?: boolean;
+  rank?: number;
 };
 
 export type WorldPlayerTransferEntry = {
@@ -91,6 +93,47 @@ export function worldPlayerGenerationLeaders(state: GameState, limit = 8): World
     .sort((a, b) => b.overall - a.overall || b.reputation - a.reputation || a.id.localeCompare(b.id))
     .slice(0, limit)
     .map((player) => ({ label: player.name, value: player.overall, playerId: player.id }));
+}
+
+function withProtagonist(
+  entries: WorldPlayerRankingEntry[],
+  state: GameState,
+  value: number,
+  limit: number,
+) {
+  const protagonist = state.name || "Você";
+  const ranked = [
+    ...entries.filter((entry) => entry.playerId !== "protagonist"),
+    { label: protagonist, value, playerId: "protagonist", highlight: true },
+  ]
+    .sort((a, b) => b.value - a.value || Number(Boolean(b.highlight)) - Number(Boolean(a.highlight)) || a.label.localeCompare(b.label, "pt-BR"))
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+  const visible = ranked.slice(0, limit);
+  const protagonistEntry = ranked.find((entry) => entry.highlight);
+  if (protagonistEntry && !visible.some((entry) => entry.highlight)) visible[Math.max(0, limit - 1)] = protagonistEntry;
+  return visible;
+}
+
+/** Rankings do universo jogável: os NPCs e o protagonista dividem a mesma régua. */
+export function worldUniverseStatLeaders(
+  state: GameState,
+  metric: "appearances" | "goals" | "assists" | "tackles" | "cleanSheets",
+  limit = 16,
+) {
+  return withProtagonist(worldPlayerStatLeaders(state, metric, playersForState(state).length), state, state.stats[metric] ?? 0, limit);
+}
+
+export function worldUniverseBallonDorLeaders(state: GameState, limit = 16) {
+  return withProtagonist(
+    worldPlayerBallonDorLeaders(state, playersForState(state).length),
+    state,
+    state.awardCabinet["Bola de Ouro"] ?? 0,
+    limit,
+  );
+}
+
+export function worldUniverseGenerationLeaders(state: GameState, limit = 16) {
+  return withProtagonist(worldPlayerGenerationLeaders(state, playersForState(state).length), state, state.overall, limit);
 }
 
 export function worldPlayerTransferLeaders(state: GameState, limit = 10): WorldPlayerTransferEntry[] {

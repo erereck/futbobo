@@ -22,7 +22,7 @@ import { randomPlayerAppearance, visualRosterForMatch } from "../player-appearan
 type Screen = "lobby" | "match" | "result";
 
 const COMPETITIONS = [
-  { id: "libertadores", name: "Libertadores", scope: "continental" as const },
+  { id: "libertadores", name: "CONMEBOL Libertadores", scope: "continental" as const },
   { id: "championsLeague", name: "Champions League", scope: "continental" as const },
   { id: "domesticCup", name: "Copa nacional", scope: "domestic" as const },
   { id: "mundial", name: "Mundial de Clubes", scope: "world" as const },

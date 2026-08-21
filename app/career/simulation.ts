@@ -200,8 +200,8 @@ export function simulateSeason(
     { id: "domesticCup", name: league.cupName, icon: country.abbr, stage: knockoutStage(61, cupChampion, ["2ª fase", "Oitavas", "Quartas", "Semifinal", "Vice"]), champion: cupChampion },
   ];
   const continentalNames: Record<ContinentalSlot, { id: CompetitionId; name: string; icon: string }> = {
-    libertadores: { id: "libertadores", name: "Libertadores", icon: "LIB" },
-    sudamericana: { id: "sudamericana", name: "Copa Sul-Americana", icon: "SULA" },
+    libertadores: { id: "libertadores", name: "CONMEBOL Libertadores", icon: "LIB" },
+    sudamericana: { id: "sudamericana", name: "CONMEBOL Sudamericana", icon: "SULA" },
     champions: { id: "championsLeague", name: "Champions League", icon: "UCL" },
     europa: { id: "europaLeague", name: "Europa League", icon: "UEL" },
     conference: { id: "conferenceLeague", name: "Conference League", icon: "UECL" },

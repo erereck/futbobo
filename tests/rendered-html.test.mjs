@@ -1638,8 +1638,40 @@ test("abre a Europa, organiza o Mundo e sincroniza o Mundial com o campeão ante
   assert.match(competitions, /config\.id === "conference-league"/);
   assert.match(simulation, /worldFinalOpponentForSeason\(affected/);
   assert.match(world, /"now" \| "national" \| "clubs" \| "players" \| "archive"/);
-  assert.match(world, /worldPlayerStatLeaders\(state, "assists", 16\)/);
+  assert.match(world, /worldUniverseStatLeaders\(state, "assists", 16\)/);
   assert.match(world, /slice\(0, 10\)/);
   assert.match(shell, /"hall-career"/);
   assert.match(shell, /initialHallEntry=\{selectedHallEntry\}/);
+});
+
+test("coloca o protagonista no universo e impede campeões continentais duplicados", async () => {
+  const players = await readFile(new URL("../app/career/world-player-world.ts", import.meta.url), "utf8");
+  const competitions = await readFile(new URL("../app/career/world-club-competitions.ts", import.meta.url), "utf8");
+  const records = await readFile(new URL("../app/career/official-football-records.ts", import.meta.url), "utf8");
+  const world = await readFile(new URL("../app/components/career/CareerWorld.tsx", import.meta.url), "utf8");
+
+  assert.match(players, /playerId: "protagonist", highlight: true/);
+  assert.match(players, /worldUniverseBallonDorLeaders/);
+  assert.match(world, /styles\.protagonistRow/);
+  assert.match(world, /Maiores ladrões de bola/);
+  assert.match(world, /Donos do zero/);
+  assert.match(competitions, /reservedWinners: Map<number, Set<string>>/);
+  assert.match(competitions, /CONMEBOL Libertadores/);
+  assert.match(competitions, /CONMEBOL Sudamericana/);
+  assert.match(competitions, /HISTORIC_WORLD_TITLES/);
+  assert.match(records, /WORLD_ARCHIVE_DUPLICATE_IDS/);
+  assert.match(world, /archiveFootballRankingsForState/);
+});
+
+test("fecha a v93 com iconografia vetorial própria e remove símbolos improvisados da navegação", async () => {
+  const icons = await readFile(new URL("../app/components/FutboboIcon.tsx", import.meta.url), "utf8");
+  const career = await readFile(new URL("../app/components/career/CareerGame.tsx", import.meta.url), "utf8");
+  const shell = await readFile(new URL("../app/components/shell/FutboboShell.tsx", import.meta.url), "utf8");
+
+  assert.match(icons, /viewBox="0 0 24 24"/);
+  assert.match(icons, /strokeWidth="1\.8"/);
+  assert.match(career, /FutboboIcon name="history"/);
+  assert.doesNotMatch(career, /<span>│<\/span>Histórico/);
+  assert.match(shell, /FutboboIcon name="settings"/);
+  assert.match(shell, /FutboboIcon name="medal"/);
 });

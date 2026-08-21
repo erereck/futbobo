@@ -65,6 +65,25 @@ const PRIMARY_WORLD_FEEDERS = new Set<LivingClubCompetitionId>([
   "caf-champions",
 ]);
 
+const HISTORIC_WORLD_TITLES: Record<string, number> = {
+  "Real Madrid": 9,
+  Milan: 7,
+  "Bayern de Munique": 4,
+  "Boca Juniors": 3,
+  "Inter de Milão": 3,
+  Barcelona: 3,
+  Peñarol: 3,
+  Nacional: 3,
+  "São Paulo": 3,
+  Chelsea: 2,
+  Santos: 2,
+  Corinthians: 2,
+  Ajax: 2,
+  Juventus: 2,
+  Porto: 2,
+  "Manchester United": 2,
+};
+
 const CONFIGS: CompetitionConfig[] = [
   {
     id: "champions-league",
@@ -114,7 +133,7 @@ const CONFIGS: CompetitionConfig[] = [
   },
   {
     id: "libertadores",
-    label: "Libertadores",
+    label: "CONMEBOL Libertadores",
     competitionId: "libertadores",
     confederation: "SOUTH_AMERICA",
     historicTitles: {
@@ -134,7 +153,7 @@ const CONFIGS: CompetitionConfig[] = [
   },
   {
     id: "sudamericana",
-    label: "Copa Sul-Americana",
+    label: "CONMEBOL Sudamericana",
     competitionId: "sudamericana",
     confederation: "SOUTH_AMERICA",
     historicTitles: {
@@ -230,10 +249,10 @@ function pickWinner(
   config: CompetitionConfig,
   season: number,
   titles: Record<string, number>,
-  excludedClubId: string,
+  excludedClubIds: Set<string>,
 ) {
   const confederationPool = CLUBS.filter((club) =>
-    club.id !== excludedClubId && clubConfederation(club) === config.confederation
+    !excludedClubIds.has(club.id) && clubConfederation(club) === config.confederation
   );
   const available = config.id === "conference-league"
     ? confederationPool.filter((club) =>
@@ -283,7 +302,12 @@ function rankedTitles(titles: Record<string, number>) {
     });
 }
 
-function buildContinentalCompetition(state: GameState, config: CompetitionConfig, latestCompletedSeason: number): LivingClubCompetition {
+function buildContinentalCompetition(
+  state: GameState,
+  config: CompetitionConfig,
+  latestCompletedSeason: number,
+  reservedWinners: Map<number, Set<string>> = new Map(),
+): LivingClubCompetition {
   const titles = historicalTitles(config);
   const champions: LivingClubChampion[] = [];
   const news: LivingClubCompetition["news"] = [];
@@ -291,10 +315,16 @@ function buildContinentalCompetition(state: GameState, config: CompetitionConfig
   for (let season = 2027; season <= latestCompletedSeason; season += 1) {
     const playerRecord = state.history.find((record) => record.season === season);
     const playerCompetition = playerRecord?.competitions.find((competition) => competition.id === config.competitionId);
-    const playerWon = Boolean(playerRecord && playerCompetition?.champion);
+    const excludedClubIds = new Set(reservedWinners.get(season) ?? []);
+    const playerWon = Boolean(
+      playerRecord &&
+      playerCompetition?.champion &&
+      !excludedClubIds.has(playerRecord.clubId)
+    );
+    if (playerRecord && !playerWon) excludedClubIds.add(playerRecord.clubId);
     const winnerId = playerWon
       ? playerRecord!.clubId
-      : pickWinner(state, config, season, titles, playerRecord?.clubId ?? "");
+      : pickWinner(state, config, season, titles, excludedClubIds);
     const source: LivingClubChampion["source"] = playerWon ? "player" : "generated";
 
     titles[winnerId] = (titles[winnerId] ?? 0) + 1;
@@ -386,7 +416,11 @@ function buildMundialCompetition(
   latestCompletedSeason: number,
   continentalCompetitions: LivingClubCompetition[],
 ): LivingClubCompetition {
-  const titles: Record<string, number> = {};
+  const titles = Object.entries(HISTORIC_WORLD_TITLES).reduce<Record<string, number>>((accumulator, [label, count]) => {
+    const clubId = resolveClubId(label);
+    if (clubId) accumulator[clubId] = count;
+    return accumulator;
+  }, {});
   const champions: LivingClubChampion[] = [];
   const news: LivingClubCompetition["news"] = [];
   const championsLeague = continentalCompetitions.find((competition) => competition.id === "champions-league")!;
@@ -463,7 +497,16 @@ function buildMundialCompetition(
 
 export function buildLivingClubCompetitions(state: GameState): LivingClubCompetition[] {
   const latestCompletedSeason = Math.max(2026, ...state.history.map((record) => record.season));
-  const continental = CONFIGS.map((config) => buildContinentalCompetition(state, config, latestCompletedSeason));
+  const reservedWinners = new Map<number, Set<string>>();
+  const continental = CONFIGS.map((config) => {
+    const competition = buildContinentalCompetition(state, config, latestCompletedSeason, reservedWinners);
+    competition.champions.forEach((champion) => {
+      const seasonWinners = reservedWinners.get(champion.season) ?? new Set<string>();
+      seasonWinners.add(champion.winnerId);
+      reservedWinners.set(champion.season, seasonWinners);
+    });
+    return competition;
+  });
   const mundial = buildMundialCompetition(state, latestCompletedSeason, continental);
   return [...continental, mundial];
 }

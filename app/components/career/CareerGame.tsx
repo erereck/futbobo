@@ -39,6 +39,7 @@ import CareerTimeline from "./CareerTimeline";
 import CareerWorld, { WorldPulseButton } from "./CareerWorld";
 import TransferMarketScreen from "./TransferMarketScreen";
 import { worldFinalOpponentForSeason } from "../../career/world-club-competitions";
+import FutboboIcon from "../FutboboIcon";
 
 type CareerGameProps = {
   initialHallEntry?: CareerHallEntry | null;
@@ -2604,9 +2605,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               <small>CENTRAL DE JOGO</small>
             </div>
             <nav className="welcome-utilities" aria-label="Ferramentas">
-              <button type="button" onClick={() => setSettingsOpen(true)}><b>⚙</b><span>Configurações</span></button>
-              <button type="button" onClick={installWebApp}><b>{nativeAndroid ? "↻" : "▣"}</b><span>{nativeAndroid ? "Atualizar" : androidPhone ? "Baixar APK" : "Instalar"}</span></button>
-              <button type="button" aria-label="Ver novidades do jogo" onClick={() => { setUpdateNoticePage("current"); setUpdateNoticeOpen(true); }}><b>⚽</b><span>Novidades</span></button>
+              <button type="button" onClick={() => setSettingsOpen(true)}><b><FutboboIcon name="settings" /></b><span>Configurações</span></button>
+              <button type="button" onClick={installWebApp}><b><FutboboIcon name="download" /></b><span>{nativeAndroid ? "Atualizar" : androidPhone ? "Baixar APK" : "Instalar"}</span></button>
+              <button type="button" aria-label="Ver novidades do jogo" onClick={() => { setUpdateNoticePage("current"); setUpdateNoticeOpen(true); }}><b><FutboboIcon name="news" /></b><span>Novidades</span></button>
             </nav>
           </header>
           <main className="welcome-mode-menu">
@@ -2682,7 +2683,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                   </article>
 
                   <Link className="game-mode-tile cup-mode-tile" href="/copa" aria-label="Jogar uma Copa do Mundo">
-                    <span className="mode-tile-symbol" aria-hidden="true">◎</span>
+                    <span className="mode-tile-symbol" aria-hidden="true"><FutboboIcon name="globe" /></span>
                     <span className="mode-tile-copy"><small>MODO COPA</small><strong>Buscar o mundo</strong><em>Da fase de grupos até a final.</em></span>
                     <span className="mode-tile-action">Jogar Copa <b>→</b></span>
                   </Link>
@@ -2709,7 +2710,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           )}
           {installHelp && <div className="install-help">Use o menu do navegador e toque em <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>.</div>}
           <footer className="welcome-meta-footer">
-            <div className="welcome-features"><span>◉ {CLUBS.length} clubes</span><span>✦ 12 posições</span><span>🏆 {LEAGUES.length} ligas</span><span>★ {COUNTRIES.length} seleções</span></div>
+            <div className="welcome-features"><span><FutboboIcon name="career" /> {CLUBS.length} clubes</span><span><FutboboIcon name="player" /> 12 posições</span><span><FutboboIcon name="trophy" /> {LEAGUES.length} ligas</span><span><FutboboIcon name="globe" /> {COUNTRIES.length} seleções</span></div>
             <div className="welcome-version"><span>FUTBOBO</span><b>v92 · DONO DA ÁREA</b></div>
           </footer>
         </section>
@@ -3002,7 +3003,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             <span><small>STATUS</small><strong>{ROLE_LABELS[game.squadRole]}</strong></span>
             <span><small>TREINADOR</small><strong>{Math.round(game.managerTrust)}%</strong></span>
             <span><small>CONTRATO</small><strong>{game.contractYears ? `${game.contractYears} ano${game.contractYears > 1 ? "s" : ""}` : "Expirado"}</strong></span>
-            {game.phase !== "retirement-confirm" && <button className="retirement-trigger" onClick={requestRetirement}><small>CARREIRA</small><strong>⌛ Aposentar</strong></button>}
+            {game.phase !== "retirement-confirm" && <button className="retirement-trigger" onClick={requestRetirement}><small>CARREIRA</small><strong><FutboboIcon name="hourglass" /> Aposentar</strong></button>}
           </div>
 
           {luckSpin && (
@@ -3060,7 +3061,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           {game.phase === "season-result" && game.lastResult && (
             <div className="result-stage screen-enter">
               <span className="result-kicker">TEMPORADA {game.lastResult.season}</span>
-              <div className={`result-symbol ${game.lastResult.title ? "winner" : game.lastResult.breakoutBonus > 0 ? "breakout" : ""}`}>{game.lastResult.title ? "🏆" : game.lastResult.breakoutBonus > 0 ? "⚡" : game.lastResult.development > 0 ? "↗" : game.lastResult.development < 0 ? "↘" : "→"}</div>
+              <div className={`result-symbol ${game.lastResult.title ? "winner" : game.lastResult.breakoutBonus > 0 ? "breakout" : ""}`}><FutboboIcon name={game.lastResult.title ? "trophy" : game.lastResult.development < 0 ? "trend-down" : "trend-up"} /></div>
               <h1>{game.lastResult.title ? "Temporada de campeão!" : game.lastResult.breakoutBonus > 0 ? "Você explodiu de vez!" : game.lastResult.development > 0 ? "Você subiu de nível" : game.lastResult.development < 0 ? "Uma temporada dura" : "Mais um ano de estrada"}</h1>
               <p>{game.lastResult.title ? "Seu nome agora está gravado em uma taça." : game.lastResult.breakoutBonus > 0 ? "Uma temporada absurda acelerou sua carreira como poucas vezes acontece." : "A temporada terminou e a carreira ganhou mais um capítulo."}</p>
               <div className="season-stat-grid">
@@ -3138,14 +3139,14 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                         <article key={`title-${competition.id}`}>
                           <CompetitionBadge competition={competition} leagueId={game.lastResult?.leagueId || game.currentLeagueId || currentClub.leagueId} />
                           <div><small>CAMPEÃO</small><strong>{competition.name}</strong></div>
-                          <b>🏆</b>
+                          <b><FutboboIcon name="trophy" /></b>
                         </article>
                       ))}
                       {seasonNationalTitles.map((record) => (
                         <article key={`national-title-${record.season}-${record.name}`} className="national-season-title">
                           <NationBadge country={nationCountry} size="sm" />
                           <div><small>CAMPEÃO PELA SELEÇÃO</small><strong>{record.name}</strong></div>
-                          <b>🏆</b>
+                          <b><FutboboIcon name="trophy" /></b>
                         </article>
                       ))}
                     </div>
@@ -3230,7 +3231,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                   </div>
                 </section>
               )}
-              <div className="result-details"><span>Valor de mercado <strong>{formatMoney(game.lastResult.marketValue)}</strong></span>{game.lastResult.calledUp && <span className="callup-badge">★ Convocado pela Seleção</span>}</div>
+              <div className="result-details"><span>Valor de mercado <strong>{formatMoney(game.lastResult.marketValue)}</strong></span>{game.lastResult.calledUp && <span className="callup-badge"><FutboboIcon name="globe" /> Convocado pela Seleção</span>}</div>
               <div className="mobile-action-dock">
                 <button className="primary-button" onClick={continueAfterResult}>{game.retireAfterSeason ? "Concluir carreira" : game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"} <span>→</span></button>
               </div>
@@ -3266,7 +3267,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           {game.phase === "retirement-confirm" && (
             <div className="retirement-stage screen-enter">
               <span className="result-kicker">DECISÃO DE CARREIRA</span>
-              <div className="retirement-symbol">⌛</div>
+              <div className="retirement-symbol"><FutboboIcon name="hourglass" /></div>
               <h1>Pendurar as chuteiras agora?</h1>
               <p>Você pode encerrar a carreira em qualquer idade. O legado será fechado exatamente como está — esta decisão é definitiva.</p>
               <div className="retirement-recap">
@@ -3344,7 +3345,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               </div>
               <div className="profile-metrics legacy-ui-hidden"><Metric label="OVR" value={game.overall} tone="gold" /><Metric label="Momento" value={careerTrend(game.history)} /><Metric label="Valor" value={formatMoney(marketValue(game.overall, game.age, currentClub, game.reputation, game.history.at(-1)))} /></div>
               <section className="medical-department">
-                <header><div><span>DEPARTAMENTO MÉDICO</span><strong>Prontuário da carreira</strong></div><b className={game.medicalHistory.length ? "has-history" : ""}>✚</b></header>
+                <header><div><span>DEPARTAMENTO MÉDICO</span><strong>Prontuário da carreira</strong></div><b className={game.medicalHistory.length ? "has-history" : ""}><FutboboIcon name="medical" /></b></header>
                 <div className="medical-overview">
                   <Metric label="Lesões sérias" value={game.medicalHistory.length} tone={game.medicalHistory.length ? "danger" : "green"} />
                   <Metric label="Jogos perdidos" value={game.matchesMissedInjuries} />
@@ -3452,7 +3453,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                 ) : (
                   <div className="national-history-list">
                     {[...game.nationalHistory].reverse().map((entry) => (
-                      <article key={`${entry.season}-${entry.name}`}><span>{entry.season}</span><div><strong>{entry.name}</strong><small>{entry.stage}</small></div>{entry.champion && <b>🏆</b>}</article>
+                      <article key={`${entry.season}-${entry.name}`}><span>{entry.season}</span><div><strong>{entry.name}</strong><small>{entry.stage}</small></div>{entry.champion && <b><FutboboIcon name="trophy" /></b>}</article>
                     ))}
                   </div>
                 )}
@@ -3528,7 +3529,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               )}
 
               <section className={`sponsor-hub ${game.activeSponsor ? "has-deal" : "no-deal"}`}>
-                <div className="sponsor-heading"><div><span>PATROCINADOR PESSOAL</span><strong>{game.activeSponsor ? "Contrato ativo" : "Sua chuteira ainda está livre"}</strong></div><b>◇</b></div>
+                <div className="sponsor-heading"><div><span>PATROCINADOR PESSOAL</span><strong>{game.activeSponsor ? "Contrato ativo" : "Sua chuteira ainda está livre"}</strong></div><b><FutboboIcon name="tag" /></b></div>
                 {game.activeSponsor ? (
                   <>
                     <article className="active-sponsor-card">
@@ -3648,15 +3649,15 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                   <section className="record-book">
                     <div><span>LIVRO DE RECORDES</span><strong>Seus picos</strong></div>
                     <section>
-                      <article><span>◎</span><div><small>MAIS GOLS</small><strong>{statistics.mostGoals?.goals ?? 0}</strong><em>{statistics.mostGoals?.season}</em></div></article>
-                      <article><span>✦</span><div><small>MAIS ASSISTÊNCIAS</small><strong>{statistics.mostAssists?.assists ?? 0}</strong><em>{statistics.mostAssists?.season}</em></div></article>
+                      <article><span><FutboboIcon name="ball" /></span><div><small>MAIS GOLS</small><strong>{statistics.mostGoals?.goals ?? 0}</strong><em>{statistics.mostGoals?.season}</em></div></article>
+                      <article><span><FutboboIcon name="stats" /></span><div><small>MAIS ASSISTÊNCIAS</small><strong>{statistics.mostAssists?.assists ?? 0}</strong><em>{statistics.mostAssists?.season}</em></div></article>
                       <article><span>▶</span><div><small>MAIS JOGOS</small><strong>{statistics.mostAppearances?.appearances ?? 0}</strong><em>{statistics.mostAppearances?.season}</em></div></article>
                       <article><span>↑</span><div><small>MAIOR OVR</small><strong>{statistics.highestOverall?.overall ?? game.overall}</strong><em>{statistics.highestOverall?.season}</em></div></article>
                       <article className="value-record"><span>€</span><div><small>MAIOR VALOR</small><strong>{formatMoney(statistics.highestValue?.marketValue ?? 0)}</strong><em>{statistics.highestValue?.season}</em></div></article>
                     </section>
                   </section>
                 </>
-              ) : <div className="statistics-empty"><span>▥</span><strong>A central abre depois da estreia</strong><p>Complete a primeira temporada para começar seu arquivo estatístico.</p></div>}
+              ) : <div className="statistics-empty"><span><FutboboIcon name="stats" /></span><strong>A central abre depois da estreia</strong><p>Complete a primeira temporada para começar seu arquivo estatístico.</p></div>}
 
               <CareerStatisticsArchive state={game} />
               <CareerExtraStats state={game} />
@@ -3730,11 +3731,11 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                 <BrandMark size="sm" />
                 <span><small>CENTRAL DO JOGADOR</small><strong>{game.name}</strong><em>{position.name} · {leagueById(game.currentLeagueId || currentClub.leagueId).name}</em></span>
               </div>
-              <button aria-pressed={activeTab === "event"} className={activeTab === "event" ? "selected" : ""} onClick={() => changeTab("event")}><span>◆</span>Carreira</button>
-              <button aria-pressed={activeTab === "profile"} className={activeTab === "profile" ? "selected" : ""} onClick={() => changeTab("profile")}><span>●</span>Jogador</button>
-              <button aria-pressed={activeTab === "history"} className={activeTab === "history" ? "selected" : ""} onClick={() => changeTab("history")}><span>│</span>Histórico</button>
-              <button aria-pressed={activeTab === "stats"} className={activeTab === "stats" ? "selected" : ""} onClick={() => changeTab("stats")}><span>▥</span>Estatísticas</button>
-              <button aria-pressed={activeTab === "world"} className={activeTab === "world" ? "selected" : ""} onClick={() => changeTab("world")}><span>◎</span>Mundo</button>
+              <button aria-pressed={activeTab === "event"} className={activeTab === "event" ? "selected" : ""} onClick={() => changeTab("event")}><span><FutboboIcon name="career" /></span>Carreira</button>
+              <button aria-pressed={activeTab === "profile"} className={activeTab === "profile" ? "selected" : ""} onClick={() => changeTab("profile")}><span><FutboboIcon name="player" /></span>Jogador</button>
+              <button aria-pressed={activeTab === "history"} className={activeTab === "history" ? "selected" : ""} onClick={() => changeTab("history")}><span><FutboboIcon name="history" /></span>Histórico</button>
+              <button aria-pressed={activeTab === "stats"} className={activeTab === "stats" ? "selected" : ""} onClick={() => changeTab("stats")}><span><FutboboIcon name="stats" /></span>Estatísticas</button>
+              <button aria-pressed={activeTab === "world"} className={activeTab === "world" ? "selected" : ""} onClick={() => changeTab("world")}><span><FutboboIcon name="globe" /></span>Mundo</button>
             </nav>
           )}
         </section>
@@ -3768,9 +3769,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             <div className="share-numbers"><Metric label="Jogos" value={displayGame.stats.appearances} /><Metric label={displayGame.position === "GOL" ? "Sem sofrer" : "Gols"} value={displayGame.position === "GOL" ? displayGame.stats.cleanSheets : displayGame.stats.goals} /><Metric label={displayGame.position === "GOL" ? "Sofridos" : "Assistências"} value={displayGame.position === "GOL" ? displayGame.stats.goalsConceded : displayGame.stats.assists} /><Metric label="Taças" value={displayGame.trophies + displayGame.nationalTrophies} tone="gold" /></div>
             <div className="share-legacy-line"><span>LEGADO {displayGame.legacyPoints}</span><strong>{legacyStanding.label}</strong><span>{displayGame.unlockedAchievements.length}/{ACHIEVEMENTS.length} CONQUISTAS</span></div>
             <div className="share-honours">
-              <article><span>◉</span><div><small>BOLA DE OURO</small><strong>{displayGame.awardCabinet["Bola de Ouro"] ?? 0}</strong></div></article>
-              <article><span>✪</span><div><small>WORLD XI</small><strong>{displayGame.awardCabinet["FIFPRO World XI"] ?? 0}</strong></div></article>
-              <article><span>✦</span><div><small>PRÊMIOS</small><strong>{totalIndividualAwards}</strong></div></article>
+              <article><span><FutboboIcon name="medal" /></span><div><small>BOLA DE OURO</small><strong>{displayGame.awardCabinet["Bola de Ouro"] ?? 0}</strong></div></article>
+              <article><span><FutboboIcon name="player" /></span><div><small>WORLD XI</small><strong>{displayGame.awardCabinet["FIFPRO World XI"] ?? 0}</strong></div></article>
+              <article><span><FutboboIcon name="trophy" /></span><div><small>PRÊMIOS</small><strong>{totalIndividualAwards}</strong></div></article>
             </div>
             <div className="share-trophies">
               {shareTitleHighlights.map((entry) => (
@@ -3822,7 +3823,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                 })}
               </div>
             ) : (
-              <div className="final-awards-empty"><span>◇</span><strong>Uma carreira sem prêmio não é uma carreira sem história.</strong><p>Seu legado foi construído de outras formas.</p></div>
+              <div className="final-awards-empty"><span><FutboboIcon name="medal" /></span><strong>Uma carreira sem prêmio não é uma carreira sem história.</strong><p>Seu legado foi construído de outras formas.</p></div>
             )}
           </section>
           <section className="career-club-summary">

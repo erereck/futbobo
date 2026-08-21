@@ -8,6 +8,7 @@ import { VERIFIED_CLUB_ASSET_IDS } from "../../verified-club-assets";
 import type { CompetitionResult, GameState, TrophyCabinet } from "../../career/model";
 import { awardFinalists, awardPresentation } from "../../career/state";
 import { clamp, clubById } from "../../career/shared";
+import FutboboIcon from "../FutboboIcon";
 
 export function LocalBadgeImage({
   path,
@@ -103,7 +104,7 @@ export function CompetitionBadge({ competition, leagueId }: { competition: Compe
 
   return (
     <span className={`competition-emblem ${imageAvailable ? "has-image" : "is-fallback"}`} aria-hidden="true">
-      <b>{competition.icon}</b>
+      <b><FutboboIcon name="trophy" /></b>
       <LocalBadgeImage path={path} kind="competition" onAvailabilityChange={setImageAvailable} />
     </span>
   );
@@ -114,24 +115,23 @@ export const TROPHY_PRESENTATIONS: {
   label: string;
   shortLabel: string;
   group: "NACIONAIS" | "CONTINENTAIS" | "MUNDIAIS";
-  symbol: string;
   imagePath?: string;
 }[] = [
-  { id: "domesticLeague", label: "Ligas nacionais", shortLabel: "LIGAS", group: "NACIONAIS", symbol: "◆" },
-  { id: "domesticCup", label: "Copas nacionais", shortLabel: "COPAS", group: "NACIONAIS", symbol: "♜" },
-  { id: "domesticSuperCup", label: "Supercopas nacionais", shortLabel: "SUP.", group: "NACIONAIS", symbol: "✦" },
-  { id: "libertadores", label: "Libertadores", shortLabel: "LIB", group: "CONTINENTAIS", symbol: "L", imagePath: "/assets/competitions/libertadores.png" },
-  { id: "sudamericana", label: "Copa Sul-Americana", shortLabel: "SULA", group: "CONTINENTAIS", symbol: "S" },
-  { id: "recopaSudamericana", label: "Recopa Sul-Americana", shortLabel: "REC", group: "CONTINENTAIS", symbol: "R", imagePath: "/assets/competitions/recopaSudamericana.png" },
-  { id: "championsLeague", label: "Champions League", shortLabel: "UCL", group: "CONTINENTAIS", symbol: "★", imagePath: "/assets/competitions/championsLeague.png" },
-  { id: "uefaSuperCup", label: "Supercopa da UEFA", shortLabel: "USC", group: "CONTINENTAIS", symbol: "U", imagePath: "/assets/competitions/uefaSuperCup.png" },
-  { id: "europaLeague", label: "Europa League", shortLabel: "UEL", group: "CONTINENTAIS", symbol: "E", imagePath: "/assets/competitions/europaLeague.png" },
-  { id: "conferenceLeague", label: "Conference League", shortLabel: "UECL", group: "CONTINENTAIS", symbol: "C", imagePath: "/assets/competitions/conferenceLeague.png" },
-  { id: "concacafChampions", label: "Copa dos Campeões Concacaf", shortLabel: "CCC", group: "CONTINENTAIS", symbol: "N", imagePath: "/assets/competitions/concacafChampions.png" },
-  { id: "afcChampions", label: "AFC Champions League Elite", shortLabel: "ACL", group: "CONTINENTAIS", symbol: "A", imagePath: "/assets/competitions/afcChampions.png" },
-  { id: "cafChampions", label: "CAF Champions League", shortLabel: "CAF", group: "CONTINENTAIS", symbol: "Á", imagePath: "/assets/competitions/cafChampions.svg" },
-  { id: "campeonesCup", label: "Campeones Cup", shortLabel: "CAM", group: "CONTINENTAIS", symbol: "C", imagePath: "/assets/competitions/campeonesCup.png" },
-  { id: "mundial", label: "Mundial de Clubes", shortLabel: "MUN", group: "MUNDIAIS", symbol: "◉", imagePath: "/assets/competitions/mundial.png" },
+  { id: "domesticLeague", label: "Ligas nacionais", shortLabel: "LIGAS", group: "NACIONAIS" },
+  { id: "domesticCup", label: "Copas nacionais", shortLabel: "COPAS", group: "NACIONAIS" },
+  { id: "domesticSuperCup", label: "Supercopas nacionais", shortLabel: "SUP.", group: "NACIONAIS" },
+  { id: "libertadores", label: "CONMEBOL Libertadores", shortLabel: "LIB", group: "CONTINENTAIS", imagePath: "/assets/competitions/libertadores.png" },
+  { id: "sudamericana", label: "CONMEBOL Sudamericana", shortLabel: "SULA", group: "CONTINENTAIS" },
+  { id: "recopaSudamericana", label: "Recopa Sul-Americana", shortLabel: "REC", group: "CONTINENTAIS", imagePath: "/assets/competitions/recopaSudamericana.png" },
+  { id: "championsLeague", label: "Champions League", shortLabel: "UCL", group: "CONTINENTAIS", imagePath: "/assets/competitions/championsLeague.png" },
+  { id: "uefaSuperCup", label: "Supercopa da UEFA", shortLabel: "USC", group: "CONTINENTAIS", imagePath: "/assets/competitions/uefaSuperCup.png" },
+  { id: "europaLeague", label: "Europa League", shortLabel: "UEL", group: "CONTINENTAIS", imagePath: "/assets/competitions/europaLeague.png" },
+  { id: "conferenceLeague", label: "Conference League", shortLabel: "UECL", group: "CONTINENTAIS", imagePath: "/assets/competitions/conferenceLeague.png" },
+  { id: "concacafChampions", label: "Copa dos Campeões Concacaf", shortLabel: "CCC", group: "CONTINENTAIS", imagePath: "/assets/competitions/concacafChampions.png" },
+  { id: "afcChampions", label: "AFC Champions League Elite", shortLabel: "ACL", group: "CONTINENTAIS", imagePath: "/assets/competitions/afcChampions.png" },
+  { id: "cafChampions", label: "CAF Champions League", shortLabel: "CAF", group: "CONTINENTAIS", imagePath: "/assets/competitions/cafChampions.svg" },
+  { id: "campeonesCup", label: "Campeones Cup", shortLabel: "CAM", group: "CONTINENTAIS", imagePath: "/assets/competitions/campeonesCup.png" },
+  { id: "mundial", label: "Mundial de Clubes", shortLabel: "MUN", group: "MUNDIAIS", imagePath: "/assets/competitions/mundial.png" },
 ];
 
 export function TrophyGallery({ state, final = false }: { state: GameState; final?: boolean }) {
@@ -151,7 +151,7 @@ export function TrophyGallery({ state, final = false }: { state: GameState; fina
           <strong>{totalClubTitles + state.nationalTrophies}</strong>
           <small>taças levantadas</small>
         </div>
-        <b aria-hidden="true">🏆</b>
+        <b aria-hidden="true"><FutboboIcon name="trophy" /></b>
       </header>
       <div className="trophy-groups">
         {(["NACIONAIS", "CONTINENTAIS", "MUNDIAIS"] as const).map((group) => {
@@ -166,7 +166,7 @@ export function TrophyGallery({ state, final = false }: { state: GameState; fina
                   return (
                     <article className={count > 0 ? "won" : "empty"} key={presentation.id}>
                       <span className="trophy-medallion" aria-hidden="true">
-                        <b>{presentation.symbol}</b>
+                        <b><FutboboIcon name="trophy" /></b>
                         {presentation.imagePath && <LocalBadgeImage path={presentation.imagePath} kind="competition" />}
                       </span>
                       <div><strong>{presentation.label}</strong><small>{count > 0 ? `${count} conquista${count > 1 ? "s" : ""}` : "Ainda não conquistada"}</small></div>
@@ -182,7 +182,7 @@ export function TrophyGallery({ state, final = false }: { state: GameState; fina
           <header><span>SELEÇÃO</span><b>{state.nationalTrophies}</b></header>
           <div>
             <article className={state.nationalTrophies > 0 ? "won" : "empty"}>
-              <span className="trophy-medallion national" aria-hidden="true">★</span>
+              <span className="trophy-medallion national" aria-hidden="true"><FutboboIcon name="medal" /></span>
               <div><strong>Títulos pela Seleção</strong><small>{state.nationalTrophies > 0 ? `${state.nationalTrophies} conquista${state.nationalTrophies > 1 ? "s" : ""}` : "O país ainda espera sua taça"}</small></div>
               <b>{state.nationalTrophies}</b>
             </article>
@@ -190,7 +190,7 @@ export function TrophyGallery({ state, final = false }: { state: GameState; fina
               <article className="won national-title-detail" key={`${record.season}-${record.name}`}>
                 <span className="trophy-medallion national" aria-hidden="true">{record.icon}</span>
                 <div><strong>{record.name}</strong><small>{record.season} · {record.tier === "main" ? "Seleção principal" : record.tier === "olympic" ? "Seleção olímpica" : record.tier === "sub20" ? "Seleção Sub-20" : "Seleção Sub-17"}</small></div>
-                <b>★</b>
+                <b><FutboboIcon name="trophy" /></b>
               </article>
             ))}
           </div>

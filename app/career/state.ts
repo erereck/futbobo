@@ -8,7 +8,7 @@ import { FUTBOBO_MOMENTS } from "../futbobo-moments";
 import { DEFAULT_PLAYER_APPEARANCE, normalizePlayerAppearance, randomPlayerAppearance } from "../player-appearance";
 import { GOALKEEPER_EVENTS } from "../goalkeeper-events";
 import { CLUB_SPECIFIC_EVENTS } from "./club-specific-events";
-import type { AttributeKey, AwardPresentation, CareerHallEntry, CareerRival, CompetitionId, CustomCharacter, CustomClubDefinition, GameState, MonteCarloReport, PlayerAttributes, PlayerStats, SeasonRecord, SpecialTraitId } from "./model";
+import type { AttributeKey, AwardPresentation, CareerHallEntry, CareerRival, CompetitionId, CustomCharacter, CustomClubDefinition, GameState, MonteCarloReport, PendingBotaoMatch, PlayerAttributes, PlayerStats, SeasonRecord, SpecialTraitId, StoredBotaoResult } from "./model";
 import { positionByKey } from "./academy";
 import { competitiveStrength } from "./performance";
 import { clamp, clubById, pick, seeded } from "./shared";
@@ -63,6 +63,26 @@ export const BALLON_DOR_EXCLUDED_TROPHIES = new Set<CompetitionId>([
   "uefaSuperCup",
   "campeonesCup",
 ]);
+
+function canonicalCompetitionName(id: string, currentName: string) {
+  if (id === "libertadores") return "CONMEBOL Libertadores";
+  if (id === "sudamericana") return "CONMEBOL Sudamericana";
+  return currentName;
+}
+
+function normalizePendingBotaoMatch(match: PendingBotaoMatch): PendingBotaoMatch {
+  return {
+    ...match,
+    competitionName: canonicalCompetitionName(match.competitionId, match.competitionName),
+  };
+}
+
+function normalizeStoredBotaoResult(stored: StoredBotaoResult): StoredBotaoResult {
+  return {
+    ...stored,
+    match: normalizePendingBotaoMatch(stored.match),
+  };
+}
 
 export function dateKey(date = new Date()) {
   return [
@@ -611,8 +631,10 @@ export function normalizeSave(value: unknown): GameState {
     nationalitySwitched: saved.nationalitySwitched ?? false,
     nationalitySwitchInviteUsed: saved.nationalitySwitchInviteUsed ?? false,
     pendingNationalitySwitchTarget: saved.pendingNationalitySwitchTarget ?? "",
-    pendingBotaoMatches: Array.isArray(saved.pendingBotaoMatches) ? saved.pendingBotaoMatches : [],
-    lastBotaoResult: saved.lastBotaoResult ?? null,
+    pendingBotaoMatches: Array.isArray(saved.pendingBotaoMatches)
+      ? saved.pendingBotaoMatches.map(normalizePendingBotaoMatch)
+      : [],
+    lastBotaoResult: saved.lastBotaoResult ? normalizeStoredBotaoResult(saved.lastBotaoResult) : null,
     pendingPressConference: saved.pendingPressConference ?? null,
     stats: {
       appearances: saved.stats?.appearances ?? 0,
@@ -694,7 +716,10 @@ export function normalizeSave(value: unknown): GameState {
       overall: record.overall ?? 0,
       title: record.title ?? false,
       eventTitle: record.eventTitle ?? "",
-      competitions: record.competitions ?? [],
+      competitions: (record.competitions ?? []).map((competition) => ({
+        ...competition,
+        name: canonicalCompetitionName(competition.id, competition.name),
+      })),
       awards: record.awards ?? [],
       awardNominations: record.awardNominations ?? (record.awards ?? [])
         .filter((award) => awardPresentation(award).tier !== "regular")
@@ -706,7 +731,7 @@ export function normalizeSave(value: unknown): GameState {
       development: record.development ?? 0,
       followers: record.followers ?? 0,
       socialSentiment: record.socialSentiment ?? 50,
-      botaoResults: Array.isArray(record.botaoResults) ? record.botaoResults : [],
+      botaoResults: Array.isArray(record.botaoResults) ? record.botaoResults.map(normalizeStoredBotaoResult) : [],
       promotion: record.promotion ?? null,
       averageRating: record.averageRating,
       manOfTheMatchAwards: record.manOfTheMatchAwards ?? 0,
@@ -715,7 +740,10 @@ export function normalizeSave(value: unknown): GameState {
     lastResult: saved.lastResult ? {
       ...saved.lastResult,
       position: saved.lastResult.position ?? saved.position ?? base.position,
-      competitions: saved.lastResult.competitions ?? [],
+      competitions: (saved.lastResult.competitions ?? []).map((competition) => ({
+        ...competition,
+        name: canonicalCompetitionName(competition.id, competition.name),
+      })),
       awards: saved.lastResult.awards ?? [],
       awardNominations: saved.lastResult.awardNominations ?? (saved.lastResult.awards ?? [])
         .filter((award) => awardPresentation(award).tier !== "regular")
@@ -726,7 +754,7 @@ export function normalizeSave(value: unknown): GameState {
       redCards: saved.lastResult.redCards ?? 0,
       squadRole: saved.lastResult.squadRole ?? "rotacao",
       objectiveResult: saved.lastResult.objectiveResult ?? null,
-      botaoResults: Array.isArray(saved.lastResult.botaoResults) ? saved.lastResult.botaoResults : [],
+      botaoResults: Array.isArray(saved.lastResult.botaoResults) ? saved.lastResult.botaoResults.map(normalizeStoredBotaoResult) : [],
       promotion: saved.lastResult.promotion ?? null,
       performanceScore: saved.lastResult.performanceScore ?? 0,
       europeanSpotlight: saved.lastResult.europeanSpotlight ?? 0,

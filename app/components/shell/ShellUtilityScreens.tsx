@@ -9,6 +9,7 @@ import { ANDROID_APP_VERSION, checkForAndroidUpdate, isAndroidDevice, isNativeAn
 import type { AndroidRelease } from "../../android-app";
 import { ClubBadge } from "../career/CareerPrimitives";
 import styles from "./ShellUtilityScreens.module.css";
+import FutboboIcon from "../FutboboIcon";
 
 const DEFAULT_SETTINGS: AppSettings = {
   customCharacters: [],
@@ -211,7 +212,7 @@ export function InstallScreen() {
 }
 
 const UPDATES = [
-  { version: "v93", date: "AGORA", title: "Dono da Área", lead: "O maior rework do Rumo ao Estrelato.", items: ["Menu e criação refeitos", "Até 10 carreiras", "Histórico vertical e nova aba Mundo", "Arquivo Vivo com recordes reais + seu save", "Copa Sul-Americana", "Eventos exclusivos de grandes clubes", "Conquistas globais e backups melhores"] },
+  { version: "v93", date: "AGORA", title: "Dono da Área", lead: "O maior rework do Rumo ao Estrelato.", items: ["Menu e criação refeitos", "Até 10 carreiras", "Histórico vertical e nova aba Mundo", "Arquivo Vivo com recordes reais + seu save", "CONMEBOL Sudamericana", "Iconografia SVG própria em toda a interface", "Eventos exclusivos de grandes clubes", "Conquistas globais e backups melhores"] },
   { version: "v92", date: "ANTERIOR", title: "Fundação do novo Futbobo", lead: "A base que abriu caminho para a v93.", items: ["Carreira expandida", "Mais eventos e sistemas de bastidores", "Futebol de botão integrado a jogos decisivos"] },
 ];
 
@@ -220,7 +221,7 @@ export function NewsScreen() {
   return (
     <section className={styles.utilityScreen}>
       <header className={styles.hero}><span>NOVIDADES</span><h2>O que mudou.</h2><p>Sem parede de patch note. Só as coisas que você vai perceber jogando.</p></header>
-      <div className={styles.newsStack}>{UPDATES.map((update) => <article className={styles.newsCard} key={update.version} data-open={openVersion === update.version}><button type="button" onClick={() => setOpenVersion((current) => current === update.version ? "" : update.version)}><span><em>{update.date}</em><b>{update.version}</b></span><div><strong>{update.title}</strong><p>{update.lead}</p></div><i>{openVersion === update.version ? "−" : "+"}</i></button>{openVersion === update.version && <div className={styles.newsDetails}>{update.items.map((item) => <span key={item}>◆ {item}</span>)}</div>}</article>)}</div>
+      <div className={styles.newsStack}>{UPDATES.map((update) => <article className={styles.newsCard} key={update.version} data-open={openVersion === update.version}><button type="button" onClick={() => setOpenVersion((current) => current === update.version ? "" : update.version)}><span><em>{update.date}</em><b>{update.version}</b></span><div><strong>{update.title}</strong><p>{update.lead}</p></div><i>{openVersion === update.version ? "−" : "+"}</i></button>{openVersion === update.version && <div className={styles.newsDetails}>{update.items.map((item) => <span key={item}><FutboboIcon name="check" /> {item}</span>)}</div>}</article>)}</div>
     </section>
   );
 }

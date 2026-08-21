@@ -18,6 +18,7 @@
 }
 
 * { box-sizing: border-box; }
+.futbobo-icon { display: block; flex: 0 0 auto; overflow: visible; }
 
 html {
   background: #06110d;
@@ -115,6 +116,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .primary-button:disabled { cursor: not-allowed; opacity: .35; }
 .secondary-button { border: 1px solid var(--line); background: rgba(255,255,255,.035); color: var(--text); }
 .welcome-features { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 14px; margin-top: 18px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.welcome-features > span { display: flex; align-items: center; gap: 5px; }
 .welcome-version { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 11px; color: rgba(163,184,170,.5); font-size: 8px; font-weight: 800; letter-spacing: .15em; }
 .welcome-version b { color: rgba(255,199,44,.72); font-size: 9px; text-transform: uppercase; }
 .welcome-hall { display: grid; gap: 6px; margin-top: 14px; padding: 12px; border: 1px solid rgba(255,199,44,.18); border-radius: 17px; background: rgba(255,199,44,.035); }
@@ -395,6 +397,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .retirement-trigger { display: flex; min-width: 0; flex-direction: column; justify-content: center; padding: 7px 8px; border: 0; border-left: 1px solid var(--line); background: rgba(255,90,78,.045); color: var(--text); text-align: left; cursor: pointer; }
 .retirement-trigger small { color: var(--red); }
 .retirement-trigger strong { color: #ff9a91; }
+.retirement-trigger strong, .callup-badge { display: flex; align-items: center; gap: 5px; }
 .progress-stat { min-width: 0; }
 .progress-label { display: flex; justify-content: space-between; margin-bottom: 5px; color: var(--muted); font-size: 7px; font-weight: 800; }
 .progress-label strong { color: var(--text); font-size: 8px; }

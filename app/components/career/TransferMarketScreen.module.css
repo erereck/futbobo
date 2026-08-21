@@ -35,6 +35,7 @@
 .stay .identity small, .stay .deal strong, .stay .deal b { color: #63e36b; }
 .secondaryAction { width: 100%; display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; padding: 16px 18px; color: #cad8d2; border: 1px solid rgba(128, 169, 151, .2); border-radius: 15px; background: rgba(8, 27, 20, .8); cursor: pointer; }
 .secondaryAction span { color: #80988e; }
+.secondaryAction strong { display: flex; align-items: center; gap: 7px; }
 .secondaryAction:disabled { opacity: .45; cursor: not-allowed; }
 
 @media (max-width: 600px) {

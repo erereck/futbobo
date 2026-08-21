@@ -6,6 +6,7 @@ import { formatMoney } from "../../career/performance";
 import { clubById } from "../../career/shared";
 import { ClubBadge } from "./CareerPrimitives";
 import styles from "./TransferMarketScreen.module.css";
+import FutboboIcon from "../FutboboIcon";
 
 type Props = {
   state: GameState;
@@ -64,7 +65,7 @@ export default function TransferMarketScreen({ state, currentClub, offers, renew
                 <span className={styles.deal}>
                   <small>{moveLabel(offer)}</small>
                   <strong>{ROLE_LABELS[offer.role]}</strong>
-                  <b aria-hidden>→</b>
+                  <b aria-hidden><FutboboIcon name="arrow-right" /></b>
                 </span>
               </button>
               <p className={styles.reason}>{offer.reasonText}</p>
@@ -85,14 +86,14 @@ export default function TransferMarketScreen({ state, currentClub, offers, renew
             <button className={styles.offerMain} onClick={onStay}>
               <ClubBadge club={currentClub} />
               <span className={styles.identity}><small>{state.contractYears === 0 ? "RENOVAÇÃO" : "CONTINUIDADE"}</small><strong>{currentClub.shortName}</strong><em>Manter o projeto atual</em></span>
-              <span className={styles.deal}><small>{state.contractYears === 0 ? `${renewalOffer?.contractYears ?? 1} ano(s)` : "Contrato atual"}</small><strong>{state.contractYears === 0 ? formatMoney(renewalOffer?.annualSalary ?? state.annualSalary) : "Ficar"}</strong><b>✓</b></span>
+              <span className={styles.deal}><small>{state.contractYears === 0 ? `${renewalOffer?.contractYears ?? 1} ano(s)` : "Contrato atual"}</small><strong>{state.contractYears === 0 ? formatMoney(renewalOffer?.annualSalary ?? state.annualSalary) : "Ficar"}</strong><b><FutboboIcon name="check" /></b></span>
             </button>
           </article>
         )}
       </div>
 
-      {canStay && state.contractYears === 0 && <button className={styles.secondaryAction} onClick={onBecomeFreeAgent}><span>Recusar renovação</span><strong>Virar agente livre →</strong></button>}
-      {state.isFreeAgent && <button className={styles.secondaryAction} disabled={state.age >= 42 && state.forcedFreeAgentUntilSeason <= state.season} onClick={onWait}><span>{state.forcedFreeAgentUntilSeason > state.season ? "Punição em andamento" : "Nada convenceu?"}</span><strong>Passar um ano sem clube →</strong></button>}
+      {canStay && state.contractYears === 0 && <button className={styles.secondaryAction} onClick={onBecomeFreeAgent}><span>Recusar renovação</span><strong>Virar agente livre <FutboboIcon name="arrow-right" /></strong></button>}
+      {state.isFreeAgent && <button className={styles.secondaryAction} disabled={state.age >= 42 && state.forcedFreeAgentUntilSeason <= state.season} onClick={onWait}><span>{state.forcedFreeAgentUntilSeason > state.season ? "Punição em andamento" : "Nada convenceu?"}</span><strong>Passar um ano sem clube <FutboboIcon name="arrow-right" /></strong></button>}
     </section>
   );
 }

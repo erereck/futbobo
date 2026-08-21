@@ -14,6 +14,7 @@ import { formatFollowers, formatMoney, marketValue, seasonAverageRating } from "
 import { clubById } from "../../career/shared";
 import { ClubBadge, TrophyGallery } from "./CareerPrimitives";
 import styles from "./CareerReworkPanels.module.css";
+import FutboboIcon from "../FutboboIcon";
 
 export function PlayerReworkPanels({ state }: { state: GameState }) {
   const [followersOpen, setFollowersOpen] = useState(false);
@@ -67,11 +68,11 @@ export function PlayerReworkPanels({ state }: { state: GameState }) {
         <button type="button" className={styles.followersCard} onClick={() => setFollowersOpen(true)}>
           <small>SEGUIDORES</small>
           <strong>{formatFollowers(state.followers)}</strong>
-          <span>Ver alcance e marcos <b>→</b></span>
+          <span>Ver alcance e marcos <b><FutboboIcon name="arrow-right" /></b></span>
         </button>
 
         <article className={styles.sponsorCard}>
-          <header><span>PATROCÍNIO</span><b>◇</b></header>
+          <header><span>PATROCÍNIO</span><b><FutboboIcon name="tag" /></b></header>
           {state.activeSponsor ? (
             <>
               <strong>{state.activeSponsor.brand}</strong>

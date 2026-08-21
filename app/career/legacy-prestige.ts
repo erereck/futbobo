@@ -221,7 +221,7 @@ export function legacySignatureForState(state: GameState) {
   if (ballonDor > 0) highlights.push(`${ballonDor} Bola${ballonDor > 1 ? "s" : ""} de Ouro`);
   if (worldCups > 0) highlights.push(`${worldCups} Copa${worldCups > 1 ? "s" : ""} do Mundo`);
   if (champions > 0) highlights.push(`${champions} Champions`);
-  if (libertadores > 0) highlights.push(`${libertadores} Libertadores`);
+  if (libertadores > 0) highlights.push(`${libertadores} CONMEBOL Libertadores`);
 
   if (highlights.length === 0) {
     const titles = (state.trophies ?? 0) + (state.nationalTrophies ?? 0);

@@ -109,6 +109,14 @@ Selecoes sem liga recebem uma rota de base recomendada por confederacao. A recom
 - Métrica principal — label 10/700 muted · valor Barlow Condensed 30/800 · numerais tabulares.
 - Rail desktop — 264px · mesmo fundo do canvas · uma borda à direita · navegação textual com indicador amarelo.
 
+## Iconografia
+
+- Biblioteca própria `FutboboIcon`: SVG inline, grade 24×24, traço 1.8, pontas e junções arredondadas.
+- Ícones herdam `currentColor`, usam `1em` por padrão e nunca dependem de fonte, emoji ou rede; site, APK e versão offline permanecem idênticos.
+- Navegação usa metáforas fixas: bandeira = carreira, camisa = jogador, linha do tempo = histórico, barras = estatísticas, globo = Mundo.
+- Troféus, medalhas, mercado, saúde e aposentadoria usam pictogramas reais; caracteres tipográficos ficam reservados para operações universais de expansão (`+`/`−`) e conteúdo textual.
+- Contêiner mínimo de 18px na navegação e 20–24px em ações; o SVG é sempre alinhado no centro óptico do rótulo.
+
 ## Movimento
 
 - Entrada de tela: 220ms, opacity + translateY(8px).

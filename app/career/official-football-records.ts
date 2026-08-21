@@ -211,7 +211,7 @@ const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
   },
   {
     id: "libertadores-titles",
-    eyebrow: "LIBERTADORES · HISTÓRIA VIVA",
+    eyebrow: "CONMEBOL LIBERTADORES · HISTÓRIA VIVA",
     label: "Maiores campeões",
     unit: "títulos",
     cutoff: "CONMEBOL · até 2025 + seu save",
@@ -233,7 +233,7 @@ const OFFICIAL_FOOTBALL_RANKINGS: OfficialFootballRanking[] = [
   },
   {
     id: "libertadores-goals",
-    eyebrow: "LIBERTADORES · JOGADORES",
+    eyebrow: "CONMEBOL LIBERTADORES · JOGADORES",
     label: "Maiores artilheiros",
     unit: "gols",
     cutoff: "CONMEBOL · abril de 2026",
@@ -402,4 +402,18 @@ export function footballRankingsForState(state: GameState): OfficialFootballRank
     ...(generationBoard ? [generationBoard] : []),
     ...(transferBoard ? [transferBoard] : []),
   ];
+}
+
+const WORLD_ARCHIVE_DUPLICATE_IDS = new Set<OfficialFootballRanking["id"]>([
+  "champions-titles",
+  "europa-titles",
+  "libertadores-titles",
+  "sudamericana-titles",
+  "current-generation",
+  "largest-world-transfers",
+]);
+
+/** O Arquivo guarda recordes únicos; campeões e líderes do universo vivem nas abas próprias. */
+export function archiveFootballRankingsForState(state: GameState) {
+  return footballRankingsForState(state).filter((board) => !WORLD_ARCHIVE_DUPLICATE_IDS.has(board.id));
 }
