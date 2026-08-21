@@ -37,6 +37,33 @@ function ballonDorWins(player: WorldPlayer) {
   return player.honors.filter((honor) => honor.kind === "award" && honor.name === "Bola de Ouro").length;
 }
 
+function eraScore(player: WorldPlayer) {
+  return (
+    ballonDorWins(player) * 190 +
+    player.overall * 2.2 +
+    player.reputation * 1.6 +
+    player.careerStats.goals * 0.12 +
+    player.careerStats.assists * 0.16 +
+    player.honors.filter((honor) => honor.kind === "award").length * 14
+  );
+}
+
+function generationRivalForState(state: GameState) {
+  if (state.history.length < 3) return null;
+  const protagonistBirthSeason = state.season - state.age;
+  return playersForState(state)
+    .filter((player) =>
+      player.status !== "retired" &&
+      Math.abs(player.birthSeason - protagonistBirthSeason) <= 7 &&
+      (
+        ballonDorWins(player) > 0 ||
+        player.reputation >= 72 ||
+        player.overall >= Math.max(82, state.overall - 4)
+      )
+    )
+    .sort((a, b) => eraScore(b) - eraScore(a) || b.overall - a.overall || a.id.localeCompare(b.id))[0] ?? null;
+}
+
 export function worldPlayerStatLeaders(state: GameState, metric: "goals" | "assists", limit = 8): WorldPlayerRankingEntry[] {
   return playersForState(state)
     .filter((player) => player.careerStats[metric] > 0)
@@ -134,6 +161,22 @@ export function worldPlayerNewsForState(state: GameState): WorldPlayerNewsProjec
         });
       }
     }
+  }
+
+  const eraRival = generationRivalForState(state);
+  if (eraRival) {
+    const rivalBallons = ballonDorWins(eraRival);
+    const protagonistBallons = state.awardCabinet["Bola de Ouro"] ?? 0;
+    const latestSeason = state.history.at(-1)?.season ?? Math.max(2027, state.season - 1);
+    const closeRace = Math.abs(eraRival.overall - state.overall) <= 3 || Math.abs(rivalBallons - protagonistBallons) <= 1;
+    news.push({
+      id: `world-player-era-rival-${latestSeason}-${eraRival.id}`,
+      season: latestSeason,
+      category: "rival",
+      priority: rivalBallons > 0 || closeRace ? "major" : "normal",
+      title: `${eraRival.name} vira referência da sua geração`,
+      summary: `${clubShortName(eraRival.currentClubId)} · ${eraRival.overall} OVR${rivalBallons ? ` · ${rivalBallons} Bola${rivalBallons > 1 ? "s" : ""} de Ouro` : ""}.`,
+    });
   }
 
   return news;
