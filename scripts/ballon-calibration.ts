@@ -2,8 +2,7 @@ import { leagueById } from "../app/game-data";
 import { evaluateBallonDor } from "../app/career/ballon-dor";
 import { runMonteCarloCareers } from "../app/career/simulation";
 
-// Iteration batch. The final candidate is validated again with 2,000 careers.
-const report = runMonteCarloCareers(500, 20260723);
+const report = runMonteCarloCareers(2000, 20260723);
 
 const turkeyDomesticOnly = evaluateBallonDor({
   league: leagueById("superlig"),
