@@ -2,7 +2,7 @@ import { leagueById } from "../app/game-data";
 import { evaluateBallonDor } from "../app/career/ballon-dor";
 import { runMonteCarloCareers } from "../app/career/simulation";
 
-const report = runMonteCarloCareers(500, 20260723);
+const report = runMonteCarloCareers(2000, 20260723);
 const base = {
   inEurope: false, positionZone: "ataque" as const, isKeeper: false,
   overall: 91, performanceScore: 94, reputation: 82, appearances: 40,
