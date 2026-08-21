@@ -1,45 +1,55 @@
-name: Publicar Futbobo no GitHub Pages
+name: Ballon temporary QA runner
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [agent/ballon-balance-field-rotation]
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  contents: write
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  qa:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Baixar o projeto
-        uses: actions/checkout@v4
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
         with:
-          node-version: 24
+          ref: agent/ballon-balance-field-rotation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
           cache: npm
-      - name: Instalar dependências
+      - name: Materialize product changes
+        run: node scripts/agent-ballon-fields-update.mjs
+      - name: Install
         run: npm ci
-      - name: Configurar Pages
-        uses: actions/configure-pages@v5
-      - name: Gerar site estático
-        run: npm run build
-        env:
-          GITHUB_PAGES_CUSTOM_DOMAIN: "true"
-      - name: Preparar artefato
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./out
-      - name: Publicar
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Full build and tests
+        run: npm test
+      - name: Lint
+        run: npm run lint
+      - name: Monte Carlo calibration
+        run: |
+          npx --yes tsx -e "import { runMonteCarloCareers } from './app/career/simulation.ts'; const report=runMonteCarloCareers(600, 20260821); console.log('MONTE_CARLO', JSON.stringify(report));"
+      - name: Scenario and field probability checks
+        run: |
+          npx --yes tsx <<'TSX'
+          import { evaluateBallonDor } from './app/career/ballon-dor.ts';
+          import { fieldThemeForMatch } from './app/botao/field-themes.ts';
+          const league = { id:'superlig', countryId:'turquia', name:'Süper Lig', cupName:'Türkiye Kupası', prestige:2, championsPlaces:1, europaPlaces:2, conferencePlaces:3 };
+          const turkey = evaluateBallonDor({league,inEurope:true,positionZone:'ataque',isKeeper:false,overall:89,performanceScore:91,reputation:82,appearances:36,goals:34,assists:8,cleanSheets:0,goalsConceded:0,titleCount:1,majorClubTitleCount:1,majorNationalTitle:false,playsContinental:'conference',continentalChampion:false,mundialChampion:false,worldCupGoals:0,worldCupAssists:0,supportingAwardBonus:4,hasProductionAward:true,previousBallonDor:0});
+          console.log('TURKEY_34_GOALS', JSON.stringify(turkey));
+          if (turkey.eligible || turkey.chance !== 0) throw new Error('34 goals + only Süper Lig must not be Ballon eligible');
+          const counts = {classic:0,'checker-night':0,'diagonal-sun':0,'futsal-blue':0};
+          for (let i=0;i<100000;i++) counts[fieldThemeForMatch(1000+i, `match-${i}`)]++;
+          console.log('FIELD_DISTRIBUTION', JSON.stringify(counts));
+          const blueRate = counts['futsal-blue']/100000;
+          if (blueRate < 0.018 || blueRate > 0.022) throw new Error(`blue futsal rate out of tolerance: ${blueRate}`);
+          TSX
+      - name: Commit verified changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/career/simulation.ts app/botao/render.ts tests/rendered-html.test.mjs
+          git commit -m "feat: rebalance Ballon d'Or and rotate 5v5 fields"
+          git push origin HEAD:agent/ballon-balance-field-rotation

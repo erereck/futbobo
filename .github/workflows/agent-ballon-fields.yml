@@ -1,0 +1,45 @@
+name: Ballon balance and field rotation
+
+on:
+  push:
+    branches: [agent/ballon-balance-field-rotation]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/ballon-balance-field-rotation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - name: Materialize product changes
+        run: node scripts/agent-ballon-fields-update-v2.mjs
+      - name: Install
+        run: npm ci
+      - name: Full build and tests
+        run: npm test
+      - name: Lint
+        run: npm run lint
+      - name: Monte Carlo calibration
+        run: |
+          npx --yes tsx -e "import { runMonteCarloCareers } from './app/career/simulation.ts'; const report=runMonteCarloCareers(600, 20260821); console.log(JSON.stringify({runs:report.runs,ballonDorCareers:report.ballonDorCareers,ballonDorCareerRate:report.ballonDorCareerRate,totalBallonDor:report.totalBallonDor,averagePeakOverall:report.averagePeakOverall,positionBreakdown:report.positionBreakdown},null,2));"
+      - name: Scenario and field probability checks
+        run: |
+          npx --yes tsx -e "import { evaluateBallonDor } from './app/career/ballon-dor.ts'; import { fieldThemeForMatch } from './app/botao/field-themes.ts'; const league={id:'superlig',countryId:'turquia',name:'Süper Lig',cupName:'Türkiye Kupası',prestige:2,championsPlaces:1,europaPlaces:2,conferencePlaces:3}; const turkey=evaluateBallonDor({league,inEurope:true,positionZone:'ataque',isKeeper:false,overall:89,performanceScore:91,reputation:82,appearances:36,goals:34,assists:8,cleanSheets:0,goalsConceded:0,titleCount:1,majorClubTitleCount:1,majorNationalTitle:false,playsContinental:'conference',continentalChampion:false,mundialChampion:false,worldCupGoals:0,worldCupAssists:0,supportingAwardBonus:4,hasProductionAward:true,previousBallonDor:0}); console.log('TURKEY_34_GOALS',JSON.stringify(turkey)); if(turkey.eligible||turkey.chance!==0) throw new Error('34 goals + only Süper Lig must not be Ballon eligible'); const counts={classic:0,'checker-night':0,'diagonal-sun':0,'futsal-blue':0}; for(let i=0;i<100000;i++) counts[fieldThemeForMatch(1000+i,'match-'+i)]++; console.log('FIELD_DISTRIBUTION',JSON.stringify(counts)); const rate=counts['futsal-blue']/100000; if(rate<0.018||rate>0.022) throw new Error('blue futsal rate out of tolerance: '+rate);"
+      - name: Commit verified changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/career/simulation.ts app/botao/render.ts tests/rendered-html.test.mjs
+          git commit -m "feat: rebalance Ballon d'Or and rotate 5v5 fields"
+          git push origin HEAD:agent/ballon-balance-field-rotation
