@@ -83,7 +83,7 @@ function repeatMultiplier(previous: number) {
   if (previous === 4) return 0.032;
   if (previous === 5) return 0.012;
   if (previous === 6) return 0.0045;
-  return Math.max(0.0003, 0.0028 * 0.5 ** (previous - 7));
+  return Math.max(0.0004, 0.006 * 0.55 ** (previous - 7));
 }
 
 export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEvaluation {
