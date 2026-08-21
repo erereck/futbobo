@@ -1,10 +1,25 @@
 import { CLUBS, leagueById } from "../game-data";
+import type { Country } from "../game-data";
 import type { GameState, SeasonRecord } from "./model";
 import { clubConfederation } from "./academy";
 import { seeded } from "./shared";
 
-export type LivingClubCompetitionId = "champions-league" | "libertadores" | "mundial";
+export type LivingClubCompetitionId =
+  | "champions-league"
+  | "libertadores"
+  | "concacaf-champions"
+  | "afc-champions"
+  | "caf-champions"
+  | "mundial";
+
 type ContinentalLivingClubCompetitionId = Exclude<LivingClubCompetitionId, "mundial">;
+
+type LivingCompetitionGameId =
+  | "championsLeague"
+  | "libertadores"
+  | "concacafChampions"
+  | "afcChampions"
+  | "cafChampions";
 
 export type LivingClubChampion = {
   season: number;
@@ -30,8 +45,8 @@ export type LivingClubCompetition = {
 type CompetitionConfig = {
   id: ContinentalLivingClubCompetitionId;
   label: string;
-  competitionId: "championsLeague" | "libertadores";
-  confederation: "EUROPE" | "SOUTH_AMERICA";
+  competitionId: LivingCompetitionGameId;
+  confederation: Country["confederation"];
   historicTitles: Record<string, number>;
 };
 
@@ -76,6 +91,37 @@ const CONFIGS: CompetitionConfig[] = [
       Santos: 3,
       "Grêmio": 3,
       Palmeiras: 3,
+    },
+  },
+  {
+    id: "concacaf-champions",
+    label: "Concacaf Champions Cup",
+    competitionId: "concacafChampions",
+    confederation: "NORTH_AMERICA",
+    historicTitles: {
+      "Club América": 7,
+      "Cruz Azul": 7,
+    },
+  },
+  {
+    id: "afc-champions",
+    label: "AFC Champions League",
+    competitionId: "afcChampions",
+    confederation: "ASIA",
+    historicTitles: {
+      "Al-Hilal": 4,
+      "Urawa Red Diamonds": 3,
+    },
+  },
+  {
+    id: "caf-champions",
+    label: "CAF Champions League",
+    competitionId: "cafChampions",
+    confederation: "AFRICA",
+    historicTitles: {
+      "Al Ahly": 12,
+      Zamalek: 5,
+      "TP Mazembe": 5,
     },
   },
 ];
@@ -127,7 +173,8 @@ function pickWinner(
   );
   const elite = available.filter((club) => club.reputation >= 4 || (titles[club.id] ?? 0) >= 2);
   const strong = available.filter((club) => club.reputation >= 3 || (titles[club.id] ?? 0) >= 1);
-  const upset = seeded(state.seed, season * 5501 + (config.id === "champions-league" ? 17 : 43)) < 0.1;
+  const salt = config.id.length * 71;
+  const upset = seeded(state.seed, season * 5501 + salt) < 0.1;
   const candidates = upset && strong.length ? strong : elite.length ? elite : strong.length ? strong : available;
 
   return candidates
@@ -142,7 +189,7 @@ function pickWinner(
         historyPull * 24 +
         squadBoost,
       );
-      const roll = Math.max(0.000001, seeded(state.seed, season * 5801 + index * 67 + (config.id === "champions-league" ? 5 : 29)));
+      const roll = Math.max(0.000001, seeded(state.seed, season * 5801 + index * 67 + salt));
       return { clubId: club.id, score: Math.pow(roll, 1 / weight) };
     })
     .sort((a, b) => b.score - a.score)[0]?.clubId ?? available[0]?.id ?? CLUBS[0].id;
@@ -172,7 +219,7 @@ function buildContinentalCompetition(state: GameState, config: CompetitionConfig
     const playerWon = Boolean(playerRecord && playerCompetition?.champion);
     const winnerId = playerWon
       ? playerRecord!.clubId
-      : pickWinner(state, config, season, titles, playerRecord?.clubId ?? "");
+      : pickWinner(state, config, season, titles, playerCompetition ? playerRecord?.clubId ?? "" : "");
     const source: LivingClubChampion["source"] = playerWon ? "player" : "generated";
 
     titles[winnerId] = (titles[winnerId] ?? 0) + 1;
@@ -213,24 +260,45 @@ function actualMundialFinalWinner(record: SeasonRecord | undefined) {
   return finalLoss?.match.opponentId ?? "";
 }
 
+function continentalChampionIdsForSeason(competitions: LivingClubCompetition[], season: number) {
+  return competitions
+    .filter((competition) => competition.id !== "mundial")
+    .map((competition) => ({
+      competitionId: competition.id,
+      clubId: competition.champions.find((entry) => entry.season === season)?.winnerId ?? "",
+    }))
+    .filter((entry) => entry.clubId);
+}
+
 function pickMundialUpsetWinner(
   state: GameState,
   season: number,
   excludedClubIds: Set<string>,
-  libertadoresChampionId: string,
+  continentalChampions: Array<{ competitionId: LivingClubCompetitionId; clubId: string }>,
 ) {
-  const available = CLUBS.filter((club) => !excludedClubIds.has(club.id));
+  const eligibleChampionIds = new Set(
+    continentalChampions
+      .map((entry) => entry.clubId)
+      .filter((clubId) => clubId && !excludedClubIds.has(clubId)),
+  );
+  const continentalPool = CLUBS.filter((club) => eligibleChampionIds.has(club.id));
+  const available = continentalPool.length
+    ? continentalPool
+    : CLUBS.filter((club) => !excludedClubIds.has(club.id));
+
   return available
     .map((club, index) => {
       const league = leagueById(club.leagueId);
       const squadBoost = worldPlayerSquadBoost(state, club.id);
-      const libertadoresBoost = club.id === libertadoresChampionId ? 260 : 0;
+      const wonLibertadores = continentalChampions.some((entry) => entry.competitionId === "libertadores" && entry.clubId === club.id);
+      const wonContinental = continentalChampions.some((entry) => entry.clubId === club.id);
+      const continentalBoost = wonLibertadores ? 340 : wonContinental ? 170 : 0;
       const weight = Math.max(
         1,
         club.reputation ** 4 * 3.4 +
         league.prestige ** 3 * 1.8 +
         squadBoost +
-        libertadoresBoost,
+        continentalBoost,
       );
       const roll = Math.max(0.000001, seeded(state.seed, season * 6907 + index * 79 + 53));
       return { clubId: club.id, score: Math.pow(roll, 1 / weight) };
@@ -241,12 +309,12 @@ function pickMundialUpsetWinner(
 function buildMundialCompetition(
   state: GameState,
   latestCompletedSeason: number,
-  championsLeague: LivingClubCompetition,
-  libertadores: LivingClubCompetition,
+  continentalCompetitions: LivingClubCompetition[],
 ): LivingClubCompetition {
   const titles: Record<string, number> = {};
   const champions: LivingClubChampion[] = [];
   const news: LivingClubCompetition["news"] = [];
+  const championsLeague = continentalCompetitions.find((competition) => competition.id === "champions-league")!;
 
   for (let season = 2027; season <= latestCompletedSeason; season += 1) {
     const playerRecord = state.history.find((record) => record.season === season);
@@ -254,7 +322,7 @@ function buildMundialCompetition(
     const playerCompeted = Boolean(playerMundial);
     const playerWon = Boolean(playerRecord && playerMundial?.champion);
     const championsWinnerId = championsLeague.champions.find((entry) => entry.season === season)?.winnerId ?? "";
-    const libertadoresWinnerId = libertadores.champions.find((entry) => entry.season === season)?.winnerId ?? "";
+    const continentalChampions = continentalChampionIdsForSeason(continentalCompetitions, season);
 
     let winnerId = "";
     let source: LivingClubChampion["source"] = "generated";
@@ -269,7 +337,7 @@ function buildMundialCompetition(
           state,
           season,
           new Set([playerRecord?.clubId ?? ""]),
-          libertadoresWinnerId,
+          continentalChampions,
         );
       }
     } else {
@@ -280,7 +348,7 @@ function buildMundialCompetition(
           state,
           season,
           new Set(championsWinnerId ? [championsWinnerId] : []),
-          libertadoresWinnerId,
+          continentalChampions,
         );
     }
 
@@ -291,6 +359,7 @@ function buildMundialCompetition(
       const club = CLUBS.find((item) => item.id === winnerId);
       if (club) {
         const championsFavored = !playerCompeted && winnerId === championsWinnerId;
+        const continentalOrigin = continentalChampions.find((entry) => entry.clubId === winnerId)?.competitionId;
         news.push({
           id: `world-mundial-${season}-${winnerId}`,
           season,
@@ -298,8 +367,10 @@ function buildMundialCompetition(
           priority: "major",
           title: `${club.shortName} é campeão mundial`,
           summary: championsFavored
-            ? `${season} · campeão da Champions confirmou o favoritismo.`
-            : `${season} · o Mundial fugiu do favorito europeu.`,
+            ? `${season} · campeão da Champions confirmou os 93% de favoritismo.`
+            : continentalOrigin
+              ? `${season} · campeão continental derrubou o favorito europeu.`
+              : `${season} · o Mundial fugiu do favorito europeu.`,
         });
       }
     }
@@ -317,8 +388,6 @@ function buildMundialCompetition(
 export function buildLivingClubCompetitions(state: GameState): LivingClubCompetition[] {
   const latestCompletedSeason = Math.max(2026, ...state.history.map((record) => record.season));
   const continental = CONFIGS.map((config) => buildContinentalCompetition(state, config, latestCompletedSeason));
-  const championsLeague = continental.find((competition) => competition.id === "champions-league")!;
-  const libertadores = continental.find((competition) => competition.id === "libertadores")!;
-  const mundial = buildMundialCompetition(state, latestCompletedSeason, championsLeague, libertadores);
+  const mundial = buildMundialCompetition(state, latestCompletedSeason, continental);
   return [...continental, mundial];
 }
