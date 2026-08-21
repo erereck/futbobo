@@ -5,7 +5,7 @@ import { runMonteCarloCareers } from "../career/simulation";
 export const dynamic = "force-static";
 
 export default function BallonCalibrationPage() {
-  const report = runMonteCarloCareers(1000, 20260723);
+  const report = runMonteCarloCareers(200, 20260723);
 
   const turkeyDomesticOnly = evaluateBallonDor({
     league: leagueById("superlig"),
