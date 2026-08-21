@@ -103,9 +103,9 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
   // por excelência específica da posição. O palco da temporada decide o quão
   // fácil é transformar essa excelência em candidatura real.
   const positionalRecognition =
-    (input.isKeeper && input.overall >= 76 && input.performanceScore >= 72) ||
-    (input.positionZone === "defesa" && input.overall >= 76 && input.performanceScore >= 72) ||
-    (input.positionZone === "meio" && input.overall >= 77 && input.performanceScore >= 74);
+    (input.isKeeper && input.overall >= 75 && input.performanceScore >= 70) ||
+    (input.positionZone === "defesa" && input.overall >= 75 && input.performanceScore >= 70) ||
+    (input.positionZone === "meio" && input.overall >= 76 && input.performanceScore >= 72);
   const worldClassRecognition =
     input.hasProductionAward ||
     input.supportingAwardBonus >= 2.5 ||
@@ -117,22 +117,22 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
   if (input.inEurope && stage === "elite") {
     eligible =
       baseAvailability &&
-      input.overall >= 75 &&
-      input.performanceScore >= 64 &&
-      input.reputation >= 22 &&
+      input.overall >= 74 &&
+      input.performanceScore >= 62 &&
+      input.reputation >= 18 &&
       (input.majorClubTitleCount > 0 || input.majorNationalTitle || globalBreakthrough || worldClassRecognition);
   } else if (input.inEurope && stage === "major") {
     eligible =
       baseAvailability &&
       input.appearances >= 20 &&
-      input.overall >= 76 &&
-      input.performanceScore >= 66 &&
-      input.reputation >= 28 &&
+      input.overall >= 75 &&
+      input.performanceScore >= 64 &&
+      input.reputation >= 24 &&
       (
         input.majorClubTitleCount > 0 ||
         input.majorNationalTitle ||
         globalBreakthrough ||
-        (worldClassRecognition && input.overall >= 79 && input.performanceScore >= 72)
+        (worldClassRecognition && input.overall >= 78 && input.performanceScore >= 70)
       );
   } else if (input.inEurope && stage === "secondary") {
     eligible =
@@ -194,26 +194,26 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
 
   if (!eligible) return { eligible: false, score, chance: 0, historicSeason, stage };
 
-  const firstChance = clamp(36 + Math.max(0, score - 66) * 2.3, 36, 88);
+  const firstChance = clamp(48 + Math.max(0, score - 64) * 2.4, 48, 92);
   const repeatBase = clamp(18 + Math.max(0, score - 74) * 1.8, 18, 60);
   const stageMultiplier = stageChanceMultiplier(stage, globalBreakthrough, input.mundialChampion, input.majorNationalTitle);
   let chance = (input.previousBallonDor === 0 ? firstChance : repeatBase) * repeatMultiplier(input.previousBallonDor) * stageMultiplier;
 
   if (historicSeason) {
-    const historicFloor = input.previousBallonDor === 0 ? 52 : input.previousBallonDor === 1 ? 25 : input.previousBallonDor === 2 ? 12 : Math.max(0.18, 5 * 0.44 ** (input.previousBallonDor - 3));
+    const historicFloor = input.previousBallonDor === 0 ? 56 : input.previousBallonDor === 1 ? 25 : input.previousBallonDor === 2 ? 12 : Math.max(0.18, 5 * 0.44 ** (input.previousBallonDor - 3));
     // Liga menor sem feito global continua sendo um conto de fadas, não um atalho.
     const adjustedHistoricFloor = stage === "minor" && !globalBreakthrough ? historicFloor * 0.18 : historicFloor;
     chance = Math.max(chance, adjustedHistoricFloor);
   }
   if (input.worldCupGoals >= 8) {
-    const worldCupFloor = input.previousBallonDor === 0 ? 74 : input.previousBallonDor === 1 ? 44 : input.previousBallonDor === 2 ? 24 : input.previousBallonDor === 3 ? 11 : Math.max(0.22, 5 * 0.46 ** (input.previousBallonDor - 4));
+    const worldCupFloor = input.previousBallonDor === 0 ? 78 : input.previousBallonDor === 1 ? 44 : input.previousBallonDor === 2 ? 24 : input.previousBallonDor === 3 ? 11 : Math.max(0.22, 5 * 0.46 ** (input.previousBallonDor - 4));
     chance = Math.max(chance, worldCupFloor);
   }
 
   return {
     eligible: true,
     score,
-    chance: Math.max(0.03, Number(clamp(chance, 0.03, 88).toFixed(3))),
+    chance: Math.max(0.03, Number(clamp(chance, 0.03, 92).toFixed(3))),
     historicSeason,
     stage,
   };
