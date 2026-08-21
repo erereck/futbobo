@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { ROLE_LABELS } from "../../career-systems";
 import type { Club } from "../../game-data";
@@ -29,6 +29,8 @@ type TransferJourney = {
   mode: TravelMode;
 };
 
+type Point = { x: number; y: number };
+
 function windowCopy(state: GameState, currentClub: Club, count: number) {
   if (state.forcedFreeAgentUntilSeason > state.season) return { eyebrow: "FORA DO MERCADO", title: "Nenhum clube pode contratar você", text: `A punição vai até ${state.forcedFreeAgentUntilSeason}.` };
   if (state.pendingTransferMode === "loan") return { eyebrow: "EMPRÉSTIMO", title: "Minutos em outro clube", text: `Você retorna ao ${currentClub.shortName} ao fim da próxima temporada.` };
@@ -47,19 +49,39 @@ function moveLabel(offer: TransferOffer) {
   return `Proposta de ${formatMoney(offer.transferFee)}`;
 }
 
+function cubicPoint(start: Point, controlA: Point, controlB: Point, end: Point, t: number): Point {
+  const inv = 1 - t;
+  return {
+    x: inv ** 3 * start.x + 3 * inv ** 2 * t * controlA.x + 3 * inv * t ** 2 * controlB.x + t ** 3 * end.x,
+    y: inv ** 3 * start.y + 3 * inv ** 2 * t * controlA.y + 3 * inv * t ** 2 * controlB.y + t ** 3 * end.y,
+  };
+}
+
+function cubicTangent(start: Point, controlA: Point, controlB: Point, end: Point, t: number): Point {
+  const inv = 1 - t;
+  return {
+    x: 3 * inv ** 2 * (controlA.x - start.x) + 6 * inv * t * (controlB.x - controlA.x) + 3 * t ** 2 * (end.x - controlB.x),
+    y: 3 * inv ** 2 * (controlA.y - start.y) + 6 * inv * t * (controlB.y - controlA.y) + 3 * t ** 2 * (end.y - controlB.y),
+  };
+}
+
 function TravelVehicle({ mode }: { mode: TravelMode }) {
   if (mode === "bus") {
     return (
-      <svg className={styles.vehicleSvg} viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M6 17h12M6 4h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
-        <path d="M4 10h16M8 4v6m8-6v6M7 14h.01M17 14h.01" />
-        <path d="M7 17v2m10-2v2" />
+      <svg className={styles.vehicleSvg} viewBox="0 0 64 40" aria-hidden="true">
+        <path d="M7 8h40c6 0 10 4 10 10v10H4V13c0-3 1-5 3-5Z" />
+        <path d="M11 12h27v10H10V14c0-1 0-2 1-2Zm31 0h5c3 0 6 3 6 6v4H42V12Z" />
+        <path d="M4 28h53v4H4z" />
+        <circle cx="15" cy="32" r="5" />
+        <circle cx="47" cy="32" r="5" />
+        <path d="M57 21h3m-3 5h3" />
       </svg>
     );
   }
   return (
-    <svg className={styles.vehicleSvg} viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M17.8 19 16 11l3.5-3.5c1.5-1.5 2-3.5 1-4.5s-3-.5-4.5 1L12.5 7.5 4.5 6 3 7.5l6.5 3.5L6 14.5 3.5 14 2 15.5l4 2 2 4 1.5-1.5-.5-2.5 3.5-3.5 3.5 6.5 1.8-1.5Z" />
+    <svg className={styles.vehicleSvg} viewBox="0 0 72 42" aria-hidden="true">
+      <path d="M3 19h22L35 4h6l-5 15h19l8-7h5l-4 9 4 9h-5l-8-7H36l5 15h-6L25 23H3l-3-2 3-2Z" />
+      <path d="M12 19 8 11h4l8 8m-8 4-4 8h4l8-8" />
     </svg>
   );
 }
@@ -76,6 +98,74 @@ function TransferJourneyOverlay({ journey, origin }: { journey: TransferJourney;
     "--journey-to": destination.primary,
     "--journey-to-secondary": destination.secondary,
   } as CSSProperties;
+  const routeRef = useRef<HTMLDivElement | null>(null);
+  const vehicleRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const route = routeRef.current;
+    const vehicle = vehicleRef.current;
+    if (!route || !vehicle) return;
+
+    const plane = mode === "plane";
+    const start = { x: 0.04, y: plane ? 0.76 : 0.72 };
+    const controlA = { x: 0.28, y: plane ? 0.08 : 0.42 };
+    const controlB = { x: 0.72, y: plane ? 0.08 : 0.42 };
+    const end = { x: 0.96, y: plane ? 0.76 : 0.72 };
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const sampleCount = 180;
+    const samples: Array<{ t: number; length: number }> = [{ t: 0, length: 0 }];
+    let totalLength = 0;
+    let previous = start;
+
+    for (let index = 1; index <= sampleCount; index += 1) {
+      const t = index / sampleCount;
+      const point = cubicPoint(start, controlA, controlB, end, t);
+      totalLength += Math.hypot(point.x - previous.x, point.y - previous.y);
+      samples.push({ t, length: totalLength });
+      previous = point;
+    }
+
+    const renderAt = (progress: number) => {
+      const bounds = route.getBoundingClientRect();
+      const targetLength = totalLength * progress;
+      let upperIndex = samples.findIndex((sample) => sample.length >= targetLength);
+      if (upperIndex < 1) upperIndex = 1;
+      const lower = samples[upperIndex - 1];
+      const upper = samples[upperIndex];
+      const segmentLength = Math.max(0.000001, upper.length - lower.length);
+      const blend = (targetLength - lower.length) / segmentLength;
+      const t = lower.t + (upper.t - lower.t) * blend;
+      const point = cubicPoint(start, controlA, controlB, end, t);
+      const tangent = cubicTangent(start, controlA, controlB, end, t);
+      const angle = Math.atan2(tangent.y * bounds.height, tangent.x * bounds.width) * 180 / Math.PI;
+      vehicle.style.transform = `translate3d(${point.x * bounds.width}px, ${point.y * bounds.height}px, 0) rotate(${angle}deg)`;
+    };
+
+    if (reducedMotion) {
+      renderAt(1);
+      return;
+    }
+
+    const duration = plane ? 2380 : 2460;
+    const delay = 150;
+    const startedAt = performance.now() + delay;
+    let frame = 0;
+
+    const animate = (now: number) => {
+      const progress = Math.max(0, Math.min(1, (now - startedAt) / duration));
+      renderAt(progress);
+      if (progress < 1) frame = window.requestAnimationFrame(animate);
+    };
+
+    renderAt(0);
+    frame = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(frame);
+  }, [mode]);
+
+  const routePath = mode === "plane"
+    ? "M4 76 C28 8 72 8 96 76"
+    : "M4 72 C28 42 72 42 96 72";
+  const routeY = mode === "plane" ? 76 : 72;
 
   return (
     <div className={styles.travelOverlay} role="dialog" aria-modal="true" aria-label={`Viagem de ${origin.shortName} para ${destination.shortName}`} style={style}>
@@ -94,25 +184,27 @@ function TransferJourneyOverlay({ journey, origin }: { journey: TransferJourney;
 
           <div className={`${styles.terminal} ${styles.originTerminal}`}>
             <div className={styles.badgeShell}><ClubBadge club={origin} /></div>
-            <span>{mode === "plane" ? "AEROPORTO" : "TERMINAL"} DO</span>
+            <span>ORIGEM</span>
             <strong>{origin.shortName}</strong>
             <small>{origin.city} · {originCountry.name}</small>
           </div>
 
-          <div className={styles.route} aria-hidden="true">
-            <svg className={styles.routeSvg} viewBox="0 0 600 190" preserveAspectRatio="none">
-              <path className={styles.routeShadow} d="M28 145 C165 18 435 18 572 145" />
-              <path className={styles.routeLine} d="M28 145 C165 18 435 18 572 145" />
+          <div className={styles.route} ref={routeRef} aria-hidden="true">
+            <svg className={styles.routeSvg} viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path className={styles.routeShadow} d={routePath} />
+              <path className={styles.routeLine} d={routePath} />
+              <circle className={styles.routePoint} cx="4" cy={routeY} r="1.5" />
+              <circle className={styles.routePoint} cx="96" cy={routeY} r="1.5" />
             </svg>
-            <div className={`${styles.vehicle} ${mode === "bus" ? styles.vehicleBus : styles.vehiclePlane}`}>
-              <TravelVehicle mode={mode} />
+            <div ref={vehicleRef} className={`${styles.vehicleMotion} ${mode === "bus" ? styles.vehicleBus : styles.vehiclePlane}`}>
+              <div className={styles.vehicleCenter}><TravelVehicle mode={mode} /></div>
             </div>
             <span className={styles.routeStatus}>{mode === "plane" ? "EM VOO" : "NA ESTRADA"}</span>
           </div>
 
           <div className={`${styles.terminal} ${styles.destinationTerminal}`}>
             <div className={styles.badgeShell}><ClubBadge club={destination} /></div>
-            <span>{mode === "plane" ? "AEROPORTO" : "TERMINAL"} DO</span>
+            <span>DESTINO</span>
             <strong>{destination.shortName}</strong>
             <small>{destination.city} · {destinationCountry.name}</small>
           </div>
@@ -133,22 +225,35 @@ export default function TransferMarketScreen({ state, currentClub, offers, renew
   const copy = windowCopy(state, currentClub, offers.length);
   const canStay = !state.transferRequested && !state.renewalDenied && !state.forcedClubExit && !state.forcedAlternativeTransfer && state.pendingTransferMode !== "loan";
   const [journey, setJourney] = useState<TransferJourney | null>(null);
+  const onChooseRef = useRef(onChoose);
+  const journeyFinishingRef = useRef(false);
+
+  useEffect(() => {
+    onChooseRef.current = onChoose;
+  }, [onChoose]);
 
   useEffect(() => {
     if (!journey) return;
+    journeyFinishingRef.current = false;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const timer = window.setTimeout(() => {
+
+    const finishJourney = () => {
+      if (journeyFinishingRef.current) return;
+      journeyFinishingRef.current = true;
       const acceptedOffer = journey.offer;
+      document.body.style.overflow = previousOverflow;
       setJourney(null);
-      onChoose(acceptedOffer);
-    }, reducedMotion ? 650 : 2750);
+      onChooseRef.current(acceptedOffer);
+    };
+
+    const timer = window.setTimeout(finishJourney, reducedMotion ? 650 : 2850);
     return () => {
       window.clearTimeout(timer);
       document.body.style.overflow = previousOverflow;
     };
-  }, [journey, onChoose]);
+  }, [journey]);
 
   function chooseWithJourney(offer: TransferOffer) {
     if (journey) return;
