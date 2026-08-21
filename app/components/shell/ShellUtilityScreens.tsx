@@ -179,8 +179,10 @@ export function InstallScreen() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    setAndroid(isAndroidDevice());
-    setNative(isNativeAndroid());
+    queueMicrotask(() => {
+      setAndroid(isAndroidDevice());
+      setNative(isNativeAndroid());
+    });
     const capture = (event: Event) => { event.preventDefault(); setPrompt(event as InstallPromptEvent); };
     window.addEventListener("beforeinstallprompt", capture);
     if (isNativeAndroid()) void checkForAndroidUpdate().then(setRelease);

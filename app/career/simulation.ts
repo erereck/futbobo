@@ -9,7 +9,8 @@ import { ALL_PRO_EVENTS, BALLON_DOR_EXCLUDED_TROPHIES, POSITION_PRIMARY_ATTRIBUT
 import { clamp, clubById, pick, seeded } from "./shared";
 import { DOMESTIC_SUPER_CUP_NAMES, clubConfederation, continentalSlotAfterSeason, initialAdaptation, initialContinentalSlot, isEuropeanClub, isOutsideAcademyHome, isOutsideCountry, positionByKey, randomAcademyClubs } from "./academy";
 import { addStats, competitiveStrength, describeEffects, isIdolAtClub, marketValue, medicalRecordForSeason, mergeEffects, seasonAverageRating, seasonPerformanceScore, simulatedWorldCupStats, worldCupGamesThroughStage } from "./performance";
-import { selectAlternativeExileOffers, selectTransferOffers } from "./transfer-market";
+import { applyAcceptedTransfer, completeLoanReturn, materializeTransferOffers, selectAlternativeExileOffers, selectTransferOffers } from "./transfer-market";
+import { advanceWorldPlayerUniverse } from "./world-players";
 
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
@@ -1146,6 +1147,15 @@ export function simulateSeason(
     const rivalOffer = pick(rivalIds, nextBase.seed, affected.season);
     if (rivalOffer) transferOffers = [rivalOffer, ...transferOffers.filter((clubId) => clubId !== rivalOffer)].slice(0, Math.max(5, transferOffers.length));
   }
+  const transferMarketOffers = materializeTransferOffers(nextBase, transferOffers, affected.season * 43, {
+    includeForeign: !wantsDomesticReturn,
+    forceDomestic: wantsDomesticReturn,
+    forceForeign: effect.transferAbroad,
+    domesticCountryId: domesticReturnCountryId,
+    sourceLeagueId: league.id,
+    mode: effect.loan ? "loan" : renewalDenied ? "free-agent" : "permanent",
+    trigger: forcedClubExit ? "forced-exit" : renewalDenied ? "contract-expired" : "season-end",
+  });
   const legacyPoints = calculateLegacyScore({
     appearances: nextBase.stats.appearances,
     goals: nextBase.stats.goals,
@@ -1220,12 +1230,20 @@ export function simulateSeason(
     ...newOffFieldMilestones,
   ];
   const nationalitySwitchTarget = maybeOfferNationalitySwitch(nextBase, affected.season * 71);
+  const worldPlayers = advanceWorldPlayerUniverse(nextBase.worldPlayers, {
+    season: nextBase.season,
+    rivals: nextBase.rivals,
+    awardNominations: result.awardNominations,
+    protagonistName: nextBase.name,
+  });
   return {
     ...nextBase,
     nextEventId: nationalitySwitchTarget ? NATIONALITY_SWITCH_EVENT_ID : selectNextEvent(nextBase, affected.season * 37),
     pendingNationalitySwitchTarget: nationalitySwitchTarget ?? "",
     nationalitySwitchInviteUsed: nextBase.nationalitySwitchInviteUsed || Boolean(nationalitySwitchTarget),
     transferOffers,
+    transferMarketOffers,
+    worldPlayers,
     legacyPoints,
     unlockedAchievements: [...nextBase.unlockedAchievements, ...newlyUnlocked.map((achievement) => achievement.id)],
     newsFeed: [...achievementNews, ...offFieldNews, seasonHeadline, ...nextBase.newsFeed].slice(0, 16),
@@ -1285,6 +1303,16 @@ export function signProfessionalForSimulation(state: GameState, clubId: string):
 }
 
 export function completeSimulationTransfer(state: GameState, clubId: string | null): GameState {
+  const richOffer = state.transferMarketOffers.find((offer) => offer.clubId === clubId)
+    ?? (clubId ? materializeTransferOffers(state, [clubId], state.season * 601, {
+      includeForeign: true,
+      mode: state.pendingTransferMode === "loan" ? "loan" : state.isFreeAgent ? "free-agent" : "permanent",
+    })[0] : undefined);
+  if (clubId && richOffer) {
+    const moved = applyAcceptedTransfer(state, richOffer);
+    const next = { ...moved, phase: "career" as const, currentEventId: "", nextEventId: "", lastResult: null, lastConsequence: null };
+    return { ...next, currentEventId: state.nextEventId || selectNextEvent(next, state.season * 47) };
+  }
   const newClub = clubId ? clubById(clubId) : null;
   const oldClub = clubById(state.currentClubId);
   const targetClub = newClub ?? oldClub;
@@ -1307,6 +1335,7 @@ export function completeSimulationTransfer(state: GameState, clubId: string | nu
     lastResult: null,
     lastConsequence: null,
     transferOffers: [],
+    transferMarketOffers: [],
     morale: clamp(state.morale + (clubId ? 5 : 2)),
     fanSupport: clubId ? 52 : clamp(state.fanSupport + 3),
     continentalSlot: newClub ? initialContinentalSlot(newClub) : state.continentalSlot,
@@ -1372,17 +1401,7 @@ export function simulateMonteCarloCareer(seed: number, careerIndex: number): Mon
 
   let seasons = 0;
   while (state.age < 40 && seasons < 30) {
-    if (state.loanParentClubId && state.season >= state.loanEndSeason) {
-      state = {
-        ...state,
-        currentClubId: state.loanParentClubId,
-        currentLeagueId: state.loanParentLeagueId || clubById(state.loanParentClubId).leagueId,
-        loanParentClubId: "",
-        loanParentLeagueId: "",
-        loanEndSeason: 0,
-        pendingTransferMode: "permanent",
-      };
-    }
+    if ((state.activeLoan || state.loanParentClubId) && state.season >= (state.activeLoan?.endSeason ?? state.loanEndSeason)) state = completeLoanReturn(state);
     const event = eventForState(state);
     const choiceIndex = Math.floor(seeded(seed, state.season * 401 + seasons * 17) * event.choices.length);
     const choice = event.choices[choiceIndex] ?? event.choices[0];

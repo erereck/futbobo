@@ -389,11 +389,3 @@ export function isIdolAtClub(state: GameState, clubId: string) {
   );
   return state.fanSupport >= 94 && state.reputation >= 70 && (clubSeasons.length >= 4 || clubTitles >= 3);
 }
-
-export type TransferOfferOptions = {
-  includeForeign?: boolean;
-  forceDomestic?: boolean;
-  forceForeign?: boolean;
-  domesticCountryId?: string;
-  sourceLeagueId?: string;
-};

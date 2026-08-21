@@ -3,6 +3,7 @@ import type { CareerObjective, ObjectiveResult, SquadRole } from "../career-syst
 import type { PlayerAppearance } from "../player-appearance";
 import type { BotaoMatchResult } from "../botao/types";
 import type { PlayerStoryId } from "../player-stories";
+import type { WorldPlayerUniverse } from "./world-player-model";
 
 export type Phase =
   | "welcome"
@@ -221,6 +222,71 @@ export type AwardNomination = {
 
 export type TransferMode = "permanent" | "loan";
 
+export type MarketMoveType = "permanent" | "loan" | "free-agent" | "renewal";
+
+export type MarketReason =
+  | "breakout"
+  | "champion"
+  | "young-promise"
+  | "needs-minutes"
+  | "contract-ending"
+  | "requested-exit"
+  | "forced-exit"
+  | "homecoming"
+  | "career-step"
+  | "veteran-leadership"
+  | "position-need"
+  | "rebuild"
+  | "alternative-route";
+
+export type TransferOffer = {
+  id: string;
+  clubId: string;
+  fromClubId: string;
+  season: number;
+  type: MarketMoveType;
+  role: SquadRole;
+  reason: MarketReason;
+  reasonLabel: string;
+  reasonText: string;
+  transferFee: number;
+  annualSalary: number;
+  contractYears: number;
+  loanEndSeason: number;
+  parentSalaryShare: number;
+  destinationSalaryShare: number;
+  expiresSeason: number;
+};
+
+export type TransferRecord = {
+  id: string;
+  season: number;
+  age: number;
+  playerName: string;
+  position: PositionKey;
+  type: MarketMoveType | "loan-return";
+  fromClubId: string;
+  toClubId: string;
+  transferFee: number;
+  annualSalary: number;
+  contractYears: number;
+  role: SquadRole;
+  reason: MarketReason;
+};
+
+export type LoanAgreement = {
+  id: string;
+  parentClubId: string;
+  parentLeagueId: string;
+  destinationClubId: string;
+  startSeason: number;
+  endSeason: number;
+  annualSalary: number;
+  parentSalaryShare: number;
+  destinationSalaryShare: number;
+  contractYearsAtStart: number;
+};
+
 export type SocialPost = {
   id: string;
   season: number;
@@ -436,6 +502,9 @@ export type GameState = {
   retireAfterSeason: boolean;
   retirementReturnPhase: Phase;
   transferOffers: string[];
+  transferMarketOffers: TransferOffer[];
+  transferHistory: TransferRecord[];
+  activeLoan: LoanAgreement | null;
   transferRequests: number;
   transferCooldownSeason: number;
   positionChangeCooldownSeason: number;
@@ -454,6 +523,7 @@ export type GameState = {
   corruptionGuaranteedSeason: number;
   traits: SpecialTraitId[];
   rivals: CareerRival[];
+  worldPlayers: WorldPlayerUniverse;
   followers: number;
   socialSentiment: number;
   mediaRelation: number;

@@ -1,0 +1,41 @@
+.screen { width: min(100%, 860px); margin: 0 auto; padding: 24px 20px 120px; }
+.header { margin-bottom: 20px; }
+.header > span, .identity small { color: #2ca8ff; font-size: 11px; font-weight: 900; letter-spacing: .13em; }
+.header h1 { margin: 7px 0 6px; font-size: clamp(32px, 6vw, 58px); line-height: .96; letter-spacing: -.035em; }
+.header p { margin: 0; color: var(--muted, #9cafaa); font-size: 15px; }
+.list { display: grid; gap: 10px; }
+.offer { overflow: hidden; border: 1px solid rgba(128, 169, 151, .2); border-radius: 18px; background: rgba(14, 38, 29, .84); }
+.offerMain { width: 100%; min-height: 92px; display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 14px; color: inherit; text-align: left; border: 0; background: transparent; cursor: pointer; }
+.offerMain:hover { background: rgba(44, 168, 255, .055); }
+.identity, .deal { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.identity strong { overflow: hidden; font-size: 19px; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.identity em, .deal small { color: #92a99f; font-size: 12px; font-style: normal; }
+.deal { position: relative; min-width: 170px; padding-right: 32px; align-items: flex-end; text-align: right; }
+.deal strong { color: #f8c932; font-size: 15px; }
+.deal b { position: absolute; right: 0; top: 50%; color: #f8c932; font-size: 22px; transform: translateY(-50%); }
+.reason { margin: -5px 14px 10px 86px; color: #b7c9c1; font-size: 13px; }
+.details { border-top: 1px solid rgba(128, 169, 151, .13); }
+.details summary { padding: 9px 14px 10px 86px; color: #83a397; font-size: 11px; font-weight: 800; cursor: pointer; }
+.details div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0 14px 14px 86px; }
+.details span { display: flex; flex-direction: column; gap: 2px; }
+.details small { color: #789087; font-size: 10px; }
+.details strong { font-size: 13px; }
+.stay { border-color: rgba(99, 227, 107, .24); }
+.stay .identity small, .stay .deal strong, .stay .deal b { color: #63e36b; }
+.secondaryAction { width: 100%; display: flex; justify-content: space-between; gap: 16px; margin-top: 12px; padding: 16px 18px; color: #cad8d2; border: 1px solid rgba(128, 169, 151, .2); border-radius: 15px; background: rgba(8, 27, 20, .8); cursor: pointer; }
+.secondaryAction span { color: #80988e; }
+.secondaryAction:disabled { opacity: .45; cursor: not-allowed; }
+
+@media (max-width: 600px) {
+  .screen { padding: 18px 14px 110px; }
+  .header h1 { font-size: 38px; }
+  .offerMain { min-height: 84px; grid-template-columns: 48px minmax(0, 1fr) 110px; gap: 10px; padding: 12px; }
+  .identity strong { font-size: 16px; }
+  .deal { min-width: 0; padding-right: 22px; }
+  .deal small { max-width: 108px; line-height: 1.15; }
+  .deal strong { font-size: 13px; }
+  .reason, .details summary { margin-left: 0; padding-left: 70px; }
+  .reason { padding-right: 12px; }
+  .details div { grid-template-columns: 1fr 1fr; padding-left: 70px; }
+  .secondaryAction { align-items: flex-start; flex-direction: column; gap: 3px; }
+}

@@ -89,7 +89,7 @@ export default function FutboboShell() {
 
   useEffect(() => {
     bootstrapCareerStorage();
-    refreshLibrary();
+    queueMicrotask(refreshLibrary);
   }, []);
 
   useEffect(() => {
