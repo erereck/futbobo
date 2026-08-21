@@ -155,22 +155,17 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
       input.reputation >= 76 &&
       (globalBreakthrough || (domesticMiracle && input.titleCount >= 2));
   } else if (input.league.prestige >= 4) {
-    // O Brasileirão é um palco grande o bastante para produzir um vencedor sem
-    // obrigar uma Libertadores em toda candidatura. Ainda exige temporada de
-    // elite; o multiplicador fora da Europa mantém a vantagem do eixo europeu.
-    const domesticWorldClass =
-      worldClassRecognition &&
-      input.overall >= 79 &&
-      input.performanceScore >= 75 &&
-      input.reputation >= 42;
+    // O Brasileirão pode produzir um vencedor por domínio doméstico, mas não
+    // basta simplesmente jogar bem: é preciso título relevante e temporada de
+    // nível mundial. Libertadores/Mundial/Seleção continuam abrindo a rota mais forte.
     eligible =
       baseAvailability &&
-      input.appearances >= 20 &&
-      input.overall >= 75 &&
-      input.performanceScore >= 66 &&
-      input.reputation >= 26 &&
+      input.appearances >= 21 &&
+      input.overall >= 78 &&
+      input.performanceScore >= 72 &&
+      input.reputation >= 36 &&
       worldClassRecognition &&
-      (input.majorClubTitleCount > 0 || input.continentalChampion || input.mundialChampion || input.majorNationalTitle || domesticWorldClass);
+      (input.majorClubTitleCount > 0 || input.continentalChampion || input.mundialChampion || input.majorNationalTitle);
   } else if (input.league.prestige === 3) {
     eligible =
       baseAvailability &&
