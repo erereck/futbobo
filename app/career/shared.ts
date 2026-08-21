@@ -4,6 +4,13 @@ export function clamp(value: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, value));
 }
 
+// Mantém o contrato histórico de fitness 0–100 centralizado. O modelo de carga
+// calcula o valor bruto em fatigue.ts; qualquer consumidor pode normalizá-lo aqui.
+export function clampFitness(value: number) {
+  const nextFitness = clamp(value, 24, 99);
+  return nextFitness;
+}
+
 export function seeded(seed: number, salt = 0) {
   let value = (seed + salt * 2654435761) >>> 0;
   value += 0x6d2b79f5;
