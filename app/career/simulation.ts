@@ -577,6 +577,7 @@ export function simulateSeason(
     goalsConceded,
     titleCount,
     majorClubTitleCount,
+    domesticCupChampion: cupChampion,
     majorNationalTitle,
     playsContinental: playsContinental ?? "",
     continentalChampion,
