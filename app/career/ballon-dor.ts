@@ -16,6 +16,7 @@ export type BallonDorEvaluationInput = {
   goalsConceded: number;
   titleCount: number;
   majorClubTitleCount: number;
+  domesticCupChampion?: boolean;
   majorNationalTitle: boolean;
   playsContinental: ContinentalSlot | "";
   continentalChampion: boolean;
@@ -89,6 +90,7 @@ function repeatMultiplier(previous: number) {
 export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEvaluation {
   const stage = stageFor(input);
   const historicSeason = historicProduction(input);
+  const isBrasileirao = input.league.id === "brasileirao";
   const championsBreakthrough = input.playsContinental === "champions" && input.continentalChampion;
   const globalBreakthrough = championsBreakthrough || input.mundialChampion || input.majorNationalTitle;
   const domesticMiracle =
@@ -154,25 +156,29 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
       input.performanceScore >= 88 &&
       input.reputation >= 76 &&
       (globalBreakthrough || (domesticMiracle && input.titleCount >= 2));
+  } else if (isBrasileirao) {
+    // No Brasil não existe atalho por prestígio doméstico: a candidatura só
+    // nasce numa temporada quase absurda. É preciso empilhar 50+ gols e ganhar
+    // Copa do Brasil + Libertadores no mesmo ano; mesmo então o prêmio segue raro.
+    eligible =
+      input.hasProductionAward &&
+      input.appearances >= 28 &&
+      input.goals >= 50 &&
+      input.overall >= 88 &&
+      input.performanceScore >= 90 &&
+      input.reputation >= 72 &&
+      Boolean(input.domesticCupChampion) &&
+      input.playsContinental === "libertadores" &&
+      input.continentalChampion;
   } else if (input.league.prestige >= 4) {
-    // No Brasileirão, uma Libertadores/Mundial/Seleção abre a candidatura com
-    // patamar internacional. Só o título doméstico também pode bastar, mas a
-    // temporada precisa ter números e reputação de verdadeira superestrela.
-    const continentalCase =
-      (input.continentalChampion || input.mundialChampion || input.majorNationalTitle) &&
-      input.overall >= 81 &&
-      input.performanceScore >= 76 &&
-      input.reputation >= 50;
-    const domesticChampionCase =
-      input.majorClubTitleCount > 0 &&
-      input.overall >= 82 &&
-      input.performanceScore >= 79 &&
-      input.reputation >= 54;
     eligible =
       baseAvailability &&
       input.appearances >= 21 &&
+      input.overall >= 81 &&
+      input.performanceScore >= 76 &&
+      input.reputation >= 50 &&
       worldClassRecognition &&
-      (continentalCase || domesticChampionCase);
+      (input.continentalChampion || input.mundialChampion || input.majorNationalTitle);
   } else if (input.league.prestige === 3) {
     eligible =
       baseAvailability &&
@@ -224,23 +230,20 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
   const firstChance = clamp(60 + Math.max(0, score - 61) * 2.5, 60, 97);
   const repeatBase = clamp(18 + Math.max(0, score - 74) * 1.8, 18, 60);
   const stageMultiplier = stageChanceMultiplier(stage, globalBreakthrough, input.mundialChampion, input.majorNationalTitle);
-  const domesticOutsideEurope =
-    !input.inEurope &&
-    input.league.prestige >= 4 &&
-    input.majorClubTitleCount > 0 &&
-    !input.continentalChampion &&
-    !input.mundialChampion &&
-    !input.majorNationalTitle;
-  const contextMultiplier = domesticOutsideEurope ? 0.55 : 1;
-  let chance = (input.previousBallonDor === 0 ? firstChance : repeatBase) * repeatMultiplier(input.previousBallonDor) * stageMultiplier * contextMultiplier;
+  const brazilMultiplier = isBrasileirao ? 0.35 : 1;
+  let chance = (input.previousBallonDor === 0 ? firstChance : repeatBase) * repeatMultiplier(input.previousBallonDor) * stageMultiplier * brazilMultiplier;
 
   if (historicSeason) {
     const historicFloor = input.previousBallonDor === 0 ? 60 : input.previousBallonDor === 1 ? 25 : input.previousBallonDor === 2 ? 12 : Math.max(0.18, 5 * 0.44 ** (input.previousBallonDor - 3));
-    // Liga menor sem feito global continua sendo um conto de fadas, não um atalho.
-    const adjustedHistoricFloor = stage === "minor" && !globalBreakthrough ? historicFloor * 0.18 : historicFloor;
+    const adjustedHistoricFloor =
+      stage === "minor" && !globalBreakthrough
+        ? historicFloor * 0.18
+        : isBrasileirao
+          ? historicFloor * 0.35
+          : historicFloor;
     chance = Math.max(chance, adjustedHistoricFloor);
   }
-  if (input.worldCupGoals >= 8) {
+  if (input.worldCupGoals >= 8 && !isBrasileirao) {
     const worldCupFloor = input.previousBallonDor === 0 ? 84 : input.previousBallonDor === 1 ? 44 : input.previousBallonDor === 2 ? 24 : input.previousBallonDor === 3 ? 11 : Math.max(0.22, 5 * 0.46 ** (input.previousBallonDor - 4));
     chance = Math.max(chance, worldCupFloor);
   }
