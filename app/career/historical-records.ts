@@ -95,11 +95,20 @@ function sortEntries(entries: ContextRecordEntry[]) {
   return entries.sort((a, b) => b.value - a.value || a.label.localeCompare(b.label, "pt-BR"));
 }
 
+function matchingClubRecord(clubNames: string[]) {
+  const exact = CLUB_GOAL_RECORDS.find((candidate) => candidate.aliases.some((alias) => clubNames.includes(normalize(alias))));
+  if (exact) return exact;
+  return CLUB_GOAL_RECORDS.find((candidate) => candidate.aliases.some((alias) => {
+    const normalizedAlias = normalize(alias);
+    return normalizedAlias.length >= 5 && clubNames.some((name) => name.startsWith(`${normalizedAlias} `));
+  }));
+}
+
 function clubRecordForState(state: GameState): ContextRecordBoard | null {
   if (!state.currentClubId) return null;
   const club = clubById(state.currentClubId);
   const clubNames = [club.name, club.shortName, club.abbr].map(normalize);
-  const record = CLUB_GOAL_RECORDS.find((candidate) => candidate.aliases.some((alias) => clubNames.some((name) => name === normalize(alias) || name.includes(normalize(alias)))));
+  const record = matchingClubRecord(clubNames);
   if (!record) return null;
 
   const playerGoals = (state.history ?? [])
