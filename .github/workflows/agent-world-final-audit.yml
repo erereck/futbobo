@@ -20,8 +20,8 @@ jobs:
         with:
           node-version: 22.13.0
           cache: npm
-      - name: Materialize audit fixes
-        run: node scripts/agent-world-final-audit.mjs
+      - name: Materialize final consistency fixes
+        run: node scripts/agent-world-final-audit-v2.mjs
       - name: Structural invariants
         shell: bash
         run: |
@@ -29,18 +29,27 @@ jobs:
           import fs from 'node:fs';
           const club = fs.readFileSync('app/career/world-club-competitions.ts','utf8');
           const nat = fs.readFileSync('app/career/world-national-competitions.ts','utf8');
+          const model = fs.readFileSync('app/career/model.ts','utf8');
           const world = fs.readFileSync('app/career/world-memory.ts','utf8');
           const ui = fs.readFileSync('app/components/career/CareerWorld.tsx','utf8');
           const sim = fs.readFileSync('app/career/simulation.ts','utf8');
           const shared = fs.readFileSync('app/career/shared.ts','utf8');
           const must = (ok, msg) => { if (!ok) throw new Error(msg); };
           must(club.includes('worldPlayerWasAtClub(player, clubId, season)'), 'club history lookup missing');
+          must(club.includes('spell.leftSeason > season'), 'transfer season belongs to destination only');
           must(club.includes('player.generatedSeason <= season'), 'future NPC leaking into past club seasons');
           must(club.includes('pickWinner(state, config, season, titles, playerRecord?.clubId ?? "")'), 'player club exclusion missing');
           must(club.includes('seeded(state.seed, season * 6803 + 37) < 0.93'), 'Mundial 93% rule missing');
           must(club.includes('PRIMARY_WORLD_FEEDERS'), 'continental Mundial feeders missing');
-          must(nat.includes('startSeason: 2027') && nat.includes('interval: 2') && nat.includes('interval: 4'), 'national competition cadence missing');
+          must((nat.match(/startSeason: 2028/g) ?? []).length === 6, 'national calendar diverges from career engine');
+          must((nat.match(/interval: 4/g) ?? []).length === 6, 'national calendar cadence diverges from career engine');
+          must(!nat.includes('startSeason: 2027') && !nat.includes('interval: 2'), 'old national cadence survived');
           must(nat.includes('player.generatedSeason <= season'), 'future NPC leaking into past national seasons');
+          must(nat.includes('playerRecord?.countryId'), 'national record identity missing');
+          must(model.includes('countryId?: string;'), 'NationalRecord country identity missing');
+          must((sim.match(/countryId: affected\.nationality/g) ?? []).length >= 3, 'national history does not preserve country');
+          must(world.includes('nationalRecord?.countryId ?? state.nationality'), 'World Cup country identity missing');
+          must(world.includes('record.countryId ?? state.nationality'), 'national news country identity missing');
           must(world.includes('| "mundial"') && world.includes('| "sudamericana"') && world.includes('| "afcon"'), 'world ledger ids incomplete');
           must((ui.match(/open && recentChampions\.length > 0/g) ?? []).length === 2, 'collapsed competition cards still too verbose');
           must(sim.includes('const nextFitness = clamp(physicalLoad.fitness, 24, 99);'), 'fatigue clamp missing');
@@ -48,16 +57,16 @@ jobs:
           NODE
       - name: Install
         run: npm ci
-      - name: Full test suite
+      - name: Full test suite and production build
         run: npm test
       - name: Lint
         run: npm run lint
       - name: Record verified product
         shell: bash
         run: |
-          printf 'audit=0\ntest=0\nlint=0\nhead_before_commit=%s\n' "$(git rev-parse HEAD)" > .agent-final-audit-ok
+          printf 'audit=0\ntest=0\nlint=0\nhead_before_commit=%s\n' "$(git rev-parse HEAD)" > .agent-final-audit-v2-ok
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/career/world-club-competitions.ts app/career/world-national-competitions.ts app/components/career/CareerWorld.tsx app/career/simulation.ts app/career/shared.ts .agent-final-audit-ok
-          git commit -m "fix: stabilize living-world history before release"
+          git add app/career/world-club-competitions.ts app/career/world-national-competitions.ts app/career/model.ts app/career/simulation.ts app/career/world-memory.ts .agent-final-audit-v2-ok
+          git commit -m "fix: lock living-world consistency before release"
           git push origin HEAD:agent/futbobo-world-players-live-world
