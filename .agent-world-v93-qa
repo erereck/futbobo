@@ -1,26 +1,78 @@
 test=1
 lint=0
+--- failing test context ---
+196-  ...
+197-# Subtest: atributos influenciam a simulação, premiações têm suspense e o escândalo força exílio
+198-ok 32 - atributos influenciam a simulação, premiações têm suspense e o escândalo força exílio
+199-  ---
+200-  duration_ms: 7.863123
+201-  ...
+202-# Subtest: convites raros de outras seleções respeitam proximidade geográfica e nunca se repetem
+203-ok 33 - convites raros de outras seleções respeitam proximidade geográfica e nunca se repetem
+204-  ---
+205-  duration_ms: 5.288904
+206-  ...
+207-# Subtest: integra o novo campo de posições, base sorteada, roleta e simulação por mérito
+208:not ok 34 - integra o novo campo de posições, base sorteada, roleta e simulação por mérito
+209-  ---
+210-  duration_ms: 12.535694
+211-  location: '/home/runner/work/futbobo/futbobo/tests/rendered-html.test.mjs:765:1'
+212-  failureType: 'testCodeFailure'
+213-  error: |-
+214-    The input did not match the regular expression /const nextFitness = clamp\(/. Input:
+215-    
+216-    'import FutboboShell from "./components/shell/FutboboShell";\n' +
+217-      '\n' +
+218-      '// A rota raiz só monta o shell; criação, saves e carreira ficam nos módulos de domínio.\n' +
+219-      'export default function HomePage() {\n' +
+220-      '  return <FutboboShell />;\n' +
+221-      '}\n' +
+222-      '\n' +
+223-      '"use client";\n' +
+224-      '\n' +
+225-      'import Image from "next/image";\n' +
+226-      'import Link from "next/link";\n' +
+227-      'import { useEffect, useMemo, useRef, useState } from "react";\n' +
+228-      'import type { CSSProperties } from "react";\n' +
+229-      'import { CLUBS, COUNTRIES, FIRST_MATCH_EVENT, FORMATIONS, LEAGUES, POSITIONS, countryById, leagueById } from "../../game-data";\n' +
+230-      'import type { GameEvent, PositionKey } from "../../game-data";\n' +
+231-      'import { ROLE_LABELS, calculateSquadRole, createContract, createSeasonObjective } from "../../career-systems";\n' +
+232-      'import { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prestige";\n' +
+233-      'import { ACHIEVEMENTS, NEWS_TEMPLATES, fillNewsTemplate, findRivalry } from "../../mega-expansion";\n' +
+234-      'import BotaoMatch from "../../botao/BotaoMatch";\n' +
+235-      'import GoalReplay from "../../botao/GoalReplay";\n' +
+236-      'import TeamCrest from "../../botao/TeamCrest";\n' +
 --- test tail ---
+  ...
+# Subtest: publica metadados completos para buscadores no dominio oficial
+ok 67 - publica metadados completos para buscadores no dominio oficial
+  ---
+  duration_ms: 3.379444
+  ...
+# Subtest: abre um X1 local real e reorganiza o menu por tipo de gameplay
+ok 68 - abre um X1 local real e reorganiza o menu por tipo de gameplay
+  ---
+  duration_ms: 6.243799
   ...
 # Subtest: dá ao goleiro uma carreira própria da base ao fim da trajetória
 ok 69 - dá ao goleiro uma carreira própria da base ao fim da trajetória
   ---
-  duration_ms: 5.225534
+  duration_ms: 5.778964
   ...
 # Subtest: mantém World Players persistentes, compactos e determinísticos por carreira
 ok 70 - mantém World Players persistentes, compactos e determinísticos por carreira
   ---
-  duration_ms: 1.49188
+  duration_ms: 1.641442
   ...
 # Subtest: liga rivais e premiações ao mundo sem substituir seus sistemas atuais
 ok 71 - liga rivais e premiações ao mundo sem substituir seus sistemas atuais
   ---
-  duration_ms: 0.716656
+  duration_ms: 0.697147
   ...
 # Subtest: World Players usam o mesmo motor central de mercado
 ok 72 - World Players usam o mesmo motor central de mercado
   ---
-  duration_ms: 0.851456
+  duration_ms: 0.889288
   ...
 1..72
 # tests 72
@@ -30,7 +82,7 @@ ok 72 - World Players usam o mesmo motor central de mercado
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 613.681179
+# duration_ms 550.318761
 --- lint tail ---
 
 > futbobo@1.2.5 lint
