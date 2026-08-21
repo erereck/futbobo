@@ -1,0 +1,26 @@
+name: Ballon calibration QA
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    if: startsWith(github.head_ref, 'agent/ballon')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run 2000-career Ballon calibration
+        run: npx --yes tsx@4 scripts/ballon-calibration.ts
