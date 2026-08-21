@@ -64,7 +64,11 @@ function generationRivalForState(state: GameState) {
     .sort((a, b) => eraScore(b) - eraScore(a) || b.overall - a.overall || a.id.localeCompare(b.id))[0] ?? null;
 }
 
-export function worldPlayerStatLeaders(state: GameState, metric: "goals" | "assists", limit = 8): WorldPlayerRankingEntry[] {
+export function worldPlayerStatLeaders(
+  state: GameState,
+  metric: "appearances" | "goals" | "assists" | "tackles" | "cleanSheets",
+  limit = 8,
+): WorldPlayerRankingEntry[] {
   return playersForState(state)
     .filter((player) => player.careerStats[metric] > 0)
     .sort((a, b) => b.careerStats[metric] - a.careerStats[metric] || b.reputation - a.reputation || a.id.localeCompare(b.id))

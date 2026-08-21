@@ -24,7 +24,7 @@ import { BrandMark, ClubBadge } from "../career/CareerPrimitives";
 import styles from "./FutboboShell.module.css";
 import { InstallScreen, NewsScreen, SettingsScreen } from "./ShellUtilityScreens";
 
-type ShellScreen = "home" | "modes" | "saves" | "achievements" | "hall" | "settings" | "install" | "news" | "career" | "legacy-tool";
+type ShellScreen = "home" | "modes" | "saves" | "achievements" | "hall" | "hall-career" | "settings" | "install" | "news" | "career" | "legacy-tool";
 type BootAction = "new" | "continue" | "settings" | "install" | "news" | null;
 
 function safeHall() {
@@ -76,6 +76,7 @@ export default function FutboboShell() {
   const [saves, setSaves] = useState<CareerSaveMeta[]>([]);
   const [unlocks, setUnlocks] = useState<GlobalAchievementUnlock[]>([]);
   const [hall, setHall] = useState<CareerHallEntry[]>([]);
+  const [selectedHallEntry, setSelectedHallEntry] = useState<CareerHallEntry | null>(null);
   const [selectedAchievementId, setSelectedAchievementId] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState("");
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -200,6 +201,10 @@ export default function FutboboShell() {
     return <div ref={hostRef} className={styles.careerHost}><CareerGame /></div>;
   }
 
+  if (screen === "hall-career" && selectedHallEntry) {
+    return <div className={styles.careerHost}><CareerGame initialHallEntry={selectedHallEntry} onCloseHallPreview={() => { setSelectedHallEntry(null); setScreen("hall"); }} /></div>;
+  }
+
   if (screen === "legacy-tool") {
     return (
       <div className={styles.toolHost}>
@@ -297,7 +302,7 @@ export default function FutboboShell() {
           <div className={styles.hallList}>
             {hallRows.length === 0 ? <div className={styles.emptyCollection}><b>★</b><strong>Nenhuma carreira aposentada.</strong><span>Quando uma história terminar, ela aparece aqui.</span></div> : hallRows.map(({ entry, legacy }, index) => {
               const club = CLUBS.find((item) => item.id === entry.finalClubId);
-              return <article key={entry.id}><b>#{index + 1}</b>{club ? <ClubBadge club={club} size="md" /> : null}<span><strong>{entry.name}</strong><small>{entry.position} · {entry.seasons} temporadas · pico {entry.peakOverall}</small><em>{legacy.signature}</em></span><strong className={styles.legacyScore} style={{ color: legacy.color }}>{legacy.score}<small>{legacy.label}</small></strong></article>;
+              return <button type="button" className={styles.hallCareerCard} key={entry.id} onClick={() => { setSelectedHallEntry(entry); setScreen("hall-career"); }} aria-label={`Abrir carreira completa de ${entry.name}`}><b>#{index + 1}</b>{club ? <ClubBadge club={club} size="md" /> : <span /> }<span><strong>{entry.name}</strong><small>{entry.position} · {entry.seasons} temporadas · pico {entry.peakOverall}</small><em>{legacy.signature}</em></span><strong className={styles.legacyScore} style={{ color: legacy.color }}>{legacy.score}<small>{legacy.label} · abrir dossiê →</small></strong></button>;
             })}
           </div>
         </section>

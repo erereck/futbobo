@@ -38,8 +38,14 @@ import CareerExtraStats from "./CareerExtraStats";
 import CareerTimeline from "./CareerTimeline";
 import CareerWorld, { WorldPulseButton } from "./CareerWorld";
 import TransferMarketScreen from "./TransferMarketScreen";
+import { worldFinalOpponentForSeason } from "../../career/world-club-competitions";
 
-export default function CareerGame() {
+type CareerGameProps = {
+  initialHallEntry?: CareerHallEntry | null;
+  onCloseHallPreview?: () => void;
+};
+
+export default function CareerGame({ initialHallEntry = null, onCloseHallPreview }: CareerGameProps = {}) {
   const [game, setGame] = useState<GameState>(() => initialState());
   const nameRollRef = useRef(0);
   const shirtRollRef = useRef(0);
@@ -58,8 +64,8 @@ export default function CareerGame() {
   const [nationalitySearch, setNationalitySearch] = useState("");
   const [monteCarloReport, setMonteCarloReport] = useState<MonteCarloReport | null>(null);
   const [hallOfFame, setHallOfFame] = useState<CareerHallEntry[]>([]);
-  const [hallPreview, setHallPreview] = useState<GameState | null>(null);
-  const [hallPreviewLegacy, setHallPreviewLegacy] = useState(false);
+  const [hallPreview, setHallPreview] = useState<GameState | null>(() => initialHallEntry ? archivedCareerState(initialHallEntry).state : null);
+  const [hallPreviewLegacy, setHallPreviewLegacy] = useState(() => initialHallEntry ? archivedCareerState(initialHallEntry).legacyArchive : false);
   const [updateNoticeOpen, setUpdateNoticeOpen] = useState(false);
   const [updateNoticePage, setUpdateNoticePage] = useState<"current" | "previous">("current");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -691,6 +697,10 @@ export default function CareerGame() {
   }
 
   function closeHallCareer() {
+    if (onCloseHallPreview) {
+      onCloseHallPreview();
+      return;
+    }
     setHallPreview(null);
     setHallPreviewLegacy(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1124,13 +1134,18 @@ export default function CareerGame() {
           : current.continentalSlot;
         if (nextWorldStage) {
           const excludedClubIds = Array.from(new Set([...(match.previousOpponentIds ?? []), match.opponentId]));
-          const opponent = pickClubWorldOpponent({
+          const archivedOpponentId = nextWorldStage === "Final"
+            ? worldFinalOpponentForSeason(current, current.currentClubId, match.season)
+            : "";
+          const opponent = archivedOpponentId && !excludedClubIds.includes(archivedOpponentId)
+            ? clubById(archivedOpponentId)
+            : pickClubWorldOpponent({
             clubId: current.currentClubId,
             seed: current.seed,
             season: match.season,
             stageName: nextWorldStage,
             excludedClubIds,
-          });
+            });
           remainingMatches = [{
             ...match,
             id: `club-mundial-${nextWorldStage}-${match.season}`,
