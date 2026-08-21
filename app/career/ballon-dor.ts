@@ -98,37 +98,55 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
     input.reputation >= 82 &&
     input.majorClubTitleCount > 0;
 
-  // Em Premier/La Liga/Serie A/Bundesliga/Brasileirão, uma temporada de nível
-  // mundial pode entrar na votação mesmo sem artilharia: FIFPRO, MVP e Jogador
-  // do Ano também contam como reconhecimento. O palco continua pesando muito;
-  // ligas pequenas mantêm a barreira de feito global ou temporada histórica.
+  // Atacantes entram normalmente por produção/prêmios. Goleiros, defensores e
+  // meio-campistas também podem construir uma candidatura por excelência na
+  // própria função, sem precisar virar artilheiros artificiais.
+  const positionalRecognition =
+    (input.isKeeper && input.overall >= 79 && input.performanceScore >= 77) ||
+    (input.positionZone === "defesa" && input.overall >= 79 && input.performanceScore >= 77) ||
+    (input.positionZone === "meio" && input.overall >= 79 && input.performanceScore >= 79);
+  const worldClassRecognition =
+    input.hasProductionAward ||
+    input.supportingAwardBonus >= 2.5 ||
+    historicSeason ||
+    positionalRecognition;
   const baseAvailability = input.appearances >= 20;
-  const worldClassRecognition = input.hasProductionAward || input.supportingAwardBonus >= 2.5 || historicSeason;
+  const eliteNoTitleCase =
+    input.overall >= 82 &&
+    input.performanceScore >= 80 &&
+    input.reputation >= 52 &&
+    worldClassRecognition;
+  const majorNoTitleCase =
+    input.overall >= 84 &&
+    input.performanceScore >= 82 &&
+    input.reputation >= 60 &&
+    worldClassRecognition;
+
   let eligible = false;
   if (input.inEurope && stage === "elite") {
     eligible =
       baseAvailability &&
-      input.overall >= 78 &&
-      input.performanceScore >= 70 &&
-      input.reputation >= 34 &&
+      input.overall >= 77 &&
+      input.performanceScore >= 68 &&
+      input.reputation >= 30 &&
       worldClassRecognition &&
-      (input.majorClubTitleCount > 0 || input.majorNationalTitle || globalBreakthrough);
+      (input.majorClubTitleCount > 0 || input.majorNationalTitle || globalBreakthrough || eliteNoTitleCase);
   } else if (input.inEurope && stage === "major") {
     eligible =
       baseAvailability &&
       input.appearances >= 21 &&
-      input.overall >= 79 &&
-      input.performanceScore >= 72 &&
-      input.reputation >= 40 &&
+      input.overall >= 78 &&
+      input.performanceScore >= 70 &&
+      input.reputation >= 36 &&
       worldClassRecognition &&
-      (input.majorClubTitleCount > 0 || input.majorNationalTitle || globalBreakthrough);
+      (input.majorClubTitleCount > 0 || input.majorNationalTitle || globalBreakthrough || majorNoTitleCase);
   } else if (input.inEurope && stage === "secondary") {
     eligible =
       baseAvailability &&
       input.appearances >= 23 &&
-      input.overall >= 83 &&
-      input.performanceScore >= 78 &&
-      input.reputation >= 55 &&
+      input.overall >= 82 &&
+      input.performanceScore >= 77 &&
+      input.reputation >= 52 &&
       worldClassRecognition &&
       (globalBreakthrough || domesticMiracle);
   } else if (input.inEurope) {
