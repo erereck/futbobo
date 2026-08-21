@@ -155,17 +155,24 @@ export function evaluateBallonDor(input: BallonDorEvaluationInput): BallonDorEva
       input.reputation >= 76 &&
       (globalBreakthrough || (domesticMiracle && input.titleCount >= 2));
   } else if (input.league.prestige >= 4) {
-    // O Brasileirão pode produzir um vencedor por domínio doméstico, mas não
-    // basta simplesmente jogar bem: é preciso título relevante e temporada de
-    // nível mundial. Libertadores/Mundial/Seleção continuam abrindo a rota mais forte.
+    // No Brasileirão, uma Libertadores/Mundial/Seleção abre a candidatura com
+    // patamar internacional. Só o título doméstico também pode bastar, mas a
+    // temporada precisa ter números e reputação de verdadeira superestrela.
+    const continentalCase =
+      (input.continentalChampion || input.mundialChampion || input.majorNationalTitle) &&
+      input.overall >= 81 &&
+      input.performanceScore >= 76 &&
+      input.reputation >= 50;
+    const domesticChampionCase =
+      input.majorClubTitleCount > 0 &&
+      input.overall >= 82 &&
+      input.performanceScore >= 79 &&
+      input.reputation >= 54;
     eligible =
       baseAvailability &&
       input.appearances >= 21 &&
-      input.overall >= 78 &&
-      input.performanceScore >= 72 &&
-      input.reputation >= 36 &&
       worldClassRecognition &&
-      (input.majorClubTitleCount > 0 || input.continentalChampion || input.mundialChampion || input.majorNationalTitle);
+      (continentalCase || domesticChampionCase);
   } else if (input.league.prestige === 3) {
     eligible =
       baseAvailability &&
