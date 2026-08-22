@@ -24,6 +24,7 @@ import { BrandMark, ClubBadge } from "../career/CareerPrimitives";
 import styles from "./FutboboShell.module.css";
 import { InstallScreen, NewsScreen, SettingsScreen } from "./ShellUtilityScreens";
 import FutboboIcon from "../FutboboIcon";
+import { FUTBOBO_VERSION, FUTBOBO_VERSION_NAME } from "../../version";
 
 type ShellScreen = "home" | "modes" | "saves" | "achievements" | "hall" | "hall-career" | "settings" | "install" | "news" | "career" | "legacy-tool";
 type BootAction = "new" | "continue" | "settings" | "install" | "news" | null;
@@ -311,7 +312,7 @@ export default function FutboboShell() {
 
       <footer className={styles.footer}>
         <div><span><FutboboIcon name="career" /> {CLUBS.length} clubes</span><span><FutboboIcon name="player" /> 12 posições</span><span><FutboboIcon name="trophy" /> {LEAGUES.length} ligas</span><span><FutboboIcon name="globe" /> {COUNTRIES.length} seleções</span></div>
-        <strong>v93 · DONO DA ÁREA</strong>
+        <strong>{FUTBOBO_VERSION} · {FUTBOBO_VERSION_NAME}</strong>
       </footer>
     </main>
   );

@@ -1,0 +1,204 @@
+import { playerStoryById } from "../player-stories";
+import type { BotaoMatchResult } from "../botao/types";
+import type { Club } from "../game-data";
+import type { GameState, PendingBotaoMatch, PressAnswer, PressConference, PressQuestion, TransferOffer } from "./model";
+import { pick, seeded } from "./shared";
+
+type AnswerDraft = Omit<PressAnswer, "tone"> & { tone: PressAnswer["tone"] };
+
+function ordered<T>(items: T[], state: GameState, salt: number) {
+  return items
+    .map((item, index) => ({ item, order: seeded(state.seed, salt + index * 47) }))
+    .sort((a, b) => a.order - b.order)
+    .map(({ item }) => item);
+}
+
+function visibleAnswers(state: GameState, salt: number, answers: AnswerDraft[]) {
+  return ordered(answers, state, salt).slice(0, 3);
+}
+
+function question(
+  state: GameState,
+  id: string,
+  salt: number,
+  contexts: string[],
+  prompts: string[],
+  answers: AnswerDraft[],
+): PressQuestion {
+  return {
+    id,
+    context: pick(contexts, state.seed, salt + 3),
+    question: pick(prompts, state.seed, salt + 7),
+    answers: visibleAnswers(state, salt + 11, answers),
+  };
+}
+
+const INDIVIDUAL_ANSWERS: AnswerDraft[] = [
+  { label: "Foi uma noite que eu nunca vou esquecer", tone: "bold", toneLabel: "Assume o protagonismo", result: "A confiança vira manchete e a torcida abraça o protagonista.", effect: { morale: 7, fans: 5, followers: 45_000 } },
+  { label: "Eu entrei em campo para decidir", tone: "bold", toneLabel: "Resposta forte", result: "A frase circula como declaração de estrela.", effect: { reputation: 6, followers: 58_000, morale: 3 } },
+  { label: "O prêmio pertence ao time inteiro", tone: "team", toneLabel: "Valoriza o grupo", result: "O elenco recebe a fala como um gesto real.", effect: { leadership: 7, minutes: 4, fans: 3 } },
+  { label: "Sem quem correu por mim, eu não estaria aqui", tone: "team", toneLabel: "Divide os méritos", result: "O vestiário percebe que o discurso combina com o campo.", effect: { leadership: 6, minutes: 3, mediaRelation: 3 } },
+  { label: "Ainda consigo jogar muito melhor", tone: "calm", toneLabel: "Mantém os pés no chão", result: "A ambição aumenta o respeito e também a cobrança.", effect: { reputation: 5, morale: -2, mediaRelation: 2 } },
+  { label: "Amanhã esse jogo já vira passado", tone: "calm", toneLabel: "Foco no próximo jogo", result: "A comissão gosta da recusa em viver de um único lance.", effect: { discipline: 4, minutes: 4, morale: 2 } },
+];
+
+const TEAM_ANSWERS: AnswerDraft[] = [
+  { label: "A gente se encontrou dentro do jogo", tone: "team", toneLabel: "Exalta o coletivo", result: "A fala fortalece a sensação de unidade.", effect: { leadership: 6, morale: 4, minutes: 2 } },
+  { label: "Todo mundo aceitou fazer o trabalho difícil", tone: "team", toneLabel: "Reconhece o esforço", result: "Os jogadores menos celebrados se sentem lembrados.", effect: { leadership: 7, fans: 2 } },
+  { label: "Eu pedi a bola quando a partida apertou", tone: "bold", toneLabel: "Chama a responsabilidade", result: "A torcida gosta da coragem; o holofote cresce.", effect: { reputation: 6, followers: 42_000, morale: 3 } },
+  { label: "Partida grande pede jogador sem medo", tone: "bold", toneLabel: "Aumenta a temperatura", result: "A declaração vira combustível para o próximo adversário.", effect: { reputation: 7, discipline: -2, fans: 4 } },
+  { label: "O plano funcionou e eu fiz a minha parte", tone: "calm", toneLabel: "Resposta tática", result: "A comissão recebe o comentário como sinal de maturidade.", effect: { minutes: 5, mediaRelation: 4 } },
+  { label: "Não existe atuação individual sem estrutura", tone: "calm", toneLabel: "Analisa o jogo", result: "A imprensa destaca sua leitura da partida.", effect: { mediaRelation: 5, leadership: 4 } },
+];
+
+const OPPONENT_ANSWERS: AnswerDraft[] = [
+  { label: "Nós entendemos onde eles eram vulneráveis", tone: "calm", toneLabel: "Leitura tática", result: "A resposta agrada à comissão.", effect: { minutes: 6, leadership: 3, mediaRelation: 3 } },
+  { label: "Eles mudaram o jogo e nós mudamos junto", tone: "calm", toneLabel: "Reconhece o duelo", result: "A análise soa segura sem diminuir o rival.", effect: { mediaRelation: 5, leadership: 3 } },
+  { label: "Em decisão, personalidade pesa mais", tone: "bold", toneLabel: "Provoca o adversário", result: "A frase vira corte de vídeo e esquenta o reencontro.", effect: { reputation: 6, followers: 65_000, discipline: -2 } },
+  { label: "Quando aceleramos, eles não acompanharam", tone: "bold", toneLabel: "Resposta provocadora", result: "A torcida adora; o adversário guarda a frase.", effect: { fans: 6, followers: 54_000, mediaRelation: -3 } },
+  { label: "Respeito total; eles nos levaram ao limite", tone: "team", toneLabel: "Respeita o rival", result: "A fala baixa a temperatura depois da partida.", effect: { mediaRelation: 6, leadership: 4, fans: 2 } },
+  { label: "O placar não conta o tamanho da dificuldade", tone: "team", toneLabel: "Evita soberba", result: "A resposta é tratada como postura de líder.", effect: { leadership: 5, discipline: 3 } },
+];
+
+const FUTURE_ANSWERS: AnswerDraft[] = [
+  { label: "Nós vamos buscar tudo que estiver em jogo", tone: "bold", toneLabel: "Eleva a promessa", result: "A ambição aumenta a conexão com a arquibancada.", effect: { fans: 7, reputation: 5, morale: 2 } },
+  { label: "Quero deixar meu nome gravado aqui", tone: "bold", toneLabel: "Fala como ídolo", result: "A torcida transforma a frase em faixa.", effect: { fans: 9, followers: 52_000, morale: 3 } },
+  { label: "O calendário vai dizer quem nós somos", tone: "calm", toneLabel: "Evita promessas", result: "A comissão gosta do foco imediato.", effect: { fitness: 4, minutes: 4, discipline: 3 } },
+  { label: "Ainda não conquistamos o direito de relaxar", tone: "calm", toneLabel: "Mantém a cobrança", result: "A frase preserva o nível de exigência.", effect: { minutes: 5, morale: -1, reputation: 2 } },
+  { label: "Hoje é dia de agradecer quem veio com a gente", tone: "team", toneLabel: "Lembra da torcida", result: "A resposta divide o holofote e fortalece sua imagem.", effect: { leadership: 7, mediaRelation: 5, followers: 35_000 } },
+  { label: "Nosso limite depende de todo o elenco", tone: "team", toneLabel: "Protege o elenco", result: "Reservas e titulares compram a mensagem.", effect: { leadership: 8, morale: 4 } },
+];
+
+export function buildPressConference(state: GameState, match: PendingBotaoMatch, result: BotaoMatchResult, opponentName: string): PressConference {
+  const wonTitle = result.champion && match.stageName === "Final";
+  const story = playerStoryById(state.playerStoryId);
+  const pool: PressQuestion[] = [
+    question(state, "individual-night", match.season * 1999 + 11,
+      [`${result.playerGoals} gol(s), ${result.playerAssists} assistência(s) e o prêmio de melhor em campo.`, "Seu nome foi anunciado no estádio antes mesmo de você chegar à zona mista.", "Os flashes acompanharam você desde o apito final."],
+      ["Foi a melhor atuação da sua carreira até aqui?", "Em que momento você percebeu que a noite seria sua?", "O que esse prêmio diz sobre o jogador que você se tornou?"], INDIVIDUAL_ANSWERS),
+    question(state, "collective", match.season * 2003 + 23,
+      ["A transmissão destacou sua influência em todos os setores.", "O vestiário inteiro passou pela zona mista sorrindo.", "Seu desempenho individual cresceu junto com o time."],
+      ["Quanto do seu prêmio pertence aos companheiros?", "Você decidiu o jogo ou o time colocou você nessa posição?", "Por que o coletivo funcionou tão bem hoje?"], TEAM_ANSWERS),
+    question(state, "opposition", match.season * 2011 + 37,
+      [`${opponentName} tentou tirar seu espaço até o último lance.`, `O ${opponentName} mudou a marcação várias vezes para tentar parar você.`, `A partida contra o ${opponentName} teve clima de decisão desde o começo.`],
+      [`O que fez a diferença contra o ${opponentName}?`, `Por que o ${opponentName} não conseguiu controlar você?`, `Foi talento, plano de jogo ou personalidade?`], OPPONENT_ANSWERS),
+    question(state, "decisive-moment", match.season * 2027 + 41,
+      [result.playerGoals ? "Seu gol mudou o rumo da partida." : "Uma jogada sua mudou a temperatura da partida.", "O lance decisivo já circula em todos os programas esportivos.", "A partida parecia travada até você assumir o protagonismo."],
+      ["O lance decisivo foi treinado ou nasceu na hora?", "O que passou pela sua cabeça antes da jogada?", "Jogadores grandes procuram esse tipo de momento?"], [...INDIVIDUAL_ANSWERS, ...TEAM_ANSWERS]),
+    question(state, "pressure", match.season * 2039 + 53,
+      ["A semana foi cercada por cobrança e pouco espaço para erro.", "A expectativa sobre você era maior do que em qualquer outro jogo do mês.", "O estádio parecia esperar uma resposta sua."],
+      ["A pressão ajuda ou atrapalha você?", "Você joga melhor quando todos esperam algo?", "Como se carrega o peso de decidir?"], [...INDIVIDUAL_ANSWERS, ...FUTURE_ANSWERS]),
+    question(state, "crowd", match.season * 2053 + 67,
+      ["A arquibancada cantou seu nome depois do apito.", "Seu último toque foi acompanhado por um barulho ensurdecedor.", "Torcedores ficaram minutos no estádio esperando sua volta ao gramado."],
+      ["O que você diria para quem cantou seu nome hoje?", "A torcida participou dessa atuação?", "É possível explicar a ligação que você sentiu com a arquibancada?"], [...TEAM_ANSWERS, ...FUTURE_ANSWERS]),
+    question(state, "next-step", match.season * 2069 + 71,
+      [wonTitle ? "A taça ainda está no gramado." : "A classificação já muda o tamanho da temporada.", "O calendário ainda guarda jogos maiores.", "A vitória colocou o clube diante de uma nova expectativa."],
+      [wonTitle ? "Essa conquista muda seu lugar na história do clube?" : "Até onde esse time pode chegar agora?", "O que muda a partir de amanhã?", "Essa atuação aumenta a obrigação de conquistar títulos?"], FUTURE_ANSWERS),
+    question(state, "origin", match.season * 2081 + 83,
+      [`Sua origem como “${story.title}” voltou a ser lembrada durante a transmissão.`, "A reportagem antes do jogo recuperou imagens do começo da sua carreira.", "A caminhada até esta noite virou parte da narrativa da transmissão."],
+      ["Quanto da sua história ainda entra em campo com você?", "Você ainda reconhece o garoto do começo da carreira?", "Essa noite conversa com tudo que você viveu antes?"], [...INDIVIDUAL_ANSWERS, ...FUTURE_ANSWERS]),
+    question(state, "consistency", match.season * 2099 + 97,
+      ["A discussão agora é se essa atuação pode virar rotina.", "Os comentaristas deixaram de falar em surpresa e começaram a falar em padrão.", "O prêmio de hoje aumenta a régua para o próximo jogo."],
+      ["Como transformar uma grande noite em constância?", "O difícil é chegar nesse nível ou permanecer nele?", "A partir de agora essa atuação vira sua obrigação?"], [...INDIVIDUAL_ANSWERS, ...FUTURE_ANSWERS]),
+  ];
+  const questionCount = 1 + Math.floor(seeded(state.seed, match.season * 2111 + match.id.length) * 3);
+  return {
+    kind: "post-match",
+    matchId: match.id,
+    competitionName: match.competitionName,
+    opponentName,
+    questionIndex: 0,
+    questions: ordered(pool, state, match.season * 2131 + match.id.length).slice(0, questionCount),
+  };
+}
+
+const PRESENTATION_ANSWERS: AnswerDraft[] = [
+  { label: "Vim para disputar tudo desde o primeiro dia", tone: "bold", toneLabel: "Chega com ambição", result: "A frase domina a apresentação e aumenta a expectativa.", effect: { reputation: 5, fans: 5, morale: 3 } },
+  { label: "Quero construir uma história que fique", tone: "bold", toneLabel: "Fala como futuro ídolo", result: "A torcida transforma expectativa em compromisso.", effect: { fans: 7, followers: 70_000, morale: 2 } },
+  { label: "Meu futebol vai responder melhor que qualquer promessa", tone: "calm", toneLabel: "Evita prometer", result: "A resposta segura reduz o ruído em volta da estreia.", effect: { mediaRelation: 5, minutes: 3, discipline: 2 } },
+  { label: "Primeiro quero entender o clube e meus companheiros", tone: "calm", toneLabel: "Prioriza adaptação", result: "A comissão gosta da disposição para aprender.", effect: { adaptation: 7, minutes: 4, leadership: 2 } },
+  { label: "Chego para ajudar o grupo onde for necessário", tone: "team", toneLabel: "Valoriza o elenco", result: "O vestiário recebe a estrela sem sensação de ameaça.", effect: { leadership: 6, morale: 3, minutes: 3 } },
+  { label: "Se o time crescer comigo, os números virão", tone: "team", toneLabel: "Coloca o time primeiro", result: "A imprensa destaca a maturidade da primeira fala.", effect: { leadership: 5, mediaRelation: 5, fans: 3 } },
+  { label: "Eu escolhi este projeto porque ele ainda pode crescer", tone: "bold", toneLabel: "Compra o projeto", result: "A diretoria adota a frase como lema da temporada.", effect: { fans: 5, minutes: 5, reputation: 3 } },
+  { label: "Não vim repetir o passado; vim começar outra coisa", tone: "calm", toneLabel: "Abre um novo capítulo", result: "A resposta fecha comparações e protege o recomeço.", effect: { lifeBalance: 5, morale: 5, mediaRelation: 2 } },
+];
+
+export function buildTransferPresentation(state: GameState, source: Club, destination: Club, offer: TransferOffer): PressConference {
+  const questions = [
+    { context: `O ${destination.shortName} apresenta você diante de uma sala lotada.`, prompt: `O que fez você escolher o ${destination.shortName}?` },
+    { context: `A nova camisa já está sobre a mesa, com seu número nas costas.`, prompt: "Que marca você quer deixar neste novo capítulo?" },
+    { context: `A expectativa cresceu assim que sua chegada foi confirmada.`, prompt: "O que a torcida pode esperar de você desde a estreia?" },
+    { context: `${source.shortName} ficou para trás e a primeira pergunta olha para a frente.`, prompt: "Você chega para ser protagonista ou para conquistar espaço?" },
+    { context: `O clube trata sua contratação como uma peça central do projeto.`, prompt: "Por que este é o momento certo para essa mudança?" },
+    { context: `Seu novo papel no elenco será ${offer.role}.`, prompt: "Como você pretende transformar expectativa em resultado?" },
+  ];
+  const selected = pick(questions, state.seed, state.season * 2179 + destination.id.length);
+  return {
+    kind: "presentation",
+    matchId: `presentation-${state.season}-${destination.id}`,
+    competitionName: "Apresentação oficial",
+    opponentName: destination.shortName,
+    questionIndex: 0,
+    questions: [{
+      id: `presentation-${destination.id}`,
+      context: selected.context,
+      question: selected.prompt,
+      answers: visibleAnswers(state, state.season * 2203 + destination.id.length, PRESENTATION_ANSWERS),
+    }],
+  };
+}
+
+const FORMER_SILENCE = [
+  { label: "Prefiro não falar sobre meu ex-clube hoje", result: "Você encerra o assunto sem alimentar a rivalidade." },
+  { label: "Meu respeito por eles inclui saber a hora de ficar em silêncio", result: "A recusa é interpretada como um limite consciente." },
+  { label: "Essa pergunta fica para outro dia", result: "A zona mista não consegue arrancar uma manchete sobre o passado." },
+];
+const FORMER_RESPECT = [
+  { label: "Tenho gratidão por tudo que vivi lá", result: "A antiga torcida reconhece o respeito mesmo do outro lado." },
+  { label: "Eles fazem parte da minha história e isso não muda", result: "A resposta preserva pontes com o antigo clube." },
+  { label: "Foi um adversário difícil e sempre será uma casa importante", result: "A maturidade esfria a rivalidade depois do jogo." },
+];
+const FORMER_FIRE = [
+  { label: "Hoje eles viram por que não deveriam ter me deixado sair", result: "A declaração explode nas redes e rompe o pouco de paz restante." },
+  { label: "O passado ficou pequeno para o jogador que eu sou agora", result: "A antiga torcida transforma seu nome em alvo." },
+  { label: "Conheço aquele clube e sabia exatamente onde machucar", result: "A provocação vira a principal manchete do reencontro." },
+];
+
+function formerAnswers(state: GameState, salt: number): PressAnswer[] {
+  const silent = pick(FORMER_SILENCE, state.seed, salt + 1);
+  const respect = pick(FORMER_RESPECT, state.seed, salt + 2);
+  const fire = pick(FORMER_FIRE, state.seed, salt + 3);
+  return [
+    { ...silent, tone: "calm", toneLabel: "Não comenta", effect: { lifeBalance: 5, mediaRelation: -1, morale: 2 } },
+    { ...respect, tone: "team", toneLabel: "Fala com respeito", effect: { mediaRelation: 6, leadership: 4, fans: 2 } },
+    { ...fire, tone: "bold", toneLabel: "Ataca o ex-clube", effect: { reputation: 7, followers: 90_000, discipline: -5, mediaRelation: -4 } },
+  ];
+}
+
+export function buildFormerClubConference(state: GameState, match: PendingBotaoMatch, result: BotaoMatchResult, formerClub: Club): PressConference {
+  const won = result.outcome === "win";
+  const scored = result.playerGoals > 0;
+  const resultLine = won ? "Seu time venceu o reencontro." : result.outcome === "loss" ? "O reencontro terminou em derrota." : "O reencontro terminou sem vencedor.";
+  const candidates = [
+    { id: "former-result", context: `${resultLine} A primeira pergunta ignora todo o resto da partida.`, prompts: won ? ["Vencer seu ex-clube teve um sabor diferente?", "Essa vitória encerra alguma conta com o passado?"] : ["Enfrentar seu ex-clube tornou o resultado mais pesado?", "O passado entrou em campo junto com você?"] },
+    { id: "former-memory", context: `Você conhece corredores, funcionários e parte da torcida do ${formerClub.shortName}.`, prompts: ["O que passou pela sua cabeça ao reencontrar tanta gente?", "Ainda existe carinho pelo clube que ficou para trás?"] },
+    { id: "former-choice", context: "Sua troca de camisa ainda é discutida pelas duas torcidas.", prompts: ["Você faria a mesma escolha novamente?", "O reencontro confirmou que sair foi a decisão certa?"] },
+    ...(scored ? [{ id: "former-goal", context: `Você marcou ${result.playerGoals > 1 ? `${result.playerGoals} vezes` : "contra o ex-clube"}. A chamada lei do ex virou assunto imediato.`, prompts: ["Por que a lei do ex parece funcionar tanto?", "Você pensou em comemorar contra o antigo clube?", "Esse gol foi mais pessoal do que os outros?"] }] : []),
+    { id: "former-future", context: `O próximo reencontro com o ${formerClub.shortName} já começou a ser esperado.`, prompts: ["A partir de agora isso virou uma rivalidade pessoal?", "O que você espera da reação no próximo jogo?"] },
+  ];
+  const count = 1 + Math.floor(seeded(state.seed, match.season * 2221 + match.id.length) * 3);
+  const questions = ordered(candidates, state, match.season * 2237 + match.id.length).slice(0, count).map((entry, index) => ({
+    id: entry.id,
+    context: entry.context,
+    question: pick(entry.prompts, state.seed, match.season * 2251 + index * 19),
+    answers: formerAnswers(state, match.season * 2267 + index * 23),
+  }));
+  return {
+    kind: "former-club",
+    matchId: match.id,
+    competitionName: `Reencontro com o ${formerClub.shortName}`,
+    opponentName: formerClub.shortName,
+    questionIndex: 0,
+    questions,
+  };
+}

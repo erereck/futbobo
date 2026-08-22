@@ -1,12 +1,11 @@
 import { CLUBS, COUNTRIES, FORMATIONS, YOUTH_EVENTS, countryById } from "../game-data";
 import type { Club, Country, Effect, GameEvent } from "../game-data";
 import { RIVALRIES } from "../mega-expansion";
-import type { BotaoMatchResult } from "../botao/types";
 import { playerStoryById } from "../player-stories";
 import type { PlayerStoryId } from "../player-stories";
 import { STORY_CHAPTER_BEATS } from "../story-chapters";
 import { GOALKEEPER_YOUTH_EVENTS } from "../goalkeeper-events";
-import type { GameState, PendingBotaoMatch, PressConference, PressQuestion, SponsorDeal, StoryDecision, StoryDecisionChoice, YouthYear } from "./model";
+import type { GameState, SponsorDeal, StoryDecision, StoryDecisionChoice, YouthYear } from "./model";
 import { ALL_PRO_EVENTS, shiftPlayerAttributes } from "./state";
 import { clamp, clubById, pick, seeded } from "./shared";
 import { clubConfederation, isEuropeanClub, positionByKey, randomClubSelection, revelationOfferPool } from "./academy";
@@ -751,71 +750,6 @@ export function buildStorySeasonDecision(
     title: followup.title,
     description: followup.description,
     choices: followup.choices,
-  };
-}
-
-export function buildPressConference(
-  state: GameState,
-  match: PendingBotaoMatch,
-  result: BotaoMatchResult,
-  opponentName: string,
-): PressConference {
-  const wonTitle = result.champion && match.stageName === "Final";
-  const story = playerStoryById(state.playerStoryId);
-  const pool: PressQuestion[] = [
-    {
-      id: "individual-night",
-      context: `${result.playerGoals} gol(s), ${result.playerAssists} assistência(s) e o prêmio de melhor em campo.`,
-      question: "Foi a melhor atuação da sua carreira até aqui?",
-      answers: [
-        { label: "Foi uma noite que eu nunca vou esquecer", tone: "bold", result: "A confiança vira manchete e a torcida abraça o protagonista.", effect: { morale: 7, fans: 5, followers: 45_000 } },
-        { label: "O prêmio pertence ao time inteiro", tone: "team", result: "O elenco recebe a fala como um gesto real, não como frase pronta.", effect: { leadership: 7, minutes: 4, fans: 3 } },
-        { label: "Ainda consigo jogar muito melhor", tone: "calm", result: "A cobrança sobre você aumenta, junto com o respeito pela ambição.", effect: { reputation: 5, morale: -2, mediaRelation: 2 } },
-      ],
-    },
-    {
-      id: "opposition",
-      context: `${opponentName} tentou tirar seu espaço até o último lance.`,
-      question: `O que fez a diferença contra o ${opponentName}?`,
-      answers: [
-        { label: "Nós entendemos onde eles eram vulneráveis", tone: "calm", result: "A resposta tática agrada a comissão.", effect: { minutes: 6, leadership: 3, mediaRelation: 3 } },
-        { label: "Em decisão, personalidade pesa mais", tone: "bold", result: "A frase vira corte de vídeo e provoca o adversário.", effect: { reputation: 6, followers: 65_000, discipline: -2 } },
-        { label: "Respeito total; eles nos levaram ao limite", tone: "team", result: "A fala baixa a temperatura depois da partida.", effect: { mediaRelation: 6, leadership: 4, fans: 2 } },
-      ],
-    },
-    {
-      id: "next-step",
-      context: wonTitle ? "A taça ainda está no gramado." : "A classificação já muda o tamanho da temporada.",
-      question: wonTitle ? "Essa conquista muda seu lugar na história do clube?" : "Até onde esse time pode chegar agora?",
-      answers: [
-        { label: wonTitle ? "Quero virar eterno aqui" : "Nós vamos buscar o título", tone: "bold", result: "A promessa aumenta sua ligação com a arquibancada e a cobrança do próximo capítulo.", effect: { fans: 8, reputation: 5, morale: 3 } },
-        { label: "A temporada só termina quando o calendário acabar", tone: "calm", result: "A comissão gosta do foco imediato.", effect: { fitness: 4, minutes: 4, discipline: 3 } },
-        { label: "Hoje é dia de agradecer quem veio com a gente", tone: "team", result: "A resposta divide o holofote e fortalece sua imagem de líder.", effect: { leadership: 8, mediaRelation: 5, followers: 35_000 } },
-      ],
-    },
-    {
-      id: "origin",
-      context: `Sua origem como “${story.title}” voltou a ser lembrada durante a transmissão.`,
-      question: "Quanto daquela história ainda entra em campo com você?",
-      answers: [
-        { label: "Tudo. Eu não seria o mesmo sem ela", tone: "bold", result: "Sua origem vira parte pública da identidade do jogador.", effect: { morale: 7, followers: 55_000, fans: 4 } },
-        { label: "Ela me formou, mas não me prende", tone: "calm", result: "A resposta marca uma distância madura entre passado e presente.", effect: { leadership: 6, lifeBalance: 5, mediaRelation: 3 } },
-        { label: "Prefiro guardar essa parte para minha família", tone: "team", result: "A imprensa respeita o limite, ainda que a curiosidade continue.", effect: { lifeBalance: 8, mediaRelation: -2, morale: 4 } },
-      ],
-    },
-  ];
-  const questionCount = 1 + Math.floor(seeded(state.seed, match.season * 1999 + match.id.length) * 3);
-  const questions = pool
-    .map((question, index) => ({ question, order: seeded(state.seed, match.season * 2003 + index * 37 + match.id.length) }))
-    .sort((a, b) => a.order - b.order)
-    .slice(0, questionCount)
-    .map(({ question }) => question);
-  return {
-    matchId: match.id,
-    competitionName: match.competitionName,
-    opponentName,
-    questionIndex: 0,
-    questions,
   };
 }
 

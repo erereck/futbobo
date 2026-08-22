@@ -154,6 +154,7 @@ export type StoryLogEntry = {
 export type PressAnswer = {
   label: string;
   tone: "calm" | "bold" | "team";
+  toneLabel?: string;
   result: string;
   effect: Effect;
 };
@@ -166,6 +167,7 @@ export type PressQuestion = {
 };
 
 export type PressConference = {
+  kind?: "post-match" | "presentation" | "former-club";
   matchId: string;
   competitionName: string;
   opponentName: string;
@@ -522,6 +524,7 @@ export type GameState = {
   freeAgentSinceSeason: number;
   forcedFreeAgentUntilSeason: number;
   corruptionGuaranteedSeason: number;
+  lastCycleShopSeason: number;
   traits: SpecialTraitId[];
   rivals: CareerRival[];
   worldPlayers: WorldPlayerUniverse;

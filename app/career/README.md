@@ -11,7 +11,9 @@ O `app/page.tsx` é apenas a entrada da rota. A implementação da carreira fica
 - `transfer-market.ts`: motor central do mercado. Calcula contexto, elegibilidade, necessidade posicional, papel, taxa real, salário, empréstimo, retorno e registro histórico. As regras de mercado não devem ser recriadas na interface ou na simulação.
 - `world-player-model.ts`: contrato persistido dos jogadores fictícios, população agregada, histórico, honrarias e vínculos com rivais.
 - `world-players.ts`: geração compacta, migração, avanço anual determinístico e APIs neutras de consulta. Só jogadores relevantes viram entidades completas.
-- `events.ts`: escolha e aplicação de eventos, histórias e coletivas.
+- `events.ts`: escolha e aplicação de eventos e histórias.
+- `press-conferences.ts`: conteúdo determinístico de zona mista, apresentação e reencontro com ex-clube. Cada pergunta sorteia três respostas de pools maiores.
+- `cycle-shop.ts`: catálogo, frequência, preço e consequências da loja quadrienal. A interface apenas apresenta e despacha compras.
 - `simulation.ts`: resolução da temporada e simulação Monte Carlo.
 
 A interface está em `app/components/career/`:
@@ -19,6 +21,8 @@ A interface está em `app/components/career/`:
 - `CareerGame.tsx`: orquestra estado, ações e telas da carreira.
 - `CareerPrimitives.tsx`: escudos, métricas, prêmios e galeria de títulos reutilizáveis.
 - `TransferMarketScreen.tsx`: janela enxuta de propostas; consome propostas prontas do domínio e deixa contrato/detalhes sob demanda.
+- `PressConferenceDialog.tsx`: pergunta focada para todos os tipos de coletiva.
+- `CycleShopDialog.tsx`: loja `QUADRA`, aberta entre ciclos de quatro temporadas.
 
 ## Mercado e compatibilidade
 

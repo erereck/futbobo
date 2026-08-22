@@ -29,7 +29,10 @@ import { eventForState, isNegativeConsequence, runMonteCarloCareers, simulateSea
 import { PLAYABLE_ACADEMY_COUNTRIES, academyRouteCopy, continentalNationalTournament, continentalSlotAfterSeason, defaultAcademyCountry, hasLocalAcademyRoute, initialContinentalSlot, isEuropeanClub, isOutsideAcademyHome, positionByKey, randomAcademyClubs, sortedCountries } from "../../career/academy";
 import { POSITION_FIELD_SPOTS, careerTrend, fanMood, formatFollowers, formatMoney, marketValue, mergeEffects, publicImageProfile, seasonAverageRating, simulatedWorldCupStats, worldCupStatsForSeason } from "../../career/performance";
 import { AwardCeremony, AwardReveal, BrandMark, ClubBadge, CompetitionBadge, Metric, NationBadge, Progress, TROPHY_PRESENTATIONS, TrophyGallery } from "./CareerPrimitives";
-import { applyEffect, applyStoryOrigin, buildPressConference, createYouthJourney, selectNextEvent, storyClubCandidate } from "../../career/events";
+import { applyEffect, applyStoryOrigin, createYouthJourney, selectNextEvent, storyClubCandidate } from "../../career/events";
+import { buildFormerClubConference, buildPressConference, buildTransferPresentation } from "../../career/press-conferences";
+import { isCycleShopDue, purchaseCycleShopItem } from "../../career/cycle-shop";
+import type { CycleShopItemId } from "../../career/cycle-shop";
 import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, materializeTransferOffers, resolveTransferRequest } from "../../career/transfer-market";
 import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../career/save-system";
 import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
@@ -38,6 +41,8 @@ import CareerExtraStats from "./CareerExtraStats";
 import CareerTimeline from "./CareerTimeline";
 import CareerWorld, { WorldPulseButton } from "./CareerWorld";
 import TransferMarketScreen from "./TransferMarketScreen";
+import PressConferenceDialog from "./PressConferenceDialog";
+import CycleShopDialog from "./CycleShopDialog";
 import { worldFinalOpponentForSeason } from "../../career/world-club-competitions";
 import FutboboIcon from "../FutboboIcon";
 
@@ -102,6 +107,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   const [botaoSimulating, setBotaoSimulating] = useState(false);
   const [activeGoalReplay, setActiveGoalReplay] = useState<number | null>(null);
   const [pressConferenceOpen, setPressConferenceOpen] = useState(false);
+  const [cycleShopDismissedSeason, setCycleShopDismissedSeason] = useState(0);
+  const [cycleShopFeedback, setCycleShopFeedback] = useState("");
   const [summaryClubId, setSummaryClubId] = useState("");
   const [shareBusy, setShareBusy] = useState(false);
   const saveImportRef = useRef<HTMLInputElement>(null);
@@ -311,6 +318,11 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   }, [game.phase]);
 
   const displayGame = hallPreview ?? game;
+  const presentationOpen = game.pendingPressConference?.kind === "presentation" && game.phase === "career";
+  const cycleShopOpen = !pressConferenceOpen
+    && !game.pendingPressConference
+    && cycleShopDismissedSeason !== game.season
+    && isCycleShopDue(game);
   const todayChallenge = dailyChallenge();
   const todayChallengeResults = challengeResults
     .filter((result) => result.challengeId === todayChallenge.id)
@@ -1051,14 +1063,20 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       const match = current.pendingBotaoMatches[0];
       if (!match || matchResult.matchId !== resolvedSetup?.matchId) return current;
 
+      const formerClub = match.source === "club" && current.history.some((record) => record.clubId === match.opponentId)
+        ? clubById(match.opponentId)
+        : null;
+      const interviewEligible = !matchResult.simulated && !matchResult.walkover && Boolean(resolvedSetup);
+
       let remainingMatches = current.pendingBotaoMatches.slice(1);
       let nextState: GameState = {
         ...current,
         phase: "botao-result",
         pendingBotaoMatches: remainingMatches,
         lastBotaoResult: { match, result: matchResult },
-        pendingPressConference:
-          matchResult.manOfTheMatch && !matchResult.simulated && !matchResult.walkover && resolvedSetup
+        pendingPressConference: interviewEligible && formerClub
+          ? buildFormerClubConference(current, match, matchResult, formerClub)
+          : interviewEligible && matchResult.manOfTheMatch && resolvedSetup
             ? buildPressConference(current, match, matchResult, resolvedSetup.cpuTeam.shortName)
             : null,
       };
@@ -1522,12 +1540,18 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       const affected = applyEffect(current, answer.effect);
       const nextIndex = conference.questionIndex + 1;
       const completed = nextIndex >= conference.questions.length;
+      const pressSource = conference.kind === "presentation" ? "Sala de Imprensa" : "Zona Mista";
+      const pressMoment = conference.kind === "presentation"
+        ? `na apresentação pelo ${conference.opponentName}`
+        : conference.kind === "former-club"
+          ? `depois do reencontro com o ${conference.opponentName}`
+          : `após ${conference.competitionName}`;
       const post: SocialPost = {
         id: `${current.seed}-${conference.matchId}-press-${conference.questionIndex}`,
         season: current.lastResult?.season ?? current.season - 1,
         source: "press",
-        author: "Zona Mista",
-        text: `“${answer.label}” — ${current.name}, após ${conference.competitionName}.`,
+        author: pressSource,
+        text: `“${answer.label}” — ${current.name}, ${pressMoment}.`,
         likes: Math.max(500, Math.round((current.followers + 10_000) * (0.02 + seeded(current.seed, conference.questionIndex + current.season) * 0.04))),
         tone: answer.tone === "bold" ? "positive" : "neutral",
       };
@@ -1686,8 +1710,12 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           ...current.newsFeed,
         ].slice(0, 12),
       };
+      const presentation = acceptedOffer && newClub && current.overall > 80
+        ? buildTransferPresentation(transferred, oldClub, newClub, acceptedOffer)
+        : null;
       return {
         ...transferred,
+        pendingPressConference: presentation,
         currentEventId: pendingCareerEventId || selectNextEvent(transferred, current.season * 47),
       };
     });
@@ -1771,7 +1799,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     const purchaseKey = `${game.season}:${item}`;
     if (game.spendableMoney < price || game.economyPurchases.includes(purchaseKey)) return;
     const corruptionSucceeded = item === "corruption" && seeded(game.seed, game.season * 1877 + game.economyPurchases.length * 31) < 0.5;
-    const corruptionBanYears = 3 + Math.floor(seeded(game.seed, game.season * 1889 + game.economyPurchases.length * 37) * 3);
+    const corruptionBanYears = 5;
     setGame((current) => {
       const next = {
         ...current,
@@ -1789,7 +1817,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       } else if (item === "coach") {
         next.attributes = shiftPlayerAttributes(current.attributes, 1, current.position, current.seed + current.season * 613);
       } else if (item === "potential") {
-        next.potential = clamp(current.potential < 80 ? current.potential + 1 : current.potential - 1, current.overall, 99);
+        next.potential = clamp(current.potential < 80 ? current.potential + 2 : current.potential - 2, current.overall, 99);
       } else if (corruptionSucceeded) {
         next.corruptionGuaranteedSeason = current.season;
         next.discipline = clamp(current.discipline - 18);
@@ -1835,6 +1863,25 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             : "A estrutura de recuperação devolveu energia e tranquilidade.",
     );
     setToast(item === "corruption" ? (corruptionSucceeded ? "Esquema fechado — título garantido" : "Esquema descoberto") : `${formatMoney(price)} investidos na carreira`);
+    vibrate();
+  }
+
+  function buyCycleShopItem(itemId: CycleShopItemId) {
+    const purchase = purchaseCycleShopItem(game, itemId);
+    if (purchase.state === game) return;
+    setGame(purchase.forcedClose
+      ? { ...purchase.state, lastCycleShopSeason: game.season }
+      : purchase.state);
+    setCycleShopFeedback(purchase.feedback);
+    setToast(purchase.toast);
+    if (purchase.forcedClose) setCycleShopDismissedSeason(game.season);
+    vibrate();
+  }
+
+  function closeCycleShop() {
+    setGame((current) => ({ ...current, lastCycleShopSeason: current.season }));
+    setCycleShopDismissedSeason(game.season);
+    setCycleShopFeedback("");
     vibrate();
   }
 
@@ -2308,30 +2355,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                 : "Ver resumo da temporada"}
           </button>
         </div>
-        {pressConferenceOpen && game.pendingPressConference && (() => {
-          const conference = game.pendingPressConference;
-          const question = conference.questions[conference.questionIndex];
-          return (
-            <div className="press-conference-backdrop">
-              <section className="press-conference" role="dialog" aria-modal="true" aria-labelledby="press-question">
-                <header>
-                  <span>🎙</span>
-                  <div><small>COLETIVA · PERGUNTA {conference.questionIndex + 1} DE {conference.questions.length}</small><strong>{conference.competitionName}</strong></div>
-                </header>
-                <p>{question.context}</p>
-                <h2 id="press-question">{question.question}</h2>
-                <div>
-                  {question.answers.map((answer, index) => (
-                    <button type="button" key={answer.label} onClick={() => answerPressConference(index)}>
-                      <span><strong>{answer.label}</strong><small>{answer.tone === "bold" ? "Resposta forte" : answer.tone === "team" ? "Valoriza o grupo" : "Resposta serena"}</small></span><b>→</b>
-                    </button>
-                  ))}
-                </div>
-                <footer>Suas respostas afetam torcida, imprensa, liderança e o vestiário.</footer>
-              </section>
-            </div>
-          );
-        })()}
+        {pressConferenceOpen && game.pendingPressConference && <PressConferenceDialog conference={game.pendingPressConference} onAnswer={answerPressConference} />}
       </main>
     );
   }
@@ -2341,6 +2365,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       {toast && <div className="toast" role="status">{toast}</div>}
+      {(pressConferenceOpen || presentationOpen) && game.pendingPressConference && <PressConferenceDialog conference={game.pendingPressConference} onAnswer={answerPressConference} />}
+      {cycleShopOpen && <CycleShopDialog game={game} feedback={cycleShopFeedback} onBuy={buyCycleShopItem} onClose={closeCycleShop} />}
       {androidInstallOpen && (
         <AndroidInstallDialog
           native={nativeAndroid}

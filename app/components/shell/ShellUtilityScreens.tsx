@@ -9,6 +9,7 @@ import { ANDROID_APP_VERSION, checkForAndroidUpdate, isAndroidDevice, isNativeAn
 import type { AndroidRelease } from "../../android-app";
 import { ClubBadge } from "../career/CareerPrimitives";
 import styles from "./ShellUtilityScreens.module.css";
+import { FUTBOBO_VERSION } from "../../version";
 import FutboboIcon from "../FutboboIcon";
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -212,12 +213,12 @@ export function InstallScreen() {
 }
 
 const UPDATES = [
-  { version: "v93", date: "AGORA", title: "Dono da Área", lead: "O maior rework do Rumo ao Estrelato.", items: ["Menu e criação refeitos", "Até 10 carreiras", "Histórico vertical e nova aba Mundo", "Arquivo Vivo com recordes reais + seu save", "CONMEBOL Sudamericana", "Iconografia SVG própria em toda a interface", "Eventos exclusivos de grandes clubes", "Conquistas globais e backups melhores"] },
-  { version: "v92", date: "ANTERIOR", title: "Fundação do novo Futbobo", lead: "A base que abriu caminho para a v93.", items: ["Carreira expandida", "Mais eventos e sistemas de bastidores", "Futebol de botão integrado a jogos decisivos"] },
+  { version: FUTBOBO_VERSION, date: "AGORA", title: "Zona Mista & QUADRA", lead: "Sua carreira ganhou voz, memória e uma nova janela de investimento.", items: ["Entrevistas pós-jogo muito mais variadas", "Coletiva de apresentação para grandes contratações", "Reencontros e lei do ex com perguntas próprias", "Loja QUADRA a cada quatro temporadas", "+1 OVR, recalibração oculta e investimentos balanceados", "Corrupção com risco real de cinco anos de banimento", "Avião de transferências orientado corretamente"] },
+  { version: "v93", date: "ANTERIOR", title: "Dono da Área", lead: "O maior rework do Rumo ao Estrelato.", items: ["Menu e criação refeitos", "Até 10 carreiras", "Histórico vertical e nova aba Mundo", "Arquivo Vivo com recordes reais + seu save", "CONMEBOL Sudamericana", "Iconografia SVG própria em toda a interface", "Eventos exclusivos de grandes clubes", "Conquistas globais e backups melhores"] },
 ];
 
 export function NewsScreen() {
-  const [openVersion, setOpenVersion] = useState("v93");
+  const [openVersion, setOpenVersion] = useState(FUTBOBO_VERSION);
   return (
     <section className={styles.utilityScreen}>
       <header className={styles.hero}><span>NOVIDADES</span><h2>O que mudou.</h2><p>Sem parede de patch note. Só as coisas que você vai perceber jogando.</p></header>

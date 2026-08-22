@@ -1,0 +1,2 @@
+export const FUTBOBO_VERSION = "v93.7";
+export const FUTBOBO_VERSION_NAME = "ZONA MISTA & QUADRA";

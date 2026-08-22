@@ -80,7 +80,9 @@ function TravelVehicle({ mode }: { mode: TravelMode }) {
   }
   return (
     <svg className={styles.vehicleSvg} viewBox="0 0 72 42" aria-hidden="true">
-      <path d="M2 19.2 26 16 38 3h6l-5 13 22 3 7-6h3l-3 8 3 8h-3l-7-6-22 3 5 13h-6L26 26 2 22.8 0 21Z" />
+      <g transform="translate(72 0) scale(-1 1)">
+        <path d="M2 19.2 26 16 38 3h6l-5 13 22 3 7-6h3l-3 8 3 8h-3l-7-6-22 3 5 13h-6L26 26 2 22.8 0 21Z" />
+      </g>
     </svg>
   );
 }

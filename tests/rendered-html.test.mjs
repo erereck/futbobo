@@ -44,7 +44,9 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readCareerSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   assert.match(pageSource, /className="welcome-version"/);
-  assert.match(pageSource, /v92 · DONO DA ÁREA/);
+  assert.match(pageSource, /FUTBOBO_VERSION_NAME/);
+  const version = await readFile(new URL("../app/version.ts", import.meta.url), "utf8");
+  assert.match(version, /v93\.7/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -1670,7 +1672,29 @@ test("encerra a viagem de transferência com uma saída suave", async () => {
   assert.match(transfer, /setJourneyLeaving\(true\)/);
   assert.match(transfer, /fadeDelay \+ fadeDuration/);
   assert.match(transfer, /styles\.travelLeaving/);
+  assert.match(transfer, /translate\(72 0\) scale\(-1 1\)/);
   assert.match(styles, /@keyframes travelBackdropOut/);
   assert.match(styles, /@keyframes travelCardOut/);
   assert.match(styles, /\.travelLeaving \.travelCard/);
+});
+
+test("expande coletivas e abre a loja QUADRA sem inflar a carreira", async () => {
+  const career = await readCareerSource();
+  const press = await readFile(new URL("../app/career/press-conferences.ts", import.meta.url), "utf8");
+  const shop = await readFile(new URL("../app/career/cycle-shop.ts", import.meta.url), "utf8");
+  const shopUi = await readFile(new URL("../app/components/career/CycleShopDialog.tsx", import.meta.url), "utf8");
+
+  assert.match(press, /buildTransferPresentation/);
+  assert.match(press, /buildFormerClubConference/);
+  assert.match(press, /kind: "former-club"/);
+  assert.match(press, /visibleAnswers[\s\S]*slice\(0, 3\)/);
+  assert.match(career, /current\.overall > 80/);
+  assert.match(career, /current\.history\.some\(\(record\) => record\.clubId === match\.opponentId\)/);
+  assert.match(shop, /state\.history\.length % 4 === 0/);
+  assert.match(shop, /price: 7_500_000/);
+  assert.match(shop, /price: 2_000_000/);
+  assert.match(shop, /state\.season \+ 5/);
+  assert.match(shop, /state\.potential < 80 \? state\.potential \+ 2 : state\.potential - 2/);
+  assert.match(shopUi, /LOJA DO QUADRIÊNIO/);
+  assert.match(shop, /name: "Treino especial"/);
 });

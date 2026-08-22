@@ -105,6 +105,14 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 
 Selecoes sem liga recebem uma rota de base recomendada por confederacao. A recomendacao deve ser visivel, explicada em linguagem narrativa e nunca bloquear a escolha manual de outra liga.
 
+### Zona mista e loja quadrienal
+
+- Entrevistas são overlays de foco único: contexto curto, uma pergunta grande e exatamente três respostas. Variação vem do conteúdo sorteado, nunca de mais controles na tela.
+- Azul `broadcast` identifica imprensa e apresentação; amarelo continua reservado para ação e progressão. Reencontros usam o mesmo componente, mudando conteúdo e rótulo, sem criar outra linguagem visual.
+- `QUADRA` aparece somente entre ciclos de quatro temporadas. O cabeçalho mostra um único número financeiro — caixa disponível — e cada investimento cabe em nome, efeito curto e preço.
+- Benefícios comuns usam superfície neutra; evolução imediata recebe amarelo; potencial oculto e corrupção recebem borda vermelha. `Treino especial` permanece visível e indisponível para antecipar a função sem fingir interação.
+- No mobile, ambos os overlays encostam visualmente na base, mantêm rolagem própria e preservam alvos de 44px; o conteúdo da carreira não disputa rolagem com o modal.
+
 ## Componentes recorrentes
 
 - Botão primário — 52px mobile / 48px desktop · raio 10px · Barlow Condensed 18/800 · fundo referee.

@@ -13,6 +13,7 @@ export type FutboboIconName =
   | "hourglass"
   | "medical"
   | "medal"
+  | "microphone"
   | "news"
   | "play"
   | "player"
@@ -21,7 +22,8 @@ export type FutboboIconName =
   | "trend-down"
   | "trend-up"
   | "tag"
-  | "trophy";
+  | "trophy"
+  | "wallet";
 
 type FutboboIconProps = Omit<SVGProps<SVGSVGElement>, "children"> & {
   name: FutboboIconName;
@@ -41,6 +43,7 @@ const paths: Record<FutboboIconName, ReactNode> = {
   hourglass: <><path d="M7 3h10M7 21h10M8 3c0 4 1.5 6.2 4 9-2.5 2.8-4 5-4 9M16 3c0 4-1.5 6.2-4 9 2.5 2.8 4 5 4 9" /></>,
   medical: <><rect x="4" y="5" width="16" height="15" rx="3" /><path d="M9 5V3h6v2M12 9v7M8.5 12.5h7" /></>,
   medal: <><path d="m8 3 4 6 4-6M9 3H6l4 7M15 3h3l-4 7" /><circle cx="12" cy="15" r="5" /><path d="m12 12.5.8 1.6 1.7.2-1.2 1.2.3 1.8-1.6-.8-1.6.8.3-1.8-1.2-1.2 1.7-.2.8-1.6Z" /></>,
+  microphone: <><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M6 10a6 6 0 0 0 12 0M12 16v5M8 21h8" /></>,
   news: <><path d="M4 13V8l12-4v13L4 13Z" /><path d="M16 8.5a4 4 0 0 1 0 4M7 14l1 6h4l-1-5" /></>,
   play: <><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4V8Z" /></>,
   player: <><path d="m8 4-5 3 2 4 3-1v10h8V10l3 1 2-4-5-3a5 5 0 0 1-8 0Z" /><path d="M10 4c.5 1 1.2 1.5 2 1.5S13.5 5 14 4" /></>,
@@ -50,6 +53,7 @@ const paths: Record<FutboboIconName, ReactNode> = {
   "trend-up": <><path d="M4 17h5l3-4 3 3 5-7" /><path d="M16 9h4v4" /></>,
   tag: <><path d="M20 13 13 20 4 11V4h7l9 9Z" /><circle cx="8.5" cy="8.5" r="1.5" /></>,
   trophy: <><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" /><path d="M8 6H4v2a4 4 0 0 0 5 4M16 6h4v2a4 4 0 0 1-5 4M12 13v5M8 21h8M9 18h6" /></>,
+  wallet: <><path d="M4 7h14a2 2 0 0 1 2 2v9H6a2 2 0 0 1-2-2V7Z" /><path d="M4 7V6a2 2 0 0 1 2-2h11v3M15 11h5v4h-5a2 2 0 0 1 0-4Z" /></>,
 };
 
 export default function FutboboIcon({ name, size = "1em", className, ...props }: FutboboIconProps) {
