@@ -80,13 +80,12 @@ function TravelVehicle({ mode }: { mode: TravelMode }) {
   }
   return (
     <svg className={styles.vehicleSvg} viewBox="0 0 72 42" aria-hidden="true">
-      <path d="M3 19h22L35 4h6l-5 15h19l8-7h5l-4 9 4 9h-5l-8-7H36l5 15h-6L25 23H3l-3-2 3-2Z" />
-      <path d="M12 19 8 11h4l8 8m-8 4-4 8h4l8-8" />
+      <path d="M2 19.2 26 16 38 3h6l-5 13 22 3 7-6h3l-3 8 3 8h-3l-7-6-22 3 5 13h-6L26 26 2 22.8 0 21Z" />
     </svg>
   );
 }
 
-function TransferJourneyOverlay({ journey, origin }: { journey: TransferJourney; origin: Club }) {
+function TransferJourneyOverlay({ journey, origin, leaving }: { journey: TransferJourney; origin: Club; leaving: boolean }) {
   const { destination, offer, mode } = journey;
   const originCountry = countryById(origin.countryId);
   const destinationCountry = countryById(destination.countryId);
@@ -168,7 +167,7 @@ function TransferJourneyOverlay({ journey, origin }: { journey: TransferJourney;
   const routeY = mode === "plane" ? 76 : 72;
 
   return (
-    <div className={styles.travelOverlay} role="dialog" aria-modal="true" aria-label={`Viagem de ${origin.shortName} para ${destination.shortName}`} style={style}>
+    <div className={`${styles.travelOverlay} ${leaving ? styles.travelLeaving : ""}`} role="dialog" aria-modal="true" aria-label={`Viagem de ${origin.shortName} para ${destination.shortName}`} style={style}>
       <section className={styles.travelCard}>
         <header className={styles.travelHeader}>
           <div>
@@ -225,6 +224,7 @@ export default function TransferMarketScreen({ state, currentClub, offers, renew
   const copy = windowCopy(state, currentClub, offers.length);
   const canStay = !state.transferRequested && !state.renewalDenied && !state.forcedClubExit && !state.forcedAlternativeTransfer && state.pendingTransferMode !== "loan";
   const [journey, setJourney] = useState<TransferJourney | null>(null);
+  const [journeyLeaving, setJourneyLeaving] = useState(false);
   const onChooseRef = useRef(onChoose);
   const journeyFinishingRef = useRef(false);
 
@@ -248,9 +248,13 @@ export default function TransferMarketScreen({ state, currentClub, offers, renew
       onChooseRef.current(acceptedOffer);
     };
 
-    const timer = window.setTimeout(finishJourney, reducedMotion ? 650 : 2850);
+    const fadeDelay = reducedMotion ? 480 : 2850;
+    const fadeDuration = reducedMotion ? 180 : 320;
+    const fadeTimer = window.setTimeout(() => setJourneyLeaving(true), fadeDelay);
+    const finishTimer = window.setTimeout(finishJourney, fadeDelay + fadeDuration);
     return () => {
-      window.clearTimeout(timer);
+      window.clearTimeout(fadeTimer);
+      window.clearTimeout(finishTimer);
       document.body.style.overflow = previousOverflow;
     };
   }, [journey]);
@@ -262,6 +266,7 @@ export default function TransferMarketScreen({ state, currentClub, offers, renew
       return;
     }
     const destination = clubById(offer.clubId);
+    setJourneyLeaving(false);
     setJourney({
       offer,
       destination,
@@ -325,7 +330,7 @@ export default function TransferMarketScreen({ state, currentClub, offers, renew
         {canStay && state.contractYears === 0 && <button className={styles.secondaryAction} disabled={Boolean(journey)} onClick={onBecomeFreeAgent}><span>Recusar renovação</span><strong>Virar agente livre <FutboboIcon name="arrow-right" /></strong></button>}
         {state.isFreeAgent && <button className={styles.secondaryAction} disabled={Boolean(journey) || (state.age >= 42 && state.forcedFreeAgentUntilSeason <= state.season)} onClick={onWait}><span>{state.forcedFreeAgentUntilSeason > state.season ? "Punição em andamento" : "Nada convenceu?"}</span><strong>Passar um ano sem clube <FutboboIcon name="arrow-right" /></strong></button>}
       </section>
-      {journey && <TransferJourneyOverlay journey={journey} origin={currentClub} />}
+      {journey && <TransferJourneyOverlay journey={journey} origin={currentClub} leaving={journeyLeaving} />}
     </>
   );
 }

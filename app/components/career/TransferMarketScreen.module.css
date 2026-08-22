@@ -170,6 +170,7 @@
 .vehiclePlane .vehicleCenter { width: 66px; height: 44px; }
 .vehicleBus .vehicleCenter { width: 58px; height: 42px; }
 .vehicleSvg { width: 100%; height: 100%; overflow: visible; fill: rgba(8, 28, 20, .96); stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.vehiclePlane .vehicleSvg { fill: #edf4ef; stroke: rgba(4, 18, 12, .9); stroke-width: .85; }
 .routeStatus {
   position: absolute;
   left: 50%;
@@ -204,10 +205,16 @@
 
 @keyframes travelBackdropIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes travelCardIn { from { opacity: 0; transform: scale(.97) translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes travelBackdropOut { to { opacity: 0; } }
+@keyframes travelCardOut { to { opacity: 0; transform: translateY(8px) scale(.99); } }
+@keyframes travelCardFadeOut { to { opacity: 0; } }
 @keyframes routeDash { to { stroke-dashoffset: -15; } }
 @keyframes destinationArrival { to { opacity: 1; transform: translateY(-4px); } }
 @keyframes arrivalRing { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--journey-to-secondary) 70%, transparent); } 100% { box-shadow: 0 0 0 22px transparent; } }
 @keyframes progressBlink { from { opacity: .3; } to { opacity: 1; background: #f8c932; } }
+
+.travelLeaving { pointer-events: none; animation: travelBackdropOut 320ms cubic-bezier(.77,0,.175,1) forwards; }
+.travelLeaving .travelCard { animation: travelCardOut 320ms cubic-bezier(.77,0,.175,1) forwards; }
 
 @media (max-width: 700px) {
   .travelOverlay { padding: 8px; }
@@ -256,6 +263,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .travelOverlay, .travelCard, .routeLine, .destinationTerminal, .destinationTerminal .badgeShell, .travelFooter i { animation: none; }
+  .travelCard, .routeLine, .destinationTerminal, .destinationTerminal .badgeShell, .travelFooter i { animation: none; }
   .destinationTerminal { opacity: 1; }
+  .travelLeaving { animation: travelBackdropOut 180ms linear forwards; }
+  .travelLeaving .travelCard { animation: travelCardFadeOut 180ms linear forwards; }
 }

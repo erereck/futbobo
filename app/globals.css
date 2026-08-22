@@ -2438,9 +2438,11 @@ button:active:not(:disabled) { transform: scale(0.975); }
 
   .event-stage {
     position: relative;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
     padding-bottom: calc(env(safe-area-inset-bottom) + 68px);
     overflow-x: hidden !important;
-    overflow-y: auto !important;
+    overflow-y: hidden !important;
   }
 
   .event-stage .market-strip { display: grid; min-height: 0; grid-template-columns: minmax(0,1fr) auto; gap: 10px; padding: 10px; background: rgba(7,23,16,.9); backdrop-filter: blur(12px); }
@@ -2449,19 +2451,21 @@ button:active:not(:disabled) { transform: scale(0.975); }
   .event-stage .market-strip button { min-height: 40px; max-width: 100%; white-space: normal; }
   .event-stage .objective-card { margin: 7px 10px 0; padding: 9px 11px; }
   .event-stage .objective-card p { display: none; }
-  .event-art { height: 150px; min-height: 150px; border-bottom: 0; }
+  .event-stage .event-art { display: none; }
   .event-card {
     position: relative;
     inset: auto;
     z-index: 1;
+    align-self: end;
+    width: auto;
     max-height: none;
-    margin: -18px 10px 14px;
+    margin: 8px 10px 12px;
     padding: 14px 13px 12px;
     overflow: visible;
     border-radius: 20px;
     box-shadow: 0 18px 42px rgba(0,0,0,.48);
   }
-  .event-heading h1 { margin: 4px 0 6px; font-size: 22px; }
+  .event-heading h1 { width: 100%; max-width: none; margin: 4px 0 6px; font-size: clamp(20px, 6.1vw, 24px); line-height: .98; text-wrap: pretty; }
   .event-heading p { font-size: 10px; line-height: 1.4; }
   .choice-list { gap: 6px; margin-top: 11px; }
   .decision-button { min-height: 51px; padding: 8px 10px; }
@@ -2667,11 +2671,19 @@ button:active:not(:disabled) { transform: scale(0.975); }
 /* WORLD MEMORY EVENT FLOW */
 @media (max-width:899px) {
   .career-shell > .event-stage {
-    display:block !important;
     min-height:0 !important;
     height:auto !important;
   }
-  .event-stage .event-card {
-    margin:8px 10px 14px !important;
-  }
+}
+
+@media (max-width: 540px) and (max-height: 760px) {
+  .event-stage .market-strip { padding-block: 7px; }
+  .event-stage .objective-card { padding-block: 7px; }
+  .event-stage .objective-card > small { margin-top: 4px; }
+  .event-card { margin-top: 6px; padding: 10px 11px 9px; }
+  .event-heading h1 { font-size: 20px; }
+  .event-heading p { display: none; }
+  .choice-list { gap: 5px; margin-top: 8px; }
+  .decision-button { min-height: 44px; padding-block: 6px; }
+  .decision-button small { display: none; }
 }

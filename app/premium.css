@@ -3162,9 +3162,13 @@ button:active:not(:disabled) { transform: scale(.98); }
   .career-phase-career.career-tab-event .event-heading { flex: 0 1 auto; min-height: 0; }
   .career-phase-career.career-tab-event .event-heading > span { font-size: 7px; }
   .career-phase-career.career-tab-event .event-heading h1 {
+    width: 100%;
+    max-width: none;
     margin: 3px 0 5px;
     font-size: clamp(19px,3.3dvh,27px);
     line-height: .95;
+    overflow-wrap: normal;
+    text-wrap: pretty;
   }
   .career-phase-career.career-tab-event .event-heading p {
     margin: 0;

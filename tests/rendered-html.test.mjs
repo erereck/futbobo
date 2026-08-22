@@ -251,7 +251,7 @@ test("mantém a carreira encaixada na tela mobile com ações fixas", async () =
   assert.match(styles, /@media \(max-width: 540px\)/);
   assert.match(styles, /\.career-shell \{[\s\S]*height: 100%/);
   assert.match(styles, /\.mobile-action-dock \{[\s\S]*position: fixed/);
-  assert.match(styles, /\.event-stage \{[\s\S]*overflow-y: auto !important/);
+  assert.match(styles, /\.event-stage \{[\s\S]*grid-template-rows: auto auto minmax\(0, 1fr\)[\s\S]*overflow-y: hidden !important/);
   assert.match(styles, /\.event-card \{[\s\S]*position: relative/);
 });
 
@@ -1656,4 +1656,16 @@ test("fecha a v93 com iconografia vetorial própria e remove símbolos improvisa
   assert.doesNotMatch(career, /<span>│<\/span>Histórico/);
   assert.match(shell, /FutboboIcon name="settings"/);
   assert.match(shell, /FutboboIcon name="medal"/);
+});
+
+test("encerra a viagem de transferência com uma saída suave", async () => {
+  const transfer = await readFile(new URL("../app/components/career/TransferMarketScreen.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/components/career/TransferMarketScreen.module.css", import.meta.url), "utf8");
+
+  assert.match(transfer, /setJourneyLeaving\(true\)/);
+  assert.match(transfer, /fadeDelay \+ fadeDuration/);
+  assert.match(transfer, /styles\.travelLeaving/);
+  assert.match(styles, /@keyframes travelBackdropOut/);
+  assert.match(styles, /@keyframes travelCardOut/);
+  assert.match(styles, /\.travelLeaving \.travelCard/);
 });

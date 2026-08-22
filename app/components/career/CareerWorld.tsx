@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { countryById } from "../../game-data";
 import type { GameState } from "../../career/model";
 import { archiveFootballRankingsForState } from "../../career/official-football-records";
@@ -28,9 +28,45 @@ function rankingPosition(entries: Array<{ value: number }>, index: number) {
 }
 
 export function WorldPulseButton({ state, onOpen }: { state: GameState; onOpen: () => void }) {
-  const pulse = useMemo(() => worldPulseForState(state), [state]);
-  if (!pulse) return null;
-  return <button type="button" className={styles.pulse} onClick={onOpen}><span><i /> MUNDO</span><strong>{pulse.title}</strong><b><FutboboIcon name="arrow-right" /></b></button>;
+  const headlines = useMemo(() => {
+    const news = buildWorldSnapshot(state).news.slice(0, 6).map((item) => ({ id: item.id, title: item.title }));
+    if (news.length) return news;
+    const pulse = worldPulseForState(state);
+    return pulse ? [{ id: `pulse-${state.season}`, title: pulse.title }] : [];
+  }, [state]);
+  const [headlineIndex, setHeadlineIndex] = useState(0);
+  const [tickerMoving, setTickerMoving] = useState(false);
+  const headlineKey = headlines.map((headline) => headline.id).join("|");
+
+  useEffect(() => {
+    if (headlines.length < 2) return;
+    let swapTimer = 0;
+    const interval = window.setInterval(() => {
+      setTickerMoving(true);
+      swapTimer = window.setTimeout(() => {
+        setHeadlineIndex((current) => (current + 1) % headlines.length);
+        setTickerMoving(false);
+      }, 280);
+    }, 3000);
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(swapTimer);
+    };
+  }, [headlineKey, headlines.length]);
+
+  if (!headlines.length) return null;
+  const current = headlines[headlineIndex % headlines.length];
+  const next = headlines[(headlineIndex + 1) % headlines.length];
+  return <button type="button" className={styles.pulse} onClick={onOpen} aria-label={`Abrir Mundo: ${current.title}`}>
+    <span><i /> MUNDO</span>
+    <span className={styles.pulseViewport} aria-live="polite">
+      <span className={`${styles.pulseTrack} ${tickerMoving ? styles.pulseMoving : ""}`}>
+        <strong>{current.title}</strong>
+        <strong aria-hidden="true">{next.title}</strong>
+      </span>
+    </span>
+    <b><FutboboIcon name="arrow-right" /></b>
+  </button>;
 }
 
 function EntityBadge({ ledger, entityId }: { ledger: WorldCompetitionLedger; entityId: string }) {

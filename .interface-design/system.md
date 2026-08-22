@@ -94,6 +94,8 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Toda opção de evento ocupa uma linha real de no mínimo 44px; descrição e metadados cedem espaço antes que qualquer escolha seja cortada.
 - A meta nunca é truncada ou escondida, inclusive em telas de até 700px de altura. Título e consequência podem quebrar linha dentro de uma faixa de altura natural.
 - O capítulo ocupa todo o espaço restante e as escolhas se ancoram na borda inferior do card. O card usa raio externo de 18px; as escolhas, com 8px de respiro interno, usam 10px para manter curvas concêntricas.
+- A arte do capítulo não reserva altura no mobile. O card encosta no rodapé com 12px de respiro acima da navegação; títulos usam toda a largura e `text-wrap: pretty`. Em telas baixas, descrição e metadados saem antes dos alvos de escolha de 44px.
+- O giro do Mundo dentro da meta é uma fita de placar de 25px: uma manchete por vez, troca vertical a cada 3s e movimento de 280ms. Nunca aumenta a altura do HUD.
 - A criação do jogador no desktop é uma cabine de uma viewport: ficha à esquerda, campo de posições à direita e avanço integrado no rodapé, sempre visível.
 - A mesa mobile mede o espaço restante entre placar e comando. O tamanho cheio é padrão; reduzir a mesa é uma escolha explícita e reversível.
 
@@ -122,5 +124,6 @@ Selecoes sem liga recebem uma rota de base recomendada por confederacao. A recom
 - Entrada de tela: 220ms, opacity + translateY(8px).
 - Hover/press: 140ms; `scale(.98)` no press.
 - Overlays: 220ms com `cubic-bezier(.23,1,.32,1)`.
+- Transferência confirmada: a chegada termina antes da saída; overlay e card dissolvem juntos em 320ms, com deslocamento máximo de 8px. Em movimento reduzido, somente opacity por 180ms.
 - Nunca `transition: all`; respeitar `prefers-reduced-motion`.
 - Controles interativos são elementos nativos (`button`, `a`, `input`) com foco visível; cards clicáveis nunca simulam botão com `role` e eventos manuais de teclado.
