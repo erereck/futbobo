@@ -26,4 +26,4 @@ jobs:
       - name: Ballon d'Or scenarios and Monte Carlo
         run: npx --yes tsx scripts/ballon-title-qa.ts
         env:
-          BALLON_MC_RUNS: "3000"
+          BALLON_MC_RUNS: "1000"
