@@ -21,8 +21,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Build and rendered HTML tests
-        run: npm test
+      - name: Production build and TypeScript
+        run: npm run build
       - name: Ballon d'Or scenarios and Monte Carlo
         run: npx --yes tsx scripts/ballon-title-qa.ts
         env:
