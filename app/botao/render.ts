@@ -12,6 +12,7 @@ import {
   type BotaoBody,
   type BotaoMatchState,
 } from "./engine";
+import { fieldThemeForMatch, type BotaoFieldTheme } from "./field-themes";
 import { readableInk } from "./kits";
 import type { BotaoGoalReplay, BotaoMatchSetup, BotaoSide } from "./types";
 import { drawPlayerBust, type PlayerAppearance } from "../player-appearance";
@@ -106,30 +107,95 @@ function drawGoal(ctx: CanvasRenderingContext2D, y: number, direction: number, a
   ctx.restore();
 }
 
-function drawField(ctx: CanvasRenderingContext2D, userColor: string, cpuColor: string) {
-  const { width, height } = FIELD;
-  ctx.save();
-  // Tabelas da mesa
-  ctx.fillStyle = "#0b2517";
-  roundRect(ctx, -VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT, 14);
-  ctx.fill();
-
+function drawGrassBase(ctx: CanvasRenderingContext2D, width: number, height: number) {
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
   gradient.addColorStop(0, "#145c3a");
   gradient.addColorStop(0.5, "#12522f");
   gradient.addColorStop(1, "#0f4629");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
+}
 
-  // Listras do gramado
-  ctx.fillStyle = "rgba(255, 255, 255, 0.028)";
-  const stripe = height / 10;
-  for (let index = 0; index < 10; index += 2) {
-    ctx.fillRect(0, index * stripe, width, stripe);
+function drawFieldPattern(ctx: CanvasRenderingContext2D, theme: BotaoFieldTheme, width: number, height: number) {
+  if (theme === "futsal-blue") {
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, "#1979ad");
+    gradient.addColorStop(0.52, "#126795");
+    gradient.addColorStop(1, "#0d557e");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    // Brilho discreto de piso polido, sem textura de grama.
+    const sheen = ctx.createLinearGradient(0, 0, width, 0);
+    sheen.addColorStop(0, "rgba(255, 255, 255, 0.015)");
+    sheen.addColorStop(0.5, "rgba(255, 255, 255, 0.075)");
+    sheen.addColorStop(1, "rgba(255, 255, 255, 0.015)");
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, width, height);
+    return;
   }
 
-  ctx.strokeStyle = "rgba(245, 247, 242, 0.34)";
-  ctx.lineWidth = 1.6;
+  drawGrassBase(ctx, width, height);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.028)";
+
+  if (theme === "classic") {
+    const stripe = height / 10;
+    for (let index = 0; index < 10; index += 2) {
+      ctx.fillRect(0, index * stripe, width, stripe);
+    }
+    return;
+  }
+
+  if (theme === "vertical") {
+    const stripe = width / 10;
+    for (let index = 0; index < 10; index += 2) {
+      ctx.fillRect(index * stripe, 0, stripe, height);
+    }
+    return;
+  }
+
+  if (theme === "checker") {
+    const columns = 6;
+    const rows = 10;
+    const cellWidth = width / columns;
+    const cellHeight = height / rows;
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        if ((row + column) % 2 === 0) {
+          ctx.fillRect(column * cellWidth, row * cellHeight, cellWidth, cellHeight);
+        }
+      }
+    }
+    return;
+  }
+
+  // Faixas diagonais largas, ainda com as mesmas cores naturais de gramado.
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, width, height);
+  ctx.clip();
+  ctx.translate(width / 2, height / 2);
+  ctx.rotate(-Math.PI / 12);
+  const stripe = 42;
+  for (let x = -width - height; x < width + height; x += stripe * 2) {
+    ctx.fillRect(x, -height, stripe, height * 2);
+  }
+  ctx.restore();
+}
+
+function drawField(ctx: CanvasRenderingContext2D, userColor: string, cpuColor: string, theme: BotaoFieldTheme) {
+  const { width, height } = FIELD;
+  const futsal = theme === "futsal-blue";
+  ctx.save();
+  // Tabelas da mesa
+  ctx.fillStyle = futsal ? "#0a2436" : "#0b2517";
+  roundRect(ctx, -VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT, 14);
+  ctx.fill();
+
+  drawFieldPattern(ctx, theme, width, height);
+
+  ctx.strokeStyle = futsal ? "rgba(245, 249, 255, 0.68)" : "rgba(245, 247, 242, 0.34)";
+  ctx.lineWidth = futsal ? 1.8 : 1.6;
   ctx.strokeRect(1, 1, width - 2, height - 2);
 
   ctx.beginPath();
@@ -142,17 +208,29 @@ function drawField(ctx: CanvasRenderingContext2D, userColor: string, cpuColor: s
   ctx.stroke();
   ctx.beginPath();
   ctx.arc(width / 2, height / 2, 3, 0, Math.PI * 2);
-  ctx.fillStyle = "rgba(245, 247, 242, 0.4)";
+  ctx.fillStyle = futsal ? "rgba(245, 249, 255, 0.72)" : "rgba(245, 247, 242, 0.4)";
   ctx.fill();
 
-  // Áreas
-  const areaX = (width - FIELD.areaWidth) / 2;
-  ctx.strokeStyle = "rgba(245, 247, 242, 0.28)";
-  ctx.strokeRect(areaX, 0, FIELD.areaWidth, FIELD.areaDepth);
-  ctx.strokeRect(areaX, height - FIELD.areaDepth, FIELD.areaWidth, FIELD.areaDepth);
+  if (futsal) {
+    // Áreas arredondadas lembram uma quadra de futsal; a física continua idêntica.
+    const areaRadius = Math.min(48, FIELD.areaWidth * 0.46);
+    ctx.strokeStyle = "rgba(245, 249, 255, 0.58)";
+    ctx.beginPath();
+    ctx.arc(width / 2, 0, areaRadius, 0, Math.PI);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(width / 2, height, areaRadius, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    // Áreas tradicionais do campo de futebol.
+    const areaX = (width - FIELD.areaWidth) / 2;
+    ctx.strokeStyle = "rgba(245, 247, 242, 0.28)";
+    ctx.strokeRect(areaX, 0, FIELD.areaWidth, FIELD.areaDepth);
+    ctx.strokeRect(areaX, height - FIELD.areaDepth, FIELD.areaWidth, FIELD.areaDepth);
+  }
 
   // Marca do pênalti
-  ctx.fillStyle = "rgba(245, 247, 242, 0.34)";
+  ctx.fillStyle = futsal ? "rgba(245, 249, 255, 0.66)" : "rgba(245, 247, 242, 0.34)";
   for (const spotY of [FIELD.penaltyDistance, height - FIELD.penaltyDistance]) {
     ctx.beginPath();
     ctx.arc(width / 2, spotY, 2.4, 0, Math.PI * 2);
@@ -456,9 +534,10 @@ export function drawMatch(
   const userColors = { primary: state.setup.userTeam.primary, secondary: state.setup.userTeam.secondary };
   const cpuColors = { primary: state.setup.cpuTeam.primary, secondary: state.setup.cpuTeam.secondary };
   const pulse = (Math.sin(time / 320) + 1) / 2;
+  const fieldTheme = fieldThemeForMatch(state.setup.seed, state.setup.matchId);
 
   ctx.clearRect(-VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT);
-  drawField(ctx, userColors.primary, cpuColors.primary);
+  drawField(ctx, userColors.primary, cpuColors.primary, fieldTheme);
   drawGoalFlash(ctx, view.goalFlash, view.goalFlashSide);
 
   const visible = view.penaltyMode ? penaltyVisibleBodies(state) : state.bodies;
@@ -505,8 +584,9 @@ export function drawReplayFrame(
   const nextFrame = replay.frames[Math.min(replay.frames.length - 1, frameIndex + 1)] ?? frame;
   const interpolation = Math.max(0, Math.min(1, blend));
   const coordinateScale = Math.max(1, replay.coordinateScale ?? 1);
+  const fieldTheme = fieldThemeForMatch(setup.seed, setup.matchId);
   ctx.clearRect(-VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT);
-  drawField(ctx, setup.userTeam.primary, setup.cpuTeam.primary);
+  drawField(ctx, setup.userTeam.primary, setup.cpuTeam.primary, fieldTheme);
   const renderedBodies = replay.bodies.map((body, index): BotaoBody => ({
     ...body,
     x: ((frame.positions[index * 2] ?? 0) +
