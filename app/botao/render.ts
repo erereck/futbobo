@@ -125,6 +125,14 @@ function drawFieldPattern(ctx: CanvasRenderingContext2D, theme: BotaoFieldTheme,
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
 
+    // Faixas horizontais em um segundo azul quase igual: diferença pequena,
+    // mas suficiente para a quadra rara ter uma identidade mais swag.
+    const stripe = height / 10;
+    ctx.fillStyle = "rgba(47, 151, 194, 0.12)";
+    for (let index = 0; index < 10; index += 2) {
+      ctx.fillRect(0, index * stripe, width, stripe);
+    }
+
     // Brilho discreto de piso polido, sem textura de grama.
     const sheen = ctx.createLinearGradient(0, 0, width, 0);
     sheen.addColorStop(0, "rgba(255, 255, 255, 0.015)");
@@ -534,7 +542,7 @@ export function drawMatch(
   const userColors = { primary: state.setup.userTeam.primary, secondary: state.setup.userTeam.secondary };
   const cpuColors = { primary: state.setup.cpuTeam.primary, secondary: state.setup.cpuTeam.secondary };
   const pulse = (Math.sin(time / 320) + 1) / 2;
-  const fieldTheme = fieldThemeForMatch(state.setup.seed, state.setup.matchId);
+  const fieldTheme = fieldThemeForMatch(state.setup);
 
   ctx.clearRect(-VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT);
   drawField(ctx, userColors.primary, cpuColors.primary, fieldTheme);
@@ -584,7 +592,7 @@ export function drawReplayFrame(
   const nextFrame = replay.frames[Math.min(replay.frames.length - 1, frameIndex + 1)] ?? frame;
   const interpolation = Math.max(0, Math.min(1, blend));
   const coordinateScale = Math.max(1, replay.coordinateScale ?? 1);
-  const fieldTheme = fieldThemeForMatch(setup.seed, setup.matchId);
+  const fieldTheme = fieldThemeForMatch(setup);
   ctx.clearRect(-VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT);
   drawField(ctx, setup.userTeam.primary, setup.cpuTeam.primary, fieldTheme);
   const renderedBodies = replay.bodies.map((body, index): BotaoBody => ({
