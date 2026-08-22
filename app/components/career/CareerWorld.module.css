@@ -5,11 +5,11 @@
 .sectionNav button{grid-template-columns:18px auto;place-content:center;align-items:center;gap:8px}.sectionNav button>svg{font-size:17px}.sectionNav button>span{display:grid;gap:4px;text-align:left}
 
 /* HUD de carreira: fita de placar fina, com uma manchete por vez. */
-.pulse{min-height:25px;margin-top:7px;padding-top:5px;grid-template-columns:auto minmax(0,1fr) 14px;gap:7px}
+.pulse{min-height:22px;margin-top:6px;padding-top:4px;grid-template-columns:auto minmax(0,1fr) 14px;gap:7px}
 .pulse>span:first-child{display:flex;align-items:center;gap:4px;color:#84968b;font:900 6px/1 ui-monospace,monospace;letter-spacing:.08em}
 .pulse i{width:4px;height:4px}
-.pulse>.pulseViewport{display:block;height:12px;min-width:0;overflow:hidden;color:inherit;font:inherit;letter-spacing:normal}
-.pulseTrack{display:grid;grid-template-rows:12px 12px;transform:translateY(0);will-change:transform}
-.pulseTrack strong{display:block;overflow:hidden;color:#eef3ef;font-size:8px;line-height:12px;text-overflow:ellipsis;white-space:nowrap}
-.pulseMoving{transform:translateY(-12px);transition:transform 280ms cubic-bezier(.77,0,.175,1)}
+.pulse>.pulseViewport{display:block;height:10px;min-width:0;overflow:hidden;color:inherit;font:inherit;letter-spacing:normal}
+.pulseTrack{display:grid;grid-template-rows:10px 10px;transform:translateY(0);will-change:transform}
+.pulseTrack strong{display:block;overflow:hidden;color:#eef3ef;font-size:8px;line-height:10px;text-overflow:ellipsis;white-space:nowrap}
+.pulseMoving{transform:translateY(-10px);transition:transform 280ms cubic-bezier(.77,0,.175,1)}
 .pulse>b{display:grid;place-items:center;font-size:12px}

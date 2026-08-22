@@ -95,7 +95,9 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - A meta nunca é truncada ou escondida, inclusive em telas de até 700px de altura. Título e consequência podem quebrar linha dentro de uma faixa de altura natural.
 - O capítulo ocupa todo o espaço restante e as escolhas se ancoram na borda inferior do card. O card usa raio externo de 18px; as escolhas, com 8px de respiro interno, usam 10px para manter curvas concêntricas.
 - A arte do capítulo não reserva altura no mobile. O card encosta no rodapé com 12px de respiro acima da navegação; títulos usam toda a largura e `text-wrap: pretty`. Em telas baixas, descrição e metadados saem antes dos alvos de escolha de 44px.
-- O giro do Mundo dentro da meta é uma fita de placar de 25px: uma manchete por vez, troca vertical a cada 3s e movimento de 280ms. Nunca aumenta a altura do HUD.
+- O giro do Mundo dentro da meta é uma fita de placar de 22px: uma manchete por vez, troca vertical a cada 3s e movimento de 280ms. Nunca aumenta a altura do HUD.
+- O HUD de decisão usa 12px como ritmo único: margens laterais do capítulo, distância até a navegação e intervalo entre mercado e meta. Descrição do capítulo e pistas das escolhas são informação funcional e nunca desaparecem; telas baixas reduzem tipografia e entrelinha.
+- A faixa de status mobile preserva 8px de proteção nas bordas da viewport antes do padding interno das quatro células.
 - A criação do jogador no desktop é uma cabine de uma viewport: ficha à esquerda, campo de posições à direita e avanço integrado no rodapé, sempre visível.
 - A mesa mobile mede o espaço restante entre placar e comando. O tamanho cheio é padrão; reduzir a mesa é uma escolha explícita e reversível.
 

@@ -3769,22 +3769,41 @@ p,
 /* v89 — mobile decision deck: readable objective, bottom-anchored actions and
    one continuous radius system between the chapter and its choices. */
 @media (max-width: 540px) {
+  .career-phase-career.career-tab-event {
+    --decision-edge: 12px;
+  }
+
   .app-shell-career .career-phase-career.career-tab-event {
     padding-bottom: calc(66px + env(safe-area-inset-bottom));
   }
 
   .career-phase-career.career-tab-event > .event-stage {
     align-content: stretch;
-    padding-bottom: 8px;
+    padding-bottom: 0;
   }
 
   .career-phase-career.career-tab-event .objective-card {
     display: grid;
     min-height: 0;
+    margin: var(--decision-edge) var(--decision-edge) 0;
     align-content: center;
     padding: 8px 10px;
     overflow: visible;
     border-radius: 12px;
+  }
+
+  .career-status-strip {
+    padding-inline: 8px;
+  }
+
+  .career-status-strip > span,
+  .career-status-strip .retirement-trigger {
+    padding-inline: 6px;
+  }
+
+  .career-phase-career.career-tab-event > .career-status-strip > span,
+  .career-phase-career.career-tab-event > .career-status-strip .retirement-trigger {
+    padding-inline: 6px;
   }
 
   .career-phase-career.career-tab-event .objective-card > span {
@@ -3825,6 +3844,10 @@ p,
     overflow: hidden;
   }
 
+  .career-phase-career.career-tab-event .event-heading p {
+    display: block;
+  }
+
   .career-phase-career.career-tab-event .choice-list,
   .career-phase-career.career-tab-event .choice-list[data-choice-count="2"],
   .career-phase-career.career-tab-event .choice-list[data-choice-count="3"],
@@ -3842,6 +3865,10 @@ p,
     min-height: 44px;
     border-radius: 10px;
   }
+
+  .career-phase-career.career-tab-event .decision-button small {
+    display: block;
+  }
 }
 
 @media (max-width: 540px) and (max-height: 700px) {
@@ -3853,11 +3880,23 @@ p,
     padding: 9px;
   }
 
+  .career-phase-career.career-tab-event .event-heading p {
+    display: block;
+    font-size: 8px;
+    line-height: 1.25;
+  }
+
   .career-phase-career.career-tab-event .choice-list,
   .career-phase-career.career-tab-event .choice-list[data-choice-count="2"],
   .career-phase-career.career-tab-event .choice-list[data-choice-count="3"],
   .career-phase-career.career-tab-event .choice-list[data-choice-count="4"] {
     padding-top: 6px;
+  }
+
+  .career-phase-career.career-tab-event .decision-button small {
+    display: block;
+    font-size: 7px;
+    line-height: 1.2;
   }
 }
 

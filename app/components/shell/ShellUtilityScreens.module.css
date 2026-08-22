@@ -7,5 +7,5 @@
 :global(.career-shell.career-tab-profile > .panel-screen),:global(.career-shell.career-tab-stats > .panel-screen){display:grid!important;align-content:start!important;gap:12px!important}
 :global(.career-shell.career-tab-profile > .panel-screen > *),:global(.career-shell.career-tab-stats > .panel-screen > *){margin-top:0!important;margin-bottom:0!important}
 :global(.career-shell > .event-stage){display:grid!important;grid-template-rows:auto auto minmax(0,1fr)!important;min-height:0!important}
-:global(.career-shell > .event-stage .event-card){align-self:end!important;margin:8px 10px 12px!important}
+:global(.career-shell > .event-stage .event-card){align-self:end!important;margin:8px 12px 12px!important}
 }

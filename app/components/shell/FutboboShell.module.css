@@ -199,7 +199,7 @@
   .shell[data-screen="home"] .home { padding-top:10px; }
   .careerHost :global(.bottom-nav) { grid-template-columns:repeat(3,minmax(0,1fr)) !important; justify-content:center !important; justify-items:stretch !important; }
   .careerHost :global(.bottom-nav .desktop-career-nav-brand) { display:none !important; }
-  .careerHost :global(.career-phase-career.career-tab-event .event-card) { align-self:end !important; height:auto !important; align-content:start !important; overflow:visible !important; }
+  .careerHost :global(.career-phase-career.career-tab-event .event-card) { align-self:end !important; height:auto !important; margin:8px 12px 12px !important; align-content:start !important; overflow:visible !important; }
   .careerHost :global(.career-phase-career.career-tab-event .event-card .choice-list) { align-self:end !important; margin-top:8px !important; overflow:visible !important; }
   .careerHost :global(.bottom-nav > button) { width:100% !important; min-width:0 !important; }
   .careerHost :global(.club-badge-lg) { width:62px !important; height:62px !important; min-width:62px !important; }
