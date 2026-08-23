@@ -6,6 +6,7 @@
 // um `BotaoMatchSetup`, e o resultado de volta para "campeão / vice".
 
 import { CLUBS, COUNTRIES, countryById, leagueById, type Club, type Country, type PositionKey } from "../game-data";
+import { clubWithPlayerImpact } from "../career/player-club-impact";
 import { VERIFIED_CLUB_ASSET_IDS } from "../verified-club-assets";
 import { difficultyFromStrength } from "./cpu";
 import { ensureContrastingKits } from "./kits";
@@ -105,8 +106,6 @@ export function pickFinalOpponent(args: {
   const elitePool = scopedPool.filter((candidate) => candidate.reputation >= 4);
   const pool = eliteFinal && elitePool.length > 0 ? elitePool : scopedPool;
   const fallback = pool.length > 0 ? pool : CLUBS.filter((candidate) => candidate.id !== club.id);
-  // Quem chega a uma final costuma ser grande, mas não é sempre o mesmo trio:
-  // sorteio ponderado pela força dá variedade sem escalar time de meio de tabela.
   const viable = fallback.filter((candidate) => candidate.strength >= club.strength - 14);
   const contenders = viable.length >= 4 ? viable : fallback;
   const weights = contenders.map((candidate) => Math.pow(Math.max(1, candidate.strength - 45), 2.4));
@@ -178,30 +177,19 @@ export function pickNationalOpponent(args: {
 }): Country {
   const country = countryById(args.countryId);
   const excludedCountryIds = new Set([country.id, ...(args.excludedCountryIds ?? [])]);
-  const isGlobalTournament =
-    args.competitionId === "world-cup" ||
-    args.competitionId.includes("jogos-ol") ||
-    args.competitionId.includes("mundial-sub");
+  const isGlobalTournament = args.competitionId === "world-cup" || args.competitionId.includes("jogos-ol") || args.competitionId.includes("mundial-sub");
   const isGlobalFinal = isGlobalTournament && args.stageName === "Final";
   const sameTournamentPool = COUNTRIES.filter((candidate) => {
     if (excludedCountryIds.has(candidate.id)) return false;
-    // A final do Mundial sempre guarda uma potência inédita. Nas fases
-    // anteriores há mais variedade, mas uma seleção eliminada nunca volta.
     if (isGlobalTournament) return candidate.strength >= (isGlobalFinal ? 4 : 2);
     return candidate.confederation === country.confederation;
   });
   const unseenCountries = COUNTRIES.filter((candidate) => !excludedCountryIds.has(candidate.id));
   const strongUnseenCountries = unseenCountries.filter((candidate) => candidate.strength >= 4);
-  const pool = sameTournamentPool.length > 0
-    ? sameTournamentPool
-    : isGlobalFinal && strongUnseenCountries.length > 0
-      ? strongUnseenCountries
-      : unseenCountries;
+  const pool = sameTournamentPool.length > 0 ? sameTournamentPool : isGlobalFinal && strongUnseenCountries.length > 0 ? strongUnseenCountries : unseenCountries;
   const weights = pool.map((candidate) => Math.pow(Math.max(1, candidate.strength + 1), 2.1));
   const total = weights.reduce((sum, weight) => sum + weight, 0);
-  const roll = createRng(
-    hashSeed(args.seed, args.season, args.competitionId, args.stageName, country.id),
-  ).next() * total;
+  const roll = createRng(hashSeed(args.seed, args.season, args.competitionId, args.stageName, country.id)).next() * total;
   let cursor = 0;
   for (let index = 0; index < pool.length; index += 1) {
     cursor += weights[index];
@@ -210,78 +198,34 @@ export function pickNationalOpponent(args: {
   return pool[pool.length - 1];
 }
 
-/** Regras usadas na final da carreira. Preset único para todo mundo jogar a mesma coisa. */
 export const CAREER_FINAL_RULES: BotaoRules = { ...DEFAULT_BOTAO_RULES };
 
 export type BotaoNationalTier = "none" | "sub17" | "sub20" | "olympic" | "main";
 
-/** Titularidade segue o nível da seleção e da categoria, sem depender de sorte. */
-export function nationalMatchRole(
-  overall: number,
-  country: Country,
-  tier: BotaoNationalTier,
-  captain = false,
-): "starter" | "reserve" {
+export function nationalMatchRole(overall: number, country: Country, tier: BotaoNationalTier, captain = false): "starter" | "reserve" {
   if (captain) return "starter";
   const safeStrength = Math.max(1, Math.min(5, country.strength));
-  // A vaga é disputada contra o nível real daquela seleção. Antes, qualquer
-  // adulto precisava de 80 OVR: uma régua adequada às potências, mas absurda
-  // para países médios e pequenos.
-  const requiredOverall = tier === "main" || tier === "none"
-    ? 64 + safeStrength * 3.5
-    : tier === "olympic"
-      ? 62 + safeStrength * 3
-      : tier === "sub20"
-        ? 58 + safeStrength * 2.5
-        : 53 + safeStrength * 2;
+  const requiredOverall = tier === "main" || tier === "none" ? 64 + safeStrength * 3.5 : tier === "olympic" ? 62 + safeStrength * 3 : tier === "sub20" ? 58 + safeStrength * 2.5 : 53 + safeStrength * 2;
   return overall >= Math.round(requiredOverall) ? "starter" : "reserve";
 }
 
-function reserveEntry(args: {
-  seed: number;
-  season: number;
-  competitionId: string;
-  stageName: string;
-  userTeam: BotaoTeam;
-  cpuTeam: BotaoTeam;
-  rules: BotaoRules;
-}) {
+function reserveEntry(args: { seed: number; season: number; competitionId: string; stageName: string; userTeam: BotaoTeam; cpuTeam: BotaoTeam; rules: BotaoRules; }) {
   const rng = createRng(hashSeed(args.seed, args.season, args.competitionId, args.stageName, "reserve-entry"));
   const goalRoll = rng.next();
   const totalGoals = goalRoll < 0.42 ? 0 : goalRoll < 0.82 ? 1 : 2;
   const score = { user: 0, cpu: 0 };
   const timeline: BotaoTimelineEntry[] = [];
   const userGoalChance = args.userTeam.strength / Math.max(1, args.userTeam.strength + args.cpuTeam.strength);
-
   for (let index = 0; index < totalGoals; index += 1) {
     const side = rng.next() < userGoalChance ? "user" : "cpu";
     score[side] += 1;
-    const elapsedRatio = totalGoals === 1
-      ? rng.range(0.18, 0.82)
-      : 0.2 + index * 0.48 + rng.range(0, 0.12);
+    const elapsedRatio = totalGoals === 1 ? rng.range(0.18, 0.82) : 0.2 + index * 0.48 + rng.range(0, 0.12);
     const clock = Math.round(args.rules.halfSeconds * (1 - Math.min(0.88, elapsedRatio)));
     const scorer = `#${rng.pick([7, 8, 9, 10, 11, 17])}`;
-    timeline.push({
-      period: 1,
-      clock,
-      side,
-      kind: "goal",
-      scorer,
-      assist: null,
-      byUser: false,
-      beforePlayerEntry: true,
-      text: `Gol de ${scorer}`,
-    });
+    timeline.push({ period: 1, clock, side, kind: "goal", scorer, assist: null, byUser: false, beforePlayerEntry: true, text: `Gol de ${scorer}` });
   }
-
   const hasMultiplePeriods = args.rules.halves > 1;
-  return {
-    role: "reserve" as const,
-    period: hasMultiplePeriods ? Math.min(2, args.rules.halves) : 1,
-    clock: hasMultiplePeriods ? args.rules.halfSeconds : args.rules.halfSeconds / 2,
-    score,
-    timeline,
-  };
+  return { role: "reserve" as const, period: hasMultiplePeriods ? Math.min(2, args.rules.halves) : 1, clock: hasMultiplePeriods ? args.rules.halfSeconds : args.rules.halfSeconds / 2, score, timeline };
 }
 
 export function buildFinalSetup(args: {
@@ -296,14 +240,14 @@ export function buildFinalSetup(args: {
   playerNumber: number;
   position: PositionKey;
   overall: number;
-  /** Atributos da carreira (finalização, passe, etc.) para calibrar o botão do jogador. */
   ratings?: { power?: number; control?: number };
   userIsHost?: boolean;
   neutralVenue?: boolean;
   rules?: Partial<BotaoRules>;
   visuals?: BotaoMatchSetup["visuals"];
 }): BotaoMatchSetup {
-  const kits = ensureContrastingKits(botaoTeamFromClub(args.club), botaoTeamFromClub(args.opponent));
+  const effectiveClub = clubWithPlayerImpact(args.club, args.overall);
+  const kits = ensureContrastingKits(botaoTeamFromClub(effectiveClub), botaoTeamFromClub(args.opponent));
   return {
     matchId: `${args.competitionId}-${args.season}-${args.club.id}`,
     seed: hashSeed(args.seed, args.season, args.competitionId),
@@ -311,14 +255,7 @@ export function buildFinalSetup(args: {
     stageName: args.stageName ?? "Final",
     neutralVenue: args.neutralVenue ?? true,
     userIsHost: args.userIsHost ?? true,
-    player: {
-      name: args.playerName || "Você",
-      number: args.playerNumber,
-      position: toBotaoPosition(args.position),
-      overall: args.overall,
-      power: args.ratings?.power,
-      control: args.ratings?.control,
-    },
+    player: { name: args.playerName || "Você", number: args.playerNumber, position: toBotaoPosition(args.position), overall: args.overall, power: args.ratings?.power, control: args.ratings?.control },
     userTeam: kits.user,
     cpuTeam: kits.cpu,
     difficulty: difficultyFromStrength(args.opponent.strength),
@@ -344,10 +281,7 @@ export function buildNationalMatchSetup(args: {
   rules?: Partial<BotaoRules>;
   visuals?: BotaoMatchSetup["visuals"];
 }): BotaoMatchSetup {
-  const kits = ensureContrastingKits(
-    botaoTeamFromCountry(args.country),
-    botaoTeamFromCountry(args.opponent),
-  );
+  const kits = ensureContrastingKits(botaoTeamFromCountry(args.country), botaoTeamFromCountry(args.opponent));
   const rules = { ...CAREER_FINAL_RULES, ...args.rules };
   return {
     matchId: `${args.competitionId}-${args.stageName}-${args.season}-${args.country.id}`,
@@ -356,41 +290,17 @@ export function buildNationalMatchSetup(args: {
     stageName: args.stageName,
     neutralVenue: true,
     userIsHost: true,
-    player: {
-      name: args.playerName || "Você",
-      number: args.playerNumber,
-      position: toBotaoPosition(args.position),
-      overall: args.overall,
-      power: args.ratings?.power,
-      control: args.ratings?.control,
-    },
+    player: { name: args.playerName || "Você", number: args.playerNumber, position: toBotaoPosition(args.position), overall: args.overall, power: args.ratings?.power, control: args.ratings?.control },
     userTeam: kits.user,
     cpuTeam: kits.cpu,
     difficulty: difficultyFromStrength(kits.cpu.strength),
     rules,
     visuals: args.visuals,
-    entry: args.playerRole === "reserve"
-      ? reserveEntry({
-          seed: args.seed,
-          season: args.season,
-          competitionId: args.competitionId,
-          stageName: args.stageName,
-          userTeam: kits.user,
-          cpuTeam: kits.cpu,
-          rules,
-        })
-      : undefined,
+    entry: args.playerRole === "reserve" ? reserveEntry({ seed: args.seed, season: args.season, competitionId: args.competitionId, stageName: args.stageName, userTeam: kits.user, cpuTeam: kits.cpu, rules }) : undefined,
   };
 }
 
-/**
- * Traduz os atributos da carreira em força e controle do botão.
- * Finalização e força viram potência; passe, visão e drible viram controle.
- */
-export function ratingsFromAttributes(
-  attributes: Partial<Record<string, number>>,
-  overall: number,
-): { power: number; control: number } {
+export function ratingsFromAttributes(attributes: Partial<Record<string, number>>, overall: number): { power: number; control: number } {
   const read = (key: string) => attributes[key] ?? overall;
   const power = (read("finishing") + read("strength") + read("longShots")) / 3;
   const control = (read("passing") + read("vision") + read("dribbling")) / 3;
@@ -398,13 +308,11 @@ export function ratingsFromAttributes(
   return { power: scale(power), control: scale(control) };
 }
 
-/** O que a temporada precisa saber depois da final. */
 export function finalOutcome(result: BotaoMatchResult): { champion: boolean; stage: string } {
   if (result.champion) return { champion: true, stage: "CAMPEÃO" };
   return { champion: false, stage: "Vice" };
 }
 
-/** Derrota administrativa usada quando uma partida iniciada é abandonada. */
 export function walkoverBotaoResult(setup: BotaoMatchSetup): BotaoMatchResult {
   return {
     matchId: setup.matchId,
@@ -420,30 +328,20 @@ export function walkoverBotaoResult(setup: BotaoMatchSetup): BotaoMatchResult {
     manOfTheMatch: false,
     decision: "regulation",
     turns: 0,
-    stats: {
-      user: { flicks: 0, touches: 0, posts: 0 },
-      cpu: { flicks: 0, touches: 0, posts: 0 },
-    },
+    stats: { user: { flicks: 0, touches: 0, posts: 0 }, cpu: { flicks: 0, touches: 0, posts: 0 } },
     timeline: [],
     champion: false,
   };
 }
 
-/** Rótulo do adversário para a narração da temporada. */
 export function describeFinal(setup: BotaoMatchSetup, result: BotaoMatchResult): string {
-  if (result.walkover) {
-    return `Final da ${setup.competitionName}: derrota por W.O. contra o ${setup.cpuTeam.shortName} após abandono da partida.`;
-  }
+  if (result.walkover) return `Final da ${setup.competitionName}: derrota por W.O. contra o ${setup.cpuTeam.shortName} após abandono da partida.`;
   const score = `${result.goalsFor} x ${result.goalsAgainst}`;
-  const penalties =
-    result.penaltyFor !== null && result.penaltyAgainst !== null
-      ? ` (${result.penaltyFor} x ${result.penaltyAgainst} nos pênaltis)`
-      : "";
+  const penalties = result.penaltyFor !== null && result.penaltyAgainst !== null ? ` (${result.penaltyFor} x ${result.penaltyAgainst} nos pênaltis)` : "";
   const verb = result.champion ? "venceu" : "perdeu para";
   return `Final da ${setup.competitionName}: seu time ${verb} o ${setup.cpuTeam.shortName} por ${score}${penalties}.`;
 }
 
-/** Nome da liga/país só para exibir na antessala. */
 export function isMatchGoal(entry: BotaoTimelineEntry) {
   return entry.kind === "goal" || entry.kind === "own-goal";
 }
@@ -451,9 +349,7 @@ export function isMatchGoal(entry: BotaoTimelineEntry) {
 export function formatGoalMinute(entry: BotaoTimelineEntry, rules: BotaoRules) {
   const inExtraTime = entry.period > rules.halves;
   const segmentSeconds = inExtraTime ? rules.extraSeconds : rules.halfSeconds;
-  const segmentMinutes = inExtraTime
-    ? 30 / Math.max(1, rules.extraHalves)
-    : 90 / Math.max(1, rules.halves);
+  const segmentMinutes = inExtraTime ? 30 / Math.max(1, rules.extraHalves) : 90 / Math.max(1, rules.halves);
   const segmentIndex = inExtraTime ? entry.period - rules.halves - 1 : entry.period - 1;
   const minuteBase = inExtraTime ? 90 + segmentIndex * segmentMinutes : segmentIndex * segmentMinutes;
   const elapsedRatio = Math.min(1, Math.max(0, (segmentSeconds - entry.clock) / Math.max(1, segmentSeconds)));
