@@ -8,6 +8,7 @@ import { competitiveStrength, marketValue, seasonPerformanceScore, transferMarke
 import { clamp, clubById, seeded } from "./shared";
 import { clubConfederation, initialAdaptation, initialContinentalSlot, isEuropeanClub, positionByKey, regionAffinity } from "./academy";
 import { continentalChampionForWorldSeason } from "./world-club-competitions";
+import { clubWithPlayerImpact } from "./player-club-impact";
 
 export const SECOND_DIVISION_LEAGUES = new Set(["brasileirao-b", "championship"]);
 export type TransferTrigger = "season-end" | "requested" | "forced-exit" | "contract-expired" | "free-agent-wait" | "event";
@@ -56,7 +57,7 @@ const ROLE_TEXT: Record<SquadRole, string> = {
 function latestSeason(state: GameState) { return state.history.at(-1) ?? null; }
 
 export function buildMarketContext(state: GameState, options: TransferOfferOptions = {}): MarketContext {
-  const sourceClub = clubById(state.currentClubId || state.academyClubId);
+  const sourceClub = clubWithPlayerImpact(clubById(state.currentClubId || state.academyClubId), state.overall);
   const latest = latestSeason(state);
   const currentRole = state.squadRole || calculateSquadRole(state.overall, sourceClub, leagueById(state.currentLeagueId || sourceClub.leagueId).prestige, state.managerTrust, state.age);
   const performanceScore = seasonPerformanceScore(state.position, latest);
@@ -89,7 +90,7 @@ function profileRole(profile: MarketPlayerProfile, club: Club): SquadRole {
 
 /** Ranking sem efeitos colaterais. Não cria um segundo mercado: reutiliza força, papel, região, necessidade e valor do motor central. */
 export function rankMarketDestinations(profile: MarketPlayerProfile, options: { mode?: MarketMoveType; count?: number } = {}): MarketDestination[] {
-  const source = clubById(profile.currentClubId);
+  const source = clubWithPlayerImpact(clubById(profile.currentClubId), profile.overall);
   const mode = options.mode ?? "permanent";
   const careerPhase = profile.age <= 22 ? "promise" : profile.age <= 31 ? "prime" : "veteran";
   const target = clamp(competitiveStrength(source) + clamp((profile.performanceScore - 58) / 5, -7, 8) + (careerPhase === "promise" ? 1 : careerPhase === "veteran" ? -2 : 0), 52, 95);
