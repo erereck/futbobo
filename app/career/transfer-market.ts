@@ -6,7 +6,8 @@ import type { SquadRole } from "../career-systems";
 import type { GameState, MarketMoveType, MarketReason, TransferOffer, TransferRecord } from "./model";
 import { competitiveStrength, marketValue, seasonPerformanceScore, transferMarketProfile } from "./performance";
 import { clamp, clubById, seeded } from "./shared";
-import { initialAdaptation, initialContinentalSlot, isEuropeanClub, positionByKey, regionAffinity } from "./academy";
+import { clubConfederation, initialAdaptation, initialContinentalSlot, isEuropeanClub, positionByKey, regionAffinity } from "./academy";
+import { continentalChampionForWorldSeason } from "./world-club-competitions";
 
 export const SECOND_DIVISION_LEAGUES = new Set(["brasileirao-b", "championship"]);
 export type TransferTrigger = "season-end" | "requested" | "forced-exit" | "contract-expired" | "free-agent-wait" | "event";
@@ -286,17 +287,36 @@ function transferRecord(state: GameState, offer: TransferOffer): TransferRecord 
     type: offer.type, fromClubId: offer.fromClubId, toClubId: offer.clubId, transferFee: offer.transferFee,
     annualSalary: offer.annualSalary, contractYears: offer.contractYears, role: offer.role, reason: offer.reason };
 }
+
+function clubQualifiedForWorldSeason(state: GameState, club: Club) {
+  const feeder = clubConfederation(club) === "EUROPE"
+    ? "champions-league"
+    : clubConfederation(club) === "SOUTH_AMERICA"
+      ? "libertadores"
+      : clubConfederation(club) === "NORTH_AMERICA"
+        ? "concacaf-champions"
+        : clubConfederation(club) === "ASIA"
+          ? "afc-champions"
+          : clubConfederation(club) === "AFRICA"
+            ? "caf-champions"
+            : null;
+  return feeder ? continentalChampionForWorldSeason(state, feeder, state.season) === club.id : false;
+}
+
 export function applyAcceptedTransfer(state: GameState, offer: TransferOffer): GameState {
   const destination = clubById(offer.clubId);
   const source = clubById(offer.fromClubId || state.currentClubId || state.academyClubId);
   const isLoan = offer.type === "loan";
   const isRenewal = offer.type === "renewal";
+  const destinationQualifiedForWorld = clubQualifiedForWorldSeason(state, destination);
   return {
     ...state, currentClubId: destination.id, currentLeagueId: destination.leagueId,
     contractYears: isLoan ? Math.max(2, state.contractYears) : offer.contractYears, annualSalary: isLoan ? state.annualSalary : offer.annualSalary,
     squadRole: offer.role, managerTrust: isRenewal ? Math.max(state.managerTrust, 56) : offer.role === "estrela" ? 68 : offer.role === "titular" ? 59 : 48,
     fanSupport: isRenewal ? state.fanSupport : 50, adaptation: isRenewal ? state.adaptation : initialAdaptation(source.countryId, destination.countryId),
     continentalSlot: isRenewal ? state.continentalSlot : initialContinentalSlot(destination),
+    worldQualifiedSeason: destinationQualifiedForWorld ? state.season : state.worldQualifiedSeason,
+    worldQualifiedClubId: destinationQualifiedForWorld ? destination.id : state.worldQualifiedClubId,
     transferOffers: [], transferMarketOffers: [], transferRequested: false, transferStatus: null,
     renewalDenied: false, forcedClubExit: false, isFreeAgent: false, freeAgentSinceSeason: 0, pendingTransferMode: "permanent",
     activeLoan: isLoan ? { id: offer.id, parentClubId: source.id, parentLeagueId: state.currentLeagueId || source.leagueId,
@@ -318,10 +338,13 @@ export function completeLoanReturn(state: GameState): GameState {
   if (!agreement || state.season < agreement.endSeason) return state;
   const parent = clubById(agreement.parentClubId);
   const contractExpired = state.contractYears <= 0;
+  const parentQualifiedForWorld = clubQualifiedForWorldSeason(state, parent);
   const record: TransferRecord = { id: `${agreement.id}-return`, season: state.season, age: state.age, playerName: state.name,
     position: state.position, type: "loan-return", fromClubId: agreement.destinationClubId, toClubId: parent.id,
     transferFee: 0, annualSalary: agreement.annualSalary, contractYears: state.contractYears, role: state.squadRole, reason: "needs-minutes" };
   const returned: GameState = { ...state, currentClubId: parent.id, currentLeagueId: agreement.parentLeagueId || parent.leagueId,
+    worldQualifiedSeason: parentQualifiedForWorld ? state.season : state.worldQualifiedSeason,
+    worldQualifiedClubId: parentQualifiedForWorld ? parent.id : state.worldQualifiedClubId,
     activeLoan: null, loanParentClubId: "", loanParentLeagueId: "", loanEndSeason: 0, pendingTransferMode: "permanent",
     isFreeAgent: contractExpired, freeAgentSinceSeason: contractExpired ? state.season : state.freeAgentSinceSeason,
     transferHistory: [...state.transferHistory, record] };
