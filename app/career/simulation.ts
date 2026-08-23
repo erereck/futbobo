@@ -14,6 +14,7 @@ import { advanceWorldPlayerUniverse } from "./world-players";
 import { seasonFitnessAfterLoad } from "./fatigue";
 import { worldFinalOpponentForSeason } from "./world-club-competitions";
 import { evaluateBallonDor } from "./ballon-dor";
+import { clubWithPlayerImpact } from "./player-club-impact";
 
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
@@ -43,7 +44,7 @@ export function simulateSeason(
     affected.nationalLevel = Math.round(affected.nationalLevel * 0.4);
     nationalitySwitchRecord = { season: state.season, tier: "none", name: "Troca de Seleção", icon: "↔", stage: `Deixou a Seleção de ${fromCountry.name} para defender a Seleção de ${toCountry.name}`, champion: false, countryId: effect.switchNationalityTo };
   }
-  const club = clubById(affected.currentClubId);
+  const club = clubWithPlayerImpact(clubById(affected.currentClubId), affected.overall);
   const league = leagueById(affected.currentLeagueId || club.leagueId);
   const country = countryById(club.countryId);
   const awayFromAcademyHome = isOutsideAcademyHome(affected, club);
@@ -349,7 +350,6 @@ export function simulateSeason(
     affected.seed,
     affected.season,
   );
-  // Seleção nacional: convocação real, categorias e grandes torneios.
   const nation = countryById(affected.nationality);
   const ageTier: NationalTier = affected.age <= 14 ? "none" : affected.age <= 17 ? "sub17" : affected.age <= 20 ? "sub20" : affected.age <= 23 ? "olympic" : "main";
   const seniorThreshold = 78 + Math.max(0, nation.strength - 3) * 2 - Math.min(7, Math.floor(affected.reputation / 14));
@@ -389,7 +389,6 @@ export function simulateSeason(
       nationalGoals += goalsGain;
       nationalAssists += assistsGain;
       if (nationalTier === "main" && nationalCaps >= 30 && affected.leadership >= 78 && !nationalCaptain && seeded(state.seed, state.season * 139) > 0.7) nationalCaptain = true;
-
       const seasonYear = affected.season;
       let tournament: { name: string; icon: string; scope: string } | null = null;
       if (nationalTier === "main") {
@@ -408,7 +407,6 @@ export function simulateSeason(
       } else if (nationalTier === "sub17" && seasonYear % 2 === 1) {
         tournament = { name: "Mundial Sub-17", icon: "S17", scope: "u17" };
       }
-
       if (tournament?.scope === "qualifiers") {
         const qualifyChance = clamp(40 + nation.strength * 8 + (effect.nationalTitleBoost ?? 0) * 0.7 + Math.max(0, affected.overall - 78) * 0.4, 38, 95);
         const qualified = seeded(state.seed, state.season * 149) * 100 < qualifyChance;
@@ -430,12 +428,8 @@ export function simulateSeason(
           const stage = champion ? "CAMPEÃO" : knockoutStage(157, false, knockoutStages);
           nationalHistoryAdd = { season: seasonYear, tier: nationalTier, name: tournament.name, icon: tournament.icon, stage, champion, countryId: affected.nationality };
           if (tournament.scope === "world") {
-            const fullPlayableRun =
-              finalMatchMode === "play-key-matches" &&
-              ["16 avos", "Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"].includes(stage);
-            const playableFinalOnly =
-              finalMatchMode === "finals-only" &&
-              (stage === "Vice" || stage === "CAMPEÃO");
+            const fullPlayableRun = finalMatchMode === "play-key-matches" && ["16 avos", "Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"].includes(stage);
+            const playableFinalOnly = finalMatchMode === "finals-only" && (stage === "Vice" || stage === "CAMPEÃO");
             const simulatedGames = fullPlayableRun ? 3 : playableFinalOnly ? 7 : worldCupGamesThroughStage(stage);
             nationalHistoryAdd.tournamentStats = simulatedWorldCupStats(affected, simulatedGames, 1009);
           }
@@ -452,20 +446,10 @@ export function simulateSeason(
       nationalNote = "Corte doloroso: seu nome ficou de fora da lista da Seleção pela primeira vez em um bom tempo.";
     }
   }
-  if (nationalitySwitchRecord) {
-    nationalNote = `${nationalitySwitchRecord.stage}. Não há volta.`;
-  }
+  if (nationalitySwitchRecord) nationalNote = `${nationalitySwitchRecord.stage}. Não há volta.`;
   const nextAgeTier: NationalTier = nextAge <= 14 ? "none" : nextAge <= 17 ? "sub17" : nextAge <= 20 ? "sub20" : nextAge <= 23 ? "olympic" : "main";
-  const graduatesWithinYouth =
-    (nationalTier === "sub17" && nextAgeTier === "sub20") ||
-    (nationalTier === "sub20" && nextAgeTier === "olympic");
-  const nextNationalCategory: NationalTier = !nationalCalled
-    ? "none"
-    : nationalTier === "main" || nationalTier === nextAgeTier
-      ? nationalTier
-      : graduatesWithinYouth
-        ? nextAgeTier
-        : "none";
+  const graduatesWithinYouth = (nationalTier === "sub17" && nextAgeTier === "sub20") || (nationalTier === "sub20" && nextAgeTier === "olympic");
+  const nextNationalCategory: NationalTier = !nationalCalled ? "none" : nationalTier === "main" || nationalTier === nextAgeTier ? nationalTier : graduatesWithinYouth ? nextAgeTier : "none";
   const calledUp = nationalCalled;
 
   const awards: string[] = [];
@@ -496,18 +480,10 @@ export function simulateSeason(
   if (inEurope && isKeeper && cleanSheets >= 14 && nextOverall >= 84 && performanceScore >= 80 && seeded(state.seed, state.season * 179) > 0.48) awards.push("Troféu Yashin");
   if (isKeeper && playsContinental && continentalChampion && cleanSheets >= 13 && performanceScore >= 80) awards.push(`Luva de Ouro da ${continentalNames[playsContinental].name}`);
   if (inEurope && !isKeeper && goals >= europeanGoldenShoeLine && league.prestige >= 4) awards.push("Chuteira de Ouro Europeia");
-  if (!isKeeper && playsContinental && continentalChampion && goals >= continentalGoldenBootLine) {
-    awards.push(`Artilheiro da ${continentalNames[playsContinental].name}`);
-  }
-  if (!isKeeper && playsContinental && continentalChampion && assists >= continentalAssistLine && performanceScore >= 78) {
-    awards.push(`Líder de Assistências da ${continentalNames[playsContinental].name}`);
-  }
-  const worldCupGoals = nationalHistoryAdd?.name === "Copa do Mundo"
-    ? nationalHistoryAdd.tournamentStats?.goals ?? 0
-    : 0;
-  const worldCupAssists = nationalHistoryAdd?.name === "Copa do Mundo"
-    ? nationalHistoryAdd.tournamentStats?.assists ?? 0
-    : 0;
+  if (!isKeeper && playsContinental && continentalChampion && goals >= continentalGoldenBootLine) awards.push(`Artilheiro da ${continentalNames[playsContinental].name}`);
+  if (!isKeeper && playsContinental && continentalChampion && assists >= continentalAssistLine && performanceScore >= 78) awards.push(`Líder de Assistências da ${continentalNames[playsContinental].name}`);
+  const worldCupGoals = nationalHistoryAdd?.name === "Copa do Mundo" ? nationalHistoryAdd.tournamentStats?.goals ?? 0 : 0;
+  const worldCupAssists = nationalHistoryAdd?.name === "Copa do Mundo" ? nationalHistoryAdd.tournamentStats?.assists ?? 0 : 0;
   if (!isKeeper && worldCupGoals >= 6) awards.push("Artilheiro da Copa do Mundo");
   if (inEurope && playsContinental === "champions" && continentalChampion && nextOverall >= 88 && seeded(state.seed, state.season * 191) > 0.55) awards.push("Melhor da UEFA");
   if (inEurope && playsContinental === "champions" && continentalChampion && performanceScore >= 84 && seeded(state.seed, state.season * 193) > 0.38) awards.push("MVP da Champions League");
@@ -516,336 +492,90 @@ export function simulateSeason(
   const hasAssistKingAward = awards.some((award) => award.includes("Assistências"));
   const hasGoalsOrAssistsAward = hasLeagueGoldenBoot || hasEuropeanGoldenShoe || hasAssistKingAward;
   const hasGoalkeeperAward = isKeeper && awards.some((award) => award.includes("Goleiro") || award.includes("Luva") || award.includes("Yashin") || award.includes("Muralha"));
-  const worldXiMerit =
-    inEurope &&
-    appearances >= 25 &&
-    (
-      (isKeeper && nextOverall >= 84 && performanceScore >= 79 && (hasGoalkeeperAward || cleanSheets >= 16)) ||
-      (nextOverall >= 87 && performanceScore >= 84) ||
-      (hasEuropeanGoldenShoe && nextOverall >= 82 && performanceScore >= 76) ||
-      (hasLeagueGoldenBoot && league.prestige >= 3 && nextOverall >= 83 && performanceScore >= 78) ||
-      (hasAssistKingAward && league.prestige >= 3 && nextOverall >= 83 && performanceScore >= 80)
-    );
-  const worldXiChance =
-    isKeeper && awards.includes("Troféu Yashin") ? 90 :
-    isKeeper && hasGoalkeeperAward ? 72 :
-    hasEuropeanGoldenShoe ? 88 :
-    hasLeagueGoldenBoot || hasAssistKingAward ? 68 :
-    48;
+  const worldXiMerit = inEurope && appearances >= 25 && ((isKeeper && nextOverall >= 84 && performanceScore >= 79 && (hasGoalkeeperAward || cleanSheets >= 16)) || (nextOverall >= 87 && performanceScore >= 84) || (hasEuropeanGoldenShoe && nextOverall >= 82 && performanceScore >= 76) || (hasLeagueGoldenBoot && league.prestige >= 3 && nextOverall >= 83 && performanceScore >= 78) || (hasAssistKingAward && league.prestige >= 3 && nextOverall >= 83 && performanceScore >= 80));
+  const worldXiChance = isKeeper && awards.includes("Troféu Yashin") ? 90 : isKeeper && hasGoalkeeperAward ? 72 : hasEuropeanGoldenShoe ? 88 : hasLeagueGoldenBoot || hasAssistKingAward ? 68 : 48;
   if (worldXiMerit && seeded(state.seed, state.season * 197 + 13) * 100 < worldXiChance) awards.push("FIFPRO World XI");
   if (!isKeeper && goals >= 8 && nextOverall >= 82 && seeded(state.seed, state.season * 103) > 0.94) awards.push("Prêmio Puskás");
   if (affected.leadership >= 82 && seeded(state.seed, state.season * 107) > 0.82) awards.push("Prêmio Fair Play");
   if (affected.fanSupport >= 92 && titleCount > 0 && !(affected.awardCabinet["Ídolo da Torcida"] > 0)) awards.push("Ídolo da Torcida");
-  const majorNationalTitle = Boolean(
-    nationalHistoryAdd?.champion &&
-    ["Copa do Mundo", "Eurocopa", "Copa América", "Copa Ouro", "Copa da Ásia", "Copa Africana de Nações", "Copa das Nações da OFC"].includes(nationalHistoryAdd.name),
-  );
+  const majorNationalTitle = Boolean(nationalHistoryAdd?.champion && ["Copa do Mundo", "Eurocopa", "Copa América", "Copa Ouro", "Copa da Ásia", "Copa Africana de Nações", "Copa das Nações da OFC"].includes(nationalHistoryAdd.name));
   if (majorNationalTitle && nextOverall >= 86 && performanceScore >= 80) awards.push(`Craque da ${nationalHistoryAdd?.name}`);
-  const hasBallonProductionAward =
-    hasGoalsOrAssistsAward ||
-    (isKeeper && hasGoalkeeperAward) ||
-    (position.zone === "defesa" && awards.includes("Melhor Defensor") && performanceScore >= 92);
-  const supportingAwardBonus = Math.min(10, awards.reduce((bonus, award) => (
-    bonus +
-    (
-      award === "FIFPRO World XI" ||
-      award === "Melhor da UEFA" ||
-      award.includes("MVP") ||
-      award.includes("Jogador do Ano")
-        ? 2.5
-        : award.includes("Craque") ||
-            award.includes("Chuteira") ||
-            award.includes("Artilheiro") ||
-            award === "Rei da América"
-          ? 1.4
-          : 0
-    )
-  ), 0));
+  const hasBallonProductionAward = hasGoalsOrAssistsAward || (isKeeper && hasGoalkeeperAward) || (position.zone === "defesa" && awards.includes("Melhor Defensor") && performanceScore >= 92);
+  const supportingAwardBonus = Math.min(10, awards.reduce((bonus, award) => bonus + (award === "FIFPRO World XI" || award === "Melhor da UEFA" || award.includes("MVP") || award.includes("Jogador do Ano") ? 2.5 : award.includes("Craque") || award.includes("Chuteira") || award.includes("Artilheiro") || award === "Rei da América" ? 1.4 : 0), 0));
   const previousBallonDor = affected.awardCabinet["Bola de Ouro"] ?? 0;
-  const ballonEvaluation = evaluateBallonDor({
-    league,
-    inEurope,
-    positionZone: position.zone,
-    isKeeper,
-    overall: nextOverall,
-    performanceScore,
-    reputation: affected.reputation,
-    appearances,
-    goals,
-    assists,
-    cleanSheets,
-    goalsConceded,
-    titleCount,
-    majorClubTitleCount,
-    domesticCupChampion: cupChampion,
-    majorNationalTitle,
-    playsContinental: playsContinental ?? "",
-    continentalChampion,
-    mundialChampion,
-    worldCupGoals,
-    worldCupAssists,
-    supportingAwardBonus,
-    hasProductionAward: hasBallonProductionAward,
-    previousBallonDor,
-  });
+  const ballonEvaluation = evaluateBallonDor({ league, inEurope, positionZone: position.zone, isKeeper, overall: nextOverall, performanceScore, reputation: affected.reputation, appearances, goals, assists, cleanSheets, goalsConceded, titleCount, majorClubTitleCount, domesticCupChampion: cupChampion, majorNationalTitle, playsContinental: playsContinental ?? "", continentalChampion, mundialChampion, worldCupGoals, worldCupAssists, supportingAwardBonus, hasProductionAward: hasBallonProductionAward, previousBallonDor });
   const europeanBallonEligible = inEurope && ballonEvaluation.eligible;
   const americanBallonEligible = !inEurope && ballonEvaluation.eligible;
   const ballonScore = ballonEvaluation.score;
   const historicBallonSeason = ballonEvaluation.historicSeason;
   const ballonChance = ballonEvaluation.chance;
-  const wonBallonDor =
-    (europeanBallonEligible || americanBallonEligible) &&
-    seeded(state.seed, state.season * 109) * 100 < ballonChance;
+  const wonBallonDor = (europeanBallonEligible || americanBallonEligible) && seeded(state.seed, state.season * 109) * 100 < ballonChance;
   if (wonBallonDor) {
     if (!awards.includes("FIFPRO World XI")) awards.push("FIFPRO World XI");
     awards.push("Bola de Ouro");
   }
-  const awardNominations: AwardNomination[] = awards
-    .filter((award) => awardPresentation(award).tier !== "regular")
-    .map((award) => ({
-      award,
-      won: true,
-      winner: affected.name || "Você",
-      finalists: awardFinalists(affected.name || "Você", award, state.seed, affected.season, affected.rivals),
-    }));
+  const awardNominations: AwardNomination[] = awards.filter((award) => awardPresentation(award).tier !== "regular").map((award) => ({ award, won: true, winner: affected.name || "Você", finalists: awardFinalists(affected.name || "Você", award, state.seed, affected.season, affected.rivals) }));
   const addLostNomination = (award: string, eligible: boolean, chance: number, salt: number) => {
     if (!eligible || awards.includes(award) || awardNominations.some((nomination) => nomination.award === award)) return;
     if (seeded(state.seed, state.season * salt + award.length * 7) * 100 >= chance) return;
-    awardNominations.push({
-      award,
-      won: false,
-      winner: fictionalAwardWinner(affected.name || "Você", award, state.seed, affected.season, affected.rivals),
-      finalists: awardFinalists(affected.name || "Você", award, state.seed, affected.season, affected.rivals),
-    });
+    awardNominations.push({ award, won: false, winner: fictionalAwardWinner(affected.name || "Você", award, state.seed, affected.season, affected.rivals), finalists: awardFinalists(affected.name || "Você", award, state.seed, affected.season, affected.rivals) });
   };
-  addLostNomination(
-    "Bola de Ouro",
-    ballonEvaluation.eligible,
-    historicBallonSeason ? 92 : clamp(18 + Math.max(0, ballonScore - 70) * 2.6, 18, 82),
-    313,
-  );
-  addLostNomination(
-    `Jogador do Ano do ${leagueLabel}`,
-    nextOverall >= 78 && performanceScore >= 70 && appearances >= 23,
-    clamp(34 + (performanceScore - 70) * 2, 34, 76),
-    317,
-  );
-  addLostNomination(
-    "Golden Boy",
-    inEurope && affected.age <= 21 && nextOverall >= 76 && appearances >= 16,
-    clamp(28 + (nextOverall - 76) * 4, 28, 72),
-    331,
-  );
-  addLostNomination(
-    "Troféu Yashin",
-    inEurope && isKeeper && keeperSkill >= 79 && cleanSheets >= 11,
-    clamp(30 + (keeperSkill - 79) * 3, 30, 75),
-    337,
-  );
+  addLostNomination("Bola de Ouro", ballonEvaluation.eligible, historicBallonSeason ? 92 : clamp(18 + Math.max(0, ballonScore - 70) * 2.6, 18, 82), 313);
+  addLostNomination(`Jogador do Ano do ${leagueLabel}`, nextOverall >= 78 && performanceScore >= 70 && appearances >= 23, clamp(34 + (performanceScore - 70) * 2, 34, 76), 317);
+  addLostNomination("Golden Boy", inEurope && affected.age <= 21 && nextOverall >= 76 && appearances >= 16, clamp(28 + (nextOverall - 76) * 4, 28, 72), 331);
+  addLostNomination("Troféu Yashin", inEurope && isKeeper && keeperSkill >= 79 && cleanSheets >= 11, clamp(30 + (keeperSkill - 79) * 3, 30, 75), 337);
   awardNominations.sort((a, b) => awardTierWeight(b.award) - awardTierWeight(a.award) || Number(b.won) - Number(a.won));
   if (awardNominations.length > 3) awardNominations.splice(3);
   const title = titleCount > 0;
   const seasonObjective = affected.currentObjective ?? createSeasonObjective(position, seasonRole, affected.season, affected.seed);
   const objectiveResult = evaluateObjective(seasonObjective, seasonStats, titleCount);
-  const trustDelta =
-    (objectiveResult.completed ? seasonObjective.reward : -seasonObjective.penalty) +
-    (appearances >= 28 ? 4 : appearances < 12 ? -5 : 0) +
-    titleCount * 3 +
-    (hasTrait("leader") ? 3 : 0) +
-    breakoutBonus * 2 -
-    redCards * 5;
+  const trustDelta = (objectiveResult.completed ? seasonObjective.reward : -seasonObjective.penalty) + (appearances >= 28 ? 4 : appearances < 12 ? -5 : 0) + titleCount * 3 + (hasTrait("leader") ? 3 : 0) + breakoutBonus * 2 - redCards * 5;
   const nextTrust = clamp(affected.managerTrust + trustDelta);
   const nextDiscipline = clamp(affected.discipline + (yellowCards <= 4 ? 2 : -2) - redCards * 8);
   const nextRole = calculateSquadRole(nextOverall, club, league.prestige, nextTrust, nextAge);
-
-  // Não-renovação: um clube pode recusar renovar um contrato expirado após uma temporada ruim.
   const contractExpiring = affected.contractYears - 1 <= 0;
-  const nonRenewalRiskFactors = [
-    performanceScore < 42 || !objectiveResult.completed,
-    nextRole === "reserva" || nextRole === "promessa",
-    nextTrust < 42,
-    appearances < 12,
-  ].filter(Boolean).length;
-  const nonRenewalChance = contractExpiring && nonRenewalRiskFactors >= 2
-    ? nonRenewalRiskFactors >= 3
-      ? 100
-      : clamp(62 - Math.max(0, affected.reputation - 45) * 0.25, 48, 72)
-    : 0;
+  const nonRenewalRiskFactors = [performanceScore < 42 || !objectiveResult.completed, nextRole === "reserva" || nextRole === "promessa", nextTrust < 42, appearances < 12].filter(Boolean).length;
+  const nonRenewalChance = contractExpiring && nonRenewalRiskFactors >= 2 ? nonRenewalRiskFactors >= 3 ? 100 : clamp(62 - Math.max(0, affected.reputation - 45) * 0.25, 48, 72) : 0;
   const renewalDenied = nonRenewalChance > 0 && seeded(state.seed, state.season * 283 + 11) * 100 < nonRenewalChance;
   const clubLevelFloor = clamp(club.strength - 12, 55, 82);
-  const clearlyBelowClubLevel =
-    nextOverall <= clubLevelFloor - 6 &&
-    (performanceScore < 56 || appearances < 20 || nextRole === "reserva");
+  const clearlyBelowClubLevel = nextOverall <= clubLevelFloor - 6 && (performanceScore < 56 || appearances < 20 || nextRole === "reserva");
   const eliteMismatch = club.reputation >= 5 && nextOverall < 73 && performanceScore < 62;
   const forcedClubExit = !isIdolAtClub(affected, club.id) && (clearlyBelowClubLevel || eliteMismatch);
 
   const pendingBotaoMatches: PendingBotaoMatch[] = [];
   if (finalMatchMode !== "simulate") {
-    const competitionPriority: Record<string, number> = {
-      mundial: 100,
-      championsLeague: 95,
-      libertadores: 94,
-      sudamericana: 86,
-      concacafChampions: 90,
-      afcChampions: 90,
-      cafChampions: 90,
-      europaLeague: 85,
-      conferenceLeague: 80,
-      domesticCup: 70,
-      uefaSuperCup: 60,
-      recopaSudamericana: 60,
-      domesticSuperCup: 55,
-      campeonesCup: 55,
-    };
+    const competitionPriority: Record<string, number> = { mundial: 100, championsLeague: 95, libertadores: 94, sudamericana: 86, concacafChampions: 90, afcChampions: 90, cafChampions: 90, europaLeague: 85, conferenceLeague: 80, domesticCup: 70, uefaSuperCup: 60, recopaSudamericana: 60, domesticSuperCup: 55, campeonesCup: 55 };
     const worldCompetition = competitions.find((competition) => competition.id === "mundial");
     if (playsWorld && worldCompetition) {
       const confederation = clubConfederation(club);
-      const worldStages = confederation === "EUROPE"
-        ? ["Final"]
-        : confederation === "SOUTH_AMERICA"
-          ? ["Semifinal", "Final"]
-          : confederation === "OCEANIA"
-            ? ["Playoff Mundial", "Quartas de final", "Semifinal", "Final"]
-            : ["Quartas de final", "Semifinal", "Final"];
+      const worldStages = confederation === "EUROPE" ? ["Final"] : confederation === "SOUTH_AMERICA" ? ["Semifinal", "Final"] : confederation === "OCEANIA" ? ["Playoff Mundial", "Quartas de final", "Semifinal", "Final"] : ["Quartas de final", "Semifinal", "Final"];
       const stageName = worldStages[0];
-      const archivedOpponentId = stageName === "Final"
-        ? worldFinalOpponentForSeason(affected, club.id, affected.season)
-        : "";
-      const opponent = archivedOpponentId ? clubById(archivedOpponentId) : pickClubWorldOpponent({
-        clubId: club.id,
-        seed: affected.seed,
-        season: affected.season,
-        stageName,
-      });
-      pendingBotaoMatches.push({
-        id: `club-mundial-${stageName}-${affected.season}`,
-        source: "club",
-        competitionId: "mundial",
-        competitionName: worldCompetition.name,
-        stageName,
-        opponentId: opponent.id,
-        season: affected.season,
-        rngChampion: worldCompetition.champion,
-        originalStage: worldCompetition.stage,
-        previousOpponentIds: [],
-        worldCampaign: true,
-      });
+      const archivedOpponentId = stageName === "Final" ? worldFinalOpponentForSeason(affected, club.id, affected.season) : "";
+      const opponent = archivedOpponentId ? clubById(archivedOpponentId) : pickClubWorldOpponent({ clubId: club.id, seed: affected.seed, season: affected.season, stageName });
+      pendingBotaoMatches.push({ id: `club-mundial-${stageName}-${affected.season}`, source: "club", competitionId: "mundial", competitionName: worldCompetition.name, stageName, opponentId: opponent.id, season: affected.season, rngChampion: worldCompetition.champion, originalStage: worldCompetition.stage, previousOpponentIds: [], worldCampaign: true });
     }
-    competitions
-      .filter((competition) =>
-        competition.id !== "mundial" &&
-        competition.id !== "domesticLeague" &&
-        (competition.champion || competition.stage === "Vice"),
-      )
-      .sort((a, b) => (competitionPriority[b.id] ?? 0) - (competitionPriority[a.id] ?? 0))
-      .forEach((competition) => {
-        const scope = competition.id === "mundial"
-          ? "world"
-          : ["domesticCup", "domesticSuperCup"].includes(competition.id)
-            ? "domestic"
-            : "continental";
-        const opponent = pickFinalOpponent({
-          clubId: club.id,
-          leagueId: league.id,
-          scope,
-          seed: affected.seed,
-          season: affected.season,
-          competitionId: competition.id,
-        });
-        pendingBotaoMatches.push({
-          id: `club-${competition.id}-${affected.season}`,
-          source: "club",
-          competitionId: competition.id,
-          competitionName: competition.name,
-          stageName: "Final",
-          opponentId: opponent.id,
-          season: affected.season,
-          rngChampion: competition.champion,
-          originalStage: competition.stage,
-        });
-      });
-
+    competitions.filter((competition) => competition.id !== "mundial" && competition.id !== "domesticLeague" && (competition.champion || competition.stage === "Vice")).sort((a, b) => (competitionPriority[b.id] ?? 0) - (competitionPriority[a.id] ?? 0)).forEach((competition) => {
+      const scope = competition.id === "mundial" ? "world" : ["domesticCup", "domesticSuperCup"].includes(competition.id) ? "domestic" : "continental";
+      const opponent = pickFinalOpponent({ clubId: club.id, leagueId: league.id, scope, seed: affected.seed, season: affected.season, competitionId: competition.id });
+      pendingBotaoMatches.push({ id: `club-${competition.id}-${affected.season}`, source: "club", competitionId: competition.id, competitionName: competition.name, stageName: "Final", opponentId: opponent.id, season: affected.season, rngChampion: competition.champion, originalStage: competition.stage });
+    });
     if (nationalHistoryAdd) {
       const worldKnockoutStages = ["16 avos", "Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"];
-      const shouldPlayWorldKnockout =
-        finalMatchMode === "play-key-matches" &&
-        nationalHistoryAdd.name === "Copa do Mundo" &&
-        worldKnockoutStages.includes(nationalHistoryAdd.stage);
-      const shouldPlayNationalFinal =
-        !shouldPlayWorldKnockout &&
-        (nationalHistoryAdd.champion || nationalHistoryAdd.stage === "Vice");
+      const shouldPlayWorldKnockout = finalMatchMode === "play-key-matches" && nationalHistoryAdd.name === "Copa do Mundo" && worldKnockoutStages.includes(nationalHistoryAdd.stage);
+      const shouldPlayNationalFinal = !shouldPlayWorldKnockout && (nationalHistoryAdd.champion || nationalHistoryAdd.stage === "Vice");
       const stageName = shouldPlayWorldKnockout ? "16 avos de final" : shouldPlayNationalFinal ? "Final" : "";
       if (stageName) {
-        const competitionId = nationalHistoryAdd.name === "Copa do Mundo"
-          ? "world-cup"
-          : `national-${nationalHistoryAdd.name.toLocaleLowerCase("pt-BR").replace(/\W+/g, "-")}`;
-        const opponent = pickNationalOpponent({
-          countryId: affected.nationality,
-          seed: affected.seed,
-          season: affected.season,
-          competitionId,
-          stageName,
-        });
-        pendingBotaoMatches.unshift({
-          id: `national-${competitionId}-${stageName}-${affected.season}`,
-          source: "national",
-          competitionId,
-          competitionName: nationalHistoryAdd.name,
-          stageName,
-          opponentId: opponent.id,
-          season: affected.season,
-          rngChampion: nationalHistoryAdd.champion,
-          originalStage: nationalHistoryAdd.stage,
-          nationalTier: nationalHistoryAdd.tier,
-          previousOpponentIds: [],
-        });
+        const competitionId = nationalHistoryAdd.name === "Copa do Mundo" ? "world-cup" : `national-${nationalHistoryAdd.name.toLocaleLowerCase("pt-BR").replace(/\W+/g, "-")}`;
+        const opponent = pickNationalOpponent({ countryId: affected.nationality, seed: affected.seed, season: affected.season, competitionId, stageName });
+        pendingBotaoMatches.unshift({ id: `national-${competitionId}-${stageName}-${affected.season}`, source: "national", competitionId, competitionName: nationalHistoryAdd.name, stageName, opponentId: opponent.id, season: affected.season, rngChampion: nationalHistoryAdd.champion, originalStage: nationalHistoryAdd.stage, nationalTier: nationalHistoryAdd.tier, previousOpponentIds: [] });
       }
     }
   }
 
   const currentMarketValue = marketValue(nextOverall, nextAge, { ...club, leagueId: league.id }, affected.reputation, seasonStats);
-  const record: SeasonRecord = {
-    ...seasonStats,
-    age: affected.age,
-    season: affected.season,
-    clubId: club.id,
-    leagueId: league.id,
-    position: affected.position,
-    overall: nextOverall,
-    title,
-    eventTitle: event.title,
-    competitions,
-    awards,
-    awardNominations,
-    squadRole: seasonRole,
-    objectiveResult,
-    performanceScore,
-    marketValue: currentMarketValue,
-    development,
-    botaoResults: [],
-    promotion,
-    averageRating,
-    manOfTheMatchAwards,
-    medicalRecord,
-  };
-  const result: SeasonResult = {
-    ...record,
-    resultText,
-    development,
-    performanceScore,
-    europeanSpotlight,
-    europeanDevelopmentBonus,
-    breakoutBonus,
-    marketValue: currentMarketValue,
-    calledUp,
-    twist,
-    nationalNote,
-  };
-  const pendingStoryDecision = buildStorySeasonDecision(affected, {
-    performanceScore,
-    titleCount,
-    club,
-  });
+  const record: SeasonRecord = { ...seasonStats, age: affected.age, season: affected.season, clubId: club.id, leagueId: league.id, position: affected.position, overall: nextOverall, title, eventTitle: event.title, competitions, awards, awardNominations, squadRole: seasonRole, objectiveResult, performanceScore, marketValue: currentMarketValue, development, botaoResults: [], promotion, averageRating, manOfTheMatchAwards, medicalRecord };
+  const result: SeasonResult = { ...record, resultText, development, performanceScore, europeanSpotlight, europeanDevelopmentBonus, breakoutBonus, marketValue: currentMarketValue, calledUp, twist, nationalNote };
+  const pendingStoryDecision = buildStorySeasonDecision(affected, { performanceScore, titleCount, club });
   const seenEvents = event.oneTime || event.id === FIRST_MATCH_EVENT.id ? Array.from(new Set([...affected.seenEvents, event.id])) : affected.seenEvents;
   const nextCabinet = { ...affected.trophyCabinet };
   competitions.forEach((competition) => { if (competition.champion) nextCabinet[competition.id] += 1; });
@@ -855,73 +585,21 @@ export function simulateSeason(
   const nextAwardCabinet = { ...affected.awardCabinet };
   awards.forEach((award) => { nextAwardCabinet[award] = (nextAwardCabinet[award] ?? 0) + 1; });
   const qualifiedBySudamericana = continentalChampion && playsContinental === "sudamericana";
-  const nextContinentalSlot = qualifiedBySudamericana
-    ? "libertadores"
-    : continentalSlotAfterSeason(club, league, leagueChampion, cupChampion, leaguePosition);
-  const physicalLoad = seasonFitnessAfterLoad({
-    seed: state.seed,
-    season: affected.season,
-    startingFitness: affected.fitness,
-    age: nextAge,
-    stamina: affected.attributes.stamina,
-    lifeBalance: affected.lifeBalance,
-    appearances,
-    nationalAppearances: nationalHistoryAdd?.tournamentStats?.appearances ?? (calledUp ? 2 : 0),
-    continentalCampaign: Boolean(playsContinental),
-    continentalChampion,
-    clubWorldCampaign: playsWorld,
-    titles: titleCount,
-    injuryMatchesMissed: medicalRecord?.matchesMissed ?? 0,
-    suspensionMatches: affected.suspensionMatches,
-    ironLungs: hasTrait("iron-lungs"),
-    injuryProne: hasTrait("injury-prone"),
-    twistFitness,
-  });
+  const nextContinentalSlot = qualifiedBySudamericana ? "libertadores" : continentalSlotAfterSeason(club, league, leagueChampion, cupChampion, leaguePosition);
+  const physicalLoad = seasonFitnessAfterLoad({ seed: state.seed, season: affected.season, startingFitness: affected.fitness, age: nextAge, stamina: affected.attributes.stamina, lifeBalance: affected.lifeBalance, appearances, nationalAppearances: nationalHistoryAdd?.tournamentStats?.appearances ?? (calledUp ? 2 : 0), continentalCampaign: Boolean(playsContinental), continentalChampion, clubWorldCampaign: playsWorld, titles: titleCount, injuryMatchesMissed: medicalRecord?.matchesMissed ?? 0, suspensionMatches: affected.suspensionMatches, ironLungs: hasTrait("iron-lungs"), injuryProne: hasTrait("injury-prone"), twistFitness });
   const nextFitness = clamp(physicalLoad.fitness, 24, 99);
-  const moraleTarget =
-    64 +
-    performanceScore * 0.16 +
-    titleCount * 4 +
-    (objectiveResult.completed ? 5 : -7) +
-    (seeded(state.seed, state.season * 311) * 12 - 6);
-  const nextMorale = clamp(
-    Math.round(affected.morale * 0.48 + moraleTarget * 0.52 + twistMorale),
-    24,
-    98,
-  );
+  const moraleTarget = 64 + performanceScore * 0.16 + titleCount * 4 + (objectiveResult.completed ? 5 : -7) + (seeded(state.seed, state.season * 311) * 12 - 6);
+  const nextMorale = clamp(Math.round(affected.morale * 0.48 + moraleTarget * 0.52 + twistMorale), 24, 98);
   const overallVisibility = Math.pow(clamp((nextOverall - 50) / 36, 0.08, 1.22), 1.7);
   const followerSoftCeiling = Math.round(30_000 * Math.pow(1.32, clamp(nextOverall - 55, 0, 40)));
-  const audienceSaturation = affected.followers <= followerSoftCeiling
-    ? 1
-    : clamp((followerSoftCeiling / Math.max(1, affected.followers)) * 0.72, 0.1, 1);
-  const organicFollowerGain = Math.max(250, Math.round(
-    (
-      1_200 +
-      performanceScore * performanceScore * 34 +
-      titleCount * 85_000 +
-      awards.length * 48_000 +
-      europeanSpotlight * 14_000 +
-      (calledUp ? 26_000 : 0)
-    ) *
-    overallVisibility *
-    audienceSaturation *
-    (0.62 + affected.reputation / 125) *
-    (affected.socialSentiment < 35 ? 0.55 : affected.socialSentiment > 75 ? 1.18 : 1),
-  ));
+  const audienceSaturation = affected.followers <= followerSoftCeiling ? 1 : clamp((followerSoftCeiling / Math.max(1, affected.followers)) * 0.72, 0.1, 1);
+  const organicFollowerGain = Math.max(250, Math.round((1_200 + performanceScore * performanceScore * 34 + titleCount * 85_000 + awards.length * 48_000 + europeanSpotlight * 14_000 + (calledUp ? 26_000 : 0)) * overallVisibility * audienceSaturation * (0.62 + affected.reputation / 125) * (affected.socialSentiment < 35 ? 0.55 : affected.socialSentiment > 75 ? 1.18 : 1)));
   const nextFollowers = affected.followers + organicFollowerGain;
   const nextSocialSentiment = clamp(Math.round(affected.socialSentiment * 0.72 + (52 + performanceScore * 0.28 + titleCount * 4) * 0.28), 12, 98);
   record.followers = nextFollowers;
   record.socialSentiment = nextSocialSentiment;
-  const followerMilestones = [
-    { threshold: 10_000, label: "10 mil seguidores" },
-    { threshold: 100_000, label: "100 mil seguidores" },
-    { threshold: 1_000_000, label: "1 milhão de seguidores" },
-    { threshold: 10_000_000, label: "10 milhões de seguidores" },
-    { threshold: 50_000_000, label: "50 milhões de seguidores" },
-  ];
-  const newOffFieldMilestones = followerMilestones
-    .filter((milestone) => affected.followers < milestone.threshold && nextFollowers >= milestone.threshold)
-    .map((milestone) => `${affected.season}: ${milestone.label}`);
+  const followerMilestones = [{ threshold: 10_000, label: "10 mil seguidores" }, { threshold: 100_000, label: "100 mil seguidores" }, { threshold: 1_000_000, label: "1 milhão de seguidores" }, { threshold: 10_000_000, label: "10 milhões de seguidores" }, { threshold: 50_000_000, label: "50 milhões de seguidores" }];
+  const newOffFieldMilestones = followerMilestones.filter((milestone) => affected.followers < milestone.threshold && nextFollowers >= milestone.threshold).map((milestone) => `${affected.season}: ${milestone.label}`);
   const sponsorIncome = affected.activeSponsor?.annualValue ?? 0;
   const seasonLivingCost = Math.round((120_000 + affected.age * 3_500 + (awayFromAcademyHome ? 85_000 : 35_000) + Math.max(0, affected.reputation - 35) * 5_500) / 10_000) * 10_000;
   const seasonNetIncome = Math.max(0, affected.annualSalary + sponsorIncome - seasonLivingCost);
@@ -932,49 +610,14 @@ export function simulateSeason(
   result.balanceBefore = affected.money;
   result.balanceAfter = Math.max(0, affected.money + affected.annualSalary + sponsorIncome - seasonLivingCost);
   result.spendableIncome = seasonSpendableGain;
-  result.spendableAfter = Math.min(
-    result.balanceAfter,
-    affected.spendableMoney + seasonSpendableGain,
-  );
+  result.spendableAfter = Math.min(result.balanceAfter, affected.spendableMoney + seasonSpendableGain);
   const sponsorExpired = Boolean(affected.activeSponsor && affected.season + 1 >= affected.activeSponsor.endSeason);
-  const completedSponsor = sponsorExpired && affected.activeSponsor
-    ? { ...affected.activeSponsor, status: "completed" as const }
-    : null;
-  const socialTone: SocialPost["tone"] = (effect.socialSentiment ?? 0) < -3
-    ? "negative"
-    : performanceScore >= 72 || (effect.socialSentiment ?? 0) > 3
-      ? "positive"
-      : "neutral";
-  const socialSource: SocialPost["source"] = event.id === DYNAMIC_SPONSOR_EVENT_ID || event.id === DYNAMIC_SPONSOR_DUTY_EVENT_ID
-    ? "sponsor"
-    : event.id === DYNAMIC_SOCIAL_EVENT_ID || event.id === DYNAMIC_LIFE_EVENT_ID
-      ? "player"
-      : "press";
-  const socialAuthor = socialSource === "sponsor"
-    ? effect.sponsorBrand ?? affected.activeSponsor?.brand ?? "Parceiro comercial"
-    : socialSource === "player"
-      ? `@${(affected.name || "jogador").toLocaleLowerCase("pt-BR").replace(/\s+/g, "")}`
-      : "Central do Futebol";
-  const seasonSocialPost: SocialPost = {
-    id: `${affected.seed}-${affected.season}-${event.id}`,
-    season: affected.season,
-    source: socialSource,
-    author: socialAuthor,
-    text: socialSource === "press"
-      ? `${affected.name} fecha ${affected.season} com ${appearances} jogos, ${goals} gols, ${assists} assistências${titleCount ? ` e ${titleCount} título(s)` : ""}.`
-      : resultText,
-    likes: Math.max(120, Math.round(nextFollowers * (0.018 + seeded(affected.seed, affected.season * 1423) * 0.065))),
-    tone: socialTone,
-  };
-  const milestonePosts: SocialPost[] = newOffFieldMilestones.map((milestone, index) => ({
-    id: `${affected.seed}-${affected.season}-milestone-${index}`,
-    season: affected.season,
-    source: "fans",
-    author: "Arquibancada",
-    text: `${affected.name} alcançou ${milestone.split(": ")[1]}. A carreira também cresce fora das quatro linhas.`,
-    likes: Math.max(1_000, Math.round(nextFollowers * 0.09)),
-    tone: "positive",
-  }));
+  const completedSponsor = sponsorExpired && affected.activeSponsor ? { ...affected.activeSponsor, status: "completed" as const } : null;
+  const socialTone: SocialPost["tone"] = (effect.socialSentiment ?? 0) < -3 ? "negative" : performanceScore >= 72 || (effect.socialSentiment ?? 0) > 3 ? "positive" : "neutral";
+  const socialSource: SocialPost["source"] = event.id === DYNAMIC_SPONSOR_EVENT_ID || event.id === DYNAMIC_SPONSOR_DUTY_EVENT_ID ? "sponsor" : event.id === DYNAMIC_SOCIAL_EVENT_ID || event.id === DYNAMIC_LIFE_EVENT_ID ? "player" : "press";
+  const socialAuthor = socialSource === "sponsor" ? effect.sponsorBrand ?? affected.activeSponsor?.brand ?? "Parceiro comercial" : socialSource === "player" ? `@${(affected.name || "jogador").toLocaleLowerCase("pt-BR").replace(/\s+/g, "")}` : "Central do Futebol";
+  const seasonSocialPost: SocialPost = { id: `${affected.seed}-${affected.season}-${event.id}`, season: affected.season, source: socialSource, author: socialAuthor, text: socialSource === "press" ? `${affected.name} fecha ${affected.season} com ${appearances} jogos, ${goals} gols, ${assists} assistências${titleCount ? ` e ${titleCount} título(s)` : ""}.` : resultText, likes: Math.max(120, Math.round(nextFollowers * (0.018 + seeded(affected.seed, affected.season * 1423) * 0.065))), tone: socialTone };
+  const milestonePosts: SocialPost[] = newOffFieldMilestones.map((milestone, index) => ({ id: `${affected.seed}-${affected.season}-milestone-${index}`, season: affected.season, source: "fans", author: "Arquibancada", text: `${affected.name} alcançou ${milestone.split(": ")[1]}. A carreira também cresce fora das quatro linhas.`, likes: Math.max(1_000, Math.round(nextFollowers * 0.09)), tone: "positive" }));
   const nextBase: GameState = {
     ...affected,
     phase: "consequence",
@@ -992,10 +635,7 @@ export function simulateSeason(
     squadRole: nextRole,
     contractYears: Math.max(0, affected.contractYears - 1),
     money: Math.max(0, affected.money + affected.annualSalary + sponsorIncome - seasonLivingCost),
-    spendableMoney: Math.min(
-      Math.max(0, affected.money + affected.annualSalary + sponsorIncome - seasonLivingCost),
-      affected.spendableMoney + seasonSpendableGain,
-    ),
+    spendableMoney: Math.min(Math.max(0, affected.money + affected.annualSalary + sponsorIncome - seasonLivingCost), affected.spendableMoney + seasonSpendableGain),
     currentObjective: createSeasonObjective(position, nextRole, affected.season + 1, affected.seed + affected.history.length * 31),
     objectivesCompleted: affected.objectivesCompleted + (objectiveResult.completed ? 1 : 0),
     objectivesFailed: affected.objectivesFailed + (objectiveResult.completed ? 0 : 1),
@@ -1019,11 +659,7 @@ export function simulateSeason(
     nationalAssists,
     nationalCaptain,
     nationalTrophies: nationalTrophiesCount,
-    nationalHistory: [
-      ...affected.nationalHistory,
-      ...(nationalitySwitchRecord ? [nationalitySwitchRecord] : []),
-      ...(nationalHistoryAdd ? [nationalHistoryAdd] : []),
-    ],
+    nationalHistory: [...affected.nationalHistory, ...(nationalitySwitchRecord ? [nationalitySwitchRecord] : []), ...(nationalHistoryAdd ? [nationalHistoryAdd] : [])],
     qualifiedNextMajor,
     history: [...affected.history, record],
     lastResult: result,
@@ -1041,12 +677,7 @@ export function simulateSeason(
     forcedAlternativeTransfer: Boolean(effect.forcedAlternativeTransfer),
     transferRequested: effect.forcedAlternativeTransfer || forcedClubExit ? true : affected.transferRequested,
     pendingTransferMode: effect.loan ? "loan" : "permanent",
-    rivals: evolveRivals(affected.rivals, affected.seed, affected.season).map((rival) =>
-      event.id === DYNAMIC_RIVAL_EVENT_ID &&
-      rival.id === pick(affected.rivals.filter((item) => item.active), affected.seed, affected.season * 809)?.id
-        ? { ...rival, relationship: clamp(rival.relationship + (effect.rivalRespect ?? 0)) }
-        : rival,
-    ),
+    rivals: evolveRivals(affected.rivals, affected.seed, affected.season).map((rival) => event.id === DYNAMIC_RIVAL_EVENT_ID && rival.id === pick(affected.rivals.filter((item) => item.active), affected.seed, affected.season * 809)?.id ? { ...rival, relationship: clamp(rival.relationship + (effect.rivalRespect ?? 0)) } : rival),
     followers: nextFollowers,
     socialSentiment: nextSocialSentiment,
     mediaRelation: clamp(Math.round(affected.mediaRelation * 0.86 + (58 + (objectiveResult.completed ? 4 : -3)) * 0.14), 15, 97),
@@ -1063,139 +694,31 @@ export function simulateSeason(
     matchesMissedInjuries: affected.matchesMissedInjuries + (medicalRecord?.matchesMissed ?? 0),
   };
   const wantsDomesticReturn = event.id === "european-exit" || event.id === "return-home" || event.id === "mega-empresta-para-time-menor";
-  const domesticReturnCountryId = event.id === "european-exit" || event.id === "return-home"
-    ? nextBase.academyCountryId
-    : club.countryId;
-  let transferOffers = effect.transfer || effect.forcedAlternativeTransfer || forcedClubExit || nextBase.contractYears === 0
-    ? effect.forcedAlternativeTransfer
-      ? selectAlternativeExileOffers(nextBase, affected.season * 43)
-      : selectTransferOffers(nextBase, affected.season * 43, {
-          includeForeign: !wantsDomesticReturn,
-          forceDomestic: wantsDomesticReturn,
-          forceForeign: effect.transferAbroad,
-          domesticCountryId: domesticReturnCountryId,
-          sourceLeagueId: league.id,
-        })
-    : [];
+  const domesticReturnCountryId = event.id === "european-exit" || event.id === "return-home" ? nextBase.academyCountryId : club.countryId;
+  let transferOffers = effect.transfer || effect.forcedAlternativeTransfer || forcedClubExit || nextBase.contractYears === 0 ? effect.forcedAlternativeTransfer ? selectAlternativeExileOffers(nextBase, affected.season * 43) : selectTransferOffers(nextBase, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad, domesticCountryId: domesticReturnCountryId, sourceLeagueId: league.id }) : [];
   if (effect.transfer && event.id === "return-home" && nextBase.academyClubId) {
     const europeanDoor = transferOffers.find((clubId) => isEuropeanClub(clubById(clubId)));
-    const homecomingOffers = [
-      nextBase.academyClubId,
-      ...transferOffers.filter((clubId) => clubId !== nextBase.academyClubId && clubId !== europeanDoor),
-    ];
-    transferOffers = europeanDoor
-      ? [...homecomingOffers.slice(0, 4), europeanDoor]
-      : homecomingOffers.slice(0, 5);
+    const homecomingOffers = [nextBase.academyClubId, ...transferOffers.filter((clubId) => clubId !== nextBase.academyClubId && clubId !== europeanDoor)];
+    transferOffers = europeanDoor ? [...homecomingOffers.slice(0, 4), europeanDoor] : homecomingOffers.slice(0, 5);
   }
   if (effect.transfer && event.id === "rival-offer") {
-    const rivalIds = RIVALRIES
-      .filter((rivalry) => rivalry.clubIds.includes(club.id))
-      .map((rivalry) => rivalry.clubIds.find((clubId) => clubId !== club.id))
-      .filter((clubId): clubId is string => Boolean(clubId));
+    const rivalIds = RIVALRIES.filter((rivalry) => rivalry.clubIds.includes(club.id)).map((rivalry) => rivalry.clubIds.find((clubId) => clubId !== club.id)).filter((clubId): clubId is string => Boolean(clubId));
     const rivalOffer = pick(rivalIds, nextBase.seed, affected.season);
     if (rivalOffer) transferOffers = [rivalOffer, ...transferOffers.filter((clubId) => clubId !== rivalOffer)].slice(0, Math.max(5, transferOffers.length));
   }
-  const transferMarketOffers = materializeTransferOffers(nextBase, transferOffers, affected.season * 43, {
-    includeForeign: !wantsDomesticReturn,
-    forceDomestic: wantsDomesticReturn,
-    forceForeign: effect.transferAbroad,
-    domesticCountryId: domesticReturnCountryId,
-    sourceLeagueId: league.id,
-    mode: effect.loan ? "loan" : renewalDenied ? "free-agent" : "permanent",
-    trigger: forcedClubExit ? "forced-exit" : renewalDenied ? "contract-expired" : "season-end",
-  });
-  const legacyPoints = calculateLegacyScore({
-    appearances: nextBase.stats.appearances,
-    goals: nextBase.stats.goals,
-    assists: nextBase.stats.assists,
-    cleanSheets: nextBase.stats.cleanSheets,
-    trophies: nextBase.trophies,
-    nationalTrophies: nextBase.nationalTrophies,
-    awards: nextBase.awards,
-    ballonDor: nextBase.awardCabinet["Bola de Ouro"] ?? 0,
-    nationalCaps: nextBase.nationalCaps,
-    peakOverall: Math.max(nextBase.overall, ...nextBase.history.map((item) => item.overall)),
-    setbacks: nextBase.setbacks,
-  }) + Math.round(Math.log10(Math.max(1, nextBase.followers)) * 4 + nextBase.charityReputation * 0.22);
-  const achievementCandidates = getUnlockedAchievements({
-    appearances: nextBase.stats.appearances,
-    goals: nextBase.stats.goals,
-    assists: nextBase.stats.assists,
-    cleanSheets: nextBase.stats.cleanSheets,
-    trophies: nextBase.trophies + nextBase.nationalTrophies,
-    continentalTitles:
-      nextBase.trophyCabinet.libertadores +
-      nextBase.trophyCabinet.recopaSudamericana +
-      nextBase.trophyCabinet.championsLeague +
-      nextBase.trophyCabinet.uefaSuperCup +
-      nextBase.trophyCabinet.europaLeague +
-      nextBase.trophyCabinet.conferenceLeague +
-      nextBase.trophyCabinet.concacafChampions +
-      nextBase.trophyCabinet.afcChampions +
-      nextBase.trophyCabinet.cafChampions +
-      nextBase.trophyCabinet.campeonesCup,
-    worldTitles: nextBase.trophyCabinet.mundial,
-    nationalCaps: nextBase.nationalCaps,
-    nationalTrophies: nextBase.nationalTrophies,
-    ballonDor: nextBase.awardCabinet["Bola de Ouro"] ?? 0,
-    clubsPlayed: new Set(nextBase.history.map((item) => item.clubId)).size,
-    seasonsAbroad: nextBase.history.filter((item) => isOutsideCountry(clubById(item.clubId), nextBase.academyCountryId)).length,
-    seasons: nextBase.history.length,
-    age: nextBase.age,
-    wasCaptain: nextBase.clubCaptain,
-    nationalCaptain: nextBase.nationalCaptain,
-    yellowCards: nextBase.stats.yellowCards,
-    redCards: nextBase.stats.redCards,
-    retired: nextBase.retireAfterSeason,
-  }, nextBase.unlockedAchievements);
-  const newlyUnlocked = achievementCandidates.filter((achievement) =>
-    nextBase.disciplineHistoryReliable || (achievement.id !== "ficha-limpa" && achievement.id !== "disciplinado-em-campo"),
-  );
-  const newsCategory = breakoutBonus > 0
-    ? "milestone"
-    : titleCount > 0
-    ? "title"
-    : luckyDelta > 0
-      ? "milestone"
-      : nationalCalled && nationalNote
-        ? "national"
-        : twist || nationalNote
-          ? "setback"
-          : "season";
+  const transferMarketOffers = materializeTransferOffers(nextBase, transferOffers, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad, domesticCountryId: domesticReturnCountryId, sourceLeagueId: league.id, mode: effect.loan ? "loan" : renewalDenied ? "free-agent" : "permanent", trigger: forcedClubExit ? "forced-exit" : renewalDenied ? "contract-expired" : "season-end" });
+  const legacyPoints = calculateLegacyScore({ appearances: nextBase.stats.appearances, goals: nextBase.stats.goals, assists: nextBase.stats.assists, cleanSheets: nextBase.stats.cleanSheets, trophies: nextBase.trophies, nationalTrophies: nextBase.nationalTrophies, awards: nextBase.awards, ballonDor: nextBase.awardCabinet["Bola de Ouro"] ?? 0, nationalCaps: nextBase.nationalCaps, peakOverall: Math.max(nextBase.overall, ...nextBase.history.map((item) => item.overall)), setbacks: nextBase.setbacks }) + Math.round(Math.log10(Math.max(1, nextBase.followers)) * 4 + nextBase.charityReputation * 0.22);
+  const achievementCandidates = getUnlockedAchievements({ appearances: nextBase.stats.appearances, goals: nextBase.stats.goals, assists: nextBase.stats.assists, cleanSheets: nextBase.stats.cleanSheets, trophies: nextBase.trophies + nextBase.nationalTrophies, continentalTitles: nextBase.trophyCabinet.libertadores + nextBase.trophyCabinet.recopaSudamericana + nextBase.trophyCabinet.championsLeague + nextBase.trophyCabinet.uefaSuperCup + nextBase.trophyCabinet.europaLeague + nextBase.trophyCabinet.conferenceLeague + nextBase.trophyCabinet.concacafChampions + nextBase.trophyCabinet.afcChampions + nextBase.trophyCabinet.cafChampions + nextBase.trophyCabinet.campeonesCup, worldTitles: nextBase.trophyCabinet.mundial, nationalCaps: nextBase.nationalCaps, nationalTrophies: nextBase.nationalTrophies, ballonDor: nextBase.awardCabinet["Bola de Ouro"] ?? 0, clubsPlayed: new Set(nextBase.history.map((item) => item.clubId)).size, seasonsAbroad: nextBase.history.filter((item) => isOutsideCountry(clubById(item.clubId), nextBase.academyCountryId)).length, seasons: nextBase.history.length, age: nextBase.age, wasCaptain: nextBase.clubCaptain, nationalCaptain: nextBase.nationalCaptain, yellowCards: nextBase.stats.yellowCards, redCards: nextBase.stats.redCards, retired: nextBase.retireAfterSeason }, nextBase.unlockedAchievements);
+  const newlyUnlocked = achievementCandidates.filter((achievement) => nextBase.disciplineHistoryReliable || (achievement.id !== "ficha-limpa" && achievement.id !== "disciplinado-em-campo"));
+  const newsCategory = breakoutBonus > 0 ? "milestone" : titleCount > 0 ? "title" : luckyDelta > 0 ? "milestone" : nationalCalled && nationalNote ? "national" : twist || nationalNote ? "setback" : "season";
   const newsPool = NEWS_TEMPLATES.filter((item) => item.category === newsCategory);
   const newsTemplate = pick(newsPool, nextBase.seed, nextBase.season * 229)?.template ?? "{player} fecha mais uma temporada pelo {club}";
-  const seasonHeadline = fillNewsTemplate(newsTemplate, {
-    player: nextBase.name,
-    club: club.shortName,
-    season: String(affected.season),
-    rival: "o maior rival",
-    competition: competitions.find((item) => item.champion)?.name ?? league.name,
-  });
+  const seasonHeadline = fillNewsTemplate(newsTemplate, { player: nextBase.name, club: club.shortName, season: String(affected.season), rival: "o maior rival", competition: competitions.find((item) => item.champion)?.name ?? league.name });
   const achievementNews = newlyUnlocked.map((achievement) => `Conquista desbloqueada: ${achievement.title}.`);
-  const offFieldNews = [
-    ...(effect.sponsorBrand ? [`${affected.season}: ${affected.name} assina contrato pessoal com ${effect.sponsorBrand}.`] : []),
-    ...(completedSponsor ? [`${affected.season}: parceria com ${completedSponsor.brand} chega ao fim após ${completedSponsor.endSeason - completedSponsor.startSeason} temporada(s).`] : []),
-    ...newOffFieldMilestones,
-  ];
+  const offFieldNews = [...(effect.sponsorBrand ? [`${affected.season}: ${affected.name} assina contrato pessoal com ${effect.sponsorBrand}.`] : []), ...(completedSponsor ? [`${affected.season}: parceria com ${completedSponsor.brand} chega ao fim após ${completedSponsor.endSeason - completedSponsor.startSeason} temporada(s).`] : []), ...newOffFieldMilestones];
   const nationalitySwitchTarget = maybeOfferNationalitySwitch(nextBase, affected.season * 71);
-  const worldPlayers = advanceWorldPlayerUniverse(nextBase.worldPlayers, {
-    season: nextBase.season,
-    rivals: nextBase.rivals,
-    awardNominations: result.awardNominations,
-    protagonistName: nextBase.name,
-  });
-  return {
-    ...nextBase,
-    nextEventId: nationalitySwitchTarget ? NATIONALITY_SWITCH_EVENT_ID : selectNextEvent(nextBase, affected.season * 37),
-    pendingNationalitySwitchTarget: nationalitySwitchTarget ?? "",
-    nationalitySwitchInviteUsed: nextBase.nationalitySwitchInviteUsed || Boolean(nationalitySwitchTarget),
-    transferOffers,
-    transferMarketOffers,
-    worldPlayers,
-    legacyPoints,
-    unlockedAchievements: [...nextBase.unlockedAchievements, ...newlyUnlocked.map((achievement) => achievement.id)],
-    newsFeed: [...achievementNews, ...offFieldNews, seasonHeadline, ...nextBase.newsFeed].slice(0, 16),
-  };
+  const worldPlayers = advanceWorldPlayerUniverse(nextBase.worldPlayers, { season: nextBase.season, rivals: nextBase.rivals, awardNominations: result.awardNominations, protagonistName: nextBase.name });
+  return { ...nextBase, nextEventId: nationalitySwitchTarget ? NATIONALITY_SWITCH_EVENT_ID : selectNextEvent(nextBase, affected.season * 37), pendingNationalitySwitchTarget: nationalitySwitchTarget ?? "", nationalitySwitchInviteUsed: nextBase.nationalitySwitchInviteUsed || Boolean(nationalitySwitchTarget), transferOffers, transferMarketOffers, worldPlayers, legacyPoints, unlockedAchievements: [...nextBase.unlockedAchievements, ...newlyUnlocked.map((achievement) => achievement.id)], newsFeed: [...achievementNews, ...offFieldNews, seasonHeadline, ...nextBase.newsFeed].slice(0, 16) };
 }
 
 export function eventForState(state: GameState) {
@@ -1205,12 +728,8 @@ export function eventForState(state: GameState) {
   if (state.currentEventId === DYNAMIC_SOCIAL_EVENT_ID) return buildSocialEvent(state);
   if (state.currentEventId === DYNAMIC_LIFE_EVENT_ID) return buildLifeEvent(state);
   if (state.currentEventId === DYNAMIC_STORY_EVENT_ID) return buildStoryCareerEvent(state);
-  if (state.currentEventId === DYNAMIC_RIVAL_EVENT_ID && state.rivals.some((rival) => rival.active)) {
-    return buildRivalEvent(state);
-  }
-  if (state.currentEventId === NATIONALITY_SWITCH_EVENT_ID && state.pendingNationalitySwitchTarget) {
-    return buildNationalitySwitchEvent(countryById(state.nationality), countryById(state.pendingNationalitySwitchTarget));
-  }
+  if (state.currentEventId === DYNAMIC_RIVAL_EVENT_ID && state.rivals.some((rival) => rival.active)) return buildRivalEvent(state);
+  if (state.currentEventId === NATIONALITY_SWITCH_EVENT_ID && state.pendingNationalitySwitchTarget) return buildNationalitySwitchEvent(countryById(state.nationality), countryById(state.pendingNationalitySwitchTarget));
   return ALL_PRO_EVENTS.find((event) => event.id === state.currentEventId) ?? ALL_PRO_EVENTS[0];
 }
 
@@ -1220,42 +739,11 @@ export function signProfessionalForSimulation(state: GameState, clubId: string):
   const managerTrust = clubId === state.academyClubId ? 58 : 44;
   const squadRole = calculateSquadRole(state.overall, club, league.prestige, managerTrust, state.age);
   const contract = createContract(state.overall, state.age, club, state.seed);
-  return {
-    ...state,
-    phase: "career",
-    currentClubId: clubId,
-    currentLeagueId: club.leagueId,
-    currentEventId: FIRST_MATCH_EVENT.id,
-    nextEventId: "",
-    reputation: clubId === state.academyClubId ? 8 : 4,
-    fanSupport: clubId === state.academyClubId ? 68 : 50,
-    continentalSlot: initialContinentalSlot(club),
-    money: 0,
-    managerTrust,
-    squadRole,
-    contractYears: contract.years,
-    annualSalary: contract.annualSalary,
-    currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed),
-    followers: 1_200 + club.reputation * 900,
-    socialFeed: [{
-      id: `${state.seed}-${state.season}-first-contract`,
-      season: state.season,
-      source: "press",
-      author: "Central do Futebol",
-      text: `${state.name} assinou o primeiro contrato profissional com o ${club.shortName}.`,
-      likes: 340 + club.reputation * 120,
-      tone: "positive",
-    }],
-    newsFeed: [`${state.season}: primeiro contrato assinado com o ${club.shortName}.`],
-  };
+  return { ...state, phase: "career", currentClubId: clubId, currentLeagueId: club.leagueId, currentEventId: FIRST_MATCH_EVENT.id, nextEventId: "", reputation: clubId === state.academyClubId ? 8 : 4, fanSupport: clubId === state.academyClubId ? 68 : 50, continentalSlot: initialContinentalSlot(club), money: 0, managerTrust, squadRole, contractYears: contract.years, annualSalary: contract.annualSalary, currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed), followers: 1_200 + club.reputation * 900, socialFeed: [{ id: `${state.seed}-${state.season}-first-contract`, season: state.season, source: "press", author: "Central do Futebol", text: `${state.name} assinou o primeiro contrato profissional com o ${club.shortName}.`, likes: 340 + club.reputation * 120, tone: "positive" }], newsFeed: [`${state.season}: primeiro contrato assinado com o ${club.shortName}.`] };
 }
 
 export function completeSimulationTransfer(state: GameState, clubId: string | null): GameState {
-  const richOffer = state.transferMarketOffers.find((offer) => offer.clubId === clubId)
-    ?? (clubId ? materializeTransferOffers(state, [clubId], state.season * 601, {
-      includeForeign: true,
-      mode: state.pendingTransferMode === "loan" ? "loan" : state.isFreeAgent ? "free-agent" : "permanent",
-    })[0] : undefined);
+  const richOffer = state.transferMarketOffers.find((offer) => offer.clubId === clubId) ?? (clubId ? materializeTransferOffers(state, [clubId], state.season * 601, { includeForeign: true, mode: state.pendingTransferMode === "loan" ? "loan" : state.isFreeAgent ? "free-agent" : "permanent" })[0] : undefined);
   if (clubId && richOffer) {
     const moved = applyAcceptedTransfer(state, richOffer);
     const next = { ...moved, phase: "career" as const, currentEventId: "", nextEventId: "", lastResult: null, lastConsequence: null };
@@ -1273,43 +761,8 @@ export function completeSimulationTransfer(state: GameState, clubId: string | nu
   const changingCountry = Boolean(newClub && newClub.countryId !== oldClub.countryId);
   const managerTrust = newClub ? 50 : clamp(state.managerTrust + 5);
   const squadRole = calculateSquadRole(state.overall, targetClub, targetLeague.prestige, managerTrust, state.age);
-  const transferred: GameState = {
-    ...state,
-    phase: "career",
-    currentClubId: clubId ?? state.currentClubId,
-    currentLeagueId: newClub ? newClub.leagueId : state.currentLeagueId,
-    currentEventId: "",
-    nextEventId: "",
-    lastResult: null,
-    lastConsequence: null,
-    transferOffers: [],
-    transferMarketOffers: [],
-    morale: clamp(state.morale + (clubId ? 5 : 2)),
-    fanSupport: clubId ? 52 : clamp(state.fanSupport + 3),
-    continentalSlot: newClub ? initialContinentalSlot(newClub) : state.continentalSlot,
-    adaptation: newClub ? (changingCountry ? initialAdaptation(oldClub.countryId, newClub.countryId) : state.adaptation) : state.adaptation,
-    abroadSeasons: changingCountry ? 0 : state.abroadSeasons,
-    transferStatus: null,
-    transferRequested: false,
-    renewalDenied: false,
-    forcedAlternativeTransfer: false,
-    pendingTransferMode: "permanent",
-    loanParentClubId: isLoan ? oldClub.id : "",
-    loanParentLeagueId: isLoan ? (state.currentLeagueId || oldClub.leagueId) : "",
-    loanEndSeason: isLoan ? state.season + 1 : 0,
-    isFreeAgent: false,
-    freeAgentSinceSeason: 0,
-    managerTrust,
-    squadRole,
-    contractYears: contract.years,
-    annualSalary: contract.annualSalary,
-    clubCaptain: newClub ? false : state.clubCaptain,
-    currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed + state.season),
-  };
-  return {
-    ...transferred,
-    currentEventId: state.nextEventId || selectNextEvent(transferred, state.season * 47),
-  };
+  const transferred: GameState = { ...state, phase: "career", currentClubId: clubId ?? state.currentClubId, currentLeagueId: newClub ? newClub.leagueId : state.currentLeagueId, currentEventId: "", nextEventId: "", lastResult: null, lastConsequence: null, transferOffers: [], transferMarketOffers: [], morale: clamp(state.morale + (clubId ? 5 : 2)), fanSupport: clubId ? 52 : clamp(state.fanSupport + 3), continentalSlot: newClub ? initialContinentalSlot(newClub) : state.continentalSlot, adaptation: newClub ? (changingCountry ? initialAdaptation(oldClub.countryId, newClub.countryId) : state.adaptation) : state.adaptation, abroadSeasons: changingCountry ? 0 : state.abroadSeasons, transferStatus: null, transferRequested: false, renewalDenied: false, forcedAlternativeTransfer: false, pendingTransferMode: "permanent", loanParentClubId: isLoan ? oldClub.id : "", loanParentLeagueId: isLoan ? (state.currentLeagueId || oldClub.leagueId) : "", loanEndSeason: isLoan ? state.season + 1 : 0, isFreeAgent: false, freeAgentSinceSeason: 0, managerTrust, squadRole, contractYears: contract.years, annualSalary: contract.annualSalary, clubCaptain: newClub ? false : state.clubCaptain, currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed + state.season) };
+  return { ...transferred, currentEventId: state.nextEventId || selectNextEvent(transferred, state.season * 47) };
 }
 
 export function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarloCareerSummary {
@@ -1317,36 +770,11 @@ export function simulateMonteCarloCareer(seed: number, careerIndex: number): Mon
   const chosenNationality = pick(COUNTRIES, seed, 709 + careerIndex).id;
   const academyClub = pick(randomAcademyClubs(seed, chosenNationality), seed, 719 + careerIndex);
   const formation = pick(FORMATIONS, seed, 727 + careerIndex);
-  let state: GameState = {
-    ...initialState(),
-    seed,
-    name: `Simulação ${careerIndex + 1}`,
-    position: chosenPosition,
-    nationality: chosenNationality,
-    academyClubId: academyClub.id,
-  };
+  let state: GameState = { ...initialState(), seed, name: `Simulação ${careerIndex + 1}`, position: chosenPosition, nationality: chosenNationality, academyClubId: academyClub.id };
   const journey = createYouthJourney(state, formation.id);
-  state = {
-    ...state,
-    formationId: formation.id,
-    archetype: journey.formation.archetype,
-    revealAge: journey.revealAge,
-    youthScore: journey.score,
-    youthYears: journey.youthYears,
-    proOffers: journey.offers,
-    age: journey.revealAge,
-    season: state.season + journey.revealAge - 12,
-    overall: journey.overall,
-    potential: journey.potential,
-    attributes: createPlayerAttributes(chosenPosition, journey.overall, seed),
-    traits: selectCareerTraits(chosenPosition, seed),
-    rivals: createCareerRivals(seed, journey.revealAge, journey.overall, []),
-    morale: clamp(68 + Math.round(journey.score / 4)),
-    fitness: 94,
-  };
+  state = { ...state, formationId: formation.id, archetype: journey.formation.archetype, revealAge: journey.revealAge, youthScore: journey.score, youthYears: journey.youthYears, proOffers: journey.offers, age: journey.revealAge, season: state.season + journey.revealAge - 12, overall: journey.overall, potential: journey.potential, attributes: createPlayerAttributes(chosenPosition, journey.overall, seed), traits: selectCareerTraits(chosenPosition, seed), rivals: createCareerRivals(seed, journey.revealAge, journey.overall, []), morale: clamp(68 + Math.round(journey.score / 4)), fitness: 94 };
   const firstClubId = pick(journey.offers, seed, 733 + careerIndex);
   state = signProfessionalForSimulation(state, firstClubId);
-
   let seasons = 0;
   while (state.age < 40 && seasons < 30) {
     if ((state.activeLoan || state.loanParentClubId) && state.season >= (state.activeLoan?.endSeason ?? state.loanEndSeason)) state = completeLoanReturn(state);
@@ -1365,65 +793,22 @@ export function simulateMonteCarloCareer(seed: number, careerIndex: number): Mon
     state = simulateSeason(state, event, effect, choice.label, resultText, luckOutcome);
     seasons += 1;
     if (state.retireAfterSeason) break;
-
     if (state.transferOffers.length) {
       const mustMove = state.renewalDenied || state.transferRequested || state.pendingTransferMode === "loan" || state.isFreeAgent;
       const movesClub = mustMove || seeded(seed, state.season * 419 + seasons) < 0.55;
-      const destination = movesClub
-        ? pick(state.transferOffers, seed, state.season * 431 + seasons)
-        : null;
+      const destination = movesClub ? pick(state.transferOffers, seed, state.season * 431 + seasons) : null;
       state = completeSimulationTransfer(state, destination);
     } else {
-      state = {
-        ...state,
-        phase: "career",
-        currentEventId: state.nextEventId || "extra-training",
-        lastResult: null,
-        lastConsequence: null,
-        transferRequested: false,
-        renewalDenied: false,
-        forcedClubExit: false,
-        forcedAlternativeTransfer: false,
-      };
+      state = { ...state, phase: "career", currentEventId: state.nextEventId || "extra-training", lastResult: null, lastConsequence: null, transferRequested: false, renewalDenied: false, forcedClubExit: false, forcedAlternativeTransfer: false };
     }
   }
-
-  const awardSeasons = state.history.map((record) => ({
-    ballonDor: record.awards.includes("Bola de Ouro"),
-    worldXi: record.awards.includes("FIFPRO World XI"),
-    production: record.awards.some((award) =>
-      award.includes("Artilheiro") ||
-      award === "Chuteira de Ouro Europeia" ||
-      award.includes("Assistências")
-    ),
-  }));
-  return {
-    career: careerIndex + 1,
-    seed,
-    name: state.name,
-    nationality: countryById(state.nationality).name,
-    position: state.position,
-    seasons,
-    clubs: new Set(state.history.map((record) => record.clubId)).size,
-    peakOverall: Math.max(state.overall, ...state.history.map((record) => record.overall), 0),
-    appearances: state.stats.appearances,
-    goals: state.stats.goals,
-    assists: state.stats.assists,
-    trophies: state.trophies + state.nationalTrophies,
-    individualAwards: state.awards,
-    ballonDor: state.awardCabinet["Bola de Ouro"] ?? 0,
-    worldXi: state.awardCabinet["FIFPRO World XI"] ?? 0,
-    worldXiWithoutBallonDor: awardSeasons.filter((season) => season.worldXi && !season.ballonDor).length,
-    ballonDorWithoutProductionAward: awardSeasons.filter((season) => season.ballonDor && !season.production).length,
-    ballonDorWithoutWorldXi: awardSeasons.filter((season) => season.ballonDor && !season.worldXi).length,
-  };
+  const awardSeasons = state.history.map((record) => ({ ballonDor: record.awards.includes("Bola de Ouro"), worldXi: record.awards.includes("FIFPRO World XI"), production: record.awards.some((award) => award.includes("Artilheiro") || award === "Chuteira de Ouro Europeia" || award.includes("Assistências")) }));
+  return { career: careerIndex + 1, seed, name: state.name, nationality: countryById(state.nationality).name, position: state.position, seasons, clubs: new Set(state.history.map((record) => record.clubId)).size, peakOverall: Math.max(state.overall, ...state.history.map((record) => record.overall), 0), appearances: state.stats.appearances, goals: state.stats.goals, assists: state.stats.assists, trophies: state.trophies + state.nationalTrophies, individualAwards: state.awards, ballonDor: state.awardCabinet["Bola de Ouro"] ?? 0, worldXi: state.awardCabinet["FIFPRO World XI"] ?? 0, worldXiWithoutBallonDor: awardSeasons.filter((season) => season.worldXi && !season.ballonDor).length, ballonDorWithoutProductionAward: awardSeasons.filter((season) => season.ballonDor && !season.production).length, ballonDorWithoutWorldXi: awardSeasons.filter((season) => season.ballonDor && !season.worldXi).length };
 }
 
 export function runMonteCarloCareers(runs: number, seedBase = 20260723): MonteCarloReport {
   const safeRuns = clamp(Math.floor(runs), 1, 10_000);
-  const careers = Array.from({ length: safeRuns }, (_, index) =>
-    simulateMonteCarloCareer((seedBase + index * 104729) % 2147483647, index),
-  );
+  const careers = Array.from({ length: safeRuns }, (_, index) => simulateMonteCarloCareer((seedBase + index * 104729) % 2147483647, index));
   const winners = careers.filter((career) => career.ballonDor > 0);
   const totalBallonDor = winners.reduce((total, career) => total + career.ballonDor, 0);
   const totalWorldXi = careers.reduce((total, career) => total + career.worldXi, 0);
@@ -1432,51 +817,12 @@ export function runMonteCarloCareers(runs: number, seedBase = 20260723): MonteCa
   const ballonDorWithoutWorldXi = careers.reduce((total, career) => total + career.ballonDorWithoutWorldXi, 0);
   const totalSeasons = careers.reduce((total, career) => total + career.seasons, 0);
   const totalIndividualAwards = careers.reduce((total, career) => total + career.individualAwards, 0);
-  const average = (key: keyof Pick<MonteCarloCareerSummary, "seasons" | "peakOverall" | "appearances" | "goals" | "assists" | "trophies">) =>
-    Number((careers.reduce((total, career) => total + career[key], 0) / safeRuns).toFixed(2));
+  const average = (key: keyof Pick<MonteCarloCareerSummary, "seasons" | "peakOverall" | "appearances" | "goals" | "assists" | "trophies">) => Number((careers.reduce((total, career) => total + career[key], 0) / safeRuns).toFixed(2));
   const positionBreakdown = Object.fromEntries(POSITIONS.map((position) => {
     const positionCareers = careers.filter((career) => career.position === position.key);
     const count = Math.max(1, positionCareers.length);
-    return [position.key, {
-      careers: positionCareers.length,
-      averagePeakOverall: Number((positionCareers.reduce((total, career) => total + career.peakOverall, 0) / count).toFixed(2)),
-      averageTrophies: Number((positionCareers.reduce((total, career) => total + career.trophies, 0) / count).toFixed(2)),
-      ballonDorCareers: positionCareers.filter((career) => career.ballonDor > 0).length,
-    }];
+    return [position.key, { careers: positionCareers.length, averagePeakOverall: Number((positionCareers.reduce((total, career) => total + career.peakOverall, 0) / count).toFixed(2)), averageTrophies: Number((positionCareers.reduce((total, career) => total + career.trophies, 0) / count).toFixed(2)), ballonDorCareers: positionCareers.filter((career) => career.ballonDor > 0).length }];
   })) as MonteCarloReport["positionBreakdown"];
-  const bestCareer = [...careers].sort((a, b) =>
-    b.ballonDor - a.ballonDor ||
-    b.peakOverall - a.peakOverall ||
-    b.trophies - a.trophies ||
-    b.goals + b.assists - (a.goals + a.assists),
-  )[0];
-  return {
-    runs: safeRuns,
-    seedBase,
-    totalSeasons,
-    totalIndividualAwards,
-    averageIndividualAwards: Number((totalIndividualAwards / safeRuns).toFixed(2)),
-    averageSeasons: average("seasons"),
-    averagePeakOverall: average("peakOverall"),
-    averageAppearances: average("appearances"),
-    averageGoals: average("goals"),
-    averageAssists: average("assists"),
-    averageTrophies: average("trophies"),
-    careersWithoutTrophies: careers.filter((career) => career.trophies === 0).length,
-    careersWithoutAwards: careers.filter((career) => career.individualAwards === 0).length,
-    careersBelow70Peak: careers.filter((career) => career.peakOverall < 70).length,
-    careersAtLeast85Peak: careers.filter((career) => career.peakOverall >= 85).length,
-    careersWithFiveBallonDor: careers.filter((career) => career.ballonDor >= 5).length,
-    positionBreakdown,
-    careersWithBallonDor: winners.length,
-    totalBallonDor,
-    totalWorldXi,
-    worldXiWithoutBallonDor,
-    ballonDorWithoutProductionAward,
-    ballonDorWithoutWorldXi,
-    careerChancePercent: Number(((winners.length / safeRuns) * 100).toFixed(2)),
-    awardChancePerSeasonPercent: Number(((totalBallonDor / Math.max(1, totalSeasons)) * 100).toFixed(3)),
-    winners,
-    bestCareer,
-  };
+  const bestCareer = [...careers].sort((a, b) => b.ballonDor - a.ballonDor || b.peakOverall - a.peakOverall || b.trophies - a.trophies || b.goals + b.assists - (a.goals + a.assists))[0];
+  return { runs: safeRuns, seedBase, totalSeasons, totalIndividualAwards, averageIndividualAwards: Number((totalIndividualAwards / safeRuns).toFixed(2)), averageSeasons: average("seasons"), averagePeakOverall: average("peakOverall"), averageAppearances: average("appearances"), averageGoals: average("goals"), averageAssists: average("assists"), averageTrophies: average("trophies"), careersWithoutTrophies: careers.filter((career) => career.trophies === 0).length, careersWithoutAwards: careers.filter((career) => career.individualAwards === 0).length, careersBelow70Peak: careers.filter((career) => career.peakOverall < 70).length, careersAtLeast85Peak: careers.filter((career) => career.peakOverall >= 85).length, careersWithFiveBallonDor: careers.filter((career) => career.ballonDor >= 5).length, positionBreakdown, careersWithBallonDor: winners.length, totalBallonDor, totalWorldXi, worldXiWithoutBallonDor, ballonDorWithoutProductionAward, ballonDorWithoutWorldXi, careerChancePercent: Number(((winners.length / safeRuns) * 100).toFixed(2)), awardChancePerSeasonPercent: Number(((totalBallonDor / Math.max(1, totalSeasons)) * 100).toFixed(3)), winners, bestCareer };
 }
