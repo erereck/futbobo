@@ -1,14 +1,13 @@
 import { CLUBS, COUNTRIES, POSITIONS } from "../game-data";
 import type { Club, Confederation, PositionKey } from "../game-data";
 import { rankMarketDestinations } from "./transfer-market";
+import { worldPlayerNameForNationality } from "./world-player-name-pools";
 import { clamp, clubById, pick, seeded } from "./shared";
 import type {
   WorldPlayer, WorldPlayerAdvanceContext, WorldPlayerCareerStats, WorldPlayerHonor,
   WorldPlayerUniverse, WorldPopulationBucket,
 } from "./world-player-model";
 
-const FIRST_NAMES = ["Kenji", "Mateo", "Ibrahim", "Noah", "Luka", "Davi", "Youssef", "Min-jun", "Thiago", "Elias", "Santiago", "Amadou", "Nikolai", "Rayan", "Tobias", "Kaito", "Malik", "Enzo", "João", "Milan"];
-const LAST_NAMES = ["Sakamoto", "Kovač", "Benali", "Okafor", "Silveira", "Moretti", "Tanaka", "Diallo", "Navarro", "Petrov", "Kishimoto", "Mensah", "Costa", "Nakamura", "Haddad", "Lindberg", "Rojas", "Park", "Mbaye", "Alvarez"];
 const EMPTY_STATS: WorldPlayerCareerStats = { seasons: 0, appearances: 0, goals: 0, assists: 0, tackles: 0, cleanSheets: 0 };
 const CONFEDERATIONS: Confederation[] = ["SOUTH_AMERICA", "EUROPE", "NORTH_AMERICA", "ASIA", "AFRICA", "OCEANIA"];
 
@@ -55,7 +54,7 @@ function generatedPlayer(universe: WorldPlayerUniverse, season: number, serial: 
   const clubs = clubPoolForCountry(nationality);
   const club = pick(clubs.length ? clubs : CLUBS, universe.seed, salt + 19);
   const id = stablePlayerId(universe.seed, season, serial);
-  const baseName = `${pick(FIRST_NAMES, universe.seed, salt + 23)} ${pick(LAST_NAMES, universe.seed, salt + 29)}`;
+  const baseName = worldPlayerNameForNationality(nationality, universe.seed, salt + 23);
   const name = Object.values(universe.players).some((player) => normalizeWorldPlayerName(player.name) === normalizeWorldPlayerName(baseName))
     ? `${baseName} ${serial + 1}`
     : baseName;
