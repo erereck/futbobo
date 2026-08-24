@@ -9,7 +9,7 @@ import { ALL_PRO_EVENTS, BALLON_DOR_EXCLUDED_TROPHIES, POSITION_PRIMARY_ATTRIBUT
 import { clamp, clubById, pick, seeded } from "./shared";
 import { DOMESTIC_SUPER_CUP_NAMES, clubConfederation, continentalSlotAfterSeason, initialAdaptation, initialContinentalSlot, isEuropeanClub, isOutsideAcademyHome, isOutsideCountry, positionByKey, randomAcademyClubs } from "./academy";
 import { addStats, competitiveStrength, describeEffects, isIdolAtClub, marketValue, medicalRecordForSeason, mergeEffects, seasonAverageRating, seasonPerformanceScore, simulatedWorldCupStats, worldCupGamesThroughStage } from "./performance";
-import { applyAcceptedTransfer, completeLoanReturn, materializeTransferOffers, selectAlternativeExileOffers, selectTransferOffers } from "./transfer-market";
+import { applyAcceptedTransfer, completeLoanReturn, materializeTransferOffers, selectAlternativeExileOffers, selectTransferOffers, shouldOfferYouthLoanInsteadOfSale } from "./transfer-market";
 import { advanceWorldPlayerUniverse } from "./world-players";
 import { seasonFitnessAfterLoad } from "./fatigue";
 import { worldFinalOpponentForSeason } from "./world-club-competitions";
@@ -19,6 +19,13 @@ import { clubWithPlayerImpact } from "./player-club-impact";
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
   return change.startsWith("-") || normalized.includes("piorou") || normalized.includes("risco") || normalized.includes("despedida");
+}
+
+/** Metade estatística para evolução inteira: resultados ímpares alternam de forma determinística. */
+export function halveDevelopment(value: number, seed: number, season: number) {
+  const magnitude = Math.abs(value);
+  const roundedHalf = Math.floor(magnitude / 2) + Number(magnitude % 2 === 1 && seeded(seed, season * 1879 + 23) < 0.5);
+  return Math.sign(value) * roundedHalf;
 }
 
 export function simulateSeason(
@@ -65,6 +72,7 @@ export function simulateSeason(
   const leaguePressure = inEurope ? league.prestige * 3 : Math.max(0, league.prestige - 3) * 2;
   const requirement = 55 + club.reputation * 5 + leaguePressure;
   const seasonRole = calculateSquadRole(affected.overall, club, league.prestige, affected.managerTrust, affected.age);
+  const reducedOpportunity = affected.reducedOpportunitySeason === affected.season;
   const roleScore = affected.overall - requirement + (primaryAttributeRating - affected.overall) * 0.18 + (effect.minutes ?? 0) - adaptationPenalty + roleAppearanceModifier(seasonRole);
   const baseApps = roleScore >= 5 ? 33 : roleScore >= 0 ? 26 : roleScore >= -5 ? 19 : 11;
   const provisionalCards = Math.floor(seeded(state.seed, state.season * 211) * 5);
@@ -111,23 +119,32 @@ export function simulateSeason(
       : previousContributionRate >= previousExpectedRate
         ? 2
         : 0;
-  const appearances = clamp(
+  const fullAppearances = clamp(
     Math.round(baseApps + seeded(state.seed, state.season * 3) * 8 + inSeasonMeritApps + previousFormApps + (attributes.stamina - 60) / 12 + (hasTrait("iron-lungs") ? 3 : 0) - suspensionPenalty),
     3,
     44,
   );
-  const goals = isKeeper ? (seeded(state.seed, state.season * 5) > 0.992 ? 1 : 0) : Math.max(0, Math.round(appearances * goalRate));
-  const assists = isKeeper ? Math.round(seeded(state.seed, state.season * 11) * 2) : Math.max(0, Math.round(appearances * assistRate));
-  const tackles = position.zone === "defesa"
-    ? Math.max(0, Math.round(appearances * clamp(1.8 + defensiveSkill / 40 + (affected.managerTrust - 50) / 120, 1.7, 4.8)))
+  const fullGoals = isKeeper ? (seeded(state.seed, state.season * 5) > 0.992 ? 1 : 0) : Math.max(0, Math.round(fullAppearances * goalRate));
+  const fullAssists = isKeeper ? Math.round(seeded(state.seed, state.season * 11) * 2) : Math.max(0, Math.round(fullAppearances * assistRate));
+  const fullTackles = position.zone === "defesa"
+    ? Math.max(0, Math.round(fullAppearances * clamp(1.8 + defensiveSkill / 40 + (affected.managerTrust - 50) / 120, 1.7, 4.8)))
     : position.zone === "meio"
-      ? Math.max(0, Math.round(appearances * clamp(0.8 + defensiveSkill / 75, 0.7, 2.6)))
+      ? Math.max(0, Math.round(fullAppearances * clamp(0.8 + defensiveSkill / 75, 0.7, 2.6)))
       : 0;
-  const cleanSheets = isKeeper ? Math.round(appearances * clamp(0.07 + club.reputation * 0.035 + keeperSkill / 270, 0.16, 0.57)) : 0;
-  const goalsConceded = isKeeper ? Math.max(4, Math.round(appearances * clamp(1.7 - club.reputation * 0.09 - keeperSkill / 160, 0.45, 1.45))) : 0;
+  const fullCleanSheets = isKeeper ? Math.round(fullAppearances * clamp(0.07 + club.reputation * 0.035 + keeperSkill / 270, 0.16, 0.57)) : 0;
+  const fullGoalsConceded = isKeeper ? Math.max(4, Math.round(fullAppearances * clamp(1.7 - club.reputation * 0.09 - keeperSkill / 160, 0.45, 1.45))) : 0;
   const positionCardWeight = position.zone === "defesa" ? 1.35 : position.zone === "meio" ? 1 : 0.65;
-  const yellowCards = Math.max(0, Math.round((provisionalCards + appearances / 10) * positionCardWeight * (1.28 - affected.discipline / 180)));
-  const redCards = seeded(state.seed, state.season * 223) < Math.max(0.015, (72 - affected.discipline) / 270) ? 1 : 0;
+  const fullYellowCards = Math.max(0, Math.round((provisionalCards + fullAppearances / 10) * positionCardWeight * (1.28 - affected.discipline / 180)));
+  const fullRedCards = seeded(state.seed, state.season * 223) < Math.max(0.015, (72 - affected.discipline) / 270) ? 1 : 0;
+  const reduceStat = (value: number) => reducedOpportunity ? Math.floor(value / 2) : value;
+  const appearances = reducedOpportunity ? Math.max(1, Math.floor(fullAppearances / 2)) : fullAppearances;
+  const goals = reduceStat(fullGoals);
+  const assists = reduceStat(fullAssists);
+  const tackles = reduceStat(fullTackles);
+  const cleanSheets = reduceStat(fullCleanSheets);
+  const goalsConceded = reduceStat(fullGoalsConceded);
+  const yellowCards = reduceStat(fullYellowCards);
+  const redCards = reduceStat(fullRedCards);
   const seasonStats = { appearances, goals, assists, tackles, cleanSheets, goalsConceded, yellowCards, redCards };
 
   const boost = (effect.titleBoost ?? 0) + (hasTrait("big-game") ? 5 : 0);
@@ -338,6 +355,11 @@ export function simulateSeason(
     development += breakoutBonus;
   }
 
+  if (reducedOpportunity) {
+    development = halveDevelopment(development, affected.seed, affected.season);
+    breakoutBonus = Math.min(breakoutBonus, Math.max(0, development));
+  }
+
   if (affected.overall >= affected.potential && development > 0) development = 0;
   if (development > 0) development = Math.min(development, affected.potential - affected.overall);
   const nextOverall = clamp(affected.overall + development, 42, Math.max(affected.potential, affected.overall));
@@ -541,6 +563,8 @@ export function simulateSeason(
   const clearlyBelowClubLevel = nextOverall <= clubLevelFloor - 6 && (performanceScore < 56 || appearances < 20 || nextRole === "reserva");
   const eliteMismatch = club.reputation >= 5 && nextOverall < 73 && performanceScore < 62;
   const forcedClubExit = !isIdolAtClub(affected, club.id) && (clearlyBelowClubLevel || eliteMismatch);
+  const youthLoanDecision = shouldOfferYouthLoanInsteadOfSale(affected, forcedClubExit, renewalDenied, nextAge);
+  const permanentForcedExit = forcedClubExit && !youthLoanDecision;
 
   const pendingBotaoMatches: PendingBotaoMatch[] = [];
   if (finalMatchMode !== "simulate") {
@@ -633,7 +657,7 @@ export function simulateSeason(
     discipline: nextDiscipline,
     suspensionMatches: redCards * 2 + (yellowCards >= 8 ? 2 : yellowCards >= 5 ? 1 : 0),
     squadRole: nextRole,
-    contractYears: Math.max(0, affected.contractYears - 1),
+    contractYears: youthLoanDecision ? Math.max(2, affected.contractYears - 1) : Math.max(0, affected.contractYears - 1),
     money: Math.max(0, affected.money + affected.annualSalary + sponsorIncome - seasonLivingCost),
     spendableMoney: Math.min(Math.max(0, affected.money + affected.annualSalary + sponsorIncome - seasonLivingCost), affected.spendableMoney + seasonSpendableGain),
     currentObjective: createSeasonObjective(position, nextRole, affected.season + 1, affected.seed + affected.history.length * 31),
@@ -671,12 +695,14 @@ export function simulateSeason(
     seenEvents,
     nextEventId: "",
     renewalDenied,
-    forcedClubExit,
+    forcedClubExit: permanentForcedExit,
+    youthLoanDecision,
+    reducedOpportunitySeason: 0,
     isFreeAgent: renewalDenied,
     freeAgentSinceSeason: renewalDenied ? affected.season + 1 : affected.freeAgentSinceSeason,
     forcedAlternativeTransfer: Boolean(effect.forcedAlternativeTransfer),
-    transferRequested: effect.forcedAlternativeTransfer || forcedClubExit ? true : affected.transferRequested,
-    pendingTransferMode: effect.loan ? "loan" : "permanent",
+    transferRequested: effect.forcedAlternativeTransfer || permanentForcedExit ? true : affected.transferRequested,
+    pendingTransferMode: effect.loan || youthLoanDecision ? "loan" : "permanent",
     rivals: evolveRivals(affected.rivals, affected.seed, affected.season).map((rival) => event.id === DYNAMIC_RIVAL_EVENT_ID && rival.id === pick(affected.rivals.filter((item) => item.active), affected.seed, affected.season * 809)?.id ? { ...rival, relationship: clamp(rival.relationship + (effect.rivalRespect ?? 0)) } : rival),
     followers: nextFollowers,
     socialSentiment: nextSocialSentiment,
@@ -695,7 +721,7 @@ export function simulateSeason(
   };
   const wantsDomesticReturn = event.id === "european-exit" || event.id === "return-home" || event.id === "mega-empresta-para-time-menor";
   const domesticReturnCountryId = event.id === "european-exit" || event.id === "return-home" ? nextBase.academyCountryId : club.countryId;
-  let transferOffers = effect.transfer || effect.forcedAlternativeTransfer || forcedClubExit || nextBase.contractYears === 0 ? effect.forcedAlternativeTransfer ? selectAlternativeExileOffers(nextBase, affected.season * 43) : selectTransferOffers(nextBase, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad, domesticCountryId: domesticReturnCountryId, sourceLeagueId: league.id }) : [];
+  let transferOffers = effect.transfer || effect.forcedAlternativeTransfer || permanentForcedExit || youthLoanDecision || nextBase.contractYears === 0 ? effect.forcedAlternativeTransfer ? selectAlternativeExileOffers(nextBase, affected.season * 43) : selectTransferOffers(nextBase, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad, domesticCountryId: domesticReturnCountryId, sourceLeagueId: league.id }) : [];
   if (effect.transfer && event.id === "return-home" && nextBase.academyClubId) {
     const europeanDoor = transferOffers.find((clubId) => isEuropeanClub(clubById(clubId)));
     const homecomingOffers = [nextBase.academyClubId, ...transferOffers.filter((clubId) => clubId !== nextBase.academyClubId && clubId !== europeanDoor)];
@@ -706,7 +732,7 @@ export function simulateSeason(
     const rivalOffer = pick(rivalIds, nextBase.seed, affected.season);
     if (rivalOffer) transferOffers = [rivalOffer, ...transferOffers.filter((clubId) => clubId !== rivalOffer)].slice(0, Math.max(5, transferOffers.length));
   }
-  const transferMarketOffers = materializeTransferOffers(nextBase, transferOffers, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad, domesticCountryId: domesticReturnCountryId, sourceLeagueId: league.id, mode: effect.loan ? "loan" : renewalDenied ? "free-agent" : "permanent", trigger: forcedClubExit ? "forced-exit" : renewalDenied ? "contract-expired" : "season-end" });
+  const transferMarketOffers = materializeTransferOffers(nextBase, transferOffers, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad, domesticCountryId: domesticReturnCountryId, sourceLeagueId: league.id, mode: effect.loan || youthLoanDecision ? "loan" : renewalDenied ? "free-agent" : "permanent", trigger: youthLoanDecision ? "youth-development" : permanentForcedExit ? "forced-exit" : renewalDenied ? "contract-expired" : "season-end" });
   const legacyPoints = calculateLegacyScore({ appearances: nextBase.stats.appearances, goals: nextBase.stats.goals, assists: nextBase.stats.assists, cleanSheets: nextBase.stats.cleanSheets, trophies: nextBase.trophies, nationalTrophies: nextBase.nationalTrophies, awards: nextBase.awards, ballonDor: nextBase.awardCabinet["Bola de Ouro"] ?? 0, nationalCaps: nextBase.nationalCaps, peakOverall: Math.max(nextBase.overall, ...nextBase.history.map((item) => item.overall)), setbacks: nextBase.setbacks }) + Math.round(Math.log10(Math.max(1, nextBase.followers)) * 4 + nextBase.charityReputation * 0.22);
   const achievementCandidates = getUnlockedAchievements({ appearances: nextBase.stats.appearances, goals: nextBase.stats.goals, assists: nextBase.stats.assists, cleanSheets: nextBase.stats.cleanSheets, trophies: nextBase.trophies + nextBase.nationalTrophies, continentalTitles: nextBase.trophyCabinet.libertadores + nextBase.trophyCabinet.recopaSudamericana + nextBase.trophyCabinet.championsLeague + nextBase.trophyCabinet.uefaSuperCup + nextBase.trophyCabinet.europaLeague + nextBase.trophyCabinet.conferenceLeague + nextBase.trophyCabinet.concacafChampions + nextBase.trophyCabinet.afcChampions + nextBase.trophyCabinet.cafChampions + nextBase.trophyCabinet.campeonesCup, worldTitles: nextBase.trophyCabinet.mundial, nationalCaps: nextBase.nationalCaps, nationalTrophies: nextBase.nationalTrophies, ballonDor: nextBase.awardCabinet["Bola de Ouro"] ?? 0, clubsPlayed: new Set(nextBase.history.map((item) => item.clubId)).size, seasonsAbroad: nextBase.history.filter((item) => isOutsideCountry(clubById(item.clubId), nextBase.academyCountryId)).length, seasons: nextBase.history.length, age: nextBase.age, wasCaptain: nextBase.clubCaptain, nationalCaptain: nextBase.nationalCaptain, yellowCards: nextBase.stats.yellowCards, redCards: nextBase.stats.redCards, retired: nextBase.retireAfterSeason }, nextBase.unlockedAchievements);
   const newlyUnlocked = achievementCandidates.filter((achievement) => nextBase.disciplineHistoryReliable || (achievement.id !== "ficha-limpa" && achievement.id !== "disciplinado-em-campo"));

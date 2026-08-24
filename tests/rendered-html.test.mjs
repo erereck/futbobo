@@ -1698,3 +1698,22 @@ test("expande coletivas e abre a loja QUADRA sem inflar a carreira", async () =>
   assert.match(shopUi, /LOJA DO QUADRIÊNIO/);
   assert.match(shop, /name: "Treino especial"/);
 });
+
+test("troca a venda forçada sub-20 por empréstimo com permanência de custo oculto", async () => {
+  const market = await readFile(new URL("../app/career/transfer-market.ts", import.meta.url), "utf8");
+  const simulation = await readFile(new URL("../app/career/simulation.ts", import.meta.url), "utf8");
+  const state = await readFile(new URL("../app/career/state.ts", import.meta.url), "utf8");
+  const transferUi = await readFile(new URL("../app/components/career/TransferMarketScreen.tsx", import.meta.url), "utf8");
+
+  assert.match(market, /playerAge < 20 && !renewalDenied && !state\.activeLoan && !state\.loanParentClubId/);
+  assert.match(market, /reducedOpportunitySeason: state\.season/);
+  assert.match(simulation, /const youthLoanDecision = shouldOfferYouthLoanInsteadOfSale/);
+  assert.match(simulation, /mode: effect\.loan \|\| youthLoanDecision \? "loan"/);
+  assert.match(simulation, /const reduceStat = \(value: number\) => reducedOpportunity \? Math\.floor\(value \/ 2\) : value/);
+  assert.match(simulation, /development = halveDevelopment\(development/);
+  assert.match(simulation, /reducedOpportunitySeason: 0/);
+  assert.match(state, /youthLoanDecision: saved\.youthLoanDecision \?\? false/);
+  assert.match(state, /reducedOpportunitySeason: saved\.reducedOpportunitySeason \?\? 0/);
+  assert.match(transferUi, /state\.youthLoanDecision \|\| \(!state\.transferRequested/);
+  assert.doesNotMatch(transferUi, /metade|estatísticas reduzidas|desenvolvimento cortado/i);
+});

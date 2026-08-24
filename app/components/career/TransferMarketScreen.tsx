@@ -33,6 +33,7 @@ type Point = { x: number; y: number };
 
 function windowCopy(state: GameState, currentClub: Club, count: number) {
   if (state.forcedFreeAgentUntilSeason > state.season) return { eyebrow: "FORA DO MERCADO", title: "Nenhum clube pode contratar você", text: `A punição vai até ${state.forcedFreeAgentUntilSeason}.` };
+  if (state.youthLoanDecision) return { eyebrow: "PLANO DE DESENVOLVIMENTO", title: "Empréstimo ou permanência", text: `${count} projeto${count === 1 ? "" : "s"} oferece${count === 1 ? "" : "m"} mais minutos. A decisão continua sendo sua.` };
   if (state.pendingTransferMode === "loan") return { eyebrow: "EMPRÉSTIMO", title: "Minutos em outro clube", text: `Você retorna ao ${currentClub.shortName} ao fim da próxima temporada.` };
   if (state.isFreeAgent) return { eyebrow: "AGENTE LIVRE", title: "Seu próximo contrato", text: `${count} projeto${count === 1 ? "" : "s"} sem taxa de transferência.` };
   if (state.forcedAlternativeTransfer) return { eyebrow: "RECOMEÇO", title: "Uma rota de volta", text: "Só projetos de reconstrução estão disponíveis." };
@@ -224,7 +225,7 @@ function TransferJourneyOverlay({ journey, origin, leaving }: { journey: Transfe
 
 export default function TransferMarketScreen({ state, currentClub, offers, renewalOffer, onChoose, onStay, onBecomeFreeAgent, onWait }: Props) {
   const copy = windowCopy(state, currentClub, offers.length);
-  const canStay = !state.transferRequested && !state.renewalDenied && !state.forcedClubExit && !state.forcedAlternativeTransfer && state.pendingTransferMode !== "loan";
+  const canStay = state.youthLoanDecision || (!state.transferRequested && !state.renewalDenied && !state.forcedClubExit && !state.forcedAlternativeTransfer && state.pendingTransferMode !== "loan");
   const [journey, setJourney] = useState<TransferJourney | null>(null);
   const [journeyLeaving, setJourneyLeaving] = useState(false);
   const onChooseRef = useRef(onChoose);
@@ -322,7 +323,7 @@ export default function TransferMarketScreen({ state, currentClub, offers, renew
             <article className={`${styles.offer} ${styles.stay}`}>
               <button className={styles.offerMain} disabled={Boolean(journey)} onClick={onStay}>
                 <ClubBadge club={currentClub} />
-                <span className={styles.identity}><small>{state.contractYears === 0 ? "RENOVAÇÃO" : "CONTINUIDADE"}</small><strong>{currentClub.shortName}</strong><em>Manter o projeto atual</em></span>
+                <span className={styles.identity}><small>{state.youthLoanDecision ? "DISPUTAR ESPAÇO" : state.contractYears === 0 ? "RENOVAÇÃO" : "CONTINUIDADE"}</small><strong>{currentClub.shortName}</strong><em>Manter o projeto atual</em></span>
                 <span className={styles.deal}><small>{state.contractYears === 0 ? `${renewalOffer?.contractYears ?? 1} ano(s)` : "Contrato atual"}</small><strong>{state.contractYears === 0 ? formatMoney(renewalOffer?.annualSalary ?? state.annualSalary) : "Ficar"}</strong><b><FutboboIcon name="check" /></b></span>
               </button>
             </article>

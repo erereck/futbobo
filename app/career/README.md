@@ -30,6 +30,8 @@ A interface está em `app/components/career/`:
 
 Empréstimos usam `activeLoan` como contrato próprio e preservam os campos legados `loanParentClubId`, `loanParentLeagueId` e `loanEndSeason`. Ao aceitar, o vínculo de origem é estendido quando necessário para cobrir a temporada emprestada. O retorno sempre passa por `completeLoanReturn`, inclusive para saves antigos ou quando o vínculo termina. Não implemente retornos paralelos em componentes.
 
+Uma saída forçada de jogador sub-20 vira `youthLoanDecision`: o mercado oferece apenas empréstimos, mas permanecer continua disponível. Se ele ficar, `reducedOpportunitySeason` marca só a temporada seguinte; `simulation.ts` reduz produção e desenvolvimento, consome a marca e a limpa. O custo é deliberadamente oculto na UI.
+
 `clubPositionNeed` é hoje um provedor determinístico leve. Ele existe como ponto de troca para o futuro modo treinador fornecer necessidade real do elenco sem obrigar o mercado a conhecer jogadores fictícios agora.
 
 `rankMarketDestinations` é o contrato neutro usado pelo protagonista e pelos World Players. Sistemas futuros devem fornecer um `MarketPlayerProfile` e consumir esse ranking, sem recriar critérios de força, papel, região, necessidade ou valor.

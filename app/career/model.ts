@@ -515,6 +515,8 @@ export type GameState = {
   transferRequested: boolean;
   renewalDenied: boolean;
   forcedClubExit: boolean;
+  youthLoanDecision: boolean;
+  reducedOpportunitySeason: number;
   forcedAlternativeTransfer: boolean;
   pendingTransferMode: TransferMode;
   loanParentClubId: string;

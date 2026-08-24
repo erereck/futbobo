@@ -11,7 +11,7 @@ import { continentalChampionForWorldSeason } from "./world-club-competitions";
 import { clubWithPlayerImpact } from "./player-club-impact";
 
 export const SECOND_DIVISION_LEAGUES = new Set(["brasileirao-b", "championship"]);
-export type TransferTrigger = "season-end" | "requested" | "forced-exit" | "contract-expired" | "free-agent-wait" | "event";
+export type TransferTrigger = "season-end" | "requested" | "forced-exit" | "youth-development" | "contract-expired" | "free-agent-wait" | "event";
 export type TransferOfferOptions = {
   includeForeign?: boolean; forceDomestic?: boolean; forceForeign?: boolean;
   domesticCountryId?: string; sourceLeagueId?: string; mode?: MarketMoveType;
@@ -54,6 +54,35 @@ const ROLE_TEXT: Record<SquadRole, string> = {
   titular: "Vaga de titular", estrela: "Papel de protagonista",
 };
 
+/**
+ * Um sub-20 sem espaço continua vinculado ao clube: a saída esportiva vira
+ * empréstimo, nunca venda obrigatória. Não interfere em fim de contrato nem
+ * em quem já está emprestado.
+ */
+export function shouldOfferYouthLoanInsteadOfSale(
+  state: GameState,
+  forcedClubExit: boolean,
+  renewalDenied: boolean,
+  playerAge = state.age,
+) {
+  return forcedClubExit && playerAge < 20 && !renewalDenied && !state.activeLoan && !state.loanParentClubId;
+}
+
+/** Registra a consequência silenciosa de recusar o plano de empréstimo. */
+export function stayAfterYouthLoanRecommendation(state: GameState): GameState {
+  return {
+    ...state,
+    youthLoanDecision: false,
+    reducedOpportunitySeason: state.season,
+    transferOffers: [],
+    transferMarketOffers: [],
+    transferRequested: false,
+    transferStatus: null,
+    forcedClubExit: false,
+    pendingTransferMode: "permanent",
+  };
+}
+
 function latestSeason(state: GameState) { return state.history.at(-1) ?? null; }
 
 export function buildMarketContext(state: GameState, options: TransferOfferOptions = {}): MarketContext {
@@ -63,7 +92,7 @@ export function buildMarketContext(state: GameState, options: TransferOfferOptio
   const performanceScore = seasonPerformanceScore(state.position, latest);
   return {
     mode: options.mode ?? (state.pendingTransferMode === "loan" ? "loan" : state.isFreeAgent ? "free-agent" : "permanent"),
-    trigger: options.trigger ?? (state.forcedClubExit ? "forced-exit" : state.renewalDenied ? "contract-expired" : state.transferRequested ? "requested" : "season-end"),
+    trigger: options.trigger ?? (state.youthLoanDecision ? "youth-development" : state.forcedClubExit ? "forced-exit" : state.renewalDenied ? "contract-expired" : state.transferRequested ? "requested" : "season-end"),
     sourceClub, sourceLeagueId: options.sourceLeagueId ?? state.currentLeagueId ?? sourceClub.leagueId,
     performanceScore, careerPhase: state.age <= 22 ? "promise" : state.age <= 31 ? "prime" : "veteran", currentRole,
     champion: Boolean(latest?.competitions.some((competition) => competition.champion)),
@@ -138,7 +167,7 @@ function candidateEligible(state: GameState, club: Club, context: MarketContext,
   const strengthGap = competitiveStrength(club) - competitiveStrength(context.sourceClub);
   if (context.mode === "loan") {
     if (state.contractYears < 1 || state.age > 29 || role === "reserva") return false;
-    if (!context.needsMinutes && !context.requestedExit) return false;
+    if (!context.needsMinutes && !context.requestedExit && context.trigger !== "youth-development") return false;
     if (strengthGap > 4 || strengthGap < -18) return false;
   }
   if (state.age >= 35 && isEuropeanClub(club) && strengthGap > 3) return false;
@@ -319,7 +348,8 @@ export function applyAcceptedTransfer(state: GameState, offer: TransferOffer): G
     worldQualifiedSeason: destinationQualifiedForWorld ? state.season : state.worldQualifiedSeason,
     worldQualifiedClubId: destinationQualifiedForWorld ? destination.id : state.worldQualifiedClubId,
     transferOffers: [], transferMarketOffers: [], transferRequested: false, transferStatus: null,
-    renewalDenied: false, forcedClubExit: false, isFreeAgent: false, freeAgentSinceSeason: 0, pendingTransferMode: "permanent",
+    renewalDenied: false, forcedClubExit: false, youthLoanDecision: false, reducedOpportunitySeason: 0,
+    isFreeAgent: false, freeAgentSinceSeason: 0, pendingTransferMode: "permanent",
     activeLoan: isLoan ? { id: offer.id, parentClubId: source.id, parentLeagueId: state.currentLeagueId || source.leagueId,
       destinationClubId: destination.id, startSeason: state.season, endSeason: offer.loanEndSeason || state.season + 1,
       annualSalary: state.annualSalary, parentSalaryShare: offer.parentSalaryShare, destinationSalaryShare: offer.destinationSalaryShare,
@@ -347,6 +377,7 @@ export function completeLoanReturn(state: GameState): GameState {
     worldQualifiedSeason: parentQualifiedForWorld ? state.season : state.worldQualifiedSeason,
     worldQualifiedClubId: parentQualifiedForWorld ? parent.id : state.worldQualifiedClubId,
     activeLoan: null, loanParentClubId: "", loanParentLeagueId: "", loanEndSeason: 0, pendingTransferMode: "permanent",
+    youthLoanDecision: false, reducedOpportunitySeason: 0,
     isFreeAgent: contractExpired, freeAgentSinceSeason: contractExpired ? state.season : state.freeAgentSinceSeason,
     transferHistory: [...state.transferHistory, record] };
   if (!contractExpired) return returned;

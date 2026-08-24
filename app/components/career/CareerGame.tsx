@@ -33,7 +33,7 @@ import { applyEffect, applyStoryOrigin, createYouthJourney, selectNextEvent, sto
 import { buildFormerClubConference, buildPressConference, buildTransferPresentation } from "../../career/press-conferences";
 import { isCycleShopDue, purchaseCycleShopItem } from "../../career/cycle-shop";
 import type { CycleShopItemId } from "../../career/cycle-shop";
-import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, materializeTransferOffers, resolveTransferRequest } from "../../career/transfer-market";
+import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, materializeTransferOffers, resolveTransferRequest, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";
 import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../career/save-system";
 import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
 import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanels";
@@ -1660,6 +1660,19 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
 
   function chooseTransfer(offer: TransferOffer | null) {
     setGame((current) => {
+      if (!offer && current.youthLoanDecision) {
+        const stayed = stayAfterYouthLoanRecommendation(current);
+        return {
+          ...stayed,
+          phase: "career",
+          currentEventId: current.nextEventId || selectNextEvent(stayed, current.season * 47),
+          nextEventId: "",
+          lastResult: null,
+          lastConsequence: null,
+          managerTrust: clamp(current.managerTrust + 5),
+          morale: clamp(current.morale + 2),
+        };
+      }
       if (!offer && (current.transferRequested || current.renewalDenied || current.forcedClubExit || current.forcedAlternativeTransfer)) return current;
       if (!offer && (current.isFreeAgent || current.pendingTransferMode === "loan")) return current;
       const acceptedOffer = offer ?? (current.contractYears === 0 ? buildRenewalOffer(current) : null);
@@ -3144,6 +3157,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                 </section>
                 {game.lastResult.objectiveResult && <div className={`objective-result ${game.lastResult.objectiveResult.completed ? "completed" : "failed"}`}><span>{game.lastResult.objectiveResult.completed ? "META CUMPRIDA" : "META PERDIDA"}</span><strong>{game.lastResult.objectiveResult.label}</strong><p>{game.lastResult.objectiveResult.text}</p></div>}
                 {game.lastResult.promotion && <div className="objective-result completed"><span>ACESSO CONQUISTADO</span><strong>O clube subiu de divisão</strong><p>{game.lastResult.promotion}</p></div>}
+                {game.youthLoanDecision && <div className="contract-expired"><span>PLANO DE DESENVOLVIMENTO</span><strong>O clube recomenda um empréstimo</strong><p>Você poderá buscar mais minutos em outro projeto ou continuar disputando espaço no elenco atual.</p></div>}
                 {game.forcedClubExit && <div className="contract-expired"><span>VENDA OBRIGATÓRIA</span><strong>O clube colocou você no mercado</strong><p>Seu overall e seu rendimento ficaram muito abaixo da exigência do elenco. Sem status de ídolo, você terá de escolher outro destino.</p></div>}
                 {game.contractYears === 0 && (
                   <div className="contract-expired">
