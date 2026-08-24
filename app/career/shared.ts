@@ -12,7 +12,7 @@ export function seeded(seed: number, salt = 0) {
   return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
 }
 
-export function pick<T>(items: T[], seed: number, salt = 0): T {
+export function pick<T>(items: readonly T[], seed: number, salt = 0): T {
   return items[Math.floor(seeded(seed, salt) * items.length) % items.length];
 }
 
