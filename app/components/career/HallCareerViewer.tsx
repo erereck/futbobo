@@ -6,7 +6,7 @@ import type { CareerHallEntry } from "../../career/model";
 import { ROLE_LABELS } from "../../career-systems";
 import { archivedCareerState } from "../../career/state";
 import { clubById } from "../../career/shared";
-import { fanMood, formatMoney } from "../../career/performance";
+import { fanMood } from "../../career/performance";
 import { positionByKey } from "../../career/academy";
 import CareerTimeline from "./CareerTimeline";
 import CareerExtraStats from "./CareerExtraStats";
@@ -15,7 +15,7 @@ import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanel
 import { BrandMark, ClubBadge, Metric, NationBadge, Progress, TrophyGallery } from "./CareerPrimitives";
 import FutboboIcon from "../FutboboIcon";
 
-type ArchiveTab = "career" | "profile" | "history" | "stats" | "world" | "legacy";
+type ArchiveTab = "career" | "profile" | "history" | "stats" | "world";
 
 type HallCareerViewerProps = {
   entry: CareerHallEntry;
@@ -33,7 +33,6 @@ export default function HallCareerViewer({ entry, onBack, onGenerateCard }: Hall
   const supporterMood = fanMood(state.fanSupport);
   const peakOverall = Math.max(state.overall, ...state.history.map((record) => record.overall), entry.peakOverall, 0);
   const totalTitles = state.trophies + state.nationalTrophies;
-  const totalAwards = Object.values(state.awardCabinet).reduce((sum, count) => sum + count, 0);
   const clubs = new Set(state.history.map((record) => record.clubId)).size || 1;
 
   return (
@@ -44,7 +43,6 @@ export default function HallCareerViewer({ entry, onBack, onGenerateCard }: Hall
       <div className="summary-preview-bar">
         <button type="button" onClick={onBack}>← Voltar ao Hall da Fama</button>
         <div><small>MODO DE VISUALIZAÇÃO</small><strong>Carreira encerrada de {state.name}</strong></div>
-        <button type="button" className="primary-button" onClick={onGenerateCard}>Gerar card <span>→</span></button>
       </div>
 
       {archive.legacyArchive && (
@@ -123,7 +121,7 @@ export default function HallCareerViewer({ entry, onBack, onGenerateCard }: Hall
           </div>
         )}
 
-        {activeTab === "history" && <CareerTimeline state={state} />}
+        {activeTab === "history" && <CareerTimeline state={state} archived />}
 
         {activeTab === "stats" && (
           <div className="panel-screen screen-enter">
@@ -133,29 +131,6 @@ export default function HallCareerViewer({ entry, onBack, onGenerateCard }: Hall
         )}
 
         {activeTab === "world" && <CareerWorld state={state} />}
-
-        {activeTab === "legacy" && (
-          <div className="panel-screen legacy-screen screen-enter">
-            <div className="legacy-hero">
-              <span>ÍNDICE DE LEGADO</span>
-              <strong style={{ color: "#f4c430" }}>{state.legacyPoints || entry.legacyPoints}</strong>
-              <h2>{entry.legacyLabel}</h2>
-              <p>O retrato final usado pelo Hall da Fama, preservado para comparação depois da aposentadoria.</p>
-            </div>
-            <div className="legacy-grid">
-              <Metric label="Temporadas" value={state.history.length || entry.seasons} />
-              <Metric label="Clubes" value={clubs} />
-              <Metric label="Pico OVR" value={peakOverall} tone="gold" />
-              <Metric label="Patrimônio" value={formatMoney(state.money)} tone="green" />
-            </div>
-            <div className="award-cabinet">
-              <div className="award-cabinet-title"><div><span>PRÊMIOS INDIVIDUAIS</span><strong>Galeria final</strong></div><b>{totalAwards}<small>CONQUISTADOS</small></b></div>
-              <div className="award-cabinet-list">
-                {Object.entries(state.awardCabinet).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]).map(([award, count]) => <article key={award}><div><strong>{award}</strong><small>Arquivo da carreira</small></div><b>{count}×</b></article>)}
-              </div>
-            </div>
-          </div>
-        )}
 
         <nav className="bottom-nav" aria-label="Navegação da carreira arquivada">
           <div className="desktop-career-nav-brand" aria-hidden="true">
@@ -167,7 +142,6 @@ export default function HallCareerViewer({ entry, onBack, onGenerateCard }: Hall
           <button aria-pressed={activeTab === "history"} className={activeTab === "history" ? "selected" : ""} onClick={() => setActiveTab("history")}><span><FutboboIcon name="history" /></span>Histórico</button>
           <button aria-pressed={activeTab === "stats"} className={activeTab === "stats" ? "selected" : ""} onClick={() => setActiveTab("stats")}><span><FutboboIcon name="stats" /></span>Estatísticas</button>
           <button aria-pressed={activeTab === "world"} className={activeTab === "world" ? "selected" : ""} onClick={() => setActiveTab("world")}><span><FutboboIcon name="globe" /></span>Mundo</button>
-          <button aria-pressed={activeTab === "legacy"} className={activeTab === "legacy" ? "selected" : ""} onClick={() => setActiveTab("legacy")}><span><FutboboIcon name="hall" /></span>Legado</button>
         </nav>
       </section>
     </main>
