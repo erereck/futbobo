@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { countryById } from "../../game-data";
 import type { GameState } from "../../career/model";
+import { buildDomesticTitleArchive } from "../../career/domestic-title-archive";
+import type { DomesticTitleLedger } from "../../career/domestic-title-archive";
 import { archiveFootballRankingsForState } from "../../career/official-football-records";
 import { historicalRecordBoardsForState } from "../../career/historical-records";
 import type { WorldCompetitionLedger } from "../../career/world-memory";
@@ -15,6 +17,7 @@ import FutboboIcon from "../FutboboIcon";
 import type { FutboboIconName } from "../FutboboIcon";
 
 type WorldSection = "now" | "national" | "clubs" | "players" | "archive";
+type CompetitionLedgerView = WorldCompetitionLedger | DomesticTitleLedger;
 const CATEGORY_LABELS = { "world-cup": "MUNDIAL", career: "CARREIRA", transfer: "MERCADO", award: "PRÊMIOS", rival: "GERAÇÃO", record: "RECORDE" } as const;
 const SECTION_ITEMS: Array<{ id: WorldSection; label: string; hint: string; icon: FutboboIconName }> = [
   { id: "now", label: "Agora", hint: "Notícias", icon: "news" }, { id: "national", label: "Seleções", hint: "Copas", icon: "globe" },
@@ -69,13 +72,13 @@ export function WorldPulseButton({ state, onOpen }: { state: GameState; onOpen: 
   </button>;
 }
 
-function EntityBadge({ ledger, entityId }: { ledger: WorldCompetitionLedger; entityId: string }) {
+function EntityBadge({ ledger, entityId }: { ledger: CompetitionLedgerView; entityId: string }) {
   return ledger.entityType === "country"
     ? <span className={styles.flagWrap}><NationBadge country={countryById(entityId)} size="sm" /></span>
     : <span className={styles.clubCrestWrap}><ClubBadge club={clubById(entityId)} size="sm" /></span>;
 }
 
-function CompetitionCard({ ledger, state, open, onToggle }: { ledger: WorldCompetitionLedger; state: GameState; open: boolean; onToggle: () => void }) {
+function CompetitionCard({ ledger, state, open, onToggle }: { ledger: CompetitionLedgerView; state: GameState; open: boolean; onToggle: () => void }) {
   const leader = ledger.titleTable[0];
   const leaderName = leader ? (ledger.entityType === "country" ? countryById(leader.entityId).name : clubById(leader.entityId).shortName) : ledger.label;
   const highlightedId = ledger.entityType === "country" ? state.nationality : state.currentClubId;
@@ -108,7 +111,9 @@ export default function CareerWorld({ state }: { state: GameState }) {
   const [section, setSection] = useState<WorldSection>("now");
   const [competitionOpen, setCompetitionOpen] = useState("");
   const [officialOpen, setOfficialOpen] = useState("");
+  const [domesticTitlesOpen, setDomesticTitlesOpen] = useState(false);
   const snapshot = useMemo(() => buildWorldSnapshot(state), [state]);
+  const domesticTitleLedgers = useMemo(() => buildDomesticTitleArchive(state), [state]);
   const officialRankings = useMemo(() => [...historicalRecordBoardsForState(state), ...archiveFootballRankingsForState(state)], [state]);
   const playerBoards = useMemo(() => [
     { title: "Maiores artilheiros", eyebrow: "GOLS NA CARREIRA", unit: "gols", entries: worldUniverseStatLeaders(state, "goals", 16) },
@@ -133,9 +138,20 @@ export default function CareerWorld({ state }: { state: GameState }) {
     {section === "national" && <section className={styles.sectionStack}><header><small>SELEÇÕES</small><strong>Torneios e campeões</strong><p>Copas do Mundo e competições continentais.</p></header>{nationalCompetitions.map((ledger) => <CompetitionCard key={ledger.id} ledger={ledger} state={state} open={competitionOpen === ledger.id} onToggle={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} />)}</section>}
     {section === "clubs" && <section className={styles.sectionStack}><header><small>CLUBES</small><strong>O mapa dos campeões</strong><p>Até dez edições recentes por competição.</p></header>{clubCompetitions.map((ledger) => <CompetitionCard key={ledger.id} ledger={ledger} state={state} open={competitionOpen === ledger.id} onToggle={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} />)}</section>}
     {section === "players" && <section className={styles.sectionStack}><header><small>JOGADORES</small><strong>Quem está deixando marca</strong><p>Mais nomes, mais estatísticas e o mercado do seu universo.</p></header><div className={styles.playerGrid}>{playerBoards.map((board) => <PlayerBoard key={board.title} {...board} />)}</div></section>}
-    {section === "archive" && <section className={styles.officialSection}><header><span>ARQUIVO VIVO</span><small>Recordes históricos que não se repetem nas outras abas</small></header><div>{officialRankings.map((board) => {
-      const open = officialOpen === board.id; const highlightedIndex = board.entries.findIndex((entry) => entry.highlight); const highlighted = highlightedIndex >= 0 ? board.entries[highlightedIndex] : null;
-      return <article className={`${styles.officialCard} ${board.living ? styles.livingCard : ""}`} key={board.id}><button type="button" onClick={() => setOfficialOpen((current) => current === board.id ? "" : board.id)} aria-expanded={open}><span><small>{board.eyebrow}</small><strong>{board.label}</strong><em>{board.entries[0]?.label} · {board.entries[0]?.value} {board.unit}{highlighted && highlightedIndex > 0 ? ` · ${highlighted.label} #${rankingPosition(board.entries, highlightedIndex)}` : ""}</em></span><b>{open ? "−" : "+"}</b></button>{open && <div className={styles.officialRanking}><div className={styles.officialRows}>{board.entries.map((entry, index) => <div className={entry.highlight ? styles.livingEntry : ""} key={`${board.id}-${entry.label}`}><b>#{rankingPosition(board.entries, index)}</b><strong>{entry.label}</strong><span>{entry.value}</span></div>)}</div><small>{board.cutoff}</small></div>}</article>;
-    })}</div></section>}
+    {section === "archive" && <>
+      <section className={styles.competitionCard}>
+        <button type="button" onClick={() => { setDomesticTitlesOpen((current) => !current); setCompetitionOpen(""); }} aria-expanded={domesticTitlesOpen}>
+          <span className={styles.trophy}><FutboboIcon name="trophy" /></span>
+          <span><small>ARQUIVO · CLUBES</small><strong>Títulos nacionais</strong><em>Brasileirão, Copa do Brasil e principais ligas e copas</em></span><b>{domesticTitlesOpen ? "−" : "+"}</b>
+        </button>
+        {domesticTitlesOpen && <div className={styles.competitionDetails}><div className={styles.sectionStack} style={{ padding: 9 }}>
+          {domesticTitleLedgers.map((ledger) => <CompetitionCard key={ledger.id} ledger={ledger} state={state} open={competitionOpen === ledger.id} onToggle={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} />)}
+        </div></div>}
+      </section>
+      <section className={styles.officialSection}><header><span>ARQUIVO VIVO</span><small>Recordes históricos que não se repetem nas outras abas</small></header><div>{officialRankings.map((board) => {
+        const open = officialOpen === board.id; const highlightedIndex = board.entries.findIndex((entry) => entry.highlight); const highlighted = highlightedIndex >= 0 ? board.entries[highlightedIndex] : null;
+        return <article className={`${styles.officialCard} ${board.living ? styles.livingCard : ""}`} key={board.id}><button type="button" onClick={() => setOfficialOpen((current) => current === board.id ? "" : board.id)} aria-expanded={open}><span><small>{board.eyebrow}</small><strong>{board.label}</strong><em>{board.entries[0]?.label} · {board.entries[0]?.value} {board.unit}{highlighted && highlightedIndex > 0 ? ` · ${highlighted.label} #${rankingPosition(board.entries, highlightedIndex)}` : ""}</em></span><b>{open ? "−" : "+"}</b></button>{open && <div className={styles.officialRanking}><div className={styles.officialRows}>{board.entries.map((entry, index) => <div className={entry.highlight ? styles.livingEntry : ""} key={`${board.id}-${entry.label}`}><b>#{rankingPosition(board.entries, index)}</b><strong>{entry.label}</strong><span>{entry.value}</span></div>)}</div><small>{board.cutoff}</small></div>}</article>;
+      })}</div></section>
+    </>}
   </div>;
 }
