@@ -4,7 +4,7 @@ import type { PositionKey } from "../game-data";
 import { calculateSquadRole, createContract } from "../career-systems";
 import type { SquadRole } from "../career-systems";
 import type { GameState, MarketMoveType, MarketReason, TransferOffer, TransferRecord } from "./model";
-import { competitiveStrength, marketValue, seasonPerformanceScore, transferMarketProfile } from "./performance";
+import { competitiveStrength, marketValue, seasonAverageRating, seasonPerformanceScore, transferMarketProfile } from "./performance";
 import { clamp, clubById, seeded } from "./shared";
 import { clubConfederation, initialAdaptation, initialContinentalSlot, isEuropeanClub, positionByKey, regionAffinity } from "./academy";
 import { continentalChampionForWorldSeason } from "./world-club-competitions";
@@ -228,6 +228,69 @@ function materializeOffer(state: GameState, club: Club, context: MarketContext, 
     loanEndSeason: context.mode === "loan" ? state.season + 1 : 0,
     parentSalaryShare: parentShare, destinationSalaryShare: context.mode === "loan" ? 100 - parentShare : 100,
     expiresSeason: state.season + 1,
+  };
+}
+
+
+export function loanClubPermanentOffer(state: GameState): { offer: TransferOffer; averageRating: number } | null {
+  const agreement = state.activeLoan ?? (state.loanParentClubId ? {
+    id: `legacy-loan-${state.season}`,
+    parentClubId: state.loanParentClubId,
+    parentLeagueId: state.loanParentLeagueId || clubById(state.loanParentClubId).leagueId,
+    destinationClubId: state.currentClubId,
+    startSeason: Math.max(0, state.loanEndSeason - 1),
+    endSeason: state.loanEndSeason,
+    annualSalary: state.annualSalary,
+    parentSalaryShare: 50,
+    destinationSalaryShare: 50,
+    contractYearsAtStart: state.contractYears,
+  } : null);
+  if (!agreement || state.season < agreement.endSeason) return null;
+
+  const loanRecord = state.lastResult?.clubId === agreement.destinationClubId
+    ? state.lastResult
+    : [...state.history].reverse().find((record) =>
+        record.clubId === agreement.destinationClubId &&
+        record.season >= agreement.startSeason &&
+        record.season < agreement.endSeason,
+      );
+  if (!loanRecord) return null;
+
+  const performanceScore = loanRecord.performanceScore ?? seasonPerformanceScore(state.position, loanRecord);
+  const averageRating = loanRecord.averageRating ?? seasonAverageRating(performanceScore, state.seed, loanRecord.season);
+  if (averageRating <= 8.5) return null;
+
+  const parent = clubById(agreement.parentClubId);
+  const destination = clubById(agreement.destinationClubId);
+  const contractExpired = state.contractYears <= 0;
+  const returnedView: GameState = {
+    ...state,
+    currentClubId: parent.id,
+    currentLeagueId: agreement.parentLeagueId || parent.leagueId,
+    activeLoan: null,
+    loanParentClubId: "",
+    loanParentLeagueId: "",
+    loanEndSeason: 0,
+    pendingTransferMode: "permanent",
+    isFreeAgent: contractExpired,
+    freeAgentSinceSeason: contractExpired ? state.season : state.freeAgentSinceSeason,
+  };
+  const mode = contractExpired ? "free-agent" as const : "permanent" as const;
+  const context = buildMarketContext(returnedView, {
+    mode,
+    trigger: contractExpired ? "contract-expired" : "season-end",
+  });
+  const offer = materializeOffer(returnedView, destination, context, state.season * 563 + 85);
+  return {
+    averageRating,
+    offer: {
+      ...offer,
+      id: `${agreement.id}-permanent-bid`,
+      fromClubId: parent.id,
+      reason: "breakout",
+      reasonLabel: "Compra após empréstimo",
+      reasonText: `Depois de uma média ${averageRating.toFixed(1)} no empréstimo, o ${destination.shortName} quer transformar sua passagem em contrato definitivo.`,
+    },
   };
 }
 
