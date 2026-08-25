@@ -358,6 +358,11 @@ const EXTERNAL_COMPETITION_ASSETS = {
 };
 
 const EXTERNAL_CLUB_ASSETS = {
+  "wisla-plock": "https://a.espncdn.com/i/teamlogos/soccer/500/2700.png",
+  "lokomotiva-zagreb": "https://a.espncdn.com/i/teamlogos/soccer/500/15707.png",
+  "vukovar-1991": "https://hnk-vukovar1991.hr/wp-content/uploads/2024/07/grb-vukovar.png",
+  "red-star-belgrade": "https://a.espncdn.com/i/teamlogos/soccer/500/2290.png",
+  partizan: "https://a.espncdn.com/i/teamlogos/soccer/500/541.png",
   "western-sydney-wanderers": "https://r2.thesportsdb.com/images/media/team/badge/yotugj1759632879.png",
   "maghreb-fes": "https://r2.thesportsdb.com/images/media/team/badge/l8ma1e1653314001.png",
   "asteras-aktor": "https://www.thesportsdb.com/images/media/team/badge/eaf2vb1785777279.png",
