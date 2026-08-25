@@ -35,6 +35,7 @@ import { isCycleShopDue, purchaseCycleShopItem } from "../../career/cycle-shop";
 import type { CycleShopItemId } from "../../career/cycle-shop";
 import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, loanClubPermanentOffer, materializeTransferOffers, resolveTransferRequest, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";
 import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../career/save-system";
+import { compactBotaoMatchResult, compactGameForPersistence } from "../../career/save-compaction";
 import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
 import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanels";
 import CareerExtraStats from "./CareerExtraStats";
@@ -222,8 +223,23 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   useEffect(() => {
     if (game.phase === "welcome") return;
     const key = game.challengeId ? CHALLENGE_SAVE_KEY : SAVE_KEY;
-    localStorage.setItem(key, JSON.stringify(game));
-    if (game.challengeId) queueMicrotask(() => setHasChallengeSave(game.phase !== "summary"));
+    const compact = compactGameForPersistence(game);
+    try {
+      localStorage.setItem(key, JSON.stringify(compact));
+      if (game.challengeId) queueMicrotask(() => setHasChallengeSave(game.phase !== "summary"));
+    } catch (error) {
+      console.error("[Futbobo] Falha ao persistir a carreira.", error);
+      // Nunca deixe uma cota de armazenamento cheia derrubar a partida inteira.
+      // A segunda tentativa remove também o resultado pós-jogo efêmero; histórico
+      // e estatísticas permanecem intactos.
+      try {
+        localStorage.setItem(key, JSON.stringify({ ...compact, lastBotaoResult: null }));
+        setToast("Save compactado automaticamente para liberar espaço");
+      } catch (retryError) {
+        console.error("[Futbobo] O save continuou acima da cota após compactação.", retryError);
+        setToast("Não foi possível salvar: armazenamento do navegador cheio");
+      }
+    }
   }, [game]);
 
   useEffect(() => {
@@ -1062,6 +1078,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     setGame((current) => {
       const match = current.pendingBotaoMatches[0];
       if (!match || matchResult.matchId !== resolvedSetup?.matchId) return current;
+      // Replay só existe para a tela imediatamente após o apito. Arquivar os
+      // frames em cada temporada multiplicava o tamanho do save a cada partida.
+      const archivedMatchResult = compactBotaoMatchResult(matchResult);
 
       const formerClub = match.source === "club" && current.history.some((record) => record.clubId === match.opponentId)
         ? clubById(match.opponentId)
@@ -1119,7 +1138,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             assists: record.assists + matchResult.playerAssists,
             competitions: recordCompetitions,
             title: recordCompetitions.some((competition) => competition.champion),
-            botaoResults: [...(record.botaoResults ?? []), { match, result: matchResult }],
+            botaoResults: [...(record.botaoResults ?? []), { match, result: archivedMatchResult }],
           };
         });
         const updatedCabinet = {
@@ -1133,7 +1152,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               assists: current.lastResult.assists + matchResult.playerAssists,
               competitions: updatedLastCompetitions,
               title: updatedLastCompetitions.some((competition) => competition.champion),
-              botaoResults: [...(current.lastResult.botaoResults ?? []), { match, result: matchResult }],
+              botaoResults: [...(current.lastResult.botaoResults ?? []), { match, result: archivedMatchResult }],
             }
           : null;
         const qualificationClub = clubById(current.currentClubId);
@@ -1306,12 +1325,12 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                     ? ` · ${updatedWorldCupStats.appearances}J, ${updatedWorldCupStats.goals}G, ${updatedWorldCupStats.assists}A`
                     : ""
                 }`,
-                botaoResults: [...(current.lastResult.botaoResults ?? []), { match, result: matchResult }],
+                botaoResults: [...(current.lastResult.botaoResults ?? []), { match, result: archivedMatchResult }],
               }
             : null,
           history: current.history.map((record) =>
             record.season === match.season
-              ? { ...record, botaoResults: [...(record.botaoResults ?? []), { match, result: matchResult }] }
+              ? { ...record, botaoResults: [...(record.botaoResults ?? []), { match, result: archivedMatchResult }] }
               : record,
           ),
           newsFeed: [
