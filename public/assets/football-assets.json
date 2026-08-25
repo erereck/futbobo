@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-09T22:35:33.011Z",
+  "generatedAt": "2026-08-25T02:50:19.798Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -3199,48 +3199,462 @@
     },
     "western-sydney-wanderers": {
       "providerName": "Western Sydney Wanderers Football Club",
-      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/yotugj1759632879.png",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/yotugj1759632879.png"
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/yotugj1759632879.png"
     },
     "maghreb-fes": {
       "providerName": "Maghreb Association Sportive de Fès",
-      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/l8ma1e1653314001.png",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/l8ma1e1653314001.png"
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/l8ma1e1653314001.png"
     },
     "asteras-aktor": {
       "providerName": "Asteras Aktor Football Club",
-      "externalSource": "https://www.thesportsdb.com/images/media/team/badge/eaf2vb1785777279.png",
-      "source": "https://www.thesportsdb.com/images/media/team/badge/eaf2vb1785777279.png"
+      "externalSource": "https://www.thesportsdb.com/images/media/team/badge/eaf2vb1785777279.png"
     },
     "ael-larissa": {
       "providerName": "Athlitiki Enosi Larissa Football Club",
-      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/xlln3b1782459015.png",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/xlln3b1782459015.png"
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/xlln3b1782459015.png"
     },
     "panserraikos": {
       "providerName": "Panserraikos Football Club",
-      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/uz7slk1689689598.png",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/uz7slk1689689598.png"
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/uz7slk1689689598.png"
     },
     "slavia-prague": {
       "providerName": "Sportovní Klub Slavia Praha",
-      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/l7kl4n1759252139.png",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/l7kl4n1759252139.png"
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/l7kl4n1759252139.png"
     },
     "sparta-prague": {
       "providerName": "Athletic Club Sparta Praha",
-      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/j00qct1718287150.png",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/j00qct1718287150.png"
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/j00qct1718287150.png"
     },
     "karvina": {
       "providerName": "Městský Fotbalový Klub Karviná",
-      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/5w2blo1578836734.png",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/5w2blo1578836734.png"
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/5w2blo1578836734.png"
     },
     "teplice": {
       "providerName": "Fotbalový Klub Teplice",
-      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/0hnqi61777766291.png",
-      "source": "https://r2.thesportsdb.com/images/media/team/badge/0hnqi61777766291.png"
+      "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/0hnqi61777766291.png"
+    },
+    "midtjylland": {
+      "providerId": "133891",
+      "providerName": "FC Midtjylland",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/s5bpcr1755712262.png"
+    },
+    "brondby": {
+      "providerId": "133893",
+      "providerName": "Brøndby",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/usxoux1784825763.png"
+    },
+    "nordsjaelland": {
+      "providerId": "133890",
+      "providerName": "FC Nordsjælland",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/p2hof41579460164.png"
+    },
+    "agf": {
+      "providerId": "133899",
+      "providerName": "AGF Aarhus",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vxuuts1473535487.png"
+    },
+    "randers": {
+      "providerId": "133938",
+      "providerName": "Randers FC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/w0kmhn1690407779.png"
+    },
+    "silkeborg": {
+      "providerId": "133892",
+      "providerName": "Silkeborg IF",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tpxvvp1473535560.png"
+    },
+    "bodo-glimt": {
+      "providerId": "135497",
+      "providerName": "Bodø/Glimt",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uqpwwx1449165943.png"
+    },
+    "brann": {
+      "providerId": "134571",
+      "providerName": "Brann",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ovuad71690695412.png"
+    },
+    "molde": {
+      "providerId": "133958",
+      "providerName": "Molde",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/apziyg1534866527.png"
+    },
+    "rosenborg": {
+      "providerId": "133990",
+      "providerName": "Rosenborg",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/z483ps1764866361.png"
+    },
+    "fredrikstad": {
+      "providerId": "134749",
+      "providerName": "Fredrikstad",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9se6qv1690695269.png"
+    },
+    "lillestrom": {
+      "providerId": "134569",
+      "providerName": "Lillestrøm",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/txpuvv1448823342.png"
+    },
+    "hamkam": {
+      "providerId": "134753",
+      "providerName": "Hamarkameratene",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zft1oc1639776721.png"
+    },
+    "kfum-oslo": {
+      "providerId": "135723",
+      "providerName": "KFUM-Kameratene Oslo",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/981eyj1690696173.png"
+    },
+    "kristiansund": {
+      "providerId": "134754",
+      "providerName": "Kristiansund",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wzrjhc1690695847.png"
+    },
+    "aalesund": {
+      "providerId": "133998",
+      "providerName": "Aalesund",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/s1br7q1602448285.png"
+    },
+    "hammarby": {
+      "providerId": "134731",
+      "providerName": "Hammarby",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/3kgg5b1592144695.png"
+    },
+    "djurgarden": {
+      "providerId": "134162",
+      "providerName": "Djurgården",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yuuwru1425411493.png"
+    },
+    "aik": {
+      "providerId": "134011",
+      "providerName": "AIK",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/rwsrxq1420769503.png"
+    },
+    "elfsborg": {
+      "providerId": "133984",
+      "providerName": "Elfsborg",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/svqvqq1421957626.png"
+    },
+    "hacken": {
+      "providerId": "134160",
+      "providerName": "Häcken",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zyl9m01523905866.png"
+    },
+    "ifk-goteborg": {
+      "providerId": "134161",
+      "providerName": "IFK Göteborg",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ywyxtp1429470529.png"
+    },
+    "gais": {
+      "providerId": "134725",
+      "providerName": "GAIS",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/3pahks1639779139.png"
+    },
+    "halmstad": {
+      "providerId": "134167",
+      "providerName": "Halmstad",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/26hnaj1639778271.png"
+    },
+    "brommapojkarna": {
+      "providerId": "134170",
+      "providerName": "Brommapojkarna",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/nwr81l1639779730.png"
+    },
+    "degerfors": {
+      "providerId": "134728",
+      "providerName": "Degerfors",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wrytvq1429977939.png"
+    },
+    "lech-poznan": {
+      "providerId": "134010",
+      "providerName": "Lech Poznań",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/8zfxyx1685597440.png"
+    },
+    "jagiellonia": {
+      "providerId": "135297",
+      "providerName": "Jagiellonia Białystok",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ucze1y1601404699.png"
+    },
+    "gornik-zabrze": {
+      "providerId": "135296",
+      "providerName": "Górnik Zabrze",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/fk1fam1767928408.png"
+    },
+    "pogon-szczecin": {
+      "providerId": "135302",
+      "providerName": "Pogoń Szczecin",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uxyuwx1448219553.png"
+    },
+    "cracovia": {
+      "providerId": "135294",
+      "providerName": "Cracovia",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/bgqbo51714200086.png"
+    },
+    "piast-gliwice": {
+      "providerId": "135300",
+      "providerName": "Piast Gliwice",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qywuux1448219182.png"
+    },
+    "gks-katowice": {
+      "providerId": "142467",
+      "providerName": "GKS Katowice",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zsva1p1626103599.png"
+    },
+    "motor-lublin": {
+      "providerId": "147435",
+      "providerName": "Motor Lublin",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7qevx11720351099.png"
+    },
+    "korona-kielce": {
+      "providerId": "135298",
+      "providerName": "Korona Kielce",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ytpvtv1448218305.png"
+    },
+    "viborg": {
+      "providerId": "espn:3153",
+      "providerName": "Viborg FF",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/3153.png"
+    },
+    "sonderjyske": {
+      "providerId": "espn:8118",
+      "providerName": "Sønderjyske Fodbold",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/8118.png"
+    },
+    "viking": {
+      "providerId": "espn:510",
+      "providerName": "Viking FK",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/510.png"
+    },
+    "valerenga": {
+      "providerId": "espn:2791",
+      "providerName": "Vålerenga",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/2791.png"
+    },
+    "sandefjord": {
+      "providerId": "espn:3279",
+      "providerName": "Sandefjord",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/3279.png"
+    },
+    "malmo": {
+      "providerId": "espn:2720",
+      "providerName": "Malmö FF",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/2720.png"
+    },
+    "mjallby": {
+      "providerId": "espn:20301",
+      "providerName": "Mjällby AIF",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/20301.png"
+    },
+    "sirius": {
+      "providerId": "espn:8547",
+      "providerName": "IK Sirius",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/8547.png"
+    },
+    "kalmar": {
+      "providerId": "espn:3052",
+      "providerName": "Kalmar FF",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/3052.png"
+    },
+    "vasteras": {
+      "providerId": "espn:22163",
+      "providerName": "Västerås SK",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/22163.png"
+    },
+    "orgryte": {
+      "providerId": "espn:131552",
+      "providerName": "Örgryte IS",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/131552.png"
+    },
+    "vejle": {
+      "providerId": "136188",
+      "providerName": "Vejle",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/fhlqev1532855346.png"
+    },
+    "fredericia": {
+      "providerId": "138451",
+      "providerName": "Fredericia",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/aq1xqm1780641007.png"
+    },
+    "start": {
+      "providerId": "134568",
+      "providerName": "Start",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7hf7vl1734069002.png"
+    },
+    "rakow": {
+      "providerId": "137670",
+      "providerName": "Raków Częstochowa",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vy8paa1579458598.png"
+    },
+    "widzew-lodz": {
+      "providerId": "134489",
+      "providerName": "Widzew Łódź",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/3rkfjd1692596430.png"
+    },
+    "lechia-gdansk": {
+      "providerId": "135299",
+      "providerName": "Lechia Gdańsk",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/92qkyn1601412225.png"
+    },
+    "radomiak-radom": {
+      "providerId": "138916",
+      "providerName": "Radomiak Radom",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wpi1dx1698554708.png"
+    },
+    "zaglebie-lubin": {
+      "providerId": "135496",
+      "providerName": "Zagłębie Lubin",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7n07qf1702990302.png"
+    },
+    "arka-gdynia": {
+      "providerId": "135660",
+      "providerName": "Arka Gdynia",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/i6ls7n1698553767.png"
+    },
+    "bruk-bet-termalica": {
+      "providerId": "135495",
+      "providerName": "Bruk-Bet Termalica Nieciecza",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/m1tod31628431456.png"
+    },
+    "dinamo-zagreb": {
+      "providerId": "133961",
+      "providerName": "Dinamo Zagreb",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zcb6f61784988620.png"
+    },
+    "hajduk-split": {
+      "providerId": "134019",
+      "providerName": "Hajduk Split",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/23mvtk1579955412.png"
+    },
+    "rijeka": {
+      "providerId": "134399",
+      "providerName": "Rijeka",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/z8bxvi1603310975.png"
+    },
+    "osijek": {
+      "providerId": "134041",
+      "providerName": "Osijek",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/kly3v31578830575.png"
+    },
+    "varazdin": {
+      "providerId": "137798",
+      "providerName": "Varaždin",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/r82ai21578830558.png"
+    },
+    "istra-1961": {
+      "providerId": "137797",
+      "providerName": "Istra 1961",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/6h1n791578830529.png"
+    },
+    "slaven-belupo": {
+      "providerId": "133989",
+      "providerName": "Slaven Belupo Koprivnica",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/r8yo3a1672950533.png"
+    },
+    "gorica-cro": {
+      "providerId": "137794",
+      "providerName": "HNK Gorica",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/v77ket1579955421.png"
+    },
+    "tsc-backa-topola": {
+      "providerId": "137856",
+      "providerName": "TSC Bačka Topola",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/1bnnu81703173169.png"
+    },
+    "vojvodina": {
+      "providerId": "134022",
+      "providerName": "Vojvodina",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/adh59u1703173053.png"
+    },
+    "cukaricki": {
+      "providerId": "134617",
+      "providerName": "Čukarički",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/sk6owo1512571250.png"
+    },
+    "radnicki-1923": {
+      "providerId": "141776",
+      "providerName": "Radnički 1923",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/30a8an1624623873.png"
+    },
+    "novi-pazar": {
+      "providerId": "140069",
+      "providerName": "Novi Pazar",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qc4e101595000305.png"
+    },
+    "ofk-beograd": {
+      "providerId": "140232",
+      "providerName": "OFK Beograd",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/r25fik1691128690.png"
+    },
+    "mladost-lucani": {
+      "providerId": "137860",
+      "providerName": "Mladost Lučani",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/6ypddz1578920686.png"
+    },
+    "radnicki-nis": {
+      "providerId": "137858",
+      "providerName": "Radnički Niš",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/luu0ta1578920639.png"
+    },
+    "zeleznicar-pancevo": {
+      "providerId": "141839",
+      "providerName": "Železničar Pančevo",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/h4nw5d1624714466.png"
+    },
+    "spartak-subotica": {
+      "providerId": "137859",
+      "providerName": "Spartak Subotica",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/cty1ud1578920617.png"
+    },
+    "napredak": {
+      "providerId": "137861",
+      "providerName": "Napredak Kruševac",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/keu55i1578920675.png"
+    },
+    "javor": {
+      "providerId": "137863",
+      "providerName": "Javor-Matis Ivanjica",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/lauev01578921035.png"
+    },
+    "radnik-surdulica": {
+      "providerId": "137864",
+      "providerName": "Radnik Surdulica",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/obaapf1578920625.png"
+    },
+    "imt-belgrade": {
+      "providerId": "141832",
+      "providerName": "IMT Novi Beograd",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/8c705p1725171761.png"
+    },
+    "wisla-plock": {
+      "providerName": "Wisła Płock",
+      "externalSource": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Wisla_P%C5%82ock.png",
+      "source": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Wisla_P%C5%82ock.png"
+    },
+    "lokomotiva-zagreb": {
+      "providerName": "Nogometni Klub Lokomotiva Zagreb",
+      "externalSource": "https://webp.vp.cdn.pxr.nl/tag/clubs/7nk3gfpmnuay3xe6v58zsvp0y.png?width=1200",
+      "source": "https://webp.vp.cdn.pxr.nl/tag/clubs/7nk3gfpmnuay3xe6v58zsvp0y.png?width=1200"
+    },
+    "vukovar-1991": {
+      "providerName": "Hrvatski Nogometni Klub Vukovar 1991",
+      "externalSource": "https://hnk-vukovar1991.hr/wp-content/uploads/2024/07/grb-vukovar.png"
+    },
+    "red-star-belgrade": {
+      "providerName": "Fudbalski Klub Crvena zvezda",
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/2290.png"
+    },
+    "partizan": {
+      "providerName": "Fudbalski Klub Partizan",
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/541.png"
     }
   },
   "flags": {

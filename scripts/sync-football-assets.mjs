@@ -36,6 +36,12 @@ const LEAGUE_SEARCH_NAMES = {
   "austria-bundesliga": "Austrian Bundesliga",
   "swiss-super-league": "Swiss Super League",
   "premiership-sco": "Scottish Premier League",
+  "danish-superliga": "Danish Superliga",
+  eliteserien: "Norwegian Eliteserien",
+  allsvenskan: "Swedish Allsvenskan",
+  ekstraklasa: "Polish Ekstraklasa",
+  hnl: "Croatian HNL",
+  "serbian-superliga": "Serbian SuperLiga",
   "saudi-pro-league": "Saudi-Arabian Pro League",
   "j1-league": "Japanese J1 League",
   "k-league": "South Korean K League 1",
@@ -77,6 +83,11 @@ const COUNTRY_NAMES = {
   austria: ["austria"],
   suica: ["switzerland"],
   dinamarca: ["denmark"],
+  noruega: ["norway"],
+  suecia: ["sweden"],
+  polonia: ["poland"],
+  croacia: ["croatia"],
+  servia: ["serbia"],
   "republica-tcheca": ["czech republic", "czechia"],
   "arabia-saudita": ["saudi arabia"],
   japao: ["japan"],
@@ -262,6 +273,12 @@ const ESPN_LEAGUE_IDS = {
   "liga-boliviana": "bol.1",
   "liga-futve": "ven.1",
   "chance-liga": "cze.1",
+  "danish-superliga": "den.1",
+  eliteserien: "nor.1",
+  allsvenskan: "swe.1",
+  ekstraklasa: "pol.1",
+  hnl: "cro.1",
+  "serbian-superliga": "srb.1",
 };
 
 const SUPER_CUP_SEARCH_NAMES = {
@@ -341,6 +358,11 @@ const EXTERNAL_COMPETITION_ASSETS = {
 };
 
 const EXTERNAL_CLUB_ASSETS = {
+  "wisla-plock": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Wisla_P%C5%82ock.png",
+  "lokomotiva-zagreb": "https://webp.vp.cdn.pxr.nl/tag/clubs/7nk3gfpmnuay3xe6v58zsvp0y.png?width=1200",
+  "vukovar-1991": "https://hnk-vukovar1991.hr/wp-content/uploads/2024/07/grb-vukovar.png",
+  "red-star-belgrade": "https://a.espncdn.com/i/teamlogos/soccer/500/2290.png",
+  partizan: "https://a.espncdn.com/i/teamlogos/soccer/500/541.png",
   "western-sydney-wanderers": "https://r2.thesportsdb.com/images/media/team/badge/yotugj1759632879.png",
   "maghreb-fes": "https://r2.thesportsdb.com/images/media/team/badge/l8ma1e1653314001.png",
   "asteras-aktor": "https://www.thesportsdb.com/images/media/team/badge/eaf2vb1785777279.png",
