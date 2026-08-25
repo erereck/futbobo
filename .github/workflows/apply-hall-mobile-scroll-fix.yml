@@ -1,0 +1,54 @@
+name: Apply Hall mobile scroll fix
+
+on:
+  push:
+    branches:
+      - fix/hall-mobile-scroll
+    paths:
+      - scripts/apply-hall-mobile-scroll-fix.py
+      - .github/workflows/apply-hall-mobile-scroll-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/hall-mobile-scroll
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply fix
+        run: python scripts/apply-hall-mobile-scroll-fix.py
+
+      - name: Verify source
+        run: |
+          grep -q 'Hall archive mobile viewport fix' app/globals.css
+          grep -q '.hall-archive-viewer > .career-shell' app/globals.css
+          grep -q 'grid-template-columns: auto minmax(0, 1fr) auto' app/globals.css
+
+      - name: Build
+        run: npm run build
+
+      - name: Remove temporary helpers
+        run: rm scripts/apply-hall-mobile-scroll-fix.py .github/workflows/apply-hall-mobile-scroll-fix.yml
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/globals.css scripts/apply-hall-mobile-scroll-fix.py .github/workflows/apply-hall-mobile-scroll-fix.yml
+          git commit -m "fix: liberar scroll do Hall da Fama no celular"
+          git push origin HEAD:fix/hall-mobile-scroll
