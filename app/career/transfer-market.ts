@@ -340,7 +340,7 @@ export function applyAcceptedTransfer(state: GameState, offer: TransferOffer): G
   const isRenewal = offer.type === "renewal";
   const destinationQualifiedForWorld = clubQualifiedForWorldSeason(state, destination);
   return {
-    ...state, currentClubId: destination.id, currentLeagueId: destination.leagueId,
+    ...state, currentClubId: destination.id, currentLeagueId: isRenewal ? state.currentLeagueId : destination.leagueId,
     contractYears: isLoan ? Math.max(2, state.contractYears) : offer.contractYears, annualSalary: isLoan ? state.annualSalary : offer.annualSalary,
     squadRole: offer.role, managerTrust: isRenewal ? Math.max(state.managerTrust, 56) : offer.role === "estrela" ? 68 : offer.role === "titular" ? 59 : 48,
     fanSupport: isRenewal ? state.fanSupport : 50, adaptation: isRenewal ? state.adaptation : initialAdaptation(source.countryId, destination.countryId),
