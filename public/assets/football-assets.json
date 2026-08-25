@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T02:46:40.055Z",
+  "generatedAt": "2026-08-25T02:50:19.798Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -3636,28 +3636,25 @@
     },
     "wisla-plock": {
       "providerName": "Wisła Płock",
-      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/2700.png",
-      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/2700.png"
+      "externalSource": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Wisla_P%C5%82ock.png",
+      "source": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Wisla_P%C5%82ock.png"
     },
     "lokomotiva-zagreb": {
       "providerName": "Nogometni Klub Lokomotiva Zagreb",
-      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/15707.png",
-      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/15707.png"
+      "externalSource": "https://webp.vp.cdn.pxr.nl/tag/clubs/7nk3gfpmnuay3xe6v58zsvp0y.png?width=1200",
+      "source": "https://webp.vp.cdn.pxr.nl/tag/clubs/7nk3gfpmnuay3xe6v58zsvp0y.png?width=1200"
     },
     "vukovar-1991": {
       "providerName": "Hrvatski Nogometni Klub Vukovar 1991",
-      "externalSource": "https://hnk-vukovar1991.hr/wp-content/uploads/2024/07/grb-vukovar.png",
-      "source": "https://hnk-vukovar1991.hr/wp-content/uploads/2024/07/grb-vukovar.png"
+      "externalSource": "https://hnk-vukovar1991.hr/wp-content/uploads/2024/07/grb-vukovar.png"
     },
     "red-star-belgrade": {
       "providerName": "Fudbalski Klub Crvena zvezda",
-      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/2290.png",
-      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/2290.png"
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/2290.png"
     },
     "partizan": {
       "providerName": "Fudbalski Klub Partizan",
-      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/541.png",
-      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/541.png"
+      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/541.png"
     }
   },
   "flags": {

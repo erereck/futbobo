@@ -358,8 +358,8 @@ const EXTERNAL_COMPETITION_ASSETS = {
 };
 
 const EXTERNAL_CLUB_ASSETS = {
-  "wisla-plock": "https://a.espncdn.com/i/teamlogos/soccer/500/2700.png",
-  "lokomotiva-zagreb": "https://a.espncdn.com/i/teamlogos/soccer/500/15707.png",
+  "wisla-plock": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Wisla_P%C5%82ock.png",
+  "lokomotiva-zagreb": "https://webp.vp.cdn.pxr.nl/tag/clubs/7nk3gfpmnuay3xe6v58zsvp0y.png?width=1200",
   "vukovar-1991": "https://hnk-vukovar1991.hr/wp-content/uploads/2024/07/grb-vukovar.png",
   "red-star-belgrade": "https://a.espncdn.com/i/teamlogos/soccer/500/2290.png",
   partizan: "https://a.espncdn.com/i/teamlogos/soccer/500/541.png",
