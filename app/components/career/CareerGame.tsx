@@ -33,7 +33,7 @@ import { applyEffect, applyStoryOrigin, createYouthJourney, selectNextEvent, sto
 import { buildFormerClubConference, buildPressConference, buildTransferPresentation } from "../../career/press-conferences";
 import { isCycleShopDue, purchaseCycleShopItem } from "../../career/cycle-shop";
 import type { CycleShopItemId } from "../../career/cycle-shop";
-import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, materializeTransferOffers, resolveTransferRequest, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";
+import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, loanClubPermanentOffer, materializeTransferOffers, resolveTransferRequest, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";
 import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../career/save-system";
 import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
 import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanels";
@@ -1618,21 +1618,47 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     }
     if ((game.activeLoan || game.loanParentClubId) && game.season >= (game.activeLoan?.endSeason ?? game.loanEndSeason)) {
       setGame((current) => {
+        const loanBuyout = loanClubPermanentOffer(current);
         const returned = completeLoanReturn(current);
         const parentClub = clubById(returned.currentClubId);
+        const loanClub = loanBuyout ? clubById(loanBuyout.offer.clubId) : null;
         const league = leagueById(parentClub.leagueId);
         const managerTrust = 48;
         const squadRole = calculateSquadRole(returned.overall, parentClub, league.prestige, managerTrust, returned.age);
+        const transferMarketOffers = loanBuyout
+          ? [
+              loanBuyout.offer,
+              ...returned.transferMarketOffers.filter((offer) => offer.clubId !== loanBuyout.offer.clubId),
+            ].slice(0, 10)
+          : returned.transferMarketOffers;
+        const transferOffers = loanBuyout
+          ? Array.from(new Set([loanBuyout.offer.clubId, ...returned.transferOffers])).slice(0, 10)
+          : returned.transferOffers;
         return {
           ...returned,
-          phase: returned.transferOffers.length ? "transfer" : "career",
+          phase: transferOffers.length ? "transfer" : "career",
+          transferOffers,
+          transferMarketOffers,
           currentEventId: returned.nextEventId || "extra-training",
-          lastResult: returned.transferOffers.length ? returned.lastResult : null,
+          lastResult: transferOffers.length ? returned.lastResult : null,
           lastConsequence: null,
           managerTrust,
           squadRole,
+          transferStatus: loanBuyout && loanClub
+            ? {
+                success: true,
+                chance: 100,
+                headline: `${loanClub.shortName} quer ficar com você`,
+                text: `Sua média ${loanBuyout.averageRating.toFixed(1)} durante o empréstimo convenceu o clube a tentar uma contratação definitiva. A proposta aparece primeiro no mercado.`,
+              }
+            : returned.transferStatus,
           currentObjective: createSeasonObjective(positionByKey(returned.position), squadRole, returned.season, returned.seed + 701),
-          newsFeed: [`${returned.season}: retorno ao ${parentClub.shortName} após o fim do empréstimo.`, ...returned.newsFeed].slice(0, 16),
+          newsFeed: [
+            loanBuyout && loanClub
+              ? `${returned.season}: após média ${loanBuyout.averageRating.toFixed(1)}, o ${loanClub.shortName} apresentou proposta para comprar ${returned.name} em definitivo.`
+              : `${returned.season}: retorno ao ${parentClub.shortName} após o fim do empréstimo.`,
+            ...returned.newsFeed,
+          ].slice(0, 16),
         };
       });
       setActiveTab("event");
