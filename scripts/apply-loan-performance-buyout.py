@@ -1,0 +1,148 @@
+from pathlib import Path
+
+market_path = Path("app/career/transfer-market.ts")
+market = market_path.read_text()
+old_import = 'import { competitiveStrength, marketValue, seasonPerformanceScore, transferMarketProfile } from "./performance";'
+new_import = 'import { competitiveStrength, marketValue, seasonAverageRating, seasonPerformanceScore, transferMarketProfile } from "./performance";'
+if old_import not in market:
+    raise SystemExit("performance import not found")
+market = market.replace(old_import, new_import, 1)
+
+marker = '\nexport function generateTransferOffers(state: GameState, salt: number, options: TransferOfferOptions = {}) {'
+if marker not in market:
+    raise SystemExit("generateTransferOffers marker not found")
+helper = r'''
+
+export function loanClubPermanentOffer(state: GameState): { offer: TransferOffer; averageRating: number } | null {
+  const agreement = state.activeLoan ?? (state.loanParentClubId ? {
+    id: `legacy-loan-${state.season}`,
+    parentClubId: state.loanParentClubId,
+    parentLeagueId: state.loanParentLeagueId || clubById(state.loanParentClubId).leagueId,
+    destinationClubId: state.currentClubId,
+    startSeason: Math.max(0, state.loanEndSeason - 1),
+    endSeason: state.loanEndSeason,
+    annualSalary: state.annualSalary,
+    parentSalaryShare: 50,
+    destinationSalaryShare: 50,
+    contractYearsAtStart: state.contractYears,
+  } : null);
+  if (!agreement || state.season < agreement.endSeason) return null;
+
+  const loanRecord = state.lastResult?.clubId === agreement.destinationClubId
+    ? state.lastResult
+    : [...state.history].reverse().find((record) =>
+        record.clubId === agreement.destinationClubId &&
+        record.season >= agreement.startSeason &&
+        record.season < agreement.endSeason,
+      );
+  if (!loanRecord) return null;
+
+  const performanceScore = loanRecord.performanceScore ?? seasonPerformanceScore(state.position, loanRecord);
+  const averageRating = loanRecord.averageRating ?? seasonAverageRating(performanceScore, state.seed, loanRecord.season);
+  if (averageRating <= 8.5) return null;
+
+  const parent = clubById(agreement.parentClubId);
+  const destination = clubById(agreement.destinationClubId);
+  const contractExpired = state.contractYears <= 0;
+  const returnedView: GameState = {
+    ...state,
+    currentClubId: parent.id,
+    currentLeagueId: agreement.parentLeagueId || parent.leagueId,
+    activeLoan: null,
+    loanParentClubId: "",
+    loanParentLeagueId: "",
+    loanEndSeason: 0,
+    pendingTransferMode: "permanent",
+    isFreeAgent: contractExpired,
+    freeAgentSinceSeason: contractExpired ? state.season : state.freeAgentSinceSeason,
+  };
+  const mode = contractExpired ? "free-agent" as const : "permanent" as const;
+  const context = buildMarketContext(returnedView, {
+    mode,
+    trigger: contractExpired ? "contract-expired" : "season-end",
+  });
+  const offer = materializeOffer(returnedView, destination, context, state.season * 563 + 85);
+  return {
+    averageRating,
+    offer: {
+      ...offer,
+      id: `${agreement.id}-permanent-bid`,
+      fromClubId: parent.id,
+      reason: "breakout",
+      reasonLabel: "Compra após empréstimo",
+      reasonText: `Depois de uma média ${averageRating.toFixed(1)} no empréstimo, o ${destination.shortName} quer transformar sua passagem em contrato definitivo.`,
+    },
+  };
+}
+'''
+market = market.replace(marker, helper + marker, 1)
+market_path.write_text(market)
+
+game_path = Path("app/components/career/CareerGame.tsx")
+game = game_path.read_text()
+old_game_import = 'import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, materializeTransferOffers, resolveTransferRequest, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";'
+new_game_import = 'import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, loanClubPermanentOffer, materializeTransferOffers, resolveTransferRequest, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";'
+if old_game_import not in game:
+    raise SystemExit("CareerGame transfer import not found")
+game = game.replace(old_game_import, new_game_import, 1)
+
+start_marker = '    if ((game.activeLoan || game.loanParentClubId) && game.season >= (game.activeLoan?.endSeason ?? game.loanEndSeason)) {'
+end_marker = '    if (game.transferOffers.length) {'
+start = game.find(start_marker)
+if start < 0:
+    raise SystemExit("loan return block start not found")
+end = game.find(end_marker, start)
+if end < 0:
+    raise SystemExit("loan return block end not found")
+replacement = r'''    if ((game.activeLoan || game.loanParentClubId) && game.season >= (game.activeLoan?.endSeason ?? game.loanEndSeason)) {
+      setGame((current) => {
+        const loanBuyout = loanClubPermanentOffer(current);
+        const returned = completeLoanReturn(current);
+        const parentClub = clubById(returned.currentClubId);
+        const loanClub = loanBuyout ? clubById(loanBuyout.offer.clubId) : null;
+        const league = leagueById(parentClub.leagueId);
+        const managerTrust = 48;
+        const squadRole = calculateSquadRole(returned.overall, parentClub, league.prestige, managerTrust, returned.age);
+        const transferMarketOffers = loanBuyout
+          ? [
+              loanBuyout.offer,
+              ...returned.transferMarketOffers.filter((offer) => offer.clubId !== loanBuyout.offer.clubId),
+            ].slice(0, 10)
+          : returned.transferMarketOffers;
+        const transferOffers = loanBuyout
+          ? Array.from(new Set([loanBuyout.offer.clubId, ...returned.transferOffers])).slice(0, 10)
+          : returned.transferOffers;
+        return {
+          ...returned,
+          phase: transferOffers.length ? "transfer" : "career",
+          transferOffers,
+          transferMarketOffers,
+          currentEventId: returned.nextEventId || "extra-training",
+          lastResult: transferOffers.length ? returned.lastResult : null,
+          lastConsequence: null,
+          managerTrust,
+          squadRole,
+          transferStatus: loanBuyout && loanClub
+            ? {
+                success: true,
+                chance: 100,
+                headline: `${loanClub.shortName} quer ficar com você`,
+                text: `Sua média ${loanBuyout.averageRating.toFixed(1)} durante o empréstimo convenceu o clube a tentar uma contratação definitiva. A proposta aparece primeiro no mercado.`,
+              }
+            : returned.transferStatus,
+          currentObjective: createSeasonObjective(positionByKey(returned.position), squadRole, returned.season, returned.seed + 701),
+          newsFeed: [
+            loanBuyout && loanClub
+              ? `${returned.season}: após média ${loanBuyout.averageRating.toFixed(1)}, o ${loanClub.shortName} apresentou proposta para comprar ${returned.name} em definitivo.`
+              : `${returned.season}: retorno ao ${parentClub.shortName} após o fim do empréstimo.`,
+            ...returned.newsFeed,
+          ].slice(0, 16),
+        };
+      });
+      setActiveTab("event");
+      vibrate();
+      return;
+    }
+'''
+game = game[:start] + replacement + game[end:]
+game_path.write_text(game)
