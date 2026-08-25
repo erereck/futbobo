@@ -237,9 +237,30 @@ export function generateTransferOffers(state: GameState, salt: number, options: 
   const pool = CLUBS.filter((club) => candidateEligible(state, club, context, { includeForeign: true, ...options }))
     .sort((a, b) => candidateScore(state, a, context, salt) - candidateScore(state, b, context, salt));
   const priorityCountryId = options.forceDomestic ? (options.domesticCountryId ?? context.sourceClub.countryId) : context.sourceClub.countryId;
-  const domestic = pool.filter((club) => club.countryId === priorityCountryId).slice(0, context.careerPhase === "veteran" ? 4 : 3);
-  const rest = pool.filter((club) => !domestic.includes(club));
-  let selected = Array.from(new Set([...domestic, ...rest])).slice(0, wanted);
+  const sourceConfederation = clubConfederation(context.sourceClub);
+  const lowOverallRegionalMarket =
+    state.overall < 74 &&
+    (sourceConfederation === "SOUTH_AMERICA" || sourceConfederation === "EUROPE") &&
+    !options.forceDomestic &&
+    !options.forceForeign;
+  const domesticLimit = lowOverallRegionalMarket
+    ? Math.min(2, Math.max(1, Math.floor(wanted / 3)))
+    : context.careerPhase === "veteran" ? 4 : 3;
+  const domestic = pool.filter((club) => club.countryId === priorityCountryId).slice(0, domesticLimit);
+  const regionalStrengthCeiling = Math.max(sourceConfederation === "EUROPE" ? 79 : 77, state.overall + 6);
+  const regionalForeign = lowOverallRegionalMarket
+    ? pool.filter((club) =>
+        club.countryId !== priorityCountryId &&
+        clubConfederation(club) === sourceConfederation &&
+        competitiveStrength(club) <= regionalStrengthCeiling,
+      )
+    : [];
+  const rest = pool.filter((club) => !domestic.includes(club) && !regionalForeign.includes(club));
+  let selected = Array.from(new Set([
+    ...domestic,
+    ...regionalForeign,
+    ...rest,
+  ])).slice(0, wanted);
   if (options.forceForeign) selected = rest.filter(isEuropeanClub).slice(0, wanted);
   if (options.forceDomestic) selected = domestic.slice(0, wanted);
   let loanId = "";
