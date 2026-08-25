@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateActio
 import { CLUBS, COUNTRIES, FORMATIONS, LEAGUES, POSITIONS } from "../../game-data";
 import type { PositionKey } from "../../game-data";
 import type { GameState } from "../../career/model";
-import { defaultAcademyCountry } from "../../career/academy";
+import { defaultAcademyCountry, randomClubSelection } from "../../career/academy";
 import { POSITION_FIELD_SPOTS } from "../../career/performance";
 import { clubById } from "../../career/shared";
 import { setActiveCareerAchievementsEligible } from "../../career/save-system";
@@ -82,28 +82,40 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
     ?? COUNTRIES[0];
   const academyClubs = useMemo(() => {
     const limit = 6;
-    const countryClubs = CLUBS
-      .filter((club) => club.countryId === academyCountry.id)
-      .sort((a, b) => a.reputation - b.reputation || a.strength - b.strength);
+    const countryClubs = CLUBS.filter((club) => club.countryId === academyCountry.id);
     const divisions = LEAGUES
       .filter((league) => league.countryId === academyCountry.id)
       .sort((a, b) => b.prestige - a.prestige);
+    const countrySalt = [...academyCountry.id].reduce((total, char) => total + char.charCodeAt(0), 0);
+    const baseSalt = 3500 + countrySalt * 17;
 
-    if (divisions.length < 2) return countryClubs.slice(0, limit);
+    if (divisions.length < 2) {
+      return randomClubSelection(countryClubs, limit, game.seed, baseSalt);
+    }
 
     const perDivision = Math.floor(limit / 2);
-    const selected = [
-      ...countryClubs.filter((club) => club.leagueId === divisions[0].id).slice(0, perDivision),
-      ...countryClubs.filter((club) => club.leagueId === divisions[1].id).slice(0, perDivision),
-    ];
+    const firstDivision = randomClubSelection(
+      countryClubs.filter((club) => club.leagueId === divisions[0].id),
+      perDivision,
+      game.seed,
+      baseSalt + 101,
+    );
+    const secondDivision = randomClubSelection(
+      countryClubs.filter((club) => club.leagueId === divisions[1].id),
+      perDivision,
+      game.seed,
+      baseSalt + 211,
+    );
+    const selected = [...firstDivision, ...secondDivision];
 
     if (selected.length < limit) {
       const selectedIds = new Set(selected.map((club) => club.id));
-      selected.push(...countryClubs.filter((club) => !selectedIds.has(club.id)).slice(0, limit - selected.length));
+      const fallbackPool = countryClubs.filter((club) => !selectedIds.has(club.id));
+      selected.push(...randomClubSelection(fallbackPool, limit - selected.length, game.seed, baseSalt + 307));
     }
 
     return selected.slice(0, limit);
-  }, [academyCountry.id]);
+  }, [academyCountry.id, game.seed]);
   const filteredCountries = useMemo(() => {
     const needle = countrySearch.trim().toLocaleLowerCase("pt-BR");
     return COUNTRIES
