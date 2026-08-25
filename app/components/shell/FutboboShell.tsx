@@ -20,13 +20,14 @@ import { ACHIEVEMENTS } from "../../mega-expansion";
 import { clubById } from "../../career/shared";
 import { legacySummaryForHallEntry } from "../../career/legacy-prestige";
 import CareerGame from "../career/CareerGame";
+import HallCareerViewer from "../career/HallCareerViewer";
 import { BrandMark, ClubBadge } from "../career/CareerPrimitives";
 import styles from "./FutboboShell.module.css";
 import { InstallScreen, NewsScreen, SettingsScreen } from "./ShellUtilityScreens";
 import FutboboIcon from "../FutboboIcon";
 import { FUTBOBO_VERSION, FUTBOBO_VERSION_NAME } from "../../version";
 
-type ShellScreen = "home" | "modes" | "saves" | "achievements" | "hall" | "hall-career" | "settings" | "install" | "news" | "career" | "legacy-tool";
+type ShellScreen = "home" | "modes" | "saves" | "achievements" | "hall" | "hall-career" | "hall-card" | "settings" | "install" | "news" | "career" | "legacy-tool";
 type BootAction = "new" | "continue" | "settings" | "install" | "news" | null;
 
 function safeHall() {
@@ -204,7 +205,26 @@ export default function FutboboShell() {
   }
 
   if (screen === "hall-career" && selectedHallEntry) {
-    return <div className={styles.careerHost}><CareerGame initialHallEntry={selectedHallEntry} onCloseHallPreview={() => { setSelectedHallEntry(null); setScreen("hall"); }} /></div>;
+    return (
+      <div className={styles.careerHost}>
+        <HallCareerViewer
+          entry={selectedHallEntry}
+          onBack={() => { setSelectedHallEntry(null); setScreen("hall"); }}
+          onGenerateCard={() => setScreen("hall-card")}
+        />
+      </div>
+    );
+  }
+
+  if (screen === "hall-card" && selectedHallEntry) {
+    return (
+      <div className={styles.careerHost}>
+        <CareerGame
+          initialHallEntry={selectedHallEntry}
+          onCloseHallPreview={() => setScreen("hall-career")}
+        />
+      </div>
+    );
   }
 
   if (screen === "legacy-tool") {
@@ -304,7 +324,7 @@ export default function FutboboShell() {
           <div className={styles.hallList}>
             {hallRows.length === 0 ? <div className={styles.emptyCollection}><b><FutboboIcon name="hall" /></b><strong>Nenhuma carreira aposentada.</strong><span>Quando uma história terminar, ela aparece aqui.</span></div> : hallRows.map(({ entry, legacy }, index) => {
               const club = CLUBS.find((item) => item.id === entry.finalClubId);
-              return <button type="button" className={styles.hallCareerCard} key={entry.id} onClick={() => { setSelectedHallEntry(entry); setScreen("hall-career"); }} aria-label={`Abrir carreira completa de ${entry.name}`}><b>#{index + 1}</b>{club ? <ClubBadge club={club} size="md" /> : <span /> }<span><strong>{entry.name}</strong><small>{entry.position} · {entry.seasons} temporadas · pico {entry.peakOverall}</small><em>{legacy.signature}</em></span><strong className={styles.legacyScore} style={{ color: legacy.color }}>{legacy.score}<small>{legacy.label} · abrir dossiê →</small></strong></button>;
+              return <button type="button" className={styles.hallCareerCard} key={entry.id} onClick={() => { setSelectedHallEntry(entry); setScreen("hall-career"); }} aria-label={`Abrir carreira completa de ${entry.name}`}><b>#{index + 1}</b>{club ? <ClubBadge club={club} size="md" /> : <span /> }<span><strong>{entry.name}</strong><small>{entry.position} · {entry.seasons} temporadas · pico {entry.peakOverall}</small><em>{legacy.signature}</em></span><strong className={styles.legacyScore} style={{ color: legacy.color }}>{legacy.score}<small>{legacy.label} · abrir carreira →</small></strong></button>;
             })}
           </div>
         </section>

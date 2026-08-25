@@ -15,7 +15,7 @@ function strongestAward(awards: string[]) {
     ?? "";
 }
 
-export default function CareerTimeline({ state }: { state: GameState }) {
+export default function CareerTimeline({ state, archived = false }: { state: GameState; archived?: boolean }) {
   const rows = useMemo(() => state.history.map((record, index) => {
     const previous = index > 0 ? state.history[index - 1] : null;
     const club = clubById(record.clubId);
@@ -44,13 +44,13 @@ export default function CareerTimeline({ state }: { state: GameState }) {
 
       <section className={styles.timeline}>
         <article className={`${styles.row} ${styles.current}`}>
-          <time>AGORA</time>
+          <time>{archived ? "FINAL" : "AGORA"}</time>
           <span className={styles.rail}><i /></span>
           <ClubBadge club={currentClub} size="sm" />
           <div className={styles.copy}>
             <small>{state.season} · {state.age} anos</small>
             <strong>{currentClub.shortName}</strong>
-            <p>{state.position} · {state.overall} OVR · temporada em andamento</p>
+            <p>{state.position} · {state.overall} OVR · {archived ? "carreira encerrada" : "temporada em andamento"}</p>
           </div>
           <b className={styles.ovr}>{state.overall}<small>OVR</small></b>
         </article>
