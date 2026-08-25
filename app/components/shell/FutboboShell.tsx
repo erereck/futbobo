@@ -64,7 +64,7 @@ function SaveCard({ meta, onPlay, onDelete }: { meta: CareerSaveMeta; onPlay: ()
         <span className={styles.saveCopy}>
           <strong>{meta.name || "Nova carreira"}</strong>
           <small>{club?.shortName ?? "Categorias de base"} · {meta.position} · {meta.season}</small>
-          <em>{meta.phase === "summary" ? "Carreira encerrada" : `OVR ${meta.overall}`} · {formatLastPlayed(meta.lastPlayedAt)}</em>
+          <em>{`OVR ${meta.overall}`} · {formatLastPlayed(meta.lastPlayedAt)}</em>
         </span>
         <span className={styles.saveArrow}><FutboboIcon name="arrow-right" /></span>
       </button>
@@ -113,6 +113,14 @@ export default function FutboboShell() {
       document.removeEventListener("visibilitychange", onVisibility);
       sync();
     };
+  }, [screen]);
+
+  useEffect(() => {
+    if (screen !== "saves") return;
+    const retired = listCareerSaves("player").filter((meta) => meta.phase === "summary");
+    if (!retired.length) return;
+    retired.forEach((meta) => deleteCareerSlot(meta.id));
+    refreshLibrary();
   }, [screen]);
 
   useEffect(() => {
@@ -170,7 +178,8 @@ export default function FutboboShell() {
     return () => observer.disconnect();
   }, [bootAction, screen]);
 
-  const continueMeta = saves[0] ?? null;
+  const playableSaves = useMemo(() => saves.filter((meta) => meta.phase !== "summary"), [saves]);
+  const continueMeta = playableSaves[0] ?? null;
   const achievementMap = useMemo(() => new Map(unlocks.map((item) => [item.achievementId, item])), [unlocks]);
   const selectedAchievement = ACHIEVEMENTS.find((item) => item.id === selectedAchievementId) ?? null;
   const selectedUnlock = selectedAchievement ? achievementMap.get(selectedAchievement.id) : undefined;
@@ -282,15 +291,15 @@ export default function FutboboShell() {
 
       {screen === "saves" && (
         <section className={styles.panelScreen}>
-          <header className={styles.panelHeading}><span>RUMO AO ESTRELATO</span><h2>Suas carreiras.</h2><p>Até 10 histórias independentes. O save antigo é migrado automaticamente.</p></header>
+          <header className={styles.panelHeading}><span>RUMO AO ESTRELATO</span><h2>Suas carreiras.</h2><p>Até 10 histórias em andamento. Carreiras encerradas ficam guardadas no Hall da Fama.</p></header>
           <div className={styles.saveActions}>
             <button type="button" className={styles.continueButton} disabled={!continueMeta} onClick={() => continueMeta && launchExisting(continueMeta.id)}>
               <small>ÚLTIMA CARREIRA</small><strong>{continueMeta ? "Continuar carreira" : "Nenhuma carreira ainda"}</strong><span>{continueMeta ? `${continueMeta.name} · ${formatLastPlayed(continueMeta.lastPlayedAt)}` : "Crie seu primeiro jogador"}</span><b><FutboboIcon name="arrow-right" /></b>
             </button>
-            <button type="button" className={styles.newButton} disabled={saves.length >= 10} onClick={launchNew}><span>＋</span><strong>Nova carreira</strong><small>{saves.length}/10 slots usados</small></button>
+            <button type="button" className={styles.newButton} disabled={playableSaves.length >= 10} onClick={launchNew}><span>＋</span><strong>Nova carreira</strong><small>{playableSaves.length}/10 slots usados</small></button>
           </div>
           <div className={styles.saveGrid}>
-            {saves.map((meta) => <SaveCard key={meta.id} meta={meta} onPlay={() => launchExisting(meta.id)} onDelete={() => setConfirmDeleteId(meta.id)} />)}
+            {playableSaves.map((meta) => <SaveCard key={meta.id} meta={meta} onPlay={() => launchExisting(meta.id)} onDelete={() => setConfirmDeleteId(meta.id)} />)}
           </div>
           {confirmDeleteId && (
             <div className={styles.confirmOverlay} role="dialog" aria-modal="true">
