@@ -59,6 +59,8 @@ export type BotaoRenderView = {
   uprightLabels?: boolean;
   /** Duelo local controla os dois lados, então nenhum disco representa "você". */
   hideUserMarker?: boolean;
+  /** Tratamento 2.5D experimental usado apenas pela rota de protótipo. */
+  showcase?: boolean;
 };
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
@@ -250,20 +252,142 @@ function drawField(ctx: CanvasRenderingContext2D, userColor: string, cpuColor: s
   ctx.restore();
 }
 
+function colorWithAlpha(color: string, alpha: number) {
+  if (/^#[0-9a-f]{6}$/i.test(color)) {
+    const value = Number.parseInt(color.slice(1), 16);
+    return `rgba(${value >> 16}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+  }
+  return color;
+}
+
+/** Halo baixo no feltro: mantém a bola legível sem parecer maior. */
+function drawBallFocusLight(ctx: CanvasRenderingContext2D, ball: BotaoBody) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, FIELD.width, FIELD.height);
+  ctx.clip();
+  const ballLight = ctx.createRadialGradient(ball.x, ball.y, 6, ball.x, ball.y, 118);
+  ballLight.addColorStop(0, "rgba(244, 241, 204, 0.115)");
+  ballLight.addColorStop(0.42, "rgba(244, 241, 204, 0.035)");
+  ballLight.addColorStop(1, "rgba(244, 241, 204, 0)");
+  ctx.fillStyle = ballLight;
+  ctx.fillRect(0, 0, FIELD.width, FIELD.height);
+  ctx.restore();
+}
+
+/** Luz de transmissão e textura microscópica sem alterar a leitura das linhas. */
+function drawShowcaseAtmosphere(
+  ctx: CanvasRenderingContext2D,
+  time: number,
+  userColor: string,
+  cpuColor: string,
+) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, FIELD.width, FIELD.height);
+  ctx.clip();
+
+  const sweepX = FIELD.width * (0.5 + Math.sin(time / 5400) * 0.34);
+  const sweep = ctx.createLinearGradient(sweepX - 62, 0, sweepX + 62, 0);
+  sweep.addColorStop(0, "rgba(255,255,255,0)");
+  sweep.addColorStop(0.5, "rgba(255,255,255,0.032)");
+  sweep.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.save();
+  ctx.fillStyle = sweep;
+  ctx.transform(1, 0, -0.12, 1, 28, 0);
+  ctx.fillRect(sweepX - 70, 0, 140, FIELD.height);
+  ctx.restore();
+
+  // Fibras e marcas do feltro: visíveis de perto, silenciosas de longe.
+  ctx.globalAlpha = 0.12;
+  ctx.strokeStyle = "rgba(238, 246, 233, 0.12)";
+  ctx.lineWidth = 0.55;
+  for (let index = 0; index < 72; index += 1) {
+    const x = (index * 83) % FIELD.width;
+    const y = (index * 137) % FIELD.height;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 2.5 + (index % 4), y + 0.6);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  const topSignal = ctx.createLinearGradient(0, 0, FIELD.width, 0);
+  topSignal.addColorStop(0, colorWithAlpha(cpuColor, 0));
+  topSignal.addColorStop(0.5, colorWithAlpha(cpuColor, 0.68));
+  topSignal.addColorStop(1, colorWithAlpha(cpuColor, 0));
+  ctx.fillStyle = topSignal;
+  ctx.fillRect(28, -1.5, FIELD.width - 56, 2.5);
+  const bottomSignal = ctx.createLinearGradient(0, 0, FIELD.width, 0);
+  bottomSignal.addColorStop(0, colorWithAlpha(userColor, 0));
+  bottomSignal.addColorStop(0.5, colorWithAlpha(userColor, 0.68));
+  bottomSignal.addColorStop(1, colorWithAlpha(userColor, 0));
+  ctx.fillStyle = bottomSignal;
+  ctx.fillRect(28, FIELD.height - 1, FIELD.width - 56, 2.5);
+  ctx.restore();
+
+  // Parafusos e moldura física da mesa vivem fora do gramado.
+  ctx.save();
+  for (const [x, y] of [[-4, -12], [FIELD.width + 4, -12], [-4, FIELD.height + 12], [FIELD.width + 4, FIELD.height + 12]]) {
+    ctx.fillStyle = "rgba(223, 227, 214, 0.38)";
+    ctx.beginPath();
+    ctx.arc(x, y, 1.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(4, 11, 8, 0.68)";
+    ctx.lineWidth = 0.55;
+    ctx.beginPath();
+    ctx.moveTo(x - 1, y);
+    ctx.lineTo(x + 1, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawShowcaseWake(ctx: CanvasRenderingContext2D, body: BotaoBody, color: string) {
+  const speed = Math.hypot(body.vx, body.vy);
+  if (speed < 72) return;
+  const nx = body.vx / speed;
+  const ny = body.vy / speed;
+  const length = Math.min(44, speed * 0.055);
+  const wake = ctx.createLinearGradient(body.x, body.y, body.x - nx * length, body.y - ny * length);
+  wake.addColorStop(0, colorWithAlpha(color, 0.47));
+  wake.addColorStop(1, colorWithAlpha(color, 0));
+  ctx.save();
+  ctx.strokeStyle = wake;
+  ctx.lineCap = "round";
+  ctx.lineWidth = Math.max(1.2, body.radius * 0.16);
+  ctx.beginPath();
+  ctx.moveTo(body.x - nx * body.radius * 0.4, body.y - ny * body.radius * 0.4);
+  ctx.lineTo(body.x - nx * (body.radius + length), body.y - ny * (body.radius + length));
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawDisc(
   ctx: CanvasRenderingContext2D,
   body: BotaoBody,
   colors: { primary: string; secondary: string },
-  options: { selected: boolean; ready: boolean; pulse: number; uprightLabel?: boolean; appearance?: PlayerAppearance | null; hideUserMarker?: boolean },
+  options: { selected: boolean; ready: boolean; pulse: number; uprightLabel?: boolean; appearance?: PlayerAppearance | null; hideUserMarker?: boolean; showcase?: boolean; showcaseAngle?: number },
 ) {
   ctx.save();
   ctx.translate(body.x, body.y);
 
   // Sombra da peça na mesa
-  ctx.fillStyle = "rgba(0, 0, 0, 0.32)";
+  ctx.fillStyle = options.showcase ? "rgba(0, 0, 0, 0.42)" : "rgba(0, 0, 0, 0.32)";
   ctx.beginPath();
   ctx.ellipse(1.5, 3, body.radius * 0.95, body.radius * 0.78, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  if (options.showcase) {
+    const ambient = ctx.createRadialGradient(-body.radius * 0.26, -body.radius * 0.34, 1, 0, 0, body.radius * 1.22);
+    ambient.addColorStop(0, "rgba(255,255,255,.24)");
+    ambient.addColorStop(0.46, "rgba(255,255,255,.025)");
+    ambient.addColorStop(1, "rgba(0,0,0,.34)");
+    ctx.fillStyle = ambient;
+    ctx.beginPath();
+    ctx.arc(0, 0, body.radius + 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   if (body.isUserPlayer && !options.hideUserMarker) {
     ctx.strokeStyle = `rgba(255, 199, 44, ${0.35 + options.pulse * 0.35})`;
@@ -311,6 +435,17 @@ function drawDisc(
     ctx.beginPath();
     ctx.arc(0, 0, body.radius + 2.5, 0, Math.PI * 2);
     ctx.stroke();
+    if (options.showcase) {
+      ctx.save();
+      ctx.rotate(options.showcaseAngle ?? 0);
+      ctx.strokeStyle = "rgba(255, 199, 44, 0.9)";
+      ctx.lineWidth = 2.2;
+      ctx.setLineDash([9, 8]);
+      ctx.beginPath();
+      ctx.arc(0, 0, body.radius + 6.4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   // O canvas inteiro gira no modo horizontal. Contra-rotacionar somente a
@@ -359,6 +494,14 @@ function liveSpinAngle(ball: BotaoBody): number {
 function drawBall(ctx: CanvasRenderingContext2D, ball: BotaoBody, rotation = liveSpinAngle(ball)) {
   ctx.save();
   ctx.translate(ball.x, ball.y);
+  const glow = ctx.createRadialGradient(0, 0, ball.radius * 0.2, 0, 0, ball.radius * 2.7);
+  glow.addColorStop(0, "rgba(255,255,237,.32)");
+  glow.addColorStop(0.35, "rgba(255,255,237,.11)");
+  glow.addColorStop(1, "rgba(255,255,237,0)");
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(0, 0, ball.radius * 2.7, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
   ctx.beginPath();
   ctx.ellipse(1, 2, ball.radius, ball.radius * 0.8, 0, 0, Math.PI * 2);
@@ -422,7 +565,7 @@ function replayBallSpin(replay: BotaoGoalReplay, bodyIndex: number, frameIndex: 
   return travel / Math.max(1, radius) * 0.72;
 }
 
-function drawAim(ctx: CanvasRenderingContext2D, disc: BotaoBody, aim: BotaoAimView) {
+function drawAim(ctx: CanvasRenderingContext2D, disc: BotaoBody, aim: BotaoAimView, showcase = false) {
   const dx = disc.x - aim.dragX;
   const dy = disc.y - aim.dragY;
   const length = Math.hypot(dx, dy);
@@ -448,6 +591,21 @@ function drawAim(ctx: CanvasRenderingContext2D, disc: BotaoBody, aim: BotaoAimVi
     ctx.moveTo(disc.x, disc.y);
     ctx.lineTo(stopX, stopY);
     ctx.stroke();
+    if (showcase) {
+      ctx.strokeStyle = aim.ratio > 0.82 ? "rgba(255,122,69,.2)" : "rgba(255,199,44,.16)";
+      ctx.lineWidth = disc.radius * 1.35;
+      ctx.beginPath();
+      ctx.moveTo(disc.x + nx * (disc.radius + 8), disc.y + ny * (disc.radius + 8));
+      ctx.lineTo(stopX, stopY);
+      ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([2, 5]);
+      ctx.beginPath();
+      ctx.arc(stopX, stopY, disc.radius + 5 + Math.sin(aim.ratio * Math.PI) * 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     ctx.setLineDash([]);
     ctx.strokeStyle = "rgba(245, 247, 242, 0.3)";
     ctx.lineWidth = 1.2;
@@ -501,6 +659,17 @@ function drawAim(ctx: CanvasRenderingContext2D, disc: BotaoBody, aim: BotaoAimVi
 function drawTrail(ctx: CanvasRenderingContext2D, trail: Array<{ x: number; y: number }>, radius: number) {
   if (trail.length < 2) return;
   ctx.save();
+  const first = trail[0];
+  const last = trail[trail.length - 1];
+  const beam = ctx.createLinearGradient(first.x, first.y, last.x, last.y);
+  beam.addColorStop(0, "rgba(247,249,244,0)");
+  beam.addColorStop(1, "rgba(247,249,244,.62)");
+  ctx.strokeStyle = beam;
+  ctx.lineWidth = radius * 0.7;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  trail.forEach((point, index) => index === 0 ? ctx.moveTo(point.x, point.y) : ctx.lineTo(point.x, point.y));
+  ctx.stroke();
   for (let index = 0; index < trail.length; index += 1) {
     const fade = (index + 1) / trail.length;
     ctx.globalAlpha = fade * 0.3;
@@ -512,12 +681,21 @@ function drawTrail(ctx: CanvasRenderingContext2D, trail: Array<{ x: number; y: n
   ctx.restore();
 }
 
-function drawGoalFlash(ctx: CanvasRenderingContext2D, intensity: number, side: BotaoSide | null) {
+function drawGoalFlash(ctx: CanvasRenderingContext2D, intensity: number, side: BotaoSide | null, showcase = false) {
   if (intensity <= 0) return;
   ctx.save();
   ctx.globalAlpha = Math.min(0.5, intensity * 0.45);
   ctx.fillStyle = side === "user" ? "#ffc72c" : "#ff5a4e";
   ctx.fillRect(0, 0, FIELD.width, FIELD.height);
+  if (showcase) {
+    ctx.globalCompositeOperation = "screen";
+    const originY = side === "user" ? 0 : FIELD.height;
+    const blast = ctx.createRadialGradient(FIELD.width / 2, originY, 8, FIELD.width / 2, originY, FIELD.width * 0.9);
+    blast.addColorStop(0, side === "user" ? "rgba(255,214,70,.95)" : "rgba(255,92,77,.9)");
+    blast.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = blast;
+    ctx.fillRect(0, 0, FIELD.width, FIELD.height);
+  }
   ctx.restore();
 }
 
@@ -543,10 +721,13 @@ export function drawMatch(
   const cpuColors = { primary: state.setup.cpuTeam.primary, secondary: state.setup.cpuTeam.secondary };
   const pulse = (Math.sin(time / 320) + 1) / 2;
   const fieldTheme = fieldThemeForMatch(state.setup);
+  const ball = state.bodies.find((body) => body.kind === "ball");
 
   ctx.clearRect(-VIEW_PAD_X, -VIEW_PAD_Y, VIEW_WIDTH, VIEW_HEIGHT);
   drawField(ctx, userColors.primary, cpuColors.primary, fieldTheme);
-  drawGoalFlash(ctx, view.goalFlash, view.goalFlashSide);
+  if (ball) drawBallFocusLight(ctx, ball);
+  if (view.showcase) drawShowcaseAtmosphere(ctx, time, userColors.primary, cpuColors.primary);
+  drawGoalFlash(ctx, view.goalFlash, view.goalFlashSide, view.showcase);
 
   const visible = view.penaltyMode ? penaltyVisibleBodies(state) : state.bodies;
   if (view.penaltyMode) {
@@ -560,6 +741,7 @@ export function drawMatch(
     if (body.kind === "post") continue;
     if (body.kind === "ball") continue;
     const colors = body.side === "user" ? userColors : cpuColors;
+    if (view.showcase) drawShowcaseWake(ctx, body, colors.primary);
     drawDisc(ctx, body, colors, {
       selected: view.selectedId === body.id,
       ready: view.highlight && body.side === state.turn,
@@ -567,15 +749,17 @@ export function drawMatch(
       uprightLabel: view.uprightLabels,
       appearance: bodyAppearance(state.setup, body),
       hideUserMarker: view.hideUserMarker,
+      showcase: view.showcase,
+      showcaseAngle: time / 620,
     });
   }
 
-  const ball = visible.find((body) => body.kind === "ball");
-  if (ball) drawBall(ctx, ball);
+  const visibleBall = visible.find((body) => body.kind === "ball");
+  if (visibleBall) drawBall(ctx, visibleBall);
 
   if (view.aim) {
     const disc = state.bodies.find((body) => body.id === view.aim?.bodyId);
-    if (disc) drawAim(ctx, disc, view.aim);
+    if (disc) drawAim(ctx, disc, view.aim, view.showcase);
   }
 }
 

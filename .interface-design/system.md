@@ -71,6 +71,7 @@ Estratégia única: mudanças sutis de superfície + bordas de baixa opacidade. 
 - Futebol de botão desktop: mesa sempre inteira na viewport, proporção `316/516`, largura máxima de 400px e respiro mínimo de 80px acima/abaixo.
 - Futebol de botão horizontal: no desktop, o usuário pode girar a mesa em 90 graus sem alterar regras nem coordenadas do motor. O canvas passa a `516/316` e ocupa todo o palco esquerdo; placar e comandos se empilham num rail lateral de 244–320px. O campo usa simultaneamente a largura e a altura disponíveis e o mesmo controle nunca aparece no mobile.
 - Partida ao vivo: campo é sempre o foco; placar/tempo formam a leitura secundária e a pausa abre um intervalo técnico sobre a mesa. Pausar congela relógio, física, CPU, inatividade e linha do tempo do replay. No campo girado, os discos mantêm sua posição, mas números e selo `VC` permanecem orientados para a tela.
+- Bola em jogo: a bola é o único foco móvel permanente. Ela mantém o raio físico original e ganha três camadas de leitura — halo quente e muito baixo sobre o feltro, brilho local semitransparente e trilha curta com intensidade crescente na direção do movimento. O mesmo brilho aparece nos replays. Esses efeitos nunca alteram colisão, velocidade ou tamanho percebido e não justificam partículas, rastros nas peças ou iluminação ornamental no modo oficial.
 - Painéis longos: rolagem pertence ao canvas da direita; galerias nunca usam a altura do card vizinho como limite.
 
 ### Copa instantânea

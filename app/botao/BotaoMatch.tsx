@@ -99,6 +99,7 @@ export default function BotaoMatch({
   startInPenalties = false,
   controlMode = "cpu",
   localPlayerNames,
+  presentation = "standard",
 }: {
   setup: BotaoMatchSetup;
   onFinish: (result: BotaoMatchResult) => void;
@@ -107,8 +108,11 @@ export default function BotaoMatch({
   /** No modo local, os dois lados usam o mesmo mouse em turnos alternados. */
   controlMode?: "cpu" | "local";
   localPlayerNames?: Record<BotaoSide, string>;
+  /** Direção visual isolada para laboratórios; não altera física nem regras. */
+  presentation?: "standard" | "showcase";
 }) {
   const localMatch = controlMode === "local";
+  const showcase = presentation === "showcase";
   const playerNames = localPlayerNames ?? DEFAULT_LOCAL_PLAYER_NAMES;
   const matchRef = useRef<BotaoMatchState | null>(null);
   const machine =
@@ -522,12 +526,13 @@ export default function BotaoMatch({
           goalFlashSide: goalFlashSideRef.current,
           uprightLabels: desktopLandscape,
           hideUserMarker: localMatch,
+          showcase,
         },
         time,
       );
     });
     return () => cancelAnimationFrame(frame);
-  }, [handleEvents, bump, showFlash, desktopLandscape, localMatch]);
+  }, [handleEvents, bump, showFlash, desktopLandscape, localMatch, showcase]);
 
   // -------------------------------------------------------- gol e intervalo
   useEffect(() => {
@@ -715,9 +720,14 @@ export default function BotaoMatch({
   const penalties = state.penalties;
 
   return (
-    <div className={`botao-root ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""}`}>
+    <div className={`botao-root ${showcase ? "botao-root-showcase" : ""} ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""}`}>
       <header className="botao-hud">
         <div className="botao-hud-top">
+          {showcase ? (
+            <span className="botao-showcase-live">
+              <i aria-hidden="true" /> AO VIVO
+            </span>
+          ) : null}
           <span className="botao-competition">
             {setup.competitionName} · {setup.stageName}
           </span>
