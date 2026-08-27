@@ -399,6 +399,7 @@ export type SeasonRecord = PlayerStats & {
   followers?: number;
   socialSentiment?: number;
   botaoResults?: StoredBotaoResult[];
+  nationalBotaoProductionMatchIds?: string[];
   promotion?: string | null;
   averageRating?: number;
   manOfTheMatchAwards?: number;

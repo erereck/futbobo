@@ -13,6 +13,7 @@ import { positionByKey } from "./academy";
 import { competitiveStrength } from "./performance";
 import { clamp, clubById, pick, seeded } from "./shared";
 import { emptyWorldPlayerUniverse, normalizeWorldPlayerUniverse } from "./world-players";
+import { applyNationalBotaoProduction } from "./botao-production";
 
 export function awardPresentation(award: string): AwardPresentation {
   if (award === "Bola de Ouro") return { icon: "◉", tier: "legendary", kicker: "MAIOR PRÊMIO DO FUTEBOL", description: "Você foi eleito o melhor jogador do mundo." };
@@ -705,7 +706,7 @@ export function normalizeSave(value: unknown): GameState {
       campeonesCup: saved.trophyCabinet?.campeonesCup ?? 0,
     },
     awardCabinet: { ...base.awardCabinet, ...saved.awardCabinet },
-    history: (saved.history ?? []).map((record) => ({
+    history: (saved.history ?? []).map((record) => applyNationalBotaoProduction({
       appearances: record.appearances ?? 0,
       goals: record.goals ?? 0,
       assists: record.assists ?? 0,
@@ -738,12 +739,13 @@ export function normalizeSave(value: unknown): GameState {
       followers: record.followers ?? 0,
       socialSentiment: record.socialSentiment ?? 50,
       botaoResults: Array.isArray(record.botaoResults) ? record.botaoResults.map(normalizeStoredBotaoResult) : [],
+      nationalBotaoProductionMatchIds: Array.isArray(record.nationalBotaoProductionMatchIds) ? record.nationalBotaoProductionMatchIds : [],
       promotion: record.promotion ?? null,
       averageRating: record.averageRating,
       manOfTheMatchAwards: record.manOfTheMatchAwards ?? 0,
       medicalRecord: record.medicalRecord ?? null,
     })),
-    lastResult: saved.lastResult ? {
+    lastResult: saved.lastResult ? applyNationalBotaoProduction({
       ...saved.lastResult,
       position: saved.lastResult.position ?? saved.position ?? base.position,
       competitions: (saved.lastResult.competitions ?? []).map((competition) => ({
@@ -766,7 +768,7 @@ export function normalizeSave(value: unknown): GameState {
       europeanSpotlight: saved.lastResult.europeanSpotlight ?? 0,
       europeanDevelopmentBonus: saved.lastResult.europeanDevelopmentBonus ?? 0,
       breakoutBonus: saved.lastResult.breakoutBonus ?? 0,
-    } : null,
+    }) : null,
     lastConsequence: saved.lastConsequence ? {
       ...saved.lastConsequence,
       luckOutcome: saved.lastConsequence.luckOutcome ?? null,
