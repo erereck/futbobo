@@ -36,6 +36,7 @@ import type { CycleShopItemId } from "../../career/cycle-shop";
 import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, loanClubPermanentOffer, materializeTransferOffers, resolveTransferRequest, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";
 import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../career/save-system";
 import { compactBotaoMatchResult, compactGameForPersistence } from "../../career/save-compaction";
+import { applyNationalBotaoProduction } from "../../career/botao-production";
 import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
 import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanels";
 import CareerExtraStats from "./CareerExtraStats";
@@ -1274,6 +1275,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         const updatedWorldCupStats = updatedNationalHistory.find((record) =>
           record.season === match.season && record.name === "Copa do Mundo"
         )?.tournamentStats;
+        const storedNationalResult = { match, result: archivedMatchResult };
 
         if (nextStageName) {
           const previouslyPlayedOpponents = (current.lastResult?.botaoResults ?? [])
@@ -1318,19 +1320,18 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           fanSupport: clamp(current.fanSupport + (wonTournament ? 8 : wonRound ? 3 : -2)),
           morale: clamp(current.morale + (wonTournament ? 6 : wonRound ? 2 : -3)),
           lastResult: current.lastResult
-            ? {
+            ? applyNationalBotaoProduction({
                 ...current.lastResult,
                 nationalNote: `${match.competitionName}: ${stageAfterMatch}${
                   updatedWorldCupStats
                     ? ` · ${updatedWorldCupStats.appearances}J, ${updatedWorldCupStats.goals}G, ${updatedWorldCupStats.assists}A`
                     : ""
                 }`,
-                botaoResults: [...(current.lastResult.botaoResults ?? []), { match, result: archivedMatchResult }],
-              }
+              }, storedNationalResult)
             : null,
           history: current.history.map((record) =>
             record.season === match.season
-              ? { ...record, botaoResults: [...(record.botaoResults ?? []), { match, result: archivedMatchResult }] }
+              ? applyNationalBotaoProduction(record, storedNationalResult)
               : record,
           ),
           newsFeed: [
