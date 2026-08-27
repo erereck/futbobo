@@ -1,0 +1,54 @@
+name: Apply national key match production fix
+
+on:
+  push:
+    branches:
+      - fix/national-key-match-season-production
+    paths:
+      - scripts/apply-national-key-match-production-fix.py
+      - .github/workflows/apply-national-key-match-production-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/national-key-match-season-production
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply fix
+        run: python scripts/apply-national-key-match-production-fix.py
+
+      - name: Verify source
+        run: |
+          grep -q 'nationalBotaoProductionMatchIds' app/career/model.ts
+          grep -q 'applyNationalBotaoProduction' app/career/state.ts
+          grep -q 'storedNationalResult' app/components/career/CareerGame.tsx
+
+      - name: Build
+        run: npm run build
+
+      - name: Remove temporary helpers
+        run: rm scripts/apply-national-key-match-production-fix.py .github/workflows/apply-national-key-match-production-fix.yml
+
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/career/model.ts app/career/state.ts app/career/botao-production.ts app/components/career/CareerGame.tsx scripts/apply-national-key-match-production-fix.py .github/workflows/apply-national-key-match-production-fix.yml
+          git commit -m "fix: somar gols da seleção ao resumo anual"
+          git push origin HEAD:fix/national-key-match-season-production
