@@ -105,6 +105,14 @@ export function buildMarketContext(state: GameState, options: TransferOfferOptio
   };
 }
 
+export function agentCountryRouteActive(state: GameState, context: MarketContext) {
+  return Boolean(
+    state.agentCountryFocus &&
+    context.mode !== "loan" &&
+    (state.contractYears <= 0 || context.trigger === "contract-expired" || context.mode === "free-agent")
+  );
+}
+
 /** Deterministic seam for a future persistent roster/manager market. */
 export function clubPositionNeed(state: GameState, club: Club) {
   const zoneSalt = { gol: 17, defesa: 31, meio: 47, ataque: 61 }[positionByKey(state.position).zone];
@@ -374,13 +382,7 @@ export function generateTransferOffers(state: GameState, salt: number, options: 
       selected = [...withoutDoors.slice(0, Math.max(0, wanted - doors.length)), ...doors];
     }
   }
-  const usesCountryFocus = Boolean(
-    state.agentCountryFocus &&
-    context.mode !== "loan" &&
-    (state.contractYears === 0 || context.trigger === "contract-expired" || context.mode === "free-agent") &&
-    !options.forceDomestic &&
-    !options.forceForeign
-  );
+  const usesCountryFocus = agentCountryRouteActive(state, context);
   if (usesCountryFocus) {
     const focusedWanted = Math.min(wanted, Math.max(1, Math.round(wanted * 0.75)));
     const focused = CLUBS
@@ -456,6 +458,12 @@ export function applyAcceptedTransfer(state: GameState, offer: TransferOffer): G
   const directRivalry = !isLoan && !isRenewal ? findRivalry(source.id, destination.id) : undefined;
   const worldPlayers = isRenewal ? state.worldPlayers : ensureClubSquadPlayers(state.worldPlayers, destination.id, state.season, 14);
   const betrayalConference = directRivalry ? buildBetrayalConference(state, source, destination, directRivalry.nickname) : null;
+  const agentCountryRouteConsumed = Boolean(
+    state.agentCountryFocus &&
+    !isLoan &&
+    !isRenewal &&
+    (state.contractYears <= 0 || state.isFreeAgent || offer.type === "free-agent")
+  );
   return {
     ...state, currentClubId: destination.id, currentLeagueId: isRenewal ? state.currentLeagueId : destination.leagueId,
     contractYears: isLoan ? Math.max(2, state.contractYears) : offer.contractYears, annualSalary: isLoan ? state.annualSalary : offer.annualSalary,
@@ -475,7 +483,7 @@ export function applyAcceptedTransfer(state: GameState, offer: TransferOffer): G
     loanEndSeason: isLoan ? (offer.loanEndSeason || state.season + 1) : 0,
     transferHistory: isRenewal ? state.transferHistory : [...state.transferHistory, transferRecord(state, offer)],
     betrayedClubIds,
-    agentCountryFocus: !isLoan && !isRenewal ? "" : state.agentCountryFocus,
+    agentCountryFocus: agentCountryRouteConsumed ? "" : state.agentCountryFocus,
     worldPlayers,
     pendingPressConference: betrayalConference ?? state.pendingPressConference,
     socialSentiment: directRivalry ? clamp(state.socialSentiment - 7) : state.socialSentiment,
@@ -557,6 +565,9 @@ export const ALTERNATIVE_EXILE_LEAGUES = new Set([
   "super-league-greece", "liga-boliviana", "liga-futve", "chance-liga",
 ]);
 export function selectAlternativeExileOffers(state: GameState, salt: number) {
+  if (state.agentCountryFocus && state.contractYears <= 0) {
+    return selectTransferOffers(state, salt, { includeForeign: true, trigger: "contract-expired" });
+  }
   const source = clubById(state.currentClubId || state.academyClubId);
   const context = buildMarketContext(state);
   return CLUBS.filter((club) => club.id !== source.id && club.countryId !== source.countryId && ALTERNATIVE_EXILE_LEAGUES.has(club.leagueId) && club.reputation <= 3)
