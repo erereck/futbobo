@@ -126,6 +126,8 @@ export type BotaoMatchSetup = {
   visuals?: BotaoVisualRoster;
   /** Quando presente, a partida começa com o jogador saindo do banco. */
   entry?: BotaoMatchEntry;
+  /** Metadado de carreira: o adversário é um ex-clube do protagonista. */
+  formerClub?: { id: string; name: string; shortName: string };
 };
 
 export type BotaoDecision = "goal-limit" | "regulation" | "extra-time" | "penalties";
@@ -189,6 +191,10 @@ export type BotaoMatchResult = {
   timeline: BotaoTimelineEntry[];
   /** Clipes vetoriais de baixa frequência: apenas os segundos que antecedem cada gol. */
   replays?: BotaoGoalReplay[];
+  /** Como o protagonista reagiu a cada gol marcado contra um ex-clube. */
+  formerClubCelebrations?: Array<"celebrate" | "respect">;
+  /** Quantidade de gols do protagonista contra o ex-clube nesta partida. */
+  formerClubGoalCount?: number;
   /** Atalho para o Futbobo: venceu a decisão, logo é campeão. */
   champion: boolean;
 };

@@ -54,6 +54,14 @@ type CareerGameProps = {
   onCloseHallPreview?: () => void;
 };
 
+function isFormerClubOpponent(state: GameState, clubId: string) {
+  if (!clubId || clubId === state.currentClubId) return false;
+  return (
+    state.history.some((record) => record.clubId === clubId) ||
+    state.transferHistory.some((record) => record.fromClubId === clubId || record.toClubId === clubId)
+  );
+}
+
 export default function CareerGame({ initialHallEntry = null, onCloseHallPreview }: CareerGameProps = {}) {
   const [game, setGame] = useState<GameState>(() => initialState());
   const nameRollRef = useRef(0);
@@ -406,12 +414,14 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     }
     const club = clubById(state.currentClubId);
     const opponent = clubById(match.opponentId);
+    const formerClub = match.source === "club" && isFormerClubOpponent(state, opponent.id);
     return buildFinalSetup({
       seed: state.seed,
       season: match.season,
       competitionId: match.competitionId,
       competitionName: match.competitionName,
       stageName: match.stageName,
+      formerClub,
       club,
       opponent,
       playerName: state.name,
@@ -1084,7 +1094,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       // frames em cada temporada multiplicava o tamanho do save a cada partida.
       const archivedMatchResult = compactBotaoMatchResult(matchResult);
 
-      const formerClub = match.source === "club" && current.history.some((record) => record.clubId === match.opponentId)
+      const formerClub = match.source === "club" && isFormerClubOpponent(current, match.opponentId)
         ? clubById(match.opponentId)
         : null;
       const interviewEligible = !matchResult.simulated && !matchResult.walkover && Boolean(resolvedSetup);
@@ -1097,7 +1107,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         lastBotaoResult: { match, result: matchResult },
         pendingPressConference: interviewEligible && formerClub
           ? buildFormerClubConference(current, match, matchResult, formerClub)
-          : interviewEligible && matchResult.manOfTheMatch && resolvedSetup
+          : interviewEligible && (matchResult.manOfTheMatch || matchResult.playerGoals >= 3) && resolvedSetup
             ? buildPressConference(current, match, matchResult, resolvedSetup.cpuTeam.shortName)
             : null,
       };

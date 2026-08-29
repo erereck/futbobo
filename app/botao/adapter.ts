@@ -245,6 +245,7 @@ export function buildFinalSetup(args: {
   neutralVenue?: boolean;
   rules?: Partial<BotaoRules>;
   visuals?: BotaoMatchSetup["visuals"];
+  formerClub?: boolean;
 }): BotaoMatchSetup {
   const effectiveClub = clubWithPlayerImpact(args.club, args.overall);
   const kits = ensureContrastingKits(botaoTeamFromClub(effectiveClub), botaoTeamFromClub(args.opponent));
@@ -261,6 +262,9 @@ export function buildFinalSetup(args: {
     difficulty: difficultyFromStrength(args.opponent.strength),
     rules: { ...CAREER_FINAL_RULES, ...args.rules },
     visuals: args.visuals,
+    formerClub: args.formerClub
+      ? { id: args.opponent.id, name: args.opponent.name, shortName: args.opponent.shortName }
+      : undefined,
   };
 }
 

@@ -78,6 +78,83 @@ const COMEBACK_ANSWERS: AnswerDraft[] = [
   { label: "A melhor sensação foi perceber que ninguém desistiu quando a gente estava atrás", tone: "calm", toneLabel: "Valoriza a reação", result: "A fala coloca a resiliência do grupo acima do placar e soa como discurso de liderança.", effect: { leadership: 7, discipline: 3, mediaRelation: 3 } },
 ];
 
+const HAT_TRICK_ANSWERS: AnswerDraft[] = [
+  { label: "Hoje tudo que eu tentei parecia terminar dentro do gol", tone: "bold", toneLabel: "Abraça a noite", result: "A frase vira a síntese de uma atuação que ninguém consegue ignorar.", effect: { reputation: 8, morale: 6, followers: 70_000 } },
+  { label: "Três gols são bonitos, mas eu quero que lembrem da vitória", tone: "team", toneLabel: "Puxa para o coletivo", result: "O vestiário gosta de ver o feito individual colocado dentro do resultado do time.", effect: { leadership: 8, fans: 4, morale: 3 } },
+  { label: "O terceiro foi o momento em que eu percebi que era uma noite diferente", tone: "calm", toneLabel: "Reconhece o momento", result: "A resposta soa segura e dá peso ao hat-trick sem transformar a fala em provocação.", effect: { mediaRelation: 6, reputation: 4, morale: 3 } },
+  { label: "Eu queria o quarto", tone: "bold", toneLabel: "Nunca basta", result: "A ambição agrada parte da torcida e aumenta a imagem de atacante insaciável.", effect: { reputation: 7, followers: 48_000, discipline: -1 } },
+  { label: "Guardo a bola, mas divido a noite com quem me colocou na cara do gol", tone: "team", toneLabel: "Divide o hat-trick", result: "Companheiros e torcida compram o discurso de gratidão.", effect: { leadership: 7, mediaRelation: 4, fans: 4 } },
+];
+
+function hatTrickQuestion(state: GameState, match: PendingBotaoMatch, result: BotaoMatchResult, opponentName: string): PressQuestion {
+  const goalsLabel = result.playerGoals === 3 ? "hat-trick" : `${result.playerGoals} gols`;
+  return question(state, "hat-trick", match.season * 2153 + match.id.length,
+    [
+      `Você marcou ${goalsLabel} contra o ${opponentName}. A bola da partida já foi separada para você.`,
+      `O placar guarda ${result.playerGoals} gols seus. Foi uma atuação fora da curva até para os seus padrões.`,
+      `Cada vez que você chegou perto da área, o estádio começou a esperar outro gol. Foram ${result.playerGoals} no total.`,
+    ],
+    [
+      "Em qual gol você percebeu que estava vivendo uma noite de hat-trick?",
+      "O que muda na cabeça de um jogador depois de marcar três vezes na mesma partida?",
+      result.playerGoals > 3 ? `Depois do terceiro, você ainda estava pensando no quarto e no quinto?` : "Depois do segundo, você já estava procurando o terceiro?",
+    ], HAT_TRICK_ANSWERS);
+}
+
+const FORMER_CELEBRATE_ANSWERS: AnswerDraft[] = [
+  { label: "Eu respeito minha história, mas hoje defendo outra camisa", tone: "bold", toneLabel: "Não pede desculpas", result: "A torcida atual adota a frase; parte da antiga entende como uma ruptura definitiva.", effect: { fans: 8, reputation: 5, followers: 60_000, mediaRelation: -2 } },
+  { label: "Foi emoção do jogo. Eu não planejei nada", tone: "calm", toneLabel: "Tira o peso", result: "A resposta reduz a temperatura sem negar que a comemoração aconteceu.", effect: { mediaRelation: 6, discipline: 3, fans: 2 } },
+  { label: "Quem me conhece sabe o carinho que eu tenho pelo clube", tone: "team", toneLabel: "Preserva a ponte", result: "A fala recupera parte do carinho sem enfraquecer o compromisso com o time atual.", effect: { leadership: 4, mediaRelation: 5, morale: 2 } },
+  { label: "Se doeu, é porque esse jogo significava muito para todo mundo", tone: "bold", toneLabel: "Aumenta a rivalidade", result: "A declaração vira corte de vídeo e garante que o próximo reencontro venha carregado.", effect: { reputation: 7, followers: 85_000, discipline: -4, mediaRelation: -4 } },
+];
+
+const FORMER_RESPECT_ANSWERS: AnswerDraft[] = [
+  { label: "Eu não conseguiria apagar o que vivi aqui por causa de um gol", tone: "team", toneLabel: "Mostra carinho", result: "A antiga torcida reconhece o gesto e o reencontro perde parte da hostilidade.", effect: { leadership: 7, mediaRelation: 7, fans: 2 } },
+  { label: "Não comemorar não significa que eu não queria vencer", tone: "calm", toneLabel: "Separa respeito e competição", result: "A resposta é tratada como maturidade competitiva.", effect: { discipline: 5, reputation: 3, mediaRelation: 5 } },
+  { label: "Na hora eu lembrei de muita gente que ainda trabalha lá", tone: "team", toneLabel: "Lembra das pessoas", result: "O gesto ganha uma leitura humana em vez de virar apenas protocolo de futebol.", effect: { leadership: 6, morale: 3, mediaRelation: 6 } },
+  { label: "O respeito termina no apito; durante o jogo eu queria fazer outro", tone: "bold", toneLabel: "Respeita sem aliviar", result: "A torcida atual gosta do equilíbrio entre memória e competitividade.", effect: { fans: 5, reputation: 5, discipline: 2 } },
+];
+
+function formerCelebrationQuestion(state: GameState, match: PendingBotaoMatch, result: BotaoMatchResult, formerClub: Club): PressQuestion | null {
+  const choices = result.formerClubCelebrations ?? [];
+  if (!choices.length) return null;
+  const celebrated = choices.filter((choice) => choice === "celebrate").length;
+  const respected = choices.length - celebrated;
+  if (celebrated > 0 && respected > 0) {
+    return question(state, "former-celebration-mixed", match.season * 2273 + match.id.length,
+      [
+        `Você marcou mais de uma vez contra o ${formerClub.shortName}: em um gol segurou a comemoração e em outro deixou a emoção sair.`,
+        `Sua relação com o ${formerClub.shortName} apareceu até nas comemorações: houve respeito em um momento e explosão em outro.`,
+      ],
+      [
+        "Por que sua reação mudou de um gol para o outro?",
+        "O que fez o respeito virar comemoração durante a mesma partida?",
+      ], [...FORMER_CELEBRATE_ANSWERS, ...FORMER_RESPECT_ANSWERS]);
+  }
+  if (celebrated > 0) {
+    return question(state, "former-celebration", match.season * 2281 + match.id.length,
+      [
+        `Você marcou contra o ${formerClub.shortName} e comemorou. A imagem dividiu imediatamente as duas torcidas.`,
+        `Seu gol contra o ex-clube veio acompanhado de uma comemoração sem esconder a emoção.`,
+      ],
+      [
+        "Você pensou por um segundo em não comemorar?",
+        `O que você diria para o torcedor do ${formerClub.shortName} que se incomodou com a comemoração?`,
+        "Comemorar foi uma forma de mostrar que esse capítulo da carreira acabou?",
+      ], FORMER_CELEBRATE_ANSWERS);
+  }
+  return question(state, "former-respect", match.season * 2293 + match.id.length,
+    [
+      `Você marcou contra o ${formerClub.shortName}, mas conteve a comemoração enquanto seus companheiros corriam até você.`,
+      `A bola entrou contra seu ex-clube e sua primeira reação foi não comemorar. O gesto foi notado pelo estádio inteiro.`,
+    ],
+    [
+      "Foi respeito, carinho ou simplesmente uma decisão do momento?",
+      `O que o ${formerClub.shortName} ainda representa para você?`,
+      "Foi difícil segurar a comemoração em uma partida tão importante?",
+    ], FORMER_RESPECT_ANSWERS);
+}
+
 function wasComebackVictory(result: BotaoMatchResult) {
   if (!result.manOfTheMatch || result.outcome !== "win" || result.goalsFor <= result.goalsAgainst) return false;
 
@@ -95,6 +172,16 @@ function wasComebackVictory(result: BotaoMatchResult) {
 }
 
 export function buildPressConference(state: GameState, match: PendingBotaoMatch, result: BotaoMatchResult, opponentName: string): PressConference {
+  if (!result.manOfTheMatch && result.playerGoals >= 3) {
+    return {
+      kind: "post-match",
+      matchId: match.id,
+      competitionName: match.competitionName,
+      opponentName,
+      questionIndex: 0,
+      questions: [hatTrickQuestion(state, match, result, opponentName)],
+    };
+  }
   const wonTitle = result.champion && match.stageName === "Final";
   const story = playerStoryById(state.playerStoryId);
   const pool: PressQuestion[] = [
@@ -140,6 +227,9 @@ export function buildPressConference(state: GameState, match: PendingBotaoMatch,
         "Como você descreve a sensação de sair de uma derrota para uma vitória dessas?",
         "O que passou pela sua cabeça no instante em que vocês tomaram a frente?",
       ], COMEBACK_ANSWERS));
+  }
+  if (result.playerGoals >= 3) {
+    questions.push(hatTrickQuestion(state, match, result, opponentName));
   }
   return {
     kind: "post-match",
@@ -222,7 +312,7 @@ export function buildFormerClubConference(state: GameState, match: PendingBotaoM
     { id: "former-result", context: `${resultLine} A primeira pergunta ignora todo o resto da partida.`, prompts: won ? ["Vencer seu ex-clube teve um sabor diferente?", "Essa vitória encerra alguma conta com o passado?"] : ["Enfrentar seu ex-clube tornou o resultado mais pesado?", "O passado entrou em campo junto com você?"] },
     { id: "former-memory", context: `Você conhece corredores, funcionários e parte da torcida do ${formerClub.shortName}.`, prompts: ["O que passou pela sua cabeça ao reencontrar tanta gente?", "Ainda existe carinho pelo clube que ficou para trás?"] },
     { id: "former-choice", context: "Sua troca de camisa ainda é discutida pelas duas torcidas.", prompts: ["Você faria a mesma escolha novamente?", "O reencontro confirmou que sair foi a decisão certa?"] },
-    ...(scored ? [{ id: "former-goal", context: `Você marcou ${result.playerGoals > 1 ? `${result.playerGoals} vezes` : "contra o ex-clube"}. A chamada lei do ex virou assunto imediato.`, prompts: ["Por que a lei do ex parece funcionar tanto?", "Você pensou em comemorar contra o antigo clube?", "Esse gol foi mais pessoal do que os outros?"] }] : []),
+    ...(scored ? [{ id: "former-goal", context: `Você marcou ${result.playerGoals > 1 ? `${result.playerGoals} vezes` : "contra o ex-clube"}. A chamada lei do ex virou assunto imediato.`, prompts: ["Por que a lei do ex parece funcionar tanto?", "Marcar contra quem conhece seu jogo torna o gol diferente?", "Esse gol foi mais pessoal do que os outros?"] }] : []),
     { id: "former-future", context: `O próximo reencontro com o ${formerClub.shortName} já começou a ser esperado.`, prompts: ["A partir de agora isso virou uma rivalidade pessoal?", "O que você espera da reação no próximo jogo?"] },
   ];
   const count = 1 + Math.floor(seeded(state.seed, match.season * 2221 + match.id.length) * 3);
@@ -232,6 +322,9 @@ export function buildFormerClubConference(state: GameState, match: PendingBotaoM
     question: pick(entry.prompts, state.seed, match.season * 2251 + index * 19),
     answers: formerAnswers(state, match.season * 2267 + index * 23),
   }));
+  const celebration = formerCelebrationQuestion(state, match, result, formerClub);
+  if (celebration) questions.push(celebration);
+  if (result.playerGoals >= 3) questions.push(hatTrickQuestion(state, match, result, formerClub.shortName));
   return {
     kind: "former-club",
     matchId: match.id,

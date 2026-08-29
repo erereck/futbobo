@@ -138,6 +138,8 @@ export default function BotaoMatch({
   const replayBufferRef = useRef<BotaoReplayFrame[]>([]);
   const replayPreviousTurnsRef = useRef<BotaoReplayFrame[][]>([]);
   const goalReplaysRef = useRef<BotaoGoalReplay[]>([]);
+  const formerClubCelebrationsRef = useRef<Array<"celebrate" | "respect">>([]);
+  const formerClubPromptRef = useRef(false);
   const replayShotStartedAtRef = useRef(0);
   const replayLastSampleRef = useRef(0);
   const replayWasResolvingRef = useRef(false);
@@ -166,6 +168,7 @@ export default function BotaoMatch({
   const [desktopLandscape, setDesktopLandscape] = useState(false);
   const [compactMobileTable, setCompactMobileTable] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [formerClubGoalPrompt, setFormerClubGoalPrompt] = useState<{ goalNumber: number } | null>(null);
   const pausedRef = useRef(false);
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
@@ -212,6 +215,21 @@ export default function BotaoMatch({
       setFlash(null);
     }, duration);
   }, []);
+
+  const chooseFormerClubCelebration = useCallback((choice: "celebrate" | "respect") => {
+    formerClubCelebrationsRef.current.push(choice);
+    formerClubPromptRef.current = false;
+    setFormerClubGoalPrompt(null);
+    const clubName = setup.formerClub?.shortName ?? "ex-clube";
+    if (choice === "celebrate") {
+      setAnnouncement(`Você comemorou o gol contra o ${clubName}. A reação das arquibancadas mudou na hora.`);
+      showFlash("COMEMOROU!", "goal", 1050);
+    } else {
+      setAnnouncement(`Você segurou a comemoração contra o ${clubName} em respeito à sua história no clube.`);
+      showFlash("SEM COMEMORAR", "info", 1050);
+    }
+    bump();
+  }, [bump, setup.formerClub?.shortName, showFlash]);
 
   // Assinatura do motor: muda só quando a partida realmente avança. É o que
   // dispara as transições abaixo — sem ela os efeitos rodariam a cada frame.
@@ -345,11 +363,15 @@ export default function BotaoMatch({
                 : "TOMOU GOL";
           showFlash(text, localMatch || mine ? "goal" : "bad", GOAL_PAUSE_MS - 200);
           setAnnouncement(`${text} ${event.scorer}. Placar ${machine.score.user} a ${machine.score.cpu}.`);
+          if (!localMatch && mine && event.byUser && setup.formerClub) {
+            formerClubPromptRef.current = true;
+            setFormerClubGoalPrompt({ goalNumber: formerClubCelebrationsRef.current.length + 1 });
+          }
         }
       }
       bump();
     },
-    [bump, localMatch, machine, playerNames, showFlash],
+    [bump, localMatch, machine, playerNames, setup.formerClub, showFlash],
   );
 
   // ------------------------------------------------------------- loop de jogo
@@ -539,7 +561,7 @@ export default function BotaoMatch({
     const state = matchRef.current;
     if (!state || state.phase !== "goal" || timersRef.current.goal !== null) return;
     const resumeGoal = () => {
-      if (pausedRef.current) {
+      if (pausedRef.current || formerClubPromptRef.current) {
         timersRef.current.goal = window.setTimeout(resumeGoal, 120);
         return;
       }
@@ -604,9 +626,13 @@ export default function BotaoMatch({
   // ------------------------------------------------------------------- fim
   useEffect(() => {
     const state = matchRef.current;
-    if (!state || state.phase !== "finished" || !state.result || finishedRef.current) return;
+    if (!state || state.phase !== "finished" || !state.result || finishedRef.current || formerClubPromptRef.current) return;
     finishedRef.current = true;
-    const result = { ...state.result, replays: goalReplaysRef.current.map((replay) => ({
+    const result = {
+      ...state.result,
+      formerClubCelebrations: formerClubCelebrationsRef.current.slice(),
+      formerClubGoalCount: formerClubCelebrationsRef.current.length,
+      replays: goalReplaysRef.current.map((replay) => ({
       ...replay,
       bodies: replay.bodies.map((body) => ({ ...body })),
       frames: replay.frames.map((frame) => ({ ...frame, positions: frame.positions.slice() })),
@@ -620,7 +646,7 @@ export default function BotaoMatch({
       timersRef.current.finish = null;
       onFinishRef.current(result);
     }, 1800);
-  }, [signature, showFlash, localMatch]);
+  }, [signature, showFlash, localMatch, formerClubGoalPrompt]);
 
   // -------------------------------------------------------------- interação
   const shootableAt = useCallback((x: number, y: number) => {
@@ -795,6 +821,26 @@ export default function BotaoMatch({
           </div>
         )}
       </header>
+
+      {formerClubGoalPrompt && setup.formerClub && (
+        <div className="botao-former-club-decision" role="dialog" aria-modal="true" aria-label="Comemoração contra ex-clube">
+          <div className="botao-former-club-card">
+            <small>LEI DO EX · {formerClubGoalPrompt.goalNumber}º GOL</small>
+            <strong>Gol contra o {setup.formerClub.shortName}</strong>
+            <p>Você passou por esse clube. O estádio está olhando para a sua reação.</p>
+            <div className="botao-former-club-actions">
+              <button type="button" className="botao-former-celebrate" onClick={() => chooseFormerClubCelebration("celebrate")}>
+                <b>🔥 Comemorar</b>
+                <span>Assume a camisa atual e aceita a reação.</span>
+              </button>
+              <button type="button" className="botao-former-respect" onClick={() => chooseFormerClubCelebration("respect")}>
+                <b>🤝 Não comemorar</b>
+                <span>Respeita sua história com o ex-clube.</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div
         className={`botao-table-wrapper ${desktopLandscape ? "botao-table-landscape" : ""} ${shaking ? "botao-shake" : ""}`}
