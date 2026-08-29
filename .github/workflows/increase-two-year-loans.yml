@@ -13,61 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Increase two-year loan probability
         run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path('app/career/transfer-market.ts')
-          text = path.read_text()
-          old = '''function materializeOffer(state: GameState, club: Club, context: MarketContext, salt: number): TransferOffer {
-  const role = candidateRole(state, club);
-  const contract = createContract(state.overall, state.age, club, state.seed + state.season * 97 + salt + CLUBS.indexOf(club));
-  const reason = offerReason(state, club, role, context);
-  const parentShare = context.mode === "loan" ? clamp(Math.round((44 + (competitiveStrength(club) - competitiveStrength(context.sourceClub)) * 2) / 5) * 5, 20, 75) : 0;
-  return {
-    id: `${state.season}-${context.sourceClub.id}-${club.id}-${context.mode}`, clubId: club.id,
-    fromClubId: context.sourceClub.id, season: state.season, type: context.mode, role,
-    reason: reason.reason, reasonLabel: reason.label, reasonText: reason.text,
-    transferFee: actualTransferFee(state, club, context, role, salt),
-    annualSalary: context.mode === "loan" ? state.annualSalary : contract.annualSalary,
-    contractYears: context.mode === "loan" ? state.contractYears : contract.years,
-    loanEndSeason: context.mode === "loan" ? state.season + 1 : 0,
-    parentSalaryShare: parentShare, destinationSalaryShare: context.mode === "loan" ? 100 - parentShare : 100,
-    expiresSeason: state.season + 1,
-  };
-}'''
-          new = '''function materializeOffer(state: GameState, club: Club, context: MarketContext, salt: number): TransferOffer {
-  const role = candidateRole(state, club);
-  const contract = createContract(state.overall, state.age, club, state.seed + state.season * 97 + salt + CLUBS.indexOf(club));
-  const reason = offerReason(state, club, role, context);
-  const parentShare = context.mode === "loan" ? clamp(Math.round((44 + (competitiveStrength(club) - competitiveStrength(context.sourceClub)) * 2) / 5) * 5, 20, 75) : 0;
-  // Empréstimos longos agora são uma possibilidade real. Clubes apostam mais
-  // em dois anos quando o jogador ainda está em fase forte de desenvolvimento.
-  const twoYearLoanChance = context.mode === "loan"
-    ? clamp(0.38 + (state.age <= 20 ? 0.16 : state.age <= 23 ? 0.08 : 0) + (context.trigger === "youth-development" ? 0.08 : 0), 0, 0.62)
-    : 0;
-  const loanYears = context.mode === "loan" && seeded(state.seed, state.season * 1301 + salt + CLUBS.indexOf(club) * 17) < twoYearLoanChance ? 2 : 1;
-  return {
-    id: `${state.season}-${context.sourceClub.id}-${club.id}-${context.mode}`, clubId: club.id,
-    fromClubId: context.sourceClub.id, season: state.season, type: context.mode, role,
-    reason: reason.reason, reasonLabel: reason.label,
-    reasonText: context.mode === "loan" ? `${reason.text} Empréstimo de ${loanYears} temporada${loanYears > 1 ? "s" : ""}.` : reason.text,
-    transferFee: actualTransferFee(state, club, context, role, salt),
-    annualSalary: context.mode === "loan" ? state.annualSalary : contract.annualSalary,
-    contractYears: context.mode === "loan" ? state.contractYears : contract.years,
-    loanEndSeason: context.mode === "loan" ? state.season + loanYears : 0,
-    parentSalaryShare: parentShare, destinationSalaryShare: context.mode === "loan" ? 100 - parentShare : 100,
-    expiresSeason: state.season + 1,
-  };
-}'''
-          if old not in text:
-              raise SystemExit('target materializeOffer block not found')
-          path.write_text(text.replace(old, new, 1))
-          PY
+          python -c 'from pathlib import Path; p=Path("app/career/transfer-market.ts"); s=p.read_text(); old="loanEndSeason: context.mode === \"loan\" ? state.season + 1 : 0,"; new="loanEndSeason: context.mode === \"loan\" ? state.season + (seeded(state.seed, state.season * 1301 + salt + CLUBS.indexOf(club) * 17) < 0.5 ? 2 : 1) : 0,"; assert old in s, "loan duration target not found"; p.write_text(s.replace(old,new,1))'
           git diff --check
 
       - name: Install dependencies
