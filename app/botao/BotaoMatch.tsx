@@ -131,7 +131,7 @@ export default function BotaoMatch({
   const lastFrameRef = useRef(0);
   const frameCountRef = useRef(0);
   const lastHitRef = useRef(0);
-  const idleDeadlineRef = useRef<number | null>(null);
+  const idleRemainingRef = useRef<number | null>(null);
   const idleCountdownRef = useRef<number | null>(null);
   const trailRef = useRef<Array<{ x: number; y: number }>>([]);
   const goalFlashRef = useRef(0);
@@ -265,11 +265,10 @@ export default function BotaoMatch({
   }, []);
 
   // Voltando de segundo plano o rAF ficou parado: zera o relógio de frame para
-  // não descontar de uma vez o tempo em que o app esteve fora da tela.
+  // não descontar de uma vez o tempo em que o app esteve fora da tela. A regra
+  // dos 7s usa o mesmo delta ativo do jogo, então também fica congelada.
   useEffect(() => {
     const onVisibility = () => {
-      // O rAF pode parar em segundo plano, mas o deadline usa performance.now();
-      // ao voltar, o tempo perdido continua contado em vez de reiniciar.
       lastFrameRef.current = 0;
     };
     document.addEventListener("visibilitychange", onVisibility);
@@ -389,7 +388,8 @@ export default function BotaoMatch({
 
       const pausedNow = pausedRef.current;
 
-      // O relógio da partida congela na pausa, mas o relógio disciplinar NÃO.
+      // Relógio da partida e regra disciplinar usam o mesmo tempo ativo. Se a
+      // partida estiver pausada, nenhum dos dois avança.
       // Primeiro resolvemos a regra do último chute: se o tempo acabou enquanto
       // existe um botão fisicamente selecionado, 00:00 fica armado até a bola parar.
       if (!pausedNow && (state.phase === "aim" || state.phase === "kickoff")) {
@@ -407,26 +407,27 @@ export default function BotaoMatch({
         finalShotAnnouncedRef.current = false;
       }
 
-      // Sete segundos são absolutos dentro da vez do usuário. Pausar, segurar
-      // um botão ou selecionar de novo não cria um novo prazo. A única exceção
-      // é o último lance já armado em 00:00.
+      // Os sete segundos só existem enquanto o relógio da partida está
+      // efetivamente rodando. Pausa e segundo plano congelam o valor exato;
+      // selecionar/segurar um botão não reinicia a contagem.
       const waitingForUser = !localMatch && (state.phase === "aim" || state.phase === "kickoff") && state.turn === "user";
       if (!waitingForUser || state.finalShotGrace) {
-        idleDeadlineRef.current = null;
+        idleRemainingRef.current = null;
         if (idleCountdownRef.current !== null) {
           idleCountdownRef.current = null;
           setIdleCountdown(null);
         }
-      } else {
-        if (idleDeadlineRef.current === null) idleDeadlineRef.current = time + USER_DECISION_SECONDS * 1000;
-        const remaining = (idleDeadlineRef.current - time) / 1000;
+      } else if (!pausedNow) {
+        if (idleRemainingRef.current === null) idleRemainingRef.current = USER_DECISION_SECONDS;
+        idleRemainingRef.current = Math.max(0, idleRemainingRef.current - elapsed);
+        const remaining = idleRemainingRef.current;
         const nextCountdown = remaining <= USER_WARNING_SECONDS ? Math.max(1, Math.ceil(remaining)) : null;
         if (nextCountdown !== idleCountdownRef.current) {
           idleCountdownRef.current = nextCountdown;
           setIdleCountdown(nextCountdown);
         }
         if (remaining <= 0) {
-          idleDeadlineRef.current = null;
+          idleRemainingRef.current = null;
           idleCountdownRef.current = null;
           setIdleCountdown(null);
           pointerRef.current = null;
@@ -889,7 +890,7 @@ export default function BotaoMatch({
             <span className="botao-pause-mark" aria-hidden="true">II</span>
             <small>INTERVALO TÉCNICO</small>
             <strong>Partida pausada</strong>
-            <p>{localMatch ? "Relógio e bola estão congelados." : "Relógio da partida, bola e adversário congelam. A regra dos 7s continua."}</p>
+            <p>{localMatch ? "Relógio e bola estão congelados." : "Relógio da partida, bola, adversário e regra dos 7s estão congelados."}</p>
             <button type="button" className="botao-primary" onClick={togglePause}>
               Retomar partida <span aria-hidden="true">▶</span>
             </button>
