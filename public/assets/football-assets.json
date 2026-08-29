@@ -3233,6 +3233,31 @@
       "providerName": "Fotbalový Klub Teplice",
       "externalSource": "https://r2.thesportsdb.com/images/media/team/badge/0hnqi61777766291.png"
     },
+    "copenhagen": {
+      "providerId": "133898",
+      "providerName": "FC Copenhagen",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/styqtr1473535513.png"
+    },
+    "ob-odense": {
+      "providerId": "133889",
+      "providerName": "Odense BK",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/syyxwq1473535545.png"
+    },
+    "tromso": {
+      "providerId": "133997",
+      "providerName": "Tromsø",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/sb24al1764644259.png"
+    },
+    "sarpsborg-08": {
+      "providerId": "134566",
+      "providerName": "Sarpsborg 08",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/pxrf831534869388.png"
+    },
+    "legia-warsaw": {
+      "providerId": "133992",
+      "providerName": "Legia Warsaw",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/c969ez1632775656.png"
+    },
     "midtjylland": {
       "providerId": "133891",
       "providerName": "FC Midtjylland",

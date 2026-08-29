@@ -208,9 +208,96 @@ function addAwardWinners(universe: WorldPlayerUniverse, context: WorldPlayerAdva
   return next;
 }
 
+
+
+const SQUAD_POSITION_TEMPLATE: PositionKey[] = [
+  "GOL", "LD", "ZAG", "ZAG", "LE", "VOL", "MC", "MEI", "PD", "PE", "CA", "GOL", "ZAG", "MC", "CA",
+];
+
+function stableTextSalt(text: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+/**
+ * Materializa apenas o núcleo relevante de um elenco. É deliberadamente uma API
+ * neutra: carreira de jogador e o futuro modo treinador compartilham os mesmos
+ * World Players, contratos e histórico, sem criar um segundo banco de atletas.
+ */
+export function ensureClubSquadPlayers(universe: WorldPlayerUniverse, clubId: string, season: number, target = 14) {
+  const club = CLUBS.find((candidate) => candidate.id === clubId);
+  if (!club || !clubId) return universe;
+  const wanted = clamp(Math.round(target), 11, SQUAD_POSITION_TEMPLATE.length);
+  const current = Object.values(universe.players).filter((player) => player.status !== "retired" && player.currentClubId === clubId);
+  if (current.length >= wanted) return universe;
+
+  const players = { ...universe.players };
+  const aliases = { ...universe.aliases };
+  const confederation = COUNTRIES.find((country) => country.id === club.countryId)?.confederation;
+  const foreignPool = COUNTRIES.filter((country) => country.confederation === confederation && country.id !== club.countryId);
+  const clubSalt = stableTextSalt(club.id);
+  let added = 0;
+  let serial = 0;
+
+  while (current.length + added < wanted) {
+    const slot = serial % SQUAD_POSITION_TEMPLATE.length;
+    const id = `squad-${club.id}-${season}-${serial}`;
+    serial += 1;
+    if (players[id]) continue;
+    const salt = clubSalt + season * 997 + serial * 131 + universe.seed * 3;
+    const position = SQUAD_POSITION_TEMPLATE[slot % SQUAD_POSITION_TEMPLATE.length];
+    const foreign = seeded(universe.seed, salt + 11) < 0.28;
+    const nationality = foreign && foreignPool.length
+      ? pick(foreignPool, universe.seed, salt + 17).id
+      : club.countryId;
+    const age = 18 + Math.floor(seeded(universe.seed, salt + 23) * 17);
+    const starterBand = slot < 11 ? 0 : -5;
+    const overall = clamp(Math.round(club.strength - 5 + seeded(universe.seed, salt + 29) * 10 + starterBand), 52, 94);
+    const youthCeiling = age <= 22 ? 10 : age <= 26 ? 6 : 3;
+    const potential = clamp(overall + Math.floor(seeded(universe.seed, salt + 31) * (youthCeiling + 1)), overall, 95);
+    const baseName = worldPlayerNameForNationality(nationality, universe.seed, salt + 37);
+    let name = baseName;
+    let suffix = 2;
+    while (aliases[normalizeWorldPlayerName(name)]) {
+      name = `${baseName} ${suffix}`;
+      suffix += 1;
+    }
+    const player: WorldPlayer = {
+      id,
+      source: "squad",
+      name,
+      nationality,
+      position,
+      birthSeason: season - age,
+      generatedSeason: season,
+      overall,
+      potential,
+      reputation: clamp(overall - 42 + club.reputation * 5),
+      status: "active",
+      currentClubId: club.id,
+      parentClubId: "",
+      loanEndSeason: 0,
+      contractUntilSeason: season + 2 + Math.floor(seeded(universe.seed, salt + 43) * 4),
+      retiredSeason: null,
+      careerStats: { ...EMPTY_STATS },
+      clubHistory: [{ clubId: club.id, joinedSeason: season, leftSeason: null, moveType: "generated", transferFee: 0 }],
+      honors: [],
+    };
+    players[id] = player;
+    aliases[normalizeWorldPlayerName(name)] = id;
+    added += 1;
+  }
+  return { ...universe, players, aliases };
+}
+
 export function advanceWorldPlayerUniverse(current: WorldPlayerUniverse | undefined, context: WorldPlayerAdvanceContext) {
   let universe = current?.schemaVersion === 1 ? current : createWorldPlayerUniverse(current?.seed ?? 1, context.season - 1);
   universe = syncRivalsToWorldPlayers(universe, context.rivals, context.season);
+  if (context.focusClubId) universe = ensureClubSquadPlayers(universe, context.focusClubId, context.season, 14);
   if (universe.lastAdvancedSeason >= context.season) return addAwardWinners(universe, context);
   let players = Object.fromEntries(Object.entries(universe.players).map(([id, player]) => [id, advancePlayer(player, universe, context.season)]));
   const staleIds = new Set(Object.values(players).filter((player) =>

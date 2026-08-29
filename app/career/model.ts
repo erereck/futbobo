@@ -167,7 +167,7 @@ export type PressQuestion = {
 };
 
 export type PressConference = {
-  kind?: "post-match" | "presentation" | "former-club";
+  kind?: "post-match" | "presentation" | "former-club" | "betrayal";
   matchId: string;
   competitionName: string;
   opponentName: string;
@@ -528,6 +528,8 @@ export type GameState = {
   forcedFreeAgentUntilSeason: number;
   corruptionGuaranteedSeason: number;
   lastCycleShopSeason: number;
+  agentCountryFocus: string;
+  betrayedClubIds: string[];
   traits: SpecialTraitId[];
   rivals: CareerRival[];
   worldPlayers: WorldPlayerUniverse;

@@ -29,6 +29,8 @@ O coração do Futbobo.
 - Seguidores, imprensa, patrocinadores, torcida e vida extracampo.
 - Eventos narrativos, escolhas e consequências que permanecem no save.
 - Rivais pessoais, reencontros com ex-clubes e reações a transferências.
+- Aba **Time** com companheiros persistentes, titulares, banco e vagas de mercado.
+- Traição entre clubes rivais, foco de país do empresário e novas coletivas de repercussão.
 - Histórico completo por temporada, clube e competição.
 - Hall da Fama local e cartão final compartilhável.
 
@@ -126,6 +128,12 @@ npm test
 ```
 
 `npm test` executa o build e também valida o HTML exportado.
+
+---
+
+## 🆕 v93.10 — Time de Verdade
+
+A v93.10 transforma o clube e a Seleção em elencos vivos durante toda a carreira. Companheiros evoluem, envelhecem e se transferem; a nova aba **Time** exibe titulares e banco; e decisões de mercado agora registram traições entre rivais. A QUADRA também ganhou o foco de país do empresário, enquanto patrocinadores e alcance social foram recalibrados para carreiras de superestrelas.
 
 ---
 

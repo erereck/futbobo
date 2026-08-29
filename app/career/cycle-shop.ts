@@ -1,8 +1,9 @@
+import { COUNTRIES, countryById } from "../game-data";
 import type { GameState, Phase } from "./model";
 import { shiftPlayerAttributes } from "./state";
 import { clamp, seeded } from "./shared";
 
-export type CycleShopItemId = "recovery" | "media" | "coach" | "overall" | "potential" | "corruption" | "special-training";
+export type CycleShopItemId = "recovery" | "media" | "coach" | "overall" | "potential" | "corruption" | "agent-country" | "special-training";
 
 export type CycleShopItem = {
   id: CycleShopItemId;
@@ -21,6 +22,7 @@ export const CYCLE_SHOP_ITEMS: CycleShopItem[] = [
   { id: "overall", name: "Salto de nível", eyebrow: "RARIDADE", description: "+1 OVR imediato. Compra única no ciclo.", price: 7_500_000, tone: "highlight", available: true },
   { id: "potential", name: "Recalibração confidencial", eyebrow: "RISCO OCULTO", description: "Pode elevar ou reduzir seu teto em 2 pontos.", price: 2_500_000, tone: "risk", available: true },
   { id: "corruption", name: "Comprar os árbitros", eyebrow: "50 / 50", description: "Garante o título nacional ou causa banimento de 5 anos.", price: 2_000_000, tone: "risk", available: true },
+  { id: "agent-country", name: "Rota do empresário", eyebrow: "MERCADO", description: "Escolha um país. No fim do contrato, 75% das propostas virão de clubes aleatórios de lá.", price: 5_000_000, tone: "highlight", available: true },
   { id: "special-training", name: "Treino especial", eyebrow: "EM BREVE", description: "Uma nova forma de transformar seu jogador.", price: 0, tone: "locked", available: false },
 ];
 
@@ -42,10 +44,11 @@ export function cycleShopPurchaseKey(state: GameState, itemId: CycleShopItemId) 
   return `quadra:${state.season}:${itemId}`;
 }
 
-export function purchaseCycleShopItem(state: GameState, itemId: CycleShopItemId): CycleShopPurchase {
+export function purchaseCycleShopItem(state: GameState, itemId: CycleShopItemId, countryId?: string): CycleShopPurchase {
   const item = CYCLE_SHOP_ITEMS.find((candidate) => candidate.id === itemId);
   const purchaseKey = cycleShopPurchaseKey(state, itemId);
-  if (!item || !item.available || (itemId === "overall" && state.overall >= 99) || state.spendableMoney < item.price || state.economyPurchases.includes(purchaseKey)) {
+  const validCountryFocus = itemId !== "agent-country" || Boolean(countryId && COUNTRIES.some((country) => country.id === countryId));
+  if (!item || !item.available || !validCountryFocus || (itemId === "overall" && state.overall >= 99) || state.spendableMoney < item.price || state.economyPurchases.includes(purchaseKey)) {
     return { state, feedback: "Esta compra não está disponível.", toast: "Compra indisponível", forcedClose: false };
   }
 
@@ -85,6 +88,11 @@ export function purchaseCycleShopItem(state: GameState, itemId: CycleShopItemId)
   } else if (itemId === "potential") {
     next = { ...next, potential: clamp(state.potential < 80 ? state.potential + 2 : state.potential - 2, state.overall, 99) };
     feedback = "A recalibração terminou. O relatório segue oculto; a carreira revelará se o teto subiu ou caiu.";
+  } else if (itemId === "agent-country") {
+    const country = countryById(countryId!);
+    next = { ...next, agentCountryFocus: country.id };
+    feedback = `Seu empresário recebeu uma ordem clara: quando este contrato terminar, ${country.name} será a prioridade. 75% das propostas serão sorteadas entre clubes de lá.`;
+    toast = `Empresário focado em ${country.name}`;
   } else if (itemId === "corruption") {
     const succeeded = seeded(state.seed, state.season * 1877 + state.economyPurchases.length * 31) < 0.5;
     if (succeeded) {

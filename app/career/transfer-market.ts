@@ -9,6 +9,9 @@ import { clamp, clubById, seeded } from "./shared";
 import { clubConfederation, initialAdaptation, initialContinentalSlot, isEuropeanClub, positionByKey, regionAffinity } from "./academy";
 import { continentalChampionForWorldSeason } from "./world-club-competitions";
 import { clubWithPlayerImpact } from "./player-club-impact";
+import { findRivalry } from "../mega-expansion";
+import { buildBetrayalConference } from "./press-conferences";
+import { ensureClubSquadPlayers } from "./world-players";
 
 export const SECOND_DIVISION_LEAGUES = new Set(["brasileirao-b", "championship"]);
 export type TransferTrigger = "season-end" | "requested" | "forced-exit" | "youth-development" | "contract-expired" | "free-agent-wait" | "event";
@@ -159,6 +162,7 @@ function targetStrength(state: GameState, context: MarketContext) {
 }
 function candidateEligible(state: GameState, club: Club, context: MarketContext, options: TransferOfferOptions) {
   if (club.id === context.sourceClub.id) return false;
+  if (state.betrayedClubIds.includes(club.id)) return false;
   if (options.forceDomestic && club.countryId !== (options.domesticCountryId ?? context.sourceClub.countryId)) return false;
   if (options.forceForeign && !isEuropeanClub(club)) return false;
   if (!options.includeForeign && !options.forceForeign && club.countryId !== context.sourceClub.countryId) return false;
@@ -357,6 +361,7 @@ export function generateTransferOffers(state: GameState, salt: number, options: 
       .filter((club) =>
         isEuropeanClub(club) &&
         club.id !== context.sourceClub.id &&
+        !state.betrayedClubIds.includes(club.id) &&
         candidateRole(state, club) !== "reserva" &&
         competitiveStrength(club) <= Math.max(72, state.overall + (context.standout ? 8 : 4)) &&
         (state.age < 35 || competitiveStrength(club) <= competitiveStrength(context.sourceClub) + 3)
@@ -368,6 +373,26 @@ export function generateTransferOffers(state: GameState, salt: number, options: 
       const withoutDoors = selected.filter((club) => !doors.some((door) => door.id === club.id));
       selected = [...withoutDoors.slice(0, Math.max(0, wanted - doors.length)), ...doors];
     }
+  }
+  const usesCountryFocus = Boolean(
+    state.agentCountryFocus &&
+    context.mode !== "loan" &&
+    (context.trigger === "contract-expired" || context.mode === "free-agent") &&
+    !options.forceDomestic &&
+    !options.forceForeign
+  );
+  if (usesCountryFocus) {
+    const focusedWanted = Math.min(wanted, Math.max(1, Math.round(wanted * 0.75)));
+    const focused = CLUBS
+      .filter((club) => club.countryId === state.agentCountryFocus && club.id !== context.sourceClub.id && !state.betrayedClubIds.includes(club.id))
+      .map((club, index) => ({ club, roll: seeded(state.seed, salt + 18_001 + index * 137) }))
+      .sort((a, b) => a.roll - b.roll || a.club.id.localeCompare(b.club.id))
+      .slice(0, focusedWanted)
+      .map(({ club }) => club);
+    const focusedIds = new Set(focused.map((club) => club.id));
+    const ordinary = selected.filter((club) => !focusedIds.has(club.id) && !state.betrayedClubIds.includes(club.id));
+    const fill = pool.filter((club) => !focusedIds.has(club.id) && !ordinary.some((item) => item.id === club.id) && !state.betrayedClubIds.includes(club.id));
+    selected = [...focused, ...ordinary, ...fill].slice(0, wanted);
   }
   return selected.map((club, index) => {
     const offer = materializeOffer(state, club, club.id === loanId ? { ...context, mode: "loan" } : context, salt + index * 41);
@@ -385,7 +410,7 @@ export function generateTransferOffers(state: GameState, salt: number, options: 
 }
 export function materializeTransferOffers(state: GameState, clubIds: string[], salt: number, options: TransferOfferOptions = {}) {
   const context = buildMarketContext(state, options);
-  return Array.from(new Set(clubIds)).filter((id) => id && id !== context.sourceClub.id)
+  return Array.from(new Set(clubIds)).filter((id) => id && id !== context.sourceClub.id && !state.betrayedClubIds.includes(id))
     .map((id, index) => materializeOffer(state, clubById(id), context, salt + index * 41));
 }
 export function buildRenewalOffer(state: GameState): TransferOffer {
@@ -423,6 +448,14 @@ export function applyAcceptedTransfer(state: GameState, offer: TransferOffer): G
   const isLoan = offer.type === "loan";
   const isRenewal = offer.type === "renewal";
   const destinationQualifiedForWorld = clubQualifiedForWorldSeason(state, destination);
+  const formerClubIds = new Set([source.id, ...state.history.map((record) => record.clubId), ...state.transferHistory.flatMap((record) => [record.fromClubId, record.toClubId])].filter(Boolean));
+  const betrayalTargets = !isLoan && !isRenewal
+    ? [...formerClubIds].filter((clubId) => clubId !== destination.id && Boolean(findRivalry(clubId, destination.id)))
+    : [];
+  const betrayedClubIds = Array.from(new Set([...state.betrayedClubIds, ...betrayalTargets]));
+  const directRivalry = !isLoan && !isRenewal ? findRivalry(source.id, destination.id) : undefined;
+  const worldPlayers = isRenewal ? state.worldPlayers : ensureClubSquadPlayers(state.worldPlayers, destination.id, state.season, 14);
+  const betrayalConference = directRivalry ? buildBetrayalConference(state, source, destination, directRivalry.nickname) : null;
   return {
     ...state, currentClubId: destination.id, currentLeagueId: isRenewal ? state.currentLeagueId : destination.leagueId,
     contractYears: isLoan ? Math.max(2, state.contractYears) : offer.contractYears, annualSalary: isLoan ? state.annualSalary : offer.annualSalary,
@@ -441,6 +474,13 @@ export function applyAcceptedTransfer(state: GameState, offer: TransferOffer): G
     loanParentClubId: isLoan ? source.id : "", loanParentLeagueId: isLoan ? (state.currentLeagueId || source.leagueId) : "",
     loanEndSeason: isLoan ? (offer.loanEndSeason || state.season + 1) : 0,
     transferHistory: isRenewal ? state.transferHistory : [...state.transferHistory, transferRecord(state, offer)],
+    betrayedClubIds,
+    agentCountryFocus: !isLoan && !isRenewal ? "" : state.agentCountryFocus,
+    worldPlayers,
+    pendingPressConference: betrayalConference ?? state.pendingPressConference,
+    socialSentiment: directRivalry ? clamp(state.socialSentiment - 7) : state.socialSentiment,
+    mediaRelation: directRivalry ? clamp(state.mediaRelation - 4) : state.mediaRelation,
+    newsFeed: betrayalTargets.length ? [`${state.season}: ${state.name} assinou com ${destination.shortName} e rompeu de vez com ${betrayalTargets.map((id) => clubById(id).shortName).join(", ")}.`, ...state.newsFeed].slice(0, 16) : state.newsFeed,
   };
 }
 export function completeLoanReturn(state: GameState): GameState {

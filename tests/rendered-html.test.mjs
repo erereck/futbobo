@@ -13,7 +13,11 @@ const careerSourceFiles = [
   "../app/components/career/CareerReworkPanels.tsx",
   "../app/components/career/CareerTimeline.tsx",
   "../app/components/career/CareerWorld.tsx",
+  "../app/components/career/CareerTeam.tsx",
+  "../app/components/career/CycleShopDialog.tsx",
+  "../app/components/career/PressConferenceDialog.tsx",
   "../app/components/shell/FutboboShell.tsx",
+  "../app/components/shell/FutboboShellWithNames.tsx",
   "../app/components/shell/ShellUtilityScreens.tsx",
   "../app/career/model.ts",
   "../app/career/shared.ts",
@@ -23,6 +27,11 @@ const careerSourceFiles = [
   "../app/career/performance.ts",
   "../app/career/transfer-market.ts",
   "../app/career/events.ts",
+  "../app/career/cycle-shop.ts",
+  "../app/career/press-conferences.ts",
+  "../app/career/team-roster.ts",
+  "../app/career/world-player-model.ts",
+  "../app/career/world-players.ts",
   "../app/career/simulation.ts",
 ];
 
@@ -30,11 +39,21 @@ async function readCareerSource() {
   return (await Promise.all(careerSourceFiles.map((file) => readFile(new URL(file, import.meta.url), "utf8")))).join("\n");
 }
 
+async function readCareerDramaSource() {
+  return (await Promise.all([
+    "../app/career-drama.ts",
+    "../app/career-drama-base.ts",
+    "../app/career-drama-extra.ts",
+  ].map((file) => readFile(new URL(file, import.meta.url), "utf8")))).join("\n");
+}
+
 test("mantém a rota da carreira pequena e separa o monólito por domínio", async () => {
   const route = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const shellWithNames = await readFile(new URL("../app/components/shell/FutboboShellWithNames.tsx", import.meta.url), "utf8");
   const architecture = await readFile(new URL("../app/career/README.md", import.meta.url), "utf8");
   assert.ok(route.split("\n").length <= 10);
-  assert.match(route, /import FutboboShell from "\.\/components\/shell\/FutboboShell"/);
+  assert.match(route, /import FutboboShellWithNames from "\.\/components\/shell\/FutboboShellWithNames"/);
+  assert.match(shellWithNames, /import FutboboShell from "\.\/FutboboShell"/);
   for (const moduleName of ["model", "shared", "sponsors", "state", "academy", "performance", "transfer-market", "events", "simulation"]) {
     assert.ok(architecture.includes("`" + moduleName + ".ts`"));
   }
@@ -46,7 +65,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   assert.match(pageSource, /className="welcome-version"/);
   assert.match(pageSource, /FUTBOBO_VERSION_NAME/);
   const version = await readFile(new URL("../app/version.ts", import.meta.url), "utf8");
-  assert.match(version, /v93\.7/);
+  assert.match(version, /v93\.10/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -112,7 +131,7 @@ test("fecha a Copa do Mundo com estatisticas completas e impacto forte na Bola d
   assert.match(page, /FASE DE GRUPOS · SIMULADA/);
   const ballon = await readFile(new URL("../app/career/ballon-dor.ts", import.meta.url), "utf8");
   assert.match(ballon, /input\.worldCupGoals >= 8/);
-  assert.match(ballon, /const worldCupFloor = input\.previousBallonDor === 0 \? 62/);
+  assert.match(ballon, /const rescueFloor = input\.previousBallonDor === 0\s*\? 28/);
   assert.match(page, /worldCupBallonSurge \? 68/);
   assert.match(page, /Artilheiro da Copa do Mundo/);
   assert.match(styles, /\.world-cup-stat-report/);
@@ -274,7 +293,10 @@ test("aplica o equilíbrio levemente mais favorável sem liberar títulos fácei
 
 test("valoriza os prêmios individuais e calibra a Bola de Ouro pelo tamanho do palco", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = (await Promise.all([
+    "../app/globals.css",
+    "../app/premium.css",
+  ].map((file) => readFile(new URL(file, import.meta.url), "utf8")))).join("\n");
   const ballon = await readFile(new URL("../app/career/ballon-dor.ts", import.meta.url), "utf8");
 
   assert.match(page, /evaluateBallonDor/);
@@ -286,10 +308,10 @@ test("valoriza os prêmios individuais e calibra a Bola de Ouro pelo tamanho do 
   assert.match(ballon, /input\.overall >= 88/);
   assert.match(ballon, /globalBreakthrough/);
   assert.match(ballon, /repeatMultiplier/);
-  assert.match(ballon, /Math\.max\(0\.0004, 0\.006 \* 0\.55 \*\* \(previous - 7\)\)/);
-  assert.match(ballon, /stage === "minor" && !globalBreakthrough \? historicFloor \* 0\.18/);
-  assert.match(ballon, /input\.isKeeper \? -5/);
-  assert.match(ballon, /input\.positionZone === "defesa" \? -3/);
+  assert.match(ballon, /Math\.max\(0\.002, 0\.018 \* 0\.58 \*\* \(previous - 7\)\)/);
+  assert.match(ballon, /const historicFloor = input\.previousBallonDor === 0\s*\? 42/);
+  assert.match(ballon, /input\.isKeeper \? -4/);
+  assert.match(ballon, /input\.positionZone === "defesa" \? -2/);
   assert.match(page, /const leagueGoldenBootLine = 28 \+ Math\.floor\([\s\S]*\* 9\)/);
   assert.match(page, /const leagueAssistKingLine = 18 \+ Math\.floor\([\s\S]*\* 7\)/);
   assert.match(page, /goals >= europeanGoldenShoeLine/);
@@ -480,7 +502,7 @@ test("impede ficar no clube depois de um pedido de transferência aceito", async
   const page = await readCareerSource();
 
   assert.match(page, /if \(!offer && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/);
-  assert.match(page, /const canStay = !state\.transferRequested && !state\.renewalDenied && !state\.forcedClubExit/);
+  assert.match(page, /const canStay = state\.youthLoanDecision \|\| \(!state\.transferRequested && !state\.renewalDenied && !state\.forcedClubExit/);
   assert.match(page, /Permanecer não é mais uma opção/);
   assert.match(page, /transferRequested: false, transferStatus: null/);
 });
@@ -708,7 +730,7 @@ test("centraliza propostas reais, empréstimos e histórico de transferências s
 test("atributos influenciam a simulação, premiações têm suspense e o escândalo força exílio", async () => {
   const page = await readCareerSource();
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const drama = await readFile(new URL("../app/career-drama.ts", import.meta.url), "utf8");
+  const drama = await readCareerDramaSource();
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /type PlayerAttributes = Record<AttributeKey, number>/);
@@ -807,8 +829,8 @@ test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da
   assert.match(page, /averagePeakOverall/);
   assert.match(page, /positionBreakdown/);
   assert.match(page, /careersWithFiveBallonDor/);
-  assert.match(page, /repeatBallonMultiplier/);
-  assert.match(page, /previousBallonDor === 0[\s\S]*Math\.max\(0\.03, Number\(rawBallonChance\.toFixed\(3\)\)\)/);
+  assert.match(page, /const ballonEvaluation = evaluateBallonDor/);
+  assert.match(page, /const ballonChance = ballonEvaluation\.chance/);
   assert.match(page, /affected\.awardCabinet\["Ídolo da Torcida"\] > 0/);
   assert.match(styles, /\.monte-carlo-shell/);
 });
@@ -816,7 +838,9 @@ test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da
 test("adiciona o pacote de eventos de drama com filtros de carreira", async () => {
   const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
   const page = await readCareerSource();
-  const drama = await readFile(new URL("../app/career-drama.ts", import.meta.url), "utf8");
+  const baseDrama = await readFile(new URL("../app/career-drama-base.ts", import.meta.url), "utf8");
+  const extraDrama = await readFile(new URL("../app/career-drama-extra.ts", import.meta.url), "utf8");
+  const drama = [baseDrama, extraDrama].join("\n");
 
   assert.match(gameData, /needsConfederation\?: Confederation/);
   assert.match(gameData, /needsPositionZone\?: Position\["zone"\]/);
@@ -827,9 +851,11 @@ test("adiciona o pacote de eventos de drama com filtros de carreira", async () =
   assert.match(page, /event\.needsPositionZone && positionByKey\(state\.position\)\.zone !== event\.needsPositionZone/);
   assert.match(page, /event\.needsSquadRoles && !event\.needsSquadRoles\.includes\(state\.squadRole\)/);
 
-  const dramaEventIds = [...drama.matchAll(/id: "(drama-[^"]+)"/g)].map((match) => match[1]);
+  const extraCatalog = extraDrama.split("export const CAREER_DRAMA_EXTRA_EVENTS")[1]?.split("export function careerDramaEventWithOverride")[0] ?? "";
+  const dramaEventIds = [...[baseDrama, extraCatalog].join("\n").matchAll(/id: "(drama-[^"]+)"/g)].map((match) => match[1]);
   assert.ok(dramaEventIds.length >= 45, "o pacote de drama precisa ter ao menos 45 eventos");
   assert.equal(new Set(dramaEventIds).size, dramaEventIds.length, "IDs de drama precisam ser únicos");
+  assert.match(extraDrama, /careerDramaEventWithOverride/);
   for (const tag of ["IDADE", "POSIÇÃO", "REGIÃO", "ELENCO", "CAPITÃO", "SELEÇÃO", "LESÃO", "IMPRENSA", "FAMÍLIA", "EMPRESÁRIO", "APOSENTADORIA"]) {
     assert.match(drama, new RegExp(`tag: "${tag}"`));
   }
@@ -966,7 +992,7 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
 test("fecha o patch de mercado, economia, personalização e futebol de botão", async () => {
   const page = await readCareerSource();
   const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const drama = await readFile(new URL("../app/career-drama.ts", import.meta.url), "utf8");
+  const drama = await readCareerDramaSource();
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
   const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
   const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
@@ -990,7 +1016,7 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
   assert.match(drama, /id: "drama-billie-eilish-photo"/);
   assert.match(drama, /followers: 10_000_000/);
   assert.match(page, /id: "corruption" as const/);
-  assert.match(page, /seeded\(game\.seed, game\.season \* 1877/);
+  assert.match(page, /seeded\(state\.seed, state\.season \* 1877/);
   assert.match(page, /forcedFreeAgentUntilSeason = current\.season \+ corruptionBanYears/);
   assert.match(page, /seasonNetIncome \* 0\.18/);
   assert.match(page, /spendableMoney/);
@@ -1265,7 +1291,7 @@ test("modera o melhor da partida e transforma o destaque em coletiva", async () 
   assert.match(page, /pendingPressConference:/);
   assert.match(page, /Ir para a coletiva de imprensa/);
   assert.match(page, /function answerPressConference/);
-  assert.match(page, /COLETIVA · PERGUNTA/);
+  assert.match(page, /conference\.questionIndex \+ 1/);
   assert.match(styles, /\.press-conference-backdrop/);
 });
 
@@ -1558,6 +1584,33 @@ test("dá ao goleiro uma carreira própria da base ao fim da trajetória", async
   assert.match(systems, /metrics\.cleanSheets \* 2\.2/);
 });
 
+test("lança a v93.10 com elenco persistente, rota do empresário e traição entre rivais", async () => {
+  const game = await readFile(new URL("../app/components/career/CareerGame.tsx", import.meta.url), "utf8");
+  const team = await readFile(new URL("../app/career/team-roster.ts", import.meta.url), "utf8");
+  const world = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
+  const market = await readFile(new URL("../app/career/transfer-market.ts", import.meta.url), "utf8");
+  const state = await readFile(new URL("../app/career/state.ts", import.meta.url), "utf8");
+  const shop = await readFile(new URL("../app/career/cycle-shop.ts", import.meta.url), "utf8");
+  const press = await readFile(new URL("../app/career/press-conferences.ts", import.meta.url), "utf8");
+  const version = await readFile(new URL("../app/version.ts", import.meta.url), "utf8");
+
+  assert.match(game, /changeTab\("team"\)/);
+  assert.match(game, /activeTab === "team"/);
+  assert.match(team, /reserveCapacity: 3/);
+  assert.match(team, /COUNTRIES\.find\(\(candidate\) => candidate\.id === state\.nationality\)/);
+  assert.match(world, /squad-\$\{club\.id\}-\$\{season\}-\$\{serial\}/);
+  assert.match(world, /while \(current\.length \+ added < wanted\)/);
+  assert.match(market, /if \(state\.betrayedClubIds\.includes\(club\.id\)\) return false/);
+  assert.match(market, /!state\.betrayedClubIds\.includes\(id\)/);
+  assert.match(market, /Math\.max\(1, Math\.round\(wanted \* 0\.75\)\)/);
+  assert.match(state, /agentCountryFocus: typeof saved\.agentCountryFocus === "string"/);
+  assert.match(state, /betrayedClubIds: Array\.isArray\(saved\.betrayedClubIds\)/);
+  assert.match(shop, /validCountryFocus/);
+  assert.match(press, /kind: "betrayal"/);
+  assert.match(version, /FUTBOBO_VERSION = "v93\.10"/);
+  assert.match(version, /FUTBOBO_VERSION_NAME = "TIME DE VERDADE"/);
+});
+
 test("mantém World Players persistentes, compactos e determinísticos por carreira", async () => {
   const model = await readFile(new URL("../app/career/world-player-model.ts", import.meta.url), "utf8");
   const domain = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
@@ -1574,7 +1627,8 @@ test("mantém World Players persistentes, compactos e determinísticos por carre
   assert.match(domain, /index < 42/);
   assert.match(domain, /context\.season - player\.retiredSeason > 6/);
   assert.match(state, /worldPlayers: normalizeWorldPlayerUniverse/);
-  assert.match(simulation, /advanceWorldPlayerUniverse\(nextBase\.worldPlayers/);
+  assert.match(simulation, /ensureClubSquadPlayers\(nextBase\.worldPlayers/);
+  assert.match(simulation, /advanceWorldPlayerUniverse\(squadWorld/);
 });
 
 test("liga rivais e premiações ao mundo sem substituir seus sistemas atuais", async () => {

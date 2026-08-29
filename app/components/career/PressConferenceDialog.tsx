@@ -11,6 +11,7 @@ const COPY = {
   "post-match": { eyebrow: "ZONA MISTA", title: "A palavra é sua" },
   presentation: { eyebrow: "COLETIVA DE APRESENTAÇÃO", title: "Primeiras palavras" },
   "former-club": { eyebrow: "REENCONTRO", title: "Depois do apito" },
+  betrayal: { eyebrow: "TRANSFERÊNCIA ENTRE RIVAIS", title: "A cidade quer uma resposta" },
 } as const;
 
 export default function PressConferenceDialog({ conference, onAnswer }: Props) {
