@@ -1,11 +1,5 @@
 import type { GameState } from "./model";
 import { SAVE_KEY } from "./state";
-import {
-  deleteCareerPayload,
-  readCareerPayload,
-  requestDurableCareerStorage,
-  writeCareerPayload,
-} from "./indexed-storage";
 
 export type CareerMode = "player" | "manager";
 
@@ -61,16 +55,6 @@ function isUsableState(value: unknown): value is GameState {
   if (!value || typeof value !== "object") return false;
   const state = value as Partial<GameState>;
   return state.version === 7 && typeof state.phase === "string" && typeof state.name === "string";
-}
-
-function parseUsableState(raw: string | null) {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return isUsableState(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
 }
 
 function metaFromState(state: GameState, current: CareerSaveMeta): CareerSaveMeta {
@@ -139,6 +123,7 @@ export function createCareerSlot(mode: CareerMode = "player") {
   };
   writeIndex([meta, ...index]);
   localStorage.setItem(ACTIVE_KEY, meta.id);
+  localStorage.removeItem(SAVE_KEY);
   return meta;
 }
 
@@ -146,6 +131,15 @@ export function activateCareerSlot(id: string) {
   const index = listCareerSaves();
   const meta = index.find((item) => item.id === id);
   if (!meta) return false;
+  const raw = localStorage.getItem(slotKey(id));
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isUsableState(parsed)) return false;
+  } catch {
+    return false;
+  }
+  localStorage.setItem(SAVE_KEY, raw);
   localStorage.setItem(ACTIVE_KEY, id);
   writeIndex(index.map((item) => item.id === id ? { ...item, lastPlayedAt: Date.now() } : item));
   return true;
@@ -160,9 +154,6 @@ export function deleteCareerSlot(id: string) {
   const index = listCareerSaves().filter((item) => item.id !== id);
   writeIndex(index);
   localStorage.removeItem(slotKey(id));
-  void deleteCareerPayload(id).catch((error) => {
-    console.error("[Futbobo] Falha ao excluir payload da carreira no IndexedDB.", error);
-  });
   if (getActiveCareerId() === id) {
     localStorage.removeItem(ACTIVE_KEY);
     localStorage.removeItem(SAVE_KEY);
@@ -209,144 +200,83 @@ export function listGlobalAchievementUnlocks() {
   return readUnlocks();
 }
 
-async function readSlotRaw(id: string) {
-  try {
-    const indexed = await readCareerPayload(id);
-    if (indexed) return indexed;
-  } catch (error) {
-    console.error("[Futbobo] Falha ao ler carreira no IndexedDB.", error);
-  }
+let lastSyncedPayload = "";
 
-  // Migração sob demanda para quem abre uma carreira antes do bootstrap terminar.
-  const legacy = typeof window === "undefined" ? null : localStorage.getItem(slotKey(id));
-  if (!parseUsableState(legacy)) return null;
-  try {
-    await writeCareerPayload(id, legacy as string);
-    localStorage.removeItem(slotKey(id));
-  } catch (error) {
-    console.error("[Futbobo] Falha ao migrar slot legado para IndexedDB.", error);
-  }
-  return legacy;
-}
-
-export async function readCareerSlotState(id: string) {
-  return parseUsableState(await readSlotRaw(id));
-}
-
-export async function loadActiveCareerState() {
-  if (typeof window === "undefined") return null;
-  const id = getActiveCareerId();
-  if (id) {
-    const state = await readCareerSlotState(id);
-    if (state) return state;
-  }
-
-  // Compatibilidade com instalações anteriores à biblioteca de slots.
-  return parseUsableState(localStorage.getItem(SAVE_KEY));
-}
-
-export async function persistActiveCareerState(state: GameState) {
-  if (typeof window === "undefined" || !isUsableState(state) || state.challengeId) return false;
-  const id = getActiveCareerId();
-  if (!id) return false;
-  const index = listCareerSaves();
-  const meta = index.find((item) => item.id === id);
-  if (!meta) return false;
-
-  const raw = JSON.stringify(state);
-  await writeCareerPayload(id, raw);
-
-  // Só descartamos as cópias antigas depois que o IndexedDB confirmou a escrita.
-  localStorage.removeItem(slotKey(id));
-  localStorage.removeItem(SAVE_KEY);
-
-  const nextMeta = metaFromState(state, { ...meta, lastPlayedAt: Date.now() });
-  writeIndex(index.map((item) => item.id === id ? nextMeta : item));
-  syncAchievements(state, nextMeta);
-  return true;
-}
-
-/**
- * Mantido para chamadas antigas do shell. A carreira agora é persistida
- * diretamente pelo CareerGame, sem o buffer gigante no localStorage.
- */
 export function syncActiveCareerSlot() {
-  // no-op intencional
+  if (typeof window === "undefined") return;
+  const id = getActiveCareerId();
+  if (!id) return;
+  const raw = localStorage.getItem(SAVE_KEY);
+  if (!raw || raw === lastSyncedPayload) return;
+  try {
+    const state = JSON.parse(raw) as unknown;
+    if (!isUsableState(state) || state.phase === "welcome" || state.challengeId) return;
+    const index = listCareerSaves();
+    const meta = index.find((item) => item.id === id);
+    if (!meta) return;
+    localStorage.setItem(slotKey(id), raw);
+    const nextMeta = metaFromState(state, { ...meta, lastPlayedAt: Date.now() });
+    writeIndex(index.map((item) => item.id === id ? nextMeta : item));
+    syncAchievements(state, nextMeta);
+    lastSyncedPayload = raw;
+  } catch {
+    // O buffer legado continua intacto se o payload estiver incompleto durante uma escrita.
+  }
 }
 
-export async function bootstrapCareerStorage() {
+export function bootstrapCareerStorage() {
   if (typeof window === "undefined") return;
-  void requestDurableCareerStorage();
-
   let index = listCareerSaves();
-  const initialActiveId = localStorage.getItem(ACTIVE_KEY) ?? "";
-  const legacyActiveRaw = localStorage.getItem(SAVE_KEY);
-  const legacyActiveState = parseUsableState(legacyActiveRaw);
-
-  // Primeiro tira os payloads grandes de cada slot do localStorage. Cada chave
-  // só é apagada depois da confirmação do IndexedDB, então a atualização é
-  // segura mesmo se o navegador for fechado durante a migração.
-  for (const meta of index) {
-    const legacyRaw = localStorage.getItem(slotKey(meta.id));
-    const legacyState = parseUsableState(legacyRaw);
-    if (!legacyRaw || !legacyState) continue;
+  const legacyRaw = localStorage.getItem(SAVE_KEY);
+  if (index.length === 0 && legacyRaw) {
     try {
-      await writeCareerPayload(meta.id, legacyRaw);
-      localStorage.removeItem(slotKey(meta.id));
-      syncAchievements(legacyState, meta, true);
-    } catch (error) {
-      console.error(`[Futbobo] Não foi possível migrar o slot ${meta.id}.`, error);
-    }
-  }
-
-  if (legacyActiveState && legacyActiveState.phase !== "welcome" && !legacyActiveState.challengeId) {
-    if (index.length === 0) {
-      const now = Date.now();
-      const meta = metaFromState(legacyActiveState, {
-        id: `player-migrated-${now.toString(36)}`,
-        mode: "player",
-        createdAt: now,
-        lastPlayedAt: now,
-        name: legacyActiveState.name || "Carreira migrada",
-        clubId: legacyActiveState.currentClubId || legacyActiveState.academyClubId || "",
-        season: legacyActiveState.season,
-        position: legacyActiveState.position,
-        overall: legacyActiveState.overall,
-        phase: legacyActiveState.phase,
-        achievementsEligible: true,
-      });
-      try {
-        await writeCareerPayload(meta.id, legacyActiveRaw as string);
-        localStorage.removeItem(SAVE_KEY);
+      const legacy = JSON.parse(legacyRaw) as unknown;
+      if (isUsableState(legacy) && legacy.phase !== "welcome" && !legacy.challengeId) {
+        const now = Date.now();
+        const meta = metaFromState(legacy, {
+          id: `player-migrated-${now.toString(36)}`,
+          mode: "player",
+          createdAt: now,
+          lastPlayedAt: now,
+          name: legacy.name || "Carreira migrada",
+          clubId: legacy.currentClubId || legacy.academyClubId || "",
+          season: legacy.season,
+          position: legacy.position,
+          overall: legacy.overall,
+          phase: legacy.phase,
+          achievementsEligible: true,
+        });
+        localStorage.setItem(slotKey(meta.id), legacyRaw);
         writeIndex([meta]);
         localStorage.setItem(ACTIVE_KEY, meta.id);
-        syncAchievements(legacyActiveState, meta, true);
+        syncAchievements(legacy, meta, true);
         index = [meta];
-      } catch (error) {
-        console.error("[Futbobo] Falha ao migrar save legado para IndexedDB.", error);
       }
-    } else if (initialActiveId && index.some((meta) => meta.id === initialActiveId)) {
-      const meta = index.find((item) => item.id === initialActiveId) as CareerSaveMeta;
-      try {
-        // SAVE_KEY era o buffer mais recente da carreira ativa e pode estar à
-        // frente da cópia antiga do slot, então ele vence durante a migração.
-        await writeCareerPayload(initialActiveId, legacyActiveRaw as string);
-        localStorage.removeItem(SAVE_KEY);
-        const nextMeta = metaFromState(legacyActiveState, { ...meta, lastPlayedAt: Date.now() });
-        writeIndex(index.map((item) => item.id === initialActiveId ? nextMeta : item));
-        syncAchievements(legacyActiveState, nextMeta, true);
-        index = index.map((item) => item.id === initialActiveId ? nextMeta : item);
-      } catch (error) {
-        console.error("[Futbobo] Falha ao migrar buffer ativo para IndexedDB.", error);
-      }
+    } catch {
+      // Save legado inválido continua sob responsabilidade do normalizador atual.
     }
   }
 
-  // Faz uma passada no IndexedDB para importar conquistas de slots que já
-  // tinham sido migrados em uma execução anterior.
   for (const meta of index) {
-    const state = await readCareerSlotState(meta.id);
-    if (state) syncAchievements(state, meta, true);
+    const raw = localStorage.getItem(slotKey(meta.id));
+    if (!raw) continue;
+    try {
+      const state = JSON.parse(raw) as unknown;
+      if (isUsableState(state)) syncAchievements(state, meta, true);
+    } catch {
+      // Slot corrompido não impede a leitura dos outros.
+    }
+  }
+}
+
+export function readCareerSlotState(id: string) {
+  const raw = typeof window === "undefined" ? null : localStorage.getItem(slotKey(id));
+  if (!raw) return null;
+  try {
+    const state = JSON.parse(raw) as unknown;
+    return isUsableState(state) ? state : null;
+  } catch {
+    return null;
   }
 }
 
@@ -363,17 +293,16 @@ export type CareerStorageImportResult = {
   activeState: GameState | null;
 };
 
-export async function exportCareerStorageSnapshot(): Promise<CareerStorageSnapshot> {
+export function exportCareerStorageSnapshot(): CareerStorageSnapshot {
   const index = listCareerSaves();
   const slots: Record<string, GameState> = {};
   for (const meta of index) {
-    const state = await readCareerSlotState(meta.id);
+    const state = readCareerSlotState(meta.id);
     if (state) slots[meta.id] = state;
   }
   const usableIndex = index.filter((meta) => Boolean(slots[meta.id]));
-  const currentActiveId = getActiveCareerId();
-  const activeId = usableIndex.some((meta) => meta.id === currentActiveId)
-    ? currentActiveId
+  const activeId = usableIndex.some((meta) => meta.id === getActiveCareerId())
+    ? getActiveCareerId()
     : usableIndex[0]?.id ?? "";
   return {
     version: 2,
@@ -384,7 +313,7 @@ export async function exportCareerStorageSnapshot(): Promise<CareerStorageSnapsh
   };
 }
 
-export async function importCareerStorageSnapshot(value: unknown): Promise<CareerStorageImportResult> {
+export function importCareerStorageSnapshot(value: unknown): CareerStorageImportResult {
   if (typeof window === "undefined" || !value || typeof value !== "object") {
     return { imported: false, activeState: null };
   }
@@ -396,14 +325,10 @@ export async function importCareerStorageSnapshot(value: unknown): Promise<Caree
   const rawSlots = snapshot.slots as Record<string, unknown>;
   const importedIndex = sanitizeIndex(snapshot.index).filter((meta) => isUsableState(rawSlots[meta.id]));
   const currentIndex = listCareerSaves();
-
-  // Libera imediatamente o localStorage antigo antes de reconstruir o índice.
-  localStorage.removeItem(SAVE_KEY);
   for (const meta of currentIndex) localStorage.removeItem(slotKey(meta.id));
 
-  await Promise.all(currentIndex.map((meta) => deleteCareerPayload(meta.id).catch(() => undefined)));
   for (const meta of importedIndex) {
-    await writeCareerPayload(meta.id, JSON.stringify(rawSlots[meta.id]));
+    localStorage.setItem(slotKey(meta.id), JSON.stringify(rawSlots[meta.id]));
   }
   writeIndex(importedIndex);
 
@@ -419,10 +344,14 @@ export async function importCareerStorageSnapshot(value: unknown): Promise<Caree
     : importedIndex[0]?.id ?? "";
   if (!activeId) {
     localStorage.removeItem(ACTIVE_KEY);
+    localStorage.removeItem(SAVE_KEY);
+    lastSyncedPayload = "";
     return { imported: true, activeState: null };
   }
 
   const activeState = rawSlots[activeId] as GameState;
   localStorage.setItem(ACTIVE_KEY, activeId);
+  localStorage.setItem(SAVE_KEY, JSON.stringify(activeState));
+  lastSyncedPayload = "";
   return { imported: true, activeState };
 }
