@@ -65,32 +65,6 @@ Protótipo experimental de futebol arcade em tempo real. É uma área de laborat
 
 ---
 
-## 🚧 Próxima versão — v93.10 · TIME DE VERDADE
-
-A v93.10 está em **validação final** antes de entrar na `main`.
-
-O update é focado em transformar os clubes em elencos de verdade e preparar a arquitetura para um futuro modo carreira de treinador.
-
-Planejado para a versão:
-
-- Nova aba **TIME** dentro da carreira.
-- XI inicial visual e até três jogadores no banco, com vagas livres para futuras contratações.
-- Companheiros materializados como World Players persistentes em vez de nomes descartáveis.
-- Elenco da Seleção exibido quando o jogador estiver convocado.
-- Rebalanceamento da carreira internacional para craques produzirem números mais coerentes pela Seleção.
-- Nova opção da **QUADRA** para mandar o empresário focar em um país específico.
-- Aproximadamente 75% das propostas de fim de contrato vindas daquele mercado.
-- Sistema permanente de **traição entre rivais**.
-- Clubes traídos podem cortar relações e deixar de enviar propostas futuras.
-- Coletivas específicas para transferências diretas entre rivais.
-- Mais patrocinadores.
-- Crescimento de seguidores muito mais agressivo para jogadores realmente históricos.
-- Estruturas de elenco pensadas para serem reutilizadas futuramente por uma carreira de treinador.
-
-A versão só será marcada como lançada depois de passar pelas verificações de build e regressão.
-
----
-
 ## 🧠 Filosofia do projeto
 
 O Futbobo tenta evitar a sensação de que toda carreira acaba convergindo para a mesma coisa.
