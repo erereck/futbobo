@@ -377,7 +377,7 @@ export function generateTransferOffers(state: GameState, salt: number, options: 
   const usesCountryFocus = Boolean(
     state.agentCountryFocus &&
     context.mode !== "loan" &&
-    (context.trigger === "contract-expired" || context.mode === "free-agent") &&
+    (state.contractYears === 0 || context.trigger === "contract-expired" || context.mode === "free-agent") &&
     !options.forceDomestic &&
     !options.forceForeign
   );
