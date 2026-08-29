@@ -7,7 +7,6 @@ import type { GameState } from "../../career/model";
 import type { TeamSquadMember, TeamSquadView } from "../../career/team-roster";
 import { buildClubSquad, buildNationalSquad } from "../../career/team-roster";
 import { clubById } from "../../career/shared";
-import { ROLE_LABELS } from "../../career-systems";
 import { careerSquadAppearance, teamKitPattern } from "../../player-appearance";
 import { PlayerAppearancePortrait } from "../../PlayerAppearanceEditor";
 import FutboboIcon from "../FutboboIcon";
@@ -175,6 +174,7 @@ function TeamOption({
   badge,
   eyebrow,
   label,
+  overall,
   onClick,
 }: {
   active: boolean;
@@ -182,13 +182,14 @@ function TeamOption({
   badge: ReactNode;
   eyebrow: string;
   label: string;
+  overall?: number;
   onClick: () => void;
 }) {
   return (
     <button type="button" className={active ? styles.activeOption : ""} aria-pressed={active} disabled={disabled} onClick={onClick}>
       {badge}
-      <span><small>{eyebrow}</small><strong>{label}</strong></span>
-      <b aria-hidden="true">{active ? "●" : disabled ? "—" : "○"}</b>
+      <span className={styles.optionCopy}><small>{eyebrow}</small><strong>{label}</strong></span>
+      <span className={styles.optionOverall}><small>OVR 5</small><b>{overall ?? "—"}</b></span>
     </button>
   );
 }
@@ -205,13 +206,6 @@ export default function CareerTeam({ state }: { state: GameState }) {
   const teamId = nationalActive ? `national-${national!.country.id}` : club.id;
   const primary = nationalActive ? national!.country.primary : club.primary;
   const secondary = nationalActive ? national!.country.secondary : club.secondary;
-  const name = nationalActive ? national!.country.name : club.shortName;
-  const subline = nationalActive
-    ? `${national!.label} · ${state.nationalCaps} jogos pela seleção`
-    : `${state.season} · ${ROLE_LABELS[state.squadRole]}`;
-  const badge = nationalActive
-    ? <NationBadge country={national!.country} size="lg" />
-    : <ClubBadge club={club} size="lg" />;
 
   const teamStyle = {
     "--team-primary": primary,
@@ -231,6 +225,7 @@ export default function CareerTeam({ state }: { state: GameState }) {
           badge={<ClubBadge club={club} size="sm" />}
           eyebrow="CLUBE"
           label={club.shortName}
+          overall={clubSquad.averageOverall}
           onClick={() => setMode("club")}
         />
         <TeamOption
@@ -239,19 +234,10 @@ export default function CareerTeam({ state }: { state: GameState }) {
           badge={<NationBadge country={national?.country ?? country} size="sm" />}
           eyebrow={national ? "SELEÇÃO" : "SEM CONVOCAÇÃO"}
           label={national?.country.name ?? country.name}
+          overall={national?.squad.averageOverall}
           onClick={() => setMode("national")}
         />
       </nav>
-
-      <section className={styles.teamHero}>
-        <div className={styles.teamBadge}>{badge}</div>
-        <div className={styles.teamIdentity}>
-          <span>{nationalActive ? "SELEÇÃO ATIVA" : "TIME ATUAL"}</span>
-          <h3>{name}</h3>
-          <p>{subline}</p>
-        </div>
-        <div className={styles.teamOverall}><small>OVR 5</small><strong>{squad.averageOverall}</strong></div>
-      </section>
 
       <section className={styles.squadLayout} aria-label="Escalação e banco de reservas">
         <div className={styles.pitchColumn}>

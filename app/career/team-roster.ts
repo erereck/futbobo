@@ -35,7 +35,7 @@ export type TeamSquadView = {
 // A aba Time representa a equipe que realmente entra na mesa: cinco botões.
 // O universo da carreira continua com o elenco completo; esta seleção apenas
 // traduz os melhores nomes para a formação compacta usada nas partidas.
-const STARTER_TEMPLATE: PositionKey[] = ["ZAG", "LD", "LE", "MC", "CA"];
+const STARTER_TEMPLATE: PositionKey[] = ["ZAG", "LE", "LD", "MC", "CA"];
 const NATIONAL_TIER_LABELS: Record<NationalTier, string> = {
   none: "",
   sub17: "SUB-17",
@@ -81,30 +81,24 @@ function fitScore(member: TeamSquadMember, desired: PositionKey) {
 
 function chooseLineup(pool: TeamSquadMember[], forcedStarter?: TeamSquadMember) {
   const remaining = pool.filter((member) => !forcedStarter || member.id !== forcedStarter.id);
-  const starters: TeamSquadMember[] = [];
-  let forcedUsed = false;
-  for (const desired of STARTER_TEMPLATE) {
-    if (forcedStarter && !forcedUsed) {
-      const exact = forcedStarter.position === desired;
-      const sameZone = positionByKey(forcedStarter.position).zone === positionByKey(desired).zone;
-      if (exact || sameZone || STARTER_TEMPLATE.filter((slot) => slot === forcedStarter.position).length === 0) {
-        starters.push(forcedStarter);
-        forcedUsed = true;
-        continue;
-      }
-    }
+  const starters: Array<TeamSquadMember | undefined> = Array.from({ length: STARTER_TEMPLATE.length });
+
+  if (forcedStarter) {
+    const forcedIndex = STARTER_TEMPLATE
+      .map((desired, index) => ({ index, score: fitScore(forcedStarter, desired) }))
+      .sort((a, b) => a.score - b.score || a.index - b.index)[0]?.index ?? 0;
+    starters[forcedIndex] = forcedStarter;
+  }
+
+  STARTER_TEMPLATE.forEach((desired, index) => {
+    if (starters[index]) return;
     const candidate = [...remaining]
-      .filter((member) => !starters.some((starter) => starter.id === member.id))
+      .filter((member) => !starters.some((starter) => starter?.id === member.id))
       .sort((a, b) => fitScore(a, desired) - fitScore(b, desired) || b.overall - a.overall || a.id.localeCompare(b.id))[0];
-    if (candidate) starters.push(candidate);
-  }
-  if (forcedStarter && !forcedUsed && starters.length) {
-    const replaceIndex = starters
-      .map((member, index) => ({ member, index, score: fitScore(member, forcedStarter.position) }))
-      .sort((a, b) => a.score - b.score || a.member.overall - b.member.overall)[0]?.index ?? starters.length - 1;
-    starters[replaceIndex] = forcedStarter;
-  }
-  return starters.slice(0, STARTER_TEMPLATE.length);
+    if (candidate) starters[index] = candidate;
+  });
+
+  return starters.filter((member): member is TeamSquadMember => Boolean(member));
 }
 
 function buildLines(starters: TeamSquadMember[]): TeamPitchLine[] {

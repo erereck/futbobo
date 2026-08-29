@@ -25,7 +25,6 @@
 }
 
 .screenIntro > div,
-.teamIdentity,
 .sectionHeading > div,
 .benchIdentity,
 .benchSection header > div {
@@ -33,7 +32,6 @@
 }
 
 .screenIntro span,
-.teamIdentity > span,
 .sectionHeading span,
 .benchSection header span {
   color: var(--gold);
@@ -96,8 +94,8 @@
   min-height: 52px;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 9px;
-  padding: 6px 10px;
+  gap: 12px;
+  padding: 6px 9px;
   border: 1px solid transparent;
   border-radius: 9px;
   background: transparent;
@@ -131,105 +129,46 @@
   color: var(--text);
 }
 
-.teamSwitcher button > span {
+.optionCopy {
   display: grid;
   min-width: 0;
   gap: 2px;
 }
 
-.teamSwitcher button small {
+.optionCopy small {
   color: var(--gold);
   font-size: 6px;
   font-weight: 900;
   letter-spacing: .12em;
 }
 
-.teamSwitcher button strong {
+.optionCopy strong {
   overflow: hidden;
   font: 800 13px/1 var(--display);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.teamSwitcher button > b {
-  color: var(--gold);
-  font-size: 7px;
-}
-
-.teamHero {
-  position: relative;
+.optionOverall {
   display: grid;
-  min-width: 0;
-  min-height: 88px;
-  grid-template-columns: auto minmax(0, 1fr) 58px;
-  align-items: center;
-  gap: 12px;
-  overflow: hidden;
-  padding: 11px 12px;
-  border: 1px solid var(--line-strong);
-  border-left: 3px solid var(--team-primary);
-  border-radius: 14px 14px 5px 14px;
-  background: var(--surface);
-}
-
-.teamHero::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--team-secondary);
-  opacity: .8;
-}
-
-.teamBadge {
-  display: grid;
-  width: 66px;
-  height: 66px;
-  place-items: center;
-  border-radius: 12px 12px 4px 12px;
-  background: rgba(255, 255, 255, .035);
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-
-.teamIdentity h3 {
-  margin: 3px 0 2px;
-  overflow: hidden;
-  font: 900 26px/.92 var(--display);
-  letter-spacing: -.025em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.teamIdentity p {
-  margin: 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 8px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.teamOverall {
-  display: grid;
-  min-height: 56px;
-  place-items: center;
-  align-content: center;
-  gap: 1px;
+  min-width: 34px;
+  justify-items: end;
+  gap: 2px;
   border-left: 1px solid var(--line);
+  padding-left: 8px;
 }
 
-.teamOverall small {
+.optionOverall small {
   color: var(--muted);
-  font-size: 6px;
+  font-size: 5px;
   font-weight: 900;
   letter-spacing: .09em;
+  white-space: nowrap;
 }
 
-.teamOverall strong {
+.optionOverall b {
   color: var(--gold);
-  font: 900 29px/.95 var(--display);
+  font: 900 19px/.85 var(--display);
   font-variant-numeric: tabular-nums;
 }
 
@@ -331,7 +270,7 @@
 .playerPiece {
   position: relative;
   display: grid;
-  width: 102px;
+  width: 96px;
   min-width: 0;
   justify-items: center;
   align-self: center;
@@ -347,13 +286,13 @@
 .piecePortrait {
   position: relative;
   display: grid;
-  width: 82px;
-  height: 82px;
+  width: 78px;
+  height: 78px;
   place-items: center;
-  border: 3px solid var(--team-secondary);
+  border: 1px solid var(--team-secondary);
   border-radius: 50%;
   background: var(--team-primary);
-  box-shadow: 0 0 0 2px rgba(234, 246, 236, .68), 0 5px 12px rgba(0, 0, 0, .32);
+  box-shadow: 0 0 0 1px rgba(234, 246, 236, .55), 0 5px 12px rgba(0, 0, 0, .3);
 }
 
 .piecePortrait canvas,
@@ -363,7 +302,7 @@
 }
 
 .playerPiece[data-you="true"] .piecePortrait {
-  box-shadow: 0 0 0 3px var(--gold), 0 0 0 6px rgba(244, 196, 48, .13), 0 7px 16px rgba(0, 0, 0, .38);
+  box-shadow: 0 0 0 2px var(--gold), 0 0 0 4px rgba(244, 196, 48, .11), 0 7px 16px rgba(0, 0, 0, .36);
 }
 
 .positionBadge,
@@ -557,41 +496,35 @@
 @media (max-width: 390px) {
   .screen { padding-inline: 10px; }
   .screenIntro h2 { font-size: 26px; }
-  .teamSwitcher button { gap: 6px; padding-inline: 7px; }
-  .teamSwitcher button strong { font-size: 11px; }
-  .teamHero { grid-template-columns: auto minmax(0, 1fr) 52px; gap: 9px; padding-inline: 9px; }
-  .teamBadge { width: 58px; height: 58px; }
-  .teamIdentity h3 { font-size: 23px; }
+  .teamSwitcher button { gap: 7px; padding-inline: 7px; }
+  .optionCopy strong { font-size: 11px; }
+  .optionOverall { min-width: 28px; padding-left: 6px; }
+  .optionOverall b { font-size: 17px; }
   .sectionHeading > small { display: none; }
-  .pitch { min-height: 480px; }
-  .pieceFormation { inset-inline: 3px; }
-  .playerPiece { width: 92px; }
-  .piecePortrait { width: 76px; height: 76px; }
-  .piecePortrait canvas { width: 68px !important; height: 68px !important; }
+  .pitch { min-height: 464px; }
+  .pieceFormation { inset: 18px 6px 52px; }
+  .playerPiece { width: 86px; }
+  .piecePortrait { width: 70px; height: 70px; }
+  .piecePortrait canvas { width: 66px !important; height: 66px !important; }
   .pieceName { padding-inline: 4px; }
 }
 
 @media (max-width: 335px) {
   .screenIntro p { display: none; }
   .screenIntro h2 { font-size: 24px; }
-  .teamSwitcher button > b { display: none; }
-  .teamSwitcher button { grid-template-columns: auto minmax(0, 1fr); }
-  .teamHero { grid-template-columns: 50px minmax(0, 1fr) 46px; }
-  .teamBadge { width: 50px; height: 50px; }
-  .teamIdentity h3 { font-size: 20px; }
-  .teamOverall strong { font-size: 25px; }
-  .pitch { min-height: 460px; }
-  .playerPiece { width: 86px; }
-  .piecePortrait { width: 70px; height: 70px; }
+  .teamSwitcher button { grid-template-columns: auto minmax(0, 1fr) auto; gap: 5px; padding-inline: 5px; }
+  .optionOverall { min-width: 25px; padding-left: 4px; }
+  .optionOverall small { font-size: 4px; }
+  .optionOverall b { font-size: 15px; }
+  .pitch { min-height: 448px; }
+  .playerPiece { width: 82px; }
+  .piecePortrait { width: 66px; height: 66px; }
   .piecePortrait canvas { width: 62px !important; height: 62px !important; }
 }
 
 @media (min-width: 700px) {
   .screen { padding: 20px 22px 36px; gap: 14px; }
   .teamSwitcher { max-width: 620px; }
-  .teamHero { min-height: 102px; }
-  .teamBadge { width: 76px; height: 76px; }
-  .teamIdentity h3 { font-size: 32px; }
   .squadLayout { grid-template-columns: minmax(420px, 1fr) minmax(250px, 320px); align-items: start; gap: 14px; }
   .benchSection { position: sticky; top: 0; margin-top: 49px; }
   .pitch { min-height: 590px; }
