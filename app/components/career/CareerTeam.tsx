@@ -5,6 +5,8 @@ import type { TeamSquadMember, TeamSquadView } from "../../career/team-roster";
 import { buildClubSquad, buildNationalSquad } from "../../career/team-roster";
 import { clubById } from "../../career/shared";
 import { ROLE_LABELS } from "../../career-systems";
+import { teamKitPattern } from "../../player-appearance";
+import { PlayerAppearancePortrait } from "../../PlayerAppearanceEditor";
 import { ClubBadge, NationBadge } from "./CareerPrimitives";
 import styles from "./CareerTeam.module.css";
 
@@ -52,12 +54,37 @@ export default function CareerTeam({ state }: { state: GameState }) {
   const club = clubById(state.currentClubId || state.academyClubId);
   const clubSquad = buildClubSquad(state);
   const national = buildNationalSquad(state);
+  const role = ROLE_LABELS[state.squadRole];
+
   return (
     <div className={`${styles.screen} screen-enter`}>
       <header className={styles.hero}>
-        <div className={styles.identity}><ClubBadge club={club} size="lg" /><div><span>TIME</span><h2>{club.shortName}</h2><p>Elenco vivo · {clubSquad.formation} · {ROLE_LABELS[state.squadRole]}</p></div></div>
+        <div className={styles.portraitFrame}>
+          <PlayerAppearancePortrait
+            appearance={{ ...state.playerAppearance, kitPattern: teamKitPattern(state.seed, club.id) }}
+            primary={club.primary}
+            secondary={club.secondary}
+            size={84}
+            label={`Visual de ${state.name}`}
+          />
+          <span>VOCÊ · #{state.number}</span>
+        </div>
+
+        <div className={styles.identity}>
+          <span className={styles.heroKicker}>TIME ATUAL</span>
+          <div className={styles.clubLine}>
+            <ClubBadge club={club} size="md" />
+            <div>
+              <h2>{club.shortName}</h2>
+              <p>{state.season} · {clubSquad.formation}</p>
+            </div>
+          </div>
+          <div className={styles.roleLine}><b>{role}</b><span>{state.position} · {state.overall} OVR</span></div>
+        </div>
+
         <div className={styles.heroMetric}><small>OVR XI</small><strong>{clubSquad.averageOverall}</strong></div>
       </header>
+
       <section className={styles.sectionHeading}><div><span>ONZE INICIAL</span><h3>Quem entra em campo com você</h3></div><small>Os companheiros pertencem ao universo da carreira: evoluem, envelhecem e podem trocar de clube.</small></section>
       <Pitch squad={clubSquad} />
       <Bench squad={clubSquad} />
