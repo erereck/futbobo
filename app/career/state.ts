@@ -160,6 +160,11 @@ export const RANDOM_NAME_LAST_PART = [
 
 export const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS, ...GOALKEEPER_EVENTS, ...CLUB_SPECIFIC_EVENTS];
 
+function eventIdCompatibleWithClub(eventId: string, clubId: string, fallback: string) {
+  const event = ALL_PRO_EVENTS.find((candidate) => candidate.id === eventId);
+  return event?.needsClubIds && !event.needsClubIds.includes(clubId) ? fallback : eventId;
+}
+
 export const FICTIONAL_FINALISTS = [
   "Mateo Alcázar",
   "Noah van Dijk",
@@ -542,6 +547,8 @@ export function normalizeSave(value: unknown): GameState {
         ? saved.pendingStoryDecision
         : null,
     currentLeagueId: saved.currentLeagueId ?? (saved.currentClubId ? clubById(saved.currentClubId).leagueId : ""),
+    currentEventId: eventIdCompatibleWithClub(saved.currentEventId ?? base.currentEventId, saved.currentClubId ?? "", "extra-training"),
+    nextEventId: eventIdCompatibleWithClub(saved.nextEventId ?? "", saved.currentClubId ?? "", ""),
     continentalSlot,
     adaptation: saved.adaptation ?? 100,
     abroadSeasons: saved.abroadSeasons ?? 0,
