@@ -889,7 +889,7 @@ export default function BotaoMatch({
             <span className="botao-pause-mark" aria-hidden="true">II</span>
             <small>INTERVALO TÉCNICO</small>
             <strong>Partida pausada</strong>
-            <p>{localMatch ? "Relógio e bola estão congelados." : "Relógio, adversário e bola estão congelados."}</p>
+            <p>{localMatch ? "Relógio e bola estão congelados." : "Relógio da partida, bola e adversário congelam. A regra dos 7s continua."}</p>
             <button type="button" className="botao-primary" onClick={togglePause}>
               Retomar partida <span aria-hidden="true">▶</span>
             </button>
