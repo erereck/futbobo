@@ -14,9 +14,13 @@ export default function FutboboShellWithNames() {
 
   useEffect(() => {
     let mounted = true;
-    void installLargeStorageBridge().finally(() => {
-      if (mounted) setStorageReady(true);
-    });
+    void installLargeStorageBridge()
+      .catch((error) => {
+        console.error("[Futbobo] Falha ao preparar armazenamento; usando fallback legado.", error);
+      })
+      .finally(() => {
+        if (mounted) setStorageReady(true);
+      });
     return () => {
       mounted = false;
     };
