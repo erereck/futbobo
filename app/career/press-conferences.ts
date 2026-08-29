@@ -287,40 +287,67 @@ const FORMER_RESPECT = [
   { label: "Eles fazem parte da minha história e isso não muda", result: "A resposta preserva pontes com o antigo clube." },
   { label: "Foi um adversário difícil e sempre será uma casa importante", result: "A maturidade esfria a rivalidade depois do jogo." },
 ];
-const FORMER_FIRE = [
-  { label: "Hoje eles viram por que não deveriam ter me deixado sair", result: "A declaração explode nas redes e rompe o pouco de paz restante." },
-  { label: "O passado ficou pequeno para o jogador que eu sou agora", result: "A antiga torcida transforma seu nome em alvo." },
+const FORMER_FIRE_WIN = [
+  { label: "Hoje eles viram por que não deveriam ter me deixado sair", result: "A declaração explode nas redes e transforma a vitória em provocação direta." },
+  { label: "O passado ficou pequeno para o jogador que eu sou agora", result: "A antiga torcida transforma seu nome em alvo depois da derrota." },
   { label: "Conheço aquele clube e sabia exatamente onde machucar", result: "A provocação vira a principal manchete do reencontro." },
 ];
+const FORMER_FIRE_DRAW = [
+  { label: "Se isso virou um recado, a resposta fica para o próximo jogo", result: "A frase mantém a tensão viva sem fingir que houve vencedor." },
+  { label: "Um empate não muda o motivo pelo qual eu segui meu caminho", result: "A resposta soa firme e mantém a antiga torcida dividida." },
+  { label: "Eles me conhecem bem; sabem que essa história ainda não acabou", result: "O próximo reencontro ganha clima de continuação imediata." },
+];
+const FORMER_FIRE_LOSS = [
+  { label: "Eles ganharam hoje. Isso não reescreve por que eu saí", result: "A resposta evita desculpas, mas a antiga torcida trata a frase como combustível." },
+  { label: "Se acham que esse jogo encerra a discussão, podem esperar o próximo", result: "A provocação sobrevive à derrota e aumenta a pressão para o reencontro seguinte." },
+  { label: "Perder para eles dói, mas não me faz querer voltar", result: "A frase admite o golpe sem transformar a derrota em arrependimento." },
+];
 
-function formerAnswers(state: GameState, salt: number): PressAnswer[] {
+function formerAnswers(state: GameState, salt: number, outcome: BotaoMatchResult["outcome"]): PressAnswer[] {
   const silent = pick(FORMER_SILENCE, state.seed, salt + 1);
   const respect = pick(FORMER_RESPECT, state.seed, salt + 2);
-  const fire = pick(FORMER_FIRE, state.seed, salt + 3);
+  const firePool = outcome === "win" ? FORMER_FIRE_WIN : outcome === "loss" ? FORMER_FIRE_LOSS : FORMER_FIRE_DRAW;
+  const fire = pick(firePool, state.seed, salt + 3);
+  const fireEffect = outcome === "win"
+    ? { reputation: 7, followers: 90_000, discipline: -5, mediaRelation: -4 }
+    : outcome === "loss"
+      ? { reputation: 2, followers: 55_000, discipline: -6, mediaRelation: -5, morale: -2 }
+      : { reputation: 4, followers: 65_000, discipline: -4, mediaRelation: -4 };
   return [
     { ...silent, tone: "calm", toneLabel: "Não comenta", effect: { lifeBalance: 5, mediaRelation: -1, morale: 2 } },
     { ...respect, tone: "team", toneLabel: "Fala com respeito", effect: { mediaRelation: 6, leadership: 4, fans: 2 } },
-    { ...fire, tone: "bold", toneLabel: "Ataca o ex-clube", effect: { reputation: 7, followers: 90_000, discipline: -5, mediaRelation: -4 } },
+    { ...fire, tone: "bold", toneLabel: outcome === "loss" ? "Responde à derrota" : "Ataca o ex-clube", effect: fireEffect },
   ];
 }
 
 export function buildFormerClubConference(state: GameState, match: PendingBotaoMatch, result: BotaoMatchResult, formerClub: Club): PressConference {
   const won = result.outcome === "win";
+  const lost = result.outcome === "loss";
   const scored = result.playerGoals > 0;
-  const resultLine = won ? "Seu time venceu o reencontro." : result.outcome === "loss" ? "O reencontro terminou em derrota." : "O reencontro terminou sem vencedor.";
+  const resultLine = won ? "Seu time venceu o reencontro." : lost ? "O reencontro terminou em derrota." : "O reencontro terminou sem vencedor.";
+  const resultPrompts = won
+    ? ["Vencer seu ex-clube teve um sabor diferente?", "Essa vitória encerra alguma conta com o passado?"]
+    : lost
+      ? ["Perder para seu ex-clube tornou o resultado mais pesado?", "Essa derrota mexe mais por ter sido justamente contra eles?"]
+      : ["O empate deixou alguma sensação de assunto inacabado?", "Enfrentar seu ex-clube tornou esse empate diferente?"];
+  const choicePrompts = won
+    ? ["Você faria a mesma escolha novamente?", "Essa vitória reforça que sair foi a decisão certa?"]
+    : lost
+      ? ["Essa derrota faz você questionar a decisão de ter saído?", "Depois de perder para eles, você ainda faria a mesma escolha?"]
+      : ["Esse empate mudou alguma coisa na forma como você vê sua saída?", "Se pudesse voltar atrás, ainda faria a mesma escolha?"];
   const candidates = [
-    { id: "former-result", context: `${resultLine} A primeira pergunta ignora todo o resto da partida.`, prompts: won ? ["Vencer seu ex-clube teve um sabor diferente?", "Essa vitória encerra alguma conta com o passado?"] : ["Enfrentar seu ex-clube tornou o resultado mais pesado?", "O passado entrou em campo junto com você?"] },
+    { id: "former-result", context: `${resultLine} A primeira pergunta ignora todo o resto da partida.`, prompts: resultPrompts },
     { id: "former-memory", context: `Você conhece corredores, funcionários e parte da torcida do ${formerClub.shortName}.`, prompts: ["O que passou pela sua cabeça ao reencontrar tanta gente?", "Ainda existe carinho pelo clube que ficou para trás?"] },
-    { id: "former-choice", context: "Sua troca de camisa ainda é discutida pelas duas torcidas.", prompts: ["Você faria a mesma escolha novamente?", "O reencontro confirmou que sair foi a decisão certa?"] },
+    { id: "former-choice", context: "Sua troca de camisa ainda é discutida pelas duas torcidas.", prompts: choicePrompts },
     ...(scored ? [{ id: "former-goal", context: `Você marcou ${result.playerGoals > 1 ? `${result.playerGoals} vezes` : "contra o ex-clube"}. A chamada lei do ex virou assunto imediato.`, prompts: ["Por que a lei do ex parece funcionar tanto?", "Marcar contra quem conhece seu jogo torna o gol diferente?", "Esse gol foi mais pessoal do que os outros?"] }] : []),
-    { id: "former-future", context: `O próximo reencontro com o ${formerClub.shortName} já começou a ser esperado.`, prompts: ["A partir de agora isso virou uma rivalidade pessoal?", "O que você espera da reação no próximo jogo?"] },
+    { id: "former-future", context: `O próximo reencontro com o ${formerClub.shortName} já começou a ser esperado.`, prompts: lost ? ["Essa derrota transforma o próximo jogo em algo pessoal?", "O que você quer corrigir quando encontrar esse time de novo?"] : ["A partir de agora isso virou uma rivalidade pessoal?", "O que você espera da reação no próximo jogo?"] },
   ];
   const count = 1 + Math.floor(seeded(state.seed, match.season * 2221 + match.id.length) * 3);
   const questions = ordered(candidates, state, match.season * 2237 + match.id.length).slice(0, count).map((entry, index) => ({
     id: entry.id,
     context: entry.context,
     question: pick(entry.prompts, state.seed, match.season * 2251 + index * 19),
-    answers: formerAnswers(state, match.season * 2267 + index * 23),
+    answers: formerAnswers(state, match.season * 2267 + index * 23, result.outcome),
   }));
   const celebration = formerCelebrationQuestion(state, match, result, formerClub);
   if (celebration) questions.push(celebration);
