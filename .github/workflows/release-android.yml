@@ -1,0 +1,72 @@
+name: Publicar APK Android
+
+on:
+  push:
+    tags:
+      - "android-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o projeto
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Restaurar assinatura Android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          mkdir -p .android-signing
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > .android-signing/futbobo-release.p12
+          printf 'storeFile=../.android-signing/futbobo-release.p12\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$ANDROID_STORE_PASSWORD" "$ANDROID_KEY_ALIAS" "$ANDROID_KEY_PASSWORD" \
+            > .android-signing/keystore.properties
+
+      - name: Gerar APK assinado
+        run: npm run android:apk
+
+      - name: Preparar release
+        id: release_meta
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          APK="futbobo-v93.10-android-${VERSION}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$APK"
+          sha256sum "$APK" > "${APK}.sha256"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Publicar no GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APK: ${{ steps.release_meta.outputs.apk }}
+          VERSION: ${{ steps.release_meta.outputs.version }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$APK" "${APK}.sha256" \
+            --title "Futbobo Android ${VERSION} — v93.10 Time de Verdade" \
+            --notes "APK Android da Futbobo v93.10 — Time de Verdade. Inclui elenco persistente, nova aba Time, foco de país do empresário, traições entre rivais e as correções finais do pipeline. Build assinado, offline e gerado diretamente do commit ${GITHUB_SHA}." \
+            --latest
