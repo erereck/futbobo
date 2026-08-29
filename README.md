@@ -18,7 +18,7 @@ O coração do Futbobo.
 
 - Categorias de base dos 12 aos 16–18 anos.
 - 12 posições e quatro caminhos de formação.
-- 608 clubes distribuídos por 33 ligas.
+- 733 clubes distribuídos por 41 ligas.
 - Evolução de OVR, potencial, atributos, moral, forma, reputação e condicionamento.
 - Contratos, salários, transferências, empréstimos e pedidos de saída.
 - Seleções de base, Olímpica e principal.
