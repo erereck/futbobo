@@ -18,12 +18,13 @@ O coração do Futbobo.
 
 - Categorias de base dos 12 aos 16–18 anos.
 - 12 posições e quatro caminhos de formação.
-- 512 clubes distribuídos por 28 ligas.
+- 608 clubes distribuídos por 33 ligas.
 - Evolução de OVR, potencial, atributos, moral, forma, reputação e condicionamento.
 - Contratos, salários, transferências, empréstimos e pedidos de saída.
 - Seleções de base, Olímpica e principal.
 - Brasileirão, Copa do Brasil, Libertadores, competições europeias, asiáticas e Mundial de Clubes.
-- Promoção e rebaixamento em ligas compatíveis, incluindo playoffs ingleses.
+- Segundas divisões jogáveis no Brasil, Inglaterra, Espanha, Itália, Alemanha, França e Portugal.
+- Promoção em ligas compatíveis, com acessos diretos e playoffs específicos de cada campeonato.
 - Lesões, suspensões, fadiga, aposentadoria e declínio.
 - Bola de Ouro, premiações, artilharias, títulos e recordes.
 - Seguidores, imprensa, patrocinadores, torcida e vida extracampo.
@@ -93,7 +94,7 @@ O projeto usa:
 - GitHub Pages
 - Capacitor para a versão Android
 
-A lógica da carreira vem sendo gradualmente separada da interface. Sistemas como mercado, World Players, simulação, patrocinadores, coletivas e progressão vivem em módulos próprios dentro de `app/career/`.
+A lógica da carreira vem sendo gradualmente separada da interface. Sistemas como mercado, World Players, simulação, patrocinadores, coletivas, progressão e divisões adicionais vivem em módulos próprios dentro de `app/career/`.
 
 Isso também facilita a expansão futura para outros modos sem duplicar as regras do universo.
 
@@ -128,6 +129,22 @@ npm test
 ```
 
 `npm test` executa o build e também valida o HTML exportado.
+
+---
+
+## 🆕 Expansão das Segundas Divisões
+
+A carreira ganhou **cinco novas segundas divisões europeias**, adicionando **96 clubes** ao universo do jogo:
+
+- 🇪🇸 **Segunda División** — 22 clubes, com acesso à LaLiga.
+- 🇮🇹 **Serie B** — 20 clubes, com acesso à Serie A.
+- 🇩🇪 **2. Bundesliga** — 18 clubes, com acesso à Bundesliga.
+- 🇫🇷 **Ligue 2** — 18 clubes, com acesso à Ligue 1.
+- 🇵🇹 **Liga Portugal 2** — 18 clubes, com acesso à Primeira Liga.
+
+As novas divisões não funcionam apenas como destinos de transferência. A posição final da temporada pode gerar **acesso direto ou playoffs**, e uma carreira iniciada ou transferida para a segunda divisão pode efetivamente chegar à elite do país.
+
+Com elas, o Futbobo passa a contar com segundas divisões jogáveis em **sete países** quando somadas ao Brasileirão Série B e à Championship inglesa.
 
 ---
 
@@ -172,9 +189,13 @@ Consulte [`ANDROID.md`](ANDROID.md) para detalhes específicos.
 
 ## 📦 Dados do futebol
 
-Clubes, ligas, países, posições e vários parâmetros básicos ficam centralizados em:
+A maior parte dos clubes, ligas, países, posições e parâmetros básicos fica centralizada em:
 
 [`app/game-data.ts`](app/game-data.ts)
+
+Expansões de catálogo que possuem regras próprias podem viver em módulos separados. As segundas divisões adicionais, seus clubes e suas regras de acesso ficam em:
+
+[`app/career/second-divisions.ts`](app/career/second-divisions.ts)
 
 Cada clube possui informações como:
 
@@ -188,19 +209,20 @@ Cada clube possui informações como:
 - reputação
 - força
 
-Esse arquivo é grande de propósito: ele funciona como uma das bases de dados centrais do jogo.
+A separação permite aumentar bastante o banco de clubes sem transformar um único arquivo em responsável por toda a lógica de competições do jogo.
 
 ---
 
 ## 🗂️ Algumas áreas importantes
 
 ```text
-app/career/       regras e sistemas da carreira
-app/components/   interface reutilizável
-app/botao/        futebol de botão
-app/copa/         modo Copa do Mundo
-app/arena/        protótipo arcade experimental
-app/game-data.ts  clubes, países, ligas e dados-base
+app/career/                       regras e sistemas da carreira
+app/career/second-divisions.ts    segundas divisões e regras de acesso adicionais
+app/components/                   interface reutilizável
+app/botao/                        futebol de botão
+app/copa/                         modo Copa do Mundo
+app/arena/                        protótipo arcade experimental
+app/game-data.ts                  clubes, países, ligas e dados-base
 ```
 
 ---
