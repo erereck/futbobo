@@ -32,7 +32,10 @@ export type TeamSquadView = {
   formation: string;
 };
 
-const STARTER_TEMPLATE: PositionKey[] = ["GOL", "LD", "ZAG", "ZAG", "LE", "VOL", "MC", "MEI", "PD", "CA", "PE"];
+// A aba Time representa a equipe que realmente entra na mesa: cinco botões.
+// O universo da carreira continua com o elenco completo; esta seleção apenas
+// traduz os melhores nomes para a formação compacta usada nas partidas.
+const STARTER_TEMPLATE: PositionKey[] = ["ZAG", "LD", "LE", "MC", "CA"];
 const NATIONAL_TIER_LABELS: Record<NationalTier, string> = {
   none: "",
   sub17: "SUB-17",
@@ -101,7 +104,7 @@ function chooseLineup(pool: TeamSquadMember[], forcedStarter?: TeamSquadMember) 
       .sort((a, b) => a.score - b.score || a.member.overall - b.member.overall)[0]?.index ?? starters.length - 1;
     starters[replaceIndex] = forcedStarter;
   }
-  return starters.slice(0, 11);
+  return starters.slice(0, STARTER_TEMPLATE.length);
 }
 
 function buildLines(starters: TeamSquadMember[]): TeamPitchLine[] {
@@ -118,22 +121,21 @@ function buildLines(starters: TeamSquadMember[]): TeamPitchLine[] {
   ];
 }
 
-function finishView(state: GameState, available: TeamSquadMember[], forceUserStarter: boolean, benchSeed: number): TeamSquadView {
+function finishView(state: GameState, available: TeamSquadMember[], forceUserStarter: boolean): TeamSquadView {
   const user = protagonist(state);
   const starterPool = forceUserStarter ? [...available, user] : available;
   const starters = chooseLineup(starterPool, forceUserStarter ? user : undefined);
   const used = new Set(starters.map((member) => member.id));
-  const benchWanted = 1 + Math.floor(seeded(state.seed, benchSeed) * 3);
   let benchPool = available.filter((member) => !used.has(member.id)).sort((a, b) => b.overall - a.overall || a.id.localeCompare(b.id));
   if (!forceUserStarter) benchPool = [user, ...benchPool.filter((member) => member.id !== user.id)];
-  const bench = benchPool.slice(0, benchWanted);
+  const bench = benchPool.slice(0, 3);
   return {
     starters,
     lines: buildLines(starters),
     bench,
     reserveCapacity: 3,
     averageOverall: Math.round(starters.reduce((sum, member) => sum + member.overall, 0) / Math.max(1, starters.length)),
-    formation: "4-3-3",
+    formation: "1-2-1-1",
   };
 }
 
@@ -142,8 +144,9 @@ export function buildClubSquad(state: GameState): TeamSquadView {
   const available = worldPlayersAtClub(universe, state.currentClubId)
     .map((player) => fromWorldPlayer(player, state.season))
     .sort((a, b) => b.overall - a.overall || a.id.localeCompare(b.id));
-  const forceStarter = state.squadRole === "estrela" || state.squadRole === "titular" || (state.squadRole === "rotacao" && state.overall >= (available[7]?.overall ?? 70));
-  return finishView(state, available, forceStarter, state.season * 2801 + state.currentClubId.length * 19);
+  const buttonTeamCutoff = available[STARTER_TEMPLATE.length - 1]?.overall ?? 70;
+  const forceStarter = state.squadRole === "estrela" || state.squadRole === "titular" || (state.squadRole === "rotacao" && state.overall >= buttonTeamCutoff);
+  return finishView(state, available, forceStarter);
 }
 
 function nationalPool(state: GameState) {
@@ -178,10 +181,10 @@ function nationalPool(state: GameState) {
 export function buildNationalSquad(state: GameState) {
   if (state.nationalCategory === "none") return null;
   const available = nationalPool(state);
-  const userStarter = state.overall >= (available[10]?.overall ?? 72) || state.nationalCaptain;
+  const userStarter = state.overall >= (available[STARTER_TEMPLATE.length - 1]?.overall ?? 72) || state.nationalCaptain;
   return {
     label: NATIONAL_TIER_LABELS[state.nationalCategory],
     country: COUNTRIES.find((candidate) => candidate.id === state.nationality) ?? COUNTRIES[0],
-    squad: finishView(state, available, userStarter, state.season * 2917 + state.nationality.length * 31),
+    squad: finishView(state, available, userStarter),
   };
 }
