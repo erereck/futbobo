@@ -14,6 +14,7 @@ import {
   awardInactivityPenalty,
   ballOf,
   beginPenaltyShot,
+  cancelFinalShotGrace,
   beginShot,
   canShoot,
   commitPenalty,
@@ -50,7 +51,7 @@ const MAX_SUBSTEPS = 12;
 const GOAL_PAUSE_MS = 1700;
 const CPU_THINK_MS = 430;
 const PENALTY_PAUSE_MS = 1100;
-const USER_DECISION_SECONDS = 10;
+const USER_DECISION_SECONDS = 7;
 const USER_WARNING_SECONDS = 3;
 const REPLAY_SAMPLE_MS = 80;
 const REPLAY_MAX_FRAMES_PER_TURN = 42;
@@ -144,6 +145,7 @@ export default function BotaoMatch({
   const replayLastSampleRef = useRef(0);
   const replayWasResolvingRef = useRef(false);
   const replayGoalCapturedRef = useRef(false);
+  const finalShotAnnouncedRef = useRef(false);
   const pausedAtRef = useRef<number | null>(null);
   // Timers guardados em ref: efeitos sem lista de dependências rodam a cada
   // render, e limpar no cleanup cancelaria a transição no meio do caminho.
@@ -193,9 +195,6 @@ export default function BotaoMatch({
       pausedAtRef.current = null;
     }
     lastFrameRef.current = 0;
-    idleDeadlineRef.current = null;
-    idleCountdownRef.current = null;
-    setIdleCountdown(null);
     pointerRef.current = null;
     aimRef.current = null;
     selectedRef.current = null;
@@ -269,10 +268,9 @@ export default function BotaoMatch({
   // não descontar de uma vez o tempo em que o app esteve fora da tela.
   useEffect(() => {
     const onVisibility = () => {
+      // O rAF pode parar em segundo plano, mas o deadline usa performance.now();
+      // ao voltar, o tempo perdido continua contado em vez de reiniciar.
       lastFrameRef.current = 0;
-      idleDeadlineRef.current = null;
-      idleCountdownRef.current = null;
-      setIdleCountdown(null);
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
@@ -391,6 +389,53 @@ export default function BotaoMatch({
 
       const pausedNow = pausedRef.current;
 
+      // O relógio da partida congela na pausa, mas o relógio disciplinar NÃO.
+      // Primeiro resolvemos a regra do último chute: se o tempo acabou enquanto
+      // existe um botão fisicamente selecionado, 00:00 fica armado até a bola parar.
+      if (!pausedNow && (state.phase === "aim" || state.phase === "kickoff")) {
+        const clockEvents = advanceClock(state, elapsed, pointerRef.current !== null);
+        if (clockEvents.length > 0) handleEvents(clockEvents);
+        else if (frameCountRef.current % 6 === 0) bump();
+      }
+
+      if (state.finalShotGrace && !finalShotAnnouncedRef.current) {
+        finalShotAnnouncedRef.current = true;
+        showFlash("ÚLTIMO LANCE!", "info", 1500);
+        setAnnouncement("O tempo acabou com o chute armado. Solte: a partida só termina quando a bola parar.");
+        vibrate([0, 45, 35, 90]);
+      } else if (!state.finalShotGrace && state.clock > 0) {
+        finalShotAnnouncedRef.current = false;
+      }
+
+      // Sete segundos são absolutos dentro da vez do usuário. Pausar, segurar
+      // um botão ou selecionar de novo não cria um novo prazo. A única exceção
+      // é o último lance já armado em 00:00.
+      const waitingForUser = !localMatch && (state.phase === "aim" || state.phase === "kickoff") && state.turn === "user";
+      if (!waitingForUser || state.finalShotGrace) {
+        idleDeadlineRef.current = null;
+        if (idleCountdownRef.current !== null) {
+          idleCountdownRef.current = null;
+          setIdleCountdown(null);
+        }
+      } else {
+        if (idleDeadlineRef.current === null) idleDeadlineRef.current = time + USER_DECISION_SECONDS * 1000;
+        const remaining = (idleDeadlineRef.current - time) / 1000;
+        const nextCountdown = remaining <= USER_WARNING_SECONDS ? Math.max(1, Math.ceil(remaining)) : null;
+        if (nextCountdown !== idleCountdownRef.current) {
+          idleCountdownRef.current = nextCountdown;
+          setIdleCountdown(nextCountdown);
+        }
+        if (remaining <= 0) {
+          idleDeadlineRef.current = null;
+          idleCountdownRef.current = null;
+          setIdleCountdown(null);
+          pointerRef.current = null;
+          aimRef.current = null;
+          selectedRef.current = null;
+          handleEvents(awardInactivityPenalty(state));
+        }
+      }
+
       if (!pausedNow) {
       const resolvingForReplay = state.phase === "resolving";
       if (resolvingForReplay) {
@@ -430,37 +475,6 @@ export default function BotaoMatch({
       }
       if (goalFlashRef.current > 0) {
         goalFlashRef.current = Math.max(0, goalFlashRef.current - elapsed * 1.6);
-      }
-
-      const waitingForUser = !localMatch && (state.phase === "aim" || state.phase === "kickoff") && state.turn === "user";
-      if (!waitingForUser) {
-        idleDeadlineRef.current = null;
-        if (idleCountdownRef.current !== null) {
-          idleCountdownRef.current = null;
-          setIdleCountdown(null);
-        }
-      } else {
-        if (idleDeadlineRef.current === null) idleDeadlineRef.current = time + USER_DECISION_SECONDS * 1000;
-        const remaining = (idleDeadlineRef.current - time) / 1000;
-        const nextCountdown = remaining <= USER_WARNING_SECONDS ? Math.max(1, Math.ceil(remaining)) : null;
-        if (nextCountdown !== idleCountdownRef.current) {
-          idleCountdownRef.current = nextCountdown;
-          setIdleCountdown(nextCountdown);
-        }
-        if (remaining <= 0) {
-          idleDeadlineRef.current = null;
-          idleCountdownRef.current = null;
-          setIdleCountdown(null);
-          handleEvents(awardInactivityPenalty(state));
-        }
-      }
-
-      // Mirar e esperar consome o relógio normal. A reposição pós-gol é a
-      // exceção: `advanceClock` segura o tempo até o primeiro toque.
-      if (state.phase === "aim" || state.phase === "kickoff") {
-        const clockEvents = advanceClock(state, elapsed);
-        if (clockEvents.length > 0) handleEvents(clockEvents);
-        else if (frameCountRef.current % 6 === 0) bump();
       }
 
       if (state.phase === "resolving") {
@@ -680,9 +694,6 @@ export default function BotaoMatch({
       if (!disc) return;
       event.currentTarget.setPointerCapture(event.pointerId);
       pointerRef.current = event.pointerId;
-      idleDeadlineRef.current = performance.now() + USER_DECISION_SECONDS * 1000;
-      idleCountdownRef.current = null;
-      setIdleCountdown(null);
       selectedRef.current = disc.id;
       aimRef.current = { bodyId: disc.id, dragX: point.x, dragY: point.y, ratio: 0, valid: false };
       vibrate(8);
@@ -720,11 +731,17 @@ export default function BotaoMatch({
       const computed = aimFromDrag(disc, aim.dragX, aim.dragY);
       if (!computed.valid) {
         showFlash("Puxada curta demais", "info", 900);
+        const endEvents = cancelFinalShotGrace(state);
+        if (endEvents.length > 0) handleEvents(endEvents);
         bump();
         return;
       }
       const shot = { bodyId: disc.id, vx: computed.vx, vy: computed.vy };
       const fired = state.phase === "penalties" ? beginPenaltyShot(state, shot) : beginShot(state, shot);
+      if (!fired && state.finalShotGrace) {
+        const endEvents = cancelFinalShotGrace(state);
+        if (endEvents.length > 0) handleEvents(endEvents);
+      }
       if (fired) {
         trailRef.current.length = 0;
         playBotaoSound("flick", computed.ratio);
@@ -732,7 +749,7 @@ export default function BotaoMatch({
       }
       bump();
     },
-    [bump, showFlash],
+    [bump, handleEvents, showFlash],
   );
 
   // ------------------------------------------------------------------- HUD
@@ -757,12 +774,14 @@ export default function BotaoMatch({
           <span className="botao-competition">
             {setup.competitionName} · {setup.stageName}
           </span>
-          <span className={`botao-period ${!penalties && state.clock <= 15 && state.phase !== "finished" ? "botao-period-urgent" : ""}`}>
+          <span className={`botao-period ${!penalties && state.clock <= 15 && state.phase !== "finished" ? "botao-period-urgent" : ""} ${state.finalShotGrace ? "botao-period-final-shot" : ""}`}>
             {penalties
               ? state.penaltyReason === "inactivity"
                 ? "Pênalti por demora"
                 : "Pênaltis"
-              : `${paused ? "Pausado" : periodName(state)} · ${formatClock(state.clock)}`}
+              : state.finalShotGrace
+                ? "ÚLTIMO LANCE · 00:00"
+                : `${paused ? "Pausado" : periodName(state)} · ${formatClock(state.clock)}`}
           </span>
         </div>
         <div className="botao-scoreboard">
@@ -858,9 +877,11 @@ export default function BotaoMatch({
         {flash ? <div className={`botao-flash botao-flash-${flash.tone}`}>{flash.text}</div> : null}
         {!localMatch && idleCountdown !== null ? (
           <div className="botao-inactivity-countdown" role="alert" aria-live="assertive">
-            <small>JOGUE AGORA</small>
+            <div>
+              <small>SEM ENROLAR</small>
+              <span>chute antes do zero ou é pênalti para o adversário</span>
+            </div>
             <strong>{idleCountdown}</strong>
-            <span>ou o adversário ganha um pênalti</span>
           </div>
         ) : null}
         {paused ? (
@@ -962,6 +983,8 @@ export default function BotaoMatch({
           <p className={`botao-turn botao-turn-active botao-turn-local botao-turn-local-${activeLocalSide}`}>
             <b>{activeLocalName}</b> · passe o mouse e faça seu toque
           </p>
+        ) : state.finalShotGrace ? (
+          <p className="botao-turn botao-turn-active botao-turn-final-shot">00:00 · ÚLTIMO LANCE — solte e deixe a bola decidir</p>
         ) : yourTurn ? (
           <p className="botao-turn botao-turn-active">Sua vez — arraste um botão para trás e solte</p>
         ) : state.phase === "resolving" ? (

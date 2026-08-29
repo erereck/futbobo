@@ -144,6 +144,8 @@ export type BotaoMatchState = {
   penaltyReason: "shootout" | "inactivity" | null;
   /** Reposição depois de gol não consome o relógio até o primeiro toque. */
   clockPausedForKickoff: boolean;
+  /** O tempo zerou enquanto um jogador humano já preparava o último chute. */
+  finalShotGrace: boolean;
   result: BotaoMatchResult | null;
   /** Sobe a cada mutação relevante; a UI usa como chave de re-render. */
   version: number;
@@ -401,6 +403,7 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
     penalties: null,
     penaltyReason: null,
     clockPausedForKickoff: false,
+    finalShotGrace: false,
     result: null,
     version: 0,
   };
@@ -815,6 +818,7 @@ export function resumeAfterGoal(state: BotaoMatchState): BotaoEvent[] {
 
 function endPeriod(state: BotaoMatchState, events: BotaoEvent[]) {
   state.clock = 0;
+  state.finalShotGrace = false;
   state.timeline.push({
     period: periodLabel(state),
     clock: 0,
@@ -859,6 +863,7 @@ export function startNextPeriod(state: BotaoMatchState): BotaoEvent[] {
   state.period += 1;
   state.periodSeconds = state.period > rules.halves ? rules.extraSeconds : rules.halfSeconds;
   state.clock = state.periodSeconds;
+  state.finalShotGrace = false;
   state.formationIndex.user += 1;
   state.formationIndex.cpu += 1;
   placeTeams(state);
@@ -897,17 +902,38 @@ function settleTurn(state: BotaoMatchState, events: BotaoEvent[]) {
  * Corre o relógio em tempo real, fora da física.
  *
  * O cronômetro corre enquanto se mira, o adversário pensa e a bola rola. A
- * única pausa é a reposição depois de um gol: o relógio volta a andar no
- * primeiro toque. Se o tempo acaba com a bola rolando, o lance termina antes —
- * a vantagem é resolvida em `settleTurn`.
+ * única pausa normal é a reposição depois de um gol. Se o relógio chega a zero
+ * enquanto um humano JÁ está segurando um botão para chutar, nasce a graça do
+ * último lance: 00:00 fica na tela e a partida só pode terminar depois que o
+ * chute for solto e toda a física parar.
  */
-export function advanceClock(state: BotaoMatchState, seconds: number): BotaoEvent[] {
+export function advanceClock(state: BotaoMatchState, seconds: number, holdForFinalShot = false): BotaoEvent[] {
   const events: BotaoEvent[] = [];
   if (seconds <= 0) return events;
   if (state.phase !== "aim" && state.phase !== "kickoff") return events;
   if (state.phase === "kickoff" && state.clockPausedForKickoff) return events;
   state.clock = Math.max(0, state.clock - seconds);
   if (state.clock <= 0) {
+    if (holdForFinalShot) {
+      state.finalShotGrace = true;
+    } else {
+      endPeriod(state, events);
+    }
+  }
+  state.version += 1;
+  return events;
+}
+
+/**
+ * Cancela a graça quando o jogador solta sem produzir um chute válido. Se o
+ * relógio já zerou, o apito vem imediatamente; um arraste inválido não compra
+ * uma segunda tentativa em 00:00.
+ */
+export function cancelFinalShotGrace(state: BotaoMatchState): BotaoEvent[] {
+  const events: BotaoEvent[] = [];
+  if (!state.finalShotGrace) return events;
+  state.finalShotGrace = false;
+  if (state.clock <= 0 && (state.phase === "aim" || state.phase === "kickoff")) {
     endPeriod(state, events);
   }
   state.version += 1;
@@ -1020,9 +1046,10 @@ export function jumpToPenalties(state: BotaoMatchState) {
   startPenalties(state);
 }
 
-/** Pune dez segundos sem ação do jogador com uma cobrança real para a CPU. */
+/** Pune sete segundos sem ação do jogador com uma cobrança real para a CPU. */
 export function awardInactivityPenalty(state: BotaoMatchState): BotaoEvent[] {
   const events: BotaoEvent[] = [];
+  if (state.finalShotGrace) return events;
   if ((state.phase !== "aim" && state.phase !== "kickoff") || state.turn !== "user" || state.penalties) return events;
   const defaultRound = Math.min(5, discsOf(state, "user").length);
   state.penalties = {
