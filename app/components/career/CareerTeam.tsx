@@ -1,107 +1,268 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { COUNTRIES } from "../../game-data";
 import type { GameState } from "../../career/model";
 import type { TeamSquadMember, TeamSquadView } from "../../career/team-roster";
 import { buildClubSquad, buildNationalSquad } from "../../career/team-roster";
 import { clubById } from "../../career/shared";
 import { ROLE_LABELS } from "../../career-systems";
-import { teamKitPattern } from "../../player-appearance";
+import { careerSquadAppearance, teamKitPattern } from "../../player-appearance";
 import { PlayerAppearancePortrait } from "../../PlayerAppearanceEditor";
+import FutboboIcon from "../FutboboIcon";
 import { ClubBadge, NationBadge } from "./CareerPrimitives";
 import styles from "./CareerTeam.module.css";
 
-function PlayerChip({ member }: { member: TeamSquadMember }) {
+type TeamMode = "club" | "national";
+
+function portraitFor(member: TeamSquadMember, state: GameState, teamId: string) {
+  const kitPattern = teamKitPattern(state.seed, teamId);
+  if (member.isProtagonist) return { ...state.playerAppearance, kitPattern };
+  return careerSquadAppearance({
+    seed: state.seed,
+    memberId: member.id,
+    teamId,
+    nationality: member.nationality,
+  });
+}
+
+function PlayerPortrait({
+  member,
+  state,
+  teamId,
+  primary,
+  secondary,
+  size,
+}: {
+  member: TeamSquadMember;
+  state: GameState;
+  teamId: string;
+  primary: string;
+  secondary: string;
+  size: number;
+}) {
+  const appearance = useMemo(
+    () => portraitFor(member, state, teamId),
+    [member, state, teamId],
+  );
+
   return (
-    <article className={styles.playerChip} data-you={member.isProtagonist || undefined}>
-      <span className={styles.position}>{member.position}</span>
-      <strong>{member.name}</strong>
-      <small>{member.age} anos</small>
-      <b>{member.overall}</b>
-      {member.isProtagonist ? <em>VOCÊ</em> : null}
+    <PlayerAppearancePortrait
+      appearance={appearance}
+      primary={primary}
+      secondary={secondary}
+      size={size}
+      label={`Retrato de ${member.name}`}
+    />
+  );
+}
+
+function PlayerPiece({
+  member,
+  index,
+  state,
+  teamId,
+  primary,
+  secondary,
+}: {
+  member: TeamSquadMember;
+  index: number;
+  state: GameState;
+  teamId: string;
+  primary: string;
+  secondary: string;
+}) {
+  return (
+    <article className={styles.playerPiece} data-slot={index} data-you={member.isProtagonist || undefined}>
+      <div className={styles.piecePortrait}>
+        <PlayerPortrait member={member} state={state} teamId={teamId} primary={primary} secondary={secondary} size={74} />
+        <span className={styles.positionBadge}>{member.position}</span>
+        <b className={styles.overallBadge}>{member.overall}</b>
+      </div>
+      <div className={styles.pieceName}>
+        <strong>{member.isProtagonist ? "VOCÊ" : member.name}</strong>
+        <small>{member.isProtagonist ? member.name : `${member.age} anos`}</small>
+      </div>
     </article>
   );
 }
 
-function Pitch({ squad }: { squad: TeamSquadView }) {
+function Pitch({
+  squad,
+  state,
+  teamId,
+  primary,
+  secondary,
+}: {
+  squad: TeamSquadView;
+  state: GameState;
+  teamId: string;
+  primary: string;
+  secondary: string;
+}) {
   return (
-    <div className={styles.pitch}>
+    <section className={styles.pitch} aria-label={`Formação de cinco jogadores, ${squad.formation}`}>
+      <div className={styles.pitchOutline} aria-hidden="true" />
+      <div className={styles.midLine} aria-hidden="true" />
       <div className={styles.midCircle} aria-hidden="true" />
-      <div className={styles.boxTop} aria-hidden="true" />
-      <div className={styles.boxBottom} aria-hidden="true" />
-      {squad.lines.map((line) => (
-        <div className={styles.pitchLine} data-line={line.id} key={line.id}>
-          {line.members.map((member) => <PlayerChip key={member.id} member={member} />)}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Bench({ squad }: { squad: TeamSquadView }) {
-  const free = Math.max(0, squad.reserveCapacity - squad.bench.length);
-  return (
-    <section className={styles.benchSection}>
-      <header><span>BANCO</span><strong>{squad.bench.length}/{squad.reserveCapacity} VAGAS USADAS</strong></header>
-      <div className={styles.benchGrid}>
-        {squad.bench.map((member) => <PlayerChip key={member.id} member={member} />)}
-        {Array.from({ length: free }, (_, index) => <div className={styles.emptySlot} key={index}><b>＋</b><span>VAGA LIVRE</span><small>espaço para contratação</small></div>)}
+      <div className={styles.goalAreaTop} aria-hidden="true" />
+      <div className={styles.goalAreaBottom} aria-hidden="true" />
+      <div className={styles.pieceFormation}>
+        {squad.starters.map((member, index) => (
+          <PlayerPiece
+            key={member.id}
+            member={member}
+            index={index}
+            state={state}
+            teamId={teamId}
+            primary={primary}
+            secondary={secondary}
+          />
+        ))}
       </div>
+      <footer className={styles.pitchFooter}>
+        <span><FutboboIcon name="team" /> 5 EM CAMPO</span>
+        <strong>DIAMANTE · {squad.formation}</strong>
+      </footer>
     </section>
   );
 }
 
+function Bench({
+  squad,
+  state,
+  teamId,
+  primary,
+  secondary,
+}: {
+  squad: TeamSquadView;
+  state: GameState;
+  teamId: string;
+  primary: string;
+  secondary: string;
+}) {
+  return (
+    <aside className={styles.benchSection}>
+      <header>
+        <div><span>BANCO</span><strong>Três opções para mudar a partida</strong></div>
+        <b>{squad.bench.length}/3</b>
+      </header>
+      <div className={styles.benchList}>
+        {squad.bench.map((member, index) => (
+          <article className={styles.benchPlayer} data-you={member.isProtagonist || undefined} key={member.id}>
+            <span className={styles.benchNumber}>0{index + 1}</span>
+            <div className={styles.benchPortrait}>
+              <PlayerPortrait member={member} state={state} teamId={teamId} primary={primary} secondary={secondary} size={54} />
+            </div>
+            <div className={styles.benchIdentity}>
+              <small>{member.position} · {member.age} ANOS</small>
+              <strong>{member.isProtagonist ? "VOCÊ" : member.name}</strong>
+              {member.isProtagonist ? <span>{member.name}</span> : null}
+            </div>
+            <b className={styles.benchOverall}>{member.overall}<small>OVR</small></b>
+          </article>
+        ))}
+      </div>
+      <p><FutboboIcon name="history" /> O banco acompanha transferências, evolução e idade do universo da carreira.</p>
+    </aside>
+  );
+}
+
+function TeamOption({
+  active,
+  disabled,
+  badge,
+  eyebrow,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  badge: ReactNode;
+  eyebrow: string;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" className={active ? styles.activeOption : ""} aria-pressed={active} disabled={disabled} onClick={onClick}>
+      {badge}
+      <span><small>{eyebrow}</small><strong>{label}</strong></span>
+      <b aria-hidden="true">{active ? "●" : disabled ? "—" : "○"}</b>
+    </button>
+  );
+}
+
 export default function CareerTeam({ state }: { state: GameState }) {
+  const [mode, setMode] = useState<TeamMode>("club");
   const club = clubById(state.currentClubId || state.academyClubId);
-  const clubSquad = buildClubSquad(state);
-  const national = buildNationalSquad(state);
-  const role = ROLE_LABELS[state.squadRole];
+  const clubSquad = useMemo(() => buildClubSquad(state), [state]);
+  const national = useMemo(() => buildNationalSquad(state), [state]);
+  const country = COUNTRIES.find((candidate) => candidate.id === state.nationality) ?? COUNTRIES[0];
+  const nationalActive = mode === "national" && Boolean(national);
+
+  const squad = nationalActive ? national!.squad : clubSquad;
+  const teamId = nationalActive ? `national-${national!.country.id}` : club.id;
+  const primary = nationalActive ? national!.country.primary : club.primary;
+  const secondary = nationalActive ? national!.country.secondary : club.secondary;
+  const name = nationalActive ? national!.country.name : club.shortName;
+  const subline = nationalActive
+    ? `${national!.label} · ${state.nationalCaps} jogos pela seleção`
+    : `${state.season} · ${ROLE_LABELS[state.squadRole]}`;
+  const badge = nationalActive
+    ? <NationBadge country={national!.country} size="lg" />
+    : <ClubBadge club={club} size="lg" />;
+
+  const teamStyle = {
+    "--team-primary": primary,
+    "--team-secondary": secondary,
+  } as CSSProperties;
 
   return (
-    <div className={`${styles.screen} screen-enter`}>
-      <header className={styles.hero}>
-        <div className={styles.portraitFrame}>
-          <PlayerAppearancePortrait
-            appearance={{ ...state.playerAppearance, kitPattern: teamKitPattern(state.seed, club.id) }}
-            primary={club.primary}
-            secondary={club.secondary}
-            size={84}
-            label={`Visual de ${state.name}`}
-          />
-          <span>VOCÊ · #{state.number}</span>
-        </div>
-
-        <div className={styles.identity}>
-          <span className={styles.heroKicker}>TIME ATUAL</span>
-          <div className={styles.clubLine}>
-            <ClubBadge club={club} size="md" />
-            <div>
-              <h2>{club.shortName}</h2>
-              <p>{state.season} · {clubSquad.formation}</p>
-            </div>
-          </div>
-          <div className={styles.roleLine}><b>{role}</b><span>{state.position} · {state.overall} OVR</span></div>
-        </div>
-
-        <div className={styles.heroMetric}><small>OVR XI</small><strong>{clubSquad.averageOverall}</strong></div>
+    <div className={`${styles.screen} screen-enter`} style={teamStyle}>
+      <header className={styles.screenIntro}>
+        <div><span>ESQUADRÃO</span><h2>Sua equipe na mesa</h2><p>Cinco titulares. Três reservas. Os mesmos nomes que crescem com a sua carreira.</p></div>
+        <strong><b>5</b><small>BOTÕES</small></strong>
       </header>
 
-      <section className={styles.sectionHeading}><div><span>ONZE INICIAL</span><h3>Quem entra em campo com você</h3></div><small>Os companheiros pertencem ao universo da carreira: evoluem, envelhecem e podem trocar de clube.</small></section>
-      <Pitch squad={clubSquad} />
-      <Bench squad={clubSquad} />
+      <nav className={styles.teamSwitcher} aria-label="Alternar entre clube e seleção">
+        <TeamOption
+          active={!nationalActive}
+          badge={<ClubBadge club={club} size="sm" />}
+          eyebrow="CLUBE"
+          label={club.shortName}
+          onClick={() => setMode("club")}
+        />
+        <TeamOption
+          active={nationalActive}
+          disabled={!national}
+          badge={<NationBadge country={national?.country ?? country} size="sm" />}
+          eyebrow={national ? "SELEÇÃO" : "SEM CONVOCAÇÃO"}
+          label={national?.country.name ?? country.name}
+          onClick={() => setMode("national")}
+        />
+      </nav>
 
-      {national ? (
-        <section className={styles.nationalBlock}>
-          <header className={styles.nationalHero}>
-            <NationBadge country={national.country} size="lg" />
-            <div><span>SELEÇÃO · {national.label}</span><h3>{national.country.name}</h3><p>{state.nationalCaps} jogos · {state.nationalGoals} gols · {state.nationalAssists} assistências</p></div>
-            <strong>{national.squad.averageOverall}<small>OVR XI</small></strong>
+      <section className={styles.teamHero}>
+        <div className={styles.teamBadge}>{badge}</div>
+        <div className={styles.teamIdentity}>
+          <span>{nationalActive ? "SELEÇÃO ATIVA" : "TIME ATUAL"}</span>
+          <h3>{name}</h3>
+          <p>{subline}</p>
+        </div>
+        <div className={styles.teamOverall}><small>OVR 5</small><strong>{squad.averageOverall}</strong></div>
+      </section>
+
+      <section className={styles.squadLayout} aria-label="Escalação e banco de reservas">
+        <div className={styles.pitchColumn}>
+          <header className={styles.sectionHeading}>
+            <div><span>ESCALAÇÃO</span><h3>Os cinco da partida</h3></div>
+            <small>Seu jogador aparece entre os titulares quando a função no elenco garante a vaga.</small>
           </header>
-          <Pitch squad={national.squad} />
-          <Bench squad={national.squad} />
-        </section>
-      ) : (
-        <section className={styles.callupEmpty}><span>SELEÇÃO</span><strong>Seu nome ainda não está numa convocação ativa.</strong><p>Quando você entrar em uma lista, a equipe nacional aparece aqui junto do seu clube.</p></section>
-      )}
+          <Pitch squad={squad} state={state} teamId={teamId} primary={primary} secondary={secondary} />
+        </div>
+        <Bench squad={squad} state={state} teamId={teamId} primary={primary} secondary={secondary} />
+      </section>
     </div>
   );
 }

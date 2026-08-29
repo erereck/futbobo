@@ -1,17 +1,25 @@
-/* Keep the original Futbobo bottom-nav visual from globals.css/premium.css.
-   Only the mobile sizing/layout is overridden here so all six tabs always fit. */
+/* Keep the original Futbobo visual language, but make the six destinations an
+   explicit viewport grid. This file loads last and owns mobile nav geometry. */
 
 @media (max-width: 899px) {
   .career-shell > .bottom-nav {
     box-sizing: border-box;
+    position: fixed;
+    z-index: 50;
     left: 0;
     right: 0;
     bottom: 0;
-    display: flex;
+    display: grid;
     width: 100%;
     max-width: none;
-    overflow: hidden;
+    height: auto;
+    min-height: calc(62px + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: stretch;
+    overflow: visible;
+    padding: 5px 4px calc(env(safe-area-inset-bottom) + 5px);
     transform: none;
+    border-radius: 0;
   }
 
   .career-shell > .bottom-nav > .desktop-career-nav-brand {
@@ -20,10 +28,10 @@
 
   .career-shell > .bottom-nav > button {
     box-sizing: border-box;
-    width: 0;
+    width: auto;
     min-width: 0;
     max-width: none;
-    flex: 1 1 0;
+    min-height: 50px;
     overflow: hidden;
     padding-inline: 1px;
     white-space: nowrap;
@@ -37,19 +45,19 @@
 
 @media (max-width: 540px) {
   .career-shell > .bottom-nav {
-    gap: 1px;
-    padding-inline: 4px;
+    gap: 0;
+    padding-inline: 2px;
   }
 
   .career-shell > .bottom-nav > button {
-    font-size: clamp(5.7px, 1.8vw, 8px);
+    font-size: clamp(5.5px, 1.75vw, 8px);
     letter-spacing: -.02em;
   }
 }
 
 @media (max-width: 360px) {
   .career-shell > .bottom-nav {
-    padding-inline: 2px;
+    padding-inline: 0;
   }
 
   .career-shell > .bottom-nav > button {

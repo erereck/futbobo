@@ -177,6 +177,19 @@ export function teamKitPattern(seed: number, teamId: string) {
   return hashParts(seed, teamId, "persistent-kit") % KIT_PATTERN_NAMES.length;
 }
 
+export function careerSquadAppearance(args: {
+  seed: number;
+  memberId: string;
+  teamId: string;
+  nationality: string;
+}): PlayerAppearance {
+  const appearance = appearanceForNationalTeam(
+    hashParts(args.seed, args.teamId, args.memberId, "career-team-portrait"),
+    args.nationality,
+  );
+  return { ...appearance, kitPattern: teamKitPattern(args.seed, args.teamId) };
+}
+
 function shade(hex: string, amount: number) {
   const clean = hex.replace("#", "");
   const value = Number.parseInt(clean, 16);
