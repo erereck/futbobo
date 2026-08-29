@@ -1,0 +1,23 @@
+name: Final loan fix deploy trigger
+
+on:
+  push:
+    paths:
+      - '.github/workflows/trigger-final-loan-fix-deploy.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove deploy trigger
+        run: |
+          rm .github/workflows/trigger-final-loan-fix-deploy.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/trigger-final-loan-fix-deploy.yml
+          git commit -m "chore: remove final loan fix deploy trigger"
+          git push
