@@ -5,6 +5,8 @@ const LARGE_STORAGE_STORE = "large-local-storage";
 const LARGE_EXACT_KEYS = new Set([
   "futbobo:career:v1",
   "futbobo:challenge-save:v1",
+  "futbobo:hall-of-fame:v1",
+  "futbobo:settings:v1",
 ]);
 const LARGE_KEY_PREFIXES = ["futbobo:career-slot:v2:"];
 const PROBE_KEY = "__futbobo_storage_probe__";
@@ -96,8 +98,8 @@ declare global {
 
 /**
  * Mantém a API síncrona de localStorage usada pelo jogo, mas desvia apenas os
- * payloads gigantes de carreira para IndexedDB. Assim o restante do código não
- * precisa saber que o backend mudou e saves antigos continuam compatíveis.
+ * payloads gigantes para IndexedDB. Assim o restante do código não precisa
+ * saber que o backend mudou e saves antigos continuam compatíveis.
  */
 export async function installLargeStorageBridge() {
   if (typeof window === "undefined") return false;
