@@ -1,0 +1,50 @@
+name: Repair stale club events in saves
+
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-stale-club-events-in-saves.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Repair stale club-specific event ids on load
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('app/career/state.ts')
+          text = path.read_text()
+          anchor = 'export const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS, ...GOALKEEPER_EVENTS, ...CLUB_SPECIFIC_EVENTS];\n'
+          helper = '\nfunction eventIdCompatibleWithClub(eventId: string, clubId: string, fallback: string) {\n  const event = ALL_PRO_EVENTS.find((candidate) => candidate.id === eventId);\n  return event?.needsClubIds && !event.needsClubIds.includes(clubId) ? fallback : eventId;\n}\n'
+          if anchor not in text: raise SystemExit('ALL_PRO_EVENTS anchor not found')
+          if 'function eventIdCompatibleWithClub(' not in text:
+              text = text.replace(anchor, anchor + helper, 1)
+          anchor2 = '    currentLeagueId: saved.currentLeagueId ?? (saved.currentClubId ? clubById(saved.currentClubId).leagueId : ""),\n'
+          replacement2 = anchor2 + '    currentEventId: eventIdCompatibleWithClub(saved.currentEventId ?? base.currentEventId, saved.currentClubId ?? "", "extra-training"),\n    nextEventId: eventIdCompatibleWithClub(saved.nextEventId ?? "", saved.currentClubId ?? "", ""),\n'
+          if anchor2 not in text: raise SystemExit('normalizeSave club anchor not found')
+          if 'currentEventId: eventIdCompatibleWithClub(' not in text:
+              text = text.replace(anchor2, replacement2, 1)
+          path.write_text(text)
+          PY
+          git diff --check
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Futbobo
+        run: npm run build
+
+      - name: Commit repair and clean helper
+        run: |
+          rm .github/workflows/repair-stale-club-events-in-saves.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/career/state.ts .github/workflows/repair-stale-club-events-in-saves.yml
+          git commit -m "fix: repair stale club events in existing saves"
+          git push
