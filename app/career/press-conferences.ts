@@ -69,6 +69,31 @@ const FUTURE_ANSWERS: AnswerDraft[] = [
   { label: "Nosso limite depende de todo o elenco", tone: "team", toneLabel: "Protege o elenco", result: "Reservas e titulares compram a mensagem.", effect: { leadership: 8, morale: 4 } },
 ];
 
+const COMEBACK_ANSWERS: AnswerDraft[] = [
+  { label: "Foi uma explosão. Naquele momento eu sabia que o jogo era nosso", tone: "bold", toneLabel: "Vive a virada", result: "A euforia vira a imagem da noite e aproxima ainda mais a torcida.", effect: { morale: 8, fans: 6, followers: 55_000 } },
+  { label: "Eu queria mais. Virar não bastava; queria matar o jogo", tone: "bold", toneLabel: "Mantém a fome", result: "A resposta reforça a imagem de um jogador que cresce quando o jogo pega fogo.", effect: { reputation: 6, morale: 4, discipline: -1, followers: 38_000 } },
+  { label: "Olhei pros meus companheiros e só senti orgulho", tone: "team", toneLabel: "Divide a emoção", result: "O vestiário se reconhece na fala e a virada ganha cara de conquista coletiva.", effect: { leadership: 8, morale: 5, fans: 3 } },
+  { label: "Foi alívio, mas principalmente confiança no grupo", tone: "team", toneLabel: "Confia no time", result: "A resposta transforma o sufoco em prova de confiança no elenco.", effect: { leadership: 6, mediaRelation: 4, morale: 4 } },
+  { label: "Por alguns segundos, nada. Eu só pensei no próximo lance", tone: "calm", toneLabel: "Segura a emoção", result: "A frieza depois da virada chama atenção da comissão e da imprensa.", effect: { discipline: 5, minutes: 4, reputation: 2 } },
+  { label: "A melhor sensação foi perceber que ninguém desistiu quando a gente estava atrás", tone: "calm", toneLabel: "Valoriza a reação", result: "A fala coloca a resiliência do grupo acima do placar e soa como discurso de liderança.", effect: { leadership: 7, discipline: 3, mediaRelation: 3 } },
+];
+
+function wasComebackVictory(result: BotaoMatchResult) {
+  if (!result.manOfTheMatch || result.outcome !== "win" || result.goalsFor <= result.goalsAgainst) return false;
+
+  let userGoals = 0;
+  let cpuGoals = 0;
+  let trailed = false;
+  for (const entry of result.timeline) {
+    if (entry.kind !== "goal" && entry.kind !== "own-goal") continue;
+    if (entry.side === "user") userGoals += 1;
+    else cpuGoals += 1;
+    if (userGoals < cpuGoals) trailed = true;
+  }
+
+  return trailed && userGoals === result.goalsFor && cpuGoals === result.goalsAgainst && userGoals > cpuGoals;
+}
+
 export function buildPressConference(state: GameState, match: PendingBotaoMatch, result: BotaoMatchResult, opponentName: string): PressConference {
   const wonTitle = result.champion && match.stageName === "Final";
   const story = playerStoryById(state.playerStoryId);
@@ -102,13 +127,27 @@ export function buildPressConference(state: GameState, match: PendingBotaoMatch,
       ["Como transformar uma grande noite em constância?", "O difícil é chegar nesse nível ou permanecer nele?", "A partir de agora essa atuação vira sua obrigação?"], [...INDIVIDUAL_ANSWERS, ...FUTURE_ANSWERS]),
   ];
   const questionCount = 1 + Math.floor(seeded(state.seed, match.season * 2111 + match.id.length) * 3);
+  const questions = ordered(pool, state, match.season * 2131 + match.id.length).slice(0, questionCount);
+  if (wasComebackVictory(result)) {
+    questions.push(question(state, "comeback-feeling", match.season * 2141 + match.id.length,
+      [
+        `O ${opponentName} esteve à frente, mas o apito final encontrou seu time vencendo por ${result.goalsFor} a ${result.goalsAgainst}.`,
+        "Seu time chegou a estar atrás no placar e terminou a noite comemorando uma virada.",
+        "A imagem da partida mudou completamente entre o momento em que vocês perdiam e o apito final.",
+      ],
+      [
+        "Quando a virada se confirmou, o que você sentiu de verdade?",
+        "Como você descreve a sensação de sair de uma derrota para uma vitória dessas?",
+        "O que passou pela sua cabeça no instante em que vocês tomaram a frente?",
+      ], COMEBACK_ANSWERS));
+  }
   return {
     kind: "post-match",
     matchId: match.id,
     competitionName: match.competitionName,
     opponentName,
     questionIndex: 0,
-    questions: ordered(pool, state, match.season * 2131 + match.id.length).slice(0, questionCount),
+    questions,
   };
 }
 
