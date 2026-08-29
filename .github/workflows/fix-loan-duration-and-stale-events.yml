@@ -18,49 +18,26 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           market = Path('app/components/career/TransferMarketScreen.tsx')
           text = market.read_text()
-          text = text.replace(
-              '  if (state.pendingTransferMode === "loan") return { eyebrow: "EMPRÉSTIMO", title: "Minutos em outro clube", text: `Você retorna ao ${currentClub.shortName} ao fim da próxima temporada.` };',
-              '  if (state.pendingTransferMode === "loan") return { eyebrow: "EMPRÉSTIMO", title: "Minutos em outro clube", text: `A duração varia por proposta. Ao fim do empréstimo, você retorna ao ${currentClub.shortName}.` };',
-              1,
-          )
-          old = '''function moveLabel(offer: TransferOffer) {
-  if (offer.type === "loan") return "Empréstimo · 1 temporada";
-  if (offer.type === "free-agent") return "Sem taxa de transferência";
-  if (offer.type === "renewal") return "Renovação";
-  return `Proposta de ${formatMoney(offer.transferFee)}`;
-}'''
-          new = '''function loanDuration(offer: TransferOffer) {
-  const seasons = Math.max(1, (offer.loanEndSeason || offer.season + 1) - offer.season);
-  return `${seasons} temporada${seasons === 1 ? "" : "s"}`;
-}
-
-function moveLabel(offer: TransferOffer) {
-  if (offer.type === "loan") return `Empréstimo · ${loanDuration(offer)}`;
-  if (offer.type === "free-agent") return "Sem taxa de transferência";
-  if (offer.type === "renewal") return "Renovação";
-  return `Proposta de ${formatMoney(offer.transferFee)}`;
-}'''
-          if old not in text:
-              raise SystemExit('moveLabel block not found')
+          old = '  if (state.pendingTransferMode === "loan") return { eyebrow: "EMPRÉSTIMO", title: "Minutos em outro clube", text: `Você retorna ao ${currentClub.shortName} ao fim da próxima temporada.` };'
+          new = '  if (state.pendingTransferMode === "loan") return { eyebrow: "EMPRÉSTIMO", title: "Minutos em outro clube", text: `A duração varia por proposta. Ao fim do empréstimo, você retorna ao ${currentClub.shortName}.` };'
+          if old not in text: raise SystemExit('loan window copy not found')
           text = text.replace(old, new, 1)
-          old_overlay = '<small>{offer.type === "loan" ? "1 temporada" : `${offer.contractYears} ano${offer.contractYears === 1 ? "" : "s"} de contrato`}</small>'
-          new_overlay = '<small>{offer.type === "loan" ? loanDuration(offer) : `${offer.contractYears} ano${offer.contractYears === 1 ? "" : "s"} de contrato`}</small>'
-          if old_overlay not in text:
-              raise SystemExit('journey duration label not found')
-          text = text.replace(old_overlay, new_overlay, 1)
-          market.write_text(text)
-
+          old = '  if (offer.type === "loan") return "Empréstimo · 1 temporada";'
+          new = '  if (offer.type === "loan") { const seasons = Math.max(1, (offer.loanEndSeason || offer.season + 1) - offer.season); return `Empréstimo · ${seasons} temporada${seasons === 1 ? "" : "s"}`; }'
+          if old not in text: raise SystemExit('loan market label not found')
+          text = text.replace(old, new, 1)
+          old = '<small>{offer.type === "loan" ? "1 temporada" : `${offer.contractYears} ano${offer.contractYears === 1 ? "" : "s"} de contrato`}</small>'
+          new = '<small>{offer.type === "loan" ? `${Math.max(1, (offer.loanEndSeason || offer.season + 1) - offer.season)} temporada${Math.max(1, (offer.loanEndSeason || offer.season + 1) - offer.season) === 1 ? "" : "s"}` : `${offer.contractYears} ano${offer.contractYears === 1 ? "" : "s"} de contrato`}</small>'
+          if old not in text: raise SystemExit('loan journey label not found')
+          market.write_text(text.replace(old, new, 1))
           career = Path('app/components/career/CareerGame.tsx')
           text = career.read_text()
-          old_event = '        currentEventId: pendingCareerEventId || selectNextEvent(transferred, current.season * 47),'
-          new_event = '        currentEventId: newClub ? selectNextEvent(transferred, current.season * 47) : (pendingCareerEventId || selectNextEvent(transferred, current.season * 47)),'
-          if old_event not in text:
-              raise SystemExit('stale transfer event assignment not found')
-          text = text.replace(old_event, new_event, 1)
-          career.write_text(text)
+          old = '        currentEventId: pendingCareerEventId || selectNextEvent(transferred, current.season * 47),'
+          new = '        currentEventId: newClub ? selectNextEvent(transferred, current.season * 47) : (pendingCareerEventId || selectNextEvent(transferred, current.season * 47)),'
+          if old not in text: raise SystemExit('stale transfer event assignment not found')
+          career.write_text(text.replace(old, new, 1))
           PY
           git diff --check
 
