@@ -15,6 +15,7 @@ import { seasonFitnessAfterLoad } from "./fatigue";
 import { worldFinalOpponentForSeason } from "./world-club-competitions";
 import { evaluateBallonDor } from "./ballon-dor";
 import { clubWithPlayerImpact } from "./player-club-impact";
+import { resolveExtraSecondDivisionPromotion } from "./second-divisions";
 
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
@@ -202,15 +203,21 @@ export function simulateSeason(
     leaguePosition >= 3 &&
     leaguePosition <= 6 &&
     seeded(state.seed, state.season * 601) < clamp(0.34 + (6 - leaguePosition) * 0.09 + playerImpact * 0.012, 0.2, 0.72);
+  const extraSecondDivisionPromotion = resolveExtraSecondDivisionPromotion(
+    league.id,
+    leaguePosition,
+    seeded(state.seed, state.season * 607),
+    playerImpact,
+  );
   const promotedLeagueId =
     league.id === "brasileirao-b" && leaguePosition <= 4
       ? "brasileirao"
       : league.id === "championship" && (leaguePosition <= 2 || championshipPlayoffPromotion)
         ? "premier"
-        : "";
+        : extraSecondDivisionPromotion?.topLeagueId ?? "";
   const promotion = promotedLeagueId
-    ? championshipPlayoffPromotion
-      ? `Acesso à Premier League conquistado nos playoffs!`
+    ? championshipPlayoffPromotion || extraSecondDivisionPromotion?.playoff
+      ? `Acesso à ${leagueById(promotedLeagueId).name} conquistado nos playoffs!`
       : `Acesso conquistado para a ${leagueById(promotedLeagueId).name}!`
     : null;
   const knockoutStage = (salt: number, champion: boolean, stages: string[]) => champion ? "CAMPEÃO" : stages[Math.floor(seeded(state.seed, state.season * salt) * stages.length)];
