@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./premium.css";
+import "./mobile-career-nav.css";
 
 const manrope = localFont({
   src: "../public/fonts/manrope-latin.woff2",
