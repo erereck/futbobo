@@ -1,0 +1,91 @@
+name: Apply second division promotion patch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-second-division-promotion.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'chore: apply promotion patch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch promotion logic
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("app/career/simulation.ts")
+          source = path.read_text(encoding="utf-8")
+
+          import_anchor = 'import { clubWithPlayerImpact } from "./player-club-impact";\n'
+          import_line = 'import { resolveExtraSecondDivisionPromotion } from "./second-divisions";\n'
+          if import_line not in source:
+              if import_anchor not in source:
+                  raise SystemExit("promotion import anchor not found")
+              source = source.replace(import_anchor, import_anchor + import_line, 1)
+
+          old = '''  const championshipPlayoffPromotion =
+            league.id === "championship" &&
+            leaguePosition >= 3 &&
+            leaguePosition <= 6 &&
+            seeded(state.seed, state.season * 601) < clamp(0.34 + (6 - leaguePosition) * 0.09 + playerImpact * 0.012, 0.2, 0.72);
+          const promotedLeagueId =
+            league.id === "brasileirao-b" && leaguePosition <= 4
+              ? "brasileirao"
+              : league.id === "championship" && (leaguePosition <= 2 || championshipPlayoffPromotion)
+                ? "premier"
+                : "";
+          const promotion = promotedLeagueId
+            ? championshipPlayoffPromotion
+              ? `Acesso à Premier League conquistado nos playoffs!`
+              : `Acesso conquistado para a ${leagueById(promotedLeagueId).name}!`
+            : null;
+          '''
+
+          new = '''  const championshipPlayoffPromotion =
+            league.id === "championship" &&
+            leaguePosition >= 3 &&
+            leaguePosition <= 6 &&
+            seeded(state.seed, state.season * 601) < clamp(0.34 + (6 - leaguePosition) * 0.09 + playerImpact * 0.012, 0.2, 0.72);
+          const extraSecondDivisionPromotion = resolveExtraSecondDivisionPromotion(
+            league.id,
+            leaguePosition,
+            seeded(state.seed, state.season * 607),
+            playerImpact,
+          );
+          const promotedLeagueId =
+            league.id === "brasileirao-b" && leaguePosition <= 4
+              ? "brasileirao"
+              : league.id === "championship" && (leaguePosition <= 2 || championshipPlayoffPromotion)
+                ? "premier"
+                : extraSecondDivisionPromotion?.topLeagueId ?? "";
+          const promotion = promotedLeagueId
+            ? championshipPlayoffPromotion || extraSecondDivisionPromotion?.playoff
+              ? `Acesso à ${leagueById(promotedLeagueId).name} conquistado nos playoffs!`
+              : `Acesso conquistado para a ${leagueById(promotedLeagueId).name}!`
+            : null;
+          '''
+
+          if old not in source:
+              raise SystemExit("promotion block not found")
+          source = source.replace(old, new, 1)
+          path.write_text(source, encoding="utf-8")
+
+      - name: Check patch
+        run: git diff --check
+
+      - name: Commit promotion support
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/career/simulation.ts
+          git commit -m "feat: support promotion from new second divisions"
+          git push
