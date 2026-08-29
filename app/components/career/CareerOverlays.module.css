@@ -210,6 +210,24 @@
 .shopFooter { display: flex; justify-content: flex-end; margin-top: 18px; }
 .continueButton { min-height: 48px; padding: 0 22px; border: 0; border-radius: 14px; color: #08130f; background: #f6c724; font: 900 14px/1 var(--font-manrope), sans-serif; cursor: pointer; }
 
+
+.countryPicker { display:grid; gap:12px; margin-top:14px; padding:15px; border:1px solid rgba(44,168,255,.25); border-radius:18px; background:rgba(44,168,255,.045); }
+.countryPicker header { display:flex; justify-content:space-between; gap:12px; }
+.countryPicker header > div { display:grid; gap:4px; }
+.countryPicker header span { color:#43bdf3; font:800 9px/1 var(--font-manrope),sans-serif; letter-spacing:.14em; }
+.countryPicker header strong { font:800 20px/1.05 var(--font-barlow-condensed),sans-serif; }
+.countryPicker header small { max-width:62ch; color:#9db0a7; font:500 10px/1.4 var(--font-manrope),sans-serif; }
+.countryPicker header > button { width:32px; height:32px; border:1px solid rgba(151,185,169,.2); border-radius:10px; color:#cdd8d3; background:rgba(255,255,255,.03); cursor:pointer; }
+.countrySearch { width:100%; min-height:42px; padding:0 12px; border:1px solid rgba(151,185,169,.22); border-radius:12px; outline:0; color:#f2f4ef; background:#0a2118; }
+.countrySearch:focus { border-color:#43bdf3; }
+.countryGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; max-height:300px; overflow:auto; padding-right:2px; }
+.countryChoice { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:9px; min-height:52px; padding:8px 10px; border:1px solid rgba(151,185,169,.16); border-radius:12px; color:#f2f4ef; text-align:left; background:rgba(255,255,255,.025); cursor:pointer; }
+.countryChoice:hover { border-color:rgba(246,199,36,.5); background:rgba(246,199,36,.05); }
+.countryChoice > span { display:grid; min-width:0; gap:2px; }
+.countryChoice strong { overflow:hidden; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.countryChoice small { color:#82978e; font-size:7px; }
+.countryChoice > b { color:#f6c724; }
+
 @media (max-width: 640px) {
   .backdrop { place-items: end center; padding: 8px; }
   .dialog, .shopDialog { max-height: calc(100dvh - 16px); border-radius: 24px; }
@@ -226,6 +244,7 @@
   .balance { min-width: 0; }
   .shopBody { padding: 12px 16px 16px; }
   .shopGrid { grid-template-columns: 1fr; }
+  .countryGrid { grid-template-columns: 1fr; max-height: 42dvh; }
   .shopItem { min-height: 108px; padding: 14px; }
   .itemName { font-size: 20px; }
   .buy { min-width: 104px; }

@@ -1,0 +1,52 @@
+.screen { display: grid; gap: 14px; padding: 18px 14px 96px; }
+.hero { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 17px; overflow: hidden; border: 1px solid rgba(255,199,44,.22); border-radius: 22px 22px 22px 8px; background: radial-gradient(circle at 100% 0, rgba(255,199,44,.15), transparent 45%), linear-gradient(140deg,#16382b,#0c241b); box-shadow: 0 18px 42px rgba(0,0,0,.24); }
+.identity { display: flex; min-width: 0; align-items: center; gap: 13px; }
+.identity > div { min-width: 0; }
+.identity span,.sectionHeading span,.benchSection header span,.nationalHero span,.callupEmpty > span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .16em; }
+.identity h2 { margin: 3px 0 2px; overflow: hidden; font: 900 27px/1 var(--display); letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }
+.identity p,.nationalHero p { margin: 0; color: var(--muted); font-size: 9px; }
+.heroMetric { display: grid; min-width: 64px; place-items: center; padding: 9px; border: 1px solid rgba(255,255,255,.1); border-radius: 15px; background: rgba(0,0,0,.18); }
+.heroMetric small { color: var(--muted); font-size: 7px; font-weight: 900; }
+.heroMetric strong { color: var(--gold); font: 900 25px var(--display); }
+.sectionHeading { display: flex; align-items: end; justify-content: space-between; gap: 14px; padding: 3px 2px 0; }
+.sectionHeading h3 { margin: 4px 0 0; font: 900 18px/1 var(--display); letter-spacing: -.03em; }
+.sectionHeading > small { max-width: 210px; color: var(--muted); font-size: 8px; line-height: 1.4; text-align: right; }
+.pitch { position: relative; display: grid; min-height: 430px; grid-template-rows: 1.05fr 1.1fr 1.2fr .7fr; gap: 8px; overflow: hidden; padding: 20px 10px 15px; border: 1px solid rgba(181,235,183,.18); border-radius: 25px 25px 25px 8px; background: repeating-linear-gradient(90deg,rgba(255,255,255,.022) 0,rgba(255,255,255,.022) 12.5%,transparent 12.5%,transparent 25%), linear-gradient(#15583a,#0f442d); box-shadow: inset 0 0 55px rgba(0,0,0,.22); }
+.pitch::before { content:""; position:absolute; inset:10px; border:1px solid rgba(230,255,233,.28); border-radius:7px; pointer-events:none; }
+.pitch::after { content:""; position:absolute; left:10px; right:10px; top:50%; border-top:1px solid rgba(230,255,233,.26); pointer-events:none; }
+.midCircle { position:absolute; z-index:0; width:78px; height:78px; left:50%; top:50%; transform:translate(-50%,-50%); border:1px solid rgba(230,255,233,.25); border-radius:50%; }
+.boxTop,.boxBottom { position:absolute; z-index:0; width:44%; height:54px; left:28%; border:1px solid rgba(230,255,233,.24); }
+.boxTop { top:10px; border-top:0; }
+.boxBottom { bottom:10px; border-bottom:0; }
+.pitchLine { position:relative; z-index:2; display:flex; align-items:center; justify-content:space-evenly; gap:5px; min-width:0; }
+.pitchLine[data-line="attack"] { grid-row:1; }
+.pitchLine[data-line="midfield"] { grid-row:2; }
+.pitchLine[data-line="defense"] { grid-row:3; }
+.pitchLine[data-line="keeper"] { grid-row:4; }
+.playerChip { position:relative; display:grid; width:min(28%,105px); min-width:72px; min-height:69px; align-content:center; padding:8px 7px 7px; border:1px solid rgba(255,255,255,.13); border-radius:13px 13px 13px 5px; background:rgba(5,25,16,.88); box-shadow:0 7px 17px rgba(0,0,0,.2); text-align:center; backdrop-filter:blur(7px); }
+.playerChip[data-you="true"] { border-color:rgba(255,199,44,.75); background:linear-gradient(145deg,rgba(255,199,44,.18),rgba(6,28,18,.94)); box-shadow:0 0 0 2px rgba(255,199,44,.08),0 8px 19px rgba(0,0,0,.26); }
+.playerChip .position { position:absolute; top:5px; left:6px; color:#8fb4a0; font-size:7px; font-weight:900; }
+.playerChip strong { overflow:hidden; padding:4px 1px 0; font-size:8px; line-height:1.08; text-overflow:ellipsis; white-space:nowrap; }
+.playerChip small { margin-top:2px; color:var(--muted); font-size:6px; }
+.playerChip > b { position:absolute; top:5px; right:6px; color:var(--gold); font:900 10px var(--display); }
+.playerChip em { margin-top:4px; color:var(--gold); font-size:6px; font-style:normal; font-weight:900; letter-spacing:.13em; }
+.benchSection { display:grid; gap:8px; padding:12px; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.025); }
+.benchSection header { display:flex; justify-content:space-between; gap:10px; }
+.benchSection header strong { color:var(--muted); font-size:7px; letter-spacing:.08em; }
+.benchGrid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+.benchGrid .playerChip { width:100%; min-width:0; }
+.emptySlot { display:grid; min-height:69px; place-items:center; align-content:center; gap:2px; border:1px dashed rgba(159,179,166,.25); border-radius:13px; color:#789083; background:rgba(0,0,0,.08); text-align:center; }
+.emptySlot b { font-size:15px; font-weight:500; }
+.emptySlot span { font-size:7px; font-weight:900; letter-spacing:.1em; }
+.emptySlot small { font-size:6px; }
+.nationalBlock { display:grid; gap:10px; margin-top:7px; padding-top:15px; border-top:1px solid var(--line); }
+.nationalHero { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:12px; padding:14px; border:1px solid rgba(44,168,255,.23); border-radius:19px; background:radial-gradient(circle at 100% 0,rgba(44,168,255,.13),transparent 44%),#10271d; }
+.nationalHero h3 { margin:3px 0 3px; font:900 22px/1 var(--display); }
+.nationalHero > strong { display:grid; color:#7bd0ff; font:900 24px var(--display); text-align:right; }
+.nationalHero > strong small { color:var(--muted); font:900 6px var(--sans); letter-spacing:.1em; }
+.callupEmpty { display:grid; gap:5px; padding:16px; border:1px dashed rgba(44,168,255,.25); border-radius:18px; background:rgba(44,168,255,.035); }
+.callupEmpty > span { color:var(--blue); }
+.callupEmpty strong { font-size:12px; }
+.callupEmpty p { margin:0; color:var(--muted); font-size:8px; line-height:1.45; }
+@media (max-width:390px) { .screen{padding-inline:10px}.pitch{min-height:390px;padding-inline:7px}.playerChip{min-width:62px;min-height:64px;padding-inline:4px}.playerChip strong{font-size:7px}.sectionHeading>small{display:none}.identity h2{font-size:23px} }
+@media (min-width:900px) { .screen{padding:22px 26px 34px}.pitch{min-height:510px}.playerChip{max-width:116px;min-height:76px}.playerChip strong{font-size:9px} }

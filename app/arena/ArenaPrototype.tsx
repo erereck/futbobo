@@ -87,6 +87,13 @@ type InputState = {
   mouseInside: boolean;
 };
 
+type ArenaHudState = Pick<MatchState,
+  "score" | "timeLeft" | "phase" | "controlled" | "pulse" | "pulseActive" | "commentary" | "commentaryTimer"
+> & {
+  players: Player[];
+  shotCharge: number;
+};
+
 type Projection = {
   x: number;
   y: number;
@@ -169,6 +176,36 @@ function createMatch(): MatchState {
   };
 }
 
+function createInputState(): InputState {
+  return {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    sprint: false,
+    shoot: false,
+    shootStartedAt: 0,
+    mouseX: 0,
+    mouseY: 0,
+    mouseInside: false,
+  };
+}
+
+function createArenaHudState(state: MatchState, input: InputState, now: number): ArenaHudState {
+  return {
+    score: [state.score[0], state.score[1]],
+    timeLeft: state.timeLeft,
+    phase: state.phase,
+    controlled: state.controlled,
+    pulse: state.pulse,
+    pulseActive: state.pulseActive,
+    commentary: state.commentary,
+    commentaryTimer: state.commentaryTimer,
+    players: state.players.map((player) => ({ ...player })),
+    shotCharge: input.shoot ? clamp((now - input.shootStartedAt) / 950, 0, 1) : 0,
+  };
+}
+
 function resetKickoff(state: MatchState, team: TeamId) {
   const fresh = createPlayers();
   state.players.forEach((player, index) => {
@@ -201,23 +238,16 @@ export default function ArenaPrototype() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const stateRef = useRef<MatchState>(createMatch());
-  const inputRef = useRef<InputState>({
-    up: false,
-    down: false,
-    left: false,
-    right: false,
-    sprint: false,
-    shoot: false,
-    shootStartedAt: 0,
-    mouseX: 0,
-    mouseY: 0,
-    mouseInside: false,
-  });
+  const inputRef = useRef<InputState>(createInputState());
   const rafRef = useRef<number | null>(null);
   const lastRef = useRef(0);
-  const [, forceHud] = useState(0);
+  const [hud, setHud] = useState<ArenaHudState>(() => createArenaHudState(createMatch(), createInputState(), 0));
   const [audioOn, setAudioOn] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+
+  const syncHud = useCallback(() => {
+    setHud(createArenaHudState(stateRef.current, inputRef.current, performance.now()));
+  }, []);
 
   const startMatch = useCallback(() => {
     const state = stateRef.current;
@@ -231,23 +261,23 @@ export default function ArenaPrototype() {
     state.commentaryTimer = 2.2;
     state.matchStartedAt = performance.now();
     resetKickoff(state, HOME);
-    forceHud((v) => v + 1);
-  }, []);
+    syncHud();
+  }, [syncHud]);
 
   const rematch = useCallback(() => {
     stateRef.current = createMatch();
     stateRef.current.phase = "playing";
     stateRef.current.commentary = "REMATCH // NO BRAKES";
     stateRef.current.commentaryTimer = 2;
-    forceHud((v) => v + 1);
-  }, []);
+    syncHud();
+  }, [syncHud]);
 
   const togglePause = useCallback(() => {
     const state = stateRef.current;
     if (state.phase === "playing") state.phase = "paused";
     else if (state.phase === "paused") state.phase = "playing";
-    forceHud((v) => v + 1);
-  }, []);
+    syncHud();
+  }, [syncHud]);
 
   const doPass = useCallback(() => {
     const state = stateRef.current;
@@ -415,9 +445,9 @@ export default function ArenaPrototype() {
   }, [activatePulse, doPass, releaseShot, switchPlayer, togglePause]);
 
   useEffect(() => {
-    const hudTimer = window.setInterval(() => forceHud((v) => v + 1), 90);
+    const hudTimer = window.setInterval(syncHud, 90);
     return () => window.clearInterval(hudTimer);
-  }, []);
+  }, [syncHud]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -452,8 +482,8 @@ export default function ArenaPrototype() {
     };
   }, []);
 
-  const state = stateRef.current;
-  const shotCharge = inputRef.current.shoot ? clamp((performance.now() - inputRef.current.shootStartedAt) / 950, 0, 1) : 0;
+  const state = hud;
+  const shotCharge = hud.shotCharge;
   const minutes = Math.floor(Math.max(0, state.timeLeft) / 60);
   const seconds = Math.floor(Math.max(0, state.timeLeft) % 60).toString().padStart(2, "0");
   const selected = state.players[state.controlled] ?? state.players[3];

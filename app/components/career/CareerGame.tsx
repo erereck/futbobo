@@ -42,6 +42,7 @@ import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanel
 import CareerExtraStats from "./CareerExtraStats";
 import CareerTimeline from "./CareerTimeline";
 import CareerWorld, { WorldPulseButton } from "./CareerWorld";
+import CareerTeam from "./CareerTeam";
 import TransferMarketScreen from "./TransferMarketScreen";
 import PressConferenceDialog from "./PressConferenceDialog";
 import CycleShopDialog from "./CycleShopDialog";
@@ -62,7 +63,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   const [challengeResults, setChallengeResults] = useState<ChallengeResult[]>([]);
   const [youthStep, setYouthStep] = useState(0);
   const [youthFinished, setYouthFinished] = useState(false);
-  const [activeTab, setActiveTab] = useState<"event" | "history" | "profile" | "life" | "stats" | "world" | "legacy">("event");
+  const [activeTab, setActiveTab] = useState<"event" | "history" | "profile" | "life" | "stats" | "team" | "world" | "legacy">("event");
   const [toast, setToast] = useState("");
   const [luckSpin, setLuckSpin] = useState<{ event: GameEvent; choiceIndex: number; succeeded: boolean } | null>(null);
   const [positionChangeOpen, setPositionChangeOpen] = useState(false);
@@ -235,10 +236,10 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       // e estatísticas permanecem intactos.
       try {
         localStorage.setItem(key, JSON.stringify({ ...compact, lastBotaoResult: null }));
-        setToast("Save compactado automaticamente para liberar espaço");
+        queueMicrotask(() => setToast("Save compactado automaticamente para liberar espaço"));
       } catch (retryError) {
         console.error("[Futbobo] O save continuou acima da cota após compactação.", retryError);
-        setToast("Não foi possível salvar: armazenamento do navegador cheio");
+        queueMicrotask(() => setToast("Não foi possível salvar: armazenamento do navegador cheio"));
       }
     }
   }, [game]);
@@ -606,7 +607,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(18);
   }
 
-  function changeTab(tab: "event" | "history" | "profile" | "life" | "stats" | "world" | "legacy") {
+  function changeTab(tab: "event" | "history" | "profile" | "life" | "stats" | "team" | "world" | "legacy") {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
     vibrate();
@@ -1769,9 +1770,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           ...current.newsFeed,
         ].slice(0, 12),
       };
-      const presentation = acceptedOffer && newClub && current.overall > 80
+      const presentation = transferred.pendingPressConference ?? (acceptedOffer && newClub && current.overall > 80
         ? buildTransferPresentation(transferred, oldClub, newClub, acceptedOffer)
-        : null;
+        : null);
       return {
         ...transferred,
         pendingPressConference: presentation,
@@ -1925,8 +1926,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     vibrate();
   }
 
-  function buyCycleShopItem(itemId: CycleShopItemId) {
-    const purchase = purchaseCycleShopItem(game, itemId);
+  function buyCycleShopItem(itemId: CycleShopItemId, countryId?: string) {
+    const purchase = purchaseCycleShopItem(game, itemId, countryId);
     if (purchase.state === game) return;
     setGame(purchase.forcedClose
       ? { ...purchase.state, lastCycleShopSeason: game.season }
@@ -3770,6 +3771,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             </div>
           )}
 
+          {activeTab === "team" && game.phase === "career" && (
+            <CareerTeam state={game} />
+          )}
           {activeTab === "world" && game.phase === "career" && (
             <CareerWorld state={game} />
           )}
@@ -3819,6 +3823,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               </div>
               <button aria-pressed={activeTab === "event"} className={activeTab === "event" ? "selected" : ""} onClick={() => changeTab("event")}><span><FutboboIcon name="career" /></span>Carreira</button>
               <button aria-pressed={activeTab === "profile"} className={activeTab === "profile" ? "selected" : ""} onClick={() => changeTab("profile")}><span><FutboboIcon name="player" /></span>Jogador</button>
+              <button aria-pressed={activeTab === "team"} className={activeTab === "team" ? "selected" : ""} onClick={() => changeTab("team")}><span><FutboboIcon name="team" /></span>Time</button>
               <button aria-pressed={activeTab === "history"} className={activeTab === "history" ? "selected" : ""} onClick={() => changeTab("history")}><span><FutboboIcon name="history" /></span>Histórico</button>
               <button aria-pressed={activeTab === "stats"} className={activeTab === "stats" ? "selected" : ""} onClick={() => changeTab("stats")}><span><FutboboIcon name="stats" /></span>Estatísticas</button>
               <button aria-pressed={activeTab === "world"} className={activeTab === "world" ? "selected" : ""} onClick={() => changeTab("world")}><span><FutboboIcon name="globe" /></span>Mundo</button>

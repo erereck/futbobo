@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { PlayerAppearancePortrait as Portrait } from "../../PlayerAppearanceEditor";
 import { DEFAULT_PLAYER_APPEARANCE, normalizePlayerAppearance, randomPlayerAppearance, type PlayerAppearance } from "../../player-appearance";
@@ -153,7 +153,14 @@ export default function CinematicEventPrototype() {
   const [nameRevealed, setNameRevealed] = useState(false);
   const [autoplay, setAutoplay] = useState(false);
 
-  useEffect(() => setPlayer(readPlayerFromSave()), []);
+  useEffect(() => {
+    queueMicrotask(() => setPlayer(readPlayerFromSave()));
+  }, []);
+
+  const transitionTo = useCallback((nextScene: Scene) => {
+    setScene(nextScene);
+    if (nextScene !== "presenter") setNameRevealed(false);
+  }, []);
 
   useEffect(() => {
     if (!autoplay) return;
@@ -164,13 +171,11 @@ export default function CinematicEventPrototype() {
     const delay = scene === "presenter" ? 4200 : scene === "interview" ? 5200 : 3600;
     const timer = window.setTimeout(() => {
       if (scene === "presenter" && !nameRevealed) return setNameRevealed(true);
-      if (index >= 0 && index < order.length - 1) setScene(order[index + 1]);
+      if (index >= 0 && index < order.length - 1) transitionTo(order[index + 1]);
       else setAutoplay(false);
     }, delay);
     return () => window.clearTimeout(timer);
-  }, [autoplay, goldenBootEnabled, nameRevealed, scene]);
-
-  useEffect(() => { if (scene !== "presenter") setNameRevealed(false); }, [scene]);
+  }, [autoplay, goldenBootEnabled, nameRevealed, scene, transitionTo]);
 
   const club = clubById(player.currentClubId || player.academyClubId);
   const appearance = normalizePlayerAppearance(player.playerAppearance);
@@ -182,14 +187,14 @@ export default function CinematicEventPrototype() {
   const seasonLabel = Math.max(2026, player.season);
 
   const goNext = () => {
-    if (scene === "interview") return setScene(goldenBootEnabled ? "golden-boot" : "finalists");
-    if (scene === "golden-boot") return setScene("finalists");
-    if (scene === "finalists") return setScene("presenter");
+    if (scene === "interview") return transitionTo(goldenBootEnabled ? "golden-boot" : "finalists");
+    if (scene === "golden-boot") return transitionTo("finalists");
+    if (scene === "finalists") return transitionTo("presenter");
     if (scene === "presenter") {
       if (!nameRevealed) return setNameRevealed(true);
-      return setScene("winner");
+      return transitionTo("winner");
     }
-    setScene("interview");
+    transitionTo("interview");
   };
 
   return (
@@ -206,7 +211,7 @@ export default function CinematicEventPrototype() {
         </div>
       </header>
 
-      <SceneRail scene={scene} onScene={setScene} />
+      <SceneRail scene={scene} onScene={transitionTo} />
 
       <section className={styles.viewport}>
         {scene === "interview" && (

@@ -202,3 +202,39 @@ export function buildFormerClubConference(state: GameState, match: PendingBotaoM
     questions,
   };
 }
+
+
+const BETRAYAL_CALM: AnswerDraft[] = [
+  { label: "Eu respeito minha história, mas minha carreira continua", tone: "calm", toneLabel: "Não alimenta a guerra", result: "A resposta não apaga a revolta, mas evita transformar a coletiva em provocação.", effect: { mediaRelation: 6, lifeBalance: 4, morale: 2 } },
+  { label: "Não escolhi contra ninguém; escolhi o próximo passo", tone: "calm", toneLabel: "Separa carreira e rivalidade", result: "Parte da imprensa aceita a explicação. A antiga arquibancada, nem tanto.", effect: { mediaRelation: 5, discipline: 3 } },
+];
+const BETRAYAL_BOLD: AnswerDraft[] = [
+  { label: "Se eles me odeiam agora, é porque essa camisa pesa", tone: "bold", toneLabel: "Incendeia o clássico", result: "A frase vira corte de vídeo em minutos. Sua nova torcida compra a provocação inteira.", effect: { reputation: 8, followers: 420_000, fans: 9, mediaRelation: -6, discipline: -5 } },
+  { label: "Eu vim para o lado em que acredito que posso ganhar", tone: "bold", toneLabel: "Escolhe um lado", result: "Não sobra espaço para neutralidade. A rivalidade agora também tem seu rosto.", effect: { reputation: 7, followers: 330_000, fans: 8, morale: 4, mediaRelation: -4 } },
+];
+const BETRAYAL_TEAM: AnswerDraft[] = [
+  { label: "Meu compromisso agora é com este vestiário", tone: "team", toneLabel: "Fecha com o novo elenco", result: "Os novos companheiros gostam de ouvir uma resposta sem meia-palavra.", effect: { leadership: 7, morale: 5, fans: 5 } },
+  { label: "Vou conquistar respeito aqui jogando, não falando", tone: "team", toneLabel: "Olha para dentro", result: "A coletiva perde temperatura, mas a nova torcida cobra que a frase vire futebol.", effect: { leadership: 6, discipline: 4, mediaRelation: 2 } },
+];
+
+export function buildBetrayalConference(state: GameState, source: Club, destination: Club, rivalryName: string): PressConference {
+  const answers = [...BETRAYAL_CALM, ...BETRAYAL_BOLD, ...BETRAYAL_TEAM];
+  return {
+    kind: "betrayal",
+    matchId: `betrayal-${state.season}-${source.id}-${destination.id}`,
+    competitionName: rivalryName,
+    opponentName: `${source.shortName} → ${destination.shortName}`,
+    questionIndex: 0,
+    questions: [
+      question(state, "betrayal-first", state.season * 3001 + source.id.length,
+        [`A notícia atravessou a cidade antes mesmo da apresentação. Torcedores do ${source.shortName} chamam a transferência de traição.`],
+        [`Você entende quem diz que trocar o ${source.shortName} pelo ${destination.shortName} é uma traição?`], answers),
+      question(state, "betrayal-choice", state.season * 3011 + destination.id.length,
+        [`O ${rivalryName} agora tem uma camada pessoal. Sua antiga camisa já apareceu rasgada nas redes.`],
+        ["Você faria exatamente a mesma escolha se pudesse voltar algumas horas?"], answers),
+      question(state, "betrayal-derby", state.season * 3023 + source.id.length + destination.id.length,
+        [`O primeiro clássico já está sendo tratado como o jogo mais esperado da sua temporada.`],
+        [`O que vai passar pela sua cabeça quando você entrar em campo contra o ${source.shortName}?`], answers),
+    ],
+  };
+}

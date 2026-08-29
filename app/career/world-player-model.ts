@@ -2,7 +2,7 @@ import type { PositionKey } from "../game-data";
 export type WorldPlayerMoveType = "permanent" | "loan" | "free-agent" | "renewal";
 
 export type WorldPlayerStatus = "active" | "loaned" | "free-agent" | "retired";
-export type WorldPlayerSource = "generated" | "rival" | "award";
+export type WorldPlayerSource = "generated" | "rival" | "award" | "squad";
 
 export type WorldPlayerCareerStats = {
   seasons: number;
@@ -81,4 +81,5 @@ export type WorldPlayerAdvanceContext = {
   }>;
   awardNominations?: Array<{ award: string; winner: string }>;
   protagonistName?: string;
+  focusClubId?: string;
 };

@@ -10,7 +10,8 @@ O `app/page.tsx` é apenas a entrada da rota. A implementação da carreira fica
 - `performance.ts`: desempenho, valor, público, saúde e economia.
 - `transfer-market.ts`: motor central do mercado. Calcula contexto, elegibilidade, necessidade posicional, papel, taxa real, salário, empréstimo, retorno e registro histórico. As regras de mercado não devem ser recriadas na interface ou na simulação.
 - `world-player-model.ts`: contrato persistido dos jogadores fictícios, população agregada, histórico, honrarias e vínculos com rivais.
-- `world-players.ts`: geração compacta, migração, avanço anual determinístico e APIs neutras de consulta. Só jogadores relevantes viram entidades completas.
+- `world-players.ts`: geração compacta, migração, avanço anual determinístico e APIs neutras de consulta. Só jogadores relevantes viram entidades completas; o núcleo do elenco atual é materializado como World Players persistentes.
+- `team-roster.ts`: projeção neutra de titulares e banco para clube/Seleção. É o contrato visual do modo jogador e a base planejada para o futuro modo treinador.
 - `events.ts`: escolha e aplicação de eventos e histórias.
 - `press-conferences.ts`: conteúdo determinístico de zona mista, apresentação e reencontro com ex-clube. Cada pergunta sorteia três respostas de pools maiores.
 - `cycle-shop.ts`: catálogo, frequência, preço e consequências da loja quadrienal. A interface apenas apresenta e despacha compras.

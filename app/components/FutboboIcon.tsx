@@ -22,6 +22,7 @@ export type FutboboIconName =
   | "trend-down"
   | "trend-up"
   | "tag"
+  | "team"
   | "trophy"
   | "wallet";
 
@@ -52,6 +53,7 @@ const paths: Record<FutboboIconName, ReactNode> = {
   "trend-down": <><path d="M4 7h5l3 4 3-3 5 7" /><path d="M16 15h4v-4" /></>,
   "trend-up": <><path d="M4 17h5l3-4 3 3 5-7" /><path d="M16 9h4v4" /></>,
   tag: <><path d="M20 13 13 20 4 11V4h7l9 9Z" /><circle cx="8.5" cy="8.5" r="1.5" /></>,
+  team: <><circle cx="8.5" cy="8" r="3" /><circle cx="17" cy="9" r="2.2" /><path d="M3.5 20c.5-4 2.2-6 5-6s4.6 2 5.1 6M14 15.2c3.5-.6 5.6 1 6.5 4.8" /></>,
   trophy: <><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" /><path d="M8 6H4v2a4 4 0 0 0 5 4M16 6h4v2a4 4 0 0 1-5 4M12 13v5M8 21h8M9 18h6" /></>,
   wallet: <><path d="M4 7h14a2 2 0 0 1 2 2v9H6a2 2 0 0 1-2-2V7Z" /><path d="M4 7V6a2 2 0 0 1 2-2h11v3M15 11h5v4h-5a2 2 0 0 1 0-4Z" /></>,
 };

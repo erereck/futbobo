@@ -476,6 +476,8 @@ export function initialState(seedOverride?: number): GameState {
     forcedFreeAgentUntilSeason: 0,
     corruptionGuaranteedSeason: 0,
     lastCycleShopSeason: 0,
+    agentCountryFocus: "",
+    betrayedClubIds: [],
     traits: [],
     rivals: [],
     worldPlayers: emptyWorldPlayerUniverse(seed, 2026),
@@ -588,6 +590,8 @@ export function normalizeSave(value: unknown): GameState {
     forcedFreeAgentUntilSeason: saved.forcedFreeAgentUntilSeason ?? 0,
     corruptionGuaranteedSeason: saved.corruptionGuaranteedSeason ?? 0,
     lastCycleShopSeason: saved.lastCycleShopSeason ?? 0,
+    agentCountryFocus: typeof saved.agentCountryFocus === "string" ? saved.agentCountryFocus : "",
+    betrayedClubIds: Array.isArray(saved.betrayedClubIds) ? saved.betrayedClubIds.filter((id): id is string => typeof id === "string") : [],
     spendableMoney: saved.spendableMoney ?? Math.min(saved.money ?? 0, Math.round((saved.money ?? 0) * 0.12)),
     traits: Array.isArray(saved.traits) && saved.traits.length
       ? saved.traits.filter((trait): trait is SpecialTraitId => trait in SPECIAL_TRAITS)

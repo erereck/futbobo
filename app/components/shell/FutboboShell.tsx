@@ -120,7 +120,7 @@ export default function FutboboShell() {
     const retired = listCareerSaves("player").filter((meta) => meta.phase === "summary");
     if (!retired.length) return;
     retired.forEach((meta) => deleteCareerSlot(meta.id));
-    refreshLibrary();
+    queueMicrotask(refreshLibrary);
   }, [screen]);
 
   useEffect(() => {
@@ -201,12 +201,6 @@ export default function FutboboShell() {
     setBootAction("new");
     setScreen("career");
     refreshLibrary();
-  };
-
-  const openLegacyTool = (action: Exclude<BootAction, "new" | "continue" | null>) => {
-    toolClickedRef.current = false;
-    setBootAction(action);
-    setScreen("legacy-tool");
   };
 
   if (screen === "career") {

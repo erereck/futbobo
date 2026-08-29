@@ -147,8 +147,6 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
   if (!SETUP_PHASES.has(game.phase)) return null;
 
   const goPosition = () => setGame((current) => ({ ...current, phase: "appearance" }));
-  const goShirt = () => setGame((current) => ({ ...current, phase: "nationality" }));
-  const goIdentityMix = () => setGame((current) => ({ ...current, phase: "academy" }));
   const goClub = () => setGame((current) => ({ ...current, phase: "formation" }));
 
   const choosePosition = (position: PositionKey) => {

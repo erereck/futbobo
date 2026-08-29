@@ -10,7 +10,7 @@ import { clamp, clubById, pick, seeded } from "./shared";
 import { DOMESTIC_SUPER_CUP_NAMES, clubConfederation, continentalSlotAfterSeason, initialAdaptation, initialContinentalSlot, isEuropeanClub, isOutsideAcademyHome, isOutsideCountry, positionByKey, randomAcademyClubs } from "./academy";
 import { addStats, competitiveStrength, describeEffects, isIdolAtClub, marketValue, medicalRecordForSeason, mergeEffects, seasonAverageRating, seasonPerformanceScore, simulatedWorldCupStats, worldCupGamesThroughStage } from "./performance";
 import { applyAcceptedTransfer, completeLoanReturn, materializeTransferOffers, selectAlternativeExileOffers, selectTransferOffers, shouldOfferYouthLoanInsteadOfSale } from "./transfer-market";
-import { advanceWorldPlayerUniverse } from "./world-players";
+import { advanceWorldPlayerUniverse, ensureClubSquadPlayers } from "./world-players";
 import { seasonFitnessAfterLoad } from "./fatigue";
 import { worldFinalOpponentForSeason } from "./world-club-competitions";
 import { evaluateBallonDor } from "./ballon-dor";
@@ -389,24 +389,39 @@ export function simulateSeason(
   if (nationalTier !== "none") {
     const strengthDifficulty = nationalTier === "main" ? Math.max(0, nation.strength - 3) * 2 : Math.max(0, nation.strength - 3);
     const tierRequirement = (nationalTier === "main" ? 74 : nationalTier === "olympic" ? 70 : nationalTier === "sub20" ? 64 : 58) + strengthDifficulty;
+    const establishedSenior = nationalTier === "main" && (
+      affected.nationalCaps >= 18 ||
+      affected.overall >= 84 ||
+      affected.reputation >= 72 ||
+      performanceScore >= 82
+    );
     const callChance = clamp(
-      8 +
-      (affected.overall - tierRequirement) * 3 +
-      affected.nationalLevel * 0.3 +
-      affected.reputation * 0.12 +
-      Math.max(0, appearances - 12) * 0.45 +
+      10 +
+      (affected.overall - tierRequirement) * 3.4 +
+      affected.nationalLevel * 0.34 +
+      affected.reputation * 0.18 +
+      Math.max(0, appearances - 10) * 0.55 +
+      Math.max(0, performanceScore - 68) * 0.42 +
       (affected.morale - 50) * 0.1 -
       Math.max(0, 60 - affected.fitness) * 0.3,
-      2,
-      92,
+      establishedSenior ? 82 : 3,
+      establishedSenior ? 99 : 94,
     );
-    const called = Boolean(effect.nationalCall || effect.nationalCaptain) || seeded(state.seed, state.season * 131 + 7) * 100 < callChance;
+    const automaticSeniorCall = establishedSenior && affected.fitness >= 42 && affected.overall >= tierRequirement - 3;
+    const called = Boolean(effect.nationalCall || effect.nationalCaptain) || automaticSeniorCall || seeded(state.seed, state.season * 131 + 7) * 100 < callChance;
     nationalCalled = called;
     if (called) {
-      const capsGain = Math.round(3 + seeded(state.seed, state.season * 137) * 5);
-      const nationalQuality = clamp((affected.overall - 50) / 35, 0.4, 1.5);
-      const goalsGain = isKeeper ? 0 : Math.max(0, Math.round(capsGain * position.goals * nationalQuality * finishingFactor * 1.3));
-      const assistsGain = isKeeper ? 0 : Math.max(0, Math.round(capsGain * position.assists * nationalQuality * creationFactor * 1.3));
+      const baseCaps = nationalTier === "main" ? 8 : nationalTier === "olympic" ? 5 : 4;
+      const capRange = nationalTier === "main" ? 6 : 4;
+      const capsGain = Math.round(baseCaps + seeded(state.seed, state.season * 137) * capRange);
+      const nationalQuality = clamp((affected.overall - 50) / 35, 0.4, 1.55);
+      const clubGoalRate = appearances > 0 ? goals / appearances : position.goals;
+      const clubAssistRate = appearances > 0 ? assists / appearances : position.assists;
+      const eliteTranslation = clamp(0.5 + nationalQuality * 0.23 + affected.reputation / 520, 0.56, 0.94);
+      const goalRateN = Math.max(position.goals * nationalQuality * finishingFactor * 1.28, clubGoalRate * eliteTranslation);
+      const assistRateN = Math.max(position.assists * nationalQuality * creationFactor * 1.24, clubAssistRate * clamp(eliteTranslation - 0.05, 0.5, 0.88));
+      const goalsGain = isKeeper ? 0 : Math.max(0, Math.round(capsGain * goalRateN * (0.82 + seeded(state.seed, state.season * 138 + 5) * 0.34)));
+      const assistsGain = isKeeper ? 0 : Math.max(0, Math.round(capsGain * assistRateN * (0.82 + seeded(state.seed, state.season * 138 + 11) * 0.34)));
       nationalCaps += capsGain;
       nationalGoals += goalsGain;
       nationalAssists += assistsGain;
@@ -614,15 +629,29 @@ export function simulateSeason(
   const nextFitness = clamp(physicalLoad.fitness, 24, 99);
   const moraleTarget = 64 + performanceScore * 0.16 + titleCount * 4 + (objectiveResult.completed ? 5 : -7) + (seeded(state.seed, state.season * 311) * 12 - 6);
   const nextMorale = clamp(Math.round(affected.morale * 0.48 + moraleTarget * 0.52 + twistMorale), 24, 98);
-  const overallVisibility = Math.pow(clamp((nextOverall - 50) / 36, 0.08, 1.22), 1.7);
-  const followerSoftCeiling = Math.round(30_000 * Math.pow(1.32, clamp(nextOverall - 55, 0, 40)));
-  const audienceSaturation = affected.followers <= followerSoftCeiling ? 1 : clamp((followerSoftCeiling / Math.max(1, affected.followers)) * 0.72, 0.1, 1);
-  const organicFollowerGain = Math.max(250, Math.round((1_200 + performanceScore * performanceScore * 34 + titleCount * 85_000 + awards.length * 48_000 + europeanSpotlight * 14_000 + (calledUp ? 26_000 : 0)) * overallVisibility * audienceSaturation * (0.62 + affected.reputation / 125) * (affected.socialSentiment < 35 ? 0.55 : affected.socialSentiment > 75 ? 1.18 : 1)));
-  const nextFollowers = affected.followers + organicFollowerGain;
+  const overallVisibility = Math.pow(clamp((nextOverall - 48) / 35, 0.1, 1.35), 1.62);
+  const bigClubReach = clamp(0.82 + club.reputation * 0.18 + Math.max(0, club.strength - 76) / 52, 0.9, 2.05);
+  const followerSoftCeiling = Math.round(180_000 * Math.pow(1.34, clamp(nextOverall - 55, 0, 42)) * bigClubReach);
+  const audienceSaturation = affected.followers <= followerSoftCeiling ? 1 : clamp((followerSoftCeiling / Math.max(1, affected.followers)) * 0.82, 0.24, 1);
+  const careerGoals = affected.stats.goals + goals;
+  const careerContributions = careerGoals + affected.stats.assists + assists;
+  const ballonCount = affected.awardCabinet["Bola de Ouro"] ?? 0;
+  const celebrityTarget = Math.round(
+    careerGoals * 125_000 +
+    careerContributions * 38_000 +
+    (affected.trophies + titleCount) * 1_350_000 +
+    (affected.awards + awards.length) * 680_000 +
+    ballonCount * 24_000_000 +
+    Math.max(0, nextOverall - 80) * 3_800_000 +
+    Math.max(0, affected.nationalGoals) * 115_000
+  );
+  const organicFollowerGain = Math.max(1_000, Math.round((6_000 + performanceScore * performanceScore * 86 + titleCount * 260_000 + awards.length * 175_000 + europeanSpotlight * 50_000 + (calledUp ? 115_000 : 0)) * overallVisibility * bigClubReach * audienceSaturation * (0.7 + affected.reputation / 105) * (affected.socialSentiment < 35 ? 0.58 : affected.socialSentiment > 75 ? 1.2 : 1)));
+  const celebrityCatchUp = Math.max(0, Math.round((celebrityTarget - affected.followers) * (performanceScore >= 85 ? 0.16 : 0.095)));
+  const nextFollowers = affected.followers + organicFollowerGain + celebrityCatchUp;
   const nextSocialSentiment = clamp(Math.round(affected.socialSentiment * 0.72 + (52 + performanceScore * 0.28 + titleCount * 4) * 0.28), 12, 98);
   record.followers = nextFollowers;
   record.socialSentiment = nextSocialSentiment;
-  const followerMilestones = [{ threshold: 10_000, label: "10 mil seguidores" }, { threshold: 100_000, label: "100 mil seguidores" }, { threshold: 1_000_000, label: "1 milhão de seguidores" }, { threshold: 10_000_000, label: "10 milhões de seguidores" }, { threshold: 50_000_000, label: "50 milhões de seguidores" }];
+  const followerMilestones = [{ threshold: 10_000, label: "10 mil seguidores" }, { threshold: 100_000, label: "100 mil seguidores" }, { threshold: 1_000_000, label: "1 milhão de seguidores" }, { threshold: 10_000_000, label: "10 milhões de seguidores" }, { threshold: 50_000_000, label: "50 milhões de seguidores" }, { threshold: 100_000_000, label: "100 milhões de seguidores" }, { threshold: 250_000_000, label: "250 milhões de seguidores" }, { threshold: 500_000_000, label: "500 milhões de seguidores" }];
   const newOffFieldMilestones = followerMilestones.filter((milestone) => affected.followers < milestone.threshold && nextFollowers >= milestone.threshold).map((milestone) => `${affected.season}: ${milestone.label}`);
   const sponsorIncome = affected.activeSponsor?.annualValue ?? 0;
   const seasonLivingCost = Math.round((120_000 + affected.age * 3_500 + (awayFromAcademyHome ? 85_000 : 35_000) + Math.max(0, affected.reputation - 35) * 5_500) / 10_000) * 10_000;
@@ -743,7 +772,8 @@ export function simulateSeason(
   const achievementNews = newlyUnlocked.map((achievement) => `Conquista desbloqueada: ${achievement.title}.`);
   const offFieldNews = [...(effect.sponsorBrand ? [`${affected.season}: ${affected.name} assina contrato pessoal com ${effect.sponsorBrand}.`] : []), ...(completedSponsor ? [`${affected.season}: parceria com ${completedSponsor.brand} chega ao fim após ${completedSponsor.endSeason - completedSponsor.startSeason} temporada(s).`] : []), ...newOffFieldMilestones];
   const nationalitySwitchTarget = maybeOfferNationalitySwitch(nextBase, affected.season * 71);
-  const worldPlayers = advanceWorldPlayerUniverse(nextBase.worldPlayers, { season: nextBase.season, rivals: nextBase.rivals, awardNominations: result.awardNominations, protagonistName: nextBase.name });
+  const squadWorld = ensureClubSquadPlayers(nextBase.worldPlayers, nextBase.currentClubId, affected.season, 14);
+  const worldPlayers = advanceWorldPlayerUniverse(squadWorld, { season: nextBase.season, rivals: nextBase.rivals, awardNominations: result.awardNominations, protagonistName: nextBase.name, focusClubId: nextBase.currentClubId });
   return { ...nextBase, nextEventId: nationalitySwitchTarget ? NATIONALITY_SWITCH_EVENT_ID : selectNextEvent(nextBase, affected.season * 37), pendingNationalitySwitchTarget: nationalitySwitchTarget ?? "", nationalitySwitchInviteUsed: nextBase.nationalitySwitchInviteUsed || Boolean(nationalitySwitchTarget), transferOffers, transferMarketOffers, worldPlayers, legacyPoints, unlockedAchievements: [...nextBase.unlockedAchievements, ...newlyUnlocked.map((achievement) => achievement.id)], newsFeed: [...achievementNews, ...offFieldNews, seasonHeadline, ...nextBase.newsFeed].slice(0, 16) };
 }
 

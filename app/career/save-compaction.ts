@@ -2,7 +2,8 @@ import type { GameState, SeasonRecord, SeasonResult } from "./model";
 import type { BotaoMatchResult } from "../botao/types";
 
 export function compactBotaoMatchResult(result: BotaoMatchResult): BotaoMatchResult {
-  const { replays: _replays, ...compact } = result;
+  const { replays, ...compact } = result;
+  void replays;
   return compact;
 }
 
