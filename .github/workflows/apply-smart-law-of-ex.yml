@@ -1,0 +1,39 @@
+name: Apply smart Law of Ex
+
+"on":
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/apply-smart-law-of-ex.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply feature patch
+        run: python3 scripts/apply-smart-law-of-ex.py
+
+      - name: Validate diff
+        run: git diff --check
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Futbobo
+        run: npm run build
+
+      - name: Commit feature and remove helpers
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/botao/types.ts app/botao/adapter.ts app/botao/BotaoMatch.tsx app/botao/botao.css app/components/career/CareerGame.tsx app/career/press-conferences.ts
+          git rm scripts/apply-smart-law-of-ex.py .github/workflows/apply-smart-law-of-ex.yml
+          git commit -m "feat: make Law of Ex react to goal celebrations"
+          git push
