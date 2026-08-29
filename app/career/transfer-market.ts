@@ -229,7 +229,7 @@ function materializeOffer(state: GameState, club: Club, context: MarketContext, 
     transferFee: actualTransferFee(state, club, context, role, salt),
     annualSalary: context.mode === "loan" ? state.annualSalary : contract.annualSalary,
     contractYears: context.mode === "loan" ? state.contractYears : contract.years,
-    loanEndSeason: context.mode === "loan" ? state.season + 1 : 0,
+    loanEndSeason: context.mode === "loan" ? state.season + (seeded(state.seed, state.season * 1301 + salt + CLUBS.indexOf(club) * 17) < 0.5 ? 2 : 1) : 0,
     parentSalaryShare: parentShare, destinationSalaryShare: context.mode === "loan" ? 100 - parentShare : 100,
     expiresSeason: state.season + 1,
   };
