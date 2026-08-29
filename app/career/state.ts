@@ -527,14 +527,28 @@ export function normalizeSave(value: unknown): GameState {
       : saved.libertadoresQualified
         ? "libertadores"
         : null;
+  const lastTransferRecord = Array.isArray(saved.transferHistory) ? saved.transferHistory.at(-1) : undefined;
+  const staleForcedLoanReturnMarket = Boolean(
+    saved.phase === "transfer" &&
+    saved.forcedClubExit &&
+    lastTransferRecord?.type === "loan-return" &&
+    lastTransferRecord.toClubId === saved.currentClubId &&
+    Array.isArray(saved.transferMarketOffers) &&
+    saved.transferMarketOffers.some((offer) => offer && (
+      offer.clubId === saved.currentClubId ||
+      (typeof offer.fromClubId === "string" && offer.fromClubId.length > 0 && offer.fromClubId !== saved.currentClubId)
+    ))
+  );
   return {
     ...base,
     ...saved,
     version: 7,
     phase:
-      saved.phase === "botao-final" && !(saved.pendingBotaoMatches?.length)
-        ? "season-result"
-        : saved.phase ?? base.phase,
+      staleForcedLoanReturnMarket
+        ? "career"
+        : saved.phase === "botao-final" && !(saved.pendingBotaoMatches?.length)
+          ? "season-result"
+          : saved.phase ?? base.phase,
     nationality: saved.nationality ?? "brasil",
     playerAppearance: normalizePlayerAppearance(saved.playerAppearance ?? randomPlayerAppearance(saved.seed ?? base.seed)),
     academyCountryId: saved.academyCountryId ?? saved.nationality ?? "brasil",
@@ -560,10 +574,13 @@ export function normalizeSave(value: unknown): GameState {
     nationalTrophies: saved.nationalTrophies ?? 0,
     nationalHistory: saved.nationalHistory ?? [],
     qualifiedNextMajor: saved.qualifiedNextMajor ?? true,
-    transferOffers: Array.isArray(saved.transferOffers) ? saved.transferOffers : [],
-    transferMarketOffers: Array.isArray(saved.transferMarketOffers)
-      ? saved.transferMarketOffers.filter((offer) => offer && typeof offer.clubId === "string")
-      : [],
+    transferOffers: staleForcedLoanReturnMarket ? [] : Array.isArray(saved.transferOffers) ? saved.transferOffers : [],
+    transferMarketOffers: staleForcedLoanReturnMarket
+      ? []
+      : Array.isArray(saved.transferMarketOffers)
+        ? saved.transferMarketOffers.filter((offer) => offer && typeof offer.clubId === "string")
+        : [],
+    transferStatus: staleForcedLoanReturnMarket ? null : saved.transferStatus ?? null,
     transferHistory: Array.isArray(saved.transferHistory)
       ? saved.transferHistory.filter((record) => record && typeof record.id === "string")
       : [],
@@ -584,7 +601,7 @@ export function normalizeSave(value: unknown): GameState {
         : null
     ),
     renewalDenied: saved.renewalDenied ?? false,
-    forcedClubExit: saved.forcedClubExit ?? false,
+    forcedClubExit: staleForcedLoanReturnMarket ? false : saved.forcedClubExit ?? false,
     youthLoanDecision: saved.youthLoanDecision ?? false,
     reducedOpportunitySeason: saved.reducedOpportunitySeason ?? 0,
     forcedAlternativeTransfer: saved.forcedAlternativeTransfer ?? false,

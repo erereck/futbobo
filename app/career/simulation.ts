@@ -584,7 +584,8 @@ export function simulateSeason(
   const clubLevelFloor = clamp(club.strength - 12, 55, 82);
   const clearlyBelowClubLevel = nextOverall <= clubLevelFloor - 6 && (performanceScore < 56 || appearances < 20 || nextRole === "reserva");
   const eliteMismatch = club.reputation >= 5 && nextOverall < 73 && performanceScore < 62;
-  const forcedClubExit = !isIdolAtClub(affected, club.id) && (clearlyBelowClubLevel || eliteMismatch);
+  const loanedOut = Boolean(affected.activeLoan || affected.loanParentClubId);
+  const forcedClubExit = !loanedOut && !isIdolAtClub(affected, club.id) && (clearlyBelowClubLevel || eliteMismatch);
   const youthLoanDecision = shouldOfferYouthLoanInsteadOfSale(affected, forcedClubExit, renewalDenied, nextAge);
   const permanentForcedExit = forcedClubExit && !youthLoanDecision;
 

@@ -503,9 +503,16 @@ export function completeLoanReturn(state: GameState): GameState {
     activeLoan: null, loanParentClubId: "", loanParentLeagueId: "", loanEndSeason: 0, pendingTransferMode: "permanent",
     youthLoanDecision: false, reducedOpportunitySeason: 0,
     isFreeAgent: contractExpired, freeAgentSinceSeason: contractExpired ? state.season : state.freeAgentSinceSeason,
+    transferOffers: [], transferMarketOffers: [], transferStatus: null, forcedClubExit: false,
     transferHistory: [...state.transferHistory, record] };
-  if (!contractExpired) return returned;
-  const offers = generateTransferOffers(returned, state.season * 557, { includeForeign: true, mode: "free-agent", trigger: "contract-expired", count: 8 });
+  if (contractExpired) {
+    const offers = generateTransferOffers(returned, state.season * 557, { includeForeign: true, mode: "free-agent", trigger: "contract-expired", count: 8 });
+    return { ...returned, transferOffers: offers.map((offer) => offer.clubId), transferMarketOffers: offers };
+  }
+  const hadLegitimateOpenMarket = state.transferRequested || state.forcedAlternativeTransfer || (!state.forcedClubExit && (state.transferOffers.length > 0 || state.transferMarketOffers.length > 0));
+  if (!hadLegitimateOpenMarket) return returned;
+  const requestedCount = clamp(Math.max(state.transferOffers.length, state.transferMarketOffers.length, 5), 5, 10);
+  const offers = generateTransferOffers(returned, state.season * 557 + 31, { includeForeign: true, mode: "permanent", trigger: state.transferRequested ? "requested" : "season-end", count: requestedCount });
   return { ...returned, transferOffers: offers.map((offer) => offer.clubId), transferMarketOffers: offers };
 }
 export function resolveTransferRequest(state: GameState, salt: number): TransferRequestDecision {
