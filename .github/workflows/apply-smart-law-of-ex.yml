@@ -20,6 +20,9 @@ jobs:
       - name: Apply feature patch
         run: python3 scripts/apply-smart-law-of-ex.py
 
+      - name: Normalize generated files
+        run: python3 -c 'from pathlib import Path; p=Path("app/botao/botao.css"); p.write_text(p.read_text().rstrip()+"\n")'
+
       - name: Validate diff
         run: git diff --check
 
