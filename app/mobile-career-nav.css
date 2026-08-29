@@ -1,13 +1,17 @@
-/* Keep the original Futbobo bottom-nav visual from globals.css.
-   This file only fixes mobile sizing so all six career tabs always fit. */
+/* Keep the original Futbobo bottom-nav visual from globals.css/premium.css.
+   Only the mobile sizing/layout is overridden here so all six tabs always fit. */
 
 @media (max-width: 899px) {
   .career-shell > .bottom-nav {
     box-sizing: border-box;
-    width: min(100dvw, 540px);
-    max-width: 100dvw;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    width: 100%;
+    max-width: none;
     overflow: hidden;
+    transform: none;
   }
 
   .career-shell > .bottom-nav > .desktop-career-nav-brand {
@@ -16,11 +20,12 @@
 
   .career-shell > .bottom-nav > button {
     box-sizing: border-box;
-    width: 100%;
+    width: 0;
     min-width: 0;
-    max-width: 100%;
+    max-width: none;
+    flex: 1 1 0;
     overflow: hidden;
-    padding-inline: 0;
+    padding-inline: 1px;
     white-space: nowrap;
   }
 
@@ -30,21 +35,29 @@
   }
 }
 
-@media (max-width: 390px) {
+@media (max-width: 540px) {
   .career-shell > .bottom-nav {
-    padding-inline: 3px;
+    gap: 1px;
+    padding-inline: 4px;
   }
 
   .career-shell > .bottom-nav > button {
-    min-width: 0;
-    padding-inline: 0;
-    font-size: 6px;
+    font-size: clamp(5.7px, 1.8vw, 8px);
     letter-spacing: -.02em;
   }
 }
 
-@media (max-width: 330px) {
+@media (max-width: 360px) {
+  .career-shell > .bottom-nav {
+    padding-inline: 2px;
+  }
+
   .career-shell > .bottom-nav > button {
-    font-size: 5px;
+    padding-inline: 0;
+    font-size: 5.7px;
+  }
+
+  .career-shell > .bottom-nav > button > span {
+    font-size: 13px;
   }
 }
