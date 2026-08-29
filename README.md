@@ -132,28 +132,6 @@ npm test
 
 ---
 
-## 🆕 Expansão das Segundas Divisões
-
-A carreira ganhou **cinco novas segundas divisões europeias**, adicionando **96 clubes** ao universo do jogo:
-
-- 🇪🇸 **Segunda División** — 22 clubes, com acesso à LaLiga.
-- 🇮🇹 **Serie B** — 20 clubes, com acesso à Serie A.
-- 🇩🇪 **2. Bundesliga** — 18 clubes, com acesso à Bundesliga.
-- 🇫🇷 **Ligue 2** — 18 clubes, com acesso à Ligue 1.
-- 🇵🇹 **Liga Portugal 2** — 18 clubes, com acesso à Primeira Liga.
-
-As novas divisões não funcionam apenas como destinos de transferência. A posição final da temporada pode gerar **acesso direto ou playoffs**, e uma carreira iniciada ou transferida para a segunda divisão pode efetivamente chegar à elite do país.
-
-Com elas, o Futbobo passa a contar com segundas divisões jogáveis em **sete países** quando somadas ao Brasileirão Série B e à Championship inglesa.
-
----
-
-## 🆕 v93.10 — Time de Verdade
-
-A v93.10 transforma o clube e a Seleção em elencos vivos durante toda a carreira. Companheiros evoluem, envelhecem e se transferem; a nova aba **Time** exibe titulares e banco; e decisões de mercado agora registram traições entre rivais. A QUADRA também ganhou o foco de país do empresário, enquanto patrocinadores e alcance social foram recalibrados para carreiras de superestrelas.
-
----
-
 ## 🧪 Laboratório Monte Carlo
 
 O Futbobo possui um simulador headless para medir o balanceamento de carreiras completas.
