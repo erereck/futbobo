@@ -1,0 +1,81 @@
+name: Fix loan return self transfer
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-loan-return-self-transfer.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch loan return market invariants
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          simulation = Path('app/career/simulation.ts')
+          text = simulation.read_text()
+          old = '  const forcedClubExit = !isIdolAtClub(affected, club.id) && (clearlyBelowClubLevel || eliteMismatch);'
+          new = '  const loanedOut = Boolean(affected.activeLoan || affected.loanParentClubId);\n  const forcedClubExit = !loanedOut && !isIdolAtClub(affected, club.id) && (clearlyBelowClubLevel || eliteMismatch);'
+          if old not in text:
+              raise SystemExit('forcedClubExit line not found')
+          simulation.write_text(text.replace(old, new, 1))
+
+          market = Path('app/career/transfer-market.ts')
+          text = market.read_text()
+          old = '    isFreeAgent: contractExpired, freeAgentSinceSeason: contractExpired ? state.season : state.freeAgentSinceSeason,\n    transferHistory: [...state.transferHistory, record] };'
+          new = '    isFreeAgent: contractExpired, freeAgentSinceSeason: contractExpired ? state.season : state.freeAgentSinceSeason,\n    transferOffers: [], transferMarketOffers: [], transferStatus: null, forcedClubExit: false,\n    transferHistory: [...state.transferHistory, record] };'
+          if old not in text:
+              raise SystemExit('loan return state block not found')
+          text = text.replace(old, new, 1)
+          old = '  if (!contractExpired) return returned;\n  const offers = generateTransferOffers(returned, state.season * 557, { includeForeign: true, mode: "free-agent", trigger: "contract-expired", count: 8 });\n  return { ...returned, transferOffers: offers.map((offer) => offer.clubId), transferMarketOffers: offers };'
+          new = '  if (contractExpired) {\n    const offers = generateTransferOffers(returned, state.season * 557, { includeForeign: true, mode: "free-agent", trigger: "contract-expired", count: 8 });\n    return { ...returned, transferOffers: offers.map((offer) => offer.clubId), transferMarketOffers: offers };\n  }\n  const hadLegitimateOpenMarket = state.transferRequested || state.forcedAlternativeTransfer || (!state.forcedClubExit && (state.transferOffers.length > 0 || state.transferMarketOffers.length > 0));\n  if (!hadLegitimateOpenMarket) return returned;\n  const requestedCount = clamp(Math.max(state.transferOffers.length, state.transferMarketOffers.length, 5), 5, 10);\n  const offers = generateTransferOffers(returned, state.season * 557 + 31, { includeForeign: true, mode: "permanent", trigger: state.transferRequested ? "requested" : "season-end", count: requestedCount });\n  return { ...returned, transferOffers: offers.map((offer) => offer.clubId), transferMarketOffers: offers };'
+          if old not in text:
+              raise SystemExit('loan return offer block not found')
+          market.write_text(text.replace(old, new, 1))
+
+          state = Path('app/career/state.ts')
+          text = state.read_text()
+          anchor = '  return {\n    ...base,\n    ...saved,\n    version: 7,'
+          insert = '  const lastTransferRecord = Array.isArray(saved.transferHistory) ? saved.transferHistory.at(-1) : undefined;\n  const staleForcedLoanReturnMarket = Boolean(\n    saved.phase === "transfer" &&\n    saved.forcedClubExit &&\n    lastTransferRecord?.type === "loan-return" &&\n    lastTransferRecord.toClubId === saved.currentClubId &&\n    Array.isArray(saved.transferMarketOffers) &&\n    saved.transferMarketOffers.some((offer) => offer && (\n      offer.clubId === saved.currentClubId ||\n      (typeof offer.fromClubId === "string" && offer.fromClubId.length > 0 && offer.fromClubId !== saved.currentClubId)\n    ))\n  );\n  return {\n    ...base,\n    ...saved,\n    version: 7,'
+          if anchor not in text:
+              raise SystemExit('normalizeSave return anchor not found')
+          text = text.replace(anchor, insert, 1)
+          old = '    phase:\n      saved.phase === "botao-final" && !(saved.pendingBotaoMatches?.length)\n        ? "season-result"\n        : saved.phase ?? base.phase,'
+          new = '    phase:\n      staleForcedLoanReturnMarket\n        ? "career"\n        : saved.phase === "botao-final" && !(saved.pendingBotaoMatches?.length)\n          ? "season-result"\n          : saved.phase ?? base.phase,'
+          if old not in text:
+              raise SystemExit('normalizeSave phase block not found')
+          text = text.replace(old, new, 1)
+          old = '    transferOffers: Array.isArray(saved.transferOffers) ? saved.transferOffers : [],\n    transferMarketOffers: Array.isArray(saved.transferMarketOffers)\n      ? saved.transferMarketOffers.filter((offer) => offer && typeof offer.clubId === "string")\n      : [],'
+          new = '    transferOffers: staleForcedLoanReturnMarket ? [] : Array.isArray(saved.transferOffers) ? saved.transferOffers : [],\n    transferMarketOffers: staleForcedLoanReturnMarket\n      ? []\n      : Array.isArray(saved.transferMarketOffers)\n        ? saved.transferMarketOffers.filter((offer) => offer && typeof offer.clubId === "string")\n        : [],\n    transferStatus: staleForcedLoanReturnMarket ? null : saved.transferStatus ?? null,'
+          if old not in text:
+              raise SystemExit('normalizeSave market block not found')
+          text = text.replace(old, new, 1)
+          old = '    forcedClubExit: saved.forcedClubExit ?? false,'
+          new = '    forcedClubExit: staleForcedLoanReturnMarket ? false : saved.forcedClubExit ?? false,'
+          if old not in text:
+              raise SystemExit('normalizeSave forcedClubExit line not found')
+          state.write_text(text.replace(old, new, 1))
+          PY
+          git diff --check
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Futbobo
+        run: npm run build
+
+      - name: Commit fix and remove helper
+        run: |
+          rm .github/workflows/fix-loan-return-self-transfer.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/career/simulation.ts app/career/transfer-market.ts app/career/state.ts .github/workflows/fix-loan-return-self-transfer.yml
+          git commit -m "fix: prevent self transfers after loans"
+          git push
