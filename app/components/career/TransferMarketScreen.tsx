@@ -34,7 +34,7 @@ type Point = { x: number; y: number };
 function windowCopy(state: GameState, currentClub: Club, count: number) {
   if (state.forcedFreeAgentUntilSeason > state.season) return { eyebrow: "FORA DO MERCADO", title: "Nenhum clube pode contratar você", text: `A punição vai até ${state.forcedFreeAgentUntilSeason}.` };
   if (state.youthLoanDecision) return { eyebrow: "PLANO DE DESENVOLVIMENTO", title: "Empréstimo ou permanência", text: `${count} projeto${count === 1 ? "" : "s"} oferece${count === 1 ? "" : "m"} mais minutos. A decisão continua sendo sua.` };
-  if (state.pendingTransferMode === "loan") return { eyebrow: "EMPRÉSTIMO", title: "Minutos em outro clube", text: `Você retorna ao ${currentClub.shortName} ao fim da próxima temporada.` };
+  if (state.pendingTransferMode === "loan") return { eyebrow: "EMPRÉSTIMO", title: "Minutos em outro clube", text: `A duração varia por proposta. Ao fim do empréstimo, você retorna ao ${currentClub.shortName}.` };
   if (state.isFreeAgent) return { eyebrow: "AGENTE LIVRE", title: "Seu próximo contrato", text: `${count} projeto${count === 1 ? "" : "s"} sem taxa de transferência.` };
   if (state.forcedAlternativeTransfer) return { eyebrow: "RECOMEÇO", title: "Uma rota de volta", text: "Só projetos de reconstrução estão disponíveis." };
   if (state.forcedClubExit) return { eyebrow: "SAÍDA OBRIGATÓRIA", title: "O clube colocou você no mercado", text: `${count} destino${count === 1 ? "" : "s"} compatíveis com sua fase.` };
@@ -44,7 +44,7 @@ function windowCopy(state: GameState, currentClub: Club, count: number) {
 }
 
 function moveLabel(offer: TransferOffer) {
-  if (offer.type === "loan") return "Empréstimo · 1 temporada";
+  if (offer.type === "loan") { const seasons = Math.max(1, (offer.loanEndSeason || offer.season + 1) - offer.season); return `Empréstimo · ${seasons} temporada${seasons === 1 ? "" : "s"}`; }
   if (offer.type === "free-agent") return "Sem taxa de transferência";
   if (offer.type === "renewal") return "Renovação";
   return `Proposta de ${formatMoney(offer.transferFee)}`;
@@ -177,7 +177,7 @@ function TransferJourneyOverlay({ journey, origin, leaving }: { journey: Transfe
             <span>{transferLabel}</span>
             <strong>{routeLabel}</strong>
           </div>
-          <small>{offer.type === "loan" ? "1 temporada" : `${offer.contractYears} ano${offer.contractYears === 1 ? "" : "s"} de contrato`}</small>
+          <small>{offer.type === "loan" ? `${Math.max(1, (offer.loanEndSeason || offer.season + 1) - offer.season)} temporada${Math.max(1, (offer.loanEndSeason || offer.season + 1) - offer.season) === 1 ? "" : "s"}` : `${offer.contractYears} ano${offer.contractYears === 1 ? "" : "s"} de contrato`}</small>
         </header>
 
         <div className={styles.travelStage} aria-live="polite">

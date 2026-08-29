@@ -1786,7 +1786,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       return {
         ...transferred,
         pendingPressConference: presentation,
-        currentEventId: pendingCareerEventId || selectNextEvent(transferred, current.season * 47),
+        currentEventId: newClub ? selectNextEvent(transferred, current.season * 47) : (pendingCareerEventId || selectNextEvent(transferred, current.season * 47)),
       };
     });
     setActiveTab("event");
