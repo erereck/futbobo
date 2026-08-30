@@ -27,4 +27,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run batch
-        run: npx --yes tsx scripts/career-balance-batch-temp.ts ${{ matrix.batch }}
+        run: |
+          npx --yes tsx scripts/career-balance-batch-temp.ts ${{ matrix.batch }} > output.txt
+          cat output.txt
+          tail -n 1 output.txt | cut -d= -f2- > result-${{ matrix.batch }}.json
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: balance-batch-${{ matrix.batch }}
+          path: result-${{ matrix.batch }}.json
+
+  aggregate:
+    if: github.actor != 'github-actions[bot]'
+    needs: batch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: balance-batch-*
+          path: results
+          merge-multiple: true
+      - name: Aggregate
+        run: python scripts/aggregate-career-balance-temp.py
