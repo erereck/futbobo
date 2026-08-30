@@ -1,2 +1,2 @@
-export const FUTBOBO_VERSION = "v94";
+export const FUTBOBO_VERSION = "v95";
 export const FUTBOBO_VERSION_NAME = "TIME DE VERDADE";

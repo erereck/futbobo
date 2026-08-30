@@ -297,7 +297,7 @@ export default function FutboboShell() {
               <span className={styles.modeIndex}>01</span><div><small>MODO PRINCIPAL</small><strong>Rumo ao Estrelato</strong><p>Crie seu jogador do zero, ganhe títulos e prêmios individuais.</p></div><b><FutboboIcon name="arrow-right" /></b>
             </button>
             <button type="button" className={styles.modeCard} onClick={() => setScreen("manager-saves")}>
-              <span className={styles.modeIndex}>02</span><div><small>MODO TÉCNICO</small><strong>Carreira de Técnico</strong><p>Escolha um clube, monte os cinco da mesa e decida quando trocar.</p></div><b><FutboboIcon name="arrow-right" /></b>
+              <span className={styles.modeIndex}>02</span><div><small>MODO TÉCNICO</small><strong className={styles.modeTitle}>Carreira de Técnico <em className={styles.betaTag}>BETA</em></strong><p>Escolha um clube, monte os cinco da mesa e decida quando trocar.</p></div><b><FutboboIcon name="arrow-right" /></b>
             </button>
             <Link className={styles.modeCard} href="/copa"><span className={styles.modeIndex}>03</span><div><small>PARTIDA RÁPIDA</small><strong>Copa do Mundo</strong><p>Jogue uma Copa do Mundo rápida com qualquer seleção.</p></div><b><FutboboIcon name="arrow-right" /></b></Link>
             <Link className={styles.modeCard} href="/x1"><span className={styles.modeIndex}>04</span><div><small>DOIS JOGADORES</small><strong>1x1 Local</strong><p>Jogue uma partida de futebol de botão contra o seu amigo.</p></div><b><FutboboIcon name="arrow-right" /></b></Link>
