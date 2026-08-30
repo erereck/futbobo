@@ -53,6 +53,7 @@ function PlayerPortrait({
       secondary={secondary}
       size={size}
       label={`Retrato de ${member.name}`}
+      frame="compact"
     />
   );
 }
