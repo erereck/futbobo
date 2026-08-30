@@ -122,6 +122,17 @@ Selecoes sem liga recebem uma rota de base recomendada por confederacao. A recom
 - Métrica principal — label 10/700 muted · valor Barlow Condensed 30/800 · numerais tabulares.
 - Rail desktop — 264px · mesmo fundo do canvas · uma borda à direita · navegação textual com indicador amarelo.
 
+### Aba Time
+
+- O elenco visual respeita o futebol de botão: exatamente cinco titulares no campo e três reservas, tanto para clube quanto para seleção.
+- Clube e seleção são alternados por um único seletor compacto; o OVR dos cinco aparece dentro de cada opção e nunca exige um hero redundante.
+- A formação usa posições reais e encaixe por função. O protagonista ocupa o setor correspondente à posição jogada, nunca um slot fixo.
+- Peça mobile — 68px externos / canvas de 66px · aro externo de 1px · frame compacto centralizado · sem halo ornamental.
+- Retrato compacto — raio interno 128/280 · aro 3/280 · busto com compensação óptica vertical de -8/280 para ficar centrado dentro do disco.
+- Identificação da peça — nome 9px/800 · idade 8px/muted · posição 8px/900 · OVR Barlow Condensed 11px/900. Truncar nomes longos sem reduzir o piso tipográfico.
+- O protagonista é identificado por filete dourado, selo `VOCÊ` e nome dourado; o destaque nunca engrossa a peça nem altera sua posição.
+- Em 390px, peças usam 86px de coluna, campo mínimo de 464px e nenhum elemento pode criar overflow horizontal ou colidir com outra peça.
+
 ## Iconografia
 
 - Biblioteca própria `FutboboIcon`: SVG inline, grade 24×24, traço 1.8, pontas e junções arredondadas.
