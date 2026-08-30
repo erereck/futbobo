@@ -35,7 +35,7 @@
 .sectionHeading span,
 .benchSection header span {
   color: var(--gold);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 900;
   letter-spacing: .15em;
 }
@@ -50,7 +50,7 @@
 .screenIntro p {
   margin: 0;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.4;
   text-wrap: pretty;
 }
@@ -72,7 +72,7 @@
 .screenIntro > strong small {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 6px;
+  font-size: 8px;
   font-weight: 900;
   letter-spacing: .12em;
 }
@@ -137,14 +137,14 @@
 
 .optionCopy small {
   color: var(--gold);
-  font-size: 6px;
+  font-size: 8px;
   font-weight: 900;
   letter-spacing: .12em;
 }
 
 .optionCopy strong {
   overflow: hidden;
-  font: 800 13px/1 var(--display);
+  font: 800 14px/1 var(--display);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -160,7 +160,7 @@
 
 .optionOverall small {
   color: var(--muted);
-  font-size: 5px;
+  font-size: 7px;
   font-weight: 900;
   letter-spacing: .09em;
   white-space: nowrap;
@@ -197,7 +197,7 @@
 .sectionHeading > small {
   max-width: 230px;
   color: var(--muted);
-  font-size: 7px;
+  font-size: 9px;
   line-height: 1.4;
   text-align: right;
 }
@@ -317,7 +317,7 @@
   border: 1px solid rgba(255, 255, 255, .14);
   border-radius: 6px;
   background: rgba(4, 15, 9, .94);
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 900;
   backdrop-filter: blur(5px);
 }
@@ -347,8 +347,8 @@
   white-space: nowrap;
 }
 
-.pieceName strong { font-size: 7px; }
-.pieceName small { color: #8eaa99; font-size: 6px; }
+.pieceName strong { font-size: 9px; }
+.pieceName small { color: #8eaa99; font-size: 8px; }
 .playerPiece[data-you="true"] .pieceName { border-color: rgba(244, 196, 48, .34); }
 .playerPiece[data-you="true"] .pieceName strong { color: var(--gold); letter-spacing: .08em; }
 
@@ -374,7 +374,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 900;
   letter-spacing: .08em;
 }
@@ -461,9 +461,9 @@
   white-space: nowrap;
 }
 
-.benchIdentity small { color: var(--gold); font-size: 6px; font-weight: 900; letter-spacing: .07em; }
-.benchIdentity strong { font-size: 8px; }
-.benchIdentity span { color: var(--muted); font-size: 6px; }
+.benchIdentity small { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .07em; }
+.benchIdentity strong { font-size: 10px; }
+.benchIdentity span { color: var(--muted); font-size: 8px; }
 
 .benchOverall {
   display: grid;
@@ -476,7 +476,7 @@
 .benchOverall small {
   margin-top: 3px;
   color: var(--muted);
-  font: 900 5px var(--sans);
+  font: 900 7px var(--sans);
   letter-spacing: .08em;
 }
 
@@ -487,7 +487,7 @@
   margin: 0;
   padding: 2px 1px 0;
   color: var(--muted);
-  font-size: 7px;
+  font-size: 9px;
   line-height: 1.4;
   text-wrap: pretty;
 }
@@ -498,7 +498,7 @@
   .screen { padding-inline: 10px; }
   .screenIntro h2 { font-size: 26px; }
   .teamSwitcher button { gap: 7px; padding-inline: 7px; }
-  .optionCopy strong { font-size: 11px; }
+  .optionCopy strong { font-size: 12px; }
   .optionOverall { min-width: 28px; padding-left: 6px; }
   .optionOverall b { font-size: 17px; }
   .sectionHeading > small { display: none; }
@@ -515,7 +515,7 @@
   .screenIntro h2 { font-size: 24px; }
   .teamSwitcher button { grid-template-columns: auto minmax(0, 1fr) auto; gap: 5px; padding-inline: 5px; }
   .optionOverall { min-width: 25px; padding-left: 4px; }
-  .optionOverall small { font-size: 4px; }
+  .optionOverall small { font-size: 7px; }
   .optionOverall b { font-size: 15px; }
   .pitch { min-height: 448px; }
   .playerPiece { width: 82px; }
