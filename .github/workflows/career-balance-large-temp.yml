@@ -1,0 +1,30 @@
+name: Career balance large temp
+
+on:
+  push:
+    branches:
+      - balance/career-ovr-production
+
+permissions:
+  contents: read
+
+jobs:
+  batch:
+    if: github.actor != 'github-actions[bot]'
+    strategy:
+      fail-fast: false
+      matrix:
+        batch: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run batch
+        run: npx --yes tsx scripts/career-balance-batch-temp.ts ${{ matrix.batch }}
