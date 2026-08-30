@@ -3,7 +3,7 @@
 // jogada — a CPU só assume os dois lados. Assim simular nunca dá um resultado
 // que seria impossível de acontecer jogando.
 
-import { chooseCpuPenaltyShot, chooseCpuShot, cpuSkillFor, difficultyScore } from "./cpu";
+import { chooseCpuPenaltyShot, chooseCpuShot, chooseCpuSubstitution, cpuSkillFor, difficultyScore } from "./cpu";
 import {
   advanceClock,
   beginPenaltyShot,
@@ -80,6 +80,7 @@ export function simulateBotaoMatch(setup: BotaoMatchSetup): BotaoMatchResult {
   while (state.phase !== "finished" && guard < MAX_TURNS) {
     guard += 1;
     if (state.phase === "aim" || state.phase === "kickoff") {
+      if (state.setup.managerMode) chooseCpuSubstitution(state, state.turn, state.rng);
       advanceClock(state, DEAD_TIME_PER_TURN);
       if (state.phase !== "aim" && state.phase !== "kickoff") continue;
       const skill = state.turn === "cpu" ? cpuSkill : userSkill;

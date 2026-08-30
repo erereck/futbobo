@@ -38,6 +38,8 @@ export type BotaoTeam = {
 };
 
 export type BotaoPlayer = {
+  /** Identidade do World Player quando a partida é comandada por um técnico. */
+  id?: string;
   name: string;
   number: number;
   position: BotaoPositionKey;
@@ -45,6 +47,13 @@ export type BotaoPlayer = {
   /** Sobrescritas opcionais (0..100) derivadas dos atributos da carreira. */
   power?: number;
   control?: number;
+  /** Retrato vetorial opcional; a mesa continua funcionando sem assets. */
+  appearance?: import("../player-appearance").PlayerAppearance;
+};
+
+export type BotaoManagerRoster = {
+  starters: BotaoPlayer[];
+  bench: BotaoPlayer[];
 };
 
 export type BotaoRules = {
@@ -128,6 +137,13 @@ export type BotaoMatchSetup = {
   entry?: BotaoMatchEntry;
   /** Metadado de carreira: o adversário é um ex-clube do protagonista. */
   formerClub?: { id: string; name: string; shortName: string };
+  /** Ativa a camada de escalação do modo técnico sem alterar o modo jogador. */
+  managerMode?: boolean;
+  /** Os oito jogadores disponíveis na partida (cinco em campo + três reservas). */
+  managerRosters?: { user: BotaoManagerRoster; cpu: BotaoManagerRoster };
+  /** Formações escolhidas na prancheta; ausente mantém o rodízio clássico. */
+  userFormationId?: string;
+  cpuFormationId?: string;
 };
 
 export type BotaoDecision = "goal-limit" | "regulation" | "extra-time" | "penalties";
@@ -197,6 +213,11 @@ export type BotaoMatchResult = {
   formerClubGoalCount?: number;
   /** Atalho para o Futbobo: venceu a decisão, logo é campeão. */
   champion: boolean;
+  /** Resumo enxuto para a carreira de técnico. */
+  manager?: {
+    substitutions: Array<{ side: BotaoSide; outPlayerId: string; inPlayerId: string }>;
+    players: Record<string, { name: string; position: BotaoPositionKey; overall: number; stamina: number; distance: number; flicks?: number; touches?: number; goals?: number; assists?: number }>;
+  };
 };
 
 export type BotaoShot = {

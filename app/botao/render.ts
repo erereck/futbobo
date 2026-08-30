@@ -448,6 +448,16 @@ function drawDisc(
     }
   }
 
+  if (body.playerId) {
+    const stamina = Math.max(0, Math.min(100, body.stamina));
+    ctx.strokeStyle = stamina < 35 ? "#ff7c6e" : stamina < 60 ? "#ffc72c" : "rgba(245,247,242,.56)";
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(0, 0, body.radius + 2.7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (stamina / 100));
+    ctx.stroke();
+  }
+
   // O canvas inteiro gira no modo horizontal. Contra-rotacionar somente a
   // tipografia preserva a orientação física dos discos e deixa a camisa legível.
   ctx.save();
@@ -471,6 +481,11 @@ function drawDisc(
 }
 
 function bodyAppearance(setup: BotaoMatchSetup, body: BotaoBody): PlayerAppearance | null {
+  if (body.playerId && setup.managerRosters) {
+    const managerPlayer = [...setup.managerRosters.user.starters, ...setup.managerRosters.user.bench, ...setup.managerRosters.cpu.starters, ...setup.managerRosters.cpu.bench]
+      .find((player) => player.id === body.playerId);
+    if (managerPlayer?.appearance) return managerPlayer.appearance;
+  }
   if (!setup.visuals?.enabled || !body.side) return null;
   if (body.isUserPlayer) return setup.visuals.player;
   const slot = Number.parseInt(body.id.split("-").at(-1) ?? "", 10);
@@ -793,6 +808,8 @@ export function drawReplayFrame(
     power: 0,
     control: 0,
     slot: index - 1,
+    stamina: 100,
+    distanceActive: 0,
   }));
   renderedBodies.forEach((rendered) => {
     if (rendered.kind === "ball") return;

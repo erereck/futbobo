@@ -18,6 +18,7 @@ import type {
   BotaoSide,
   BotaoSideStats,
   BotaoTimelineEntry,
+  BotaoPlayer,
 } from "./types";
 
 export const FIELD = {
@@ -50,6 +51,8 @@ const MAX_SPEED = 1000;
 const MIN_SHOT_RATIO = 0.08;
 const KEEPER_RADIUS = 15;
 const IDLE_TURNS_FOR_RESET = 6;
+const STAMINA_DISTANCE_FACTOR = 0.14;
+const MAX_STAMINA_COST_PER_SHOT = 24;
 
 export type BotaoBodyKind = "disc" | "ball" | "post" | "keeper";
 
@@ -71,6 +74,12 @@ export type BotaoBody = {
   power: number;
   control: number;
   slot: number;
+  /** Identidade persistente da peça no elenco do modo técnico. */
+  playerId?: string;
+  /** Fôlego somente da partida; nunca é levado para a próxima. */
+  stamina: number;
+  /** Distância percorrida no último toque ativo. */
+  distanceActive: number;
 };
 
 export type BotaoPhase =
@@ -146,6 +155,11 @@ export type BotaoMatchState = {
   clockPausedForKickoff: boolean;
   /** O tempo zerou enquanto um jogador humano já preparava o último chute. */
   finalShotGrace: boolean;
+  /** Histórico enxuto do modo técnico. Vazio no modo jogador. */
+  managerPlayerStats: Record<string, { name: string; position: import("./types").BotaoPositionKey; overall: number; staminaStart: number; stamina: number; distance: number; flicks: number; touches: number; goals: number; assists: number }>;
+  managerSubstitutions: Array<{ side: BotaoSide; outPlayerId: string; inPlayerId: string }>;
+  activeShotBodyId: string | null;
+  activeShotDistance: number;
   result: BotaoMatchResult | null;
   /** Sobe a cada mutação relevante; a UI usa como chave de re-render. */
   version: number;
@@ -210,6 +224,21 @@ export function shotSpeedFor(power: number): number {
   return 430 + (clamp(power, 0, 100) / 100) * 230;
 }
 
+/** Fadiga é deliberadamente macia: ainda dá para virar uma partida cansado. */
+export function effectivePowerFor(body: Pick<BotaoBody, "power" | "stamina">): number {
+  const fatigue = clamp((72 - body.stamina) / 72, 0, 1);
+  return body.power * (1 - fatigue * 0.24);
+}
+
+export function effectiveControlFor(body: Pick<BotaoBody, "control" | "stamina">): number {
+  const fatigue = clamp((72 - body.stamina) / 72, 0, 1);
+  return body.control * (1 - fatigue * 0.2);
+}
+
+export function shotSpeedForBody(body: Pick<BotaoBody, "power" | "stamina">): number {
+  return shotSpeedFor(effectivePowerFor(body));
+}
+
 /**
  * Velocidade inicial para um disco parar depois de percorrer `distance`.
  * Com atrito exponencial o alcance total é exatamente v0 / atrito.
@@ -237,6 +266,7 @@ function createDisc(args: {
   control: number;
   isUserPlayer: boolean;
   slot: number;
+  playerId?: string;
 }): BotaoBody {
   return {
     id: args.id,
@@ -255,6 +285,9 @@ function createDisc(args: {
     power: args.power,
     control: args.control,
     slot: args.slot,
+    playerId: args.playerId,
+    stamina: 100,
+    distanceActive: 0,
   };
 }
 
@@ -276,6 +309,8 @@ function createBall(): BotaoBody {
     power: 0,
     control: 0,
     slot: -1,
+    stamina: 100,
+    distanceActive: 0,
   };
 }
 
@@ -297,7 +332,36 @@ function createPost(id: string, x: number, y: number): BotaoBody {
     power: 0,
     control: 0,
     slot: -1,
+    stamina: 100,
+    distanceActive: 0,
   };
+}
+
+/**
+ * O elenco do modo técnico chega em uma ordem de futebol, mas cada desenho
+ * da mesa possui uma ordem física própria. Encaixar os atletas no slot mais
+ * próximo da sua posição evita, por exemplo, que um MEI seja usado como
+ * goleiro quando a formação troca de desenho. Em caso de empate, a ordem do
+ * elenco permanece como desempate — a identidade nunca muda, só o lugar.
+ */
+function arrangeManagerStarters(starters: BotaoPlayer[], formation: BotaoFormation): BotaoPlayer[] {
+  const remaining = starters.slice();
+  const arranged: BotaoPlayer[] = [];
+  for (let slot = 0; slot < formation.slots.length; slot += 1) {
+    let bestIndex = 0;
+    let bestCost = Number.POSITIVE_INFINITY;
+    remaining.forEach((player, index) => {
+      const preferred = slotIndexForPosition(formation, player.position);
+      const cost = Math.abs(preferred - slot);
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestIndex = index;
+      }
+    });
+    const [picked] = remaining.splice(bestIndex, 1);
+    if (picked) arranged.push(picked);
+  }
+  return arranged;
 }
 
 const SQUAD_NUMBER_POOL = [1, 10, 9, 8, 7, 11, 6, 4, 5, 3, 2, 14, 17, 18, 19, 20, 21, 23, 27, 30, 33, 42, 47, 66, 77, 88, 99];
@@ -322,52 +386,93 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
   const cpuPower = teamDiscPower(setup.cpuTeam.strength);
   const cpuControl = teamDiscControl(setup.cpuTeam.strength);
 
+  const managerMode = Boolean(setup.managerMode && setup.managerRosters);
+  const managerRoster = setup.managerRosters;
   const formation = formationByIndex(0);
-  const userSlot = slotIndexForPosition(formation, setup.player.position);
+  const selectedUserFormation = managerMode && setup.userFormationId
+    ? (Array.from({ length: 6 }, (_, index) => formationByIndex(index)).find((candidate) => candidate.id === setup.userFormationId) ?? formation)
+    : formation;
+  const selectedCpuFormation = managerMode && setup.cpuFormationId
+    ? (Array.from({ length: 6 }, (_, index) => formationByIndex(index)).find((candidate) => candidate.id === setup.cpuFormationId) ?? formation)
+    : formationByIndex(0);
+  const userSlot = managerMode ? -1 : slotIndexForPosition(selectedUserFormation, setup.player.position);
 
   // Só o jogador da carreira tem nome. O resto é o time — como em botão de
   // verdade, onde a peça é a camisa e não um personagem inventado.
   const bodies: BotaoBody[] = [createBall()];
-  const teammateNumbers = persistentSquadNumbers(
-    setup.userTeam.id,
-    [setup.player.number],
-    formation.slots.length - 1,
-  );
-  const cpuNumbers = persistentSquadNumbers(
-    setup.cpuTeam.id,
-    [setup.player.number],
-    formation.slots.length,
-  );
-  let teammateNumberIndex = 0;
-  for (let slot = 0; slot < formation.slots.length; slot += 1) {
-    const isPlayer = slot === userSlot;
-    const number = isPlayer ? setup.player.number : teammateNumbers[teammateNumberIndex++];
-    bodies.push(
-      createDisc({
+  if (managerMode && setup.managerRosters) {
+    const userStarters = arrangeManagerStarters(setup.managerRosters.user.starters, selectedUserFormation);
+    const cpuStarters = arrangeManagerStarters(setup.managerRosters.cpu.starters, selectedCpuFormation);
+    for (let slot = 0; slot < selectedUserFormation.slots.length; slot += 1) {
+      const player = userStarters[slot] ?? userStarters[0] ?? setup.player;
+      bodies.push(createDisc({
         id: `user-${slot}`,
         side: "user",
-        number,
-        label: isPlayer ? setup.player.name : `#${number}`,
-        power: isPlayer ? userPower : matePower,
-        control: isPlayer ? userControl : mateControl,
-        isUserPlayer: isPlayer,
+        number: player.number,
+        label: player.name,
+        power: player.power ?? clamp(44 + (player.overall - 58) * 1.6, 34, 100),
+        control: player.control ?? clamp(40 + (player.overall - 58) * 1.5, 32, 100),
+        isUserPlayer: false,
+        playerId: player.id,
         slot,
-      }),
-    );
-  }
-  for (let slot = 0; slot < formation.slots.length; slot += 1) {
-    bodies.push(
-      createDisc({
+      }));
+    }
+    for (let slot = 0; slot < selectedCpuFormation.slots.length; slot += 1) {
+      const player = cpuStarters[slot] ?? cpuStarters[0] ?? setup.player;
+      bodies.push(createDisc({
         id: `cpu-${slot}`,
         side: "cpu",
-        number: cpuNumbers[slot],
-        label: `#${cpuNumbers[slot]}`,
-        power: cpuPower,
-        control: cpuControl,
+        number: player.number,
+        label: player.name,
+        power: player.power ?? cpuPower,
+        control: player.control ?? cpuControl,
         isUserPlayer: false,
+        playerId: player.id,
         slot,
-      }),
+      }));
+    }
+  } else {
+    const teammateNumbers = persistentSquadNumbers(
+      setup.userTeam.id,
+      [setup.player.number],
+      formation.slots.length - 1,
     );
+    const cpuNumbers = persistentSquadNumbers(
+      setup.cpuTeam.id,
+      [setup.player.number],
+      formation.slots.length,
+    );
+    let teammateNumberIndex = 0;
+    for (let slot = 0; slot < formation.slots.length; slot += 1) {
+      const isPlayer = slot === userSlot;
+      const number = isPlayer ? setup.player.number : teammateNumbers[teammateNumberIndex++];
+      bodies.push(
+        createDisc({
+          id: `user-${slot}`,
+          side: "user",
+          number,
+          label: isPlayer ? setup.player.name : `#${number}`,
+          power: isPlayer ? userPower : matePower,
+          control: isPlayer ? userControl : mateControl,
+          isUserPlayer: isPlayer,
+          slot,
+        }),
+      );
+    }
+    for (let slot = 0; slot < formation.slots.length; slot += 1) {
+      bodies.push(
+        createDisc({
+          id: `cpu-${slot}`,
+          side: "cpu",
+          number: cpuNumbers[slot],
+          label: `#${cpuNumbers[slot]}`,
+          power: cpuPower,
+          control: cpuControl,
+          isUserPlayer: false,
+          slot,
+        }),
+      );
+    }
   }
   bodies.push(createPost("post-top-left", GOAL_LEFT, -1), createPost("post-top-right", GOAL_RIGHT, -1));
   bodies.push(
@@ -390,8 +495,8 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
     playerAssists: 0,
     turns: 0,
     idleTurns: 0,
-    formationIndex: { user: 0, cpu: rng.int(0, 5) },
-    formationId: { user: formation.id, cpu: formationByIndex(0).id },
+    formationIndex: { user: managerMode ? Array.from({ length: 6 }, (_, index) => formationByIndex(index)).findIndex((candidate) => candidate.id === selectedUserFormation.id) : 0, cpu: managerMode ? Array.from({ length: 6 }, (_, index) => formationByIndex(index)).findIndex((candidate) => candidate.id === selectedCpuFormation.id) : rng.int(0, 5) },
+    formationId: { user: selectedUserFormation.id, cpu: selectedCpuFormation.id },
     userSlot,
     touches: [],
     ballTouches: 0,
@@ -404,6 +509,14 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
     penaltyReason: null,
     clockPausedForKickoff: false,
     finalShotGrace: false,
+    managerPlayerStats: managerMode && managerRoster ? Object.fromEntries(
+      [...managerRoster.user.starters, ...managerRoster.user.bench, ...managerRoster.cpu.starters, ...managerRoster.cpu.bench]
+        .filter((player) => player.id)
+        .map((player) => [player.id, { name: player.name, position: player.position, overall: player.overall, staminaStart: 100, stamina: 100, distance: 0, flicks: 0, touches: 0, goals: 0, assists: 0 }]),
+    ) : {},
+    managerSubstitutions: [],
+    activeShotBodyId: null,
+    activeShotDistance: 0,
     result: null,
     version: 0,
   };
@@ -423,6 +536,15 @@ export function cloneMatch(state: BotaoMatchState): BotaoMatchState {
     formationIndex: { ...state.formationIndex },
     formationId: { ...state.formationId },
     stats: { user: { ...state.stats.user }, cpu: { ...state.stats.cpu } },
+    setup: state.setup.managerRosters
+      ? {
+          ...state.setup,
+          managerRosters: {
+            user: { starters: state.setup.managerRosters.user.starters.map((player) => ({ ...player })), bench: state.setup.managerRosters.user.bench.map((player) => ({ ...player })) },
+            cpu: { starters: state.setup.managerRosters.cpu.starters.map((player) => ({ ...player })), bench: state.setup.managerRosters.cpu.bench.map((player) => ({ ...player })) },
+          },
+        }
+      : state.setup,
     touches: state.touches.map((touch) => ({ ...touch })),
     timeline: [],
     penalties: state.penalties
@@ -433,6 +555,10 @@ export function cloneMatch(state: BotaoMatchState): BotaoMatchState {
           order: { user: [...state.penalties.order.user], cpu: [...state.penalties.order.cpu] },
         }
       : null,
+    managerPlayerStats: Object.fromEntries(Object.entries(state.managerPlayerStats).map(([id, player]) => [id, { ...player }])),
+    managerSubstitutions: state.managerSubstitutions.map((item) => ({ ...item })),
+    activeShotBodyId: state.activeShotBodyId,
+    activeShotDistance: state.activeShotDistance,
     result: null,
   };
 }
@@ -452,7 +578,13 @@ function slotToField(side: BotaoSide, lane: number, depth: number): { x: number;
 }
 
 function placeSide(state: BotaoMatchState, side: BotaoSide, formation: BotaoFormation, playerSlot: number) {
-  const discs = discsOf(state, side);
+  let discs = discsOf(state, side);
+  if (state.setup.managerMode && state.setup.managerRosters) {
+    const roster = state.setup.managerRosters[side];
+    const arranged = arrangeManagerStarters(roster.starters, formation);
+    const byPlayerId = new Map(discs.filter((disc) => disc.playerId).map((disc) => [disc.playerId, disc]));
+    discs = arranged.map((player) => byPlayerId.get(player.id)).filter((disc): disc is BotaoBody => Boolean(disc));
+  }
   const available: number[] = [];
   for (let index = 0; index < formation.slots.length; index += 1) {
     if (index !== playerSlot) available.push(index);
@@ -461,13 +593,25 @@ function placeSide(state: BotaoMatchState, side: BotaoSide, formation: BotaoForm
   discs.forEach((disc) => {
     const slot = disc.isUserPlayer && playerSlot >= 0 ? playerSlot : available[cursor++] ?? 0;
     disc.slot = slot;
-    const target = formation.slots[slot];
+    let target = formation.slots[slot];
+    // Algumas formações têm dois botões na primeira linha. No modo técnico,
+    // o goleiro continua ocupando o centro da meta, como no jogo real, sem
+    // alterar o desenho dos outros quatro jogadores.
+    if (state.setup.managerMode && disc.playerId && state.setup.managerRosters) {
+      const roster = state.setup.managerRosters[side];
+      const player = [...roster.starters, ...roster.bench].find((candidate) => candidate.id === disc.playerId);
+      if (player?.position === "GOL") {
+        const deepest = Math.min(...formation.slots.map((candidate) => candidate.depth));
+        target = { ...target, lane: 0.5, depth: deepest };
+      }
+    }
     const point = slotToField(side, target.lane, target.depth);
     const jitter = 3.4;
     disc.x = clamp(point.x + state.rng.range(-jitter, jitter), disc.radius + 2, FIELD.width - disc.radius - 2);
     disc.y = clamp(point.y + state.rng.range(-jitter, jitter), disc.radius + 2, FIELD.height - disc.radius - 2);
     disc.vx = 0;
     disc.vy = 0;
+    disc.distanceActive = 0;
   });
 }
 
@@ -477,7 +621,7 @@ export function placeTeams(state: BotaoMatchState) {
   const cpuFormation = formationByIndex(state.formationIndex.cpu);
   state.formationId.user = userFormation.id;
   state.formationId.cpu = cpuFormation.id;
-  state.userSlot = slotIndexForPosition(userFormation, state.setup.player.position);
+  state.userSlot = state.setup.managerMode ? -1 : slotIndexForPosition(userFormation, state.setup.player.position);
   placeSide(state, "user", userFormation, state.userSlot);
   placeSide(state, "cpu", cpuFormation, -1);
 
@@ -546,7 +690,7 @@ export function aimFromDrag(disc: BotaoBody, dragX: number, dragY: number): Bota
   if (length < 4) return { vx: 0, vy: 0, ratio: 0, valid: false };
   const pull = Math.min(length, MAX_PULL);
   const ratio = pull / MAX_PULL;
-  const speed = shotSpeedFor(disc.power) * ratio;
+  const speed = shotSpeedForBody(disc) * ratio;
   return { vx: (dx / length) * speed, vy: (dy / length) * speed, ratio, valid: ratio >= MIN_SHOT_RATIO };
 }
 
@@ -570,9 +714,9 @@ export function beginShot(state: BotaoMatchState, shot: BotaoShot): boolean {
   const disc = state.bodies.find((body) => body.id === shot.bodyId);
   if (!disc) return false;
   const speed = Math.hypot(shot.vx, shot.vy);
-  if (speed < shotSpeedFor(disc.power) * MIN_SHOT_RATIO) return false;
+  if (speed < shotSpeedForBody(disc) * MIN_SHOT_RATIO) return false;
   const capped = Math.min(speed, MAX_SPEED);
-  const slip = slipFor(disc.control);
+  const slip = slipFor(effectiveControlFor(disc));
   const angle = Math.atan2(shot.vy, shot.vx) + (slip > 0 ? state.rng.range(-1, 1) * slip : 0);
   disc.vx = Math.cos(angle) * capped;
   disc.vy = Math.sin(angle) * capped;
@@ -581,7 +725,14 @@ export function beginShot(state: BotaoMatchState, shot: BotaoShot): boolean {
   state.resolveElapsed = 0;
   state.turns += 1;
   state.turnTouchMark = state.ballTouches;
+  state.activeShotBodyId = disc.id;
+  state.activeShotDistance = 0;
+  disc.distanceActive = 0;
   if (disc.side) state.stats[disc.side].flicks += 1;
+  if (disc.playerId) {
+    const player = state.managerPlayerStats[disc.playerId];
+    if (player) player.flicks += 1;
+  }
   state.version += 1;
   return true;
 }
@@ -594,8 +745,15 @@ function integrate(state: BotaoMatchState, dt: number) {
   for (const body of state.bodies) {
     if (body.kind === "post") continue;
     if (body.vx === 0 && body.vy === 0) continue;
+    const previousX = body.x;
+    const previousY = body.y;
     body.x += body.vx * dt;
     body.y += body.vy * dt;
+    if (body.id === state.activeShotBodyId && body.kind === "disc") {
+      const distance = Math.hypot(body.x - previousX, body.y - previousY);
+      state.activeShotDistance += distance;
+      body.distanceActive += distance;
+    }
     const decay = Math.exp(-body.friction * dt);
     body.vx *= decay;
     body.vy *= decay;
@@ -604,6 +762,25 @@ function integrate(state: BotaoMatchState, dt: number) {
       body.vy = 0;
     }
   }
+}
+
+function commitActiveShotDistance(state: BotaoMatchState) {
+  const bodyId = state.activeShotBodyId;
+  if (!bodyId) return;
+  const body = state.bodies.find((candidate) => candidate.id === bodyId);
+  if (body?.kind === "disc") {
+    const cost = clamp(state.activeShotDistance * STAMINA_DISTANCE_FACTOR, 0, MAX_STAMINA_COST_PER_SHOT);
+    body.stamina = clamp(body.stamina - cost, 0, 100);
+    if (body.playerId) {
+      const player = state.managerPlayerStats[body.playerId];
+      if (player) {
+        player.stamina = body.stamina;
+        player.distance += state.activeShotDistance;
+      }
+    }
+  }
+  state.activeShotBodyId = null;
+  state.activeShotDistance = 0;
 }
 
 /** Devolve o lado que FEZ o gol, ou null. `user` ataca y=0, `cpu` ataca y=height. */
@@ -688,6 +865,10 @@ function collide(state: BotaoMatchState, a: BotaoBody, b: BotaoBody, events: Bot
         state.touches.push({ bodyId: toucher.id, side: toucher.side });
         if (state.touches.length > 6) state.touches.shift();
         state.stats[toucher.side].touches += 1;
+        if (toucher.playerId) {
+          const player = state.managerPlayerStats[toucher.playerId];
+          if (player) player.touches += 1;
+        }
         events.push({ type: "touch", side: toucher.side, bodyId: toucher.id });
       }
       state.ballTouches += 1;
@@ -730,6 +911,7 @@ function periodLabel(state: BotaoMatchState): number {
 }
 
 function registerGoal(state: BotaoMatchState, side: BotaoSide, events: BotaoEvent[]) {
+  commitActiveShotDistance(state);
   const touches = state.touches;
   const lastTouch = touches[touches.length - 1];
   const scorerBody = lastTouch ? state.bodies.find((body) => body.id === lastTouch.bodyId) ?? null : null;
@@ -759,6 +941,14 @@ function registerGoal(state: BotaoMatchState, side: BotaoSide, events: BotaoEven
   state.score[side] += 1;
   if (byUser) state.playerGoals += 1;
   if (assistBody?.isUserPlayer && side === "user") state.playerAssists += 1;
+  if (scorerBody?.playerId && !ownGoal) {
+    const scorer = state.managerPlayerStats[scorerBody.playerId];
+    if (scorer) scorer.goals += 1;
+  }
+  if (assistBody?.playerId && side === "user" && !ownGoal) {
+    const assist = state.managerPlayerStats[assistBody.playerId];
+    if (assist) assist.assists += 1;
+  }
   state.lastGoal = { side, scorer: scorerName, byUser, ownGoal };
   state.timeline.push({
     period: periodLabel(state),
@@ -805,8 +995,10 @@ export function resumeAfterGoal(state: BotaoMatchState): BotaoEvent[] {
     state.version += 1;
     return events;
   }
-  state.formationIndex.user += 1;
-  state.formationIndex.cpu += 1;
+  if (!state.setup.managerMode) {
+    state.formationIndex.user += 1;
+    state.formationIndex.cpu += 1;
+  }
   placeTeams(state);
   events.push({ type: "formation", userFormation: state.formationId.user, cpuFormation: state.formationId.cpu });
   state.turn = conceded;
@@ -864,8 +1056,10 @@ export function startNextPeriod(state: BotaoMatchState): BotaoEvent[] {
   state.periodSeconds = state.period > rules.halves ? rules.extraSeconds : rules.halfSeconds;
   state.clock = state.periodSeconds;
   state.finalShotGrace = false;
-  state.formationIndex.user += 1;
-  state.formationIndex.cpu += 1;
+  if (!state.setup.managerMode) {
+    state.formationIndex.user += 1;
+    state.formationIndex.cpu += 1;
+  }
   placeTeams(state);
   events.push({ type: "formation", userFormation: state.formationId.user, cpuFormation: state.formationId.cpu });
   // A cada tempo troca quem sai jogando.
@@ -878,6 +1072,7 @@ export function startNextPeriod(state: BotaoMatchState): BotaoEvent[] {
 }
 
 function settleTurn(state: BotaoMatchState, events: BotaoEvent[]) {
+  commitActiveShotDistance(state);
   const touchedThisTurn = state.ballTouches > state.turnTouchMark;
   state.idleTurns = touchedThisTurn ? 0 : state.idleTurns + 1;
   if (state.idleTurns >= IDLE_TURNS_FOR_RESET) {
@@ -952,6 +1147,45 @@ export function skipTurn(state: BotaoMatchState): BotaoEvent[] {
   state.turnTouchMark = state.ballTouches;
   settleTurn(state, events);
   return events;
+}
+
+export function managerRosterFor(state: BotaoMatchState, side: BotaoSide) {
+  return state.setup.managerMode && state.setup.managerRosters ? state.setup.managerRosters[side] : null;
+}
+
+export function substitutionCount(state: BotaoMatchState, side: BotaoSide = "user") {
+  return state.managerSubstitutions.filter((item) => item.side === side).length;
+}
+
+/**
+ * Troca instantânea e irreversível do modo técnico. A bola precisa estar
+ * parada e a vez precisa ser do lado que está fazendo a troca; a troca não
+ * consome o toque. O jogador que saiu não volta nesta partida.
+ */
+export function substitutePlayer(state: BotaoMatchState, side: BotaoSide, outBodyId: string, inPlayerId: string): boolean {
+  const roster = managerRosterFor(state, side);
+  if (!roster || state.penalties || (state.phase !== "aim" && state.phase !== "kickoff") || state.turn !== side) return false;
+  if (substitutionCount(state, side) >= 3) return false;
+  const outgoing = state.bodies.find((body) => body.id === outBodyId && body.kind === "disc" && body.side === side);
+  const incomingIndex = roster.bench.findIndex((player) => player.id === inPlayerId);
+  const outgoingIndex = outgoing?.playerId ? roster.starters.findIndex((player) => player.id === outgoing.playerId) : -1;
+  if (!outgoing || outgoingIndex < 0 || incomingIndex < 0) return false;
+  const incoming = roster.bench[incomingIndex];
+  if (!incoming.id) return false;
+  const outgoingPlayer = roster.starters[outgoingIndex];
+  roster.starters[outgoingIndex] = { ...incoming };
+  roster.bench.splice(incomingIndex, 1);
+  outgoing.playerId = incoming.id;
+  outgoing.number = incoming.number;
+  outgoing.label = incoming.name;
+  outgoing.power = incoming.power ?? (side === "user" ? clamp(44 + (incoming.overall - 58) * 1.6, 34, 100) : teamDiscPower(state.setup.cpuTeam.strength));
+  outgoing.control = incoming.control ?? (side === "user" ? clamp(40 + (incoming.overall - 58) * 1.5, 32, 100) : teamDiscControl(state.setup.cpuTeam.strength));
+  outgoing.stamina = 100;
+  outgoing.distanceActive = 0;
+  outgoing.isUserPlayer = false;
+  state.managerSubstitutions.push({ side, outPlayerId: outgoingPlayer.id ?? "", inPlayerId: incoming.id });
+  state.version += 1;
+  return true;
 }
 
 /**
@@ -1141,6 +1375,8 @@ export function penaltyKeeper(state: BotaoMatchState): BotaoBody {
       power: 0,
       control: 0,
       slot: -1,
+      stamina: 100,
+      distanceActive: 0,
     };
     state.bodies.push(keeper);
   }
@@ -1162,7 +1398,7 @@ export function beginPenaltyShot(state: BotaoMatchState, shot: BotaoShot): boole
   const shooter = penaltyShooter(state);
   if (shot.bodyId !== shooter.id) return false;
   const speed = Math.hypot(shot.vx, shot.vy);
-  if (speed < shotSpeedFor(shooter.power) * MIN_SHOT_RATIO) return false;
+  if (speed < shotSpeedForBody(shooter) * MIN_SHOT_RATIO) return false;
   shooter.vx = shot.vx;
   shooter.vy = shot.vy;
   state.resolveElapsed = 0;
@@ -1299,8 +1535,10 @@ export function commitPenalty(state: BotaoMatchState, scored: boolean): BotaoEve
       const inRegulation = state.period <= state.setup.rules.halves;
       if (limit > 0 && inRegulation && state.score.cpu >= limit) finishMatch(state, "goal-limit", events);
     } else {
-      state.formationIndex.user += 1;
-      state.formationIndex.cpu += 1;
+      if (!state.setup.managerMode) {
+        state.formationIndex.user += 1;
+        state.formationIndex.cpu += 1;
+      }
       placeTeams(state);
       events.push({ type: "formation", userFormation: state.formationId.user, cpuFormation: state.formationId.cpu });
       state.phase = "kickoff";
@@ -1393,6 +1631,20 @@ function finishMatch(state: BotaoMatchState, decision: BotaoDecision, events: Bo
     stats: { user: { ...state.stats.user }, cpu: { ...state.stats.cpu } },
     timeline: state.timeline.slice(),
     champion: won,
+    manager: state.setup.managerMode ? {
+      substitutions: state.managerSubstitutions.map((item) => ({ ...item })),
+      players: Object.fromEntries(Object.entries(state.managerPlayerStats).map(([id, player]) => [id, {
+        name: player.name,
+        position: player.position,
+        overall: player.overall,
+        stamina: Math.round(player.stamina),
+        distance: Math.round(player.distance),
+        flicks: player.flicks,
+        touches: player.touches,
+        goals: player.goals,
+        assists: player.assists,
+      }])),
+    } : undefined,
   };
   state.phase = "finished";
   state.version += 1;

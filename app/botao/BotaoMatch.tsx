@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import "./botao.css";
 import { isBotaoMuted, playBotaoSound, setBotaoMuted, unlockAudio } from "./audio";
-import { chooseCpuPenaltyShot, chooseCpuShot, cpuSkillFor } from "./cpu";
+import { chooseCpuPenaltyShot, chooseCpuShot, chooseCpuSubstitution, cpuSkillFor } from "./cpu";
 import {
   advanceClock,
   aimFromDrag,
@@ -30,6 +30,9 @@ import {
   stepPenalty,
   stepPenaltyKeeper,
   userPlayerDisc,
+  managerRosterFor,
+  substitutePlayer,
+  substitutionCount,
   type BotaoEvent,
   type BotaoMatchState,
 } from "./engine";
@@ -171,6 +174,9 @@ export default function BotaoMatch({
   const [compactMobileTable, setCompactMobileTable] = useState(false);
   const [paused, setPaused] = useState(false);
   const [formerClubGoalPrompt, setFormerClubGoalPrompt] = useState<{ goalNumber: number } | null>(null);
+  const [substitutionOpen, setSubstitutionOpen] = useState(false);
+  const [substitutionOut, setSubstitutionOut] = useState("");
+  const [substitutionIn, setSubstitutionIn] = useState("");
   const pausedRef = useRef(false);
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
@@ -623,6 +629,7 @@ export default function BotaoMatch({
           playBotaoSound("flick", 0.8);
         }
       } else {
+        if (current.setup.managerMode) chooseCpuSubstitution(current, "cpu", current.rng);
         const shot = chooseCpuShot(current, cpuSkillFor(current.setup.cpuTeam.strength), current.rng, "cpu");
         if (shot && beginShot(current, shot)) {
           playBotaoSound("flick", 0.6);
@@ -762,6 +769,15 @@ export default function BotaoMatch({
   const activeLocalSide = state.penalties?.turn ?? state.turn;
   const activeLocalName = playerNames[activeLocalSide];
   const penalties = state.penalties;
+  const managerRoster = managerRosterFor(state, "user");
+  const substitutionReady = Boolean(
+    state.setup.managerMode &&
+    managerRoster &&
+    yourTurn &&
+    !paused &&
+    managerRoster.bench.length > 0 &&
+    substitutionCount(state, "user") < 3,
+  );
 
   return (
     <div className={`botao-root ${showcase ? "botao-root-showcase" : ""} ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""}`}>
@@ -841,6 +857,16 @@ export default function BotaoMatch({
           </div>
         )}
       </header>
+      {state.setup.managerMode && !penalties ? (
+        <div className="botao-manager-stamina" aria-label="Fôlego dos cinco titulares">
+          {state.bodies.filter((body) => body.kind === "disc" && body.side === "user" && body.playerId).map((body) => (
+            <span key={body.id} title={body.label + " · " + Math.round(body.stamina) + "%"}>
+              <b>{body.label.split(/\s+/)[0]}</b>
+              <i><em style={{ width: String(Math.round(body.stamina)) + "%" }} /></i>
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {formerClubGoalPrompt && setup.formerClub && (
         <div className="botao-former-club-decision" role="dialog" aria-modal="true" aria-label="Comemoração contra ex-clube">
@@ -965,6 +991,17 @@ export default function BotaoMatch({
             </button>
           </div>
         ) : null}
+        {substitutionOpen && substitutionReady && managerRoster ? (
+          <div className="botao-substitution-overlay" role="dialog" aria-modal="true" aria-label="Substituição">
+            <div className="botao-substitution-card">
+              <div className="botao-substitution-heading"><div><small>BOLA PARADA · SUA VEZ</small><strong>Troca irreversível</strong></div><button type="button" onClick={() => setSubstitutionOpen(false)}>×</button></div>
+              <p>Escolha um botão para sair e um reserva para entrar. A troca não consome seu toque e não pode ser desfeita nesta partida.</p>
+              <label><span>Sai</span><select value={substitutionOut} onChange={(event) => setSubstitutionOut(event.target.value)}><option value="">Escolha o titular</option>{state.bodies.filter((body) => body.kind === "disc" && body.side === "user" && body.playerId).map((body) => <option key={body.id} value={body.id}>{body.label} · {Math.round(body.stamina)}% fôlego</option>)}</select></label>
+              <label><span>Entra</span><select value={substitutionIn} onChange={(event) => setSubstitutionIn(event.target.value)}><option value="">Escolha o reserva</option>{managerRoster.bench.map((player) => <option key={player.id} value={player.id}>{player.name} · {player.overall} OVR</option>)}</select></label>
+              <div className="botao-substitution-actions"><button type="button" className="botao-ghost" onClick={() => setSubstitutionOpen(false)}>Cancelar</button><button type="button" className="botao-primary" disabled={!substitutionOut || !substitutionIn} onClick={() => { const current = matchRef.current; if (!current) return; if (substitutePlayer(current, "user", substitutionOut, substitutionIn)) { setSubstitutionOpen(false); setSubstitutionOut(""); setSubstitutionIn(""); showFlash("TROCA FEITA", "info", 1000); bump(); } }}>Confirmar troca</button></div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <footer className="botao-controls">
@@ -998,6 +1035,19 @@ export default function BotaoMatch({
           <p className="botao-turn">{cpuThinking ? `${setup.cpuTeam.shortName} está pensando…` : "Vez do adversário"}</p>
         )}
         <div className="botao-controls-meta">
+          {substitutionReady ? (
+            <button
+              type="button"
+              className="botao-ghost botao-substitution-toggle"
+              onClick={() => {
+                setSubstitutionOut("");
+                setSubstitutionIn("");
+                setSubstitutionOpen(true);
+              }}
+            >
+              Trocas {3 - substitutionCount(state, "user")}
+            </button>
+          ) : null}
           {state.phase !== "finished" ? (
             <button
               type="button"

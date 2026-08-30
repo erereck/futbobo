@@ -1,7 +1,9 @@
 import type { GameState } from "./model";
+import type { ManagerState } from "./manager-model";
 import { SAVE_KEY } from "./state";
 
 export type CareerMode = "player" | "manager";
+export type CareerState = GameState | ManagerState;
 
 export type CareerSaveMeta = {
   id: string;
@@ -51,21 +53,38 @@ function slotKey(id: string) {
   return `${SLOT_PREFIX}${id}`;
 }
 
-function isUsableState(value: unknown): value is GameState {
+function isUsableState(value: unknown): value is CareerState {
   if (!value || typeof value !== "object") return false;
+  if ((value as { mode?: unknown }).mode === "manager") {
+    const state = value as Partial<ManagerState>;
+    return state.version === 1 && state.mode === "manager" && typeof state.phase === "string" && typeof state.name === "string" && typeof state.currentClubId === "string";
+  }
   const state = value as Partial<GameState>;
   return state.version === 7 && typeof state.phase === "string" && typeof state.name === "string";
 }
 
-function metaFromState(state: GameState, current: CareerSaveMeta): CareerSaveMeta {
+function metaFromState(state: CareerState, current: CareerSaveMeta): CareerSaveMeta {
+  if ("mode" in state && state.mode === "manager") {
+    return {
+      ...current,
+      mode: "manager",
+      name: state.name?.trim() || current.name || "Nova carreira de técnico",
+      clubId: state.currentClubId || current.clubId,
+      season: state.season || current.season,
+      position: "TÉCNICO",
+      overall: Math.round(state.boardTrust),
+      phase: state.phase,
+    };
+  }
+  const playerState = state as GameState;
   return {
     ...current,
-    name: state.name?.trim() || current.name || "Nova carreira",
-    clubId: state.currentClubId || state.academyClubId || current.clubId,
-    season: state.season || current.season,
-    position: state.position || current.position,
-    overall: state.overall || current.overall,
-    phase: state.phase,
+    name: playerState.name?.trim() || current.name || "Nova carreira",
+    clubId: playerState.currentClubId || playerState.academyClubId || current.clubId,
+    season: playerState.season || current.season,
+    position: playerState.position || current.position,
+    overall: playerState.overall || current.overall,
+    phase: playerState.phase,
   };
 }
 
@@ -210,14 +229,15 @@ export function syncActiveCareerSlot() {
   if (!raw || raw === lastSyncedPayload) return;
   try {
     const state = JSON.parse(raw) as unknown;
-    if (!isUsableState(state) || state.phase === "welcome" || state.challengeId) return;
+    if (!isUsableState(state)) return;
+    if (!("mode" in state) && (state.phase === "welcome" || state.challengeId)) return;
     const index = listCareerSaves();
     const meta = index.find((item) => item.id === id);
     if (!meta) return;
     localStorage.setItem(slotKey(id), raw);
     const nextMeta = metaFromState(state, { ...meta, lastPlayedAt: Date.now() });
     writeIndex(index.map((item) => item.id === id ? nextMeta : item));
-    syncAchievements(state, nextMeta);
+    if (!("mode" in state)) syncAchievements(state, nextMeta);
     lastSyncedPayload = raw;
   } catch {
     // O buffer legado continua intacto se o payload estiver incompleto durante uma escrita.
@@ -231,7 +251,7 @@ export function bootstrapCareerStorage() {
   if (index.length === 0 && legacyRaw) {
     try {
       const legacy = JSON.parse(legacyRaw) as unknown;
-      if (isUsableState(legacy) && legacy.phase !== "welcome" && !legacy.challengeId) {
+      if (isUsableState(legacy) && !("mode" in legacy) && legacy.phase !== "welcome" && !legacy.challengeId) {
         const now = Date.now();
         const meta = metaFromState(legacy, {
           id: `player-migrated-${now.toString(36)}`,
@@ -262,7 +282,7 @@ export function bootstrapCareerStorage() {
     if (!raw) continue;
     try {
       const state = JSON.parse(raw) as unknown;
-      if (isUsableState(state)) syncAchievements(state, meta, true);
+      if (isUsableState(state) && !("mode" in state)) syncAchievements(state, meta, true);
     } catch {
       // Slot corrompido não impede a leitura dos outros.
     }
@@ -284,18 +304,18 @@ export type CareerStorageSnapshot = {
   version: 2;
   index: CareerSaveMeta[];
   activeId: string;
-  slots: Record<string, GameState>;
+  slots: Record<string, CareerState>;
   achievements: GlobalAchievementUnlock[];
 };
 
 export type CareerStorageImportResult = {
   imported: boolean;
-  activeState: GameState | null;
+  activeState: CareerState | null;
 };
 
 export function exportCareerStorageSnapshot(): CareerStorageSnapshot {
   const index = listCareerSaves();
-  const slots: Record<string, GameState> = {};
+  const slots: Record<string, CareerState> = {};
   for (const meta of index) {
     const state = readCareerSlotState(meta.id);
     if (state) slots[meta.id] = state;
@@ -349,7 +369,7 @@ export function importCareerStorageSnapshot(value: unknown): CareerStorageImport
     return { imported: true, activeState: null };
   }
 
-  const activeState = rawSlots[activeId] as GameState;
+  const activeState = rawSlots[activeId] as CareerState;
   localStorage.setItem(ACTIVE_KEY, activeId);
   localStorage.setItem(SAVE_KEY, JSON.stringify(activeState));
   lastSyncedPayload = "";

@@ -14,11 +14,13 @@ import {
   beginShot,
   cloneMatch,
   discsOf,
-  minShotSpeed,
+  managerRosterFor,
   otherSide,
   ownGoalY,
-  shotSpeedFor,
+  shotSpeedForBody,
   speedForDistance,
+  substitutePlayer,
+  substitutionCount,
   stepMatch,
   type BotaoBody,
   type BotaoMatchState,
@@ -120,7 +122,7 @@ function shotTowards(disc: BotaoBody, aim: Point, ratio: number): BotaoShot {
   const dx = aim.x - disc.x;
   const dy = aim.y - disc.y;
   const length = Math.hypot(dx, dy) || 1;
-  const speed = shotSpeedFor(disc.power) * ratio;
+  const speed = shotSpeedForBody(disc) * ratio;
   return { bodyId: disc.id, vx: (dx / length) * speed, vy: (dy / length) * speed };
 }
 
@@ -173,7 +175,7 @@ function buildCandidates(state: BotaoMatchState, side: BotaoSide, profile: CpuPr
     if (travel < 20) continue;
     // Reposicionamento curto gerava toque fraco demais para ser legal; se a
     // burrada da CPU escolhesse justo esse, o turno dela morria sem nada acontecer.
-    const speed = Math.max(minShotSpeed(disc.power) * 1.05, speedForDistance(travel));
+    const speed = Math.max(shotSpeedForBody(disc) * 0.085, speedForDistance(travel));
     const length = travel || 1;
     candidates.push({
       bodyId: disc.id,
@@ -248,7 +250,7 @@ function jitterShot(shot: BotaoShot, disc: BotaoBody, profile: CpuProfile, rng: 
   const precision = 1 - disc.control / 220;
   const angle = Math.atan2(shot.vy, shot.vx) + rng.range(-1, 1) * profile.aimJitter * precision;
   const power = speed * (1 + rng.range(-1, 1) * profile.powerJitter * precision);
-  const capped = Math.max(shotSpeedFor(disc.power) * 0.12, Math.min(power, shotSpeedFor(disc.power)));
+  const capped = Math.max(shotSpeedForBody(disc) * 0.12, Math.min(power, shotSpeedForBody(disc)));
   return { bodyId: shot.bodyId, vx: Math.cos(angle) * capped, vy: Math.sin(angle) * capped };
 }
 
@@ -271,6 +273,28 @@ export function chooseCpuShot(state: BotaoMatchState, skill: number, rng: Rng, s
   if (!chosen) return null;
   const disc = state.bodies.find((body) => body.id === chosen.bodyId);
   return disc ? jitterShot(chosen, disc, profile, rng) : chosen;
+}
+
+/** A CPU só troca quando é a vez dela e o motor está pronto para um novo toque. */
+export function chooseCpuSubstitution(state: BotaoMatchState, side: BotaoSide, rng: Rng): boolean {
+  const roster = managerRosterFor(state, side);
+  if (!roster || state.phase !== "aim" && state.phase !== "kickoff" || state.turn !== side || substitutionCount(state, side) >= 3) return false;
+  if (roster.bench.length === 0) return false;
+  const active = discsOf(state, side)
+    .filter((disc) => Boolean(disc.playerId))
+    .sort((a, b) => a.stamina - b.stamina);
+  const outgoing = active[0];
+  if (!outgoing || outgoing.stamina > 38) return false;
+  const outgoingRating = outgoing.power + outgoing.control;
+  const viable = roster.bench
+    .filter((player) => player.id)
+    .filter((player) => (player.power ?? player.overall) + (player.control ?? player.overall) >= outgoingRating - 16)
+    .sort((a, b) => b.overall - a.overall);
+  const incoming = viable[0] ?? roster.bench[0];
+  if (!incoming?.id) return false;
+  // Um pouco de personalidade: a CPU nem sempre troca no primeiro frame de fadiga.
+  if (outgoing.stamina > 28 && rng.next() < 0.35) return false;
+  return substitutePlayer(state, side, outgoing.id, incoming.id);
 }
 
 /** Cobrança de pênalti da CPU: mira no canto mais longe do goleiro. */

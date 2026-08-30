@@ -905,7 +905,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         setGame(importedGame);
         setHasSave(importedGame.phase !== "welcome");
         localStorage.setItem(SAVE_KEY, JSON.stringify(importedGame));
-      } else if (multiCareerImport.activeState) {
+      } else if (multiCareerImport.activeState && !("mode" in multiCareerImport.activeState)) {
         setGame(multiCareerImport.activeState);
         setHasSave(multiCareerImport.activeState.phase !== "welcome");
       } else {
