@@ -5,14 +5,14 @@ import { simulateMonteCarloCareer } from "../app/career/simulation";
 import { initialState } from "../app/career/state";
 import { pick } from "../app/career/shared";
 
-const runs = 300;
+const runs = 240;
 const seedBase = 20260723;
 const byPosition: Record<string, { count: number; potentialSum: number; peakSum: number; goalsSum: number; assistsSum: number; seasonsSum: number }> = {};
 const peakBins: Record<string, { count: number; goalsSum: number; assistsSum: number; seasonsSum: number; appearancesSum: number }> = {};
 
 for (let index = 0; index < runs; index += 1) {
   const seed = (seedBase + index * 104729) % 2147483647;
-  const chosenPosition = pick(POSITIONS, seed, 701 + index).key;
+  const chosenPosition = POSITIONS[index % POSITIONS.length].key;
   const chosenNationality = pick(COUNTRIES, seed, 709 + index).id;
   const academyClub = pick(randomAcademyClubs(seed, chosenNationality), seed, 719 + index);
   const formation = pick(FORMATIONS, seed, 727 + index);
