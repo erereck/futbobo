@@ -269,7 +269,15 @@ function pickWinner(
   const strong = available.filter((club) => club.reputation >= 3 || (titles[club.id] ?? 0) >= 1);
   const salt = config.id.length * 71;
   const upset = seeded(state.seed, season * 5501 + salt) < 0.1;
-  const candidates = upset && strong.length ? strong : elite.length ? elite : strong.length ? strong : available;
+  let candidates = upset && strong.length ? strong : elite.length ? elite : strong.length ? strong : available;
+  if (config.id === "champions-league") {
+    const fiveStar = available.filter((club) => club.reputation >= 5);
+    const fourStar = available.filter((club) => club.reputation === 4);
+    const tierRoll = seeded(state.seed, season * 9187 + salt);
+    const preferred = tierRoll < 0.6 ? fiveStar : fourStar;
+    const secondary = tierRoll < 0.6 ? fourStar : fiveStar;
+    candidates = preferred.length ? preferred : secondary.length ? secondary : available;
+  }
 
   return candidates
     .map((club, index) => {

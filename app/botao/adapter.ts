@@ -104,7 +104,15 @@ export function pickFinalOpponent(args: {
     return candidate.strength >= 78;
   });
   const elitePool = scopedPool.filter((candidate) => candidate.reputation >= 4);
-  const pool = eliteFinal && elitePool.length > 0 ? elitePool : scopedPool;
+  let pool = eliteFinal && elitePool.length > 0 ? elitePool : scopedPool;
+  if (args.competitionId === "championsLeague") {
+    const fiveStarPool = scopedPool.filter((candidate) => candidate.reputation >= 5);
+    const fourStarPool = scopedPool.filter((candidate) => candidate.reputation === 4);
+    const tierRoll = createRng(hashSeed(args.seed, args.season, args.competitionId, "final-star-tier", club.id)).next();
+    const preferredPool = tierRoll < 0.6 ? fiveStarPool : fourStarPool;
+    const secondaryPool = tierRoll < 0.6 ? fourStarPool : fiveStarPool;
+    pool = preferredPool.length ? preferredPool : secondaryPool.length ? secondaryPool : scopedPool;
+  }
   const fallback = pool.length > 0 ? pool : CLUBS.filter((candidate) => candidate.id !== club.id);
   const viable = fallback.filter((candidate) => candidate.strength >= club.strength - 14);
   const contenders = viable.length >= 4 ? viable : fallback;
