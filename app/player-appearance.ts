@@ -374,6 +374,7 @@ export function drawPlayerBust(
   primary: string,
   secondary: string,
   radius: number,
+  contentOffsetY = 0,
 ) {
   const appearance = normalizePlayerAppearance(appearanceValue);
   const skin = appearance.customSkinColor ?? SKIN_COLORS[appearance.skin];
@@ -384,6 +385,7 @@ export function drawPlayerBust(
   ctx.save();
   ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.clip();
   ctx.fillStyle = shade(primary, -24); ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+  ctx.translate(0, contentOffsetY);
   drawKit(ctx, appearance.kitPattern, primary, secondary, scale);
   ctx.fillStyle = shade(skin, -12); ctx.fillRect(-4 * scale, 4 * scale, 8 * scale, 8 * scale);
   drawHairBack(ctx, appearance.hairStyle, shade(hair, -7), scale);
