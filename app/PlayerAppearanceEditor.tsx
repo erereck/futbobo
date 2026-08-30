@@ -159,12 +159,14 @@ export function PlayerAppearancePortrait({
   secondary,
   size = 280,
   label = "Personagem",
+  frame = "standard",
 }: {
   appearance: PlayerAppearance;
   primary: string;
   secondary: string;
   size?: number;
   label?: string;
+  frame?: "standard" | "compact";
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -175,13 +177,16 @@ export function PlayerAppearancePortrait({
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.save();
     context.translate(canvas.width / 2, canvas.height / 2 - 5);
+    const portraitRadius = frame === "compact" ? 128 : 108;
+    const frameRadius = frame === "compact" ? 132 : 111;
+    const frameWidth = frame === "compact" ? 3 : 7;
     context.fillStyle = "rgba(0,0,0,.38)";
     context.beginPath(); context.ellipse(5, 15, 113, 94, 0, 0, Math.PI * 2); context.fill();
-    context.beginPath(); context.arc(0, 0, 108, 0, Math.PI * 2); context.fillStyle = primary; context.fill();
-    drawPlayerBust(context, appearance, primary, secondary, 108);
-    context.strokeStyle = "#f4c430"; context.lineWidth = 7; context.beginPath(); context.arc(0, 0, 111, 0, Math.PI * 2); context.stroke();
+    context.beginPath(); context.arc(0, 0, portraitRadius, 0, Math.PI * 2); context.fillStyle = primary; context.fill();
+    drawPlayerBust(context, appearance, primary, secondary, portraitRadius);
+    context.strokeStyle = "#f4c430"; context.lineWidth = frameWidth; context.beginPath(); context.arc(0, 0, frameRadius, 0, Math.PI * 2); context.stroke();
     context.restore();
-  }, [appearance, primary, secondary]);
+  }, [appearance, frame, primary, secondary]);
 
   return <canvas ref={canvasRef} width={280} height={280} style={{ width: size, height: size }} aria-label={label} />;
 }
