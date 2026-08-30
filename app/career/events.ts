@@ -437,7 +437,7 @@ export function createYouthJourney(state: GameState, formationId: string) {
   const hiddenCeiling = fateRoll < 0.01
     ? 61 + Math.floor(ceilingRoll * 9)
     : fateRoll < 0.65
-      ? 70 + Math.floor(ceilingRoll * 13)
+      ? 71 + Math.floor(ceilingRoll * 13)
       : fateRoll < 0.90
         ? 82 + Math.floor(ceilingRoll * 8)
         : fateRoll < 0.98
