@@ -133,6 +133,18 @@ Selecoes sem liga recebem uma rota de base recomendada por confederacao. A recom
 - O protagonista é identificado por filete dourado, selo `VOCÊ` e nome dourado; o destaque nunca engrossa a peça nem altera sua posição.
 - Em 390px, peças usam 86px de coluna, campo mínimo de 464px e nenhum elemento pode criar overflow horizontal ou colidir com outra peça.
 
+### Modo Técnico essencial
+
+- O modo reutiliza o fluxo da carreira de jogador: decisão, simulação, jogo-chave e consequência. Nenhuma tela semanal ou dashboard paralelo.
+- Navegação mantém seis destinos: Carreira, Prancheta, Time, Histórico, Estatísticas e Mundo. `Prancheta` substitui `Jogador`.
+- Carreira é a fila obrigatória: objetivo, confiança, decisão pendente e próximo jogo. Mercado, desfalque e proposta aparecem ali quando exigem resposta.
+- Prancheta escolhe somente uma das seis formações e mostra a prévia dos cinco; sem Plano A/B, sliders, treino ou instruções individuais.
+- Time é uma página única: cinco titulares, três reservas e seis atletas fora da relação. Dados visíveis limitados a foto, nome, posição, idade, OVR e disponibilidade.
+- Stamina existe somente dentro da partida e vem da distância da peça ativa no próprio toque. A peça usa filete semântico; o valor exato aparece apenas quando selecionada ou no painel de troca.
+- Troca é uma folha inferior curta, disponível apenas no próprio turno com a física parada. Sai + entra + confirmar; depois disso é imediata, irreversível, não consome a vez e preserva as coordenadas da peça.
+- O relógio e a inatividade continuam durante a troca. Nenhum painel pode virar pausa tática ilimitada.
+- Todo sistema que não muda escalação, comportamento da peça, resultado ou futuro da carreira permanece fora do lançamento.
+
 ## Iconografia
 
 - Biblioteca própria `FutboboIcon`: SVG inline, grade 24×24, traço 1.8, pontas e junções arredondadas.

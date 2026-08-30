@@ -1,813 +1,506 @@
-# Plano diretor — Modo Técnico
+# Modo Técnico essencial — plano filtrado
 
-> Documento de produto e arquitetura. Não implementa o modo e não fixa números de balanceamento antes de testes.
+> Documento de produto e arquitetura. Não implementa o modo. Esta versão substitui o plano amplo anterior e mantém somente o que sustenta a identidade e a diversão do Futbobo.
 
-## 1. Tese do modo
+## 1. Definição em uma frase
 
-O Modo Técnico deve ser uma **carreira de técnico de futebol de botão**, não um Football Manager reduzido. A fantasia central é montar cinco peças, preparar um plano simples, tomar decisões rápidas e enxergar essas decisões alterarem a partida e a carreira.
+O Modo Técnico é a carreira atual vista do banco: o jogador continua tomando decisões rápidas, simulando temporadas e jogando partidas-chave, mas agora escolhe os cinco titulares, os três reservas, a formação e as trocas durante a mesa.
 
-O modo precisa preservar os princípios já declarados pelo Futbobo:
+Não é um simulador administrativo e não deve tentar reproduzir Football Manager.
 
-- **Consequências antes de quantidade:** escalação, treino, promessa, contratação e substituição precisam afetar mais de um sistema.
-- **Mundo persistente:** os mesmos jogadores envelhecem, trocam de clube, acumulam história e podem reencontrar o técnico.
-- **Carreiras imperfeitas são histórias:** banco insatisfeito, contratação que não encaixa, demissão e temporada ruim não podem ser apenas telas de punição.
-- **Mobile first:** nenhuma tela pode virar planilha; uma decisão principal por vez.
-- **Rápido:** o jogo deve pular a burocracia e parar nas decisões que mudam alguma coisa.
-- **Determinístico onde importa:** a mesma seed e as mesmas decisões precisam produzir o mesmo estado, inclusive na IA e nas simulações.
+## 2. Filtro obrigatório
 
-Nome de trabalho para a proposta: **Prancheta de 5 Botões**.
+Um sistema só entra se cumprir pelo menos uma destas funções:
 
-## 2. O que já existe e pode ser reaproveitado
+1. muda quem entra na mesa;
+2. muda como uma peça se comporta na partida;
+3. muda um resultado ou o futuro da carreira;
+4. cria uma decisão curta com consequência clara.
 
-Esta seção descreve o repositório atual, não a proposta futura.
+Se uma informação existir apenas para preencher uma tela, ela sai. Se o jogador precisar visitar um submenu escondido para o jogo continuar, o fluxo está errado. O que exige ação deve aparecer automaticamente na aba Carreira.
 
-### Estrutura já preparada
+## 3. Base real que já existe
 
-- O seletor de carreira já conhece os modos `player` e `manager`, mas só cria e valida de verdade saves da carreira de jogador.
-- O menu principal já possui o cartão desabilitado “Carreira de Técnico”.
-- O save atual permite até dez slots por modo, porém o validador só aceita o `GameState` da carreira de jogador.
-- O universo de `World Players` já guarda identidade, posição, idade, OVR, potencial, reputação, contrato, clube, empréstimo, histórico, honrarias e estatísticas de carreira.
-- O núcleo relevante de um clube já pode ser materializado com 14 jogadores. A própria API declara que foi preparada para uma futura carreira de técnico.
-- A aba Time atual já traduz o elenco em cinco titulares e três reservas.
-- O mercado existente já possui uma costura determinística para destinos, empréstimos, transferências e agentes livres.
-- A carreira já comprime temporadas e enfileira partidas-chave jogáveis.
+- O jogo já possui o esqueleto de modo `manager`, mas ainda não possui um estado real de técnico.
+- O universo de `World Players` já mantém jogadores persistentes e materializa um núcleo de 14 atletas por clube.
+- A aba Time já representa cinco titulares e três reservas.
+- A carreira já trabalha com decisões, simulação de temporada, partidas-chave, resultados e histórico.
+- A mesa já possui cinco peças, seis formações, IA, pênaltis e simulação headless usando o mesmo motor.
+- A mesa é fechada: bola e peças rebatem nas tabelas. Isso permanece igual.
+- Hoje apenas o protagonista possui identidade individual na partida; as outras peças ainda são slots anônimos.
+- A fadiga atual é anual e pertence à carreira de jogador. Não existe stamina ao vivo por peça.
 
-### Partida de botão atual
+O novo modo deve ampliar essas bases, não substituí-las por outro fluxo.
 
-- São cinco peças por lado, turno alternado, física própria, seis formações, pênaltis e IA que usa o mesmo motor do jogador.
-- A simulação headless também usa o mesmo motor e a mesma IA. Isso é uma base importante para não existirem “dois jogos” diferentes ao jogar e ao simular.
-- Hoje somente o protagonista tem identidade e atributos individuais dentro da partida. As outras peças são slots anônimos derivados da força do clube.
-- Os IDs das peças são ligados ao slot (`user-0`, `cpu-0`), não ao jogador persistente.
-- A formação muda automaticamente depois de gols e períodos.
-- A mesa atual possui tabelas: a bola rebate nas bordas e **só sai quando entra no gol**.
-- Existe fadiga anual na carreira de jogador, mas não existe fôlego por peça dentro de uma partida.
+## 4. Fluxo completo da carreira
 
-### Lacunas objetivas
+### Criação
 
-- Não existe um `ManagerState` real.
-- Não existe escalação editável persistente, plano tático do técnico ou estado detalhado do elenco.
-- Não existem jogadores individualizados dos dois lados no motor da partida.
-- A mesa é deliberadamente fechada, com tabelas e rebotes. Não se deve introduzir lateral, escanteio ou tiro de meta no Modo Técnico.
-- Não existem substituições, fila de troca ou decisões de troca da CPU.
-- O resultado da partida não guarda um relatório individual de todos os atletas.
-- Os testes atuais são majoritariamente validações estáticas do HTML/código; eles não bastam para validar stamina, trocas, identidade das peças e IA.
+Somente três escolhas:
 
-## 3. Contrato de experiência
+1. nome do técnico;
+2. nacionalidade;
+3. clube inicial.
 
-Metas propostas para orientar o balanceamento, não fatos do jogo atual:
+Não incluir origem profissional, árvore de habilidade, licença, equipe técnica ou atributos do treinador na primeira versão.
 
-- Primeira decisão relevante em menos de 60 segundos após criar a carreira.
-- Temporada padrão em aproximadamente 15–25 minutos.
-- De quatro a sete partidas-chave jogáveis por temporada na configuração recomendada.
-- Uma partida jogada continua curta; abrir uma troca não pode transformar dois minutos de mesa em dez minutos de menus.
-- Escalar o 5+3 deve exigir poucos toques e mostrar imediatamente o custo da escolha.
-- Uma tela possui uma ação primária clara; detalhes ficam em painéis progressivos.
-- Nenhum sistema existe apenas para aumentar números. Se não produz decisão, consequência ou história, ele não entra.
+### Temporada
 
-## 4. Loop da carreira
+O ritmo deve continuar próximo ao da carreira de jogador:
 
-### Início
+1. aba Carreira apresenta o objetivo e a próxima decisão;
+2. o técnico pode revisar formação e 5+3;
+3. resolve uma decisão/evento curto;
+4. a temporada ou bloco é simulado;
+5. partidas-chave entram na fila atual de Jogar/Simular;
+6. o resultado altera confiança, reputação e futuro no clube;
+7. no fim da temporada pode aparecer uma contratação, venda ou proposta de emprego.
 
-1. Criar o técnico: nome, nacionalidade, aparência simples e origem narrativa.
-2. Escolher um clube ou aceitar uma rota recomendada.
-3. Receber objetivo da diretoria e diagnóstico de três pontos do elenco.
-4. Montar o primeiro 5+3 e escolher Plano A.
-5. Jogar ou simular o primeiro jogo-chave.
+Não criar calendário semanal, 38 telas de rodada ou capítulos artificiais. Um checkpoint extra só aparece quando há algo concreto para decidir, como desfalque, janela ou risco de demissão.
 
-A origem do técnico pode mudar o começo sem virar árvore de atributos:
+### O que torna o modo diferente
 
-- **Ex-jogador:** mais confiança inicial do vestiário.
-- **Analista:** leitura tática inicial mais clara.
-- **Formador:** jovens evoluem e aceitam rotação com mais facilidade.
+- o técnico escolhe os oito relacionados;
+- a formação escolhida é realmente usada na mesa;
+- todas as peças têm jogador, rosto, posição e OVR próprios;
+- usar demais uma peça consome o fôlego dela;
+- reservas podem entrar a qualquer momento válido;
+- resultados afetam permanência no cargo e oportunidades futuras.
 
-Essas vantagens precisam aparecer como consequências legíveis, não como bônus escondidos.
+Essas são as diferenças centrais. Todo o resto é suporte.
 
-### Temporada comprimida
+## 5. Navegação: o mesmo esqueleto, levemente adaptado
 
-A temporada deve ser dividida em capítulos, não em uma tela para cada rodada:
+Continuam existindo exatamente seis abas.
 
-1. Próximo bloco de jogos e contexto.
-2. Uma decisão relevante: escalação, treino, conversa, proposta, crise ou objetivo.
-3. Uma partida-chave jogável ou simulação compacta do bloco.
-4. Consequência: tabela, moral, condição, confiança, mercado e narrativa.
-5. Janela de transferências ou momento decisivo quando aplicável.
+### 1. Carreira
 
-Partidas comuns podem ser agregadas. Mata-matas, confrontos diretos, estreias, clássicos, finais e jogos que decidem o emprego do técnico são candidatos naturais a partidas jogáveis.
+Mantém o papel atual de conduzir o save. Mostra apenas:
 
-Configurações recomendadas:
+- clube e temporada;
+- objetivo da diretoria;
+- confiança no trabalho;
+- próxima decisão;
+- próximo jogo-chave;
+- ação principal para continuar.
 
-- **Jogos-chave** — padrão e experiência principal.
-- **Só finais** — carreira ainda mais rápida.
-- **Simular tudo** — para quem quer gerir apenas a trajetória.
-
-Não é recomendável obrigar o usuário a jogar todas as rodadas; isso quebraria a filosofia de carreira comprimida.
-
-## 5. Navegação do Modo Técnico
-
-O modo deve continuar com **seis destinos**, para não repetir o problema de overflow da barra inferior.
-
-### 1. Central
-
-Substitui a função de “Carreira” e concentra o presente:
-
-- próximo adversário e importância do jogo;
-- objetivo da diretoria e risco do cargo;
-- confiança da diretoria, vestiário e torcida;
-- condição geral do elenco;
-- decisão pendente mais importante;
-- resumo do último bloco de jogos;
-- atalhos “Preparar partida”, “Jogar” e “Simular”.
-
-Não deve ser um dashboard cheio de números. É uma fila editorial: o que exige atenção agora aparece primeiro.
+Contratação, venda, desfalque ou proposta de emprego aparecem aqui quando precisam de resposta. Não exigem que o jogador procure uma tela escondida.
 
 ### 2. Prancheta
 
-Substitui completamente a aba “Jogador” e vira a assinatura do modo:
+Substitui Jogador e responde uma única pergunta: **como os cinco começarão a próxima partida?**
 
-- Plano A e Plano B;
-- formação inicial entre as formações reais do botão;
-- comportamento quando estiver vencendo, empatando ou perdendo;
-- gatilho de Plano B por placar e momento;
-- foco de treino do próximo bloco;
-- capitão;
-- ordem de pênaltis;
-- instrução simples para reposição depois de gol ou mudança de período;
-- identidade do técnico e histórico de filosofia.
+- escolha entre as seis formações já existentes;
+- prévia visual dos cinco titulares naquela formação;
+- adversário, força e formação provável quando houver jogo pendente;
+- aviso simples de peça improvisada.
 
-Só devem existir controles que alterem algo real no motor ou na simulação. Não criar sliders como “largura 47” ou “pressão 63” se as peças não forem executar essa diferença.
+Não possui Plano A/Plano B, sliders, treino, capitão, instruções por jogador ou gatilhos automáticos. A formação pode ser alterada antes do jogo; durante a partida ela só é reorganizada nos reinícios que o motor já possui.
 
 ### 3. Time
 
-É a área operacional mais rica, com três visões internas sem criar outra aba inferior:
+Uma única página, sem labirinto de submenus:
 
-#### Mesa
+- campo com cinco titulares;
+- faixa com três reservas;
+- abaixo, seis jogadores fora da relação em cartões compactos;
+- tocar em dois atletas troca suas posições na lista;
+- cada jogador mostra somente foto, nome, posição, idade, OVR e disponibilidade.
 
-- cinco titulares posicionados na formação escolhida;
-- três reservas diretamente abaixo;
-- arrastar/tocar para trocar titular e reserva;
-- OVR, posição, forma, moral e condição essenciais;
-- alerta de improvisação posicional;
-- previsão simples do que o 5+3 ganha e perde.
-
-#### Elenco
-
-- 14 jogadores materializados: cinco titulares, três no banco e seis fora da partida;
-- filtros curtos por posição e situação;
-- detalhe individual com contrato, papel, forma, condição, moral, minutos e histórico;
-- definir papel esperado: estrela, titular, rotação, reserva ou jovem;
-- renovar, liberar, emprestar, listar e conversar;
-- lesão e suspensão visíveis no cartão, sem abrir outra planilha.
-
-#### Mercado
-
-- necessidades do elenco em primeiro lugar;
-- três a cinco nomes observados por necessidade;
-- compra, empréstimo e agente livre;
-- propostas recebidas;
-- impacto em orçamento, salários, posição e promessa de minutos;
-- lista curta de observação.
-
-O mercado fica dentro de Time para preservar as seis abas.
+Quando a janela estiver aberta, a própria página pode exibir uma ação curta de mercado. Fora da janela, nenhum botão de mercado vazio ocupa espaço.
 
 ### 4. Histórico
 
-- temporadas, clubes, demissões, pedidos de saída e ofertas aceitas;
-- títulos, campanhas e partidas decisivas;
-- escalações marcantes e jogadores mais utilizados;
-- reencontros com ex-clubes e ex-atletas.
+Reutiliza a estrutura atual com perspectiva do técnico:
+
+- clubes;
+- temporadas;
+- títulos;
+- partidas jogadas;
+- demissões e saídas.
 
 ### 5. Estatísticas
 
-- resultados do time;
-- gols, assistências, uso, distância ativa e condição dos jogadores;
-- desempenho por formação e Plano A/B;
-- comparação por temporada;
-- estatísticas compactas e filtráveis, não uma tabela infinita.
+Somente números úteis:
+
+- campanha do clube;
+- gols e assistências dos jogadores;
+- partidas e uso de cada atleta;
+- formações mais usadas;
+
+Não criar dezenas de filtros ou relatórios de scouting.
 
 ### 6. Mundo
 
-- classificações e competições;
-- notícias de clubes e jogadores persistentes;
-- mercado global resumido;
-- empregos disponíveis e técnicos demitidos;
-- seleções e convocações quando carreiras de seleção forem habilitadas.
+Reutiliza o mundo persistente atual:
 
-## 6. Estado da carreira de técnico
+- tabelas e competições;
+- transferências importantes;
+- jogadores relevantes;
+- notícias essenciais.
 
-O modo precisa de um estado próprio, versionado e discriminado. Ele não deve fingir ser um `GameState` de jogador.
+Empregos aparecem na aba Carreira quando viram proposta real. Não precisam de uma central permanente de vagas.
 
-### Núcleo do técnico
+## 6. Estado mínimo do técnico
 
-- ID, nome, nacionalidade, aparência e origem;
-- temporada e clube atual;
-- reputação;
+O save de técnico precisa guardar somente:
+
+- versão e modo;
+- nome e nacionalidade;
+- clube e temporada;
 - confiança da diretoria;
-- confiança do vestiário;
-- apoio da torcida;
-- segurança do cargo;
-- filosofia e preferências registradas pelas decisões reais;
-- objetivos atuais;
-- histórico de empregos, contratos, demissões, títulos e recordes;
-- propostas e entrevistas pendentes.
+- reputação do técnico;
+- objetivo atual;
+- orçamento simples de transferências;
+- universo de jogadores já existente;
+- IDs dos cinco titulares;
+- IDs dos três reservas;
+- formação escolhida;
+- competições, fila de partidas, resultados e histórico;
+- propostas ou decisões realmente pendentes.
 
-### Núcleo do clube
+Não criar no lançamento:
 
-- orçamento de transferências;
-- compromisso salarial total e limite salarial;
-- objetivo de temporada;
-- posição/campanhas atuais;
-- 14 jogadores relevantes;
-- escalação 5+3;
-- Planos A e B;
-- treino do bloco;
-- notícias, promessas e conflitos ativos.
+- confiança separada de torcida e vestiário;
+- atributos do técnico;
+- funcionários;
+- instalações;
+- salários e folha detalhada;
+- promessas de minutos;
+- hierarquia de papéis do elenco;
+- forma, ritmo, moral e condição como quatro barras diferentes.
 
-### Separação de dados dos atletas
+A confiança da diretoria é o único medidor de risco. A reputação existe para ofertas de emprego e pode permanecer discreta.
 
-`WorldPlayer` deve continuar sendo a identidade canônica. O Modo Técnico adiciona uma camada compacta por `playerId`, apenas para jogadores relevantes:
+## 7. Elenco e mercado mínimos
 
-- moral;
-- forma;
-- condição física entre partidas;
-- ritmo de jogo;
-- lesão e prazo;
-- suspensão;
-- papel prometido e satisfação com minutos;
-- salário e valor de mercado;
-- capitão e ordem de pênaltis;
-- estatísticas da temporada;
-- atributos derivados de mesa: potência, controle e resistência;
-- no máximo um ou dois traços realmente perceptíveis.
+### Elenco
 
-Não materializar todos os milhares de jogadores do mundo com esse estado. Isso aumentaria o save sem melhorar a experiência.
+- O núcleo continua com 14 jogadores persistentes porque essa base já existe.
+- O técnico relaciona cinco titulares e três reservas.
+- Os seis restantes só precisam aparecer como opções de escalação.
+- Lesão ou suspensão pode tornar um jogador indisponível por evento, sem criar departamento médico.
+- OVR e posição determinam encaixe e qualidade.
 
-## 7. Elenco, contratos e mercado
+Na primeira versão, não adicionar stamina permanente, treino ou recuperação entre partidas. Todo jogador disponível começa a partida com o fôlego cheio. Isso mantém o novo sistema dentro da mesa, onde ele é visível e divertido.
 
-### Tamanho e convocação
+### Mercado
 
-- Núcleo do clube: 14 jogadores persistentes, que já é suportado pela base atual.
-- Lista de jogo: cinco titulares + três reservas.
-- Seis jogadores ficam fora e podem gerar decisões de rotação, moral e mercado.
-- O adversário precisa ao menos materializar os oito relacionados da partida para que escalação, stamina e trocas sejam reais dos dois lados.
+O mercado é uma decisão de janela, não um catálogo infinito:
 
-### Qualidades do jogador
+1. o jogo mostra a principal carência do elenco;
+2. apresenta até três candidatos;
+3. o técnico pode contratar um, recusar ou vender/substituir alguém;
+4. o orçamento é atualizado;
+5. o jogador passa a fazer parte dos mesmos `World Players` persistentes.
 
-OVR continua sendo leitura geral, mas a partida precisa de diferenças visíveis:
+Não incluir inicialmente salário, agente, bônus, observadores, negociação em várias rodadas ou lista com centenas de atletas. Contratos podem continuar sendo resolvidos pelo mundo existente e só aparecem ao técnico quando gerarem uma decisão importante.
 
-- **Potência:** força máxima do toque.
-- **Controle:** precisão do toque.
-- **Resistência:** quanto caminho ativo a peça suporta antes de perder rendimento.
-- **Posição/encaixe:** decide o setor adequado e o custo de improvisar.
-- **Traços raros:** exemplos possíveis são pulmão de aço, decisivo ou versátil, apenas se houver efeito legível.
+## 8. Formação
 
-Não criar dezenas de atributos só para preencher uma ficha.
+- Reutilizar as seis formações atuais.
+- O técnico escolhe uma antes da partida.
+- A formação define posições concretas das cinco peças na saída.
+- A CPU escolhe sua formação usando força e encaixe do próprio elenco.
+- O Modo Técnico não gira automaticamente por todas as formações depois de cada gol.
+- Depois de gol ou mudança de período, os cinco voltam para a formação escolhida.
+- Não existe bônus oculto de “tática”. A vantagem vem das posições físicas das peças.
 
-### Contratos e promessas
+Isso dá autoria ao técnico sem introduzir controles que a física não representa.
 
-- duração, salário e papel esperado;
-- renovação rápida com no máximo poucas contrapropostas;
-- promessa de minutos ligada à convocação e uso real;
-- insatisfação pode afetar moral, vestiário, pedido de saída e valor;
-- decisões precisam produzir notícia e memória no save quando forem importantes.
+## 9. Stamina essencial
 
-### Mercado comprimido
+### Regra
 
-- O técnico aponta uma necessidade, não percorre centenas de linhas.
-- Observação entrega poucos candidatos, com nível de informação proporcional ao conhecimento.
-- Proposta cabe em uma tela: taxa, salário, duração, papel e impacto no orçamento.
-- A IA usa necessidades reais da lista, idade, contrato e força do clube.
-- Comprar, vender, emprestar, receber de volta e contratar livre reaproveitam o universo persistente.
-- Uma entrada anual de dois ou três jovens pode renovar o elenco sem exigir uma academia completa no primeiro lançamento.
+Todas as peças começam cada partida com 100 de fôlego. O fôlego diminui somente pela distância real percorrida pela peça que aquele lado escolheu e moveu no próprio toque.
 
-Finanças detalhadas de estádio, patrocinadores, ingressos, equipe médica e funcionários não são necessárias para a primeira versão. Orçamento de transferências e folha salarial já sustentam as decisões importantes.
+### Conta
 
-## 8. Tática que existe de verdade na mesa
+- o caminho da peça selecionada do início do toque até a física parar;
+- desvios e rebotes dessa mesma peça durante a própria jogada;
+- exatamente a mesma medição para a CPU.
 
-As seis formações atuais devem ser reaproveitadas como posições concretas das peças.
+### Não conta
 
-### Plano A
-
-- formação inicial;
-- cinco titulares;
-- capitão e pênaltis;
-- foco de jogo simples, somente se modificar decisões reais da IA/peças.
-
-### Plano B
-
-- outra formação;
-- substituições sugeridas ou pré-planejadas;
-- gatilhos como “perdendo no trecho final” ou “vencendo por um gol”.
-
-O Plano B não deve teletransportar peças no meio de uma jogada. Ele passa a valer depois de um gol ou na mudança de período, nunca durante a física em movimento.
-
-A rotação automática de formação depois de todo gol, existente hoje, deve deixar de comandar partidas do Modo Técnico. O plano escolhido pelo técnico precisa ser a fonte da formação.
-
-## 9. Stamina dentro da partida
-
-### Regra central
-
-O fôlego diminui somente pela distância realmente percorrida pela peça que aquele lado escolheu e moveu no seu próprio toque.
-
-Passo conceitual:
-
-1. Ao começar um toque, registrar o `playerId/bodyId` ativo.
-2. Enquanto a física resolve, somar a distância quadro a quadro apenas dessa peça.
-3. Encerrar a medição quando a jogada assentar.
-4. Converter essa distância em custo de fôlego usando a resistência do atleta.
-
-### O que conta
-
-- todo o caminho real da peça selecionada depois do próprio toque;
-- continuação, desvio e rebote dessa mesma peça enquanto a jogada ainda resolve;
-- o mesmo cálculo para a peça escolhida pela CPU.
-
-### O que não conta
-
-- peças empurradas ou atingidas por outra peça;
+- peças empurradas pela peça ativa;
+- peças atingidas pela bola ou por outra peça;
 - reposicionamento de formação;
-- colocação automática depois de gol ou mudança de período;
-- animação, correção de sobreposição ou carregamento de save;
-- tempo parado;
-- deslocamento da bola.
+- saída depois de gol;
+- pênaltis, correções de sobreposição ou animações;
+- tempo parado.
 
-Isso atende exatamente à ideia “só conta o que você mesmo moveu”. O usuário passa a escolher entre insistir no melhor botão ou conservar esse jogador para o fim.
+Não existe resistência individual na primeira versão. O consumo é determinado somente pelo quanto a peça foi usada, como pedido. Isso evita criar mais um atributo e torna a regra imediatamente compreensível.
 
-### Valor inicial e efeito
+### Efeito
 
-Cada atleta entra com fôlego baseado em:
-
-- condição entre partidas;
-- atributo de resistência;
-- lesão/recuperação quando aplicável.
-
-O fôlego ao vivo não deve alterar OVR, tamanho ou massa da peça. Ele afeta progressivamente apenas qualidades que o jogador percebe:
+O desgaste reduz gradualmente:
 
 - potência máxima do toque;
-- margem de erro/controle;
-- eventualmente a estabilidade em toques muito fortes, se os testes mostrarem necessidade.
+- controle/precisão.
 
-Não deve existir drenagem passiva por tempo. O sistema é sobre **uso da peça**, não sobre um cronômetro invisível.
+Não altera OVR, massa, tamanho ou raio da peça. Os coeficientes só podem ser definidos depois de simulação em lote.
 
-Faixas iniciais para protótipo podem ser “fresco”, “cansado” e “esgotado”, mas limites e coeficientes só podem ser fixados depois de simulações em lote. O objetivo é permitir que um uso equilibrado preserve os cinco, enquanto abusar de uma peça forte cobre um preço perceptível sem inutilizá-la cedo demais.
+### Interface
 
-### Interface de stamina
+- filete discreto verde, âmbar ou vermelho na peça;
+- valor exato apenas na peça selecionada e na tela de troca;
+- nenhum conjunto permanente de dez barras sobre o campo;
+- reserva entra com 100 de fôlego.
 
-- A peça usa apenas um filete discreto verde, âmbar ou vermelho.
-- A peça selecionada mostra o valor exato no HUD inferior.
-- O painel de troca mostra o valor exato dos cinco em campo e dos três reservas.
-- Não manter dez barras grandes sobre a mesa.
-- O adversário deve receber informação equivalente ou uma regra explicitamente simétrica; nunca pode existir stamina secreta favorável à CPU.
+O fôlego zera sua história ao fim da partida. Não alimenta treino, lesão ou condição da temporada no lançamento.
 
-### Relação com a temporada
+## 10. Substituições imediatas
 
-- Distância ativa e minutos/participação geram carga da partida.
-- A carga reduz condição entre partidas.
-- Treino de recuperação melhora condição, mas sacrifica evolução ou preparação tática.
-- Reserva não usada se recupera melhor e pode cobrar minutos depois.
+### Regra final
 
-Nos pênaltis, o fôlego restante pode continuar afetando potência/controle, mas as cobranças não precisam gerar nova carga de temporada porque a partida já terminou. A fila de cobradores deve usar os cinco que terminaram o jogo.
-
-## 10. Substituições
-
-### Regra recomendada
-
-- três reservas relacionados;
+- três reservas;
 - até três substituições;
 - sem reentrada;
-- qualquer jogador disponível pode substituir qualquer titular;
-- improvisação posicional continua possível, com custo claramente exibido;
-- a CPU segue exatamente os mesmos limites.
+- sem desfazer depois de confirmar;
+- permitidas somente quando é a vez daquele lado e a física está parada;
+- proibidas enquanto uma jogada está sendo resolvida;
+- proibidas depois que a disputa de pênaltis começou;
+- a CPU segue as mesmas regras.
 
-### Fluxo durante o jogo
+“Bola parada” deve ser um estado real do motor, como `aim` ou `kickoff`, e não apenas um instante em que a velocidade da bola chegou perto de zero durante a física.
 
-1. Em uma fase de mira ou pausa válida, tocar em **Trocas (3)**.
-2. Escolher quem sai e quem entra.
-3. A troca fica marcada como pendente: “entra no próximo gol ou pênalti por demora”.
-4. O jogo continua sem alterar atributos, rosto ou identidade.
-5. Quando acontecer um gol ou for marcado um pênalti por demora, todas as trocas pendentes são aplicadas.
+### Fluxo
 
-O usuário pode cancelar a fila até a parada válida. Não se pode abrir ou confirmar uma troca enquanto a física está resolvendo.
+1. No próprio turno, tocar em **Trocas (3)**.
+2. Escolher quem sai.
+3. Escolher quem entra.
+4. Conferir a troca em uma linha curta.
+5. Confirmar.
 
-### Momento de entrada
+Ao confirmar, a troca acontece imediatamente. Não existe fila, espera por gol, lateral, intervalo ou pênalti por demora.
 
-Existem exatamente duas paradas que ativam uma troca:
+Antes da confirmação é possível fechar o painel. Depois da confirmação:
 
-- **gol**, antes da nova saída de bola;
-- **pênalti por demora**, depois que a infração é marcada e antes da cobrança.
+- a substituição é consumida;
+- o jogador que saiu não pode retornar;
+- não existe botão de desfazer;
+- a nova peça já pode executar o toque daquele turno;
+- a troca não consome a vez.
 
-Durante a própria tela de gol ou de pênalti por demora, também é possível montar uma troca e aplicá-la naquela parada, antes de a partida continuar. Mudança de período, pausa manual, toque assentado, trave ou rebote na tabela não ativam substituição. Se a partida terminar sem gol nem pênalti por demora depois que a troca foi pedida, ela não acontece.
+### Posição e identidade
 
-### Como a peça entra
+O reserva assume exatamente as coordenadas da peça substituída. A troca nunca reposiciona o time e não pode ser usada como teletransporte.
 
-- Depois de gol, quando a formação é recolocada para a saída, o reserva ocupa o slot definido pela nova escalação/plano.
-- No pênalti por demora, sem uma reposição geral da formação, o reserva assume as coordenadas atuais da peça substituída. Isso evita usar a troca como teletransporte tático.
-- Identidade, número, aparência, posição, potência, controle, resistência e fôlego passam a ser os do reserva.
-- O jogador que saiu fica inelegível e não pode voltar.
-- A ordem de pênaltis é reconstruída com os cinco elegíveis.
-- A linha do tempo registra minuto, placar, quem saiu e quem entrou.
-
-### Interface rápida
-
-- botão compacto acessível pelo polegar;
-- folha inferior com titulares, fôlego e reservas;
-- seleção em no máximo três toques;
-- marca clara na peça que sairá e no reserva que entrará;
-- execução automática na parada válida, com faixa de transmissão de menos de um segundo;
-- alterações do adversário também são anunciadas.
-
-Gol e pênalti por demora não devem abrir um menu ilimitado. A fila já preparada pode ser aplicada imediatamente; se o usuário decidir trocar naquela parada, recebe apenas um painel curto antes da continuação. Isso mantém a partida rápida.
-
-## 11. Paradas válidas sem mudar a mesa
-
-No vocabulário desta proposta, “a bola sair” significa **gol ou pênalti por demora**. Não significa atravessar lateral ou linha de fundo.
-
-### Regra preservada
-
-- a bola e as peças continuam rebatendo nas tabelas;
-- não existem lateral, escanteio ou tiro de meta;
-- o gol mantém a saída central e a reposição de formação já existentes;
-- o pênalti por demora continua sendo a punição de inatividade do motor atual;
-- nenhuma regra de limite de campo precisa ser criada para o Modo Técnico.
-
-### Ativação das trocas
-
-- O evento de gol fecha primeiro a autoria do gol e o placar; depois executa as trocas, atualiza a escalação e monta a saída.
-- O evento de pênalti por demora interrompe a jogada; depois executa as trocas antes de definir os atletas elegíveis para a cobrança.
-- Se os dois lados possuem trocas pendentes, elas entram na mesma parada, sem prioridade escondida.
-- Uma mudança escolhida dentro da própria tela da parada entra antes da retomada.
-- Uma troca pendente não cria por conta própria um reinício nem para o relógio.
-
-### Novos estados e eventos conceituais
-
-- fila de substituição por lado;
-- janela curta de troca na fase de gol;
-- janela curta de troca na fase de pênalti por demora;
-- substituição executada;
-- formação/plano alterado;
-- narrativa e acessibilidade para todos eles.
-
-O contador de turnos não pode ser usado como trava de “a CPU já jogou”, porque o motor atual já permite devolver a vez sem avançar esse contador depois de um gol ou mudança de período.
-
-## 12. IA do técnico adversário
-
-A CPU precisa treinar e escalar o adversário de forma suficiente para a partida, sem simular uma interface inteira que ninguém vê.
-
-### Antes do jogo
-
-- escolhe os melhores cinco por encaixe, condição e forma;
-- relaciona três reservas úteis;
-- escolhe formação coerente com força, adversário e momento;
-- define Plano B e pênaltis.
-
-### Durante o jogo
-
-A CPU avalia trocas somente em momentos discretos, não a cada quadro:
-
-- fôlego baixo;
-- diferença de qualidade para o reserva;
-- encaixe posicional;
-- placar e tempo;
-- necessidade ofensiva ou defensiva;
-- lesão, quando esse sistema estiver ativo.
-
-Ela deve enfileirar a troca e esperar o mesmo gol ou pênalti por demora que o usuário. Também pode decidir durante uma dessas paradas. A decisão é seedada e determinística. A dificuldade pode melhorar a leitura e o momento, mas nunca conceder stamina extra, troca instantânea ou informação impossível.
-
-### Simulação headless
-
-- deve usar as mesmas identidades, stamina, gatilhos de gol/pênalti por demora e limite de trocas;
-- ambos os lados são controlados pela mesma política de IA;
-- um resultado simulado precisa continuar sendo possível no jogo manual;
-- decisões de escalação e treino devem alterar tanto a partida jogada quanto a simulada.
-
-## 13. Resultado e memória da partida
-
-O resultado do modo técnico precisa guardar um relatório compacto por jogador:
+São atualizados:
 
 - `playerId`;
-- titular ou reserva;
-- momento em que entrou e saiu;
-- fôlego inicial e final;
-- distância ativa;
-- toques/flicks;
-- contatos na bola;
+- rosto e número;
+- nome e posição;
+- OVR, potência e controle;
+- fôlego, começando em 100;
+- elegibilidade para pênaltis;
+- relatório individual da partida.
+
+### Tempo
+
+O relógio da partida e o contador de inatividade continuam correndo enquanto o painel está aberto. A troca precisa ser uma decisão rápida e não pode virar pausa tática ilimitada.
+
+### CPU
+
+A CPU avalia a troca apenas no início do próprio turno, usando:
+
+- fôlego da peça;
+- qualidade do reserva;
+- posição;
+- placar e tempo.
+
+Ela confirma instantaneamente, mantém as coordenadas e respeita três trocas e ausência de reentrada. A dificuldade pode melhorar a decisão, nunca as regras ou o fôlego.
+
+## 11. Partida com jogadores reais dos dois lados
+
+O motor precisa receber oito atletas por equipe:
+
+- cinco titulares;
+- três reservas;
+- ID persistente;
+- nome, número, posição, OVR;
+- potência e controle derivados;
+- aparência ligada ao ID.
+
+Os corpos físicos deixam de representar slots anônimos e passam a carregar a identidade do atleta atual. Uma mudança de formação ou substituição não pode trocar rostos entre jogadores.
+
+O resultado precisa guardar somente o necessário por atleta:
+
+- começou ou entrou;
+- momento em que entrou/saiu;
 - gols e assistências;
-- cartão/lesão se esses sistemas forem adicionados;
-- condição gerada para o próximo bloco.
+- toques realizados;
+- distância ativa;
+- fôlego final.
 
-A linha do tempo ganha trocas, pênalti por demora e mudança de plano.
+Replays e estados de física continuam compactos/efêmeros como hoje.
 
-O save não deve guardar estados de física a 60/120 Hz. Replays continuam efêmeros/compactados. Fechar durante a partida pode reiniciar o mesmo confronto a partir da seed, como já acontece, desde que isso seja comunicado ao jogador.
-
-## 14. Simulação de temporada
-
-A simulação atual é centrada no protagonista e não pode ser reaproveitada como se já fosse uma simulação de técnico.
-
-O novo simulador precisa considerar:
-
-- qualidade e encaixe do 5+3;
-- condição, forma e moral;
-- Plano A/Plano B;
-- força do adversário;
-- mando e competição;
-- lesões e suspensões;
-- rotação entre blocos;
-- decisões de treino;
-- profundidade do elenco.
-
-Partidas-chave simuladas devem usar o motor headless completo. Blocos de jogos comuns podem usar uma simulação agregada derivada dos mesmos fatores, para manter a carreira rápida. Os dois caminhos precisam ser calibrados juntos para não produzir tabelas incompatíveis.
-
-## 15. Diretoria, vestiário e carreira
+## 12. Carreira do técnico
 
 ### Diretoria
 
-- um objetivo principal e, no máximo, um secundário;
-- paciência baseada no tamanho do clube e contexto;
-- confiança alterada por resultado, estilo prometido, finanças e evolução de jovens;
-- aviso claro antes de uma demissão, salvo crise extrema coerente.
+- Um objetivo por temporada.
+- Uma barra de confiança.
+- Resultados acima ou abaixo do objetivo alteram a confiança.
+- Confiança muito baixa pode causar demissão.
 
-### Vestiário
+Não criar reuniões, promessas, conselhos ou metas secundárias no lançamento.
 
-- satisfação individual alimenta uma confiança coletiva;
-- capitães e jogadores importantes pesam mais;
-- promessas quebradas, banco, venda de ídolo e sequência ruim geram histórias;
-- conversa deve ser uma decisão pontual, não um minijogo repetitivo toda semana.
+### Reputação e empregos
 
-### Torcida e imprensa
+- Resultado, títulos e dificuldade do clube alteram reputação.
+- No fim da temporada podem surgir até três propostas coerentes.
+- O técnico aceita, recusa ou permanece.
+- Ser demitido leva a uma escolha curta de novo emprego, não a uma tela de espera semanal.
 
-- clássicos, resultados, contratações e estilo afetam apoio;
-- coletivas aparecem em momentos de consequência;
-- não repetir perguntas sem impacto.
+### Eventos
 
-### Mercado de trabalho
+Reaproveitar o formato de decisões da carreira atual, mudando o ponto de vista:
 
-- ofertas coerentes com reputação e resultados;
-- entrevista curta com objetivo e orçamento claros;
-- pedir demissão, recusar, aceitar e ser demitido;
-- período desempregado avança em blocos e oferece oportunidades;
-- histórico preserva todos os clubes e reencontros.
+- aceitar uma venda;
+- contratar ou recusar um reforço;
+- priorizar uma competição.
+- aceitar ou recusar uma proposta de emprego.
 
-### Seleções
+Cada evento precisa alterar escalação, confiança, orçamento ou resultado. Evento sem consequência não entra.
 
-Carreira de seleção é uma extensão natural, mas não precisa bloquear a primeira versão. Quando entrar:
+## 13. O que foi deliberadamente cortado
 
-- proposta baseada em nacionalidade, reputação e desempenho;
-- convocações 5+3 a partir dos mesmos `World Players`;
-- torneios comprimidos e partidas-chave;
-- possibilidade de acumular clube e seleção somente se a regra for simples e explícita.
+- bola fora literal, lateral, escanteio e tiro de meta;
+- fila de substituição e espera por parada especial;
+- stamina carregada entre partidas;
+- calendário e treino diário;
+- Plano A/Plano B;
+- capitão e instruções individuais;
+- múltiplas barras de moral, forma, ritmo e condição;
+- promessas de tempo de jogo;
+- contratos e salários detalhados;
+- scouting e lista global de mercado;
+- comissão técnica;
+- estádio e instalações;
+- academia completa e categorias de base gerenciáveis;
+- entrevistas de emprego longas;
+- central de vagas;
+- carreira de seleção no primeiro lançamento;
+- estatísticas que não ajudam a escolher formação, jogador ou troca.
 
-## 16. Treino, forma, condição, lesões e suspensões
+Esses itens não são “conteúdo futuro obrigatório”. Só devem voltar se o núcleo provar que sente falta deles.
 
-O treino deve ser uma escolha por bloco:
+## 14. Arquitetura mínima
 
-- **Recuperação:** recupera condição, reduz preparação/evolução.
-- **Técnico:** melhora potência/controle e desenvolvimento.
-- **Físico:** melhora resistência/condição futura, aumenta carga imediata.
-- **Tático:** melhora adaptação ao Plano A/B e reduz custo de improviso.
+### Carreira
 
-Não montar calendários diários.
+- `ManagerState` próprio e versionado;
+- normalizador e compactação próprios;
+- reaproveitamento de competições, clubes e `World Players`;
+- módulos pequenos para escalação, objetivo, confiança, mercado curto e simulação;
+- telas sem lógica de domínio embutida.
 
-Forma representa desempenho recente. Condição representa capacidade física atual. Moral representa satisfação. Ritmo representa prontidão por uso. Esses quatro conceitos precisam ter nomes e efeitos distintos na interface.
+### Mesa
 
-Lesões e suspensões são importantes para rotação e histórias, mas a primeira implementação pode começar com eventos de disponibilidade entre partidas. Lesões físicas dentro da mesa só devem ser adicionadas se houver uma regra justa e visível; não devem surgir aleatoriamente apenas porque a stamina ficou baixa.
+O módulo continua independente da carreira. Seu contrato genérico passa a aceitar:
 
-## 17. Arquitetura recomendada
+- oito jogadores por lado;
+- formação inicial;
+- stamina ao vivo;
+- substituições imediatas;
+- relatório individual.
 
-### Domínio do técnico
+O adaptador continua sendo a única ponte entre `ManagerState` e o motor.
 
-Criar módulos independentes para:
+### Simulação
 
-- modelo e normalização do `ManagerState`;
-- escalação e convocação 5+3;
-- condição, forma, moral e ritmo;
-- treino;
-- tática e planos;
-- simulação de blocos/temporada;
-- objetivos, diretoria e empregos;
-- mercado, contratos e promessas;
-- eventos e narrativa;
-- compactação do save.
+A simulação headless precisa usar:
 
-Componentes React apenas apresentam e disparam decisões. Regras não devem morar nas telas.
+- os mesmos cinco e três reservas;
+- a mesma formação;
+- o mesmo consumo de stamina;
+- a mesma decisão de substituição da CPU;
+- os mesmos limites de troca.
 
-### Módulo de botão
+Jogar e simular não podem se transformar em regras diferentes.
 
-O motor continua autônomo e não importa `ManagerState`, clube ou liga. Seu contrato genérico precisa evoluir para aceitar:
+## 15. Ordem de implementação futura
 
-- oito jogadores por lado, com IDs persistentes;
-- cinco titulares e três reservas;
-- potência, controle, resistência, stamina inicial, posição, número e visual por atleta;
-- formação/plano inicial;
-- política de ativação de troca por gol/pênalti por demora;
-- política de troca para lados controlados pela CPU.
+### Fase 1 — Esqueleto jogável
 
-Mudanças internas necessárias:
+- save de técnico;
+- criação simples e escolha do clube;
+- Carreira, Prancheta e Time;
+- elenco de 14, formação e 5+3;
+- objetivo e confiança.
 
-- corpo ligado ao `playerId`, não apenas ao slot;
-- medição de distância ativa;
-- stamina e efeitos;
-- fila de troca ligada aos eventos de gol e pênalti por demora;
-- fila e execução de substituições;
-- atualização de pênaltis e resultado individual;
-- HUD/render dos atletas;
-- paridade no simulador headless.
+### Fase 2 — Mesa de técnico
 
-O adaptador continua sendo a única ponte da carreira para o motor.
+- oito jogadores individualizados por lado;
+- stamina por distância ativa;
+- troca imediata e irreversível;
+- decisão de troca da CPU;
+- resultado individual e simulação headless equivalente.
 
-### Aparência
+### Fase 3 — Carreira completa mínima
 
-A aparência deve ser resolvida por `playerId`. Trocar uma peça ou mudar a formação não pode trocar rostos, números ou identidade entre atletas.
+- simulação de temporada na perspectiva do técnico;
+- partidas-chave;
+- mercado curto;
+- propostas, demissão e troca de clube;
+- histórico e estatísticas adaptados.
 
-## 18. Save, migração e compatibilidade
+### Fase 4 — Balanceamento e acabamento
 
-- Introduzir uma união discriminada de saves: carreira de jogador ou técnico.
-- Dar ao `ManagerState` sua própria versão e normalizador.
-- Atualizar metadados dos slots; “posição MEI” e OVR individual não fazem sentido para técnico.
-- Nunca tentar abrir um save de técnico com o normalizador da carreira de jogador.
-- Preservar todos os saves atuais sem migração destrutiva.
-- Guardar apenas overlays dos jogadores materializados e relatórios compactos.
-- Continuar removendo replays pesados da persistência.
-- Seedar formação da CPU, mercado, eventos e simulação para retomada reproduzível.
+- simulações em lote;
+- testes de saves longos;
+- interface mobile;
+- acessibilidade;
+- performance no Android;
+- tutorial contextual somente quando o recurso aparece.
 
-## 19. Testes obrigatórios
+## 16. Testes indispensáveis
 
 ### Stamina
 
-- conta o caminho da peça selecionada;
-- inclui o rebote da própria peça durante a jogada;
-- ignora peças empurradas;
-- ignora reposições automáticas;
-- é idêntica para usuário e CPU;
-- é determinística com a mesma seed e entrada;
-- respeita resistência e condição inicial;
-- afeta potência/controle nos limites definidos.
+- só a peça escolhida perde fôlego;
+- peças empurradas não perdem;
+- rebote da própria peça conta;
+- reposições automáticas não contam;
+- usuário e CPU usam a mesma fórmula;
+- mesma seed produz o mesmo resultado.
 
-### Substituição
+### Trocas
 
-- nunca entra durante `resolving`;
-- entra no primeiro gol ou pênalti por demora;
-- cancela corretamente;
-- permite múltiplas trocas na mesma parada;
+- só abre no turno correto com física parada;
+- não abre durante `resolving`;
+- acontece imediatamente ao confirmar;
+- não consome o turno;
+- não pode ser desfeita;
+- jogador substituído não volta;
 - respeita limite de três;
-- impede reentrada;
-- preserva coordenadas no pênalti por demora;
-- usa slot de formação depois de gol;
-- atualiza rosto, número, ratings, timeline e pênaltis;
+- reserva herda coordenadas sem sobreposição;
+- identidade, visual, atributos e pênaltis são atualizados;
 - CPU obedece às mesmas regras.
 
-### Mesa fechada e gatilhos
+### Fluxo
 
-- bola e peças continuam rebatendo em todas as bordas fora do gol;
-- nenhuma lateral, escanteio ou tiro de meta é criado;
-- rebote, trave, toque assentado, pausa e mudança de período não ativam troca;
-- gol ativa a fila depois de registrar o lance e antes da saída;
-- pênalti por demora ativa a fila antes da cobrança;
-- os dois lados aplicam trocas pendentes de forma simétrica;
-- relógio, fase de gol, pênalti e retomada não travam.
+- nenhum submenu é obrigatório para avançar a temporada;
+- decisão pendente sempre aparece em Carreira;
+- 390 px não apresenta colisão ou overflow;
+- escalação e troca são operáveis com uma mão;
+- save de jogador antigo permanece intacto;
+- partida jogada e simulada usam as mesmas regras.
 
-### Simulação e save
+## 17. Critério de conclusão
 
-- jogado e headless usam as mesmas regras;
-- mesma seed gera mesma decisão da CPU;
-- fechar/reabrir não corrompe fila ou carreira;
-- compactação não perde estatísticas necessárias;
-- saves antigos continuam válidos;
-- mil temporadas simuladas não explodem tamanho ou tempo.
+O Modo Técnico está pronto quando o jogador consegue:
 
-### Mobile e acessibilidade
+1. criar o técnico e escolher um clube;
+2. montar cinco titulares e três reservas;
+3. escolher uma das formações existentes;
+4. simular a temporada no mesmo ritmo atual;
+5. jogar uma partida com atletas reais dos dois lados;
+6. perceber uma peça cansar porque foi usada demais;
+7. trocar imediatamente no próprio turno, sem reposicionar e sem desfazer;
+8. ver a CPU fazer o mesmo;
+9. receber consequência de resultado, confiança, mercado e emprego;
+10. terminar uma carreira sem ter administrado telas que não queria abrir.
 
-- 390 px sem colisão ou overflow;
-- escalação 5+3 legível;
-- troca operável com uma mão;
-- foco, leitor de tela e região `aria-live` narram trocas e pênalti por demora;
-- `prefers-reduced-motion` respeitado;
-- estados não dependem só de cor.
-
-## 20. Balanceamento a medir
-
-Nada abaixo deve ser escolhido “no olho”. O laboratório precisa medir:
-
-- distância ativa média por peça e por partida;
-- concentração de uso na melhor peça;
-- fôlego final por posição/atributo;
-- frequência e minuto das trocas humanas e da CPU;
-- efeito de um reserva forte e de um banco fraco;
-- frequência de gols e pênaltis por demora disponíveis para ativar trocas;
-- percentual de trocas pedidas que efetivamente entram;
-- vantagem de quem inicia;
-- impacto real de formação e Plano B;
-- diferença entre jogar e simular;
-- temporada de time favorito, médio e azarão;
-- taxa de demissão e mobilidade de carreira;
-- tamanho do save após várias décadas.
-
-Critérios de saúde propostos:
-
-- usar sempre a mesma peça deve ser possível, mas claramente pior no fim;
-- distribuir toques entre as cinco deve ser uma estratégia válida;
-- uma substituição bem escolhida pode decidir uma partida, mas não garantir gol;
-- a CPU deve trocar com frequência plausível e não desperdiçar todas as trocas cedo;
-- a janela de troca em gol/pênalti não pode quebrar o ritmo de dois minutos;
-- o melhor elenco não pode eliminar zebras, e o pior não pode vencer por puro ruído.
-
-## 21. Riscos principais
-
-- **Poucas paradas válidas:** jogos sem gol ou pênalti por demora podem terminar sem permitir a troca já pedida; isso precisa ser uma tensão intencional, não um bug escondido.
-- **Identidade por slot:** manter IDs anônimos causaria rosto/atributo errado depois da troca.
-- **Dois simuladores:** temporada e partida podem divergir se usarem fatores diferentes.
-- **Save pesado:** detalhar todos os jogadores do mundo seria insustentável.
-- **CPU cara:** a IA já clona a física para avaliar jogadas; o estado de stamina deve ser compacto e a decisão de troca não pode rodar em cada candidato/quadro.
-- **Interface lotada:** stamina, tática e troca podem cobrir a mesa se não houver divulgação progressiva.
-- **Stamina irrelevante ou punitiva:** coeficientes errados transformam o sistema em decoração ou impedem usar a melhor peça.
-- **Conteúdo repetitivo:** entrevistas e conflitos sem consequência viram burocracia.
-- **Escopo infinito:** estádio, funcionários, patrocínios detalhados e dezenas de atributos podem atrasar o núcleo divertido.
-
-## 22. Ordem de construção futura
-
-### Fase 0 — Contratos e prova das regras
-
-- fechar o contrato de `ManagerState`;
-- fechar 14 jogadores, 5+3 e três trocas;
-- prototipar a fila ativada apenas por gol/pênalti por demora e medir quantas trocas realmente entram;
-- prototipar distância ativa e curvas de stamina;
-- criar testes reais do motor antes de ampliar a UI.
-
-### Fase 1 — Base da carreira
-
-- save de técnico e seletor de modo;
-- criação do técnico e escolha de clube;
-- World Players + overlay do elenco;
-- escalação 5+3 e contratos básicos;
-- Central, Prancheta e Time navegáveis.
-
-### Fase 2 — Partida completa de técnico
-
-- identidades completas dos dois lados;
-- formação comandada pelo plano;
-- integração da fila com gol e pênalti por demora;
-- stamina;
-- substituições humanas e da CPU;
-- relatório individual e headless equivalente.
-
-### Fase 3 — Temporada e consequências
-
-- blocos de temporada;
-- objetivos/diretoria e demissão;
-- forma, moral, condição, ritmo, lesões e suspensões;
-- treino;
-- narrativa do vestiário e imprensa;
-- estatísticas/histórico.
-
-### Fase 4 — Mercado e carreira longa
-
-- orçamento e folha;
-- compra, venda, empréstimo, renovação e agentes livres;
-- empregos e entrevistas;
-- jovens;
-- mundo e notícias do mercado;
-- eventual carreira de seleção.
-
-### Fase 5 — Balanceamento e acabamento
-
-- Monte Carlo de partida e carreira;
-- testes de saves longos;
-- acessibilidade e celulares pequenos;
-- performance Android;
-- tutorial contextual;
-- telemetria local de balanceamento, sem exigir coleta de dados pessoais.
-
-## 23. Escopo mínimo que já parece um modo completo
-
-O primeiro lançamento só deve ser chamado de Modo Técnico quando possuir, em conjunto:
-
-- carreira e save próprios;
-- clube, objetivo e risco de emprego;
-- elenco persistente de 14;
-- escalação real de cinco + três reservas;
-- Central, Prancheta e Time funcionais;
-- treino/condição/moral suficientes para criar rotação;
-- mercado e contratos básicos;
-- temporada comprimida com partidas-chave;
-- partidas com oito jogadores individualizados por lado;
-- stamina por distância ativa;
-- ativação de trocas apenas em gol ou pênalti por demora;
-- substituições do usuário e do adversário;
-- simulação headless equivalente;
-- histórico, estatísticas e consequências de carreira;
-- testes de física, IA, save e mobile.
-
-Sem stamina e troca da CPU sob os mesmos gatilhos, a mecânica pedida fica incompleta. Sem temporada comprimida, diretoria e mundo persistente, vira apenas um editor de escalação. O modo interessante nasce da ligação entre as duas metades: **a decisão rápida fora da mesa muda o que acontece dentro dela, e a partida devolve consequências para a carreira**.
-
-## 24. Decisões recomendadas para congelar antes de codificar
-
-1. Manter 14 jogadores e convocação 5+3.
-2. Adotar três substituições, sem reentrada.
-3. Aplicar troca pendente somente depois de gol ou na marcação de pênalti por demora.
-4. Manter a mesa fechada, sem lateral, escanteio ou tiro de meta.
-5. Preservar inicialmente a mesa com tabelas nos modos atuais.
-6. Medir stamina apenas pela distância da peça selecionada no próprio toque.
-7. Fazer stamina afetar potência e controle, nunca OVR/tamanho/massa.
-8. Substituto assume a posição física do substituído no pênalti por demora e o slot planejado depois de gol.
-9. Trocar a aba Jogador por Prancheta e manter seis abas.
-10. Colocar Mesa, Elenco e Mercado dentro de Time.
-11. Usar Jogos-chave como ritmo padrão da temporada.
-12. Não lançar funcionário, estádio ou finanças profundas antes do núcleo 5+3 estar divertido.
+A assinatura do modo é simples: **cinco peças, três reservas, uma formação e decisões que aparecem diretamente na mesa**.
