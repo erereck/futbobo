@@ -432,14 +432,16 @@ export function createYouthJourney(state: GameState, formationId: string) {
   const overall = clamp(Math.round(44 + score * 0.12 + seeded(state.seed, 22) * 4), 49, 60);
   const fateRoll = seeded(state.seed, 701);
   const ceilingRoll = seeded(state.seed, 709);
-  const hiddenCeiling = fateRoll < 0.18
-    ? 61 + Math.floor(ceilingRoll * 11)
-    : fateRoll < 0.80
-      ? 70 + Math.floor(ceilingRoll * 13)
-      : fateRoll < 0.96
-        ? 82 + Math.floor(ceilingRoll * 7)
-        : fateRoll < 0.99
-          ? 89 + Math.floor(ceilingRoll * 6)
+  // Só uma carreira realmente azarada nasce com teto abaixo de 70.
+  // A distribuição foi centrada em ~80 para que craques sejam comuns sem banalizar 90+.
+  const hiddenCeiling = fateRoll < 0.01
+    ? 61 + Math.floor(ceilingRoll * 9)
+    : fateRoll < 0.65
+      ? 71 + Math.floor(ceilingRoll * 13)
+      : fateRoll < 0.90
+        ? 82 + Math.floor(ceilingRoll * 8)
+        : fateRoll < 0.98
+          ? 90 + Math.floor(ceilingRoll * 5)
           : 95 + Math.floor(ceilingRoll * 5);
   const potential = clamp(hiddenCeiling, overall + 1, 99);
   const youthEventPool = state.position === "GOL" ? GOALKEEPER_YOUTH_EVENTS : YOUTH_EVENTS;
@@ -754,7 +756,9 @@ export function buildStorySeasonDecision(
 }
 
 export function applyEffect(state: GameState, effect: Effect) {
-  const overall = clamp(state.overall + (effect.ovr ?? 0), 40, 99);
+  const nextPotential = clamp(state.potential + (effect.potential ?? 0), 45, 99);
+  // Potencial volta a funcionar como teto real: eventos podem elevar o teto, mas não furá-lo.
+  const overall = clamp(state.overall + (effect.ovr ?? 0), 40, Math.max(state.overall, nextPotential));
   const signedSponsor: SponsorDeal | null = effect.sponsorBrand
     ? {
         id: `${state.seed}-${state.season}-${effect.sponsorBrand}`,
@@ -781,7 +785,7 @@ export function applyEffect(state: GameState, effect: Effect) {
     ...state,
     overall,
     attributes,
-    potential: clamp(state.potential + (effect.potential ?? 0), 45, 99),
+    potential: nextPotential,
     morale: clamp(state.morale + (effect.morale ?? 0)),
     fitness: clamp(state.fitness + (effect.fitness ?? 0)),
     reputation: clamp(state.reputation + (effect.reputation ?? 0), 0, 100),

@@ -78,18 +78,22 @@ export function simulateSeason(
   const baseApps = roleScore >= 5 ? 33 : roleScore >= 0 ? 26 : roleScore >= -5 ? 19 : 11;
   const provisionalCards = Math.floor(seeded(state.seed, state.season * 211) * 5);
   const suspensionPenalty = affected.suspensionMatches + (affected.discipline < 35 ? 3 : affected.discipline < 55 ? 1 : 0);
-  const quality = clamp((affected.overall - 48) / 35, 0.45, 1.5);
+  // Produção é centrada em 1x no nível ~80. Antes, só o sorteio de forma tinha média 1.33x,
+  // o que transformava jogadores bons em recordistas históricos quase automaticamente.
+  const quality = clamp(0.62 + (affected.overall - 60) * 0.018, 0.48, 1.35);
   const roleProductionBonus = seasonRole === "estrela" ? 0.12 : seasonRole === "titular" ? 0.07 : seasonRole === "rotacao" ? 0.02 : seasonRole === "reserva" ? -0.03 : 0;
   const productionMomentum = clamp(
-    1.1 + roleProductionBonus + (affected.morale - 50) / 250 + (affected.managerTrust - 50) / 300 + (affected.fitness - 70) / 500 + (affected.lifeBalance - 55) / 620,
-    0.9,
-    1.45,
+    0.96 + roleProductionBonus + (affected.morale - 50) / 300 + (affected.managerTrust - 50) / 360 + (affected.fitness - 70) / 600 + (affected.lifeBalance - 55) / 720,
+    0.8,
+    1.22,
   ) * consistencySwing;
-  const finishingFactor = clamp(0.45 + finishingSkill / 100, 0.68, 1.44) * (hasTrait("clinical-finisher") ? 1.13 : 1) * (hasTrait("free-kick") ? 1.04 : 1);
-  const creationFactor = clamp(0.45 + creationSkill / 100, 0.68, 1.44) * (hasTrait("playmaker") ? 1.13 : 1);
-  const lowOverallProductionBrake = affected.overall < 80 ? 0.76 + Math.max(0, affected.overall - 42) / 100 : 1;
-  const goalRate = position.goals * quality * finishingFactor * productionMomentum * lowOverallProductionBrake * (0.82 + seeded(state.seed, state.season * 7) * 1.02);
-  const assistRate = position.assists * quality * creationFactor * productionMomentum * (affected.overall < 80 ? 0.88 : 1) * (0.82 + seeded(state.seed, state.season * 13) * 1.02);
+  const finishingFactor = clamp(0.58 + finishingSkill / 190, 0.75, 1.12) * (hasTrait("clinical-finisher") ? 1.1 : 1) * (hasTrait("free-kick") ? 1.03 : 1);
+  const creationFactor = clamp(0.58 + creationSkill / 190, 0.75, 1.12) * (hasTrait("playmaker") ? 1.1 : 1);
+  const lowOverallProductionBrake = affected.overall < 75 ? clamp(0.82 + (affected.overall - 55) * 0.009, 0.72, 1) : 1;
+  const goalForm = 0.84 + seeded(state.seed, state.season * 7) * 0.32;
+  const assistForm = 0.84 + seeded(state.seed, state.season * 13) * 0.32;
+  const goalRate = position.goals * quality * finishingFactor * productionMomentum * lowOverallProductionBrake * goalForm;
+  const assistRate = position.assists * quality * creationFactor * productionMomentum * lowOverallProductionBrake * assistForm;
   const expectedContribution = Math.max(0.08, (position.goals + position.assists * 0.72) * quality);
   const contributionRate = goalRate + assistRate * 0.72;
   const formRatio = contributionRate / expectedContribution;
@@ -287,6 +291,13 @@ export function simulateSeason(
   if (affected.age <= 22) {
     const catchUp = affected.overall < 56 ? 4 : affected.overall < 61 ? 3 : affected.overall < 66 ? 2 : affected.overall < 70 ? 1 : 0;
     development += Math.max(0, catchUp - (appearances < 10 ? 1 : 0));
+  }
+  // Quem ainda está muito longe do próprio teto recebe uma pressão leve de desenvolvimento.
+  // Isso reduz diferenças artificiais entre posições sem dar OVR grátis a quem já chegou perto do potencial.
+  if (affected.age <= 27 && affected.overall < affected.potential) {
+    const potentialGap = affected.potential - affected.overall;
+    const gapCatchUpChance = potentialGap >= 10 ? 0.9 : potentialGap >= 7 ? 0.65 : potentialGap >= 4 ? 0.32 : 0;
+    if (gapCatchUpChance > 0 && seeded(state.seed, state.season * 1877 + 41) < gapCatchUpChance) development += 1;
   }
   const performanceScore = seasonPerformanceScore(affected.position, {
     ...seasonStats,
@@ -830,7 +841,8 @@ export function completeSimulationTransfer(state: GameState, clubId: string | nu
 }
 
 export function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarloCareerSummary {
-  const chosenPosition = pick(POSITIONS, seed, 701 + careerIndex).key;
+  // Amostragem estratificada: evita correlação entre a seed que escolhe a posição e a seed do potencial.
+  const chosenPosition = POSITIONS[careerIndex % POSITIONS.length].key;
   const chosenNationality = pick(COUNTRIES, seed, 709 + careerIndex).id;
   const academyClub = pick(randomAcademyClubs(seed, chosenNationality), seed, 719 + careerIndex);
   const formation = pick(FORMATIONS, seed, 727 + careerIndex);
