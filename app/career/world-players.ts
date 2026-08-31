@@ -319,19 +319,87 @@ export function advanceWorldPlayerUniverse(current: WorldPlayerUniverse | undefi
   return addAwardWinners(universe, context);
 }
 
+function normalizeWorldPlayer(value: unknown, id: string, season: number): WorldPlayer | null {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !id) return null;
+  const raw = value as Record<string, unknown>;
+  if (typeof raw.name !== "string" || !raw.name.trim()) return null;
+  const source = raw.source === "generated" || raw.source === "rival" || raw.source === "award" || raw.source === "squad" ? raw.source : "generated";
+  const status = raw.status === "active" || raw.status === "loaned" || raw.status === "free-agent" || raw.status === "retired" ? raw.status : "active";
+  const nationality = typeof raw.nationality === "string" && COUNTRIES.some((country) => country.id === raw.nationality) ? raw.nationality : "brasil";
+  const position = typeof raw.position === "string" && POSITIONS.some((item) => item.key === raw.position) ? raw.position as PositionKey : "MC";
+  const currentClubId = status === "retired" ? "" : typeof raw.currentClubId === "string" && CLUBS.some((club) => club.id === raw.currentClubId) ? raw.currentClubId : "";
+  const parentClubId = typeof raw.parentClubId === "string" && CLUBS.some((club) => club.id === raw.parentClubId) ? raw.parentClubId : "";
+  const number = (input: unknown, fallback: number) => Number.isFinite(Number(input)) ? Number(input) : fallback;
+  const rawStats = raw.careerStats && typeof raw.careerStats === "object" && !Array.isArray(raw.careerStats) ? raw.careerStats as Record<string, unknown> : {};
+  const careerStats: WorldPlayerCareerStats = {
+    seasons: Math.max(0, Math.floor(number(rawStats.seasons, 0))),
+    appearances: Math.max(0, Math.floor(number(rawStats.appearances, 0))),
+    goals: Math.max(0, Math.floor(number(rawStats.goals, 0))),
+    assists: Math.max(0, Math.floor(number(rawStats.assists, 0))),
+    tackles: Math.max(0, Math.floor(number(rawStats.tackles, 0))),
+    cleanSheets: Math.max(0, Math.floor(number(rawStats.cleanSheets, 0))),
+  };
+  const validMoveTypes = ["permanent", "loan", "free-agent", "renewal", "generated", "loan-return"];
+  const clubHistory = Array.isArray(raw.clubHistory)
+    ? raw.clubHistory.filter((spell): spell is Record<string, unknown> => Boolean(spell) && typeof spell === "object" && !Array.isArray(spell)).map((spell) => ({
+      clubId: typeof spell.clubId === "string" && CLUBS.some((club) => club.id === spell.clubId) ? spell.clubId : "",
+      joinedSeason: number(spell.joinedSeason, season),
+      leftSeason: spell.leftSeason === null ? null : Number.isFinite(Number(spell.leftSeason)) ? Number(spell.leftSeason) : season,
+      moveType: (validMoveTypes.includes(String(spell.moveType)) ? String(spell.moveType) : "generated") as WorldPlayer["clubHistory"][number]["moveType"],
+      transferFee: Math.max(0, number(spell.transferFee, 0)),
+    })).filter((spell) => spell.clubId)
+    : [];
+  const normalizedHistory = clubHistory.length || !currentClubId ? clubHistory : [{ clubId: currentClubId, joinedSeason: season, leftSeason: null, moveType: "generated" as const, transferFee: 0 }];
+  const rawHonors = Array.isArray(raw.honors) ? raw.honors : [];
+  const honors = rawHonors.filter((honor): honor is Record<string, unknown> => Boolean(honor) && typeof honor === "object" && !Array.isArray(honor)).map((honor, index) => ({
+    id: typeof honor.id === "string" && honor.id ? honor.id : `${id}:honor:${index}`,
+    season: number(honor.season, season),
+    kind: honor.kind === "trophy" ? "trophy" as const : "award" as const,
+    name: typeof honor.name === "string" && honor.name ? honor.name : "Reconhecimento",
+    clubId: typeof honor.clubId === "string" && CLUBS.some((club) => club.id === honor.clubId) ? honor.clubId : currentClubId,
+    ...(typeof honor.competitionId === "string" ? { competitionId: honor.competitionId } : {}),
+  }));
+  const overall = clamp(Math.round(number(raw.overall, 60)), 45, 99);
+  return {
+    id,
+    source,
+    name: raw.name.trim(),
+    nationality,
+    position,
+    birthSeason: Math.floor(number(raw.birthSeason, season - 24)),
+    generatedSeason: Math.floor(number(raw.generatedSeason, season)),
+    overall,
+    potential: clamp(Math.round(number(raw.potential, overall)), overall, 99),
+    reputation: clamp(Math.round(number(raw.reputation, overall - 35))),
+    status,
+    currentClubId,
+    parentClubId,
+    loanEndSeason: Math.max(0, Math.floor(number(raw.loanEndSeason, 0))),
+    contractUntilSeason: Math.floor(number(raw.contractUntilSeason, season + 2)),
+    retiredSeason: raw.retiredSeason === null ? null : Number.isFinite(Number(raw.retiredSeason)) ? Number(raw.retiredSeason) : status === "retired" ? season : null,
+    careerStats,
+    clubHistory: normalizedHistory,
+    honors,
+  };
+}
+
 export function normalizeWorldPlayerUniverse(value: unknown, seed: number, season: number, rivals: WorldPlayerAdvanceContext["rivals"] = []) {
   if (!value || typeof value !== "object" || (value as Partial<WorldPlayerUniverse>).schemaVersion !== 1) {
     return syncRivalsToWorldPlayers(createWorldPlayerUniverse(seed, season), rivals, season);
   }
   const saved = value as Partial<WorldPlayerUniverse>;
   const base = emptyWorldPlayerUniverse(seed, season);
+  const rawPlayers = saved.players && typeof saved.players === "object" && !Array.isArray(saved.players) ? saved.players : {};
+  const players = Object.fromEntries(Object.entries(rawPlayers)
+    .map(([id, player]) => [id, normalizeWorldPlayer(player, id, season)] as const)
+    .filter((entry): entry is readonly [string, WorldPlayer] => Boolean(entry[1]))) as Record<string, WorldPlayer>;
   const universe: WorldPlayerUniverse = {
     ...base, ...saved, schemaVersion: 1, seed: Number(saved.seed) || seed,
     initializedSeason: Number(saved.initializedSeason) || season,
     lastAdvancedSeason: Number(saved.lastAdvancedSeason) || season,
-    nextSerial: Number(saved.nextSerial) || Object.keys(saved.players ?? {}).length,
+    nextSerial: Number(saved.nextSerial) || Object.keys(players).length,
     population: Array.isArray(saved.population) && saved.population.length ? saved.population : base.population,
-    players: saved.players && typeof saved.players === "object" ? saved.players : {},
+    players,
     rivalLinks: saved.rivalLinks && typeof saved.rivalLinks === "object" ? saved.rivalLinks : {},
     aliases: saved.aliases && typeof saved.aliases === "object" ? saved.aliases : {},
   };

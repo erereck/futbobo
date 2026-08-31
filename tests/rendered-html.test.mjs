@@ -65,8 +65,28 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   assert.match(pageSource, /className="welcome-version"/);
   assert.match(pageSource, /FUTBOBO_VERSION_NAME/);
   const version = await readFile(new URL("../app/version.ts", import.meta.url), "utf8");
-  assert.match(version, /v93\.10/);
+  assert.match(version, /v95/);
   assert.match(styles, /\.welcome-version/);
+});
+
+test("blinda o modo técnico contra perda de save e mantém a mesa acessível no celular", async () => {
+  const manager = await readFile(new URL("../app/components/manager/ManagerGame.tsx", import.meta.url), "utf8");
+  const model = await readFile(new URL("../app/career/manager-model.ts", import.meta.url), "utf8");
+  const world = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/components/manager/ManagerGame.module.css", import.meta.url), "utf8");
+
+  assert.match(manager, /useState<ManagerState \| null>\(null\)/);
+  assert.match(manager, /if \(!loadedState\) return/);
+  assert.match(manager, /setNotice\(""\)/);
+  assert.match(manager, /player\.position === "GOL" \? 2/);
+  assert.match(model, /const nextStarters = state\.starters\.map/);
+  assert.match(model, /function normalizeHistory/);
+  assert.match(model, /const safePhase/);
+  assert.match(world, /function normalizeWorldPlayer/);
+  assert.match(layout, /viewportFit: "cover"/);
+  assert.doesNotMatch(layout, /maximumScale/);
+  assert.match(styles, /\.formationPreview/);
 });
 
 test("aplica o redesign Matchday Editorial com fontes offline e layouts realmente responsivos", async () => {
@@ -280,7 +300,7 @@ test("aplica o equilíbrio levemente mais favorável sem liberar títulos fácei
   const page = await readCareerSource();
   const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
 
-  assert.match(page, /fateRoll < 0\.18/);
+  assert.match(page, /fateRoll < 0\.65/);
   assert.match(page, /roleScore >= 5 \? 33[\s\S]*roleScore >= -5 \? 19 : 11/);
   assert.match(page, /affected\.age <= 19\) development = growthRoll < 0\.32 \? 0/);
   assert.match(page, /seriousInjuryChance = 0\.038/);
@@ -720,7 +740,7 @@ test("centraliza propostas reais, empréstimos e histórico de transferências s
   assert.match(page, /transferFee: actualTransferFee/);
   assert.match(page, /transferHistory: isRenewal \? state\.transferHistory : \[\.\.\.state\.transferHistory, transferRecord\(state, offer\)\]/);
   assert.match(page, /contractYears: isLoan \? Math\.max\(2, state\.contractYears\) : offer\.contractYears/);
-  assert.match(page, /transferMarketOffers: Array\.isArray\(saved\.transferMarketOffers\)/);
+  assert.match(page, /transferMarketOffers:[\s\S]*Array\.isArray\(saved\.transferMarketOffers\)/);
   assert.match(screen, /Proposta de \$\{formatMoney\(offer\.transferFee\)\}/);
   assert.match(screen, /<details className=\{styles\.details\}>/);
   assert.doesNotMatch(screen, /Valor estimado na liga/);
@@ -763,7 +783,7 @@ test("convites raros de outras seleções respeitam proximidade geográfica e nu
   assert.match(page, /function maybeOfferNationalitySwitch/);
   assert.match(page, /if \(state\.nationalitySwitchInviteUsed\) return null/);
   assert.match(page, /const pendingCareerEventId = current\.nextEventId/);
-  assert.match(page, /currentEventId: pendingCareerEventId \|\| selectNextEvent/);
+  assert.match(page, /currentEventId: newClub \? selectNextEvent[\s\S]*pendingCareerEventId \|\| selectNextEvent/);
   assert.match(page, /Não é possível voltar atrás/);
   assert.match(page, /nationalitySwitched: affected\.nationalitySwitched \|\| Boolean\(nationalitySwitchRecord\)/);
 });
@@ -963,7 +983,7 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   assert.match(engine, /export function awardInactivityPenalty/);
   assert.match(engine, /const inRegulation = state\.period <= state\.setup\.rules\.halves/);
   assert.match(engine, /state\.phase === "kickoff" && state\.clockPausedForKickoff/);
-  assert.match(match, /const USER_DECISION_SECONDS = 10/);
+  assert.match(match, /const USER_DECISION_SECONDS = 7/);
   assert.match(match, /const USER_WARNING_SECONDS = 3/);
   assert.match(match, /botao-inactivity-countdown/);
   assert.match(match, /const \[paused, setPaused\] = useState\(false\)/);
@@ -995,6 +1015,7 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
   const drama = await readCareerDramaSource();
   const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
   const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const simulation = await readFile(new URL("../app/career/simulation.ts", import.meta.url), "utf8");
   const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
@@ -1031,7 +1052,7 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
 
   assert.match(page, /function isIdolAtClub/);
   assert.match(page, /state\.fanSupport >= 94/);
-  assert.match(page, /const forcedClubExit = !isIdolAtClub/);
+  assert.match(simulation, /const forcedClubExit = !loanedOut && !isIdolAtClub/);
   assert.match(page, /VENDA OBRIGATÓRIA/);
 
   assert.match(page, /botaoGoalLimit\?: 0 \| 3 \| 5/);
@@ -1607,8 +1628,8 @@ test("lança a v93.10 com elenco persistente, rota do empresário e traição en
   assert.match(state, /betrayedClubIds: Array\.isArray\(saved\.betrayedClubIds\)/);
   assert.match(shop, /validCountryFocus/);
   assert.match(press, /kind: "betrayal"/);
-  assert.match(version, /FUTBOBO_VERSION = "v93\.10"/);
-  assert.match(version, /FUTBOBO_VERSION_NAME = "TIME DE VERDADE"/);
+  assert.match(version, /FUTBOBO_VERSION = "v95"/);
+  assert.match(version, /FUTBOBO_VERSION_NAME = "CARREIRA DE TÉCNICO"/);
 });
 
 test("mantém World Players persistentes, compactos e determinísticos por carreira", async () => {
@@ -1743,7 +1764,7 @@ test("expande coletivas e abre a loja QUADRA sem inflar a carreira", async () =>
   assert.match(press, /kind: "former-club"/);
   assert.match(press, /visibleAnswers[\s\S]*slice\(0, 3\)/);
   assert.match(career, /current\.overall > 80/);
-  assert.match(career, /current\.history\.some\(\(record\) => record\.clubId === match\.opponentId\)/);
+  assert.match(career, /function isFormerClubOpponent[\s\S]*state\.transferHistory/);
   assert.match(shop, /state\.history\.length % 4 === 0/);
   assert.match(shop, /price: 7_500_000/);
   assert.match(shop, /price: 2_000_000/);

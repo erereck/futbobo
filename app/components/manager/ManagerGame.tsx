@@ -25,7 +25,8 @@ import {
   type ManagerState,
 } from "../../career/manager-model";
 import { getActiveCareerId, readCareerSlotState, syncActiveCareerSlot } from "../../career/save-system";
-import { BOTAO_FORMATIONS } from "../../botao/formations";
+import type { WorldPlayer } from "../../career/world-player-model";
+import { BOTAO_FORMATIONS, formationById, slotIndexForPosition } from "../../botao/formations";
 import { hashSeed } from "../../botao/rng";
 import BotaoMatch from "../../botao/BotaoMatch";
 import { simulateBotaoMatch } from "../../botao/simulate";
@@ -66,7 +67,12 @@ function loadManagerState() {
 }
 
 export default function ManagerGame({ onExit }: { onExit?: () => void }) {
-  const [state, setState] = useState<ManagerState>(() => createManagerState(1));
+  // A carreira existente precisa ser carregada antes que qualquer efeito de
+  // persistência possa escrever no buffer global. Um estado novo aqui causava
+  // perda silenciosa do save durante a primeira renderização.
+  const [loadedState, setState] = useState<ManagerState | null>(null);
+  const loadingState = useMemo(() => createManagerState(1), []);
+  const state = loadedState ?? loadingState;
   const [tab, setTab] = useState<ManagerTab>("career");
   const [matchSetup, setMatchSetup] = useState<NonNullable<ReturnType<typeof managerMatchSetup>>["setup"] | null>(null);
   const [selectedStarter, setSelectedStarter] = useState("");
@@ -76,15 +82,16 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    const initial = loadManagerState();
-    window.setTimeout(() => setState(initial), 0);
+    const loadTimer = window.setTimeout(() => setState(loadManagerState()), 0);
+    return () => window.clearTimeout(loadTimer);
   }, []);
 
   useEffect(() => {
-    if (!state) return;
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    if (!loadedState) return;
+    const serialized = JSON.stringify(loadedState);
+    localStorage.setItem(SAVE_KEY, serialized);
     syncActiveCareerSlot();
-  }, [state]);
+  }, [loadedState]);
 
   const club = managerClub(state);
   const opponent = managerOpponent(state);
@@ -107,6 +114,28 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     counts[item.formationId] = (counts[item.formationId] ?? 0) + 1;
     return counts;
   }, {})).sort(([, a], [, b]) => b - a).slice(0, 3), [state.history]);
+  const activeFormation = useMemo(() => formationById(state.formationId), [state.formationId]);
+  const formationPreview = useMemo(() => {
+    const remaining = state.starters
+      .map((id) => playerById.get(id))
+      .filter((player): player is NonNullable<typeof player> => Boolean(player));
+    const minDepth = Math.min(...activeFormation.slots.map((slot) => slot.depth));
+    return activeFormation.slots.map((slot, slotIndex) => {
+      let bestIndex = 0;
+      let bestCost = Number.POSITIVE_INFINITY;
+      remaining.forEach((player, playerIndex) => {
+        const cost = player.position === "GOL"
+          ? (Math.abs(slot.depth - minDepth) * 100 + Math.abs(slot.lane - 0.5))
+          : Math.abs(slotIndexForPosition(activeFormation, player.position) - slotIndex);
+        if (cost < bestCost) {
+          bestCost = cost;
+          bestIndex = playerIndex;
+        }
+      });
+      const player = remaining.splice(bestIndex, 1)[0];
+      return player ? { player, slot } : null;
+    }).filter((item): item is { player: WorldPlayer; slot: (typeof activeFormation.slots)[number] } => Boolean(item));
+  }, [activeFormation, playerById, state.starters]);
 
   const start = () => {
     const selectedClub = clubId || state.currentClubId || CLUBS[0]?.id || "";
@@ -152,6 +181,9 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   if (matchSetup) {
     return <div className={styles.matchHost}><button type="button" className={styles.matchBack} onClick={() => setMatchSetup(null)}>← Prancheta</button><BotaoMatch setup={matchSetup} onFinish={finishMatch} /></div>;
   }
+  if (!loadedState) {
+    return <main className={styles.loading} aria-live="polite">Carregando sua prancheta…</main>;
+  }
   if (state.phase === "onboarding") {
     return (
       <main className={styles.managerRoot}>
@@ -176,9 +208,9 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
 
       {tab === "career" ? <section className={styles.content}><div className={styles.sectionIntro}><div><span className={styles.kicker}>TEMPORADA {state.season}</span><h2>O próximo lance define o tom.</h2><p>{state.objective}</p></div><div className={styles.statPill}><strong>{wins}</strong><span>vitórias</span></div></div>{state.lastResult ? <article className={styles.lastResult}><div><span className={styles.kicker}>ÚLTIMO JOGO</span><strong className={resultClass(state.lastResult.outcome)}>{resultLabel(state.lastResult.outcome)}</strong><p>{state.lastResult.goalsFor} × {state.lastResult.goalsAgainst} · {state.lastResult.substitutions} troca(s)</p></div><span className={styles.resultArrow}>↗</span></article> : null}<article className={styles.matchCard}><div className={styles.matchCardTop}><span className={styles.kicker}>{state.pendingMatch?.competitionName ?? "JOGO-CHAVE"}</span><span>{state.pendingMatch?.stageName ?? "Preparação"}</span></div><div className={styles.matchup}><div><ClubBadge club={club} size="sm" /><strong>{club.shortName}</strong></div><span>×</span><div><ClubBadge club={opponent ?? club} size="sm" /><strong>{opponent?.shortName ?? "adversário"}</strong></div></div><button type="button" className={styles.primary} onClick={openMatch}>{primaryAction} <span>→</span></button><button type="button" className={styles.secondary} onClick={() => { const prepared = managerMatchSetup(state); if (!prepared) { setNotice("Escolha cinco titulares e três reservas antes da partida."); setTab("team"); return; } const result = simulateBotaoMatch(prepared.setup); completeResult(prepared.state, prepared.setup, result); }}>Simular partida <small>usa a mesma mesa e a mesma IA</small></button></article>{marketOffers.length > 0 ? <article className={styles.decisionCard}><div><span className={styles.kicker}>DECISÃO PENDENTE</span><strong>Há três nomes na janela.</strong><small>Veja as opções quando quiser; a partida não fica bloqueada.</small></div><button type="button" onClick={() => setTab("world")}>Abrir mercado <span>→</span></button></article> : null}{jobOffers.length > 0 ? <article className={styles.jobCard}><div><span className={styles.kicker}>CONVITES DE TRABALHO</span><strong>A sua reputação abriu outras portas.</strong><small>Você pode aceitar agora ou continuar no {club.shortName}.</small></div><div className={styles.jobOfferList}>{jobOffers.map((offer) => <button type="button" key={offer.id} onClick={() => { setState(acceptManagerJobOffer(state, offer.id)); setNotice("Contrato assinado com o " + offer.shortName + "."); }}><ClubBadge club={offer} size="sm" /><span><strong>{offer.shortName}</strong><small>força {offer.strength}</small></span><b>→</b></button>)}<button type="button" className={styles.jobDecline} onClick={() => setState(dismissManagerJobOffers(state))}>Continuar aqui <span>×</span></button></div></article> : null}<div className={styles.quickLinks}><button type="button" onClick={() => setTab("board")}><span>＋</span><strong>Trocar formação</strong><small>{BOTAO_FORMATIONS.find((formation) => formation.id === state.formationId)?.name}</small></button><button type="button" onClick={() => setTab("team")}><span>♙</span><strong>Escalação</strong><small>5 titulares · {state.bench.length} reservas</small></button><button type="button" onClick={() => setTab("world")}><span>◎</span><strong>Mercado</strong><small>Elenco de {state.squadIds.length}</small></button></div></section> : null}
 
-      {tab === "board" ? <section className={styles.content}><div className={styles.sectionIntro}><div><span className={styles.kicker}>PRANCHETA</span><h2>Escolha como os cinco ocupam a mesa.</h2><p>A formação fica até você mudar. Cada desenho abre um risco diferente.</p></div></div>{opponent ? <div className={styles.boardContext}><div><span className={styles.kicker}>JOGO-CHAVE</span><strong>{club.shortName} × {opponent.shortName}</strong></div><span>Força {opponent.strength} · {BOTAO_FORMATIONS.find((formation) => formation.id === state.formationId)?.name ?? "formação"} em uso</span></div> : null}<div className={styles.formationGrid}>{BOTAO_FORMATIONS.map((formation) => <button type="button" key={formation.id} className={styles.formationCard + (state.formationId === formation.id ? " " + styles.formationActive : "")} onClick={() => setState(setManagerFormation(state, formation.id))}><span>{formation.shape}</span><strong>{formation.name}</strong><small>{formation.hint}</small></button>)}</div><div className={styles.tip}>A formação escolhida aparece no campo e não gira sozinha depois de gol ou intervalo.</div></section> : null}
+      {tab === "board" ? <section className={styles.content}><div className={styles.sectionIntro}><div><span className={styles.kicker}>PRANCHETA</span><h2>Escolha como os cinco ocupam a mesa.</h2><p>A formação fica até você mudar. Cada desenho abre um risco diferente.</p></div></div>{opponent ? <div className={styles.boardContext}><div><span className={styles.kicker}>JOGO-CHAVE</span><strong>{club.shortName} × {opponent.shortName}</strong></div><span>Força {opponent.strength} · {activeFormation.name} em uso</span></div> : null}<div className={styles.formationPreview} aria-label={`Prévia da formação ${activeFormation.name}`}><div className={styles.previewHalfway} />{formationPreview.map(({ player, slot }) => <div key={player.id} className={styles.previewPlayer} style={{ left: player.position === "GOL" ? "50%" : `${slot.lane * 100}%`, top: `${slot.depth * 100}%` }}><PlayerPortrait player={player} state={state} size={34} /><span>{player.position}</span></div>)}</div><div className={styles.formationGrid}>{BOTAO_FORMATIONS.map((formation) => <button type="button" key={formation.id} className={styles.formationCard + (state.formationId === formation.id ? " " + styles.formationActive : "")} onClick={() => { setState(setManagerFormation(state, formation.id)); setNotice(""); }}><span>{formation.shape}</span><strong>{formation.name}</strong><small>{formation.hint}</small></button>)}</div><div className={styles.tip}>A formação escolhida aparece no campo e não gira sozinha depois de gol ou intervalo.</div></section> : null}
 
-      {tab === "team" ? <section className={styles.content}><div className={styles.sectionIntro}><div><span className={styles.kicker}>ESCALAÇÃO</span><h2>Os cinco da partida.</h2><p>Toque em um titular e depois em um reserva para trocar. A alteração fica salva para o próximo jogo.</p></div><div className={styles.statPill}><strong>5</strong><span>botões</span></div></div><div className={styles.pitch}><div className={styles.pitchLines} />{state.starters.map((id) => { const player = playerById.get(id); if (!player) return null; return <button type="button" key={id} className={styles.pitchPlayer + (selectedStarter === id ? " " + styles.selectedPlayer : "")} onClick={() => setSelectedStarter(selectedStarter === id ? "" : id)}><PlayerPortrait player={player} state={state} size={50} /><small>{player.position}</small><strong>{player.name}</strong><b>{player.overall}</b><em>{state.season - player.birthSeason} anos</em></button>; })}</div><div className={styles.benchHeading}><span>RESERVAS</span><small>{selectedStarter ? "Escolha quem entra no lugar do titular selecionado." : "Três opções para a partida."}</small></div><div className={styles.benchGrid}>{state.bench.map((id) => { const player = playerById.get(id); if (!player) return null; return <button type="button" key={id} className={styles.benchPlayer} onClick={() => { if (!selectedStarter) { setNotice("Selecione primeiro um titular."); return; } const nextStarters = state.starters.map((item) => item === selectedStarter ? id : item); const nextBench = state.bench.map((item) => item === id ? selectedStarter : item); setState(setManagerLineup(state, nextStarters, nextBench)); setSelectedStarter(""); }}><PlayerPortrait player={player} state={state} size={42} /><span><strong>{player.name}</strong><small>{player.position} · {state.season - player.birthSeason} anos · {player.overall} OVR</small></span><b>+</b></button>; })}</div><div className={styles.squadList}><span className={styles.kicker}>ELENCO</span>{state.squadIds.filter((id) => !state.starters.includes(id) && !state.bench.includes(id)).map((id) => { const player = playerById.get(id); return player ? <div key={id}><PlayerPortrait player={player} state={state} size={34} /><strong>{player.name}</strong><small>{player.position} · {state.season - player.birthSeason} anos</small><b>{player.overall}</b></div> : null; })}</div></section> : null}
+      {tab === "team" ? <section className={styles.content}><div className={styles.sectionIntro}><div><span className={styles.kicker}>ESCALAÇÃO</span><h2>Os cinco da partida.</h2><p>Toque em um titular e depois em um reserva para trocar. A alteração fica salva para o próximo jogo.</p></div><div className={styles.statPill}><strong>5</strong><span>botões</span></div></div><div className={styles.pitch}><div className={styles.pitchLines} />{state.starters.map((id) => { const player = playerById.get(id); if (!player) return null; const placement = formationPreview.find((item) => item.player.id === id); const slot = placement?.slot ?? activeFormation.slots[0]; const gridColumn = player.position === "GOL" ? 2 : slot.lane < 0.42 ? 1 : slot.lane > 0.58 ? 3 : 2; const gridRow = slot.depth < 0.32 ? 1 : slot.depth < 0.76 ? 2 : 3; return <button type="button" key={id} className={styles.pitchPlayer + (selectedStarter === id ? " " + styles.selectedPlayer : "")} style={{ gridColumn, gridRow }} onClick={() => setSelectedStarter(selectedStarter === id ? "" : id)}><PlayerPortrait player={player} state={state} size={50} /><small>{player.position}</small><strong>{player.name}</strong><b>{player.overall}</b><em>{state.season - player.birthSeason} anos</em></button>; })}</div><div className={styles.benchHeading}><span>RESERVAS</span><small>{selectedStarter ? "Escolha quem entra no lugar do titular selecionado." : "Três opções para a partida."}</small></div><div className={styles.benchGrid}>{state.bench.map((id) => { const player = playerById.get(id); if (!player) return null; return <button type="button" key={id} className={styles.benchPlayer} onClick={() => { if (!selectedStarter) { setNotice("Selecione primeiro um titular."); return; } const nextStarters = state.starters.map((item) => item === selectedStarter ? id : item); const nextBench = state.bench.map((item) => item === id ? selectedStarter : item); setState(setManagerLineup(state, nextStarters, nextBench)); setSelectedStarter(""); setNotice(""); }}><PlayerPortrait player={player} state={state} size={42} /><span><strong>{player.name}</strong><small>{player.position} · {state.season - player.birthSeason} anos · {player.overall} OVR</small></span><b>+</b></button>; })}</div><div className={styles.squadList}><span className={styles.kicker}>ELENCO</span>{state.squadIds.filter((id) => !state.starters.includes(id) && !state.bench.includes(id)).map((id) => { const player = playerById.get(id); return player ? <div key={id}><PlayerPortrait player={player} state={state} size={34} /><strong>{player.name}</strong><small>{player.position} · {state.season - player.birthSeason} anos</small><b>{player.overall}</b></div> : null; })}</div></section> : null}
 
       {tab === "history" ? <section className={styles.content}><div className={styles.sectionIntro}><div><span className={styles.kicker}>HISTÓRICO</span><h2>Cada jogo deixa uma marca.</h2><p>Resultados curtos, legíveis e ligados às escolhas da prancheta.</p></div></div><div className={styles.historyList}>{state.history.length === 0 ? <div className={styles.emptyInline}>Sua primeira partida ainda está esperando.</div> : state.history.map((item) => { const rival = CLUBS.find((candidate) => candidate.id === item.opponentId); return <article key={item.id}><span>{item.season}</span><div><strong>{rival?.shortName ?? "Adversário"}</strong><small>{item.competitionName} · {item.formationId}</small></div><b className={resultClass(item.outcome)}>{item.score}<small>{resultLabel(item.outcome)}</small></b></article>; })}</div></section> : null}
 

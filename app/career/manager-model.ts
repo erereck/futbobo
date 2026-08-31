@@ -279,20 +279,23 @@ export function signManagerPlayer(state: ManagerState, playerId: string) {
   const replacedId = outside[0] ?? state.bench.at(-1) ?? "";
   if (!replacedId) return state;
   const players = { ...state.worldPlayers.players };
-  players[playerId] = {
-    ...player,
-    currentClubId: state.currentClubId,
-    status: "active",
-    clubHistory: [...player.clubHistory, { clubId: state.currentClubId, joinedSeason: state.season, leftSeason: null, moveType: "permanent", transferFee: fee }],
-  };
+  const replacedPlayer = players[replacedId];
+  if (replacedPlayer) players[replacedId] = releasePlayerFromClub(replacedPlayer, state.season);
+  players[playerId] = movePlayerToClub(player, state.currentClubId, state.season, fee);
+  const nextSquadIds = state.squadIds.map((id) => id === replacedId ? playerId : id);
+  const nextStarters = state.starters.map((id) => id === replacedId ? playerId : id);
+  const nextBench = state.bench.map((id) => id === replacedId ? playerId : id);
+  const nextWorldPlayers = { ...state.worldPlayers, players };
   return {
     ...state,
     budget: state.budget - fee,
-    squadIds: state.squadIds.map((id) => id === replacedId ? playerId : id),
-    worldPlayers: { ...state.worldPlayers, players },
-    playerStats: playerStatsForSquad(state, state.squadIds.map((id) => id === replacedId ? playerId : id)),
+    squadIds: nextSquadIds,
+    starters: nextStarters,
+    bench: nextBench,
+    worldPlayers: nextWorldPlayers,
+    playerStats: playerStatsForSquad(state, nextSquadIds),
     jobOffers: state.jobOffers,
-    marketOffers: managerMarketOffers({ ...state, squadIds: state.squadIds.map((id) => id === replacedId ? playerId : id), worldPlayers: { ...state.worldPlayers, players } }).map((offer) => offer.id),
+    marketOffers: managerMarketOffers({ ...state, squadIds: nextSquadIds, worldPlayers: nextWorldPlayers }).map((offer) => offer.id),
   };
 }
 
@@ -437,31 +440,151 @@ export function hireManagerAtClub(state: ManagerState, clubId: string) {
   return { ...restarted, reputation: Math.max(30, state.reputation), boardTrust: 58 };
 }
 
+function uniqueIds(value: unknown) {
+  if (!Array.isArray(value)) return [] as string[];
+  return value
+    .filter((id): id is string => typeof id === "string" && id.length > 0)
+    .filter((id, index, all) => all.indexOf(id) === index);
+}
+
+function closeCurrentSpell(history: WorldPlayer["clubHistory"], season: number) {
+  if (!Array.isArray(history)) return [];
+  return history.filter(Boolean).map((spell, index, safeHistory) => index === safeHistory.length - 1 && spell.leftSeason === null ? { ...spell, leftSeason: season } : spell);
+}
+
+function releasePlayerFromClub(player: WorldPlayer, season: number): WorldPlayer {
+  return {
+    ...player,
+    status: "free-agent",
+    currentClubId: "",
+    parentClubId: "",
+    loanEndSeason: 0,
+    contractUntilSeason: season,
+    clubHistory: closeCurrentSpell(player.clubHistory, season),
+  };
+}
+
+function movePlayerToClub(player: WorldPlayer, clubId: string, season: number, fee: number): WorldPlayer {
+  return {
+    ...player,
+    currentClubId: clubId,
+    status: "active",
+    parentClubId: "",
+    loanEndSeason: 0,
+    clubHistory: [...closeCurrentSpell(player.clubHistory, season), {
+      clubId,
+      joinedSeason: season,
+      leftSeason: null,
+      moveType: "permanent" as const,
+      transferFee: fee,
+    }],
+  };
+}
+
+function normalizeHistory(value: unknown, fallbackSeason: number): ManagerHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+    .map((item, index) => ({
+      id: typeof item.id === "string" && item.id ? item.id : `manager-history-${index}`,
+      season: Number.isFinite(Number(item.season)) ? Number(item.season) : fallbackSeason,
+      opponentId: typeof item.opponentId === "string" ? item.opponentId : "",
+      competitionName: typeof item.competitionName === "string" ? item.competitionName : "Jogo-chave",
+      stageName: typeof item.stageName === "string" ? item.stageName : "Jogo-chave",
+      outcome: (item.outcome === "win" || item.outcome === "loss" || item.outcome === "draw" ? item.outcome : "draw") as ManagerHistoryEntry["outcome"],
+      score: typeof item.score === "string" && item.score ? item.score : "0 × 0",
+      formationId: typeof item.formationId === "string" ? formationById(item.formationId).id : "muralha",
+      substitutions: Math.max(0, Math.floor(Number(item.substitutions) || 0)),
+    }))
+    .slice(0, 24);
+}
+
+function normalizeLastResult(value: unknown): ManagerLastResult | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const item = value as Record<string, unknown>;
+  const rawDistances = item.playerDistances;
+  const playerDistances = rawDistances && typeof rawDistances === "object" && !Array.isArray(rawDistances)
+    ? Object.fromEntries(Object.entries(rawDistances).filter(([id, distance]) => typeof id === "string" && Number.isFinite(Number(distance))).map(([id, distance]) => [id, Math.max(0, Number(distance))]))
+    : {};
+  return {
+    matchId: typeof item.matchId === "string" ? item.matchId : "",
+    outcome: (item.outcome === "win" || item.outcome === "loss" || item.outcome === "draw" ? item.outcome : "draw") as ManagerLastResult["outcome"],
+    goalsFor: Math.max(0, Math.floor(Number(item.goalsFor) || 0)),
+    goalsAgainst: Math.max(0, Math.floor(Number(item.goalsAgainst) || 0)),
+    substitutions: Math.max(0, Math.floor(Number(item.substitutions) || 0)),
+    playerDistances,
+  };
+}
+
+function normalizePendingMatch(value: unknown, fallbackSeason: number): ManagerMatchPlan | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const item = value as Record<string, unknown>;
+  if (typeof item.opponentId !== "string" || !item.opponentId) return null;
+  return {
+    id: typeof item.id === "string" && item.id ? item.id : `manager-match-recovered-${fallbackSeason}`,
+    opponentId: item.opponentId,
+    competitionName: typeof item.competitionName === "string" ? item.competitionName : "Copa nacional",
+    stageName: typeof item.stageName === "string" ? item.stageName : "Jogo-chave",
+    season: Number.isFinite(Number(item.season)) ? Number(item.season) : fallbackSeason,
+  };
+}
+
 export function normalizeManagerState(value: Partial<ManagerState> | null | undefined) {
   const base = createManagerState(Number(value?.seed) || defaultSeed());
   const merged = { ...base, ...value, mode: "manager" as const, version: 1 as const };
-  const club = merged.currentClubId ? cleanClub(merged.currentClubId) : null;
+  const club = typeof merged.currentClubId === "string" && merged.currentClubId ? cleanClub(merged.currentClubId) : null;
   const season = Number(merged.season) || base.season;
   const seed = Number(merged.seed) || base.seed;
+  const phase = ["onboarding", "career", "result", "dismissed"].includes(merged.phase) ? merged.phase : "onboarding";
+  const normalizedWorldPlayers = normalizeWorldPlayerUniverse(merged.worldPlayers, seed, season);
+  const worldPlayers = club ? ensureClubSquadPlayers(normalizedWorldPlayers, club.id, season, 14) : normalizedWorldPlayers;
+  const clubPlayers = club ? worldPlayersAtClub(worldPlayers, club.id).sort((a, b) => b.overall - a.overall || a.id.localeCompare(b.id)) : [];
+  const rawSquadIds = uniqueIds(merged.squadIds).filter((id) => {
+    const player = worldPlayers.players[id];
+    return Boolean(player && player.status !== "retired" && (!club || player.currentClubId === club.id));
+  });
+  const squadIds = club
+    ? (rawSquadIds.length >= 8 ? rawSquadIds : clubPlayers.map((player) => player.id)).slice(0, 14)
+    : rawSquadIds.slice(0, 14);
+  const allowed = new Set(squadIds);
+  let starters = uniqueIds(merged.starters).filter((id) => allowed.has(id)).slice(0, 5);
+  let bench = uniqueIds(merged.bench).filter((id) => allowed.has(id) && !starters.includes(id)).slice(0, 3);
+  if (club && (starters.length !== 5 || bench.length !== 3)) {
+    const lineup = chooseLineup(squadIds.map((id) => worldPlayers.players[id]).filter((player): player is WorldPlayer => Boolean(player)));
+    starters = lineup.starters;
+    bench = lineup.bench;
+  }
+  const requestedPhase: ManagerPhase = phase === "result" ? "career" : phase;
+  const safePhase: ManagerPhase = requestedPhase === "career" && (!club || squadIds.length < 8 || starters.length !== 5 || bench.length !== 3) ? "onboarding" : requestedPhase;
+  const savedPendingMatch = normalizePendingMatch(merged.pendingMatch, season);
+  const pendingMatch = safePhase === "career"
+    ? (savedPendingMatch && CLUBS.some((candidate) => candidate.id === savedPendingMatch.opponentId) && savedPendingMatch.opponentId !== club?.id ? savedPendingMatch : makeMatchPlan({ seed, currentClubId: club?.id ?? "", currentLeagueId: club?.leagueId ?? "", season }))
+    : null;
   return {
     ...merged,
     currentClubId: club?.id ?? "",
     currentLeagueId: club?.leagueId ?? "",
     seed,
     season,
-    phase: ["onboarding", "career", "result", "dismissed"].includes(merged.phase) ? merged.phase : "onboarding",
+    phase: safePhase,
+    name: typeof merged.name === "string" ? merged.name : "",
+    nationality: typeof merged.nationality === "string" && COUNTRIES.some((country) => country.id === merged.nationality) ? merged.nationality : "brasil",
+    objective: typeof merged.objective === "string" ? merged.objective : base.objective,
     reputation: clamp(Number.isFinite(Number(merged.reputation)) ? Number(merged.reputation) : base.reputation),
     boardTrust: clamp(Number.isFinite(Number(merged.boardTrust)) ? Number(merged.boardTrust) : base.boardTrust),
     budget: Math.max(0, Number(merged.budget) || 0),
-    worldPlayers: normalizeWorldPlayerUniverse(merged.worldPlayers, seed, season),
-    squadIds: Array.isArray(merged.squadIds) ? merged.squadIds.filter((id): id is string => typeof id === "string") : [],
-    starters: Array.isArray(merged.starters) ? merged.starters.filter((id): id is string => typeof id === "string").slice(0, 5) : [],
-    bench: Array.isArray(merged.bench) ? merged.bench.filter((id): id is string => typeof id === "string").slice(0, 3) : [],
-    history: Array.isArray(merged.history) ? merged.history.slice(0, 24) : [],
-    marketOffers: Array.isArray(merged.marketOffers) ? merged.marketOffers.filter((id): id is string => typeof id === "string").slice(0, 3) : [],
-    jobOffers: Array.isArray(merged.jobOffers) ? merged.jobOffers.filter((id): id is string => typeof id === "string").slice(0, 3) : [],
+    worldPlayers,
+    squadIds,
+    starters,
+    bench,
+    formationId: typeof merged.formationId === "string" ? formationById(merged.formationId).id : base.formationId,
+    pendingMatch,
+    history: normalizeHistory(merged.history, season),
+    lastResult: normalizeLastResult(merged.lastResult),
+    marketOffers: uniqueIds(merged.marketOffers).slice(0, 3),
+    jobOffers: uniqueIds(merged.jobOffers).slice(0, 3),
     playerStats: merged.playerStats && typeof merged.playerStats === "object"
-      ? Object.fromEntries(Object.entries(merged.playerStats).filter(([id, value]) => typeof id === "string" && value && typeof value === "object").map(([id, value]) => {
+      ? Object.fromEntries(Object.entries(merged.playerStats).filter(([, value]) => value && typeof value === "object" && !Array.isArray(value)).map(([id, value]) => {
         const raw = value as Partial<ManagerPlayerStat>;
         return [id, {
           appearances: Math.max(0, Number(raw.appearances) || 0),

@@ -152,16 +152,17 @@
 .formationCard strong { margin-top: 15px; font-size: 16px; }
 .formationCard small { margin-top: 6px; color: rgba(232,240,226,.52); line-height: 1.35; }
 .formationActive { border-color: #ffc72c; background: rgba(255,199,44,.11); box-shadow: inset 0 0 0 1px rgba(255,199,44,.3); }
+.formationPreview { position: relative; max-width: 720px; min-height: 260px; overflow: hidden; border: 1px solid rgba(174, 237, 185, .42); border-radius: 18px; padding: 18px; background: linear-gradient(90deg, rgba(29, 132, 74, .7), rgba(20, 97, 56, .7)); margin-bottom: 14px; }
+.formationPreview::before { content: ""; position: absolute; inset: 18px; border: 1px solid rgba(224,255,227,.3); border-radius: 12px; pointer-events: none; }
+.previewHalfway { position: absolute; z-index: 0; left: 18px; right: 18px; top: 50%; border-top: 1px solid rgba(224,255,227,.24); pointer-events: none; }
+.previewPlayer { position: absolute; z-index: 1; display: grid; justify-items: center; gap: 2px; transform: translate(-50%, -50%); color: #edf5e9; font-size: 9px; font-weight: 850; letter-spacing: .08em; text-shadow: 0 1px 4px rgba(0,0,0,.45); }
+.previewPlayer > span { color: #ffc72c; }
 .tip, .statNote { max-width: 920px; margin-top: 16px; padding: 14px 16px; border-radius: 12px; color: rgba(232,240,226,.64); background: rgba(224,237,218,.05); font-size: 12px; line-height: 1.45; }
 
 .pitch { position: relative; max-width: 720px; min-height: 420px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px; overflow: hidden; border: 1px solid rgba(174, 237, 185, .48); border-radius: 22px; padding: 28px 18px; background: linear-gradient(90deg, rgba(29, 132, 74, .74), rgba(20, 97, 56, .74)); }
 .pitchLines { position: absolute; inset: 28px 18px; border: 1px solid rgba(224,255,227,.34); border-radius: 15px; pointer-events: none; }
 .pitchLines:before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid rgba(224,255,227,.28); }
 .pitchPlayer { position: relative; z-index: 1; align-self: center; justify-self: center; min-width: 130px; display: grid; justify-items: center; gap: 4px; color: #edf5e9; border: 1px solid rgba(5, 38, 21, .46); border-radius: 13px; padding: 10px 8px; background: rgba(3, 34, 20, .87); cursor: pointer; }
-.pitchPlayer:nth-of-type(2) { grid-column: 2; }
-.pitchPlayer:nth-of-type(3) { grid-column: 1; grid-row: 2; }
-.pitchPlayer:nth-of-type(4) { grid-column: 2; grid-row: 2; }
-.pitchPlayer:nth-of-type(5) { grid-column: 3; grid-row: 2; }
 .pitchPlayer small, .pitchPlayer em { color: #ffc72c; font-size: 9px; font-style: normal; letter-spacing: .1em; }
 .pitchPlayer strong { max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .pitchPlayer b { position: absolute; top: 6px; right: 8px; color: #ffc72c; font-size: 12px; }
@@ -266,6 +267,9 @@
   .jobOfferList { grid-template-columns: 1fr 1fr; }
   .jobOfferList .jobDecline { grid-column: 1 / -1; }
   .formationGrid, .worldGrid { grid-template-columns: 1fr 1fr; }
+  .formationPreview { min-height: 220px; padding: 14px; }
+  .formationPreview::before { inset: 14px; }
+  .previewHalfway { left: 14px; right: 14px; }
   .marketOffers { grid-template-columns: 1fr; }
   .formationCard { min-height: 135px; padding: 13px; }
   .pitch { min-height: 360px; padding: 23px 8px; gap: 4px; }
