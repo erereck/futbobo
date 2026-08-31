@@ -152,8 +152,9 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
     manager,
     /<strong>\{state\.age\}<\/strong>[\s\S]{0,40}<span>ANOS<\/span>/,
   );
-  assert.match(manager, /draggable/);
-  assert.match(manager, /onDrop=/);
+  assert.match(manager, /startRosterDrag/);
+  assert.match(manager, /addEventListener\("pointermove", move\)/);
+  assert.doesNotMatch(manager, /draggable/);
   assert.match(manager, /elementFromPoint/);
   assert.match(manager, /timelineStyles\.timeline/);
   assert.match(manager, /worldStyles\.sectionNav/);
@@ -181,6 +182,9 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
   assert.match(model, /pendingSeasonRecord/);
   assert.match(model, /simulateManagerSeason/);
   assert.match(botaoMatch, /setPaused\(true\)/);
+  assert.match(botaoMatch, /data-substitution-target/);
+  assert.match(botaoMatch, /startSubstitutionDrag/);
+  assert.doesNotMatch(botaoMatch, /Escolha um botão para sair/);
   assert.match(engine, /setup\.managerMode[\s\S]*rng\.int/);
   assert.match(model, /function normalizeHistory/);
   assert.match(model, /const safePhase/);
@@ -225,7 +229,7 @@ test("aplica o redesign Matchday Editorial com fontes offline e layouts realment
   );
   assert.match(
     botao,
-    /grid-template-columns: minmax\(220px,\.72fr\) minmax\(340px,440px\) minmax\(220px,\.72fr\)/,
+    /grid-template-columns:\s*minmax\(220px,\s*0?\.72fr\)\s*minmax\(340px,\s*440px\)\s*minmax\(\s*220px,\s*0?\.72fr\s*\)/,
   );
   assert.match(
     botao,
@@ -2325,10 +2329,13 @@ test("oferece uma Copa do Mundo independente que respeita as regras atuais e cam
     styles,
     /\.botao-desktop-only,\s*\.botao-mobile-size-toggle\s*\{\s*display: none;/,
   );
-  assert.match(styles, /\.botao-mobile-size-toggle \{ display: inline-flex;/);
   assert.match(
     styles,
-    /\.botao-root-landscape \.botao-canvas \{ aspect-ratio: 516 \/ 316; \}/,
+    /\.botao-mobile-size-toggle\s*\{\s*display: inline-flex;/,
+  );
+  assert.match(
+    styles,
+    /\.botao-root-landscape \.botao-canvas\s*\{\s*aspect-ratio:\s*516 \/ 316;/,
   );
   assert.match(styles, /v90 — desktop landscape is a real table-first mode/);
   assert.match(

@@ -254,7 +254,7 @@ O fôlego zera sua história ao fim da partida. Não alimenta treino, lesão ou 
 - até três reservas;
 - até três substituições;
 - sem reentrada;
-- sem desfazer depois de confirmar;
+- sem desfazer depois de soltar a peça no alvo;
 - permitidas somente quando é a vez daquele lado e a física está parada;
 - proibidas enquanto uma jogada está sendo resolvida;
 - proibidas depois que a disputa de pênaltis começou;
@@ -265,14 +265,12 @@ O fôlego zera sua história ao fim da partida. Não alimenta treino, lesão ou 
 ### Fluxo
 
 1. No próprio turno, tocar em **Trocas (3)**.
-2. Escolher quem sai.
-3. Escolher quem entra.
-4. Conferir a troca em uma linha curta.
-5. Confirmar.
+2. Arrastar uma peça do campo sobre uma do banco, ou o inverso.
+3. Soltar para aplicar a troca imediatamente.
 
-Ao confirmar, a troca acontece imediatamente. Não existe fila, espera por gol, lateral, intervalo ou pênalti por demora.
+O painel é inteiramente visual: campo, banco, peças e alvos. Não há seletor, instrução escrita ou confirmação intermediária. Tocar em uma peça de cada grupo continua disponível como alternativa acessível. Não existe fila, espera por gol, lateral, intervalo ou pênalti por demora.
 
-Antes da confirmação é possível fechar o painel. Depois da confirmação:
+Antes de soltar no alvo é possível fechar o painel. Depois da troca:
 
 - a substituição é consumida;
 - o jogador que saiu não pode retornar;

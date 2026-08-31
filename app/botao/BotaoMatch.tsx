@@ -9,8 +9,10 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { PlayerAppearancePortrait } from "../PlayerAppearanceEditor";
 import "./botao.css";
 import {
   isBotaoMuted,
@@ -67,6 +69,7 @@ import type {
   BotaoGoalReplay,
   BotaoMatchResult,
   BotaoMatchSetup,
+  BotaoPlayer,
   BotaoReplayFrame,
   BotaoSide,
 } from "./types";
@@ -90,6 +93,15 @@ const DEFAULT_LOCAL_PLAYER_NAMES: Record<BotaoSide, string> = {
 };
 
 type Flash = { text: string; tone: "goal" | "info" | "bad" } | null;
+type SubstitutionDrag = {
+  kind: "starter" | "bench";
+  id: string;
+  x: number;
+  y: number;
+  startX: number;
+  startY: number;
+  moved: boolean;
+} | null;
 
 function vibrate(pattern: number | number[]) {
   if (
@@ -214,6 +226,11 @@ export default function BotaoMatch({
   const [substitutionOpen, setSubstitutionOpen] = useState(false);
   const [substitutionOut, setSubstitutionOut] = useState("");
   const [substitutionIn, setSubstitutionIn] = useState("");
+  const [substitutionDrag, setSubstitutionDrag] =
+    useState<SubstitutionDrag>(null);
+  const [substitutionHover, setSubstitutionHover] = useState("");
+  const substitutionDragRef = useRef<SubstitutionDrag>(null);
+  const substitutionDragLayerRef = useRef<HTMLDivElement | null>(null);
   const pausedRef = useRef(false);
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
@@ -1008,13 +1025,207 @@ export default function BotaoMatch({
     managerRoster.bench.length > 0 &&
     substitutionCount(state, "user") < 3,
   );
+  const substitutionStarters = managerRoster
+    ? state.bodies.flatMap((body) => {
+        if (body.kind !== "disc" || body.side !== "user" || !body.playerId)
+          return [];
+        const player = managerRoster.starters.find(
+          (candidate) => candidate.id === body.playerId,
+        );
+        return player ? [{ body, player }] : [];
+      })
+    : [];
+  const draggedSubstitutionPlayer = substitutionDrag
+    ? substitutionDrag.kind === "starter"
+      ? substitutionStarters.find(({ body }) => body.id === substitutionDrag.id)
+          ?.player
+      : managerRoster?.bench.find((player) => player.id === substitutionDrag.id)
+    : null;
 
   const closeSubstitution = useCallback(() => {
     setSubstitutionOpen(false);
+    setSubstitutionOut("");
+    setSubstitutionIn("");
+    setSubstitutionDrag(null);
+    substitutionDragRef.current = null;
+    setSubstitutionHover("");
     setPaused(false);
     pausedRef.current = false;
     idleRemainingRef.current = USER_DECISION_SECONDS;
   }, []);
+
+  const completeSubstitution = (outBodyId: string, inPlayerId: string) => {
+    const current = matchRef.current;
+    if (!current) return;
+    if (substitutePlayer(current, "user", outBodyId, inPlayerId)) {
+      closeSubstitution();
+      showFlash("TROCA FEITA", "info", 1000);
+      bump();
+    }
+  };
+
+  const selectSubstitutionPiece = (kind: "starter" | "bench", id: string) => {
+    if (kind === "starter") {
+      if (substitutionIn) completeSubstitution(id, substitutionIn);
+      else setSubstitutionOut((current) => (current === id ? "" : id));
+      return;
+    }
+    if (substitutionOut) completeSubstitution(substitutionOut, id);
+    else setSubstitutionIn((current) => (current === id ? "" : id));
+  };
+
+  const startSubstitutionDrag = (
+    kind: "starter" | "bench",
+    id: string,
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setSubstitutionHover("");
+    const nextDrag: NonNullable<SubstitutionDrag> = {
+      kind,
+      id,
+      x: event.clientX,
+      y: event.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    };
+    substitutionDragRef.current = nextDrag;
+    setSubstitutionDrag(nextDrag);
+  };
+
+  const moveSubstitutionDrag = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    const current = substitutionDragRef.current;
+    if (!current) return;
+    const moved =
+      current.moved ||
+      Math.hypot(
+        event.clientX - current.startX,
+        event.clientY - current.startY,
+      ) > 5;
+    const nextDrag = {
+      ...current,
+      x: event.clientX,
+      y: event.clientY,
+      moved,
+    };
+    substitutionDragRef.current = nextDrag;
+    if (moved && !current.moved) setSubstitutionDrag(nextDrag);
+    if (moved) {
+      if (substitutionDragLayerRef.current) {
+        substitutionDragLayerRef.current.style.left = `${event.clientX}px`;
+        substitutionDragLayerRef.current.style.top = `${event.clientY}px`;
+      }
+      const target = document
+        .elementFromPoint(event.clientX, event.clientY)
+        ?.closest<HTMLElement>("[data-substitution-target]");
+      const nextHover =
+        target?.dataset.substitutionKind !== current.kind
+          ? (target?.dataset.substitutionTarget ?? "")
+          : "";
+      setSubstitutionHover((previous) =>
+        previous === nextHover ? previous : nextHover,
+      );
+    }
+  };
+
+  const finishSubstitutionDrag = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    const current = substitutionDragRef.current;
+    if (!current) return;
+    const target = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>("[data-substitution-target]");
+    const targetId = target?.dataset.substitutionTarget ?? "";
+    const targetKind = target?.dataset.substitutionKind;
+    substitutionDragRef.current = null;
+    setSubstitutionDrag(null);
+    setSubstitutionHover("");
+    if (current.moved && targetId && targetKind !== current.kind) {
+      if (current.kind === "starter")
+        completeSubstitution(current.id, targetId);
+      else completeSubstitution(targetId, current.id);
+      return;
+    }
+    if (!current.moved) selectSubstitutionPiece(current.kind, current.id);
+  };
+
+  const renderSubstitutionPiece = ({
+    player,
+    kind,
+    id,
+    stamina = 100,
+    ghost = false,
+  }: {
+    player: BotaoPlayer;
+    kind: "starter" | "bench";
+    id: string;
+    stamina?: number;
+    ghost?: boolean;
+  }) => {
+    const selected =
+      (kind === "starter" && substitutionOut === id) ||
+      (kind === "bench" && substitutionIn === id);
+    const lifted = substitutionDrag?.id === id;
+    const className = `botao-substitution-piece ${selected ? "botao-substitution-piece-selected" : ""} ${substitutionHover === id ? "botao-substitution-piece-target" : ""} ${lifted && substitutionDrag?.moved ? "botao-substitution-piece-lifted" : ""} ${ghost ? "botao-substitution-piece-ghost" : ""}`;
+    const visual = (
+      <>
+        <span
+          className="botao-substitution-disc"
+          style={
+            {
+              "--substitution-stamina": `${Math.max(0, Math.min(100, stamina)) * 3.6}deg`,
+            } as CSSProperties
+          }
+        >
+          <span>
+            {player.appearance ? (
+              <PlayerAppearancePortrait
+                appearance={player.appearance}
+                primary={setup.userTeam.primary}
+                secondary={setup.userTeam.secondary}
+                size={54}
+                frame="compact"
+                label={player.name}
+              />
+            ) : (
+              <b>{player.number}</b>
+            )}
+          </span>
+          <i>{player.number}</i>
+        </span>
+        <small>{player.name.split(" ").at(-1)}</small>
+      </>
+    );
+    if (ghost) return <div className={className}>{visual}</div>;
+    return (
+      <button
+        type="button"
+        key={`${kind}-${id}`}
+        className={className}
+        data-substitution-target={id}
+        data-substitution-kind={kind}
+        aria-label={`${kind === "starter" ? "Titular" : "Reserva"} ${player.name}`}
+        aria-pressed={selected}
+        onPointerDown={(event) => startSubstitutionDrag(kind, id, event)}
+        onPointerMove={moveSubstitutionDrag}
+        onPointerUp={finishSubstitutionDrag}
+        onPointerCancel={() => {
+          substitutionDragRef.current = null;
+          setSubstitutionDrag(null);
+          setSubstitutionHover("");
+        }}
+        onClick={(event) => {
+          if (event.detail === 0) selectSubstitutionPiece(kind, id);
+        }}
+      >
+        {visual}
+      </button>
+    );
+  };
 
   return (
     <div
@@ -1315,88 +1526,66 @@ export default function BotaoMatch({
           >
             <div className="botao-substitution-card">
               <div className="botao-substitution-heading">
-                <div>
-                  <small>JOGO PAUSADO</small>
-                  <strong>Troca irreversível</strong>
-                </div>
-                <button type="button" onClick={closeSubstitution}>
+                <span aria-hidden="true">
+                  <i />
+                  <i />
+                </span>
+                <button
+                  type="button"
+                  aria-label="Fechar substituição"
+                  onClick={closeSubstitution}
+                >
                   ×
                 </button>
               </div>
-              <p>
-                Escolha um botão para sair e um reserva para entrar. A troca não
-                consome seu toque e não pode ser desfeita nesta partida.
-              </p>
-              <label>
-                <span>Sai</span>
-                <select
-                  value={substitutionOut}
-                  onChange={(event) => setSubstitutionOut(event.target.value)}
-                >
-                  <option value="">Escolha o titular</option>
-                  {state.bodies
-                    .filter(
-                      (body) =>
-                        body.kind === "disc" &&
-                        body.side === "user" &&
-                        body.playerId,
-                    )
-                    .map((body) => (
-                      <option key={body.id} value={body.id}>
-                        {body.label} · {Math.round(body.stamina)}% fôlego
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <label>
-                <span>Entra</span>
-                <select
-                  value={substitutionIn}
-                  onChange={(event) => setSubstitutionIn(event.target.value)}
-                >
-                  <option value="">Escolha o reserva</option>
-                  {managerRoster.bench.map((player) => (
-                    <option key={player.id} value={player.id}>
-                      {player.name} · {player.overall} OVR
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="botao-substitution-actions">
-                <button
-                  type="button"
-                  className="botao-ghost"
-                  onClick={closeSubstitution}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="botao-primary"
-                  disabled={!substitutionOut || !substitutionIn}
-                  onClick={() => {
-                    const current = matchRef.current;
-                    if (!current) return;
-                    if (
-                      substitutePlayer(
-                        current,
-                        "user",
-                        substitutionOut,
-                        substitutionIn,
-                      )
-                    ) {
-                      closeSubstitution();
-                      setSubstitutionOut("");
-                      setSubstitutionIn("");
-                      showFlash("TROCA FEITA", "info", 1000);
-                      bump();
-                    }
-                  }}
-                >
-                  Confirmar troca
-                </button>
+              <div className="botao-substitution-field">
+                {substitutionStarters.map(({ body, player }) =>
+                  renderSubstitutionPiece({
+                    player,
+                    kind: "starter",
+                    id: body.id,
+                    stamina: body.stamina,
+                  }),
+                )}
+              </div>
+              <div className="botao-substitution-gate" aria-hidden="true">
+                <i />
+                <span>↕</span>
+                <i />
+              </div>
+              <div className="botao-substitution-bench">
+                {managerRoster.bench.map((player) =>
+                  renderSubstitutionPiece({
+                    player,
+                    kind: "bench",
+                    id: player.id ?? "",
+                  }),
+                )}
               </div>
             </div>
+            {substitutionDrag?.moved && draggedSubstitutionPlayer ? (
+              <div
+                ref={substitutionDragLayerRef}
+                className="botao-substitution-drag-layer"
+                style={{
+                  left: substitutionDrag.x,
+                  top: substitutionDrag.y,
+                }}
+              >
+                {renderSubstitutionPiece({
+                  player: draggedSubstitutionPlayer,
+                  kind: substitutionDrag.kind,
+                  id: substitutionDrag.id,
+                  stamina:
+                    substitutionDrag.kind === "starter"
+                      ? (substitutionStarters.find(
+                          ({ body }) => body.id === substitutionDrag.id,
+                        )?.body.stamina ?? 100)
+                      : 100,
+                  ghost: true,
+                })}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

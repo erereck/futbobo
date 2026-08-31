@@ -141,12 +141,12 @@ Selecoes sem liga recebem uma rota de base recomendada por confederacao. A recom
 - Navegação mantém cinco destinos: Carreira, Time, Histórico, Estatísticas e Mundo. Prancheta permanece oculta enquanto as formações da partida forem aleatórias.
 - Carreira é a fila obrigatória: notícias, objetivo, confiança e decisão pendente. Não exibe bloco de próximo jogo antes da simulação.
 - Time mantém cinco titulares e até três reservas. Vender abre uma vaga real; contratar preenche a vaga e nunca substitui alguém automaticamente.
-- Cada titular possui coordenada própria no campo. Arrastar altera apenas aquele atleta. Um modal separado permite consultar o encaixe dos cinco nas seis formações, sem escolher a formação usada na partida.
+- Cada titular possui coordenada própria no campo. Arrastar altera apenas aquele atleta. Durante o gesto, a peça inteira se eleva e acompanha dedo/mouse; o navegador nunca mostra o ghost nativo da imagem. Um modal separado permite consultar o encaixe dos cinco nas seis formações, sem escolher a formação usada na partida.
 - Histórico repete a linha do tempo do jogador, trocando produção individual por campanha coletiva: clube à esquerda; J/V/E/D, gols, títulos e confiança por temporada. O índice de força do time nunca é exibido.
 - Estatísticas usam linhas tabulares para todo o elenco e módulos coletivos de campanha. Retratos nunca recebem `flex: 1` nem fundos elípticos; a imagem fica em um frame circular fixo.
 - Mundo mantém a mesma navegação interna do jogador — Agora, Clubes, Jogadores e Arquivo — com noticiário, rankings e memória da carreira do técnico.
 - Stamina existe somente dentro da partida e vem da distância da peça ativa no próprio toque. A peça usa filete semântico; o valor exato aparece apenas quando selecionada ou no painel de troca.
-- Troca é uma folha inferior curta, disponível apenas no próprio turno com a física parada. Sai + entra + confirmar; depois disso é imediata, irreversível, não consome a vez e preserva as coordenadas da peça.
+- Troca é uma mesa visual curta, disponível apenas no próprio turno com a física parada. Cinco peças ficam no campo e até três no banco; arrastar uma sobre a outra faz a troca imediatamente. Não usa selects, texto instrucional ou confirmação intermediária. Toque em duas peças de grupos opostos permanece como alternativa acessível.
 - Abrir a troca pausa relógio, física, CPU e regra dos sete segundos. Confirmar ou cancelar retoma imediatamente.
 - Formações dos dois times são sorteadas no início e novamente depois de cada gol.
 - Todo sistema que não muda escalação, comportamento da peça, resultado ou futuro da carreira permanece fora do lançamento.

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import {
   BOTAO_FORMATIONS,
   formationById,
@@ -56,6 +62,15 @@ import styles from "./ManagerGame.module.css";
 
 type ManagerTab = "career" | "board" | "team" | "history" | "stats" | "world";
 type ManagerWorldSection = "now" | "clubs" | "players" | "archive";
+type ManagerRosterDrag = {
+  id: string;
+  area: "starter" | "bench";
+  x: number;
+  y: number;
+  startX: number;
+  startY: number;
+  moved: boolean;
+} | null;
 const NAV_ITEMS: Array<{
   id: ManagerTab;
   label: string;
@@ -134,8 +149,12 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const [formationPreviewOpen, setFormationPreviewOpen] = useState(false);
   const [previewFormationId, setPreviewFormationId] = useState("muralha");
   const [selectedPlayer, setSelectedPlayer] = useState("");
-  const [draggedPlayer, setDraggedPlayer] = useState("");
-  const suppressRosterClick = useRef(false);
+  const [rosterDrag, setRosterDrag] = useState<ManagerRosterDrag>(null);
+  const [rosterDragHover, setRosterDragHover] = useState("");
+  const rosterDragRef = useRef<ManagerRosterDrag>(null);
+  const rosterDragLayerRef = useRef<HTMLDivElement | null>(null);
+  const rosterDragCleanupRef = useRef<() => void>(() => undefined);
+  const teamPitchRef = useRef<HTMLElement | null>(null);
   const [managerName, setManagerName] = useState("");
   const [nationality, setNationality] = useState("brasil");
   const [clubId, setClubId] = useState("");
@@ -150,6 +169,12 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     localStorage.setItem(SAVE_KEY, JSON.stringify(loadedState));
     syncActiveCareerSlot();
   }, [loadedState]);
+  useEffect(
+    () => () => {
+      rosterDragCleanupRef.current();
+    },
+    [],
+  );
 
   const club = managerClub(state);
   const opponent = managerOpponent(state);
@@ -370,7 +395,9 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     }
     setState(setManagerLineup(state, starters, bench));
     setSelectedPlayer("");
-    setDraggedPlayer("");
+    setRosterDrag(null);
+    rosterDragRef.current = null;
+    setRosterDragHover("");
     setNotice("");
   };
   const swapPlayers = (nextId: string) => {
@@ -383,6 +410,119 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       return;
     }
     swapPlayerIds(selectedPlayer, nextId);
+  };
+
+  const startRosterDrag = (
+    id: string,
+    area: "starter" | "bench",
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    rosterDragCleanupRef.current();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setRosterDragHover("");
+    const nextDrag: NonNullable<ManagerRosterDrag> = {
+      id,
+      area,
+      x: event.clientX,
+      y: event.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    };
+    rosterDragRef.current = nextDrag;
+    setRosterDrag(nextDrag);
+    const move = (pointerEvent: PointerEvent) =>
+      moveRosterDrag(pointerEvent.clientX, pointerEvent.clientY);
+    const finish = (pointerEvent: PointerEvent) => {
+      rosterDragCleanupRef.current();
+      finishRosterDrag(pointerEvent.clientX, pointerEvent.clientY);
+    };
+    const cancel = () => {
+      rosterDragCleanupRef.current();
+      rosterDragRef.current = null;
+      setRosterDrag(null);
+      setRosterDragHover("");
+    };
+    rosterDragCleanupRef.current = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", finish);
+      window.removeEventListener("pointercancel", cancel);
+      rosterDragCleanupRef.current = () => undefined;
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", finish);
+    window.addEventListener("pointercancel", cancel);
+  };
+
+  const moveRosterDrag = (clientX: number, clientY: number) => {
+    const current = rosterDragRef.current;
+    if (!current) return;
+    const moved =
+      current.moved ||
+      Math.hypot(clientX - current.startX, clientY - current.startY) > 5;
+    const nextDrag = {
+      ...current,
+      x: clientX,
+      y: clientY,
+      moved,
+    };
+    rosterDragRef.current = nextDrag;
+    if (moved && !current.moved) setRosterDrag(nextDrag);
+    if (moved) {
+      if (rosterDragLayerRef.current) {
+        rosterDragLayerRef.current.style.left = `${clientX}px`;
+        rosterDragLayerRef.current.style.top = `${clientY}px`;
+      }
+      const target = document
+        .elementFromPoint(clientX, clientY)
+        ?.closest<HTMLElement>("[data-player-id]");
+      const nextHover =
+        target?.dataset.playerArea !== current.area
+          ? (target?.dataset.playerId ?? "")
+          : "";
+      setRosterDragHover((previous) =>
+        previous === nextHover ? previous : nextHover,
+      );
+    }
+  };
+
+  const finishRosterDrag = (clientX: number, clientY: number) => {
+    const current = rosterDragRef.current;
+    if (!current) return;
+    const target = document
+      .elementFromPoint(clientX, clientY)
+      ?.closest<HTMLElement>("[data-player-id]");
+    const targetId = target?.dataset.playerId ?? "";
+    const targetArea = target?.dataset.playerArea;
+    rosterDragRef.current = null;
+    setRosterDrag(null);
+    setRosterDragHover("");
+    if (!current.moved) {
+      swapPlayers(current.id);
+      return;
+    }
+    if (targetId && targetId !== current.id && targetArea !== current.area) {
+      swapPlayerIds(current.id, targetId);
+      return;
+    }
+    const pitch = teamPitchRef.current;
+    if (current.area !== "starter" || !pitch) return;
+    const rect = pitch.getBoundingClientRect();
+    if (
+      clientX < rect.left ||
+      clientX > rect.right ||
+      clientY < rect.top ||
+      clientY > rect.bottom
+    )
+      return;
+    setState(
+      setManagerPlayerPosition(state, current.id, {
+        x: ((clientX - rect.left) / rect.width) * 100,
+        y: ((clientY - rect.top) / rect.height) * 100,
+      }),
+    );
+    setSelectedPlayer("");
+    setNotice("");
   };
 
   if (matchSetup && matchStarted)
@@ -723,56 +863,19 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       <button
         type="button"
         key={id}
-        draggable
         data-player-id={id}
-        className={`${styles.rosterPlayer} ${styles[area]} ${selectedPlayer === id ? styles.selectedPlayer : ""}`}
-        onClick={() => {
-          if (suppressRosterClick.current) {
-            suppressRosterClick.current = false;
-            return;
-          }
-          swapPlayers(id);
+        data-player-area={area}
+        className={`${styles.rosterPlayer} ${styles[area]} ${selectedPlayer === id ? styles.selectedPlayer : ""} ${rosterDrag?.id === id && rosterDrag.moved ? styles.draggingPlayer : ""} ${rosterDragHover === id ? styles.rosterDropTarget : ""}`}
+        aria-pressed={selectedPlayer === id}
+        onPointerDown={(event) => startRosterDrag(id, area, event)}
+        onClick={(event) => {
+          if (event.detail === 0) swapPlayers(id);
         }}
-        onPointerDown={(event) => {
-          if (event.pointerType !== "mouse") setDraggedPlayer(id);
-        }}
-        onPointerUp={(event) => {
-          if (event.pointerType === "mouse" || !draggedPlayer) return;
-          if (area === "starter") return;
-          const target = document
-            .elementFromPoint(event.clientX, event.clientY)
-            ?.closest<HTMLElement>("[data-player-id]");
-          const targetId = target?.dataset.playerId ?? "";
-          if (targetId && targetId !== draggedPlayer) {
-            suppressRosterClick.current = true;
-            swapPlayerIds(draggedPlayer, targetId);
-          } else {
-            setDraggedPlayer("");
-          }
-        }}
-        onPointerCancel={() => setDraggedPlayer("")}
-        onDragStart={(event) => {
-          event.dataTransfer.effectAllowed = "move";
-          event.dataTransfer.setData("text/plain", id);
-          setDraggedPlayer(id);
-        }}
-        onDragOver={(event) => {
-          event.preventDefault();
-          event.dataTransfer.dropEffect = "move";
-        }}
-        onDrop={(event) => {
-          if (area === "starter") return;
-          event.preventDefault();
-          const sourceId =
-            event.dataTransfer.getData("text/plain") || draggedPlayer;
-          swapPlayerIds(sourceId, id);
-        }}
-        onDragEnd={() => setDraggedPlayer("")}
       >
         <PlayerPortrait
           player={player}
           state={state}
-          size={area === "starter" ? 50 : 40}
+          size={area === "starter" ? 58 : 40}
         />
         <span>
           <small>{player.position}</small>
@@ -882,10 +985,6 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           <header className={styles.panelHeading}>
             <span>TIME</span>
             <h2>Seu time, do seu jeito.</h2>
-            <p>
-              Arraste cada titular livremente pelo campo. Nenhum outro jogador
-              se move junto.
-            </p>
             <button
               type="button"
               className={styles.previewFormationButton}
@@ -896,39 +995,8 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           </header>
           <div className={styles.teamLayout}>
             <section
-              className={styles.teamPitch}
-              onDragOver={(event) => {
-                if (state.starters.includes(draggedPlayer))
-                  event.preventDefault();
-              }}
-              onDrop={(event) => {
-                event.preventDefault();
-                const id =
-                  event.dataTransfer.getData("text/plain") || draggedPlayer;
-                if (!state.starters.includes(id)) return;
-                const rect = event.currentTarget.getBoundingClientRect();
-                setState(
-                  setManagerPlayerPosition(state, id, {
-                    x: ((event.clientX - rect.left) / rect.width) * 100,
-                    y: ((event.clientY - rect.top) / rect.height) * 100,
-                  }),
-                );
-                suppressRosterClick.current = true;
-                setDraggedPlayer("");
-              }}
-              onPointerUp={(event) => {
-                if (!draggedPlayer || !state.starters.includes(draggedPlayer))
-                  return;
-                const rect = event.currentTarget.getBoundingClientRect();
-                setState(
-                  setManagerPlayerPosition(state, draggedPlayer, {
-                    x: ((event.clientX - rect.left) / rect.width) * 100,
-                    y: ((event.clientY - rect.top) / rect.height) * 100,
-                  }),
-                );
-                suppressRosterClick.current = true;
-                setDraggedPlayer("");
-              }}
+              ref={teamPitchRef}
+              className={`${styles.teamPitch} ${rosterDrag?.area === "starter" && rosterDrag.moved ? styles.pitchDragActive : ""}`}
             >
               <div className={styles.previewLines} />
               {state.starters.map((id) => {
@@ -978,6 +1046,22 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               </div>
             </aside>
           </div>
+          {rosterDrag?.moved && playerById.get(rosterDrag.id) ? (
+            <div
+              ref={rosterDragLayerRef}
+              className={styles.rosterDragLayer}
+              style={{ left: rosterDrag.x, top: rosterDrag.y }}
+            >
+              <PlayerPortrait
+                player={playerById.get(rosterDrag.id)!}
+                state={state}
+                size={58}
+              />
+              <span>
+                {playerById.get(rosterDrag.id)!.name.split(" ").at(-1)}
+              </span>
+            </div>
+          ) : null}
           {formationPreviewOpen ? (
             <div
               className={styles.formationModal}
