@@ -36,54 +36,132 @@ const careerSourceFiles = [
 ];
 
 async function readCareerSource() {
-  return (await Promise.all(careerSourceFiles.map((file) => readFile(new URL(file, import.meta.url), "utf8")))).join("\n");
+  return (
+    await Promise.all(
+      careerSourceFiles.map((file) =>
+        readFile(new URL(file, import.meta.url), "utf8"),
+      ),
+    )
+  ).join("\n");
 }
 
 async function readCareerDramaSource() {
-  return (await Promise.all([
-    "../app/career-drama.ts",
-    "../app/career-drama-base.ts",
-    "../app/career-drama-extra.ts",
-  ].map((file) => readFile(new URL(file, import.meta.url), "utf8")))).join("\n");
+  return (
+    await Promise.all(
+      [
+        "../app/career-drama.ts",
+        "../app/career-drama-base.ts",
+        "../app/career-drama-extra.ts",
+      ].map((file) => readFile(new URL(file, import.meta.url), "utf8")),
+    )
+  ).join("\n");
 }
 
 test("mantém a rota da carreira pequena e separa o monólito por domínio", async () => {
-  const route = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
-  const shellWithNames = await readFile(new URL("../app/components/shell/FutboboShellWithNames.tsx", import.meta.url), "utf8");
-  const architecture = await readFile(new URL("../app/career/README.md", import.meta.url), "utf8");
+  const route = await readFile(
+    new URL("../app/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const shellWithNames = await readFile(
+    new URL(
+      "../app/components/shell/FutboboShellWithNames.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const architecture = await readFile(
+    new URL("../app/career/README.md", import.meta.url),
+    "utf8",
+  );
   assert.ok(route.split("\n").length <= 10);
-  assert.match(route, /import FutboboShellWithNames from "\.\/components\/shell\/FutboboShellWithNames"/);
+  assert.match(
+    route,
+    /import FutboboShellWithNames from "\.\/components\/shell\/FutboboShellWithNames"/,
+  );
   assert.match(shellWithNames, /import FutboboShell from "\.\/FutboboShell"/);
-  for (const moduleName of ["model", "shared", "sponsors", "state", "academy", "performance", "transfer-market", "events", "simulation"]) {
+  for (const moduleName of [
+    "model",
+    "shared",
+    "sponsors",
+    "state",
+    "academy",
+    "performance",
+    "transfer-market",
+    "events",
+    "simulation",
+  ]) {
     assert.ok(architecture.includes("`" + moduleName + ".ts`"));
   }
 });
 
 test("mostra a versao comunitaria no rodape do menu inicial", async () => {
   const pageSource = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
   assert.match(pageSource, /className="welcome-version"/);
   assert.match(pageSource, /FUTBOBO_VERSION_NAME/);
-  const version = await readFile(new URL("../app/version.ts", import.meta.url), "utf8");
+  const version = await readFile(
+    new URL("../app/version.ts", import.meta.url),
+    "utf8",
+  );
   assert.match(version, /v95/);
   assert.match(styles, /\.welcome-version/);
 });
 
 test("blinda o modo técnico contra perda de save e mantém a mesa acessível no celular", async () => {
-  const manager = await readFile(new URL("../app/components/manager/ManagerGame.tsx", import.meta.url), "utf8");
-  const model = await readFile(new URL("../app/career/manager-model.ts", import.meta.url), "utf8");
-  const world = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
-  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/components/manager/ManagerGame.module.css", import.meta.url), "utf8");
+  const manager = await readFile(
+    new URL("../app/components/manager/ManagerGame.tsx", import.meta.url),
+    "utf8",
+  );
+  const model = await readFile(
+    new URL("../app/career/manager-model.ts", import.meta.url),
+    "utf8",
+  );
+  const world = await readFile(
+    new URL("../app/career/world-players.ts", import.meta.url),
+    "utf8",
+  );
+  const layout = await readFile(
+    new URL("../app/layout.tsx", import.meta.url),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL(
+      "../app/components/manager/ManagerGame.module.css",
+      import.meta.url,
+    ),
+    "utf8",
+  );
 
   assert.match(manager, /useState<ManagerState \| null>\(null\)/);
   assert.match(manager, /if \(!loadedState\) return/);
   assert.match(manager, /setNotice\(""\)/);
   assert.match(manager, /player\.position\s*===\s*"GOL"[\s\S]{0,24}?\?\s*2/);
   assert.match(manager, /continueAfterManagerDecision/);
+  assert.match(
+    manager,
+    /<strong>\{state\.age\}<\/strong>[\s\S]{0,40}<span>ANOS<\/span>/,
+  );
+  assert.match(manager, /draggable/);
+  assert.match(manager, /onDrop=/);
+  assert.match(manager, /elementFromPoint/);
+  assert.match(manager, /timelineStyles\.timeline/);
+  assert.match(manager, /worldStyles\.sectionNav/);
+  assert.doesNotMatch(manager, /Elenco fechado em oito/);
   assert.match(model, /state\.careerStage\s*!==\s*"match"/);
   assert.match(model, /slice\(0, 8\)/);
-  assert.match(model, /state\.phase\s*!==\s*"result"[\s\S]{0,32}?\|\|[\s\S]{0,32}?state\.careerStage\s*!==\s*"result"/);
+  assert.match(model, /age: 40/);
+  assert.match(model, /function makeSeasonMatches/);
+  assert.match(model, /id: "domesticLeague"/);
+  assert.match(model, /id: "domesticCup"/);
+  assert.match(model, /age: state\.age \+ 1/);
+  assert.match(model, /seasonHistory/);
+  assert.match(
+    model,
+    /state\.phase\s*!==\s*"result"[\s\S]{0,32}?\|\|[\s\S]{0,32}?state\.careerStage\s*!==\s*"result"/,
+  );
   assert.match(model, /const nextStarters = state\.starters\.map/);
   assert.match(model, /function normalizeHistory/);
   assert.match(model, /const safePhase/);
@@ -94,9 +172,18 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
 });
 
 test("aplica o redesign Matchday Editorial com fontes offline e layouts realmente responsivos", async () => {
-  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
-  const premium = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
-  const botao = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
+  const layout = await readFile(
+    new URL("../app/layout.tsx", import.meta.url),
+    "utf8",
+  );
+  const premium = await readFile(
+    new URL("../app/premium.css", import.meta.url),
+    "utf8",
+  );
+  const botao = await readFile(
+    new URL("../app/botao/botao.css", import.meta.url),
+    "utf8",
+  );
   const fonts = await readdir(new URL("../public/fonts/", import.meta.url));
 
   assert.match(layout, /import "\.\/premium\.css"/);
@@ -111,9 +198,18 @@ test("aplica o redesign Matchday Editorial com fontes offline e layouts realment
   assert.match(premium, /scrollbar-gutter: stable/);
   assert.match(premium, /\.career-tab-profile \.trophy-gallery \{/);
   assert.match(premium, /\.career-tab-legacy \.legacy-grid \.metric \{/);
-  assert.match(premium, /\.career-shell > \.result-stage \.mobile-action-dock \{/);
-  assert.match(botao, /grid-template-columns: minmax\(220px,\.72fr\) minmax\(340px,440px\) minmax\(220px,\.72fr\)/);
-  assert.match(botao, /width: min\(100%, 400px, calc\(\(100dvh - 160px\) \* 316 \/ 516\)\)/);
+  assert.match(
+    premium,
+    /\.career-shell > \.result-stage \.mobile-action-dock \{/,
+  );
+  assert.match(
+    botao,
+    /grid-template-columns: minmax\(220px,\.72fr\) minmax\(340px,440px\) minmax\(220px,\.72fr\)/,
+  );
+  assert.match(
+    botao,
+    /width: min\(100%, 400px, calc\(\(100dvh - 160px\) \* 316 \/ 516\)\)/,
+  );
   assert.match(botao, /aspect-ratio: 316 \/ 516/);
   assert.deepEqual(fonts.sort(), [
     "barlow-condensed-600.woff2",
@@ -126,7 +222,10 @@ test("aplica o redesign Matchday Editorial com fontes offline e layouts realment
 
 test("adiciona desafio diario, avaliacao e departamento medico sem alterar a navegacao da carreira", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /const CHALLENGE_SAVE_KEY = "futbobo:challenge-save:v1"/);
   assert.match(page, /function dailyChallenge/);
@@ -145,7 +244,10 @@ test("adiciona desafio diario, avaliacao e departamento medico sem alterar a nav
 
 test("fecha a Copa do Mundo com estatisticas completas e impacto forte na Bola de Ouro", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /type TournamentStats/);
   assert.match(page, /function simulatedWorldCupStats/);
@@ -153,9 +255,15 @@ test("fecha a Copa do Mundo com estatisticas completas e impacto forte na Bola d
   assert.match(page, /knockoutAppearances/);
   assert.match(page, /RELATÓRIO DA COPA DO MUNDO/);
   assert.match(page, /FASE DE GRUPOS · SIMULADA/);
-  const ballon = await readFile(new URL("../app/career/ballon-dor.ts", import.meta.url), "utf8");
+  const ballon = await readFile(
+    new URL("../app/career/ballon-dor.ts", import.meta.url),
+    "utf8",
+  );
   assert.match(ballon, /input\.worldCupGoals >= 8/);
-  assert.match(ballon, /const rescueFloor = input\.previousBallonDor === 0\s*\? 28/);
+  assert.match(
+    ballon,
+    /const rescueFloor = input\.previousBallonDor === 0\s*\? 28/,
+  );
   assert.match(page, /worldCupBallonSurge \? 68/);
   assert.match(page, /Artilheiro da Copa do Mundo/);
   assert.match(styles, /\.world-cup-stat-report/);
@@ -163,9 +271,15 @@ test("fecha a Copa do Mundo com estatisticas completas e impacto forte na Bola d
 });
 
 test("fecha as seis novas ligas com acesso e torneio asiatico", async () => {
-  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const gameData = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
-  const sync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
+  const sync = await readFile(
+    new URL("../scripts/sync-football-assets.mjs", import.meta.url),
+    "utf8",
+  );
 
   for (const leagueId of [
     "saudi-pro-league",
@@ -186,7 +300,9 @@ test("fecha as seis novas ligas com acesso e torneio asiatico", async () => {
   assert.match(sync, /afcChampions\.png/);
   assert.match(sync, /china: "cn"/);
   await readFile(new URL("../public/assets/flags/china.png", import.meta.url));
-  await readFile(new URL("../public/assets/competitions/afcChampions.png", import.meta.url));
+  await readFile(
+    new URL("../public/assets/competitions/afcChampions.png", import.meta.url),
+  );
   for (const leagueId of [
     "saudi-pro-league",
     "j1-league",
@@ -195,17 +311,32 @@ test("fecha as seis novas ligas com acesso e torneio asiatico", async () => {
     "brasileirao-b",
     "championship",
   ]) {
-    await readFile(new URL(`../public/assets/competitions/leagues/${leagueId}.png`, import.meta.url));
-    await readFile(new URL(`../public/assets/competitions/cups/${leagueId}.png`, import.meta.url));
+    await readFile(
+      new URL(
+        `../public/assets/competitions/leagues/${leagueId}.png`,
+        import.meta.url,
+      ),
+    );
+    await readFile(
+      new URL(
+        `../public/assets/competitions/cups/${leagueId}.png`,
+        import.meta.url,
+      ),
+    );
   }
 });
 
 async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
-  const nested = await Promise.all(entries.map(async (entry) => {
-    const target = new URL(entry.name + (entry.isDirectory() ? "/" : ""), directory);
-    return entry.isDirectory() ? walk(target) : [target];
-  }));
+  const nested = await Promise.all(
+    entries.map(async (entry) => {
+      const target = new URL(
+        entry.name + (entry.isDirectory() ? "/" : ""),
+        directory,
+      );
+      return entry.isDirectory() ? walk(target) : [target];
+    }),
+  );
   return nested.flat();
 }
 
@@ -222,7 +353,9 @@ test("exporta uma página estática pronta para o GitHub Pages", async () => {
 test("inclui o conteúdo central do jogo no bundle", async () => {
   const files = await walk(outputRoot);
   const scripts = files.filter((file) => file.pathname.endsWith(".js"));
-  const bundle = (await Promise.all(scripts.map((file) => readFile(file, "utf8")))).join("\n");
+  const bundle = (
+    await Promise.all(scripts.map((file) => readFile(file, "utf8")))
+  ).join("\n");
 
   for (const content of [
     "Athletico-PR",
@@ -267,7 +400,10 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
 });
 
 test("mantém o novo equilíbrio de progressão, mercado e clubes brasileiros", async () => {
-  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const gameData = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
   const brazilBlock = gameData.slice(
     gameData.indexOf("const BRAZIL_CLUBS"),
@@ -289,24 +425,36 @@ test("mantém o novo equilíbrio de progressão, mercado e clubes brasileiros", 
 
 test("mantém a carreira encaixada na tela mobile com ações fixas", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /mobile-action-dock/);
   assert.match(page, /career-phase-\$\{game\.phase\}/);
   assert.match(styles, /@media \(max-width: 540px\)/);
   assert.match(styles, /\.career-shell \{[\s\S]*height: 100%/);
   assert.match(styles, /\.mobile-action-dock \{[\s\S]*position: fixed/);
-  assert.match(styles, /\.event-stage \{[\s\S]*grid-template-rows: auto auto minmax\(0, 1fr\)[\s\S]*overflow-y: hidden !important/);
+  assert.match(
+    styles,
+    /\.event-stage \{[\s\S]*grid-template-rows: auto auto minmax\(0, 1fr\)[\s\S]*overflow-y: hidden !important/,
+  );
   assert.match(styles, /\.event-card \{[\s\S]*position: relative/);
 });
 
 test("aplica o equilíbrio levemente mais favorável sem liberar títulos fáceis", async () => {
   const page = await readCareerSource();
-  const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
+  const systems = await readFile(
+    new URL("../app/career-systems.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /fateRoll < 0\.65/);
   assert.match(page, /roleScore >= 5 \? 33[\s\S]*roleScore >= -5 \? 19 : 11/);
-  assert.match(page, /affected\.age <= 19\) development = growthRoll < 0\.32 \? 0/);
+  assert.match(
+    page,
+    /affected\.age <= 19\) development = growthRoll < 0\.32 \? 0/,
+  );
   assert.match(page, /seriousInjuryChance = 0\.038/);
   assert.match(page, /playerImpact \* 0\.36/);
   assert.match(page, /,\s*1,\s*27,/);
@@ -317,11 +465,17 @@ test("aplica o equilíbrio levemente mais favorável sem liberar títulos fácei
 
 test("valoriza os prêmios individuais e calibra a Bola de Ouro pelo tamanho do palco", async () => {
   const page = await readCareerSource();
-  const styles = (await Promise.all([
-    "../app/globals.css",
-    "../app/premium.css",
-  ].map((file) => readFile(new URL(file, import.meta.url), "utf8")))).join("\n");
-  const ballon = await readFile(new URL("../app/career/ballon-dor.ts", import.meta.url), "utf8");
+  const styles = (
+    await Promise.all(
+      ["../app/globals.css", "../app/premium.css"].map((file) =>
+        readFile(new URL(file, import.meta.url), "utf8"),
+      ),
+    )
+  ).join("\n");
+  const ballon = await readFile(
+    new URL("../app/career/ballon-dor.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /evaluateBallonDor/);
   assert.match(page, /hasBallonProductionAward/);
@@ -332,12 +486,24 @@ test("valoriza os prêmios individuais e calibra a Bola de Ouro pelo tamanho do 
   assert.match(ballon, /input\.overall >= 88/);
   assert.match(ballon, /globalBreakthrough/);
   assert.match(ballon, /repeatMultiplier/);
-  assert.match(ballon, /Math\.max\(0\.002, 0\.018 \* 0\.58 \*\* \(previous - 7\)\)/);
-  assert.match(ballon, /const historicFloor = input\.previousBallonDor === 0\s*\? 42/);
+  assert.match(
+    ballon,
+    /Math\.max\(0\.002, 0\.018 \* 0\.58 \*\* \(previous - 7\)\)/,
+  );
+  assert.match(
+    ballon,
+    /const historicFloor = input\.previousBallonDor === 0\s*\? 42/,
+  );
   assert.match(ballon, /input\.isKeeper \? -4/);
   assert.match(ballon, /input\.positionZone === "defesa" \? -2/);
-  assert.match(page, /const leagueGoldenBootLine = 28 \+ Math\.floor\([\s\S]*\* 9\)/);
-  assert.match(page, /const leagueAssistKingLine = 18 \+ Math\.floor\([\s\S]*\* 7\)/);
+  assert.match(
+    page,
+    /const leagueGoldenBootLine = 28 \+ Math\.floor\([\s\S]*\* 9\)/,
+  );
+  assert.match(
+    page,
+    /const leagueAssistKingLine = 18 \+ Math\.floor\([\s\S]*\* 7\)/,
+  );
   assert.match(page, /goals >= europeanGoldenShoeLine/);
   assert.match(page, /FIFPRO World XI/);
   assert.match(styles, /\.award-card/);
@@ -345,8 +511,14 @@ test("valoriza os prêmios individuais e calibra a Bola de Ouro pelo tamanho do 
 
 test("registra o Hall da Fama local e resume a carreira por clube", async () => {
   const page = await readCareerSource();
-  const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const systems = await readFile(
+    new URL("../app/career-systems.ts", import.meta.url),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /HALL_OF_FAME_KEY/);
   assert.match(page, /futbobo:hall-of-fame:v1/);
@@ -356,7 +528,10 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
   assert.match(page, /function archivedCareerState/);
   assert.match(page, /function openHallCareer/);
   assert.match(page, /setHallPreview\(archive\.state\)/);
-  assert.match(page, /aria-label=\{`Ver carreira completa de \$\{entry\.name\}`\}/);
+  assert.match(
+    page,
+    /aria-label=\{`Ver carreira completa de \$\{entry\.name\}`\}/,
+  );
   assert.match(page, /Voltar ao ranking/);
   assert.match(page, /clubCareerSummary/);
   assert.match(page, /ARQUIVO POR CLUBE/);
@@ -367,8 +542,14 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
   assert.match(page, /HALL DA FAMA LOCAL/);
   assert.match(styles, /\.career-club-summary/);
   assert.match(styles, /\.final-awards-list/);
-  assert.match(styles, /grid-template-columns: 64px minmax\(84px,1fr\) minmax\(112px,auto\)/);
-  assert.match(styles, /@media \(max-width: 420px\)[\s\S]*\.career-club-list > article/);
+  assert.match(
+    styles,
+    /grid-template-columns: 64px minmax\(84px,1fr\) minmax\(112px,auto\)/,
+  );
+  assert.match(
+    styles,
+    /@media \(max-width: 420px\)[\s\S]*\.career-club-list > article/,
+  );
   assert.match(styles, /\.hall-ranking/);
   assert.match(styles, /\.hall-career-link/);
   assert.match(styles, /\.summary-preview-bar/);
@@ -379,59 +560,125 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
 
 test("reserva espaço real para os escudos no Hall da Fama mobile", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(styles, /\.hall-ranking > article \{[^}]*grid-template-columns: 24px 64px minmax\(0,1fr\) auto/);
-  assert.match(styles, /\.hall-ranking > article > \.club-badge \{ justify-self: center; \}/);
+  assert.match(
+    styles,
+    /\.hall-ranking > article \{[^}]*grid-template-columns: 24px 64px minmax\(0,1fr\) auto/,
+  );
+  assert.match(
+    styles,
+    /\.hall-ranking > article > \.club-badge \{ justify-self: center; \}/,
+  );
   assert.match(page, /className="hall-score"/);
   assert.doesNotMatch(styles, /\.hall-ranking > article > span \{/);
-  assert.match(styles, /\.welcome-hall article \{[^}]*grid-template-columns: 22px 58px minmax\(0,1fr\) auto/);
+  assert.match(
+    styles,
+    /\.welcome-hall article \{[^}]*grid-template-columns: 22px 58px minmax\(0,1fr\) auto/,
+  );
   assert.match(page, /className="welcome-hall-copy"/);
   assert.doesNotMatch(styles, /\.welcome-hall article > span \{/);
 });
 
 test("mantém o gramado contínuo atrás da meta do treinador", async () => {
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(styles, /\.event-stage \{[\s\S]*repeating-linear-gradient/);
   assert.match(styles, /\.event-art \{[^}]*background: transparent/);
-  assert.match(styles, /\.event-stage \.market-strip \{[^}]*background: rgba\(7,23,16,.9\)/);
+  assert.match(
+    styles,
+    /\.event-stage \.market-strip \{[^}]*background: rgba\(7,23,16,.9\)/,
+  );
 });
 
 test("deixa o fim de temporada rolar sem o rodapé cobrir o conteúdo", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /futbobo-viewport-locked/);
-  assert.match(page, /game\.phase === "consequence" \|\|\s+game\.phase === "transfer"/);
+  assert.match(
+    page,
+    /game\.phase === "consequence" \|\|\s+game\.phase === "transfer"/,
+  );
   assert.match(page, /window\.scrollTo\(0, 0\)/);
   assert.match(styles, /body\.futbobo-viewport-locked[\s\S]*position: fixed/);
-  assert.match(styles, /\.app-shell-season-result \{[\s\S]*height: auto;[\s\S]*overflow: visible;/);
-  assert.match(styles, /\.career-shell\.career-phase-season-result \{[\s\S]*min-height: 100dvh;[\s\S]*overflow: visible;/);
-  assert.match(styles, /\.career-phase-season-result > \.result-stage \{[\s\S]*overflow: visible;/);
-  assert.match(styles, /\.career-phase-season-result \.mobile-action-dock \{[\s\S]*position: static;/);
-  assert.match(page, /className="season-result-section-heading"><span>DESEMPENHO<\/span>/);
-  assert.match(page, /className="season-result-section-heading"><span>BASTIDORES<\/span>/);
+  assert.match(
+    styles,
+    /\.app-shell-season-result \{[\s\S]*height: auto;[\s\S]*overflow: visible;/,
+  );
+  assert.match(
+    styles,
+    /\.career-shell\.career-phase-season-result \{[\s\S]*min-height: 100dvh;[\s\S]*overflow: visible;/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-season-result > \.result-stage \{[\s\S]*overflow: visible;/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-season-result \.mobile-action-dock \{[\s\S]*position: static;/,
+  );
+  assert.match(
+    page,
+    /className="season-result-section-heading"><span>DESEMPENHO<\/span>/,
+  );
+  assert.match(
+    page,
+    /className="season-result-section-heading"><span>BASTIDORES<\/span>/,
+  );
   assert.match(page, /className="season-result-section season-campaigns"/);
-  assert.match(page, /competitions\.filter\(\(competition\) => !competition\.champion\)/);
-  assert.match(styles, /\.season-compact-grid \{[^}]*grid-template-columns: repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(styles, /\.career-phase-season-result \.result-symbol \{[\s\S]*width: 76px;[\s\S]*height: 76px;/);
+  assert.match(
+    page,
+    /competitions\.filter\(\(competition\) => !competition\.champion\)/,
+  );
+  assert.match(
+    styles,
+    /\.season-compact-grid \{[^}]*grid-template-columns: repeat\(2,minmax\(0,1fr\)\)/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-season-result \.result-symbol \{[\s\S]*width: 76px;[\s\S]*height: 76px;/,
+  );
 });
 
 test("mostra o resultado da última temporada antes de concluir a aposentadoria", async () => {
   const page = await readCareerSource();
 
-  assert.match(page, /current\.phase === "consequence"[\s\S]*current\.pendingBotaoMatches\.length \? "botao-final" : "season-result"/);
-  assert.match(page, /function continueAfterConsequence\(\) \{[\s\S]*current\.pendingBotaoMatches\.length \? "botao-final" : "season-result"/);
-  assert.match(page, /function continueAfterResult\(\) \{[\s\S]*if \(game\.retireAfterSeason\) \{[\s\S]*phase: "summary"/);
+  assert.match(
+    page,
+    /current\.phase === "consequence"[\s\S]*current\.pendingBotaoMatches\.length \? "botao-final" : "season-result"/,
+  );
+  assert.match(
+    page,
+    /function continueAfterConsequence\(\) \{[\s\S]*current\.pendingBotaoMatches\.length \? "botao-final" : "season-result"/,
+  );
+  assert.match(
+    page,
+    /function continueAfterResult\(\) \{[\s\S]*if \(game\.retireAfterSeason\) \{[\s\S]*phase: "summary"/,
+  );
   assert.match(page, /Ver resultado da última temporada/);
   assert.match(page, /game\.retireAfterSeason \? "Concluir carreira"/);
 });
 
 test("classifica para supercopas e recopás e exibe uma galeria completa de títulos", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const assetSync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
+  const assetSync = await readFile(
+    new URL("../scripts/sync-football-assets.mjs", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /domesticSuperCup/);
   assert.match(page, /recopaSudamericana/);
@@ -457,11 +704,23 @@ test("classifica para supercopas e recopás e exibe uma galeria completa de tít
 
 test("protege o OVR jovem e permite explosões raras de talento", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(page, /affected\.age <= 29\) development = growthRoll < 0\.58 \? 0/);
-  assert.match(page, /rareEarlyDeclineChance = affected\.age <= 29 \? 0\.015 : 0\.04/);
-  assert.match(page, /affected\.age <= 33\) development = growthRoll < 0\.08 \? -2/);
+  assert.match(
+    page,
+    /affected\.age <= 29\) development = growthRoll < 0\.58 \? 0/,
+  );
+  assert.match(
+    page,
+    /rareEarlyDeclineChance = affected\.age <= 29 \? 0\.015 : 0\.04/,
+  );
+  assert.match(
+    page,
+    /affected\.age <= 33\) development = growthRoll < 0\.08 \? -2/,
+  );
   assert.match(page, /const breakoutThreshold = isKeeper \? 70/);
   assert.match(page, /const breakoutChance = clamp\(12[\s\S]*12, 55\)/);
   assert.match(page, /hugeBreakout \? 5 : 3/);
@@ -474,7 +733,10 @@ test("mantém o mercado europeu coerente e reserva uma rota alternativa explicad
   const page = await readCareerSource();
 
   assert.match(page, /regionAffinity\(context\.sourceClub\.countryId, club\)/);
-  assert.match(page, /const domesticBonus = club\.countryId === context\.sourceClub\.countryId \? 4\.8 : 0/);
+  assert.match(
+    page,
+    /const domesticBonus = club\.countryId === context\.sourceClub\.countryId \? 4\.8 : 0/,
+  );
   assert.match(page, /club\.countryId === "arabia-saudita"/);
   assert.match(page, /club\.countryId === state\.academyCountryId/);
   assert.match(page, /reason: "alternative-route"/);
@@ -484,39 +746,72 @@ test("mantém o mercado europeu coerente e reserva uma rota alternativa explicad
 test("mostra de cinco a dez propostas na janela de transferências", async () => {
   const page = await readCareerSource();
 
-  assert.match(page, /clamp\(options\.count \?\? \(transferMarketProfile\(state\)\.extraMarketOffers \+ 6\), 5, 10\)/);
-  assert.match(page, /selected = \[\.\.\.selected\.slice\(0, Math\.max\(0, wanted - 1\)\), alternative\]/);
+  assert.match(
+    page,
+    /clamp\(options\.count \?\? \(transferMarketProfile\(state\)\.extraMarketOffers \+ 6\), 5, 10\)/,
+  );
+  assert.match(
+    page,
+    /selected = \[\.\.\.selected\.slice\(0, Math\.max\(0, wanted - 1\)\), alternative\]/,
+  );
   assert.match(page, /reason: "alternative-route"/);
 });
 
 test("bloqueia propostas europeias absurdas sem matar escolhas alternativas", async () => {
   const page = await readCareerSource();
 
-  assert.match(page, /state\.overall < 67 && isEuropeanClub\(club\) && !isEuropeanClub\(context\.sourceClub\)/);
-  assert.match(page, /role === "reserva" && strengthGap > 8 && !context\.standout/);
+  assert.match(
+    page,
+    /state\.overall < 67 && isEuropeanClub\(club\) && !isEuropeanClub\(context\.sourceClub\)/,
+  );
+  assert.match(
+    page,
+    /role === "reserva" && strengthGap > 8 && !context\.standout/,
+  );
   assert.match(page, /const noise = seeded[\s\S]*\* 2\.4/);
   assert.match(page, /Rota alternativa/);
 });
 
 test("oculta a reputação dos clubes no mercado e varia salários por negociação", async () => {
   const page = await readCareerSource();
-  const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
+  const systems = await readFile(
+    new URL("../app/career-systems.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.doesNotMatch(page, /reputação \{club\.reputation\}\/5/);
-  assert.match(systems, /club: Pick<Club, "id" \| "reputation" \| "countryId">/);
-  assert.match(systems, /salaryHash = Math\.imul\(salaryHash \^ club\.id\.charCodeAt\(index\), 16_777_619\)/);
-  assert.match(systems, /const negotiationFactor = 0\.87 \+ negotiationRoll \* 0\.28/);
+  assert.match(
+    systems,
+    /club: Pick<Club, "id" \| "reputation" \| "countryId">/,
+  );
+  assert.match(
+    systems,
+    /salaryHash = Math\.imul\(salaryHash \^ club\.id\.charCodeAt\(index\), 16_777_619\)/,
+  );
+  assert.match(
+    systems,
+    /const negotiationFactor = 0\.87 \+ negotiationRoll \* 0\.28/,
+  );
   assert.match(systems, /salaryBase \* negotiationFactor/);
 });
 
 test("gera temporadas com mais gols e assistências sem igualar todas as posições", async () => {
   const page = await readCareerSource();
-  const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const data = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /const productionMomentum = clamp\(/);
   assert.match(page, /roleProductionBonus/);
-  assert.match(page, /position\.goals \* quality \* finishingFactor \* productionMomentum/);
-  assert.match(page, /position\.assists \* quality \* creationFactor \* productionMomentum/);
+  assert.match(
+    page,
+    /position\.goals \* quality \* finishingFactor \* productionMomentum/,
+  );
+  assert.match(
+    page,
+    /position\.assists \* quality \* creationFactor \* productionMomentum/,
+  );
   assert.match(data, /key: "CA"[\s\S]*goals: 0\.43, assists: 0\.11/);
   assert.match(data, /key: "MEI"[\s\S]*goals: 0\.22, assists: 0\.3/);
   assert.match(data, /key: "PD"[\s\S]*goals: 0\.28, assists: 0\.22/);
@@ -525,14 +820,23 @@ test("gera temporadas com mais gols e assistências sem igualar todas as posiç�
 test("impede ficar no clube depois de um pedido de transferência aceito", async () => {
   const page = await readCareerSource();
 
-  assert.match(page, /if \(!offer && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/);
-  assert.match(page, /const canStay = state\.youthLoanDecision \|\| \(!state\.transferRequested && !state\.renewalDenied && !state\.forcedClubExit/);
+  assert.match(
+    page,
+    /if \(!offer && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/,
+  );
+  assert.match(
+    page,
+    /const canStay = state\.youthLoanDecision \|\| \(!state\.transferRequested && !state\.renewalDenied && !state\.forcedClubExit/,
+  );
   assert.match(page, /Permanecer não é mais uma opção/);
   assert.match(page, /transferRequested: false, transferStatus: null/);
 });
 
 test("expande o mercado para ligas e clubes das Américas", async () => {
-  const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const data = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
 
   for (const leagueId of [
     "liga-argentina",
@@ -585,18 +889,44 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
   assert.match(data, /"colombia"|"chile"|"paraguai"|"equador"|"peru"/);
 
   const countryIds = new Set(
-    [...data.matchAll(/\{ id: "([^"]+)", name: "[^"]+", demonym: "[^"]+", abbr: "[^"]+", confederation:/g)]
-      .map((match) => match[1]),
+    [
+      ...data.matchAll(
+        /\{ id: "([^"]+)", name: "[^"]+", demonym: "[^"]+", abbr: "[^"]+", confederation:/g,
+      ),
+    ].map((match) => match[1]),
   );
-  const leagueEntries = [...data.matchAll(/\{ id: "([^"]+)", countryId: "([^"]+)", name: "[^"]+", cupName:/g)];
+  const leagueEntries = [
+    ...data.matchAll(
+      /\{ id: "([^"]+)", countryId: "([^"]+)", name: "[^"]+", cupName:/g,
+    ),
+  ];
   const leagueIds = new Set(leagueEntries.map((match) => match[1]));
-  const clubEntries = [...data.matchAll(/\{ id: "([^"]+)", name: "[^"]+", shortName: "[^"]+", abbr: "[^"]+", city: "[^"]+"[^}]*countryId: "([^"]+)", leagueId: "([^"]+)"[^}]*reputation: (\d)/g)];
+  const clubEntries = [
+    ...data.matchAll(
+      /\{ id: "([^"]+)", name: "[^"]+", shortName: "[^"]+", abbr: "[^"]+", city: "[^"]+"[^}]*countryId: "([^"]+)", leagueId: "([^"]+)"[^}]*reputation: (\d)/g,
+    ),
+  ];
   const clubIds = clubEntries.map((match) => match[1]);
 
-  assert.equal(new Set(clubIds).size, clubIds.length, "IDs de clubes precisam ser únicos");
-  assert.ok(clubEntries.length >= 402, "a base deve manter pelo menos 402 clubes");
-  const clubsWithStrength = [...data.matchAll(/\{ id: "[^"]+", name: "[^"]+", shortName: "[^"]+", abbr: "[^"]+", city: "[^"]+"[^}]*countryId: "[^"]+", leagueId: "[^"]+"[^}]*reputation: \d[^}]*strength: \d+/g)];
-  assert.equal(clubsWithStrength.length, clubEntries.length, "todo clube precisa ter strength explícito");
+  assert.equal(
+    new Set(clubIds).size,
+    clubIds.length,
+    "IDs de clubes precisam ser únicos",
+  );
+  assert.ok(
+    clubEntries.length >= 402,
+    "a base deve manter pelo menos 402 clubes",
+  );
+  const clubsWithStrength = [
+    ...data.matchAll(
+      /\{ id: "[^"]+", name: "[^"]+", shortName: "[^"]+", abbr: "[^"]+", city: "[^"]+"[^}]*countryId: "[^"]+", leagueId: "[^"]+"[^}]*reputation: \d[^}]*strength: \d+/g,
+    ),
+  ];
+  assert.equal(
+    clubsWithStrength.length,
+    clubEntries.length,
+    "todo clube precisa ter strength explícito",
+  );
   assert.match(data, /export type Club = \{[\s\S]*?strength: number;/);
   const clubCountByLeague = new Map();
   const modestClubCountByLeague = new Map();
@@ -604,15 +934,25 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
     const leagueId = match[3];
     clubCountByLeague.set(leagueId, (clubCountByLeague.get(leagueId) ?? 0) + 1);
     if (match[4] === "1") {
-      modestClubCountByLeague.set(leagueId, (modestClubCountByLeague.get(leagueId) ?? 0) + 1);
+      modestClubCountByLeague.set(
+        leagueId,
+        (modestClubCountByLeague.get(leagueId) ?? 0) + 1,
+      );
     }
   }
   for (const [, leagueId, countryId] of leagueEntries) {
     if (countryId === "brasil") continue;
-    assert.ok((clubCountByLeague.get(leagueId) ?? 0) >= 10, `${leagueId} precisa ter ao menos 10 clubes`);
-    assert.ok((modestClubCountByLeague.get(leagueId) ?? 0) >= 1, `${leagueId} precisa ter clube modesto`);
+    assert.ok(
+      (clubCountByLeague.get(leagueId) ?? 0) >= 10,
+      `${leagueId} precisa ter ao menos 10 clubes`,
+    );
+    assert.ok(
+      (modestClubCountByLeague.get(leagueId) ?? 0) >= 1,
+      `${leagueId} precisa ter clube modesto`,
+    );
   }
-  for (const [, leagueId, countryId] of leagueEntries) assert.ok(countryIds.has(countryId), `país ausente na liga ${leagueId}`);
+  for (const [, leagueId, countryId] of leagueEntries)
+    assert.ok(countryIds.has(countryId), `país ausente na liga ${leagueId}`);
   for (const [, clubId, countryId, leagueId] of clubEntries) {
     assert.ok(countryIds.has(countryId), `país ausente no clube ${clubId}`);
     assert.ok(leagueIds.has(leagueId), `liga ausente no clube ${clubId}`);
@@ -633,7 +973,10 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
     ["premiership-sco", 12],
   ]);
   for (const [leagueId, officialSize] of completeEuropeanLeagues) {
-    assert.ok((clubCountByLeague.get(leagueId) ?? 0) >= officialSize, `${leagueId} precisa ter a liga completa`);
+    assert.ok(
+      (clubCountByLeague.get(leagueId) ?? 0) >= officialSize,
+      `${leagueId} precisa ter a liga completa`,
+    );
   }
   const completeAmericanLeagues = new Map([
     ["brasileirao", 20],
@@ -648,7 +991,10 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
     ["mls", 30],
   ]);
   for (const [leagueId, officialSize] of completeAmericanLeagues) {
-    assert.ok((clubCountByLeague.get(leagueId) ?? 0) >= officialSize, `${leagueId} precisa ter a liga completa`);
+    assert.ok(
+      (clubCountByLeague.get(leagueId) ?? 0) >= officialSize,
+      `${leagueId} precisa ter a liga completa`,
+    );
   }
   for (const clubId of [
     "coventry",
@@ -659,24 +1005,57 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
     "academico-viseu",
     "ado-den-haag",
   ]) {
-    assert.ok(clubIds.includes(clubId), `expansão europeia precisa manter ${clubId}`);
+    assert.ok(
+      clubIds.includes(clubId),
+      `expansão europeia precisa manter ${clubId}`,
+    );
   }
 });
 
 test("usa escudos, bandeiras e emblemas locais com fallback visual", async () => {
-  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const gameData = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const clubAssets = await readdir(new URL("../public/assets/clubs/", import.meta.url));
-  const flagAssets = await readdir(new URL("../public/assets/flags/", import.meta.url));
-  const competitionAssets = await walk(new URL("../public/assets/competitions/", import.meta.url));
-  const assetManifest = JSON.parse(await readFile(new URL("../public/assets/football-assets.json", import.meta.url), "utf8"));
-  const assetSync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
+  const clubAssets = await readdir(
+    new URL("../public/assets/clubs/", import.meta.url),
+  );
+  const flagAssets = await readdir(
+    new URL("../public/assets/flags/", import.meta.url),
+  );
+  const competitionAssets = await walk(
+    new URL("../public/assets/competitions/", import.meta.url),
+  );
+  const assetManifest = JSON.parse(
+    await readFile(
+      new URL("../public/assets/football-assets.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const assetSync = await readFile(
+    new URL("../scripts/sync-football-assets.mjs", import.meta.url),
+    "utf8",
+  );
   const mappedClubs = Object.values(assetManifest.clubs);
-  const providerIds = mappedClubs.map((club) => club.providerId).filter(Boolean);
-  const externalSources = mappedClubs.map((club) => club.externalSource).filter(Boolean);
-  const gameClubIds = [...gameData.matchAll(/\{ id: "([^"]+)", name: "[^"]+", shortName:/g)].map((match) => match[1]);
-  const localClubIds = new Set(clubAssets.filter((name) => name.endsWith(".png")).map((name) => name.slice(0, -4)));
+  const providerIds = mappedClubs
+    .map((club) => club.providerId)
+    .filter(Boolean);
+  const externalSources = mappedClubs
+    .map((club) => club.externalSource)
+    .filter(Boolean);
+  const gameClubIds = [
+    ...gameData.matchAll(/\{ id: "([^"]+)", name: "[^"]+", shortName:/g),
+  ].map((match) => match[1]);
+  const localClubIds = new Set(
+    clubAssets
+      .filter((name) => name.endsWith(".png"))
+      .map((name) => name.slice(0, -4)),
+  );
 
   assert.match(page, /LocalBadgeImage/);
   assert.match(page, /assets\/clubs\/\$\{club\.id\}\.png/);
@@ -690,18 +1069,48 @@ test("usa escudos, bandeiras e emblemas locais com fallback visual", async () =>
   assert.match(styles, /\.badge-image-club/);
   assert.match(styles, /\.badge-image-flag/);
   assert.match(styles, /\.badge-image-competition/);
-  assert.ok(gameClubIds.length >= 500, "a base completa precisa ser auditada pelo teste");
+  assert.ok(
+    gameClubIds.length >= 500,
+    "a base completa precisa ser auditada pelo teste",
+  );
   assert.deepEqual(
-    gameClubIds.filter((clubId) => !assetManifest.clubs[clubId] || !localClubIds.has(clubId)),
+    gameClubIds.filter(
+      (clubId) => !assetManifest.clubs[clubId] || !localClubIds.has(clubId),
+    ),
     [],
     "todos os clubes da base precisam ter escudo local verificado",
   );
-  assert.equal(assetManifest.clubs.liverpool.providerId, "133602", "Liverpool precisa usar o escudo do clube inglês");
-  assert.equal(flagAssets.filter((name) => name.endsWith(".png")).length, 139, "todas as seleções precisam ter bandeira");
-  assert.ok(competitionAssets.filter((file) => file.pathname.endsWith(".png")).length >= 12, "as principais competições precisam ter emblema");
-  assert.equal(new Set(providerIds).size, providerIds.length, "um mesmo escudo não pode representar clubes diferentes");
-  assert.equal(new Set(externalSources).size, externalSources.length, "assets externos não podem representar clubes diferentes");
-  assert.ok(mappedClubs.every((club) => !/women|femin|u-?\d\d|under-?\d\d/i.test(club.providerName)), "escudos precisam representar equipes principais masculinas");
+  assert.equal(
+    assetManifest.clubs.liverpool.providerId,
+    "133602",
+    "Liverpool precisa usar o escudo do clube inglês",
+  );
+  assert.equal(
+    flagAssets.filter((name) => name.endsWith(".png")).length,
+    139,
+    "todas as seleções precisam ter bandeira",
+  );
+  assert.ok(
+    competitionAssets.filter((file) => file.pathname.endsWith(".png")).length >=
+      12,
+    "as principais competições precisam ter emblema",
+  );
+  assert.equal(
+    new Set(providerIds).size,
+    providerIds.length,
+    "um mesmo escudo não pode representar clubes diferentes",
+  );
+  assert.equal(
+    new Set(externalSources).size,
+    externalSources.length,
+    "assets externos não podem representar clubes diferentes",
+  );
+  assert.ok(
+    mappedClubs.every(
+      (club) => !/women|femin|u-?\d\d|under-?\d\d/i.test(club.providerName),
+    ),
+    "escudos precisam representar equipes principais masculinas",
+  );
 });
 
 test("prioriza destinos sul-americanos e norte-americanos por proximidade geográfica", async () => {
@@ -713,15 +1122,24 @@ test("prioriza destinos sul-americanos e norte-americanos por proximidade geogr�
   assert.match(page, /targetConfederation === "SOUTH_AMERICA"\) return -3/);
   assert.match(page, /targetConfederation === "NORTH_AMERICA"\) return -1/);
   assert.match(page, /function prioritizeCurrentCountry/);
-  assert.match(page, /confederation === "NORTH_AMERICA"\) requirement -= state\.age >= 29 \? 10 : 4/);
+  assert.match(
+    page,
+    /confederation === "NORTH_AMERICA"\) requirement -= state\.age >= 29 \? 10 : 4/,
+  );
 });
 
 test("adiciona a Copa de Campeões Concacaf sem quebrar o gabinete de troféus", async () => {
   const page = await readCareerSource();
 
   assert.match(page, /concacafChampions: number/);
-  assert.match(page, /concacaf: \{ id: "concacafChampions", name: "Copa de Campeões Concacaf", icon: "CCC" \}/);
-  assert.match(page, /concacafChampions: saved\.trophyCabinet\?\.concacafChampions \?\? 0/);
+  assert.match(
+    page,
+    /concacaf: \{ id: "concacafChampions", name: "Copa de Campeões Concacaf", icon: "CCC" \}/,
+  );
+  assert.match(
+    page,
+    /concacafChampions: saved\.trophyCabinet\?\.concacafChampions \?\? 0/,
+  );
 });
 
 test("clube pode recusar renovar contrato após temporada ruim, forçando escolha de novo clube", async () => {
@@ -731,20 +1149,57 @@ test("clube pode recusar renovar contrato após temporada ruim, forçando escolh
   assert.match(page, /nonRenewalRiskFactors >= 2/);
   assert.match(page, /CONTRATO ENCERRADO/);
   assert.match(page, /O clube optou por não renovar/);
-  assert.match(page, /if \(!offer && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/);
+  assert.match(
+    page,
+    /if \(!offer && \(current\.transferRequested \|\| current\.renewalDenied \|\| current\.forcedClubExit \|\| current\.forcedAlternativeTransfer\)\) return current/,
+  );
 });
 
 test("centraliza propostas reais, empréstimos e histórico de transferências sem poluir a janela", async () => {
   const page = await readCareerSource();
-  const screen = await readFile(new URL("../app/components/career/TransferMarketScreen.tsx", import.meta.url), "utf8");
-  const architecture = await readFile(new URL("../app/career/README.md", import.meta.url), "utf8");
+  const screen = await readFile(
+    new URL(
+      "../app/components/career/TransferMarketScreen.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const architecture = await readFile(
+    new URL("../app/career/README.md", import.meta.url),
+    "utf8",
+  );
 
-  for (const contract of ["type TransferOffer", "type TransferRecord", "type LoanAgreement", "transferMarketOffers", "transferHistory", "activeLoan"]) assert.match(page, new RegExp(contract));
-  for (const rule of ["buildMarketContext", "clubPositionNeed", "generateTransferOffers", "applyAcceptedTransfer", "completeLoanReturn", "resolveTransferRequest"]) assert.match(page, new RegExp(`function ${rule}`));
+  for (const contract of [
+    "type TransferOffer",
+    "type TransferRecord",
+    "type LoanAgreement",
+    "transferMarketOffers",
+    "transferHistory",
+    "activeLoan",
+  ])
+    assert.match(page, new RegExp(contract));
+  for (const rule of [
+    "buildMarketContext",
+    "clubPositionNeed",
+    "generateTransferOffers",
+    "applyAcceptedTransfer",
+    "completeLoanReturn",
+    "resolveTransferRequest",
+  ])
+    assert.match(page, new RegExp(`function ${rule}`));
   assert.match(page, /transferFee: actualTransferFee/);
-  assert.match(page, /transferHistory: isRenewal \? state\.transferHistory : \[\.\.\.state\.transferHistory, transferRecord\(state, offer\)\]/);
-  assert.match(page, /contractYears: isLoan \? Math\.max\(2, state\.contractYears\) : offer\.contractYears/);
-  assert.match(page, /transferMarketOffers:[\s\S]*Array\.isArray\(saved\.transferMarketOffers\)/);
+  assert.match(
+    page,
+    /transferHistory: isRenewal \? state\.transferHistory : \[\.\.\.state\.transferHistory, transferRecord\(state, offer\)\]/,
+  );
+  assert.match(
+    page,
+    /contractYears: isLoan \? Math\.max\(2, state\.contractYears\) : offer\.contractYears/,
+  );
+  assert.match(
+    page,
+    /transferMarketOffers:[\s\S]*Array\.isArray\(saved\.transferMarketOffers\)/,
+  );
   assert.match(screen, /Proposta de \$\{formatMoney\(offer\.transferFee\)\}/);
   assert.match(screen, /<details className=\{styles\.details\}>/);
   assert.doesNotMatch(screen, /Valor estimado na liga/);
@@ -753,9 +1208,15 @@ test("centraliza propostas reais, empréstimos e histórico de transferências s
 
 test("atributos influenciam a simulação, premiações têm suspense e o escândalo força exílio", async () => {
   const page = await readCareerSource();
-  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const gameData = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
   const drama = await readCareerDramaSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /type PlayerAttributes = Record<AttributeKey, number>/);
   assert.match(page, /const finishingSkill = attributes\.finishing/);
@@ -780,33 +1241,60 @@ test("atributos influenciam a simulação, premiações têm suspense e o escân
 test("convites raros de outras seleções respeitam proximidade geográfica e nunca se repetem", async () => {
   const page = await readCareerSource();
 
-  assert.match(page, /const NATIONALITY_SWITCH_EVENT_ID = "dynamic-nationality-switch"/);
+  assert.match(
+    page,
+    /const NATIONALITY_SWITCH_EVENT_ID = "dynamic-nationality-switch"/,
+  );
   assert.match(page, /function pickNationalitySwitchTarget/);
   assert.match(page, /const NEARBY_NATIONAL_TEAMS/);
   assert.match(page, /seeded\(state\.seed, salt \+ 19\) < 0\.82/);
   assert.match(page, /function maybeOfferNationalitySwitch/);
   assert.match(page, /if \(state\.nationalitySwitchInviteUsed\) return null/);
   assert.match(page, /const pendingCareerEventId = current\.nextEventId/);
-  assert.match(page, /currentEventId: newClub \? selectNextEvent[\s\S]*pendingCareerEventId \|\| selectNextEvent/);
+  assert.match(
+    page,
+    /currentEventId: newClub \? selectNextEvent[\s\S]*pendingCareerEventId \|\| selectNextEvent/,
+  );
   assert.match(page, /Não é possível voltar atrás/);
-  assert.match(page, /nationalitySwitched: affected\.nationalitySwitched \|\| Boolean\(nationalitySwitchRecord\)/);
+  assert.match(
+    page,
+    /nationalitySwitched: affected\.nationalitySwitched \|\| Boolean\(nationalitySwitchRecord\)/,
+  );
 });
 
 test("integra o novo campo de posições, base sorteada, roleta e simulação por mérito", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(page, /function randomAcademyClubs\(seed: number, countryId: string\)/);
+  assert.match(
+    page,
+    /function randomAcademyClubs\(seed: number, countryId: string\)/,
+  );
   assert.match(page, /randomClubSelection\(academyClubPool\(countryId\), 4/);
-  assert.match(page, /randomClubSelection\([\s\S]*revelationOfferPool\(state\),[\s\S]*2,[\s\S]*\[state\.academyClubId\]/);
+  assert.match(
+    page,
+    /randomClubSelection\([\s\S]*revelationOfferPool\(state\),[\s\S]*2,[\s\S]*\[state\.academyClubId\]/,
+  );
   assert.match(page, /POSITION_FIELD_SPOTS/);
-  assert.match(styles, /\.position-grid \{[\s\S]*grid-template-columns: repeat\(5/);
+  assert.match(
+    styles,
+    /\.position-grid \{[\s\S]*grid-template-columns: repeat\(5/,
+  );
   assert.match(page, /const inSeasonMeritApps/);
   assert.match(page, /previousFormApps/);
-  assert.match(page, /Math\.round\(baseApps[\s\S]*inSeasonMeritApps \+ previousFormApps/);
+  assert.match(
+    page,
+    /Math\.round\(baseApps[\s\S]*inSeasonMeritApps \+ previousFormApps/,
+  );
   assert.match(page, /const nextFitness = clamp\(/);
   assert.match(page, /const nextMorale = clamp\(/);
-  assert.match(page, /setLuckSpin\(\{ event: currentEvent, choiceIndex, succeeded \}\)/);
+  assert.match(
+    page,
+    /setLuckSpin\(\{ event: currentEvent, choiceIndex, succeeded \}\)/,
+  );
   assert.match(styles, /@keyframes roulette-spin/);
   assert.match(page, /function attemptPositionChange/);
   assert.match(page, /positionChangeCooldownSeason/);
@@ -816,17 +1304,29 @@ test("integra o novo campo de posições, base sorteada, roleta e simulação po
 
 test("liga a nacionalidade à base local, regional ou europeia", async () => {
   const page = await readCareerSource();
-  const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const data = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(data, /id: "uzbequistao"[\s\S]*confederation: "ASIA"/);
   assert.match(data, /id: "canada"[\s\S]*confederation: "NORTH_AMERICA"/);
-  assert.match(data, /export type Confederation = "SOUTH_AMERICA" \| "EUROPE" \| "NORTH_AMERICA" \| "ASIA" \| "AFRICA" \| "OCEANIA"/);
+  assert.match(
+    data,
+    /export type Confederation = "SOUTH_AMERICA" \| "EUROPE" \| "NORTH_AMERICA" \| "ASIA" \| "AFRICA" \| "OCEANIA"/,
+  );
   assert.match(page, /const REGIONAL_ACADEMY_ROUTES/);
   assert.match(page, /const CONFEDERATION_ACADEMY_ROUTES/);
   assert.match(page, /canada: \["eua"\]/);
   assert.match(page, /if \(localClubs\.length >= 4\) return localClubs/);
-  assert.match(page, /countryById\(club\.countryId\)\.confederation === "EUROPE"/);
+  assert.match(
+    page,
+    /countryById\(club\.countryId\)\.confederation === "EUROPE"/,
+  );
   assert.match(page, /club\.reputation <= 3/);
   assert.match(page, /academyClubId: ""/);
   assert.match(page, /Uma liga próxima abriu a porta/);
@@ -842,11 +1342,17 @@ test("liga a nacionalidade à base local, regional ou europeia", async () => {
 
 test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da carreira", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /function simulateMonteCarloCareer/);
   assert.match(page, /function runMonteCarloCareers/);
-  assert.match(page, /state = simulateSeason\(state, event, effect, choice\.label, resultText, luckOutcome\)/);
+  assert.match(
+    page,
+    /state = simulateSeason\(state, event, effect, choice\.label, resultText, luckOutcome\)/,
+  );
   assert.match(page, /__FUTBOBO_MONTE_CARLO__/);
   assert.match(page, /params\.get\("montecarlo"\)/);
   assert.match(page, /data-testid="monte-carlo-report"/);
@@ -860,36 +1366,90 @@ test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da
 });
 
 test("adiciona o pacote de eventos de drama com filtros de carreira", async () => {
-  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const gameData = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
-  const baseDrama = await readFile(new URL("../app/career-drama-base.ts", import.meta.url), "utf8");
-  const extraDrama = await readFile(new URL("../app/career-drama-extra.ts", import.meta.url), "utf8");
+  const baseDrama = await readFile(
+    new URL("../app/career-drama-base.ts", import.meta.url),
+    "utf8",
+  );
+  const extraDrama = await readFile(
+    new URL("../app/career-drama-extra.ts", import.meta.url),
+    "utf8",
+  );
   const drama = [baseDrama, extraDrama].join("\n");
 
   assert.match(gameData, /needsConfederation\?: Confederation/);
   assert.match(gameData, /needsPositionZone\?: Position\["zone"\]/);
-  assert.match(gameData, /needsSquadRoles\?: Array<"promessa" \| "reserva" \| "rotacao" \| "titular" \| "estrela">/);
+  assert.match(
+    gameData,
+    /needsSquadRoles\?: Array<"promessa" \| "reserva" \| "rotacao" \| "titular" \| "estrela">/,
+  );
   assert.match(gameData, /needsCaptainRole\?: "club" \| "national" \| "any"/);
   assert.match(page, /CAREER_DRAMA_EVENTS/);
-  assert.match(page, /event\.needsConfederation && clubConfederation\(club\) !== event\.needsConfederation/);
-  assert.match(page, /event\.needsPositionZone && positionByKey\(state\.position\)\.zone !== event\.needsPositionZone/);
-  assert.match(page, /event\.needsSquadRoles && !event\.needsSquadRoles\.includes\(state\.squadRole\)/);
+  assert.match(
+    page,
+    /event\.needsConfederation && clubConfederation\(club\) !== event\.needsConfederation/,
+  );
+  assert.match(
+    page,
+    /event\.needsPositionZone && positionByKey\(state\.position\)\.zone !== event\.needsPositionZone/,
+  );
+  assert.match(
+    page,
+    /event\.needsSquadRoles && !event\.needsSquadRoles\.includes\(state\.squadRole\)/,
+  );
 
-  const extraCatalog = extraDrama.split("export const CAREER_DRAMA_EXTRA_EVENTS")[1]?.split("export function careerDramaEventWithOverride")[0] ?? "";
-  const dramaEventIds = [...[baseDrama, extraCatalog].join("\n").matchAll(/id: "(drama-[^"]+)"/g)].map((match) => match[1]);
-  assert.ok(dramaEventIds.length >= 45, "o pacote de drama precisa ter ao menos 45 eventos");
-  assert.equal(new Set(dramaEventIds).size, dramaEventIds.length, "IDs de drama precisam ser únicos");
+  const extraCatalog =
+    extraDrama
+      .split("export const CAREER_DRAMA_EXTRA_EVENTS")[1]
+      ?.split("export function careerDramaEventWithOverride")[0] ?? "";
+  const dramaEventIds = [
+    ...[baseDrama, extraCatalog].join("\n").matchAll(/id: "(drama-[^"]+)"/g),
+  ].map((match) => match[1]);
+  assert.ok(
+    dramaEventIds.length >= 45,
+    "o pacote de drama precisa ter ao menos 45 eventos",
+  );
+  assert.equal(
+    new Set(dramaEventIds).size,
+    dramaEventIds.length,
+    "IDs de drama precisam ser únicos",
+  );
   assert.match(extraDrama, /careerDramaEventWithOverride/);
-  for (const tag of ["IDADE", "POSIÇÃO", "REGIÃO", "ELENCO", "CAPITÃO", "SELEÇÃO", "LESÃO", "IMPRENSA", "FAMÍLIA", "EMPRESÁRIO", "APOSENTADORIA"]) {
+  for (const tag of [
+    "IDADE",
+    "POSIÇÃO",
+    "REGIÃO",
+    "ELENCO",
+    "CAPITÃO",
+    "SELEÇÃO",
+    "LESÃO",
+    "IMPRENSA",
+    "FAMÍLIA",
+    "EMPRESÁRIO",
+    "APOSENTADORIA",
+  ]) {
     assert.match(drama, new RegExp(`tag: "${tag}"`));
   }
-  assert.ok((drama.match(/luck: \{/g) ?? []).length >= 6, "precisa manter escolhas de sorte");
+  assert.ok(
+    (drama.match(/luck: \{/g) ?? []).length >= 6,
+    "precisa manter escolhas de sorte",
+  );
 });
 
 test("adiciona central estatística, empréstimos, rivais, personagens, agente livre e traits", async () => {
   const page = await readCareerSource();
-  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const gameData = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /CENTRAL ESTATÍSTICA/);
   assert.match(page, /function createCareerRivals/);
@@ -908,20 +1468,49 @@ test("adiciona central estatística, empréstimos, rivais, personagens, agente l
 });
 
 test("mantem os cards da Central inteiros e libera rolagem no celular", async () => {
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(styles, /\.career-tab-stats > \.statistics-screen\s*\{[^}]*grid-auto-rows: max-content/);
-  assert.match(styles, /\.career-tab-stats > \.statistics-screen\s*\{[^}]*overflow-y: auto/);
-  assert.match(styles, /\.career-tab-stats > \.statistics-screen > \*\s*\{[^}]*min-height: max-content/);
-  assert.match(styles, /scroll-padding-bottom: calc\(env\(safe-area-inset-bottom\) \+ 92px\)/);
+  assert.match(
+    styles,
+    /\.career-tab-stats > \.statistics-screen\s*\{[^}]*grid-auto-rows: max-content/,
+  );
+  assert.match(
+    styles,
+    /\.career-tab-stats > \.statistics-screen\s*\{[^}]*overflow-y: auto/,
+  );
+  assert.match(
+    styles,
+    /\.career-tab-stats > \.statistics-screen > \*\s*\{[^}]*min-height: max-content/,
+  );
+  assert.match(
+    styles,
+    /scroll-padding-bottom: calc\(env\(safe-area-inset-bottom\) \+ 92px\)/,
+  );
 });
 
 test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes", async () => {
   const page = await readCareerSource();
-  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const gameData = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
-  for (const brand of ["Nike", "adidas", "Puma", "New Balance", "Under Armour", "Mizuno", "Umbro"]) {
+  for (const brand of [
+    "Nike",
+    "adidas",
+    "Puma",
+    "New Balance",
+    "Under Armour",
+    "Mizuno",
+    "Umbro",
+  ]) {
     assert.match(page, new RegExp(`name: "${brand}"`));
   }
   assert.match(page, /type SponsorDeal/);
@@ -931,8 +1520,14 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
   assert.match(page, /function buildSponsorDutyEvent/);
   assert.match(page, /function buildSocialEvent/);
   assert.match(page, /function buildLifeEvent/);
-  assert.match(page, /activeSponsor: sponsorExpired \? null : affected\.activeSponsor/);
-  assert.match(page, /money: Math\.max\(0, affected\.money \+ affected\.annualSalary \+ sponsorIncome - seasonLivingCost\)/);
+  assert.match(
+    page,
+    /activeSponsor: sponsorExpired \? null : affected\.activeSponsor/,
+  );
+  assert.match(
+    page,
+    /money: Math\.max\(0, affected\.money \+ affected\.annualSalary \+ sponsorIncome - seasonLivingCost\)/,
+  );
   assert.match(page, /socialFeed: \[\.\.\.milestonePosts, seasonSocialPost/);
   assert.match(page, /VIDA FORA DO CAMPO/);
   assert.match(page, /PATROCINADOR PESSOAL/);
@@ -950,24 +1545,45 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
 
 test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundial", async () => {
   const page = await readCareerSource();
-  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
-  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
-  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
-  const renderer = await readFile(new URL("../app/botao/render.ts", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
+  const adapter = await readFile(
+    new URL("../app/botao/adapter.ts", import.meta.url),
+    "utf8",
+  );
+  const engine = await readFile(
+    new URL("../app/botao/engine.ts", import.meta.url),
+    "utf8",
+  );
+  const match = await readFile(
+    new URL("../app/botao/BotaoMatch.tsx", import.meta.url),
+    "utf8",
+  );
+  const renderer = await readFile(
+    new URL("../app/botao/render.ts", import.meta.url),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL("../app/botao/botao.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /\| "botao-final"/);
   assert.match(page, /\| "botao-result"/);
   assert.match(page, /pendingBotaoMatches: PendingBotaoMatch\[\]/);
   assert.match(page, /competition\.id !== "domesticLeague"/);
-  assert.match(page, /worldKnockoutStages = \["16 avos", "Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"\]/);
+  assert.match(
+    page,
+    /worldKnockoutStages = \["16 avos", "Oitavas", "Quartas", "Semifinal", "Vice", "CAMPEÃO"\]/,
+  );
   assert.match(page, /<BotaoMatch/);
   assert.match(page, /simulateBotaoMatch\(currentBotaoSetup\)/);
   assert.match(page, /function applyBotaoMatchResult/);
   assert.match(page, /playerGoals/);
   assert.match(page, /worldQualifiedSeason/);
   assert.match(page, /finalMatchMode: "play-key-matches"/);
-  assert.match(page, /finalMatchMode: AppSettings\["finalMatchMode"\] = "play-key-matches"/);
+  assert.match(
+    page,
+    /finalMatchMode: AppSettings\["finalMatchMode"\] = "play-key-matches"/,
+  );
   assert.match(page, /DECIDIDO NO FUTEBOL DE BOTÃO/);
   assert.match(page, /seasonClubTitles/);
   assert.match(page, /seasonNationalTitles/);
@@ -985,8 +1601,14 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   assert.match(page, /previousOpponentIds/);
   assert.match(engine, /function createMatch/);
   assert.match(engine, /export function awardInactivityPenalty/);
-  assert.match(engine, /const inRegulation = state\.period <= state\.setup\.rules\.halves/);
-  assert.match(engine, /state\.phase === "kickoff" && state\.clockPausedForKickoff/);
+  assert.match(
+    engine,
+    /const inRegulation = state\.period <= state\.setup\.rules\.halves/,
+  );
+  assert.match(
+    engine,
+    /state\.phase === "kickoff" && state\.clockPausedForKickoff/,
+  );
   assert.match(match, /const USER_DECISION_SECONDS = 7/);
   assert.match(match, /const USER_WARNING_SECONDS = 3/);
   assert.match(match, /botao-inactivity-countdown/);
@@ -1010,39 +1632,78 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
   assert.doesNotMatch(page, /decis.o\(ões\) restante/);
   assert.match(styles, /\.botao-career-lobby/);
   assert.match(styles, /\.botao-inactivity-countdown/);
-  assert.match(styles, /\.botao-career-lobby \.botao-actions > \.botao-primary/);
+  assert.match(
+    styles,
+    /\.botao-career-lobby \.botao-actions > \.botao-primary/,
+  );
 });
 
 test("fecha o patch de mercado, economia, personalização e futebol de botão", async () => {
   const page = await readCareerSource();
-  const data = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const data = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
   const drama = await readCareerDramaSource();
-  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
-  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
-  const simulation = await readFile(new URL("../app/career/simulation.ts", import.meta.url), "utf8");
-  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const adapter = await readFile(
+    new URL("../app/botao/adapter.ts", import.meta.url),
+    "utf8",
+  );
+  const engine = await readFile(
+    new URL("../app/botao/engine.ts", import.meta.url),
+    "utf8",
+  );
+  const simulation = await readFile(
+    new URL("../app/career/simulation.ts", import.meta.url),
+    "utf8",
+  );
+  const match = await readFile(
+    new URL("../app/botao/BotaoMatch.tsx", import.meta.url),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(page, /const SECOND_DIVISION_LEAGUES = new Set\(\["brasileirao-b", "championship"\]\)/);
+  assert.match(
+    page,
+    /const SECOND_DIVISION_LEAGUES = new Set\(\["brasileirao-b", "championship"\]\)/,
+  );
   assert.match(page, /sourceLeagueId: league\.id/);
-  assert.match(page, /SECOND_DIVISION_LEAGUES\.has\(context\.sourceLeagueId\) && club\.countryId !== context\.sourceClub\.countryId/);
-  assert.match(page, /domesticReturnCountryId = event\.id === "european-exit" \|\| event\.id === "return-home"[\s\S]*nextBase\.academyCountryId/);
+  assert.match(
+    page,
+    /SECOND_DIVISION_LEAGUES\.has\(context\.sourceLeagueId\) && club\.countryId !== context\.sourceClub\.countryId/,
+  );
+  assert.match(
+    page,
+    /domesticReturnCountryId = event\.id === "european-exit" \|\| event\.id === "return-home"[\s\S]*nextBase\.academyCountryId/,
+  );
   assert.doesNotMatch(page, /const brazilReturnChance/);
   assert.doesNotMatch(page, /Retorno raro ao Brasil/);
-  assert.match(adapter, /args\.competitionId === "domesticCup" && leagueId === "brasileirao-b"/);
+  assert.match(
+    adapter,
+    /args\.competitionId === "domesticCup" && leagueId === "brasileirao-b"/,
+  );
   assert.match(adapter, /candidate\.leagueId === "brasileirao"/);
   assert.match(adapter, /args\.competitionId === "libertadores"/);
   assert.match(adapter, /candidate\.countryId !== club\.countryId/);
 
   assert.doesNotMatch(match, /onGiveUp/);
   assert.doesNotMatch(match, />\s*Sair\s*</);
-  assert.match(engine, /persistentSquadNumbers\(\s*setup\.userTeam\.id,\s*\[setup\.player\.number\]/);
+  assert.match(
+    engine,
+    /persistentSquadNumbers\(\s*setup\.userTeam\.id,\s*\[setup\.player\.number\]/,
+  );
 
   assert.match(drama, /id: "drama-billie-eilish-photo"/);
   assert.match(drama, /followers: 10_000_000/);
   assert.match(page, /id: "corruption" as const/);
   assert.match(page, /seeded\(state\.seed, state\.season \* 1877/);
-  assert.match(page, /forcedFreeAgentUntilSeason = current\.season \+ corruptionBanYears/);
+  assert.match(
+    page,
+    /forcedFreeAgentUntilSeason = current\.season \+ corruptionBanYears/,
+  );
   assert.match(page, /seasonNetIncome \* 0\.18/);
   assert.match(page, /spendableMoney/);
 
@@ -1056,13 +1717,19 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
 
   assert.match(page, /function isIdolAtClub/);
   assert.match(page, /state\.fanSupport >= 94/);
-  assert.match(simulation, /const forcedClubExit = !loanedOut && !isIdolAtClub/);
+  assert.match(
+    simulation,
+    /const forcedClubExit = !loanedOut && !isIdolAtClub/,
+  );
   assert.match(page, /VENDA OBRIGATÓRIA/);
 
   assert.match(page, /botaoGoalLimit\?: 0 \| 3 \| 5/);
   assert.match(page, /botaoHalfSeconds\?: 90 \| 120 \| 180/);
   assert.match(page, /stageOrder = \["16 avos de final", "Oitavas de final"/);
-  assert.match(page, /useState\(false\).*updateNoticeOpen|updateNoticeOpen, setUpdateNoticeOpen\] = useState\(false\)/);
+  assert.match(
+    page,
+    /useState\(false\).*updateNoticeOpen|updateNoticeOpen, setUpdateNoticeOpen\] = useState\(false\)/,
+  );
   assert.match(page, /Ver novidades do jogo/);
   assert.match(page, /window\.scrollTo\(\{ top: 0, behavior: "smooth" \}\)/);
   assert.match(styles, /\.custom-club-settings/);
@@ -1071,9 +1738,18 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
 
 test("mostra o minuto de cada gol no resultado do futebol de botão", async () => {
   const page = await readCareerSource();
-  const standalone = await readFile(new URL("../app/botao/page.tsx", import.meta.url), "utf8");
-  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
-  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const standalone = await readFile(
+    new URL("../app/botao/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const adapter = await readFile(
+    new URL("../app/botao/adapter.ts", import.meta.url),
+    "utf8",
+  );
+  const engine = await readFile(
+    new URL("../app/botao/engine.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(adapter, /export function formatGoalMinute/);
   assert.match(adapter, /90 \+ segmentIndex \* segmentMinutes/);
@@ -1081,21 +1757,39 @@ test("mostra o minuto de cada gol no resultado do futebol de botão", async () =
   assert.match(page, /Gols da partida/);
   assert.match(page, /formatGoalMinute\(entry, setup\.rules\)/);
   assert.match(standalone, /Gols da partida/);
-  assert.match(standalone, /matchGoals = result\.timeline\.map\(\(entry, timelineIndex\)/);
-  assert.match(standalone, /\.filter\(\(\{ entry \}\) => isMatchGoal\(entry\)\)/);
+  assert.match(
+    standalone,
+    /matchGoals = result\.timeline\.map\(\(entry, timelineIndex\)/,
+  );
+  assert.match(
+    standalone,
+    /\.filter\(\(\{ entry \}\) => isMatchGoal\(entry\)\)/,
+  );
   assert.match(engine, /inactivityPenalty && scored \? "goal"/);
 });
 
 test("mantém vivo o rebote do goleiro que ainda segue em direção ao gol", async () => {
-  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const engine = await readFile(
+    new URL("../app/botao/engine.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(engine, /function collide\([^)]*\): boolean/);
   assert.match(engine, /const keeperBallPair =/);
-  assert.match(engine, /if \(collide\(state, a, b, events\) && keeperBallPair\) savedByKeeper = true/);
+  assert.match(
+    engine,
+    /if \(collide\(state, a, b, events\) && keeperBallPair\) savedByKeeper = true/,
+  );
   assert.match(engine, /if \(savedByKeeper\) \{/);
-  assert.match(engine, /const movingAwayFromGoal = goalY === 0 \? ball\.vy > STOP_SPEED : ball\.vy < -STOP_SPEED/);
+  assert.match(
+    engine,
+    /const movingAwayFromGoal = goalY === 0 \? ball\.vy > STOP_SPEED : ball\.vy < -STOP_SPEED/,
+  );
   assert.match(engine, /if \(movingAwayFromGoal \|\| keeperStoppedBall\)/);
-  assert.match(engine, /if \(crossed\) return \{ scored: inGoalMouth\(ball\.x\) \}/);
+  assert.match(
+    engine,
+    /if \(crossed\) return \{ scored: inGoalMouth\(ball\.x\) \}/,
+  );
   assert.ok(
     engine.indexOf("if (savedByKeeper)") < engine.indexOf("const crossed ="),
     "o afastamento do goleiro precisa ser resolvido antes da linha do gol",
@@ -1104,14 +1798,20 @@ test("mantém vivo o rebote do goleiro que ainda segue em direção ao gol", asy
 
 test("usa uma central de carreira própria no computador sem alterar o layout mobile", async () => {
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /desktop-career-nav-brand/);
   assert.match(page, /CENTRAL DO JOGADOR/);
   assert.match(styles, /grid-template-columns: 294px minmax\(0, 1fr\)/);
   assert.match(styles, /\.career-shell > \.bottom-nav \{/);
   assert.match(styles, /\.career-shell > \.event-stage \{/);
-  assert.match(styles, /grid-template-columns: minmax\(270px, \.82fr\) minmax\(430px, 1\.18fr\)/);
+  assert.match(
+    styles,
+    /grid-template-columns: minmax\(270px, \.82fr\) minmax\(430px, 1\.18fr\)/,
+  );
   assert.match(styles, /\.career-tab-profile > \.panel-screen \{/);
   assert.match(styles, /\.career-tab-life > \.life-screen/);
   assert.match(styles, /\.career-tab-stats > \.statistics-screen/);
@@ -1120,29 +1820,62 @@ test("usa uma central de carreira própria no computador sem alterar o layout mo
 });
 
 test("não comprime a cerimônia de prêmios no resultado desktop", async () => {
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(styles, /\.career-shell > \.result-stage > \* \{ flex-shrink: 0; \}/);
-  assert.match(styles, /\.career-shell > \.result-stage \.season-awards-showcase \{/);
+  assert.match(
+    styles,
+    /\.career-shell > \.result-stage > \* \{ flex-shrink: 0; \}/,
+  );
+  assert.match(
+    styles,
+    /\.career-shell > \.result-stage \.season-awards-showcase \{/,
+  );
   assert.match(styles, /min-height: max-content/);
 });
 
 test("organiza o arquivo final da carreira em faixas largas no desktop", async () => {
-  const premium = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
+  const premium = await readFile(
+    new URL("../app/premium.css", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(premium, /\.app-shell-summary \.summary-screen \{[\s\S]*max-width: 1480px/);
-  assert.match(premium, /\.app-shell-summary \.share-card \{[\s\S]*grid-column: 1 \/ 9/);
-  assert.match(premium, /\.app-shell-summary \.trophy-gallery-final \{[\s\S]*grid-column: 1 \/ -1/);
+  assert.match(
+    premium,
+    /\.app-shell-summary \.summary-screen \{[\s\S]*max-width: 1480px/,
+  );
+  assert.match(
+    premium,
+    /\.app-shell-summary \.share-card \{[\s\S]*grid-column: 1 \/ 9/,
+  );
+  assert.match(
+    premium,
+    /\.app-shell-summary \.trophy-gallery-final \{[\s\S]*grid-column: 1 \/ -1/,
+  );
   assert.match(premium, /repeat\(auto-fit,minmax\(300px,1fr\)\)/);
-  assert.match(premium, /trophy-groups > section:not\(\.has-titles\) \{ display: none/);
-  assert.match(premium, /\.app-shell-summary \.summary-confetti \{ display: none/);
-  assert.match(premium, /\.app-shell-summary \.summary-screen > \.career-club-summary \{ grid-column: 1 \/ -1/);
+  assert.match(
+    premium,
+    /trophy-groups > section:not\(\.has-titles\) \{ display: none/,
+  );
+  assert.match(
+    premium,
+    /\.app-shell-summary \.summary-confetti \{ display: none/,
+  );
+  assert.match(
+    premium,
+    /\.app-shell-summary \.summary-screen > \.career-club-summary \{ grid-column: 1 \/ -1/,
+  );
   assert.match(premium, /\.club-archive-layout/);
 });
 
 test("compartilha a carreira como pôster rico com fallback local", async () => {
   const page = await readCareerSource();
-  const premium = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
+  const premium = await readFile(
+    new URL("../app/premium.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /canvas\.width = 1080/);
   assert.match(page, /canvas\.height = 1350/);
@@ -1155,9 +1888,18 @@ test("compartilha a carreira como pôster rico com fallback local", async () => 
 
 test("fecha a rodada de polimento com controles semânticos e leitura acessível", async () => {
   const page = await readCareerSource();
-  const premium = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
-  const botao = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
-  const worldCup = await readFile(new URL("../app/copa/world-cup.css", import.meta.url), "utf8");
+  const premium = await readFile(
+    new URL("../app/premium.css", import.meta.url),
+    "utf8",
+  );
+  const botao = await readFile(
+    new URL("../app/botao/botao.css", import.meta.url),
+    "utf8",
+  );
+  const worldCup = await readFile(
+    new URL("../app/copa/world-cup.css", import.meta.url),
+    "utf8",
+  );
 
   assert.doesNotMatch(page, /role="button"/);
   assert.doesNotMatch(page, /Nenhuma seleção encontrada/);
@@ -1172,8 +1914,14 @@ test("fecha a rodada de polimento com controles semânticos e leitura acessível
 
 test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
   const page = await readCareerSource();
-  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
-  const types = await readFile(new URL("../app/botao/types.ts", import.meta.url), "utf8");
+  const adapter = await readFile(
+    new URL("../app/botao/adapter.ts", import.meta.url),
+    "utf8",
+  );
+  const types = await readFile(
+    new URL("../app/botao/types.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(types, /walkover\?: boolean/);
   assert.match(adapter, /export function walkoverBotaoResult/);
@@ -1181,22 +1929,40 @@ test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
   assert.match(adapter, /goalsAgainst: 3/);
   assert.match(page, /futbobo:botao-in-progress:v1/);
   assert.match(page, /function restoreSavedGame/);
-  assert.match(page, /applyBotaoMatchResult\(walkoverBotaoResult\(setup\), setup\)/);
+  assert.match(
+    page,
+    /applyBotaoMatchResult\(walkoverBotaoResult\(setup\), setup\)/,
+  );
   assert.match(page, /function startCurrentBotaoMatch/);
   assert.match(page, /onClick=\{startCurrentBotaoMatch\}/);
   assert.match(page, /DERROTA POR W\.O\./);
 
   const startMatch = page.indexOf("function startCurrentBotaoMatch");
-  const markerWrite = page.indexOf("localStorage.setItem(BOTAO_IN_PROGRESS_KEY", startMatch);
+  const markerWrite = page.indexOf(
+    "localStorage.setItem(BOTAO_IN_PROGRESS_KEY",
+    startMatch,
+  );
   const openField = page.indexOf("setBotaoMatchStarted(true)", startMatch);
-  assert.ok(markerWrite > startMatch && markerWrite < openField, "o marcador deve ser salvo antes de abrir o campo");
+  assert.ok(
+    markerWrite > startMatch && markerWrite < openField,
+    "o marcador deve ser salvo antes de abrir o campo",
+  );
 });
 
 test("cria origens persistentes que mudam a carreira e abrem capitulos proprios", async () => {
   const page = await readCareerSource();
-  const stories = await readFile(new URL("../app/player-stories.ts", import.meta.url), "utf8");
-  const chapters = await readFile(new URL("../app/story-chapters.ts", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const stories = await readFile(
+    new URL("../app/player-stories.ts", import.meta.url),
+    "utf8",
+  );
+  const chapters = await readFile(
+    new URL("../app/story-chapters.ts", import.meta.url),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL("../app/globals.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /version: 7/);
   assert.match(page, /phase: "story"/);
@@ -1221,7 +1987,11 @@ test("cria origens persistentes que mudam a carreira e abrem capitulos proprios"
   assert.match(stories, /"disillusioned"/);
   assert.match(stories, /"academy-reject"/);
   assert.match(stories, /"migrant-dream"/);
-  assert.equal((chapters.match(/key: "[^"]+"/g) ?? []).length, 33, "cada origem precisa de três capítulos adicionais próprios");
+  assert.equal(
+    (chapters.match(/key: "[^"]+"/g) ?? []).length,
+    33,
+    "cada origem precisa de três capítulos adicionais próprios",
+  );
   assert.match(chapters, /Um ex-colega inventou a origem perfeita para você/);
   assert.match(chapters, /A prova caiu na manhã seguinte à final/);
   assert.match(chapters, /Querem colocar seu nome na rua onde você cresceu/);
@@ -1230,12 +2000,27 @@ test("cria origens persistentes que mudam a carreira e abrem capitulos proprios"
 });
 
 test("grava replays vetoriais leves dos gols sem reexecutar a partida", async () => {
-  const types = await readFile(new URL("../app/botao/types.ts", import.meta.url), "utf8");
-  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
-  const replay = await readFile(new URL("../app/botao/GoalReplay.tsx", import.meta.url), "utf8");
-  const render = await readFile(new URL("../app/botao/render.ts", import.meta.url), "utf8");
+  const types = await readFile(
+    new URL("../app/botao/types.ts", import.meta.url),
+    "utf8",
+  );
+  const match = await readFile(
+    new URL("../app/botao/BotaoMatch.tsx", import.meta.url),
+    "utf8",
+  );
+  const replay = await readFile(
+    new URL("../app/botao/GoalReplay.tsx", import.meta.url),
+    "utf8",
+  );
+  const render = await readFile(
+    new URL("../app/botao/render.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
-  const standalone = await readFile(new URL("../app/botao/page.tsx", import.meta.url), "utf8");
+  const standalone = await readFile(
+    new URL("../app/botao/page.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.match(types, /export type BotaoGoalReplay/);
   assert.match(types, /positions: number\[\]/);
@@ -1256,8 +2041,8 @@ test("grava replays vetoriais leves dos gols sem reexecutar a partida", async ()
   assert.match(render, /export function drawReplayFrame/);
   const replayRendererStart = render.indexOf("export function drawReplayFrame");
   assert.ok(
-    render.indexOf("drawDisc(ctx, rendered", replayRendererStart)
-      < render.indexOf("drawBall(ctx, ball,", replayRendererStart),
+    render.indexOf("drawDisc(ctx, rendered", replayRendererStart) <
+      render.indexOf("drawBall(ctx, ball,", replayRendererStart),
     "a bola precisa ser desenhada por cima dos botões no replay",
   );
   assert.match(page, /Ver replay/);
@@ -1265,9 +2050,18 @@ test("grava replays vetoriais leves dos gols sem reexecutar a partida", async ()
 });
 
 test("coloca convocados de OVR baixo no banco e preserva o placar anterior", async () => {
-  const types = await readFile(new URL("../app/botao/types.ts", import.meta.url), "utf8");
-  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
-  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const types = await readFile(
+    new URL("../app/botao/types.ts", import.meta.url),
+    "utf8",
+  );
+  const adapter = await readFile(
+    new URL("../app/botao/adapter.ts", import.meta.url),
+    "utf8",
+  );
+  const engine = await readFile(
+    new URL("../app/botao/engine.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
 
   assert.match(types, /export type BotaoMatchEntry/);
@@ -1284,11 +2078,26 @@ test("coloca convocados de OVR baixo no banco e preserva o placar anterior", asy
 
 test("entrega um APK offline sem criar uma segunda versão do jogo", async () => {
   const page = await readCareerSource();
-  const android = await readFile(new URL("../app/android-app.ts", import.meta.url), "utf8");
-  const dialog = await readFile(new URL("../app/AndroidInstallDialog.tsx", import.meta.url), "utf8");
-  const capacitor = await readFile(new URL("../capacitor.config.ts", import.meta.url), "utf8");
-  const nextConfig = await readFile(new URL("../next.config.ts", import.meta.url), "utf8");
-  const packageJson = await readFile(new URL("../package.json", import.meta.url), "utf8");
+  const android = await readFile(
+    new URL("../app/android-app.ts", import.meta.url),
+    "utf8",
+  );
+  const dialog = await readFile(
+    new URL("../app/AndroidInstallDialog.tsx", import.meta.url),
+    "utf8",
+  );
+  const capacitor = await readFile(
+    new URL("../capacitor.config.ts", import.meta.url),
+    "utf8",
+  );
+  const nextConfig = await readFile(
+    new URL("../next.config.ts", import.meta.url),
+    "utf8",
+  );
+  const packageJson = await readFile(
+    new URL("../package.json", import.meta.url),
+    "utf8",
+  );
 
   assert.match(capacitor, /appId: "com\.futbobo\.game"/);
   assert.match(capacitor, /webDir: "out"/);
@@ -1304,11 +2113,20 @@ test("entrega um APK offline sem criar uma segunda versão do jogo", async () =>
 });
 
 test("modera o melhor da partida e transforma o destaque em coletiva", async () => {
-  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
+  const engine = await readFile(
+    new URL("../app/botao/engine.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
-  const styles = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/botao/botao.css", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(engine, /const contributions = state\.playerGoals \+ state\.playerAssists/);
+  assert.match(
+    engine,
+    /const contributions = state\.playerGoals \+ state\.playerAssists/,
+  );
   assert.match(engine, /const decisiveSingleContribution/);
   assert.match(engine, /contributions >= 3/);
   assert.match(engine, /contributions >= 2/);
@@ -1321,56 +2139,145 @@ test("modera o melhor da partida e transforma o destaque em coletiva", async () 
 });
 
 test("cria momentos engraçados e específicos com espaço próprio na carreira", async () => {
-  const moments = await readFile(new URL("../app/futbobo-moments.ts", import.meta.url), "utf8");
+  const moments = await readFile(
+    new URL("../app/futbobo-moments.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
-  const ids = [...moments.matchAll(/id: "(funny-[^"]+)"/g)].map((match) => match[1]);
+  const ids = [...moments.matchAll(/id: "(funny-[^"]+)"/g)].map(
+    (match) => match[1],
+  );
 
-  assert.equal(ids.length, 22, "o pacote precisa manter variedade suficiente para várias carreiras");
-  assert.equal(new Set(ids).size, ids.length, "cada momento precisa ter identidade própria");
-  assert.equal((moments.match(/oneTime: true/g) ?? []).length, ids.length, "momentos específicos não devem se repetir na mesma carreira");
-  assert.match(moments, /Seu companheiro quer abrir um canal de gameplay com você/);
+  assert.equal(
+    ids.length,
+    22,
+    "o pacote precisa manter variedade suficiente para várias carreiras",
+  );
+  assert.equal(
+    new Set(ids).size,
+    ids.length,
+    "cada momento precisa ter identidade própria",
+  );
+  assert.equal(
+    (moments.match(/oneTime: true/g) ?? []).length,
+    ids.length,
+    "momentos específicos não devem se repetir na mesma carreira",
+  );
+  assert.match(
+    moments,
+    /Seu companheiro quer abrir um canal de gameplay com você/,
+  );
   assert.match(moments, /O papagaio do vizinho aprendeu sua comemoração/);
   assert.match(moments, /campeonato de futebol de botão na concentração/);
-  assert.match(page, /import \{ FUTBOBO_MOMENTS \} from "\.\.\/futbobo-moments"/);
+  assert.match(
+    page,
+    /import \{ FUTBOBO_MOMENTS \} from "\.\.\/futbobo-moments"/,
+  );
   assert.match(page, /event\.id\.startsWith\("funny-"\)/);
   assert.match(page, /< 0\.22/);
 });
 
 test("mantem menu desktop e mesa de decisoes mobile dentro da viewport", async () => {
-  const styles = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
+  const styles = await readFile(
+    new URL("../app/premium.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(styles, /\.app-shell-welcome \.welcome-main \.hero-pitch \{/);
-  assert.match(styles, /grid-template-rows: max-content minmax\(0,1fr\) max-content max-content/);
-  assert.match(styles, /\.app-shell-welcome \.welcome-layout \{[\s\S]*?height: auto;[\s\S]*?overflow: hidden;/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event > \.event-stage \{[\s\S]*?grid-template-rows: max-content max-content minmax\(0,1fr\)/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event > \.career-status-strip \{[\s\S]*?overflow: hidden;/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event \.choice-list \{[\s\S]*?grid-auto-rows: minmax\(44px,1fr\)/);
+  assert.match(
+    styles,
+    /grid-template-rows: max-content minmax\(0,1fr\) max-content max-content/,
+  );
+  assert.match(
+    styles,
+    /\.app-shell-welcome \.welcome-layout \{[\s\S]*?height: auto;[\s\S]*?overflow: hidden;/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event > \.event-stage \{[\s\S]*?grid-template-rows: max-content max-content minmax\(0,1fr\)/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event > \.career-status-strip \{[\s\S]*?overflow: hidden;/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event \.choice-list \{[\s\S]*?grid-auto-rows: minmax\(44px,1fr\)/,
+  );
   assert.match(styles, /@media \(max-width: 540px\) and \(max-height: 700px\)/);
   assert.match(styles, /v89 — mobile decision deck/);
-  assert.match(styles, /\.app-shell-career \.career-phase-career\.career-tab-event \{[\s\S]*?padding-bottom: calc\(66px \+ env\(safe-area-inset-bottom\)\);/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event > \.event-stage \{[\s\S]*?align-content: stretch;/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event > \.event-stage \{[\s\S]*?padding-bottom: 0;/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event \.objective-card > small \{[\s\S]*?display: block;/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event \.event-card \{[\s\S]*?grid-template-rows: minmax\(0, 1fr\) max-content;[\s\S]*?border-radius: 18px;/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event \.choice-list,[\s\S]*?align-self: end;[\s\S]*?grid-auto-rows: minmax\(44px, max-content\);/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event \.decision-button \{[\s\S]*?border-radius: 10px;/);
+  assert.match(
+    styles,
+    /\.app-shell-career \.career-phase-career\.career-tab-event \{[\s\S]*?padding-bottom: calc\(66px \+ env\(safe-area-inset-bottom\)\);/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event > \.event-stage \{[\s\S]*?align-content: stretch;/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event > \.event-stage \{[\s\S]*?padding-bottom: 0;/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event \.objective-card > small \{[\s\S]*?display: block;/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event \.event-card \{[\s\S]*?grid-template-rows: minmax\(0, 1fr\) max-content;[\s\S]*?border-radius: 18px;/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event \.choice-list,[\s\S]*?align-self: end;[\s\S]*?grid-auto-rows: minmax\(44px, max-content\);/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event \.decision-button \{[\s\S]*?border-radius: 10px;/,
+  );
   assert.match(styles, /--decision-edge: 12px;/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event \.objective-card \{[\s\S]*?margin: var\(--decision-edge\) var\(--decision-edge\) 0;/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event \.event-heading p \{[\s\S]*?display: block;/);
-  assert.match(styles, /\.career-phase-career\.career-tab-event \.decision-button small \{[\s\S]*?display: block;/);
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event \.objective-card \{[\s\S]*?margin: var\(--decision-edge\) var\(--decision-edge\) 0;/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event \.event-heading p \{[\s\S]*?display: block;/,
+  );
+  assert.match(
+    styles,
+    /\.career-phase-career\.career-tab-event \.decision-button small \{[\s\S]*?display: block;/,
+  );
 });
 
 test("oferece uma Copa do Mundo independente que respeita as regras atuais e campo horizontal apenas no PC", async () => {
   const home = await readCareerSource();
-  const cup = await readFile(new URL("../app/copa/page.tsx", import.meta.url), "utf8");
-  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
-  const render = await readFile(new URL("../app/botao/render.ts", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/botao/botao.css", import.meta.url), "utf8");
+  const cup = await readFile(
+    new URL("../app/copa/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const match = await readFile(
+    new URL("../app/botao/BotaoMatch.tsx", import.meta.url),
+    "utf8",
+  );
+  const render = await readFile(
+    new URL("../app/botao/render.ts", import.meta.url),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL("../app/botao/botao.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(home, /href="\/copa"/);
   assert.match(home, /Jogar uma Copa do Mundo/);
-  assert.match(cup, /const KNOCKOUT_STAGES = \["16 avos", "Oitavas", "Quartas", "Semifinal", "Final"\]/);
-  assert.match(cup, /usedOpponents: \[\.\.\.campaign\.usedOpponents, opponentId\]/);
+  assert.match(
+    cup,
+    /const KNOCKOUT_STAGES = \["16 avos", "Oitavas", "Quartas", "Semifinal", "Final"\]/,
+  );
+  assert.match(
+    cup,
+    /usedOpponents: \[\.\.\.campaign\.usedOpponents, opponentId\]/,
+  );
   assert.match(cup, /buildNationalMatchSetup/);
   assert.match(cup, /<BotaoMatch/);
   assert.match(cup, /Uma Copa inteira/);
@@ -1382,26 +2289,56 @@ test("oferece uma Copa do Mundo independente que respeita as regras atuais e cam
   assert.match(match, /const \[desktopLandscape, setDesktopLandscape\]/);
   assert.match(match, /futbobo_botao_landscape/);
   assert.match(match, /context\.setTransform\(0, scale, -scale, 0/);
-  assert.match(match, /toFieldPoint\(event\.clientX, event\.clientY, canvas\.getBoundingClientRect\(\), desktopLandscape\)/);
+  assert.match(
+    match,
+    /toFieldPoint\(event\.clientX, event\.clientY, canvas\.getBoundingClientRect\(\), desktopLandscape\)/,
+  );
   assert.match(match, /botao-desktop-only/);
   assert.match(match, /compactMobileTable/);
   assert.match(match, /Encolher mesa/);
   assert.match(render, /rotated = false/);
-  assert.match(styles, /\.botao-desktop-only,\s*\.botao-mobile-size-toggle \{ display: none; \}/);
+  assert.match(
+    styles,
+    /\.botao-desktop-only,\s*\.botao-mobile-size-toggle \{ display: none; \}/,
+  );
   assert.match(styles, /\.botao-mobile-size-toggle \{ display: inline-flex;/);
-  assert.match(styles, /\.botao-root-landscape \.botao-canvas \{ aspect-ratio: 516 \/ 316; \}/);
+  assert.match(
+    styles,
+    /\.botao-root-landscape \.botao-canvas \{ aspect-ratio: 516 \/ 316; \}/,
+  );
   assert.match(styles, /v90 — desktop landscape is a real table-first mode/);
-  assert.match(styles, /\.botao-root-landscape \{[\s\S]*?grid-template-columns: minmax\(0,1fr\) clamp\(244px,19vw,320px\);[\s\S]*?grid-template-rows: minmax\(0,1fr\) max-content;/);
-  assert.match(styles, /\.botao-root-landscape \.botao-table-wrapper \{[\s\S]*?grid-column: 1;[\s\S]*?grid-row: 1 \/ 3;[\s\S]*?width: min\(100%,calc\(\(100dvh - 32px\) \* 516 \/ 316\)\);/);
-  assert.match(styles, /\.botao-root-landscape \.botao-hud \{[\s\S]*?grid-column: 2;[\s\S]*?grid-row: 1;/);
-  assert.match(styles, /\.botao-root-landscape \.botao-controls \{[\s\S]*?grid-column: 2;[\s\S]*?grid-row: 2;/);
+  assert.match(
+    styles,
+    /\.botao-root-landscape \{[\s\S]*?grid-template-columns: minmax\(0,1fr\) clamp\(244px,19vw,320px\);[\s\S]*?grid-template-rows: minmax\(0,1fr\) max-content;/,
+  );
+  assert.match(
+    styles,
+    /\.botao-root-landscape \.botao-table-wrapper \{[\s\S]*?grid-column: 1;[\s\S]*?grid-row: 1 \/ 3;[\s\S]*?width: min\(100%,calc\(\(100dvh - 32px\) \* 516 \/ 316\)\);/,
+  );
+  assert.match(
+    styles,
+    /\.botao-root-landscape \.botao-hud \{[\s\S]*?grid-column: 2;[\s\S]*?grid-row: 1;/,
+  );
+  assert.match(
+    styles,
+    /\.botao-root-landscape \.botao-controls \{[\s\S]*?grid-column: 2;[\s\S]*?grid-row: 2;/,
+  );
 });
 
 test("corrige competicoes, bola de ouro, rivais e numeros persistentes", async () => {
   const page = await readCareerSource();
-  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
-  const engine = await readFile(new URL("../app/botao/engine.ts", import.meta.url), "utf8");
-  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
+  const adapter = await readFile(
+    new URL("../app/botao/adapter.ts", import.meta.url),
+    "utf8",
+  );
+  const engine = await readFile(
+    new URL("../app/botao/engine.ts", import.meta.url),
+    "utf8",
+  );
+  const match = await readFile(
+    new URL("../app/botao/BotaoMatch.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.match(page, /const BALLON_DOR_EXCLUDED_TROPHIES = new Set/);
   assert.match(page, /"domesticSuperCup"/);
@@ -1416,15 +2353,30 @@ test("corrige competicoes, bola de ouro, rivais e numeros persistentes", async (
   assert.match(adapter, /isGlobalFinal \? 4 : 2/);
   assert.match(engine, /const SQUAD_NUMBER_POOL = \[1, 10, 9, 8, 7, 11/);
   assert.match(engine, /hashSeed\("futbobo-squad-numbers", teamId\)/);
-  assert.match(engine, /persistentSquadNumbers\(\s*setup\.userTeam\.id,\s*\[setup\.player\.number\]/);
-  assert.match(match, /state\.setup\.stageName === "Final" \? "CAMPEÃO!" : "CLASSIFICADO!"/);
+  assert.match(
+    engine,
+    /persistentSquadNumbers\(\s*setup\.userTeam\.id,\s*\[setup\.player\.number\]/,
+  );
+  assert.match(
+    match,
+    /state\.setup\.stageName === "Final" \? "CAMPEÃO!" : "CLASSIFICADO!"/,
+  );
 });
 
 test("expande personagens e transforma o Mundial em campanha jogavel", async () => {
   const page = await readCareerSource();
-  const appearance = await readFile(new URL("../app/player-appearance.ts", import.meta.url), "utf8");
-  const editor = await readFile(new URL("../app/PlayerAppearanceEditor.tsx", import.meta.url), "utf8");
-  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
+  const appearance = await readFile(
+    new URL("../app/player-appearance.ts", import.meta.url),
+    "utf8",
+  );
+  const editor = await readFile(
+    new URL("../app/PlayerAppearanceEditor.tsx", import.meta.url),
+    "utf8",
+  );
+  const adapter = await readFile(
+    new URL("../app/botao/adapter.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(appearance, /"Mini afro"/);
   assert.match(appearance, /export const KIT_PATTERN_NAMES/);
@@ -1437,60 +2389,121 @@ test("expande personagens e transforma o Mundial em campanha jogavel", async () 
   assert.match(page, /Math\.round\(game\.managerTrust\)\}%/);
   assert.match(page, /overallVisibility/);
   assert.match(page, /worldCampaign: true/);
-  assert.match(page, /\["Playoff Mundial", "Quartas de final", "Semifinal", "Final"\]/);
+  assert.match(
+    page,
+    /\["Playoff Mundial", "Quartas de final", "Semifinal", "Final"\]/,
+  );
   assert.match(adapter, /function pickClubWorldOpponent/);
-  assert.match(adapter, /roll < \.5 \? "SOUTH_AMERICA" : roll < \.65 \? "NORTH_AMERICA" : roll < \.9 \? "ASIA"/);
+  assert.match(
+    adapter,
+    /roll < \.5 \? "SOUTH_AMERICA" : roll < \.65 \? "NORTH_AMERICA" : roll < \.9 \? "ASIA"/,
+  );
 });
 
 test("vencer uma copa nacional jogavel recalcula a vaga continental", async () => {
   const page = await readCareerSource();
 
   assert.match(page, /function continentalSlotAfterSeason/);
-  assert.match(page, /league\.id === "brasileirao-b" \? "libertadores" : "europa"/);
-  assert.match(page, /competitionId === "domesticCup"[\s\S]*continentalSlotAfterSeason/);
+  assert.match(
+    page,
+    /league\.id === "brasileirao-b" \? "libertadores" : "europa"/,
+  );
+  assert.match(
+    page,
+    /competitionId === "domesticCup"[\s\S]*continentalSlotAfterSeason/,
+  );
   assert.match(page, /continentalSlot: resolvedContinentalSlot/);
 });
 
 test("personagens aleatorios reservam cores fantasia para tres por cento dos casos", async () => {
-  const appearance = await readFile(new URL("../app/player-appearance.ts", import.meta.url), "utf8");
+  const appearance = await readFile(
+    new URL("../app/player-appearance.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(appearance, /NATURAL_HAIR_COLOR_INDICES/);
   assert.match(appearance, /COLORED_HAIR_COLOR_INDICES/);
-  assert.match(appearance, /random\(\) < 0\.03 \? COLORED_HAIR_COLOR_INDICES : NATURAL_HAIR_COLOR_INDICES/);
+  assert.match(
+    appearance,
+    /random\(\) < 0\.03 \? COLORED_HAIR_COLOR_INDICES : NATURAL_HAIR_COLOR_INDICES/,
+  );
 });
 
 test("expande o mapa com Egito, Africa do Sul, Australia e vinte novas selecoes", async () => {
-  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const gameData = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
-  const adapter = await readFile(new URL("../app/botao/adapter.ts", import.meta.url), "utf8");
+  const adapter = await readFile(
+    new URL("../app/botao/adapter.ts", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(gameData, /id: "egypt-premier"[\s\S]*name: "Egyptian Premier League"/);
-  assert.match(gameData, /id: "south-africa-premiership"[\s\S]*name: "Betway Premiership"/);
+  assert.match(
+    gameData,
+    /id: "egypt-premier"[\s\S]*name: "Egyptian Premier League"/,
+  );
+  assert.match(
+    gameData,
+    /id: "south-africa-premiership"[\s\S]*name: "Betway Premiership"/,
+  );
   assert.match(gameData, /id: "a-league"[\s\S]*name: "A-League Men"/);
   assert.equal((gameData.match(/leagueId: "egypt-premier"/g) ?? []).length, 21);
-  assert.equal((gameData.match(/leagueId: "south-africa-premiership"/g) ?? []).length, 16);
+  assert.equal(
+    (gameData.match(/leagueId: "south-africa-premiership"/g) ?? []).length,
+    16,
+  );
   assert.equal((gameData.match(/leagueId: "a-league"/g) ?? []).length, 12);
 
   for (const countryId of [
-    "armenia", "azerbaijao", "cazaquistao", "luxemburgo", "siria", "libano",
-    "palestina", "malasia", "filipinas", "benim", "uganda", "tanzania", "quenia",
-    "guine-equatorial", "suriname", "nicaragua", "republica-dominicana",
-    "papua-nova-guine", "vanuatu", "nova-caledonia",
+    "armenia",
+    "azerbaijao",
+    "cazaquistao",
+    "luxemburgo",
+    "siria",
+    "libano",
+    "palestina",
+    "malasia",
+    "filipinas",
+    "benim",
+    "uganda",
+    "tanzania",
+    "quenia",
+    "guine-equatorial",
+    "suriname",
+    "nicaragua",
+    "republica-dominicana",
+    "papua-nova-guine",
+    "vanuatu",
+    "nova-caledonia",
   ]) {
     assert.match(gameData, new RegExp(`id: "${countryId}"`));
   }
 
   assert.match(gameData, /\| "african"/);
-  assert.match(page, /african: \{ id: "cafChampions", name: "CAF Champions League", icon: "CAF" \}/);
+  assert.match(
+    page,
+    /african: \{ id: "cafChampions", name: "CAF Champions League", icon: "CAF" \}/,
+  );
   assert.match(page, /confederation === "AFRICA"[\s\S]*?"african"/);
-  assert.match(page, /cafChampions: saved\.trophyCabinet\?\.cafChampions \?\? 0/);
+  assert.match(
+    page,
+    /cafChampions: saved\.trophyCabinet\?\.cafChampions \?\? 0/,
+  );
   assert.match(adapter, /roll < \.95 \? "AFRICA" : "OCEANIA"/);
 });
 
 test("abre cinco novas ligas completas e transforma a Arabia no mercado de salarios gigantes", async () => {
-  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const gameData = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
-  const careerSystems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
+  const careerSystems = await readFile(
+    new URL("../app/career-systems.ts", import.meta.url),
+    "utf8",
+  );
 
   const expectedLeagueSizes = new Map([
     ["botola-pro", 16],
@@ -1501,7 +2514,10 @@ test("abre cinco novas ligas completas e transforma a Arabia no mercado de salar
   ]);
   for (const [leagueId, expectedSize] of expectedLeagueSizes) {
     assert.match(gameData, new RegExp(`id: "${leagueId}"`));
-    assert.equal((gameData.match(new RegExp(`leagueId: "${leagueId}"`, "g")) ?? []).length, expectedSize);
+    assert.equal(
+      (gameData.match(new RegExp(`leagueId: "${leagueId}"`, "g")) ?? []).length,
+      expectedSize,
+    );
   }
 
   assert.match(page, /"botola-pro": 0\.42/);
@@ -1510,18 +2526,39 @@ test("abre cinco novas ligas completas e transforma a Arabia no mercado de salar
   assert.match(page, /"liga-futve": 0\.22/);
   assert.match(page, /"chance-liga": 0\.55/);
   assert.match(page, /AFRICA: \["egito", "africa-do-sul", "marrocos"/);
-  assert.match(careerSystems, /club\.countryId === "arabia-saudita" \? 7\.4 : 2\.8/);
+  assert.match(
+    careerSystems,
+    /club\.countryId === "arabia-saudita" \? 7\.4 : 2\.8/,
+  );
 });
 
 test("abre a carreira para microestados e novos azarões internacionais", async () => {
-  const gameData = await readFile(new URL("../app/game-data.ts", import.meta.url), "utf8");
+  const gameData = await readFile(
+    new URL("../app/game-data.ts", import.meta.url),
+    "utf8",
+  );
   const page = await readCareerSource();
-  const assetSync = await readFile(new URL("../scripts/sync-football-assets.mjs", import.meta.url), "utf8");
+  const assetSync = await readFile(
+    new URL("../scripts/sync-football-assets.mjs", import.meta.url),
+    "utf8",
+  );
 
   for (const countryId of [
-    "vaticano", "san-marino", "andorra", "liechtenstein", "malta", "gibraltar",
-    "ilhas-faroe", "moldavia", "estonia", "letonia", "lituania", "nepal", "butao",
-    "mongolia", "bangladesh",
+    "vaticano",
+    "san-marino",
+    "andorra",
+    "liechtenstein",
+    "malta",
+    "gibraltar",
+    "ilhas-faroe",
+    "moldavia",
+    "estonia",
+    "letonia",
+    "lituania",
+    "nepal",
+    "butao",
+    "mongolia",
+    "bangladesh",
   ]) {
     assert.match(gameData, new RegExp(`id: "${countryId}"`));
     assert.match(page, new RegExp(`(?:"${countryId}"|${countryId}): \\[`));
@@ -1530,20 +2567,45 @@ test("abre a carreira para microestados e novos azarões internacionais", async 
 });
 
 test("recorta estampas do uniforme dentro da camisa", async () => {
-  const appearance = await readFile(new URL("../app/player-appearance.ts", import.meta.url), "utf8");
-  const drawKit = appearance.slice(appearance.indexOf("function drawKit"), appearance.indexOf("function drawBeard"));
+  const appearance = await readFile(
+    new URL("../app/player-appearance.ts", import.meta.url),
+    "utf8",
+  );
+  const drawKit = appearance.slice(
+    appearance.indexOf("function drawKit"),
+    appearance.indexOf("function drawBeard"),
+  );
 
-  assert.match(drawKit, /ctx\.rect\(-22 \* scale, 7 \* scale, 44 \* scale, 27 \* scale\);/);
+  assert.match(
+    drawKit,
+    /ctx\.rect\(-22 \* scale, 7 \* scale, 44 \* scale, 27 \* scale\);/,
+  );
   assert.match(drawKit, /ctx\.clip\(\);/);
-  assert.match(drawKit, /ctx\.rotate\(-\.56\)/, "a faixa diagonal continua existindo dentro do recorte");
+  assert.match(
+    drawKit,
+    /ctx\.rotate\(-\.56\)/,
+    "a faixa diagonal continua existindo dentro do recorte",
+  );
   assert.match(drawKit, /ctx\.restore\(\);\s*\}/);
 });
 
 test("publica metadados completos para buscadores no dominio oficial", async () => {
-  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
-  const robots = await readFile(new URL("../app/robots.ts", import.meta.url), "utf8");
-  const sitemap = await readFile(new URL("../app/sitemap.ts", import.meta.url), "utf8");
-  const manifest = await readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8");
+  const layout = await readFile(
+    new URL("../app/layout.tsx", import.meta.url),
+    "utf8",
+  );
+  const robots = await readFile(
+    new URL("../app/robots.ts", import.meta.url),
+    "utf8",
+  );
+  const sitemap = await readFile(
+    new URL("../app/sitemap.ts", import.meta.url),
+    "utf8",
+  );
+  const manifest = await readFile(
+    new URL("../public/manifest.webmanifest", import.meta.url),
+    "utf8",
+  );
 
   assert.match(layout, /Simulador de Carreira de Jogador de Futebol/);
   assert.match(layout, /"@type": "VideoGame"/);
@@ -1558,10 +2620,22 @@ test("publica metadados completos para buscadores no dominio oficial", async () 
 
 test("abre um X1 local real e reorganiza o menu por tipo de gameplay", async () => {
   const home = await readCareerSource();
-  const match = await readFile(new URL("../app/botao/BotaoMatch.tsx", import.meta.url), "utf8");
-  const versus = await readFile(new URL("../app/x1/page.tsx", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/premium.css", import.meta.url), "utf8");
-  const versusStyles = await readFile(new URL("../app/x1/x1.css", import.meta.url), "utf8");
+  const match = await readFile(
+    new URL("../app/botao/BotaoMatch.tsx", import.meta.url),
+    "utf8",
+  );
+  const versus = await readFile(
+    new URL("../app/x1/page.tsx", import.meta.url),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL("../app/premium.css", import.meta.url),
+    "utf8",
+  );
+  const versusStyles = await readFile(
+    new URL("../app/x1/x1.css", import.meta.url),
+    "utf8",
+  );
 
   assert.match(home, /className="welcome-mode-menu"/);
   assert.match(home, /className="mode-menu-grid"/);
@@ -1590,18 +2664,33 @@ test("abre um X1 local real e reorganiza o menu por tipo de gameplay", async () 
 
 test("dá ao goleiro uma carreira própria da base ao fim da trajetória", async () => {
   const page = await readCareerSource();
-  const keeperEvents = await readFile(new URL("../app/goalkeeper-events.ts", import.meta.url), "utf8");
-  const systems = await readFile(new URL("../app/career-systems.ts", import.meta.url), "utf8");
+  const keeperEvents = await readFile(
+    new URL("../app/goalkeeper-events.ts", import.meta.url),
+    "utf8",
+  );
+  const systems = await readFile(
+    new URL("../app/career-systems.ts", import.meta.url),
+    "utf8",
+  );
   const exclusiveEventIds = keeperEvents.match(/id: "keeper-/g) ?? [];
 
-  assert.ok(exclusiveEventIds.length >= 18, `esperava pelo menos 18 eventos exclusivos, recebeu ${exclusiveEventIds.length}`);
+  assert.ok(
+    exclusiveEventIds.length >= 18,
+    `esperava pelo menos 18 eventos exclusivos, recebeu ${exclusiveEventIds.length}`,
+  );
   assert.match(keeperEvents, /GOALKEEPER_YOUTH_EVENTS/);
   assert.match(keeperEvents, /A disputa pelo gol virou um campeonato à parte/);
   assert.match(keeperEvents, /O país inteiro espera uma defesa/);
   assert.match(keeperEvents, /O clube contratou quem dizem ser seu sucessor/);
-  assert.match(page, /state\.position === "GOL" && unseenGoalkeeperEvents\.length/);
+  assert.match(
+    page,
+    /state\.position === "GOL" && unseenGoalkeeperEvents\.length/,
+  );
   assert.match(page, /< 0\.64/);
-  assert.match(page, /state\.position === "GOL" \? GOALKEEPER_YOUTH_EVENTS : YOUTH_EVENTS/);
+  assert.match(
+    page,
+    /state\.position === "GOL" \? GOALKEEPER_YOUTH_EVENTS : YOUTH_EVENTS/,
+  );
   assert.match(page, /Melhor Goleiro do/);
   assert.match(page, /Muralha da Temporada/);
   assert.match(page, /isKeeper && hasGoalkeeperAward \? 72/);
@@ -1610,26 +2699,62 @@ test("dá ao goleiro uma carreira própria da base ao fim da trajetória", async
 });
 
 test("lança a v93.10 com elenco persistente, rota do empresário e traição entre rivais", async () => {
-  const game = await readFile(new URL("../app/components/career/CareerGame.tsx", import.meta.url), "utf8");
-  const team = await readFile(new URL("../app/career/team-roster.ts", import.meta.url), "utf8");
-  const world = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
-  const market = await readFile(new URL("../app/career/transfer-market.ts", import.meta.url), "utf8");
-  const state = await readFile(new URL("../app/career/state.ts", import.meta.url), "utf8");
-  const shop = await readFile(new URL("../app/career/cycle-shop.ts", import.meta.url), "utf8");
-  const press = await readFile(new URL("../app/career/press-conferences.ts", import.meta.url), "utf8");
-  const version = await readFile(new URL("../app/version.ts", import.meta.url), "utf8");
+  const game = await readFile(
+    new URL("../app/components/career/CareerGame.tsx", import.meta.url),
+    "utf8",
+  );
+  const team = await readFile(
+    new URL("../app/career/team-roster.ts", import.meta.url),
+    "utf8",
+  );
+  const world = await readFile(
+    new URL("../app/career/world-players.ts", import.meta.url),
+    "utf8",
+  );
+  const market = await readFile(
+    new URL("../app/career/transfer-market.ts", import.meta.url),
+    "utf8",
+  );
+  const state = await readFile(
+    new URL("../app/career/state.ts", import.meta.url),
+    "utf8",
+  );
+  const shop = await readFile(
+    new URL("../app/career/cycle-shop.ts", import.meta.url),
+    "utf8",
+  );
+  const press = await readFile(
+    new URL("../app/career/press-conferences.ts", import.meta.url),
+    "utf8",
+  );
+  const version = await readFile(
+    new URL("../app/version.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(game, /changeTab\("team"\)/);
   assert.match(game, /activeTab === "team"/);
   assert.match(team, /reserveCapacity: 3/);
-  assert.match(team, /COUNTRIES\.find\(\(candidate\) => candidate\.id === state\.nationality\)/);
+  assert.match(
+    team,
+    /COUNTRIES\.find\(\(candidate\) => candidate\.id === state\.nationality\)/,
+  );
   assert.match(world, /squad-\$\{club\.id\}-\$\{season\}-\$\{serial\}/);
   assert.match(world, /while \(current\.length \+ added < wanted\)/);
-  assert.match(market, /if \(state\.betrayedClubIds\.includes\(club\.id\)\) return false/);
+  assert.match(
+    market,
+    /if \(state\.betrayedClubIds\.includes\(club\.id\)\) return false/,
+  );
   assert.match(market, /!state\.betrayedClubIds\.includes\(id\)/);
   assert.match(market, /Math\.max\(1, Math\.round\(wanted \* 0\.75\)\)/);
-  assert.match(state, /agentCountryFocus: typeof saved\.agentCountryFocus === "string"/);
-  assert.match(state, /betrayedClubIds: Array\.isArray\(saved\.betrayedClubIds\)/);
+  assert.match(
+    state,
+    /agentCountryFocus: typeof saved\.agentCountryFocus === "string"/,
+  );
+  assert.match(
+    state,
+    /betrayedClubIds: Array\.isArray\(saved\.betrayedClubIds\)/,
+  );
   assert.match(shop, /validCountryFocus/);
   assert.match(press, /kind: "betrayal"/);
   assert.match(version, /FUTBOBO_VERSION = "v95"/);
@@ -1637,10 +2762,22 @@ test("lança a v93.10 com elenco persistente, rota do empresário e traição en
 });
 
 test("mantém World Players persistentes, compactos e determinísticos por carreira", async () => {
-  const model = await readFile(new URL("../app/career/world-player-model.ts", import.meta.url), "utf8");
-  const domain = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
-  const state = await readFile(new URL("../app/career/state.ts", import.meta.url), "utf8");
-  const simulation = await readFile(new URL("../app/career/simulation.ts", import.meta.url), "utf8");
+  const model = await readFile(
+    new URL("../app/career/world-player-model.ts", import.meta.url),
+    "utf8",
+  );
+  const domain = await readFile(
+    new URL("../app/career/world-players.ts", import.meta.url),
+    "utf8",
+  );
+  const state = await readFile(
+    new URL("../app/career/state.ts", import.meta.url),
+    "utf8",
+  );
+  const simulation = await readFile(
+    new URL("../app/career/simulation.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(model, /export type WorldPlayer = \{/);
   assert.match(model, /birthSeason: number/);
@@ -1657,33 +2794,60 @@ test("mantém World Players persistentes, compactos e determinísticos por carre
 });
 
 test("liga rivais e premiações ao mundo sem substituir seus sistemas atuais", async () => {
-  const domain = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
+  const domain = await readFile(
+    new URL("../app/career/world-players.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(domain, /export function syncRivalsToWorldPlayers/);
   assert.match(domain, /rivalLinks\[rival\.id\]/);
   assert.match(domain, /export function resolveWorldPlayerByName/);
   assert.match(domain, /export function ensureKnownWorldPlayer/);
   assert.match(domain, /export function recordWorldPlayerHonor/);
-  assert.match(domain, /if \(player\.honors\.some\(\(item\) => item\.id === id\)\) return universe/);
+  assert.match(
+    domain,
+    /if \(player\.honors\.some\(\(item\) => item\.id === id\)\) return universe/,
+  );
   assert.match(domain, /nomination\.winner/);
 });
 
 test("World Players usam o mesmo motor central de mercado", async () => {
-  const market = await readFile(new URL("../app/career/transfer-market.ts", import.meta.url), "utf8");
-  const domain = await readFile(new URL("../app/career/world-players.ts", import.meta.url), "utf8");
+  const market = await readFile(
+    new URL("../app/career/transfer-market.ts", import.meta.url),
+    "utf8",
+  );
+  const domain = await readFile(
+    new URL("../app/career/world-players.ts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(market, /export type MarketPlayerProfile/);
   assert.match(market, /export function rankMarketDestinations/);
   assert.match(market, /marketPositionNeed/);
   assert.match(domain, /rankMarketDestinations\(/);
   assert.match(domain, /status: loan \? "loaned" : "active"/);
-  assert.match(domain, /moveType: loan \? "loan" : contractExpired \? "free-agent" : "permanent"/);
+  assert.match(
+    domain,
+    /moveType: loan \? "loan" : contractExpired \? "free-agent" : "permanent"/,
+  );
   assert.match(domain, /moveType: "loan-return"/);
 });
 
 test("mantém a janela de transferências rolável dentro do shell travado", async () => {
-  const screen = await readFile(new URL("../app/components/career/TransferMarketScreen.tsx", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/components/career/TransferMarketScreen.module.css", import.meta.url), "utf8");
+  const screen = await readFile(
+    new URL(
+      "../app/components/career/TransferMarketScreen.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL(
+      "../app/components/career/TransferMarketScreen.module.css",
+      import.meta.url,
+    ),
+    "utf8",
+  );
 
   assert.match(screen, /styles\.screen} transfer-stage screen-enter/);
   assert.match(styles, /min-height: 0/);
@@ -1693,11 +2857,26 @@ test("mantém a janela de transferências rolável dentro do shell travado", asy
 });
 
 test("abre a Europa, organiza o Mundo e sincroniza o Mundial com o campeão anterior", async () => {
-  const market = await readFile(new URL("../app/career/transfer-market.ts", import.meta.url), "utf8");
-  const competitions = await readFile(new URL("../app/career/world-club-competitions.ts", import.meta.url), "utf8");
-  const simulation = await readFile(new URL("../app/career/simulation.ts", import.meta.url), "utf8");
-  const world = await readFile(new URL("../app/components/career/CareerWorld.tsx", import.meta.url), "utf8");
-  const shell = await readFile(new URL("../app/components/shell/FutboboShell.tsx", import.meta.url), "utf8");
+  const market = await readFile(
+    new URL("../app/career/transfer-market.ts", import.meta.url),
+    "utf8",
+  );
+  const competitions = await readFile(
+    new URL("../app/career/world-club-competitions.ts", import.meta.url),
+    "utf8",
+  );
+  const simulation = await readFile(
+    new URL("../app/career/simulation.ts", import.meta.url),
+    "utf8",
+  );
+  const world = await readFile(
+    new URL("../app/components/career/CareerWorld.tsx", import.meta.url),
+    "utf8",
+  );
+  const shell = await readFile(
+    new URL("../app/components/shell/FutboboShell.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.match(market, /state\.overall >= 72/);
   assert.match(market, /const doorCount = 1 \+ Number/);
@@ -1705,7 +2884,10 @@ test("abre a Europa, organiza o Mundo e sincroniza o Mundial com o campeão ante
   assert.match(competitions, /worldFinalOpponentForSeason/);
   assert.match(competitions, /config\.id === "conference-league"/);
   assert.match(simulation, /worldFinalOpponentForSeason\(affected/);
-  assert.match(world, /"now" \| "national" \| "clubs" \| "players" \| "archive"/);
+  assert.match(
+    world,
+    /"now" \| "national" \| "clubs" \| "players" \| "archive"/,
+  );
   assert.match(world, /worldUniverseStatLeaders\(state, "assists", 16\)/);
   assert.match(world, /slice\(0, 10\)/);
   assert.match(shell, /"hall-career"/);
@@ -1713,10 +2895,22 @@ test("abre a Europa, organiza o Mundo e sincroniza o Mundial com o campeão ante
 });
 
 test("coloca o protagonista no universo e impede campeões continentais duplicados", async () => {
-  const players = await readFile(new URL("../app/career/world-player-world.ts", import.meta.url), "utf8");
-  const competitions = await readFile(new URL("../app/career/world-club-competitions.ts", import.meta.url), "utf8");
-  const records = await readFile(new URL("../app/career/official-football-records.ts", import.meta.url), "utf8");
-  const world = await readFile(new URL("../app/components/career/CareerWorld.tsx", import.meta.url), "utf8");
+  const players = await readFile(
+    new URL("../app/career/world-player-world.ts", import.meta.url),
+    "utf8",
+  );
+  const competitions = await readFile(
+    new URL("../app/career/world-club-competitions.ts", import.meta.url),
+    "utf8",
+  );
+  const records = await readFile(
+    new URL("../app/career/official-football-records.ts", import.meta.url),
+    "utf8",
+  );
+  const world = await readFile(
+    new URL("../app/components/career/CareerWorld.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.match(players, /playerId: "protagonist", highlight: true/);
   assert.match(players, /worldUniverseBallonDorLeaders/);
@@ -1732,9 +2926,18 @@ test("coloca o protagonista no universo e impede campeões continentais duplicad
 });
 
 test("fecha a v93 com iconografia vetorial própria e remove símbolos improvisados da navegação", async () => {
-  const icons = await readFile(new URL("../app/components/FutboboIcon.tsx", import.meta.url), "utf8");
-  const career = await readFile(new URL("../app/components/career/CareerGame.tsx", import.meta.url), "utf8");
-  const shell = await readFile(new URL("../app/components/shell/FutboboShell.tsx", import.meta.url), "utf8");
+  const icons = await readFile(
+    new URL("../app/components/FutboboIcon.tsx", import.meta.url),
+    "utf8",
+  );
+  const career = await readFile(
+    new URL("../app/components/career/CareerGame.tsx", import.meta.url),
+    "utf8",
+  );
+  const shell = await readFile(
+    new URL("../app/components/shell/FutboboShell.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.match(icons, /viewBox="0 0 24 24"/);
   assert.match(icons, /strokeWidth="1\.8"/);
@@ -1745,8 +2948,20 @@ test("fecha a v93 com iconografia vetorial própria e remove símbolos improvisa
 });
 
 test("encerra a viagem de transferência com uma saída suave", async () => {
-  const transfer = await readFile(new URL("../app/components/career/TransferMarketScreen.tsx", import.meta.url), "utf8");
-  const styles = await readFile(new URL("../app/components/career/TransferMarketScreen.module.css", import.meta.url), "utf8");
+  const transfer = await readFile(
+    new URL(
+      "../app/components/career/TransferMarketScreen.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const styles = await readFile(
+    new URL(
+      "../app/components/career/TransferMarketScreen.module.css",
+      import.meta.url,
+    ),
+    "utf8",
+  );
 
   assert.match(transfer, /setJourneyLeaving\(true\)/);
   assert.match(transfer, /fadeDelay \+ fadeDuration/);
@@ -1759,40 +2974,91 @@ test("encerra a viagem de transferência com uma saída suave", async () => {
 
 test("expande coletivas e abre a loja QUADRA sem inflar a carreira", async () => {
   const career = await readCareerSource();
-  const press = await readFile(new URL("../app/career/press-conferences.ts", import.meta.url), "utf8");
-  const shop = await readFile(new URL("../app/career/cycle-shop.ts", import.meta.url), "utf8");
-  const shopUi = await readFile(new URL("../app/components/career/CycleShopDialog.tsx", import.meta.url), "utf8");
+  const press = await readFile(
+    new URL("../app/career/press-conferences.ts", import.meta.url),
+    "utf8",
+  );
+  const shop = await readFile(
+    new URL("../app/career/cycle-shop.ts", import.meta.url),
+    "utf8",
+  );
+  const shopUi = await readFile(
+    new URL("../app/components/career/CycleShopDialog.tsx", import.meta.url),
+    "utf8",
+  );
 
   assert.match(press, /buildTransferPresentation/);
   assert.match(press, /buildFormerClubConference/);
   assert.match(press, /kind: "former-club"/);
   assert.match(press, /visibleAnswers[\s\S]*slice\(0, 3\)/);
   assert.match(career, /current\.overall > 80/);
-  assert.match(career, /function isFormerClubOpponent[\s\S]*state\.transferHistory/);
+  assert.match(
+    career,
+    /function isFormerClubOpponent[\s\S]*state\.transferHistory/,
+  );
   assert.match(shop, /state\.history\.length % 4 === 0/);
   assert.match(shop, /price: 7_500_000/);
   assert.match(shop, /price: 2_000_000/);
   assert.match(shop, /state\.season \+ 5/);
-  assert.match(shop, /state\.potential < 80 \? state\.potential \+ 2 : state\.potential - 2/);
+  assert.match(
+    shop,
+    /state\.potential < 80 \? state\.potential \+ 2 : state\.potential - 2/,
+  );
   assert.match(shopUi, /LOJA DO QUADRIÊNIO/);
   assert.match(shop, /name: "Treino especial"/);
 });
 
 test("troca a venda forçada sub-20 por empréstimo com permanência de custo oculto", async () => {
-  const market = await readFile(new URL("../app/career/transfer-market.ts", import.meta.url), "utf8");
-  const simulation = await readFile(new URL("../app/career/simulation.ts", import.meta.url), "utf8");
-  const state = await readFile(new URL("../app/career/state.ts", import.meta.url), "utf8");
-  const transferUi = await readFile(new URL("../app/components/career/TransferMarketScreen.tsx", import.meta.url), "utf8");
+  const market = await readFile(
+    new URL("../app/career/transfer-market.ts", import.meta.url),
+    "utf8",
+  );
+  const simulation = await readFile(
+    new URL("../app/career/simulation.ts", import.meta.url),
+    "utf8",
+  );
+  const state = await readFile(
+    new URL("../app/career/state.ts", import.meta.url),
+    "utf8",
+  );
+  const transferUi = await readFile(
+    new URL(
+      "../app/components/career/TransferMarketScreen.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
 
-  assert.match(market, /playerAge < 20 && !renewalDenied && !state\.activeLoan && !state\.loanParentClubId/);
+  assert.match(
+    market,
+    /playerAge < 20 && !renewalDenied && !state\.activeLoan && !state\.loanParentClubId/,
+  );
   assert.match(market, /reducedOpportunitySeason: state\.season/);
-  assert.match(simulation, /const youthLoanDecision = shouldOfferYouthLoanInsteadOfSale/);
-  assert.match(simulation, /mode: effect\.loan \|\| youthLoanDecision \? "loan"/);
-  assert.match(simulation, /const reduceStat = \(value: number\) => reducedOpportunity \? Math\.floor\(value \/ 2\) : value/);
+  assert.match(
+    simulation,
+    /const youthLoanDecision = shouldOfferYouthLoanInsteadOfSale/,
+  );
+  assert.match(
+    simulation,
+    /mode: effect\.loan \|\| youthLoanDecision \? "loan"/,
+  );
+  assert.match(
+    simulation,
+    /const reduceStat = \(value: number\) => reducedOpportunity \? Math\.floor\(value \/ 2\) : value/,
+  );
   assert.match(simulation, /development = halveDevelopment\(development/);
   assert.match(simulation, /reducedOpportunitySeason: 0/);
   assert.match(state, /youthLoanDecision: saved\.youthLoanDecision \?\? false/);
-  assert.match(state, /reducedOpportunitySeason: saved\.reducedOpportunitySeason \?\? 0/);
-  assert.match(transferUi, /state\.youthLoanDecision \|\| \(!state\.transferRequested/);
-  assert.doesNotMatch(transferUi, /metade|estatísticas reduzidas|desenvolvimento cortado/i);
+  assert.match(
+    state,
+    /reducedOpportunitySeason: saved\.reducedOpportunitySeason \?\? 0/,
+  );
+  assert.match(
+    transferUi,
+    /state\.youthLoanDecision \|\| \(!state\.transferRequested/,
+  );
+  assert.doesNotMatch(
+    transferUi,
+    /metade|estatísticas reduzidas|desenvolvimento cortado/i,
+  );
 });

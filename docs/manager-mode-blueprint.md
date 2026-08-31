@@ -81,7 +81,7 @@ Mantém o papel atual de conduzir o save. Mostra apenas:
 - objetivo da diretoria;
 - confiança no trabalho;
 - próxima decisão;
-- próximo jogo-chave;
+- sequência de partidas decisivas da temporada;
 - ação principal para continuar.
 
 Contratação, venda, desfalque ou proposta de emprego aparecem aqui quando precisam de resposta. Não exigem que o jogador procure uma tela escondida.
@@ -92,8 +92,7 @@ Substitui Jogador e responde uma única pergunta: **como os cinco começarão a 
 
 - escolha entre as seis formações já existentes;
 - prévia visual dos cinco titulares naquela formação;
-- adversário, força e formação provável quando houver jogo pendente;
-- aviso simples de peça improvisada.
+- adversário, competição e posição da partida no calendário quando houver jogo pendente.
 
 Não possui Plano A/Plano B, sliders, treino, capitão, instruções por jogador ou gatilhos automáticos. A formação pode ser alterada antes do jogo; durante a partida ela só é reorganizada nos reinícios que o motor já possui.
 
@@ -104,7 +103,7 @@ Uma única página, sem labirinto de submenus:
 - campo com cinco titulares;
 - faixa com três reservas;
 - o banco fecha o elenco com exatamente três reservas;
-- tocar em um titular e depois em um reserva troca os dois;
+- arrastar um atleta troca sua posição; tocar em dois atletas permanece como alternativa;
 - cada jogador mostra somente foto, nome, posição, idade, OVR e disponibilidade.
 
 Quando a janela estiver aberta, a própria página pode exibir uma ação curta de mercado. Fora da janela, nenhum botão de mercado vazio ocupa espaço.
@@ -113,11 +112,10 @@ Quando a janela estiver aberta, a própria página pode exibir uma ação curta 
 
 Reutiliza a estrutura atual com perspectiva do técnico:
 
-- clubes;
-- temporadas;
-- títulos;
-- partidas jogadas;
-- demissões e saídas.
+- clube e escudo à esquerda, exatamente como na linha do tempo do jogador;
+- idade do técnico, temporadas e mudanças de clube;
+- campanha coletiva com J/V/E/D, gols, força do time e confiança;
+- títulos conquistados pelo time.
 
 ### 5. Estatísticas
 
@@ -127,17 +125,18 @@ Somente números úteis:
 - gols e assistências dos jogadores;
 - partidas e uso de cada atleta;
 - formações mais usadas;
+- evolução da confiança por temporada.
 
 Não criar dezenas de filtros ou relatórios de scouting.
 
 ### 6. Mundo
 
-Reutiliza o mundo persistente atual:
+Reutiliza a mesma navegação interna do Mundo do jogador:
 
-- tabelas e competições;
-- transferências importantes;
-- jogadores relevantes;
-- notícias essenciais.
+- Agora, com notícias e próximas partidas;
+- Clubes, com ranking de força;
+- Jogadores, com líderes de OVR e reputação;
+- Arquivo, com as campanhas completas do técnico.
 
 Empregos aparecem na aba Carreira quando viram proposta real. Não precisam de uma central permanente de vagas.
 
@@ -493,14 +492,15 @@ Jogar e simular não podem se transformar em regras diferentes.
 O Modo Técnico está pronto quando o jogador consegue:
 
 1. criar o técnico e escolher um clube;
-2. montar cinco titulares e três reservas;
-3. escolher uma das formações existentes;
-4. simular a temporada no mesmo ritmo atual;
-5. jogar uma partida com atletas reais dos dois lados;
-6. perceber uma peça cansar porque foi usada demais;
-7. trocar imediatamente no próprio turno, sem reposicionar e sem desfazer;
-8. ver a CPU fazer o mesmo;
-9. receber consequência de resultado, confiança, mercado e emprego;
-10. terminar uma carreira sem ter administrado telas que não queria abrir.
+2. começar aos 40 anos e envelhecer uma vez por temporada;
+3. montar cinco titulares e três reservas por arraste ou toque;
+4. escolher uma das formações existentes;
+5. tomar uma decisão e seguir direto para as partidas de liga, copa e continental;
+6. jogar partidas com atletas reais dos dois lados;
+7. perceber uma peça cansar porque foi usada demais;
+8. trocar imediatamente no próprio turno, sem reposicionar e sem desfazer;
+9. ver a CPU fazer o mesmo;
+10. receber consequência de resultado, confiança, mercado e propostas para o técnico;
+11. terminar uma carreira sem ter administrado telas que não queria abrir.
 
 A assinatura do modo é simples: **cinco peças, três reservas, uma formação e decisões que aparecem diretamente na mesa**.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BOTAO_FORMATIONS,
   formationById,
@@ -18,6 +18,7 @@ import {
   continueManagerSeason,
   createManagerState,
   dismissManagerJobOffers,
+  hireManagerAtClub,
   managerClub,
   managerDecision,
   managerMarketOffers,
@@ -46,10 +47,13 @@ import {
   teamKitPattern,
 } from "../../player-appearance";
 import FutboboIcon, { type FutboboIconName } from "../FutboboIcon";
-import { ClubBadge } from "../career/CareerPrimitives";
+import { BrandMark, ClubBadge, Progress } from "../career/CareerPrimitives";
+import timelineStyles from "../career/CareerTimeline.module.css";
+import worldStyles from "../career/CareerWorld.module.css";
 import styles from "./ManagerGame.module.css";
 
 type ManagerTab = "career" | "board" | "team" | "history" | "stats" | "world";
+type ManagerWorldSection = "now" | "clubs" | "players" | "archive";
 const NAV_ITEMS: Array<{
   id: ManagerTab;
   label: string;
@@ -97,32 +101,6 @@ function PlayerPortrait({
   );
 }
 
-function Progress({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: string;
-}) {
-  return (
-    <div className={styles.progress}>
-      <span>
-        <small>{label}</small>
-        <strong>{Math.round(value)}</strong>
-      </span>
-      <i>
-        <b
-          style={{
-            width: `${Math.max(0, Math.min(100, value))}%`,
-            background: color,
-          }}
-        />
-      </i>
-    </div>
-  );
-}
 function money(value: number) {
   return value >= 1_000_000
     ? `€${(value / 1_000_000).toFixed(1).replace(".", ",")} mi`
@@ -145,10 +123,13 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const loadingState = useMemo(() => createManagerState(1), []);
   const state = loadedState ?? loadingState;
   const [tab, setTab] = useState<ManagerTab>("career");
+  const [worldSection, setWorldSection] = useState<ManagerWorldSection>("now");
   const [matchSetup, setMatchSetup] = useState<
     NonNullable<ReturnType<typeof managerMatchSetup>>["setup"] | null
   >(null);
   const [selectedPlayer, setSelectedPlayer] = useState("");
+  const [draggedPlayer, setDraggedPlayer] = useState("");
+  const suppressRosterClick = useRef(false);
   const [managerName, setManagerName] = useState("");
   const [nationality, setNationality] = useState("brasil");
   const [clubId, setClubId] = useState("");
@@ -191,31 +172,35 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         squad.reduce((sum, player) => sum + player.overall, 0) / squad.length,
       )
     : 0;
+  const latestSeason = state.seasonHistory.at(-1);
   const jobOffers = useMemo(() => {
     const ids = new Set(state.jobOffers);
     return CLUBS.filter((item) => ids.has(item.id)).slice(0, 3);
   }, [state.jobOffers]);
   const playerStatsRows = useMemo(
     () =>
-      Object.entries(state.playerStats)
-        .map(([id, stats]) => ({
-          player: state.worldPlayers.players[id],
-          stats,
+      squad
+        .map((player) => ({
+          player,
+          stats: state.playerStats[player.id] ?? {
+            appearances: 0,
+            starts: 0,
+            substitutionsIn: 0,
+            substitutionsOut: 0,
+            goals: 0,
+            assists: 0,
+            touches: 0,
+            flicks: 0,
+            distance: 0,
+          },
         }))
-        .filter(
-          (
-            item,
-          ): item is {
-            player: WorldPlayer;
-            stats: (typeof state.playerStats)[string];
-          } => Boolean(item.player && item.stats.appearances),
-        )
         .sort(
           (a, b) =>
-            b.stats.goals + b.stats.assists - a.stats.goals - a.stats.assists,
-        )
-        .slice(0, 10),
-    [state],
+            b.stats.goals + b.stats.assists - a.stats.goals - a.stats.assists ||
+            b.stats.appearances - a.stats.appearances ||
+            b.player.overall - a.player.overall,
+        ),
+    [squad, state.playerStats],
   );
   const formationUsage = useMemo(
     () =>
@@ -237,6 +222,18 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         .sort((a, b) => b.reputation - a.reputation || b.overall - a.overall)
         .slice(0, 12),
     [state.worldPlayers.players],
+  );
+  const worldClubs = useMemo(
+    () =>
+      CLUBS.slice()
+        .sort(
+          (a, b) =>
+            b.strength - a.strength ||
+            b.reputation - a.reputation ||
+            a.shortName.localeCompare(b.shortName),
+        )
+        .slice(0, 20),
+    [],
   );
 
   const formationPreview = useMemo(() => {
@@ -319,6 +316,33 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     setTab("career");
     setNotice("");
   };
+  const swapPlayerIds = (firstId: string, nextId: string) => {
+    if (!firstId || firstId === nextId) return;
+    const starters = state.starters.map((id) =>
+      id === firstId ? nextId : id === nextId ? firstId : id,
+    );
+    const bench = state.bench.map((id) =>
+      id === firstId ? nextId : id === nextId ? firstId : id,
+    );
+    const aRelated =
+      state.starters.includes(firstId) || state.bench.includes(firstId);
+    const bRelated =
+      state.starters.includes(nextId) || state.bench.includes(nextId);
+    if (aRelated !== bRelated) {
+      if (state.starters.includes(firstId))
+        starters[state.starters.indexOf(firstId)] = nextId;
+      else if (state.bench.includes(firstId))
+        bench[state.bench.indexOf(firstId)] = nextId;
+      else if (state.starters.includes(nextId))
+        starters[state.starters.indexOf(nextId)] = firstId;
+      else if (state.bench.includes(nextId))
+        bench[state.bench.indexOf(nextId)] = firstId;
+    }
+    setState(setManagerLineup(state, starters, bench));
+    setSelectedPlayer("");
+    setDraggedPlayer("");
+    setNotice("");
+  };
   const swapPlayers = (nextId: string) => {
     if (!selectedPlayer) {
       setSelectedPlayer(nextId);
@@ -328,30 +352,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       setSelectedPlayer("");
       return;
     }
-    const starters = state.starters.map((id) =>
-      id === selectedPlayer ? nextId : id === nextId ? selectedPlayer : id,
-    );
-    const bench = state.bench.map((id) =>
-      id === selectedPlayer ? nextId : id === nextId ? selectedPlayer : id,
-    );
-    const aRelated =
-      state.starters.includes(selectedPlayer) ||
-      state.bench.includes(selectedPlayer);
-    const bRelated =
-      state.starters.includes(nextId) || state.bench.includes(nextId);
-    if (aRelated !== bRelated) {
-      if (state.starters.includes(selectedPlayer))
-        starters[state.starters.indexOf(selectedPlayer)] = nextId;
-      else if (state.bench.includes(selectedPlayer))
-        bench[state.bench.indexOf(selectedPlayer)] = nextId;
-      else if (state.starters.includes(nextId))
-        starters[state.starters.indexOf(nextId)] = selectedPlayer;
-      else if (state.bench.includes(nextId))
-        bench[state.bench.indexOf(nextId)] = selectedPlayer;
-    }
-    setState(setManagerLineup(state, starters, bench));
-    setSelectedPlayer("");
-    setNotice("");
+    swapPlayerIds(selectedPlayer, nextId);
   };
 
   if (matchSetup)
@@ -462,22 +463,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               <button
                 type="button"
                 key={item.id}
-                onClick={() =>
-                  setState(
-                    startManagerCareer(
-                      {
-                        ...createManagerState(state.seed),
-                        name: state.name,
-                        nationality: state.nationality,
-                      },
-                      {
-                        name: state.name,
-                        nationality: state.nationality,
-                        clubId: item.id,
-                      },
-                    ),
-                  )
-                }
+                onClick={() => setState(hireManagerAtClub(state, item.id))}
               >
                 <ClubBadge club={item} size="sm" />
                 <span>{item.shortName}</span>
@@ -571,7 +557,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               className="primary-button"
               onClick={() => setState(continueAfterManagerDecision(state))}
             >
-              Preparar jogo-chave <span>→</span>
+              Abrir calendário da temporada <span>→</span>
             </button>
           </div>
         </div>
@@ -590,7 +576,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         <article className={styles.keyMatch}>
           <header>
             <span>{state.pendingMatch?.competitionName ?? "JOGO-CHAVE"}</span>
-            <strong>{state.pendingMatch?.stageName ?? "Temporada"}</strong>
+            <strong>
+              {state.pendingMatch?.stageName ?? "Temporada"} · JOGO{" "}
+              {state.pendingMatch?.order ?? 1}/{state.pendingMatch?.total ?? 1}
+            </strong>
           </header>
           <div className={styles.matchup}>
             <div>
@@ -654,8 +643,49 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       <button
         type="button"
         key={id}
+        draggable
+        data-player-id={id}
         className={`${styles.rosterPlayer} ${styles[area]} ${selectedPlayer === id ? styles.selectedPlayer : ""}`}
-        onClick={() => swapPlayers(id)}
+        onClick={() => {
+          if (suppressRosterClick.current) {
+            suppressRosterClick.current = false;
+            return;
+          }
+          swapPlayers(id);
+        }}
+        onPointerDown={(event) => {
+          if (event.pointerType !== "mouse") setDraggedPlayer(id);
+        }}
+        onPointerUp={(event) => {
+          if (event.pointerType === "mouse" || !draggedPlayer) return;
+          const target = document
+            .elementFromPoint(event.clientX, event.clientY)
+            ?.closest<HTMLElement>("[data-player-id]");
+          const targetId = target?.dataset.playerId ?? "";
+          if (targetId && targetId !== draggedPlayer) {
+            suppressRosterClick.current = true;
+            swapPlayerIds(draggedPlayer, targetId);
+          } else {
+            setDraggedPlayer("");
+          }
+        }}
+        onPointerCancel={() => setDraggedPlayer("")}
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/plain", id);
+          setDraggedPlayer(id);
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          const sourceId =
+            event.dataTransfer.getData("text/plain") || draggedPlayer;
+          swapPlayerIds(sourceId, id);
+        }}
+        onDragEnd={() => setDraggedPlayer("")}
       >
         <PlayerPortrait
           player={player}
@@ -678,10 +708,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         <div className={`panel-screen ${styles.panel}`}>
           <header className={styles.panelHeading}>
             <span>PRANCHETA</span>
-            <h2>Como os cinco começam.</h2>
+            <h2>Prepare a próxima partida.</h2>
             <p>
-              Escolha um desenho. Ele entra na partida de verdade e continua
-              ativo até você mudar.
+              O desenho posiciona os cinco na mesa. Escalação e trocas ficam na
+              aba Time.
             </p>
           </header>
           <div className={styles.boardLayout}>
@@ -711,7 +741,34 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 <strong>
                   {club.shortName} × {opponent?.shortName ?? "Adversário"}
                 </strong>
-                <small>Força rival {opponent?.strength ?? 0}</small>
+                <small>
+                  {state.pendingMatch?.competitionName} ·{" "}
+                  {state.pendingMatch?.stageName}
+                </small>
+              </div>
+              <div className={styles.competitionRail}>
+                {[...state.seasonMatches]
+                  .slice()
+                  .reverse()
+                  .map((match) => (
+                    <span key={match.id} className={styles.playedMatch}>
+                      <b>{match.score}</b>
+                      <small>{match.competitionName}</small>
+                    </span>
+                  ))}
+                {state.matchQueue.map((match) => (
+                  <span
+                    key={match.id}
+                    className={
+                      match.id === state.pendingMatch?.id
+                        ? styles.nextMatch
+                        : ""
+                    }
+                  >
+                    <b>{match.order}</b>
+                    <small>{match.competitionName}</small>
+                  </span>
+                ))}
               </div>
               <div className={styles.formationGrid}>
                 {BOTAO_FORMATIONS.map((formation) => (
@@ -746,7 +803,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             <p>
               {selectedPlayer
                 ? "Agora toque no atleta que vai trocar de lugar."
-                : "Toque em um titular e depois em um reserva para trocar os dois."}
+                : "Arraste um atleta para outra posição ou toque em dois nomes para trocar."}
             </p>
           </header>
           <div className={styles.teamLayout}>
@@ -779,70 +836,114 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               <div className={styles.benchList}>
                 {state.bench.map((id) => rosterPlayer(id, "bench"))}
               </div>
-              <div className={styles.squadRule}>
-                <FutboboIcon name="team" />
-                <span>
-                  <strong>Elenco fechado em oito.</strong>
-                  <small>
-                    Os cinco titulares e os três reservas são todo o time.
-                  </small>
-                </span>
-              </div>
             </aside>
           </div>
         </div>
       );
     if (tab === "history")
       return (
-        <div className={`panel-screen ${styles.panel}`}>
-          <header className={styles.panelHeading}>
+        <div
+          className={`panel-screen screen-enter ${timelineStyles.page} ${styles.managerTimeline}`}
+        >
+          <header className={timelineStyles.heading}>
             <span>HISTÓRICO</span>
-            <h2>A carreira vista do banco.</h2>
-            <p>Temporadas, adversários e escolhas que já chegaram à mesa.</p>
+            <strong>A carreira, ano a ano.</strong>
           </header>
-          <div className={styles.historyList}>
-            {state.history.length ? (
-              state.history.map((item) => {
-                const rival = CLUBS.find(
-                  (candidate) => candidate.id === item.opponentId,
+          <section className={timelineStyles.timeline}>
+            <article
+              className={`${timelineStyles.row} ${timelineStyles.current}`}
+            >
+              <time>AGORA</time>
+              <span className={timelineStyles.rail}>
+                <i />
+              </span>
+              <ClubBadge club={club} size="sm" />
+              <div className={timelineStyles.copy}>
+                <small>
+                  {state.season} · {state.age} anos
+                </small>
+                <strong>{club.shortName}</strong>
+                <p>
+                  {state.seasonMatches.length}J ·{" "}
+                  {
+                    state.seasonMatches.filter(
+                      (match) => match.outcome === "win",
+                    ).length
+                  }
+                  V · confiança {Math.round(state.boardTrust)}%
+                </p>
+              </div>
+              <b className={timelineStyles.ovr}>
+                {squadOverall}
+                <small>TIME</small>
+              </b>
+            </article>
+
+            {state.seasonHistory
+              .slice()
+              .reverse()
+              .map((record) => {
+                const recordClub =
+                  CLUBS.find((candidate) => candidate.id === record.clubId) ??
+                  club;
+                const originalIndex = state.seasonHistory.findIndex(
+                  (candidate) =>
+                    candidate.season === record.season &&
+                    candidate.clubId === record.clubId,
                 );
+                const previous =
+                  originalIndex > 0
+                    ? state.seasonHistory[originalIndex - 1]
+                    : null;
+                const highlights = [
+                  previous && previous.clubId !== record.clubId
+                    ? "NOVO CLUBE"
+                    : "",
+                  ...record.competitions
+                    .filter((competition) => competition.champion)
+                    .map((competition) => competition.name),
+                ]
+                  .filter(Boolean)
+                  .slice(0, 3);
                 return (
-                  <article key={item.id}>
-                    <span>{item.season}</span>
-                    <ClubBadge club={rival ?? club} size="sm" />
-                    <div>
-                      <strong>
-                        {club.shortName} × {rival?.shortName ?? "Adversário"}
-                      </strong>
-                      <small>
-                        {item.competitionName} ·{" "}
-                        {formationById(item.formationId).name} ·{" "}
-                        {item.substitutions} troca(s)
-                      </small>
+                  <article
+                    className={timelineStyles.row}
+                    key={`${record.season}-${record.clubId}`}
+                  >
+                    <time>{record.season}</time>
+                    <span className={timelineStyles.rail}>
+                      <i />
+                    </span>
+                    <ClubBadge club={recordClub} size="sm" />
+                    <div className={timelineStyles.copy}>
+                      <small>{record.age} anos</small>
+                      <strong>{recordClub.shortName}</strong>
+                      <p>
+                        {record.matches}J · {record.wins}V · {record.draws}E ·{" "}
+                        {record.losses}D · {record.goalsFor}–
+                        {record.goalsAgainst} gols
+                      </p>
+                      {highlights.length ? (
+                        <div className={timelineStyles.highlights}>
+                          {highlights.map((highlight) => (
+                            <span key={highlight}>{highlight}</span>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
-                    <b
-                      className={
-                        item.outcome === "win"
-                          ? styles.good
-                          : item.outcome === "loss"
-                            ? styles.bad
-                            : styles.neutral
-                      }
-                    >
-                      {item.score}
-                      <small>{resultLabel(item.outcome)}</small>
+                    <b className={timelineStyles.ovr}>
+                      {record.squadOverall}
+                      <small>TIME</small>
                     </b>
                   </article>
                 );
-              })
-            ) : (
-              <div className={styles.emptyPanel}>
-                <FutboboIcon name="history" />
-                <strong>Sua primeira temporada ainda está esperando.</strong>
-                <span>Decida, escale e jogue para abrir o arquivo.</span>
+              })}
+            {!state.seasonHistory.length ? (
+              <div className={timelineStyles.empty}>
+                A primeira temporada abre a linha do tempo do seu trabalho.
               </div>
-            )}
-          </div>
+            ) : null}
+          </section>
         </div>
       );
     if (tab === "stats")
@@ -850,153 +951,421 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         <div className={`panel-screen ${styles.panel}`}>
           <header className={styles.panelHeading}>
             <span>ESTATÍSTICAS</span>
-            <h2>O que suas escolhas produziram.</h2>
+            <h2>O retrato do seu trabalho.</h2>
             <p>
-              Somente números que ajudam a entender time, campanha e uso dos
-              atletas.
+              Campanha coletiva, desempenho por temporada e produção real dos
+              oito atletas.
             </p>
           </header>
-          <div className={styles.statHero}>
+          <div className={styles.managerStatHero}>
             <div>
-              <small>JOGOS-CHAVE</small>
+              <small>JOGOS</small>
               <strong>{state.history.length}</strong>
+              <span>{state.seasonHistory.length} temporada(s)</span>
             </div>
             <div>
-              <small>VITÓRIAS</small>
-              <strong>{wins}</strong>
+              <small>APROVEITAMENTO</small>
+              <strong>
+                {state.history.length
+                  ? Math.round((wins / state.history.length) * 100)
+                  : 0}
+                <em>%</em>
+              </strong>
+              <span>{wins} vitória(s)</span>
             </div>
             <div>
-              <small>GOLS PRÓ</small>
-              <strong>{goalsFor}</strong>
+              <small>SALDO DE GOLS</small>
+              <strong>{goalsFor - goalsAgainst}</strong>
+              <span>
+                {goalsFor} pró · {goalsAgainst} contra
+              </span>
             </div>
             <div>
-              <small>GOLS CONTRA</small>
-              <strong>{goalsAgainst}</strong>
+              <small>TÍTULOS</small>
+              <strong>
+                {state.seasonHistory.reduce(
+                  (total, seasonRecord) =>
+                    total +
+                    seasonRecord.competitions.filter(
+                      (competition) => competition.champion,
+                    ).length,
+                  0,
+                )}
+              </strong>
+              <span>pelo time inteiro</span>
             </div>
           </div>
-          <div className={styles.statColumns}>
-            <article>
-              <span className={styles.listLabel}>PRODUÇÃO DO ELENCO</span>
-              {playerStatsRows.length ? (
-                playerStatsRows.map(({ player, stats }) => (
-                  <div key={player.id}>
-                    <PlayerPortrait player={player} state={state} size={34} />
+          <div className={styles.managerStatsGrid}>
+            <article className={styles.squadProduction}>
+              <header>
+                <span>
+                  <small>PRODUÇÃO DO ELENCO</small>
+                  <strong>Os oito sob seu comando</strong>
+                </span>
+                <div aria-hidden="true">
+                  <b>J</b>
+                  <b>G</b>
+                  <b>A</b>
+                </div>
+              </header>
+              <div>
+                {playerStatsRows.map(({ player, stats }) => (
+                  <article key={player.id}>
+                    <PlayerPortrait player={player} state={state} size={36} />
                     <span>
                       <strong>{player.name}</strong>
                       <small>
-                        {stats.appearances}J · {stats.starts} titular ·{" "}
-                        {stats.distance}u
+                        {player.position} · {stats.starts} titular ·{" "}
+                        {stats.substitutionsIn} entrou
                       </small>
                     </span>
-                    <b>
-                      {stats.goals}G · {stats.assists}A
-                    </b>
-                  </div>
-                ))
-              ) : (
-                <p>Nenhum relatório individual ainda.</p>
-              )}
+                    <div>
+                      <b>{stats.appearances}</b>
+                      <b>{stats.goals}</b>
+                      <b>{stats.assists}</b>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </article>
-            <article>
-              <span className={styles.listLabel}>FORMAÇÕES USADAS</span>
-              {formationUsage.length ? (
-                formationUsage.map(([id, count]) => (
-                  <div key={id}>
-                    <span>
-                      <strong>{formationById(id).name}</strong>
-                      <small>{formationById(id).shape}</small>
-                    </span>
-                    <b>{count}×</b>
-                  </div>
-                ))
-              ) : (
-                <p>A estreia vai registrar sua primeira formação.</p>
-              )}
-            </article>
+            <div className={styles.statsSide}>
+              <article className={styles.seasonTrend}>
+                <header>
+                  <small>TEMPORADAS</small>
+                  <strong>Confiança ao fim do ano</strong>
+                </header>
+                <div>
+                  {state.seasonHistory.length ? (
+                    state.seasonHistory.slice(-8).map((record) => (
+                      <span key={`${record.season}-${record.clubId}`}>
+                        <b>{record.boardTrust}</b>
+                        <i>
+                          <em style={{ height: `${record.boardTrust}%` }} />
+                        </i>
+                        <small>{String(record.season).slice(-2)}</small>
+                      </span>
+                    ))
+                  ) : (
+                    <p>A primeira temporada criará a curva do trabalho.</p>
+                  )}
+                </div>
+              </article>
+              <article className={styles.formationReport}>
+                <header>
+                  <small>FORMAÇÕES</small>
+                  <strong>Desenhos mais usados</strong>
+                </header>
+                <div>
+                  {formationUsage.length ? (
+                    formationUsage.map(([id, count]) => (
+                      <p key={id}>
+                        <span>
+                          <strong>{formationById(id).name}</strong>
+                          <small>{formationById(id).shape}</small>
+                        </span>
+                        <b>{count}×</b>
+                      </p>
+                    ))
+                  ) : (
+                    <p>A estreia registrará seu primeiro desenho.</p>
+                  )}
+                </div>
+              </article>
+            </div>
           </div>
         </div>
       );
     if (tab === "world")
       return (
-        <div className={`panel-screen ${styles.panel}`}>
-          <header className={styles.panelHeading}>
+        <div className={`panel-screen screen-enter ${worldStyles.page}`}>
+          <header className={worldStyles.heading}>
             <span>MUNDO</span>
-            <h2>O futebol continua fora da sua prancheta.</h2>
-            <p>
-              Mercado curto, jogadores relevantes e o universo persistente da
-              carreira.
-            </p>
+            <strong>O futebol continua.</strong>
+            <p>Escolha o que quer acompanhar.</p>
           </header>
-          {marketOffers.length ? (
-            <article className={styles.market}>
+          <nav className={worldStyles.sectionNav} aria-label="Seções do Mundo">
+            {(
+              [
+                ["now", "Agora", "Notícias", "news"],
+                ["clubs", "Clubes", "Ranking", "trophy"],
+                ["players", "Jogadores", "Líderes", "player"],
+                ["archive", "Arquivo", "Temporadas", "history"],
+              ] as Array<[ManagerWorldSection, string, string, FutboboIconName]>
+            ).map(([id, label, hint, icon]) => (
+              <button
+                type="button"
+                key={id}
+                className={worldSection === id ? worldStyles.activeSection : ""}
+                aria-pressed={worldSection === id}
+                onClick={() => setWorldSection(id)}
+              >
+                <FutboboIcon name={icon} />
+                <span>
+                  <small>{hint}</small>
+                  <strong>{label}</strong>
+                </span>
+              </button>
+            ))}
+          </nav>
+
+          {worldSection === "now" ? (
+            <>
+              <article
+                className={`${worldStyles.featured} ${worldStyles.major}`}
+              >
+                <small>MUNDO · {state.season}</small>
+                <strong>
+                  {state.pendingMatch
+                    ? `${club.shortName} prepara ${state.pendingMatch.competitionName}`
+                    : `${club.shortName} fecha a temporada`}
+                </strong>
+                <p>
+                  {state.pendingMatch
+                    ? `${state.pendingMatch.stageName} contra ${opponent?.shortName ?? "adversário a definir"}. É a partida ${state.pendingMatch.order} de ${state.pendingMatch.total} do calendário decisivo.`
+                    : `O trabalho de ${state.name} terminou o ano com ${Math.round(state.boardTrust)}% de confiança.`}
+                </p>
+              </article>
+              {marketOffers.length ? (
+                <article className={styles.market}>
+                  <header>
+                    <span>OBSERVAÇÃO DO ELENCO</span>
+                    <strong>Três nomes disponíveis.</strong>
+                    <small>
+                      Contratar troca diretamente o reserva de menor OVR.
+                    </small>
+                  </header>
+                  <div>
+                    {marketOffers.map((player) => (
+                      <button
+                        type="button"
+                        key={player.id}
+                        onClick={() => {
+                          const next = signManagerPlayer(state, player.id);
+                          if (next === state)
+                            setNotice("O caixa não comporta essa contratação.");
+                          else {
+                            setState(next);
+                            setNotice(
+                              `${player.name} assinou com o ${club.shortName}.`,
+                            );
+                          }
+                        }}
+                      >
+                        <PlayerPortrait
+                          player={player}
+                          state={state}
+                          size={42}
+                        />
+                        <span>
+                          <strong>{player.name}</strong>
+                          <small>
+                            {player.position} · {player.overall} OVR
+                          </small>
+                        </span>
+                        <b>{money(marketFee(player))}</b>
+                      </button>
+                    ))}
+                  </div>
+                </article>
+              ) : null}
+              <section className={worldStyles.newsSection}>
+                <header>
+                  <span>GIRO DO MUNDO</span>
+                  <small>Carreira de técnico</small>
+                </header>
+                <div>
+                  {state.history.slice(0, 12).map((item) => {
+                    const itemClub =
+                      CLUBS.find((candidate) => candidate.id === item.clubId) ??
+                      club;
+                    const rival = CLUBS.find(
+                      (candidate) => candidate.id === item.opponentId,
+                    );
+                    return (
+                      <article key={item.id}>
+                        <time>{item.season}</time>
+                        <span>
+                          <small>{item.competitionName}</small>
+                          <strong>
+                            {itemClub.shortName} {item.score}{" "}
+                            {rival?.shortName ?? "Adversário"}
+                          </strong>
+                          <p>
+                            {resultLabel(item.outcome)} ·{" "}
+                            {formationById(item.formationId).name}
+                          </p>
+                        </span>
+                        {item.outcome === "win" ? <b>●</b> : null}
+                      </article>
+                    );
+                  })}
+                  {!state.history.length ? (
+                    <div className={worldStyles.empty}>
+                      <strong>O noticiário está esperando a estreia.</strong>
+                      <span>A primeira partida abrirá o giro do mundo.</span>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            </>
+          ) : null}
+
+          {worldSection === "clubs" ? (
+            <section className={worldStyles.sectionStack}>
               <header>
-                <span>JANELA ABERTA</span>
-                <strong>Uma necessidade. Três nomes.</strong>
-                <small>
-                  Uma contratação substitui diretamente o reserva de menor OVR.
-                  O elenco continua com oito.
-                </small>
+                <small>CLUBES</small>
+                <strong>Forças do futebol mundial</strong>
+                <p>Seu clube aparece destacado no ranking.</p>
+              </header>
+              <article className={worldStyles.playerBoard}>
+                <header>
+                  <span>
+                    <small>RANKING DE CLUBES</small>
+                    <strong>Potência atual</strong>
+                  </span>
+                  <b>{worldClubs.length}</b>
+                </header>
+                <div>
+                  {worldClubs.map((rankedClub, index) => (
+                    <p
+                      key={rankedClub.id}
+                      className={
+                        rankedClub.id === club.id
+                          ? worldStyles.protagonistRow
+                          : ""
+                      }
+                    >
+                      <b>#{index + 1}</b>
+                      <strong>
+                        {rankedClub.shortName}
+                        {rankedClub.id === club.id ? <i> SEU TIME</i> : null}
+                      </strong>
+                      <small>
+                        {
+                          LEAGUES.find(
+                            (league) => league.id === rankedClub.leagueId,
+                          )?.name
+                        }
+                      </small>
+                      <span>{rankedClub.strength} FOR</span>
+                    </p>
+                  ))}
+                </div>
+              </article>
+            </section>
+          ) : null}
+
+          {worldSection === "players" ? (
+            <section className={worldStyles.sectionStack}>
+              <header>
+                <small>JOGADORES</small>
+                <strong>Quem está deixando marca</strong>
+                <p>Os principais nomes do universo persistente.</p>
+              </header>
+              <div className={worldStyles.playerGrid}>
+                <article className={worldStyles.playerBoard}>
+                  <header>
+                    <span>
+                      <small>NÍVEL ATUAL</small>
+                      <strong>Craques da geração</strong>
+                    </span>
+                    <b>{worldLeaders.length}</b>
+                  </header>
+                  <div>
+                    {worldLeaders.map((player, index) => (
+                      <p key={player.id}>
+                        <b>#{index + 1}</b>
+                        <strong>{player.name}</strong>
+                        <small>
+                          {
+                            CLUBS.find(
+                              (item) => item.id === player.currentClubId,
+                            )?.shortName
+                          }
+                        </small>
+                        <span>{player.overall} OVR</span>
+                      </p>
+                    ))}
+                  </div>
+                </article>
+                <article className={worldStyles.playerBoard}>
+                  <header>
+                    <span>
+                      <small>REPUTAÇÃO</small>
+                      <strong>Nomes mais influentes</strong>
+                    </span>
+                    <b>{worldLeaders.length}</b>
+                  </header>
+                  <div>
+                    {worldLeaders
+                      .slice()
+                      .sort(
+                        (a, b) =>
+                          b.reputation - a.reputation || b.overall - a.overall,
+                      )
+                      .map((player, index) => (
+                        <p key={player.id}>
+                          <b>#{index + 1}</b>
+                          <strong>{player.name}</strong>
+                          <small>{player.position}</small>
+                          <span>{player.reputation} REP</span>
+                        </p>
+                      ))}
+                  </div>
+                </article>
+              </div>
+            </section>
+          ) : null}
+
+          {worldSection === "archive" ? (
+            <section className={worldStyles.officialSection}>
+              <header>
+                <span>ARQUIVO VIVO</span>
+                <small>Campanhas do seu trabalho</small>
               </header>
               <div>
-                {marketOffers.map((player) => (
-                  <button
-                    type="button"
-                    key={player.id}
-                    onClick={() => {
-                      const next = signManagerPlayer(state, player.id);
-                      if (next === state)
-                        setNotice("O caixa não comporta essa contratação.");
-                      else {
-                        setState(next);
-                        setNotice(
-                          `${player.name} assinou com o ${club.shortName}.`,
-                        );
-                      }
-                    }}
-                  >
-                    <PlayerPortrait player={player} state={state} size={42} />
-                    <span>
-                      <strong>{player.name}</strong>
-                      <small>
-                        {player.position} · {player.overall} OVR
-                      </small>
-                    </span>
-                    <b>{money(marketFee(player))}</b>
-                  </button>
-                ))}
-              </div>
-            </article>
-          ) : null}
-          <div className={styles.worldGrid}>
-            {worldLeaders.map((player, index) => {
-              const playerClub = CLUBS.find(
-                (item) => item.id === player.currentClubId,
-              );
-              return (
-                <article key={player.id}>
-                  <span>#{index + 1}</span>
-                  <PlayerPortrait
-                    player={player}
-                    state={{
-                      ...state,
-                      currentClubId: playerClub?.id ?? state.currentClubId,
-                    }}
-                    size={40}
-                  />
-                  <div>
-                    <strong>{player.name}</strong>
-                    <small>
-                      {playerClub?.shortName ?? "Sem clube"} · {player.position}
-                    </small>
+                {state.seasonHistory
+                  .slice()
+                  .reverse()
+                  .map((record) => {
+                    const recordClub =
+                      CLUBS.find(
+                        (candidate) => candidate.id === record.clubId,
+                      ) ?? club;
+                    return (
+                      <article
+                        className={worldStyles.officialCard}
+                        key={`${record.season}-${record.clubId}`}
+                      >
+                        <button type="button">
+                          <span>
+                            <small>
+                              {record.season} · {record.age} ANOS
+                            </small>
+                            <strong>{recordClub.shortName}</strong>
+                            <em>
+                              {record.matches}J · {record.wins}V ·{" "}
+                              {record.goalsFor}–{record.goalsAgainst} ·{" "}
+                              {record.competitions
+                                .filter((competition) => competition.champion)
+                                .map((competition) => competition.name)
+                                .join(", ") || "sem títulos"}
+                            </em>
+                          </span>
+                          <b>{record.boardTrust}</b>
+                        </button>
+                      </article>
+                    );
+                  })}
+                {!state.seasonHistory.length ? (
+                  <div className={worldStyles.empty}>
+                    <strong>O arquivo ainda está em branco.</strong>
+                    <span>Conclua a primeira temporada.</span>
                   </div>
-                  <b>
-                    {player.overall}
-                    <small>OVR</small>
-                  </b>
-                </article>
-              );
-            })}
-          </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
         </div>
       );
     return null;
@@ -1017,15 +1386,15 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               </span>
             </div>
             <div className="career-age">
-              <strong>{Math.round(state.boardTrust)}</strong>
-              <span>CONFIANÇA</span>
+              <strong>{state.age}</strong>
+              <span>ANOS</span>
             </div>
             <div className="player-identity">
               <span>
-                <small>REP</small>
-                <strong>{Math.round(state.reputation)}</strong>
+                <small>CONFIANÇA</small>
+                <strong>{Math.round(state.boardTrust)}</strong>
               </span>
-              <div className={styles.managerAvatar}>
+              <div className="mini-avatar">
                 <FutboboIcon name="career" />
               </div>
             </div>
@@ -1047,10 +1416,18 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 }
               />
             </div>
-            <h1>{resultLabel(state.lastResult.outcome)} no jogo-chave.</h1>
+            <h1>
+              {latestSeason?.competitions.some(
+                (competition) => competition.champion,
+              )
+                ? "Uma temporada com taça."
+                : "A temporada está encerrada."}
+            </h1>
             <p>
-              {state.lastResult.goalsFor} × {state.lastResult.goalsAgainst}. A
-              diretoria fecha o ano com {Math.round(state.boardTrust)}% de
+              {latestSeason
+                ? `${latestSeason.matches} partidas decisivas, ${latestSeason.wins} vitórias e saldo de ${latestSeason.goalsFor - latestSeason.goalsAgainst} gols.`
+                : `${state.lastResult.goalsFor} × ${state.lastResult.goalsAgainst} na última partida.`}{" "}
+              A diretoria fecha o ano com {Math.round(state.boardTrust)}% de
               confiança no seu trabalho.
             </p>
             <div className="season-stat-grid">
@@ -1063,18 +1440,36 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 <strong>{Math.round(state.reputation)}</strong>
               </div>
               <div className="metric">
-                <span>TROCAS</span>
-                <strong>{state.lastResult.substitutions}</strong>
+                <span>VITÓRIAS</span>
+                <strong>{latestSeason?.wins ?? 0}</strong>
               </div>
               <div className="metric">
                 <span>ORÇAMENTO</span>
                 <strong>{money(state.budget)}</strong>
               </div>
             </div>
+            {latestSeason ? (
+              <div className={styles.resultCompetitions}>
+                {latestSeason.competitions.map((competition) => (
+                  <article
+                    key={competition.id}
+                    className={competition.champion ? styles.champion : ""}
+                  >
+                    <FutboboIcon
+                      name={competition.champion ? "trophy" : "history"}
+                    />
+                    <span>
+                      <strong>{competition.name}</strong>
+                      <small>{competition.stage}</small>
+                    </span>
+                  </article>
+                ))}
+              </div>
+            ) : null}
             {jobOffers.length ? (
               <article className={styles.jobs}>
-                <span>PROPOSTAS DE TRABALHO</span>
-                <strong>Sua temporada abriu outras portas.</strong>
+                <span>PROPOSTAS AO TÉCNICO</span>
+                <strong>Outros clubes querem contratar você.</strong>
                 <div>
                   {jobOffers.map((offer) => (
                     <button
@@ -1128,15 +1523,15 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             </span>
           </div>
           <div className="career-age">
-            <strong>{String(state.season).slice(-2)}</strong>
-            <span>ANO</span>
+            <strong>{state.age}</strong>
+            <span>ANOS</span>
           </div>
           <div className="player-identity">
             <span>
               <small>CONFIANÇA</small>
               <strong>{Math.round(state.boardTrust)}</strong>
             </span>
-            <div className={styles.managerAvatar}>
+            <div className="mini-avatar">
               <FutboboIcon name="career" />
             </div>
           </div>
@@ -1155,7 +1550,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           <Progress label="Elenco" value={squadOverall} color="#67dd78" />
           <Progress
             label="Caixa"
-          value={Math.min(100, state.budget / 150_000)}
+            value={Math.min(100, state.budget / 150_000)}
             color="#aab8ac"
           />
         </div>
@@ -1210,7 +1605,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           aria-label="Navegação da carreira de técnico"
         >
           <div className="desktop-career-nav-brand" aria-hidden="true">
-            <span className={styles.brandMark}>F</span>
+            <BrandMark size="sm" />
             <span>
               <small>CENTRAL DO TÉCNICO</small>
               <strong>{state.name}</strong>

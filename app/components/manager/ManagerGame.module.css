@@ -348,6 +348,48 @@
   color: #aab8ac;
   font-size: 10px;
 }
+.competitionRail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.competitionRail > span {
+  min-width: 0;
+  min-height: 56px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  border: 1px solid rgba(226, 239, 228, 0.08);
+  border-radius: 10px;
+  padding: 8px;
+  color: #718178;
+  background: #0b1812;
+}
+.competitionRail b,
+.competitionRail small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.competitionRail b {
+  color: #aab8ac;
+  font: 900 14px var(--font-barlow-condensed, sans-serif);
+}
+.competitionRail small {
+  font-size: 7px;
+}
+.competitionRail .nextMatch {
+  border-color: rgba(244, 196, 48, 0.28);
+  color: #f2f5ed;
+  background: rgba(244, 196, 48, 0.055);
+}
+.competitionRail .nextMatch b {
+  color: #f4c430;
+}
+.competitionRail .playedMatch b {
+  color: #67dd78;
+}
 .formationGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -455,7 +497,16 @@
   color: #f2f5ed;
   background: #0b1812;
   text-align: left;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: pan-y;
+  transition:
+    border-color 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.rosterPlayer:active {
+  cursor: grabbing;
+  transform: scale(0.98);
 }
 .rosterPlayer > span:nth-child(2) {
   min-width: 0;
@@ -511,6 +562,221 @@
   border-color: #f4c430;
   box-shadow: 0 0 0 2px rgba(244, 196, 48, 0.2);
   background: rgba(244, 196, 48, 0.09);
+}
+
+.managerTimeline {
+  padding-bottom: 96px;
+}
+
+.managerStatHero,
+.managerStatsGrid {
+  max-width: 980px;
+  margin-inline: auto;
+}
+.managerStatHero {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid rgba(226, 239, 228, 0.09);
+  border-radius: 14px;
+  background: #0b1812;
+}
+.managerStatHero > div {
+  min-width: 0;
+  min-height: 118px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 16px;
+  border-right: 1px solid rgba(226, 239, 228, 0.07);
+}
+.managerStatHero > div:last-child {
+  border-right: 0;
+}
+.managerStatHero small,
+.squadProduction header small,
+.seasonTrend header small,
+.formationReport header small {
+  color: #7d9084;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+}
+.managerStatHero strong {
+  color: #f4c430;
+  font: 900 38px/0.95 var(--font-barlow-condensed, sans-serif);
+  font-variant-numeric: tabular-nums;
+}
+.managerStatHero strong em {
+  font-size: 18px;
+  font-style: normal;
+}
+.managerStatHero span {
+  overflow: hidden;
+  color: #718178;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.managerStatsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+.squadProduction,
+.seasonTrend,
+.formationReport {
+  overflow: hidden;
+  border: 1px solid rgba(226, 239, 228, 0.08);
+  border-radius: 14px;
+  background: #0b1812;
+}
+.squadProduction > header {
+  min-height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(226, 239, 228, 0.06);
+}
+.squadProduction > header > span,
+.seasonTrend header,
+.formationReport header {
+  display: grid;
+  gap: 4px;
+}
+.squadProduction > header strong,
+.seasonTrend header strong,
+.formationReport header strong {
+  font-size: 14px;
+}
+.squadProduction > header > div,
+.squadProduction > div > article > div {
+  display: grid;
+  grid-template-columns: repeat(3, 28px);
+  gap: 6px;
+  text-align: center;
+}
+.squadProduction > header > div b {
+  color: #65766c;
+  font-size: 7px;
+}
+.squadProduction > div > article {
+  min-height: 57px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(226, 239, 228, 0.045);
+}
+.squadProduction > div > article:last-child {
+  border-bottom: 0;
+}
+.squadProduction > div > article > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.squadProduction > div > article > span strong,
+.squadProduction > div > article > span small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.squadProduction > div > article > span strong {
+  font-size: 10px;
+}
+.squadProduction > div > article > span small {
+  color: #7d9084;
+  font-size: 8px;
+}
+.squadProduction > div > article > div b {
+  color: #f2f5ed;
+  font: 800 11px var(--font-barlow-condensed, sans-serif);
+  font-variant-numeric: tabular-nums;
+}
+.statsSide {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+.seasonTrend,
+.formationReport {
+  padding: 14px;
+}
+.seasonTrend > div {
+  min-height: 150px;
+  display: flex;
+  align-items: end;
+  justify-content: flex-start;
+  gap: 7px;
+  margin-top: 12px;
+}
+.seasonTrend > div > span {
+  width: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+.seasonTrend > div > span b {
+  color: #aab8ac;
+  font-size: 8px;
+}
+.seasonTrend > div > span i {
+  width: 100%;
+  height: 112px;
+  display: flex;
+  align-items: end;
+  overflow: hidden;
+  border-radius: 5px;
+  background: rgba(226, 239, 228, 0.045);
+}
+.seasonTrend > div > span em {
+  width: 100%;
+  min-height: 4px;
+  background: #f4c430;
+}
+.seasonTrend > div > span small {
+  color: #718178;
+  font-size: 7px;
+}
+.seasonTrend p,
+.formationReport > div > p {
+  margin: 0;
+  color: #718178;
+  font-size: 9px;
+}
+.formationReport > div {
+  display: grid;
+  margin-top: 10px;
+}
+.formationReport > div > p {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid rgba(226, 239, 228, 0.055);
+}
+.formationReport > div > p span {
+  display: grid;
+  gap: 2px;
+}
+.formationReport > div > p strong {
+  color: #f2f5ed;
+  font-size: 10px;
+}
+.formationReport > div > p small {
+  color: #718178;
+  font-size: 8px;
+}
+.formationReport > div > p b {
+  color: #f4c430;
+  font-size: 11px;
 }
 
 .historyList,
@@ -770,6 +1036,54 @@
 .resultStage :global(.metric strong) {
   font-size: 27px;
 }
+.resultCompetitions {
+  width: min(760px, calc(100% - 32px));
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin: 12px auto 0;
+}
+.resultCompetitions article {
+  min-width: 0;
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(226, 239, 228, 0.09);
+  border-radius: 10px;
+  padding: 9px;
+  color: #718178;
+  background: #0b1812;
+}
+.resultCompetitions article > svg {
+  font-size: 18px;
+}
+.resultCompetitions article span,
+.resultCompetitions article strong,
+.resultCompetitions article small {
+  min-width: 0;
+  display: block;
+}
+.resultCompetitions article strong,
+.resultCompetitions article small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.resultCompetitions article strong {
+  color: #f2f5ed;
+  font-size: 9px;
+}
+.resultCompetitions article small {
+  margin-top: 3px;
+  font-size: 7px;
+}
+.resultCompetitions .champion {
+  border-color: rgba(244, 196, 48, 0.22);
+  color: #f4c430;
+  background: rgba(244, 196, 48, 0.045);
+}
 .jobs {
   width: min(760px, calc(100% - 32px));
   margin: 18px auto 0;
@@ -990,15 +1304,6 @@
   .managerCareer {
     --manager-edge: 12px;
   }
-  .managerCareer :global(.career-age strong) {
-    font-size: 23px;
-  }
-  .managerCareer :global(.career-age span) {
-    font-size: 6px;
-  }
-  .managerCareer :global(.career-status-strip > span:first-child) {
-    min-width: 168px;
-  }
   .progress {
     padding-inline: 7px;
   }
@@ -1072,6 +1377,31 @@
     grid-template-columns: 1fr 1fr;
   }
   .statColumns {
+    grid-template-columns: 1fr;
+  }
+  .managerStatHero {
+    grid-template-columns: 1fr 1fr;
+  }
+  .managerStatHero > div:nth-child(2) {
+    border-right: 0;
+  }
+  .managerStatHero > div:nth-child(-n + 2) {
+    border-bottom: 1px solid rgba(226, 239, 228, 0.07);
+  }
+  .managerStatHero > div {
+    min-height: 96px;
+    padding: 12px;
+  }
+  .managerStatHero strong {
+    font-size: 31px;
+  }
+  .managerStatsGrid {
+    grid-template-columns: 1fr;
+  }
+  .squadProduction > div > article {
+    padding-inline: 10px;
+  }
+  .resultCompetitions {
     grid-template-columns: 1fr;
   }
   .market > div {

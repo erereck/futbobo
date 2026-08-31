@@ -54,22 +54,53 @@ export type ManagerDecisionResult = {
 
 export type ManagerMatchPlan = {
   id: string;
+  competitionId: string;
   opponentId: string;
   competitionName: string;
   stageName: string;
   season: number;
+  order: number;
+  total: number;
 };
 
 export type ManagerHistoryEntry = {
   id: string;
   season: number;
+  clubId: string;
+  leagueId: string;
+  managerAge: number;
   opponentId: string;
+  competitionId: string;
   competitionName: string;
   stageName: string;
   outcome: "win" | "loss" | "draw";
   score: string;
   formationId: string;
   substitutions: number;
+};
+
+export type ManagerCompetitionResult = {
+  id: string;
+  name: string;
+  stage: string;
+  champion: boolean;
+};
+
+export type ManagerSeasonRecord = {
+  season: number;
+  age: number;
+  clubId: string;
+  leagueId: string;
+  matches: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  boardTrust: number;
+  reputation: number;
+  squadOverall: number;
+  competitions: ManagerCompetitionResult[];
 };
 
 export type ManagerLastResult = {
@@ -104,6 +135,7 @@ export type ManagerState = {
   currentClubId: string;
   currentLeagueId: string;
   season: number;
+  age: number;
   reputation: number;
   boardTrust: number;
   objective: string;
@@ -114,7 +146,10 @@ export type ManagerState = {
   bench: string[];
   formationId: string;
   pendingMatch: ManagerMatchPlan | null;
+  matchQueue: ManagerMatchPlan[];
+  seasonMatches: ManagerHistoryEntry[];
   history: ManagerHistoryEntry[];
+  seasonHistory: ManagerSeasonRecord[];
   lastResult: ManagerLastResult | null;
   marketOffers: string[];
   playerStats: Record<string, ManagerPlayerStat>;
@@ -264,33 +299,77 @@ function cleanClub(clubId: string): Club {
   return CLUBS.find((club) => club.id === clubId) ?? CLUBS[0];
 }
 
-function makeMatchPlan(
+function continentalCompetitionFor(club: Club) {
+  const confederation = COUNTRIES.find(
+    (country) => country.id === club.countryId,
+  )?.confederation;
+  if (confederation === "SOUTH_AMERICA")
+    return { id: "libertadores", name: "CONMEBOL Libertadores" };
+  if (confederation === "NORTH_AMERICA")
+    return { id: "concacafChampions", name: "Copa dos Campeões Concacaf" };
+  if (confederation === "ASIA")
+    return { id: "afcChampions", name: "AFC Champions League Elite" };
+  if (confederation === "AFRICA")
+    return { id: "cafChampions", name: "CAF Champions League" };
+  if (confederation === "OCEANIA")
+    return { id: "ofcChampions", name: "OFC Champions League" };
+  return { id: "championsLeague", name: "Champions League" };
+}
+
+function makeSeasonMatches(
   state: Pick<
     ManagerState,
     "seed" | "currentClubId" | "currentLeagueId" | "season"
   >,
-): ManagerMatchPlan {
+): ManagerMatchPlan[] {
   const club = cleanClub(state.currentClubId);
-  const opponent = pickFinalOpponent({
-    clubId: club.id,
-    leagueId: state.currentLeagueId || club.leagueId,
-    scope: "domestic",
-    seed: state.seed,
-    season: state.season,
-    competitionId: "manager-key-match",
-  });
   const league = LEAGUES.find((item) => item.id === club.leagueId);
-  return {
-    id:
-      "manager-match-" +
-      state.seed.toString(36) +
-      "-" +
-      state.season.toString(36),
-    opponentId: opponent.id,
-    competitionName: league?.cupName ?? "Copa nacional",
-    stageName: "Jogo-chave",
-    season: state.season,
-  };
+  const continental = continentalCompetitionFor(club);
+  const competitionPlans = [
+    {
+      id: "domesticLeague",
+      name: league?.name ?? "Liga nacional",
+      stage: "Rodada decisiva",
+      scope: "domestic" as const,
+    },
+    {
+      id: "domesticCup",
+      name: league?.cupName ?? "Copa nacional",
+      stage: "Final",
+      scope: "domestic" as const,
+    },
+    ...(club.strength >= 70 || (league?.prestige ?? 0) >= 3
+      ? [
+          {
+            id: continental.id,
+            name: continental.name,
+            stage: "Final",
+            scope: "continental" as const,
+          },
+        ]
+      : []),
+  ];
+  const total = competitionPlans.length;
+  return competitionPlans.map((competition, index) => {
+    const opponent = pickFinalOpponent({
+      clubId: club.id,
+      leagueId: state.currentLeagueId || club.leagueId,
+      scope: competition.scope,
+      seed: hashSeed(state.seed, state.season, index),
+      season: state.season,
+      competitionId: competition.id,
+    });
+    return {
+      id: `manager-match-${state.seed.toString(36)}-${state.season.toString(36)}-${index + 1}`,
+      competitionId: competition.id,
+      opponentId: opponent.id,
+      competitionName: competition.name,
+      stageName: competition.stage,
+      season: state.season,
+      order: index + 1,
+      total,
+    };
+  });
 }
 
 function chooseLineup(players: WorldPlayer[]) {
@@ -369,6 +448,7 @@ export function createManagerState(seed = defaultSeed()): ManagerState {
     currentClubId: "",
     currentLeagueId: "",
     season,
+    age: 40,
     reputation: 30,
     boardTrust: 55,
     objective: "Escolha um clube para começar.",
@@ -379,7 +459,10 @@ export function createManagerState(seed = defaultSeed()): ManagerState {
     bench: [],
     formationId: "muralha",
     pendingMatch: null,
+    matchQueue: [],
+    seasonMatches: [],
     history: [],
+    seasonHistory: [],
     lastResult: null,
     marketOffers: [],
     playerStats: {},
@@ -506,6 +589,8 @@ export function startManagerCareer(
     starters: lineup.starters,
     bench: lineup.bench,
     pendingMatch: null,
+    matchQueue: [],
+    seasonMatches: [],
     lastResult: null,
     marketOffers: [],
     playerStats: playerStatsForSquad(
@@ -517,7 +602,12 @@ export function startManagerCareer(
     lastDecision: null,
     seasonMomentum: 0,
   };
-  const started = { ...next, pendingMatch: makeMatchPlan(next) };
+  const matchQueue = makeSeasonMatches(next);
+  const started = {
+    ...next,
+    matchQueue,
+    pendingMatch: matchQueue[0] ?? null,
+  };
   return {
     ...started,
     marketOffers: managerMarketOffers(started).map((player) => player.id),
@@ -786,12 +876,6 @@ export function applyManagerMatchResult(
     0,
     100,
   );
-  const jobOffers = managerJobOffers({
-    ...state,
-    phase: "career",
-    reputation: nextReputation,
-    boardTrust: nextTrust,
-  });
   const substitutions = result.manager?.substitutions ?? [];
   const userSubstitutions = substitutions.filter(
     (item) => item.side === "user",
@@ -825,7 +909,11 @@ export function applyManagerMatchResult(
   const history: ManagerHistoryEntry = {
     id: result.matchId,
     season: state.season,
+    clubId: state.currentClubId,
+    leagueId: state.currentLeagueId,
+    managerAge: state.age,
     opponentId: plan?.opponentId ?? "",
+    competitionId: plan?.competitionId ?? "keyMatch",
     competitionName: plan?.competitionName ?? "Jogo-chave",
     stageName: plan?.stageName ?? "Jogo-chave",
     outcome,
@@ -833,10 +921,69 @@ export function applyManagerMatchResult(
     formationId: state.formationId,
     substitutions: result.manager?.substitutions.length ?? 0,
   };
+  const seasonMatches = [...state.seasonMatches, history];
+  const remainingQueue = state.matchQueue.filter(
+    (match) => match.id !== plan?.id,
+  );
+  const seasonComplete = remainingQueue.length === 0;
+  const squad = managerSquad(state);
+  const squadOverall = squad.length
+    ? Math.round(
+        squad.reduce((sum, player) => sum + player.overall, 0) / squad.length,
+      )
+    : 0;
+  const seasonRecord: ManagerSeasonRecord = {
+    season: state.season,
+    age: state.age,
+    clubId: state.currentClubId,
+    leagueId: state.currentLeagueId,
+    matches: seasonMatches.length,
+    wins: seasonMatches.filter((match) => match.outcome === "win").length,
+    draws: seasonMatches.filter((match) => match.outcome === "draw").length,
+    losses: seasonMatches.filter((match) => match.outcome === "loss").length,
+    goalsFor: seasonMatches.reduce(
+      (sum, match) => sum + Number(match.score.split("×")[0] || 0),
+      0,
+    ),
+    goalsAgainst: seasonMatches.reduce(
+      (sum, match) => sum + Number(match.score.split("×")[1] || 0),
+      0,
+    ),
+    boardTrust: nextTrust,
+    reputation: nextReputation,
+    squadOverall,
+    competitions: seasonMatches.map((match) => ({
+      id: match.competitionId,
+      name: match.competitionName,
+      stage:
+        match.outcome === "win"
+          ? "CAMPEÃO"
+          : match.competitionName ===
+              LEAGUES.find((league) => league.id === match.leagueId)?.name
+            ? match.outcome === "draw"
+              ? "2º lugar"
+              : "3º lugar"
+            : "Vice",
+      champion: match.outcome === "win",
+    })),
+  };
+  const jobOffers = seasonComplete
+    ? managerJobOffers({
+        ...state,
+        phase: "career",
+        reputation: nextReputation,
+        boardTrust: nextTrust,
+      })
+    : [];
   return {
     ...state,
-    phase: nextTrust <= 0 ? ("dismissed" as const) : ("result" as const),
-    careerStage: "result" as const,
+    phase:
+      nextTrust <= 0
+        ? ("dismissed" as const)
+        : seasonComplete
+          ? ("result" as const)
+          : ("career" as const),
+    careerStage: seasonComplete ? ("result" as const) : ("match" as const),
     boardTrust: nextTrust,
     reputation: nextReputation,
     budget: Math.max(
@@ -850,9 +997,14 @@ export function applyManagerMatchResult(
         : outcome === "draw"
           ? "O empate segurou a pressão. Busque uma vitória no próximo jogo."
           : "A diretoria está cobrando resposta imediata.",
-    history: [history, ...state.history].slice(0, 24),
+    history: [history, ...state.history].slice(0, 72),
+    seasonMatches,
+    seasonHistory: seasonComplete
+      ? [...state.seasonHistory, seasonRecord].slice(-30)
+      : state.seasonHistory,
     playerStats,
-    jobOffers: nextTrust <= 0 ? [] : jobOffers.map((club) => club.id),
+    jobOffers:
+      nextTrust <= 0 || !seasonComplete ? [] : jobOffers.map((club) => club.id),
     lastResult: {
       matchId: result.matchId,
       outcome,
@@ -866,7 +1018,8 @@ export function applyManagerMatchResult(
         ]),
       ),
     },
-    pendingMatch: null,
+    matchQueue: remainingQueue,
+    pendingMatch: seasonComplete ? null : (remainingQueue[0] ?? null),
   } as ManagerState;
 }
 
@@ -880,6 +1033,7 @@ export function continueManagerSeason(state: ManagerState) {
   const withWorld = {
     ...state,
     season: nextSeason,
+    age: state.age + 1,
     worldPlayers: ensureClubSquadPlayers(
       world,
       state.currentClubId,
@@ -917,6 +1071,8 @@ export function continueManagerSeason(state: ManagerState) {
     bench,
     squadIds: squad.slice(0, 8).map((player) => player.id),
     pendingMatch: null,
+    matchQueue: [],
+    seasonMatches: [],
     marketOffers: managerMarketOffers(withRoster).map((player) => player.id),
     phase: "career" as const,
     careerStage: "decision" as const,
@@ -924,7 +1080,12 @@ export function continueManagerSeason(state: ManagerState) {
     lastDecision: null,
     seasonMomentum: 0,
   };
-  return { ...next, pendingMatch: makeMatchPlan(next) };
+  const matchQueue = makeSeasonMatches(next);
+  return {
+    ...next,
+    matchQueue,
+    pendingMatch: matchQueue[0] ?? null,
+  };
 }
 
 export function hireManagerAtClub(state: ManagerState, clubId: string) {
@@ -933,6 +1094,11 @@ export function hireManagerAtClub(state: ManagerState, clubId: string) {
       ...createManagerState(state.seed),
       name: state.name,
       nationality: state.nationality,
+      season: state.season,
+      age: state.age,
+      history: state.history,
+      seasonHistory: state.seasonHistory,
+      playerStats: state.playerStats,
     },
     {
       name: state.name,
@@ -944,6 +1110,9 @@ export function hireManagerAtClub(state: ManagerState, clubId: string) {
     ...restarted,
     reputation: Math.max(30, state.reputation),
     boardTrust: 58,
+    history: state.history,
+    seasonHistory: state.seasonHistory,
+    playerStats: state.playerStats,
   };
 }
 
@@ -1026,7 +1195,14 @@ function normalizeHistory(
       season: Number.isFinite(Number(item.season))
         ? Number(item.season)
         : fallbackSeason,
+      clubId: typeof item.clubId === "string" ? item.clubId : "",
+      leagueId: typeof item.leagueId === "string" ? item.leagueId : "",
+      managerAge: Math.max(40, Math.floor(Number(item.managerAge) || 40)),
       opponentId: typeof item.opponentId === "string" ? item.opponentId : "",
+      competitionId:
+        typeof item.competitionId === "string"
+          ? item.competitionId
+          : "keyMatch",
       competitionName:
         typeof item.competitionName === "string"
           ? item.competitionName
@@ -1046,7 +1222,62 @@ function normalizeHistory(
           : "muralha",
       substitutions: Math.max(0, Math.floor(Number(item.substitutions) || 0)),
     }))
-    .slice(0, 24);
+    .slice(0, 72);
+}
+
+function normalizeSeasonHistory(
+  value: unknown,
+  fallbackSeason: number,
+): ManagerSeasonRecord[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === "object" && !Array.isArray(item),
+    )
+    .map((item) => {
+      const competitions = Array.isArray(item.competitions)
+        ? item.competitions
+            .filter(
+              (competition): competition is Record<string, unknown> =>
+                Boolean(competition) &&
+                typeof competition === "object" &&
+                !Array.isArray(competition),
+            )
+            .map((competition, index) => ({
+              id:
+                typeof competition.id === "string"
+                  ? competition.id
+                  : `competition-${index}`,
+              name:
+                typeof competition.name === "string"
+                  ? competition.name
+                  : "Competição",
+              stage:
+                typeof competition.stage === "string"
+                  ? competition.stage
+                  : "Participou",
+              champion: Boolean(competition.champion),
+            }))
+        : [];
+      return {
+        season: Number(item.season) || fallbackSeason,
+        age: Math.max(40, Math.floor(Number(item.age) || 40)),
+        clubId: typeof item.clubId === "string" ? item.clubId : "",
+        leagueId: typeof item.leagueId === "string" ? item.leagueId : "",
+        matches: Math.max(0, Math.floor(Number(item.matches) || 0)),
+        wins: Math.max(0, Math.floor(Number(item.wins) || 0)),
+        draws: Math.max(0, Math.floor(Number(item.draws) || 0)),
+        losses: Math.max(0, Math.floor(Number(item.losses) || 0)),
+        goalsFor: Math.max(0, Math.floor(Number(item.goalsFor) || 0)),
+        goalsAgainst: Math.max(0, Math.floor(Number(item.goalsAgainst) || 0)),
+        boardTrust: clamp(Number(item.boardTrust) || 0),
+        reputation: clamp(Number(item.reputation) || 0),
+        squadOverall: clamp(Number(item.squadOverall) || 0),
+        competitions,
+      } satisfies ManagerSeasonRecord;
+    })
+    .slice(-30);
 }
 
 function normalizeLastResult(value: unknown): ManagerLastResult | null {
@@ -1121,6 +1352,10 @@ function normalizePendingMatch(
       typeof item.id === "string" && item.id
         ? item.id
         : `manager-match-recovered-${fallbackSeason}`,
+    competitionId:
+      typeof item.competitionId === "string"
+        ? item.competitionId
+        : "domesticCup",
     opponentId: item.opponentId,
     competitionName:
       typeof item.competitionName === "string"
@@ -1131,6 +1366,8 @@ function normalizePendingMatch(
     season: Number.isFinite(Number(item.season))
       ? Number(item.season)
       : fallbackSeason,
+    order: Math.max(1, Math.floor(Number(item.order) || 1)),
+    total: Math.max(1, Math.floor(Number(item.total) || 1)),
   };
 }
 
@@ -1222,27 +1459,48 @@ export function normalizeManagerState(
         ? "decision"
         : savedStage;
   const savedPendingMatch = normalizePendingMatch(merged.pendingMatch, season);
+  const plannedMatches = club
+    ? makeSeasonMatches({
+        seed,
+        currentClubId: club.id,
+        currentLeagueId: club.leagueId,
+        season,
+      })
+    : [];
+  const savedMatchQueue = Array.isArray(merged.matchQueue)
+    ? merged.matchQueue
+        .map((match) => normalizePendingMatch(match, season))
+        .filter((match): match is ManagerMatchPlan => Boolean(match))
+    : [];
+  const matchQueue =
+    safePhase === "career"
+      ? savedMatchQueue.length
+        ? savedMatchQueue
+        : plannedMatches
+      : [];
   const pendingMatch =
     safePhase === "career"
       ? savedPendingMatch &&
-        CLUBS.some(
-          (candidate) => candidate.id === savedPendingMatch.opponentId,
-        ) &&
-        savedPendingMatch.opponentId !== club?.id
+        matchQueue.some((match) => match.id === savedPendingMatch.id) &&
+        CLUBS.some((candidate) => candidate.id === savedPendingMatch.opponentId)
         ? savedPendingMatch
-        : makeMatchPlan({
-            seed,
-            currentClubId: club?.id ?? "",
-            currentLeagueId: club?.leagueId ?? "",
-            season,
-          })
+        : (matchQueue[0] ?? null)
       : null;
+  const seasonHistory = normalizeSeasonHistory(merged.seasonHistory, season);
+  const history = normalizeHistory(merged.history, season);
+  const completedSeasonCount = seasonHistory.length
+    ? seasonHistory.length
+    : new Set(history.map((match) => match.season)).size;
   return {
     ...merged,
     currentClubId: club?.id ?? "",
     currentLeagueId: club?.leagueId ?? "",
     seed,
     season,
+    age: Math.max(
+      40,
+      Math.floor(Number(value?.age) || 40 + completedSeasonCount),
+    ),
     phase: safePhase,
     careerStage,
     name: typeof merged.name === "string" ? merged.name : "",
@@ -1273,7 +1531,12 @@ export function normalizeManagerState(
         ? formationById(merged.formationId).id
         : base.formationId,
     pendingMatch,
-    history: normalizeHistory(merged.history, season),
+    matchQueue,
+    seasonMatches: normalizeHistory(merged.seasonMatches, season).filter(
+      (match) => match.season === season,
+    ),
+    history,
+    seasonHistory,
     lastResult,
     marketOffers: uniqueIds(merged.marketOffers).slice(0, 3),
     jobOffers: uniqueIds(merged.jobOffers).slice(0, 3),
