@@ -79,7 +79,11 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
   assert.match(manager, /useState<ManagerState \| null>\(null\)/);
   assert.match(manager, /if \(!loadedState\) return/);
   assert.match(manager, /setNotice\(""\)/);
-  assert.match(manager, /player\.position === "GOL" \? 2/);
+  assert.match(manager, /player\.position\s*===\s*"GOL"[\s\S]{0,24}?\?\s*2/);
+  assert.match(manager, /continueAfterManagerDecision/);
+  assert.match(model, /state\.careerStage\s*!==\s*"match"/);
+  assert.match(model, /slice\(0, 8\)/);
+  assert.match(model, /state\.phase\s*!==\s*"result"[\s\S]{0,32}?\|\|[\s\S]{0,32}?state\.careerStage\s*!==\s*"result"/);
   assert.match(model, /const nextStarters = state\.starters\.map/);
   assert.match(model, /function normalizeHistory/);
   assert.match(model, /const safePhase/);

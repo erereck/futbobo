@@ -103,8 +103,8 @@ Uma única página, sem labirinto de submenus:
 
 - campo com cinco titulares;
 - faixa com três reservas;
-- abaixo, seis jogadores fora da relação em cartões compactos;
-- tocar em dois atletas troca suas posições na lista;
+- o banco fecha o elenco com exatamente três reservas;
+- tocar em um titular e depois em um reserva troca os dois;
 - cada jogador mostra somente foto, nome, posição, idade, OVR e disponibilidade.
 
 Quando a janela estiver aberta, a própria página pode exibir uma ação curta de mercado. Fora da janela, nenhum botão de mercado vazio ocupa espaço.
@@ -176,8 +176,8 @@ A confiança da diretoria é o único medidor de risco. A reputação existe par
 
 ### Elenco
 
-- O núcleo continua com 14 jogadores persistentes porque essa base já existe.
-- O técnico relaciona cinco titulares e três reservas.
+- O elenco do técnico possui exatamente oito jogadores persistentes.
+- Cinco começam como titulares e três formam todo o banco; não existe grupo fora da relação.
 - Os seis restantes só precisam aparecer como opções de escalação.
 - Lesão ou suspensão pode tornar um jogador indisponível por evento, sem criar departamento médico.
 - OVR e posição determinam encaixe e qualidade.
@@ -427,7 +427,7 @@ Jogar e simular não podem se transformar em regras diferentes.
 - save de técnico;
 - criação simples e escolha do clube;
 - Carreira, Prancheta e Time;
-- elenco de 14, formação e 5+3;
+- elenco fechado em oito, formação e 5+3;
 - objetivo e confiança.
 
 ### Fase 2 — Mesa de técnico

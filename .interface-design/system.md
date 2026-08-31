@@ -139,7 +139,7 @@ Selecoes sem liga recebem uma rota de base recomendada por confederacao. A recom
 - Navegação mantém seis destinos: Carreira, Prancheta, Time, Histórico, Estatísticas e Mundo. `Prancheta` substitui `Jogador`.
 - Carreira é a fila obrigatória: objetivo, confiança, decisão pendente e próximo jogo. Mercado, desfalque e proposta aparecem ali quando exigem resposta.
 - Prancheta escolhe somente uma das seis formações e mostra a prévia dos cinco; sem Plano A/B, sliders, treino ou instruções individuais.
-- Time é uma página única: cinco titulares, três reservas e seis atletas fora da relação. Dados visíveis limitados a foto, nome, posição, idade, OVR e disponibilidade.
+- Time é uma página única e fechada em oito atletas: cinco titulares e três reservas. Não existe elenco oculto ou seção fora da relação; dados visíveis ficam limitados a foto, nome, posição, idade e OVR.
 - Stamina existe somente dentro da partida e vem da distância da peça ativa no próprio toque. A peça usa filete semântico; o valor exato aparece apenas quando selecionada ou no painel de troca.
 - Troca é uma folha inferior curta, disponível apenas no próprio turno com a física parada. Sai + entra + confirmar; depois disso é imediata, irreversível, não consome a vez e preserva as coordenadas da peça.
 - O relógio e a inatividade continuam durante a troca. Nenhum painel pode virar pausa tática ilimitada.
