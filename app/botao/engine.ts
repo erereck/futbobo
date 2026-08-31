@@ -9,7 +9,11 @@
 // re-renderiza o HUD por um contador de versão.
 
 import { createRng, hashSeed, type Rng } from "./rng";
-import { formationByIndex, slotIndexForPosition, type BotaoFormation } from "./formations";
+import {
+  formationByIndex,
+  slotIndexForPosition,
+  type BotaoFormation,
+} from "./formations";
 import type {
   BotaoDecision,
   BotaoMatchResult,
@@ -97,7 +101,14 @@ export type BotaoEvent =
   | { type: "touch"; side: BotaoSide; bodyId: string }
   | { type: "hit"; strength: number }
   | { type: "post"; side: BotaoSide }
-  | { type: "goal"; side: BotaoSide; scorer: string; assist: string | null; byUser: boolean; ownGoal: boolean }
+  | {
+      type: "goal";
+      side: BotaoSide;
+      scorer: string;
+      assist: string | null;
+      byUser: boolean;
+      ownGoal: boolean;
+    }
   | { type: "settled" }
   | { type: "idle-reset" }
   | { type: "inactivity-penalty" }
@@ -148,7 +159,12 @@ export type BotaoMatchState = {
   stats: { user: BotaoSideStats; cpu: BotaoSideStats };
   timeline: BotaoTimelineEntry[];
   resolveElapsed: number;
-  lastGoal: { side: BotaoSide; scorer: string; byUser: boolean; ownGoal: boolean } | null;
+  lastGoal: {
+    side: BotaoSide;
+    scorer: string;
+    byUser: boolean;
+    ownGoal: boolean;
+  } | null;
   penalties: BotaoPenaltyState | null;
   penaltyReason: "shootout" | "inactivity" | null;
   /** Reposição depois de gol não consome o relógio até o primeiro toque. */
@@ -156,8 +172,26 @@ export type BotaoMatchState = {
   /** O tempo zerou enquanto um jogador humano já preparava o último chute. */
   finalShotGrace: boolean;
   /** Histórico enxuto do modo técnico. Vazio no modo jogador. */
-  managerPlayerStats: Record<string, { name: string; position: import("./types").BotaoPositionKey; overall: number; staminaStart: number; stamina: number; distance: number; flicks: number; touches: number; goals: number; assists: number }>;
-  managerSubstitutions: Array<{ side: BotaoSide; outPlayerId: string; inPlayerId: string }>;
+  managerPlayerStats: Record<
+    string,
+    {
+      name: string;
+      position: import("./types").BotaoPositionKey;
+      overall: number;
+      staminaStart: number;
+      stamina: number;
+      distance: number;
+      flicks: number;
+      touches: number;
+      goals: number;
+      assists: number;
+    }
+  >;
+  managerSubstitutions: Array<{
+    side: BotaoSide;
+    outPlayerId: string;
+    inPlayerId: string;
+  }>;
   activeShotBodyId: string | null;
   activeShotDistance: number;
   result: BotaoMatchResult | null;
@@ -190,7 +224,9 @@ export function ballOf(state: BotaoMatchState): BotaoBody {
 }
 
 export function discsOf(state: BotaoMatchState, side: BotaoSide): BotaoBody[] {
-  return state.bodies.filter((body) => body.kind === "disc" && body.side === side);
+  return state.bodies.filter(
+    (body) => body.kind === "disc" && body.side === side,
+  );
 }
 
 export function userPlayerDisc(state: BotaoMatchState): BotaoBody | null {
@@ -225,17 +261,23 @@ export function shotSpeedFor(power: number): number {
 }
 
 /** Fadiga é deliberadamente macia: ainda dá para virar uma partida cansado. */
-export function effectivePowerFor(body: Pick<BotaoBody, "power" | "stamina">): number {
+export function effectivePowerFor(
+  body: Pick<BotaoBody, "power" | "stamina">,
+): number {
   const fatigue = clamp((72 - body.stamina) / 72, 0, 1);
   return body.power * (1 - fatigue * 0.24);
 }
 
-export function effectiveControlFor(body: Pick<BotaoBody, "control" | "stamina">): number {
+export function effectiveControlFor(
+  body: Pick<BotaoBody, "control" | "stamina">,
+): number {
   const fatigue = clamp((72 - body.stamina) / 72, 0, 1);
   return body.control * (1 - fatigue * 0.2);
 }
 
-export function shotSpeedForBody(body: Pick<BotaoBody, "power" | "stamina">): number {
+export function shotSpeedForBody(
+  body: Pick<BotaoBody, "power" | "stamina">,
+): number {
   return shotSpeedFor(effectivePowerFor(body));
 }
 
@@ -344,7 +386,10 @@ function createPost(id: string, x: number, y: number): BotaoBody {
  * goleiro quando a formação troca de desenho. Em caso de empate, a ordem do
  * elenco permanece como desempate — a identidade nunca muda, só o lugar.
  */
-function arrangeManagerStarters(starters: BotaoPlayer[], formation: BotaoFormation): BotaoPlayer[] {
+function arrangeManagerStarters(
+  starters: BotaoPlayer[],
+  formation: BotaoFormation,
+): BotaoPlayer[] {
   const remaining = starters.slice();
   const arranged: BotaoPlayer[] = [];
   for (let slot = 0; slot < formation.slots.length; slot += 1) {
@@ -364,14 +409,23 @@ function arrangeManagerStarters(starters: BotaoPlayer[], formation: BotaoFormati
   return arranged;
 }
 
-const SQUAD_NUMBER_POOL = [1, 10, 9, 8, 7, 11, 6, 4, 5, 3, 2, 14, 17, 18, 19, 20, 21, 23, 27, 30, 33, 42, 47, 66, 77, 88, 99];
+const SQUAD_NUMBER_POOL = [
+  1, 10, 9, 8, 7, 11, 6, 4, 5, 3, 2, 14, 17, 18, 19, 20, 21, 23, 27, 30, 33, 42,
+  47, 66, 77, 88, 99,
+];
 
-function persistentSquadNumbers(teamId: string, excluded: number[], count: number) {
+function persistentSquadNumbers(
+  teamId: string,
+  excluded: number[],
+  count: number,
+) {
   const blocked = new Set(excluded);
   const rng = createRng(hashSeed("futbobo-squad-numbers", teamId));
-  const available = SQUAD_NUMBER_POOL
-    .filter((number) => !blocked.has(number))
-    .map((number, index) => ({ number, order: rng.next() + (index === 0 ? -0.32 : 0) }))
+  const available = SQUAD_NUMBER_POOL.filter((number) => !blocked.has(number))
+    .map((number, index) => ({
+      number,
+      order: rng.next() + (index === 0 ? -0.32 : 0),
+    }))
     .sort((a, b) => a.order - b.order)
     .map(({ number }) => number);
   return available.slice(0, count);
@@ -379,8 +433,12 @@ function persistentSquadNumbers(teamId: string, excluded: number[], count: numbe
 
 export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
   const rng = createRng(hashSeed(setup.seed, setup.matchId));
-  const userPower = setup.player.power ?? clamp(44 + (setup.player.overall - 58) * 1.6, 34, 100);
-  const userControl = setup.player.control ?? clamp(40 + (setup.player.overall - 58) * 1.5, 32, 100);
+  const userPower =
+    setup.player.power ??
+    clamp(44 + (setup.player.overall - 58) * 1.6, 34, 100);
+  const userControl =
+    setup.player.control ??
+    clamp(40 + (setup.player.overall - 58) * 1.5, 32, 100);
   const matePower = teamDiscPower(setup.userTeam.strength);
   const mateControl = teamDiscControl(setup.userTeam.strength);
   const cpuPower = teamDiscPower(setup.cpuTeam.strength);
@@ -389,47 +447,67 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
   const managerMode = Boolean(setup.managerMode && setup.managerRosters);
   const managerRoster = setup.managerRosters;
   const formation = formationByIndex(0);
-  const selectedUserFormation = managerMode && setup.userFormationId
-    ? (Array.from({ length: 6 }, (_, index) => formationByIndex(index)).find((candidate) => candidate.id === setup.userFormationId) ?? formation)
-    : formation;
-  const selectedCpuFormation = managerMode && setup.cpuFormationId
-    ? (Array.from({ length: 6 }, (_, index) => formationByIndex(index)).find((candidate) => candidate.id === setup.cpuFormationId) ?? formation)
-    : formationByIndex(0);
-  const userSlot = managerMode ? -1 : slotIndexForPosition(selectedUserFormation, setup.player.position);
+  const selectedUserFormation =
+    managerMode && setup.userFormationId
+      ? (Array.from({ length: 6 }, (_, index) => formationByIndex(index)).find(
+          (candidate) => candidate.id === setup.userFormationId,
+        ) ?? formation)
+      : formation;
+  const selectedCpuFormation =
+    managerMode && setup.cpuFormationId
+      ? (Array.from({ length: 6 }, (_, index) => formationByIndex(index)).find(
+          (candidate) => candidate.id === setup.cpuFormationId,
+        ) ?? formation)
+      : formationByIndex(0);
+  const userSlot = managerMode
+    ? -1
+    : slotIndexForPosition(selectedUserFormation, setup.player.position);
 
   // Só o jogador da carreira tem nome. O resto é o time — como em botão de
   // verdade, onde a peça é a camisa e não um personagem inventado.
   const bodies: BotaoBody[] = [createBall()];
   if (managerMode && setup.managerRosters) {
-    const userStarters = arrangeManagerStarters(setup.managerRosters.user.starters, selectedUserFormation);
-    const cpuStarters = arrangeManagerStarters(setup.managerRosters.cpu.starters, selectedCpuFormation);
+    const userStarters = arrangeManagerStarters(
+      setup.managerRosters.user.starters,
+      selectedUserFormation,
+    );
+    const cpuStarters = arrangeManagerStarters(
+      setup.managerRosters.cpu.starters,
+      selectedCpuFormation,
+    );
     for (let slot = 0; slot < selectedUserFormation.slots.length; slot += 1) {
       const player = userStarters[slot] ?? userStarters[0] ?? setup.player;
-      bodies.push(createDisc({
-        id: `user-${slot}`,
-        side: "user",
-        number: player.number,
-        label: player.name,
-        power: player.power ?? clamp(44 + (player.overall - 58) * 1.6, 34, 100),
-        control: player.control ?? clamp(40 + (player.overall - 58) * 1.5, 32, 100),
-        isUserPlayer: false,
-        playerId: player.id,
-        slot,
-      }));
+      bodies.push(
+        createDisc({
+          id: `user-${slot}`,
+          side: "user",
+          number: player.number,
+          label: player.name,
+          power:
+            player.power ?? clamp(44 + (player.overall - 58) * 1.6, 34, 100),
+          control:
+            player.control ?? clamp(40 + (player.overall - 58) * 1.5, 32, 100),
+          isUserPlayer: false,
+          playerId: player.id,
+          slot,
+        }),
+      );
     }
     for (let slot = 0; slot < selectedCpuFormation.slots.length; slot += 1) {
       const player = cpuStarters[slot] ?? cpuStarters[0] ?? setup.player;
-      bodies.push(createDisc({
-        id: `cpu-${slot}`,
-        side: "cpu",
-        number: player.number,
-        label: player.name,
-        power: player.power ?? cpuPower,
-        control: player.control ?? cpuControl,
-        isUserPlayer: false,
-        playerId: player.id,
-        slot,
-      }));
+      bodies.push(
+        createDisc({
+          id: `cpu-${slot}`,
+          side: "cpu",
+          number: player.number,
+          label: player.name,
+          power: player.power ?? cpuPower,
+          control: player.control ?? cpuControl,
+          isUserPlayer: false,
+          playerId: player.id,
+          slot,
+        }),
+      );
     }
   } else {
     const teammateNumbers = persistentSquadNumbers(
@@ -445,7 +523,9 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
     let teammateNumberIndex = 0;
     for (let slot = 0; slot < formation.slots.length; slot += 1) {
       const isPlayer = slot === userSlot;
-      const number = isPlayer ? setup.player.number : teammateNumbers[teammateNumberIndex++];
+      const number = isPlayer
+        ? setup.player.number
+        : teammateNumbers[teammateNumberIndex++];
       bodies.push(
         createDisc({
           id: `user-${slot}`,
@@ -474,7 +554,10 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
       );
     }
   }
-  bodies.push(createPost("post-top-left", GOAL_LEFT, -1), createPost("post-top-right", GOAL_RIGHT, -1));
+  bodies.push(
+    createPost("post-top-left", GOAL_LEFT, -1),
+    createPost("post-top-right", GOAL_RIGHT, -1),
+  );
   bodies.push(
     createPost("post-bottom-left", GOAL_LEFT, FIELD.height + 1),
     createPost("post-bottom-right", GOAL_RIGHT, FIELD.height + 1),
@@ -495,13 +578,30 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
     playerAssists: 0,
     turns: 0,
     idleTurns: 0,
-    formationIndex: { user: managerMode ? Array.from({ length: 6 }, (_, index) => formationByIndex(index)).findIndex((candidate) => candidate.id === selectedUserFormation.id) : 0, cpu: managerMode ? Array.from({ length: 6 }, (_, index) => formationByIndex(index)).findIndex((candidate) => candidate.id === selectedCpuFormation.id) : rng.int(0, 5) },
-    formationId: { user: selectedUserFormation.id, cpu: selectedCpuFormation.id },
+    formationIndex: {
+      user: managerMode
+        ? Array.from({ length: 6 }, (_, index) =>
+            formationByIndex(index),
+          ).findIndex((candidate) => candidate.id === selectedUserFormation.id)
+        : 0,
+      cpu: managerMode
+        ? Array.from({ length: 6 }, (_, index) =>
+            formationByIndex(index),
+          ).findIndex((candidate) => candidate.id === selectedCpuFormation.id)
+        : rng.int(0, 5),
+    },
+    formationId: {
+      user: selectedUserFormation.id,
+      cpu: selectedCpuFormation.id,
+    },
     userSlot,
     touches: [],
     ballTouches: 0,
     turnTouchMark: 0,
-    stats: { user: { flicks: 0, touches: 0, posts: 0 }, cpu: { flicks: 0, touches: 0, posts: 0 } },
+    stats: {
+      user: { flicks: 0, touches: 0, posts: 0 },
+      cpu: { flicks: 0, touches: 0, posts: 0 },
+    },
     timeline: setup.entry?.timeline.map((entry) => ({ ...entry })) ?? [],
     resolveElapsed: 0,
     lastGoal: null,
@@ -509,11 +609,33 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
     penaltyReason: null,
     clockPausedForKickoff: false,
     finalShotGrace: false,
-    managerPlayerStats: managerMode && managerRoster ? Object.fromEntries(
-      [...managerRoster.user.starters, ...managerRoster.user.bench, ...managerRoster.cpu.starters, ...managerRoster.cpu.bench]
-        .filter((player) => player.id)
-        .map((player) => [player.id, { name: player.name, position: player.position, overall: player.overall, staminaStart: 100, stamina: 100, distance: 0, flicks: 0, touches: 0, goals: 0, assists: 0 }]),
-    ) : {},
+    managerPlayerStats:
+      managerMode && managerRoster
+        ? Object.fromEntries(
+            [
+              ...managerRoster.user.starters,
+              ...managerRoster.user.bench,
+              ...managerRoster.cpu.starters,
+              ...managerRoster.cpu.bench,
+            ]
+              .filter((player) => player.id)
+              .map((player) => [
+                player.id,
+                {
+                  name: player.name,
+                  position: player.position,
+                  overall: player.overall,
+                  staminaStart: 100,
+                  stamina: 100,
+                  distance: 0,
+                  flicks: 0,
+                  touches: 0,
+                  goals: 0,
+                  assists: 0,
+                },
+              ]),
+          )
+        : {},
     managerSubstitutions: [],
     activeShotBodyId: null,
     activeShotDistance: 0,
@@ -540,8 +662,22 @@ export function cloneMatch(state: BotaoMatchState): BotaoMatchState {
       ? {
           ...state.setup,
           managerRosters: {
-            user: { starters: state.setup.managerRosters.user.starters.map((player) => ({ ...player })), bench: state.setup.managerRosters.user.bench.map((player) => ({ ...player })) },
-            cpu: { starters: state.setup.managerRosters.cpu.starters.map((player) => ({ ...player })), bench: state.setup.managerRosters.cpu.bench.map((player) => ({ ...player })) },
+            user: {
+              starters: state.setup.managerRosters.user.starters.map(
+                (player) => ({ ...player }),
+              ),
+              bench: state.setup.managerRosters.user.bench.map((player) => ({
+                ...player,
+              })),
+            },
+            cpu: {
+              starters: state.setup.managerRosters.cpu.starters.map(
+                (player) => ({ ...player }),
+              ),
+              bench: state.setup.managerRosters.cpu.bench.map((player) => ({
+                ...player,
+              })),
+            },
           },
         }
       : state.setup,
@@ -551,12 +687,25 @@ export function cloneMatch(state: BotaoMatchState): BotaoMatchState {
       ? {
           ...state.penalties,
           score: { ...state.penalties.score },
-          results: { user: [...state.penalties.results.user], cpu: [...state.penalties.results.cpu] },
-          order: { user: [...state.penalties.order.user], cpu: [...state.penalties.order.cpu] },
+          results: {
+            user: [...state.penalties.results.user],
+            cpu: [...state.penalties.results.cpu],
+          },
+          order: {
+            user: [...state.penalties.order.user],
+            cpu: [...state.penalties.order.cpu],
+          },
         }
       : null,
-    managerPlayerStats: Object.fromEntries(Object.entries(state.managerPlayerStats).map(([id, player]) => [id, { ...player }])),
-    managerSubstitutions: state.managerSubstitutions.map((item) => ({ ...item })),
+    managerPlayerStats: Object.fromEntries(
+      Object.entries(state.managerPlayerStats).map(([id, player]) => [
+        id,
+        { ...player },
+      ]),
+    ),
+    managerSubstitutions: state.managerSubstitutions.map((item) => ({
+      ...item,
+    })),
     activeShotBodyId: state.activeShotBodyId,
     activeShotDistance: state.activeShotDistance,
     result: null,
@@ -569,21 +718,37 @@ export function cloneMatch(state: BotaoMatchState): BotaoMatchState {
 
 const MIN_DEPTH = 0.09;
 
-function slotToField(side: BotaoSide, lane: number, depth: number): { x: number; y: number } {
-  const normalizedDepth = (MIN_DEPTH + depth * (1 - MIN_DEPTH)) * (FIELD.height / 2);
+function slotToField(
+  side: BotaoSide,
+  lane: number,
+  depth: number,
+): { x: number; y: number } {
+  const normalizedDepth =
+    (MIN_DEPTH + depth * (1 - MIN_DEPTH)) * (FIELD.height / 2);
   if (side === "user") {
     return { x: lane * FIELD.width, y: FIELD.height - normalizedDepth };
   }
   return { x: FIELD.width - lane * FIELD.width, y: normalizedDepth };
 }
 
-function placeSide(state: BotaoMatchState, side: BotaoSide, formation: BotaoFormation, playerSlot: number) {
+function placeSide(
+  state: BotaoMatchState,
+  side: BotaoSide,
+  formation: BotaoFormation,
+  playerSlot: number,
+) {
   let discs = discsOf(state, side);
   if (state.setup.managerMode && state.setup.managerRosters) {
     const roster = state.setup.managerRosters[side];
     const arranged = arrangeManagerStarters(roster.starters, formation);
-    const byPlayerId = new Map(discs.filter((disc) => disc.playerId).map((disc) => [disc.playerId, disc]));
-    discs = arranged.map((player) => byPlayerId.get(player.id)).filter((disc): disc is BotaoBody => Boolean(disc));
+    const byPlayerId = new Map(
+      discs
+        .filter((disc) => disc.playerId)
+        .map((disc) => [disc.playerId, disc]),
+    );
+    discs = arranged
+      .map((player) => byPlayerId.get(player.id))
+      .filter((disc): disc is BotaoBody => Boolean(disc));
   }
   const available: number[] = [];
   for (let index = 0; index < formation.slots.length; index += 1) {
@@ -591,24 +756,43 @@ function placeSide(state: BotaoMatchState, side: BotaoSide, formation: BotaoForm
   }
   let cursor = 0;
   discs.forEach((disc) => {
-    const slot = disc.isUserPlayer && playerSlot >= 0 ? playerSlot : available[cursor++] ?? 0;
+    const slot =
+      disc.isUserPlayer && playerSlot >= 0
+        ? playerSlot
+        : (available[cursor++] ?? 0);
     disc.slot = slot;
     let target = formation.slots[slot];
     // Algumas formações têm dois botões na primeira linha. No modo técnico,
     // o goleiro continua ocupando o centro da meta, como no jogo real, sem
     // alterar o desenho dos outros quatro jogadores.
-    if (state.setup.managerMode && disc.playerId && state.setup.managerRosters) {
+    if (
+      state.setup.managerMode &&
+      disc.playerId &&
+      state.setup.managerRosters
+    ) {
       const roster = state.setup.managerRosters[side];
-      const player = [...roster.starters, ...roster.bench].find((candidate) => candidate.id === disc.playerId);
+      const player = [...roster.starters, ...roster.bench].find(
+        (candidate) => candidate.id === disc.playerId,
+      );
       if (player?.position === "GOL") {
-        const deepest = Math.min(...formation.slots.map((candidate) => candidate.depth));
+        const deepest = Math.min(
+          ...formation.slots.map((candidate) => candidate.depth),
+        );
         target = { ...target, lane: 0.5, depth: deepest };
       }
     }
     const point = slotToField(side, target.lane, target.depth);
     const jitter = 3.4;
-    disc.x = clamp(point.x + state.rng.range(-jitter, jitter), disc.radius + 2, FIELD.width - disc.radius - 2);
-    disc.y = clamp(point.y + state.rng.range(-jitter, jitter), disc.radius + 2, FIELD.height - disc.radius - 2);
+    disc.x = clamp(
+      point.x + state.rng.range(-jitter, jitter),
+      disc.radius + 2,
+      FIELD.width - disc.radius - 2,
+    );
+    disc.y = clamp(
+      point.y + state.rng.range(-jitter, jitter),
+      disc.radius + 2,
+      FIELD.height - disc.radius - 2,
+    );
     disc.vx = 0;
     disc.vy = 0;
     disc.distanceActive = 0;
@@ -621,7 +805,9 @@ export function placeTeams(state: BotaoMatchState) {
   const cpuFormation = formationByIndex(state.formationIndex.cpu);
   state.formationId.user = userFormation.id;
   state.formationId.cpu = cpuFormation.id;
-  state.userSlot = state.setup.managerMode ? -1 : slotIndexForPosition(userFormation, state.setup.player.position);
+  state.userSlot = state.setup.managerMode
+    ? -1
+    : slotIndexForPosition(userFormation, state.setup.player.position);
   placeSide(state, "user", userFormation, state.userSlot);
   placeSide(state, "cpu", cpuFormation, -1);
 
@@ -636,8 +822,14 @@ export function placeTeams(state: BotaoMatchState) {
 }
 
 /** Empurra corpos sobrepostos até ninguém encostar em ninguém (bola fixa). */
-function separateBodies(state: BotaoMatchState, pinnedId: string, extraGap: number) {
-  const movable = state.bodies.filter((body) => body.kind === "disc" || body.kind === "keeper");
+function separateBodies(
+  state: BotaoMatchState,
+  pinnedId: string,
+  extraGap: number,
+) {
+  const movable = state.bodies.filter(
+    (body) => body.kind === "disc" || body.kind === "keeper",
+  );
   const all = state.bodies.filter((body) => body.kind !== "post");
   for (let iteration = 0; iteration < 24; iteration += 1) {
     let moved = false;
@@ -657,7 +849,8 @@ function separateBodies(state: BotaoMatchState, pinnedId: string, extraGap: numb
         const overlap = minimum - distance;
         const nx = dx / distance;
         const ny = dy / distance;
-        const bodyShare = other.id === pinnedId || other.kind === "ball" ? 1 : 0.5;
+        const bodyShare =
+          other.id === pinnedId || other.kind === "ball" ? 1 : 0.5;
         body.x -= nx * overlap * bodyShare;
         body.y -= ny * overlap * bodyShare;
         if (bodyShare < 1) {
@@ -677,13 +870,22 @@ function separateBodies(state: BotaoMatchState, pinnedId: string, extraGap: numb
 // Toque do jogador
 // ---------------------------------------------------------------------------
 
-export type BotaoAim = { vx: number; vy: number; ratio: number; valid: boolean };
+export type BotaoAim = {
+  vx: number;
+  vy: number;
+  ratio: number;
+  valid: boolean;
+};
 
 /**
  * Traduz um arraste (estilingue) em velocidade inicial. O dedo puxa para trás
  * do botão e a força cresce com o comprimento do arraste.
  */
-export function aimFromDrag(disc: BotaoBody, dragX: number, dragY: number): BotaoAim {
+export function aimFromDrag(
+  disc: BotaoBody,
+  dragX: number,
+  dragY: number,
+): BotaoAim {
   const dx = disc.x - dragX;
   const dy = disc.y - dragY;
   const length = Math.hypot(dx, dy);
@@ -691,7 +893,12 @@ export function aimFromDrag(disc: BotaoBody, dragX: number, dragY: number): Bota
   const pull = Math.min(length, MAX_PULL);
   const ratio = pull / MAX_PULL;
   const speed = shotSpeedForBody(disc) * ratio;
-  return { vx: (dx / length) * speed, vy: (dy / length) * speed, ratio, valid: ratio >= MIN_SHOT_RATIO };
+  return {
+    vx: (dx / length) * speed,
+    vy: (dy / length) * speed,
+    ratio,
+    valid: ratio >= MIN_SHOT_RATIO,
+  };
 }
 
 export function canShoot(state: BotaoMatchState, bodyId: string): boolean {
@@ -717,7 +924,9 @@ export function beginShot(state: BotaoMatchState, shot: BotaoShot): boolean {
   if (speed < shotSpeedForBody(disc) * MIN_SHOT_RATIO) return false;
   const capped = Math.min(speed, MAX_SPEED);
   const slip = slipFor(effectiveControlFor(disc));
-  const angle = Math.atan2(shot.vy, shot.vx) + (slip > 0 ? state.rng.range(-1, 1) * slip : 0);
+  const angle =
+    Math.atan2(shot.vy, shot.vx) +
+    (slip > 0 ? state.rng.range(-1, 1) * slip : 0);
   disc.vx = Math.cos(angle) * capped;
   disc.vy = Math.sin(angle) * capped;
   state.phase = "resolving";
@@ -769,7 +978,11 @@ function commitActiveShotDistance(state: BotaoMatchState) {
   if (!bodyId) return;
   const body = state.bodies.find((candidate) => candidate.id === bodyId);
   if (body?.kind === "disc") {
-    const cost = clamp(state.activeShotDistance * STAMINA_DISTANCE_FACTOR, 0, MAX_STAMINA_COST_PER_SHOT);
+    const cost = clamp(
+      state.activeShotDistance * STAMINA_DISTANCE_FACTOR,
+      0,
+      MAX_STAMINA_COST_PER_SHOT,
+    );
     body.stamina = clamp(body.stamina - cost, 0, 100);
     if (body.playerId) {
       const player = state.managerPlayerStats[body.playerId];
@@ -819,7 +1032,12 @@ function resolveWalls(state: BotaoMatchState): BotaoSide | null {
   return scoringSide;
 }
 
-function collide(state: BotaoMatchState, a: BotaoBody, b: BotaoBody, events: BotaoEvent[]): boolean {
+function collide(
+  state: BotaoMatchState,
+  a: BotaoBody,
+  b: BotaoBody,
+  events: BotaoEvent[],
+): boolean {
   const minimum = a.radius + b.radius;
   let dx = b.x - a.x;
   let dy = b.y - a.y;
@@ -848,7 +1066,11 @@ function collide(state: BotaoMatchState, a: BotaoBody, b: BotaoBody, events: Bot
 
   const isBallPair = a.kind === "ball" || b.kind === "ball";
   const hasPost = a.kind === "post" || b.kind === "post";
-  const restitution = hasPost ? RESTITUTION_POST : isBallPair ? RESTITUTION_DISC_BALL : RESTITUTION_DISC_DISC;
+  const restitution = hasPost
+    ? RESTITUTION_POST
+    : isBallPair
+      ? RESTITUTION_DISC_BALL
+      : RESTITUTION_DISC_DISC;
   const impulse = (-(1 + restitution) * relative) / invSum;
   a.vx -= nx * impulse * invA;
   a.vy -= ny * impulse * invA;
@@ -859,7 +1081,10 @@ function collide(state: BotaoMatchState, a: BotaoBody, b: BotaoBody, events: Bot
 
   if (isBallPair) {
     const toucher = a.kind === "ball" ? b : a;
-    if ((toucher.kind === "disc" || toucher.kind === "keeper") && toucher.side) {
+    if (
+      (toucher.kind === "disc" || toucher.kind === "keeper") &&
+      toucher.side
+    ) {
       const last = state.touches[state.touches.length - 1];
       if (!last || last.bodyId !== toucher.id) {
         state.touches.push({ bodyId: toucher.id, side: toucher.side });
@@ -892,14 +1117,20 @@ function resolveCollisions(state: BotaoMatchState, events: BotaoEvent[]) {
       const b = bodies[j];
       if (a.kind === "post" && b.kind === "post") continue;
       // As traves só existem para a bola: discos batem na linha de fundo normal.
-      if ((a.kind === "post" && b.kind !== "ball") || (b.kind === "post" && a.kind !== "ball")) continue;
+      if (
+        (a.kind === "post" && b.kind !== "ball") ||
+        (b.kind === "post" && a.kind !== "ball")
+      )
+        continue;
       collide(state, a, b, events);
     }
   }
 }
 
 function everythingStopped(state: BotaoMatchState): boolean {
-  return state.bodies.every((body) => body.kind === "post" || (body.vx === 0 && body.vy === 0));
+  return state.bodies.every(
+    (body) => body.kind === "post" || (body.vx === 0 && body.vy === 0),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -910,11 +1141,17 @@ function periodLabel(state: BotaoMatchState): number {
   return state.period;
 }
 
-function registerGoal(state: BotaoMatchState, side: BotaoSide, events: BotaoEvent[]) {
+function registerGoal(
+  state: BotaoMatchState,
+  side: BotaoSide,
+  events: BotaoEvent[],
+) {
   commitActiveShotDistance(state);
   const touches = state.touches;
   const lastTouch = touches[touches.length - 1];
-  const scorerBody = lastTouch ? state.bodies.find((body) => body.id === lastTouch.bodyId) ?? null : null;
+  const scorerBody = lastTouch
+    ? (state.bodies.find((body) => body.id === lastTouch.bodyId) ?? null)
+    : null;
   const ownGoal = Boolean(scorerBody && scorerBody.side !== side);
   let assistBody: BotaoBody | null = null;
   if (scorerBody && !ownGoal) {
@@ -922,7 +1159,8 @@ function registerGoal(state: BotaoMatchState, side: BotaoSide, events: BotaoEven
       const candidate = touches[index];
       if (candidate.bodyId === scorerBody.id) continue;
       if (candidate.side === side) {
-        assistBody = state.bodies.find((body) => body.id === candidate.bodyId) ?? null;
+        assistBody =
+          state.bodies.find((body) => body.id === candidate.bodyId) ?? null;
       }
       break;
     }
@@ -931,12 +1169,15 @@ function registerGoal(state: BotaoMatchState, side: BotaoSide, events: BotaoEven
   const nameOf = (body: BotaoBody | null) => {
     if (!body) return "bate-rebate";
     if (body.isUserPlayer) return body.label;
-    const team = body.side === "user" ? state.setup.userTeam : state.setup.cpuTeam;
+    const team =
+      body.side === "user" ? state.setup.userTeam : state.setup.cpuTeam;
     return `${team.shortName} ${body.label}`;
   };
   const assist = assistBody ? nameOf(assistBody) : null;
   const byUser = Boolean(scorerBody?.isUserPlayer) && !ownGoal;
-  const scorerName = ownGoal ? `${nameOf(scorerBody)} (contra)` : nameOf(scorerBody);
+  const scorerName = ownGoal
+    ? `${nameOf(scorerBody)} (contra)`
+    : nameOf(scorerBody);
 
   state.score[side] += 1;
   if (byUser) state.playerGoals += 1;
@@ -962,7 +1203,14 @@ function registerGoal(state: BotaoMatchState, side: BotaoSide, events: BotaoEven
       ? `Gol contra de ${nameOf(scorerBody)}`
       : `${scorerName} marcou${assist ? ` (assistência de ${assist})` : ""}`,
   });
-  events.push({ type: "goal", side, scorer: scorerName, assist, byUser, ownGoal });
+  events.push({
+    type: "goal",
+    side,
+    scorer: scorerName,
+    assist,
+    byUser,
+    ownGoal,
+  });
 
   const ball = ballOf(state);
   ball.vx = 0;
@@ -995,12 +1243,23 @@ export function resumeAfterGoal(state: BotaoMatchState): BotaoEvent[] {
     state.version += 1;
     return events;
   }
-  if (!state.setup.managerMode) {
+  if (state.setup.managerMode) {
+    // No modo técnico a formação é uma leitura do momento, não uma escolha
+    // fixa: depois de cada gol os dois times sorteiam outro desenho.
+    state.formationIndex.user =
+      (state.formationIndex.user + 1 + state.rng.int(0, 4)) % 6;
+    state.formationIndex.cpu =
+      (state.formationIndex.cpu + 1 + state.rng.int(0, 4)) % 6;
+  } else {
     state.formationIndex.user += 1;
     state.formationIndex.cpu += 1;
   }
   placeTeams(state);
-  events.push({ type: "formation", userFormation: state.formationId.user, cpuFormation: state.formationId.cpu });
+  events.push({
+    type: "formation",
+    userFormation: state.formationId.user,
+    cpuFormation: state.formationId.cpu,
+  });
   state.turn = conceded;
   state.phase = "kickoff";
   state.clockPausedForKickoff = true;
@@ -1019,7 +1278,10 @@ function endPeriod(state: BotaoMatchState, events: BotaoEvent[]) {
     scorer: "",
     assist: null,
     byUser: false,
-    text: state.period === state.totalPeriods ? "Fim do tempo normal" : `Fim do ${state.period}º tempo`,
+    text:
+      state.period === state.totalPeriods
+        ? "Fim do tempo normal"
+        : `Fim do ${state.period}º tempo`,
   });
   events.push({ type: "period-end", period: state.period });
 
@@ -1033,7 +1295,11 @@ function endPeriod(state: BotaoMatchState, events: BotaoEvent[]) {
     return;
   }
   if (!drawn) {
-    finishMatch(state, state.period > rules.halves ? "extra-time" : "regulation", events);
+    finishMatch(
+      state,
+      state.period > rules.halves ? "extra-time" : "regulation",
+      events,
+    );
     return;
   }
   if (!extraOver && rules.extraHalves > 0) {
@@ -1044,7 +1310,11 @@ function endPeriod(state: BotaoMatchState, events: BotaoEvent[]) {
     startPenalties(state);
     return;
   }
-  finishMatch(state, state.period > rules.halves ? "extra-time" : "regulation", events);
+  finishMatch(
+    state,
+    state.period > rules.halves ? "extra-time" : "regulation",
+    events,
+  );
 }
 
 /** Avança do intervalo para o próximo tempo. */
@@ -1053,7 +1323,8 @@ export function startNextPeriod(state: BotaoMatchState): BotaoEvent[] {
   if (state.phase !== "interval") return events;
   const rules = state.setup.rules;
   state.period += 1;
-  state.periodSeconds = state.period > rules.halves ? rules.extraSeconds : rules.halfSeconds;
+  state.periodSeconds =
+    state.period > rules.halves ? rules.extraSeconds : rules.halfSeconds;
   state.clock = state.periodSeconds;
   state.finalShotGrace = false;
   if (!state.setup.managerMode) {
@@ -1061,7 +1332,11 @@ export function startNextPeriod(state: BotaoMatchState): BotaoEvent[] {
     state.formationIndex.cpu += 1;
   }
   placeTeams(state);
-  events.push({ type: "formation", userFormation: state.formationId.user, cpuFormation: state.formationId.cpu });
+  events.push({
+    type: "formation",
+    userFormation: state.formationId.user,
+    cpuFormation: state.formationId.cpu,
+  });
   // A cada tempo troca quem sai jogando.
   const firstSide: BotaoSide = state.setup.userIsHost ? "user" : "cpu";
   state.turn = state.period % 2 === 1 ? firstSide : otherSide(firstSide);
@@ -1102,7 +1377,11 @@ function settleTurn(state: BotaoMatchState, events: BotaoEvent[]) {
  * último lance: 00:00 fica na tela e a partida só pode terminar depois que o
  * chute for solto e toda a física parar.
  */
-export function advanceClock(state: BotaoMatchState, seconds: number, holdForFinalShot = false): BotaoEvent[] {
+export function advanceClock(
+  state: BotaoMatchState,
+  seconds: number,
+  holdForFinalShot = false,
+): BotaoEvent[] {
   const events: BotaoEvent[] = [];
   if (seconds <= 0) return events;
   if (state.phase !== "aim" && state.phase !== "kickoff") return events;
@@ -1128,7 +1407,10 @@ export function cancelFinalShotGrace(state: BotaoMatchState): BotaoEvent[] {
   const events: BotaoEvent[] = [];
   if (!state.finalShotGrace) return events;
   state.finalShotGrace = false;
-  if (state.clock <= 0 && (state.phase === "aim" || state.phase === "kickoff")) {
+  if (
+    state.clock <= 0 &&
+    (state.phase === "aim" || state.phase === "kickoff")
+  ) {
     endPeriod(state, events);
   }
   state.version += 1;
@@ -1150,10 +1432,15 @@ export function skipTurn(state: BotaoMatchState): BotaoEvent[] {
 }
 
 export function managerRosterFor(state: BotaoMatchState, side: BotaoSide) {
-  return state.setup.managerMode && state.setup.managerRosters ? state.setup.managerRosters[side] : null;
+  return state.setup.managerMode && state.setup.managerRosters
+    ? state.setup.managerRosters[side]
+    : null;
 }
 
-export function substitutionCount(state: BotaoMatchState, side: BotaoSide = "user") {
+export function substitutionCount(
+  state: BotaoMatchState,
+  side: BotaoSide = "user",
+) {
   return state.managerSubstitutions.filter((item) => item.side === side).length;
 }
 
@@ -1162,13 +1449,31 @@ export function substitutionCount(state: BotaoMatchState, side: BotaoSide = "use
  * parada e a vez precisa ser do lado que está fazendo a troca; a troca não
  * consome o toque. O jogador que saiu não volta nesta partida.
  */
-export function substitutePlayer(state: BotaoMatchState, side: BotaoSide, outBodyId: string, inPlayerId: string): boolean {
+export function substitutePlayer(
+  state: BotaoMatchState,
+  side: BotaoSide,
+  outBodyId: string,
+  inPlayerId: string,
+): boolean {
   const roster = managerRosterFor(state, side);
-  if (!roster || state.penalties || (state.phase !== "aim" && state.phase !== "kickoff") || state.turn !== side) return false;
+  if (
+    !roster ||
+    state.penalties ||
+    (state.phase !== "aim" && state.phase !== "kickoff") ||
+    state.turn !== side
+  )
+    return false;
   if (substitutionCount(state, side) >= 3) return false;
-  const outgoing = state.bodies.find((body) => body.id === outBodyId && body.kind === "disc" && body.side === side);
-  const incomingIndex = roster.bench.findIndex((player) => player.id === inPlayerId);
-  const outgoingIndex = outgoing?.playerId ? roster.starters.findIndex((player) => player.id === outgoing.playerId) : -1;
+  const outgoing = state.bodies.find(
+    (body) =>
+      body.id === outBodyId && body.kind === "disc" && body.side === side,
+  );
+  const incomingIndex = roster.bench.findIndex(
+    (player) => player.id === inPlayerId,
+  );
+  const outgoingIndex = outgoing?.playerId
+    ? roster.starters.findIndex((player) => player.id === outgoing.playerId)
+    : -1;
   if (!outgoing || outgoingIndex < 0 || incomingIndex < 0) return false;
   const incoming = roster.bench[incomingIndex];
   if (!incoming.id) return false;
@@ -1178,12 +1483,24 @@ export function substitutePlayer(state: BotaoMatchState, side: BotaoSide, outBod
   outgoing.playerId = incoming.id;
   outgoing.number = incoming.number;
   outgoing.label = incoming.name;
-  outgoing.power = incoming.power ?? (side === "user" ? clamp(44 + (incoming.overall - 58) * 1.6, 34, 100) : teamDiscPower(state.setup.cpuTeam.strength));
-  outgoing.control = incoming.control ?? (side === "user" ? clamp(40 + (incoming.overall - 58) * 1.5, 32, 100) : teamDiscControl(state.setup.cpuTeam.strength));
+  outgoing.power =
+    incoming.power ??
+    (side === "user"
+      ? clamp(44 + (incoming.overall - 58) * 1.6, 34, 100)
+      : teamDiscPower(state.setup.cpuTeam.strength));
+  outgoing.control =
+    incoming.control ??
+    (side === "user"
+      ? clamp(40 + (incoming.overall - 58) * 1.5, 32, 100)
+      : teamDiscControl(state.setup.cpuTeam.strength));
   outgoing.stamina = 100;
   outgoing.distanceActive = 0;
   outgoing.isUserPlayer = false;
-  state.managerSubstitutions.push({ side, outPlayerId: outgoingPlayer.id ?? "", inPlayerId: incoming.id });
+  state.managerSubstitutions.push({
+    side,
+    outPlayerId: outgoingPlayer.id ?? "",
+    inPlayerId: incoming.id,
+  });
   state.version += 1;
   return true;
 }
@@ -1226,9 +1543,14 @@ export function stepMatch(state: BotaoMatchState, dt: number): BotaoEvent[] {
  * No lado do jogador, `playerRound` decide em qual delas ele entra — o resto
  * do time preenche as outras. Em morte súbita a fila recomeça do começo.
  */
-export function buildPenaltyOrder(state: BotaoMatchState, side: BotaoSide, playerRound: number): string[] {
+export function buildPenaltyOrder(
+  state: BotaoMatchState,
+  side: BotaoSide,
+  playerRound: number,
+): string[] {
   const discs = discsOf(state, side);
-  const player = side === "user" ? discs.find((disc) => disc.isUserPlayer) : undefined;
+  const player =
+    side === "user" ? discs.find((disc) => disc.isUserPlayer) : undefined;
   if (!player) return discs.map((disc) => disc.id);
   const others = discs.filter((disc) => !disc.isUserPlayer);
   const slot = clamp(Math.round(playerRound), 1, discs.length);
@@ -1248,7 +1570,10 @@ function startPenalties(state: BotaoMatchState) {
     turn: state.setup.userIsHost ? "user" : "cpu",
     score: { user: 0, cpu: 0 },
     results: { user: [], cpu: [] },
-    order: { user: buildPenaltyOrder(state, "user", defaultRound), cpu: buildPenaltyOrder(state, "cpu", 0) },
+    order: {
+      user: buildPenaltyOrder(state, "user", defaultRound),
+      cpu: buildPenaltyOrder(state, "cpu", 0),
+    },
     playerRound: defaultRound,
     suddenDeath: false,
     shotInFlight: false,
@@ -1262,11 +1587,22 @@ function startPenalties(state: BotaoMatchState) {
 }
 
 /** Confirma em qual cobrança o jogador bate e começa a disputa. */
-export function confirmPenaltyOrder(state: BotaoMatchState, playerRound: number): boolean {
+export function confirmPenaltyOrder(
+  state: BotaoMatchState,
+  playerRound: number,
+): boolean {
   const penalties = state.penalties;
   if (!penalties || state.phase !== "penalty-setup") return false;
-  penalties.playerRound = clamp(Math.round(playerRound), 1, discsOf(state, "user").length);
-  penalties.order.user = buildPenaltyOrder(state, "user", penalties.playerRound);
+  penalties.playerRound = clamp(
+    Math.round(playerRound),
+    1,
+    discsOf(state, "user").length,
+  );
+  penalties.order.user = buildPenaltyOrder(
+    state,
+    "user",
+    penalties.playerRound,
+  );
   state.phase = "penalties";
   setupPenaltyShot(state);
   state.version += 1;
@@ -1284,14 +1620,22 @@ export function jumpToPenalties(state: BotaoMatchState) {
 export function awardInactivityPenalty(state: BotaoMatchState): BotaoEvent[] {
   const events: BotaoEvent[] = [];
   if (state.finalShotGrace) return events;
-  if ((state.phase !== "aim" && state.phase !== "kickoff") || state.turn !== "user" || state.penalties) return events;
+  if (
+    (state.phase !== "aim" && state.phase !== "kickoff") ||
+    state.turn !== "user" ||
+    state.penalties
+  )
+    return events;
   const defaultRound = Math.min(5, discsOf(state, "user").length);
   state.penalties = {
     round: 1,
     turn: "cpu",
     score: { user: 0, cpu: 0 },
     results: { user: [], cpu: [] },
-    order: { user: buildPenaltyOrder(state, "user", defaultRound), cpu: buildPenaltyOrder(state, "cpu", 0) },
+    order: {
+      user: buildPenaltyOrder(state, "user", defaultRound),
+      cpu: buildPenaltyOrder(state, "cpu", 0),
+    },
     playerRound: defaultRound,
     suddenDeath: false,
     shotInFlight: false,
@@ -1392,9 +1736,13 @@ function penaltyBodies(state: BotaoMatchState): BotaoBody[] {
   return [ball, shooter, keeper, ...posts];
 }
 
-export function beginPenaltyShot(state: BotaoMatchState, shot: BotaoShot): boolean {
+export function beginPenaltyShot(
+  state: BotaoMatchState,
+  shot: BotaoShot,
+): boolean {
   const penalties = state.penalties;
-  if (!penalties || penalties.shotInFlight || state.phase !== "penalties") return false;
+  if (!penalties || penalties.shotInFlight || state.phase !== "penalties")
+    return false;
   const shooter = penaltyShooter(state);
   if (shot.bodyId !== shooter.id) return false;
   const speed = Math.hypot(shot.vx, shot.vy);
@@ -1417,16 +1765,24 @@ export function stepPenaltyKeeper(state: BotaoMatchState, dt: number) {
   const keeper = penaltyKeeper(state);
   const leftLimit = GOAL_LEFT + keeper.radius + 2;
   const rightLimit = GOAL_RIGHT - keeper.radius - 2;
-  const nextX = keeper.x + penalties.keeperDirection * penalties.keeperSpeed * dt;
+  const nextX =
+    keeper.x + penalties.keeperDirection * penalties.keeperSpeed * dt;
   if (nextX < leftLimit || nextX > rightLimit) penalties.keeperDirection *= -1;
   const previousX = keeper.x;
-  keeper.x = clamp(keeper.x + penalties.keeperDirection * penalties.keeperSpeed * dt, leftLimit, rightLimit);
+  keeper.x = clamp(
+    keeper.x + penalties.keeperDirection * penalties.keeperSpeed * dt,
+    leftLimit,
+    rightLimit,
+  );
   keeper.vx = (keeper.x - previousX) / dt;
   keeper.vy = 0;
 }
 
 /** Passo de física do pênalti; devolve `null` enquanto a cobrança não terminou. */
-export function stepPenalty(state: BotaoMatchState, dt: number): { scored: boolean } | null {
+export function stepPenalty(
+  state: BotaoMatchState,
+  dt: number,
+): { scored: boolean } | null {
   const penalties = state.penalties;
   if (!penalties || !penalties.shotInFlight) return null;
   const bodies = penaltyBodies(state);
@@ -1463,7 +1819,11 @@ export function stepPenalty(state: BotaoMatchState, dt: number): { scored: boole
       const a = bodies[i];
       const b = bodies[j];
       if (a.kind === "post" && b.kind === "post") continue;
-      if ((a.kind === "post" && b.kind !== "ball") || (b.kind === "post" && a.kind !== "ball")) continue;
+      if (
+        (a.kind === "post" && b.kind !== "ball") ||
+        (b.kind === "post" && a.kind !== "ball")
+      )
+        continue;
       const keeperBallPair =
         (a.kind === "keeper" && b.kind === "ball") ||
         (a.kind === "ball" && b.kind === "keeper");
@@ -1476,7 +1836,8 @@ export function stepPenalty(state: BotaoMatchState, dt: number): { scored: boole
   // mata a bola. Uma espalmada que ainda segue em direção à linha continua viva
   // e pode entrar normalmente.
   if (savedByKeeper) {
-    const movingAwayFromGoal = goalY === 0 ? ball.vy > STOP_SPEED : ball.vy < -STOP_SPEED;
+    const movingAwayFromGoal =
+      goalY === 0 ? ball.vy > STOP_SPEED : ball.vy < -STOP_SPEED;
     const keeperStoppedBall = Math.hypot(ball.vx, ball.vy) <= STOP_SPEED;
     if (movingAwayFromGoal || keeperStoppedBall) {
       ball.vx = 0;
@@ -1490,15 +1851,25 @@ export function stepPenalty(state: BotaoMatchState, dt: number): { scored: boole
 
   state.resolveElapsed += dt;
   const ballStopped = ball.vx === 0 && ball.vy === 0;
-  const wentBackwards = goalY === 0 ? ball.y > FIELD.penaltyDistance + 60 : ball.y < FIELD.height - FIELD.penaltyDistance - 60;
-  if (state.resolveElapsed > 3 || (ballStopped && state.resolveElapsed > 0.35) || wentBackwards) {
+  const wentBackwards =
+    goalY === 0
+      ? ball.y > FIELD.penaltyDistance + 60
+      : ball.y < FIELD.height - FIELD.penaltyDistance - 60;
+  if (
+    state.resolveElapsed > 3 ||
+    (ballStopped && state.resolveElapsed > 0.35) ||
+    wentBackwards
+  ) {
     return { scored: false };
   }
   return null;
 }
 
 /** Fecha a cobrança e prepara a próxima (ou encerra a decisão). */
-export function commitPenalty(state: BotaoMatchState, scored: boolean): BotaoEvent[] {
+export function commitPenalty(
+  state: BotaoMatchState,
+  scored: boolean,
+): BotaoEvent[] {
   const events: BotaoEvent[] = [];
   const penalties = state.penalties;
   if (!penalties) return events;
@@ -1510,37 +1881,58 @@ export function commitPenalty(state: BotaoMatchState, scored: boolean): BotaoEve
     period: state.period,
     clock: inactivityPenalty ? Math.max(0, Math.round(state.clock)) : 0,
     side,
-    kind: inactivityPenalty && scored ? "goal" : scored ? "penalty-goal" : "penalty-miss",
-    scorer: inactivityPenalty ? "Pênalti por demora" : penaltyShooter(state).label,
+    kind:
+      inactivityPenalty && scored
+        ? "goal"
+        : scored
+          ? "penalty-goal"
+          : "penalty-miss",
+    scorer: inactivityPenalty
+      ? "Pênalti por demora"
+      : penaltyShooter(state).label,
     assist: null,
     byUser: side === "user" && penaltyShooter(state).isUserPlayer,
     text: inactivityPenalty
-      ? scored ? "Pênalti por demora convertido" : "Pênalti por demora defendido"
+      ? scored
+        ? "Pênalti por demora convertido"
+        : "Pênalti por demora defendido"
       : `Pênalti ${penalties.round}: ${scored ? "na rede" : "perdeu"}`,
   });
   events.push({ type: "penalty", side, scored });
 
   if (state.penaltyReason === "inactivity") {
-    const keeperIndex = state.bodies.findIndex((body) => body.kind === "keeper");
+    const keeperIndex = state.bodies.findIndex(
+      (body) => body.kind === "keeper",
+    );
     if (keeperIndex >= 0) state.bodies.splice(keeperIndex, 1);
     state.penalties = null;
     state.penaltyReason = null;
     state.turn = "user";
     if (scored) {
       state.score.cpu += 1;
-      state.lastGoal = { side: "cpu", scorer: "Pênalti por demora", byUser: false, ownGoal: false };
+      state.lastGoal = {
+        side: "cpu",
+        scorer: "Pênalti por demora",
+        byUser: false,
+        ownGoal: false,
+      };
       state.phase = "goal";
       state.clockPausedForKickoff = false;
       const limit = state.setup.rules.goalLimit;
       const inRegulation = state.period <= state.setup.rules.halves;
-      if (limit > 0 && inRegulation && state.score.cpu >= limit) finishMatch(state, "goal-limit", events);
+      if (limit > 0 && inRegulation && state.score.cpu >= limit)
+        finishMatch(state, "goal-limit", events);
     } else {
       if (!state.setup.managerMode) {
         state.formationIndex.user += 1;
         state.formationIndex.cpu += 1;
       }
       placeTeams(state);
-      events.push({ type: "formation", userFormation: state.formationId.user, cpuFormation: state.formationId.cpu });
+      events.push({
+        type: "formation",
+        userFormation: state.formationId.user,
+        cpuFormation: state.formationId.cpu,
+      });
       state.phase = "kickoff";
       state.clockPausedForKickoff = true;
     }
@@ -1555,7 +1947,8 @@ export function commitPenalty(state: BotaoMatchState, scored: boolean): BotaoEve
   }
   if (side === (state.setup.userIsHost ? "cpu" : "user")) {
     penalties.round += 1;
-    if (penalties.round > state.setup.rules.penaltyRounds) penalties.suddenDeath = true;
+    if (penalties.round > state.setup.rules.penaltyRounds)
+      penalties.suddenDeath = true;
   }
   penalties.turn = otherSide(side);
   penalties.shotInFlight = false;
@@ -1574,7 +1967,12 @@ export function penaltyDecision(state: BotaoMatchState): BotaoSide | null {
   const userScore = penalties.score.user;
   const cpuScore = penalties.score.cpu;
 
-  if (userTaken === cpuTaken && (penalties.suddenDeath || userTaken >= rounds) && userTaken > 0 && userScore !== cpuScore) {
+  if (
+    userTaken === cpuTaken &&
+    (penalties.suddenDeath || userTaken >= rounds) &&
+    userTaken > 0 &&
+    userScore !== cpuScore
+  ) {
     return userScore > cpuScore ? "user" : "cpu";
   }
   if (userTaken <= rounds && cpuTaken <= rounds) {
@@ -1590,31 +1988,42 @@ export function penaltyDecision(state: BotaoMatchState): BotaoSide | null {
 // Encerramento
 // ---------------------------------------------------------------------------
 
-function finishMatch(state: BotaoMatchState, decision: BotaoDecision, events: BotaoEvent[]) {
+function finishMatch(
+  state: BotaoMatchState,
+  decision: BotaoDecision,
+  events: BotaoEvent[],
+) {
   const penalties = state.penalties;
   const penaltyFor = penalties ? penalties.score.user : null;
   const penaltyAgainst = penalties ? penalties.score.cpu : null;
   let outcome: BotaoMatchResult["outcome"] = "draw";
   if (state.score.user !== state.score.cpu) {
     outcome = state.score.user > state.score.cpu ? "win" : "loss";
-  } else if (penaltyFor !== null && penaltyAgainst !== null && penaltyFor !== penaltyAgainst) {
+  } else if (
+    penaltyFor !== null &&
+    penaltyAgainst !== null &&
+    penaltyFor !== penaltyAgainst
+  ) {
     outcome = penaltyFor > penaltyAgainst ? "win" : "loss";
   }
   const won = outcome === "win";
   const contributions = state.playerGoals + state.playerAssists;
-  const contributionWeight = state.playerGoals * 2.2 + state.playerAssists * 1.45;
+  const contributionWeight =
+    state.playerGoals * 2.2 + state.playerAssists * 1.45;
   const teammateBenchmark = 2.25 + Math.max(0, state.score.user - 1) * 0.48;
   const decisiveSingleContribution =
     contributions === 1 &&
     state.score.user === 1 &&
-    (state.playerGoals === 1 ? state.rng.next() < 0.58 : state.rng.next() < 0.32);
+    (state.playerGoals === 1
+      ? state.rng.next() < 0.58
+      : state.rng.next() < 0.32);
   const manOfTheMatch =
     won &&
-    (
-      contributions >= 3 ||
-      (contributions >= 2 && contributionWeight >= teammateBenchmark && state.rng.next() < 0.82) ||
-      decisiveSingleContribution
-    );
+    (contributions >= 3 ||
+      (contributions >= 2 &&
+        contributionWeight >= teammateBenchmark &&
+        state.rng.next() < 0.82) ||
+      decisiveSingleContribution);
   state.result = {
     matchId: state.setup.matchId,
     simulated: false,
@@ -1631,20 +2040,29 @@ function finishMatch(state: BotaoMatchState, decision: BotaoDecision, events: Bo
     stats: { user: { ...state.stats.user }, cpu: { ...state.stats.cpu } },
     timeline: state.timeline.slice(),
     champion: won,
-    manager: state.setup.managerMode ? {
-      substitutions: state.managerSubstitutions.map((item) => ({ ...item })),
-      players: Object.fromEntries(Object.entries(state.managerPlayerStats).map(([id, player]) => [id, {
-        name: player.name,
-        position: player.position,
-        overall: player.overall,
-        stamina: Math.round(player.stamina),
-        distance: Math.round(player.distance),
-        flicks: player.flicks,
-        touches: player.touches,
-        goals: player.goals,
-        assists: player.assists,
-      }])),
-    } : undefined,
+    manager: state.setup.managerMode
+      ? {
+          substitutions: state.managerSubstitutions.map((item) => ({
+            ...item,
+          })),
+          players: Object.fromEntries(
+            Object.entries(state.managerPlayerStats).map(([id, player]) => [
+              id,
+              {
+                name: player.name,
+                position: player.position,
+                overall: player.overall,
+                stamina: Math.round(player.stamina),
+                distance: Math.round(player.distance),
+                flicks: player.flicks,
+                touches: player.touches,
+                goals: player.goals,
+                assists: player.assists,
+              },
+            ]),
+          ),
+        }
+      : undefined,
   };
   state.phase = "finished";
   state.version += 1;
@@ -1652,6 +2070,11 @@ function finishMatch(state: BotaoMatchState, decision: BotaoDecision, events: Bo
 }
 
 export function forceFinish(state: BotaoMatchState): BotaoMatchResult {
-  if (!state.result) finishMatch(state, state.period > state.setup.rules.halves ? "extra-time" : "regulation", []);
+  if (!state.result)
+    finishMatch(
+      state,
+      state.period > state.setup.rules.halves ? "extra-time" : "regulation",
+      [],
+    );
   return state.result as BotaoMatchResult;
 }

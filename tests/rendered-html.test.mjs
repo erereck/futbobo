@@ -123,6 +123,14 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
     new URL("../app/career/world-players.ts", import.meta.url),
     "utf8",
   );
+  const botaoMatch = await readFile(
+    new URL("../app/botao/BotaoMatch.tsx", import.meta.url),
+    "utf8",
+  );
+  const engine = await readFile(
+    new URL("../app/botao/engine.ts", import.meta.url),
+    "utf8",
+  );
   const layout = await readFile(
     new URL("../app/layout.tsx", import.meta.url),
     "utf8",
@@ -138,7 +146,7 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
   assert.match(manager, /useState<ManagerState \| null>\(null\)/);
   assert.match(manager, /if \(!loadedState\) return/);
   assert.match(manager, /setNotice\(""\)/);
-  assert.match(manager, /player\.position\s*===\s*"GOL"[\s\S]{0,24}?\?\s*2/);
+  assert.match(manager, /setManagerPlayerPosition/);
   assert.match(manager, /continueAfterManagerDecision/);
   assert.match(
     manager,
@@ -150,6 +158,11 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
   assert.match(manager, /timelineStyles\.timeline/);
   assert.match(manager, /worldStyles\.sectionNav/);
   assert.doesNotMatch(manager, /Elenco fechado em oito/);
+  assert.doesNotMatch(manager, /id: "board", label: "Prancheta"/);
+  assert.match(manager, /sellManagerPlayer/);
+  assert.match(manager, /neutral/);
+  assert.match(manager, /setFormationPreviewOpen\(true\)/);
+  assert.match(manager, /previewLineup/);
   assert.match(model, /state\.careerStage\s*!==\s*"match"/);
   assert.match(model, /slice\(0, 8\)/);
   assert.match(model, /age: 40/);
@@ -162,13 +175,21 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
     model,
     /state\.phase\s*!==\s*"result"[\s\S]{0,32}?\|\|[\s\S]{0,32}?state\.careerStage\s*!==\s*"result"/,
   );
-  assert.match(model, /const nextStarters = state\.starters\.map/);
+  assert.match(model, /export function setManagerPlayerPosition/);
+  assert.match(model, /export function sellManagerPlayer/);
+  assert.match(model, /state\.squadIds\.length >= 8/);
+  assert.match(model, /pendingSeasonRecord/);
+  assert.match(model, /simulateManagerSeason/);
+  assert.match(botaoMatch, /setPaused\(true\)/);
+  assert.match(engine, /setup\.managerMode[\s\S]*rng\.int/);
   assert.match(model, /function normalizeHistory/);
   assert.match(model, /const safePhase/);
   assert.match(world, /function normalizeWorldPlayer/);
   assert.match(layout, /viewportFit: "cover"/);
   assert.doesNotMatch(layout, /maximumScale/);
   assert.match(styles, /\.formationPreview/);
+  assert.match(styles, /\.freePlayerSlot/);
+  assert.match(styles, /\.formationModal/);
 });
 
 test("aplica o redesign Matchday Editorial com fontes offline e layouts realmente responsivos", async () => {
@@ -1759,13 +1780,13 @@ test("mostra o minuto de cada gol no resultado do futebol de botão", async () =
   assert.match(standalone, /Gols da partida/);
   assert.match(
     standalone,
-    /matchGoals = result\.timeline\.map\(\(entry, timelineIndex\)/,
+    /matchGoals = result\.timeline[\s\S]{0,80}\.map\(\(entry, timelineIndex\)/,
   );
   assert.match(
     standalone,
     /\.filter\(\(\{ entry \}\) => isMatchGoal\(entry\)\)/,
   );
-  assert.match(engine, /inactivityPenalty && scored \? "goal"/);
+  assert.match(engine, /inactivityPenalty && scored[\s\S]{0,30}\? "goal"/);
 });
 
 test("mantém vivo o rebote do goleiro que ainda segue em direção ao gol", async () => {
@@ -1778,12 +1799,12 @@ test("mantém vivo o rebote do goleiro que ainda segue em direção ao gol", asy
   assert.match(engine, /const keeperBallPair =/);
   assert.match(
     engine,
-    /if \(collide\(state, a, b, events\) && keeperBallPair\) savedByKeeper = true/,
+    /if \([\s\S]{0,80}collide\(state, a, b, events\)[\s\S]{0,80}keeperBallPair[\s\S]{0,80}\)[\s\S]{0,40}savedByKeeper = true/,
   );
   assert.match(engine, /if \(savedByKeeper\) \{/);
   assert.match(
     engine,
-    /const movingAwayFromGoal = goalY === 0 \? ball\.vy > STOP_SPEED : ball\.vy < -STOP_SPEED/,
+    /const movingAwayFromGoal =[\s\S]{0,100}goalY === 0[\s\S]{0,80}ball\.vy > STOP_SPEED[\s\S]{0,80}ball\.vy < -STOP_SPEED/,
   );
   assert.match(engine, /if \(movingAwayFromGoal \|\| keeperStoppedBall\)/);
   assert.match(
@@ -2288,10 +2309,13 @@ test("oferece uma Copa do Mundo independente que respeita as regras atuais e cam
 
   assert.match(match, /const \[desktopLandscape, setDesktopLandscape\]/);
   assert.match(match, /futbobo_botao_landscape/);
-  assert.match(match, /context\.setTransform\(0, scale, -scale, 0/);
   assert.match(
     match,
-    /toFieldPoint\(event\.clientX, event\.clientY, canvas\.getBoundingClientRect\(\), desktopLandscape\)/,
+    /context\.setTransform\([\s\S]{0,40}0,[\s\S]{0,20}scale,[\s\S]{0,20}-scale,[\s\S]{0,20}0,/,
+  );
+  assert.match(
+    match,
+    /toFieldPoint\([\s\S]{0,40}event\.clientX,[\s\S]{0,40}event\.clientY,[\s\S]{0,60}canvas\.getBoundingClientRect\(\),[\s\S]{0,40}desktopLandscape[\s\S]{0,20}\)/,
   );
   assert.match(match, /botao-desktop-only/);
   assert.match(match, /compactMobileTable/);
@@ -2299,7 +2323,7 @@ test("oferece uma Copa do Mundo independente que respeita as regras atuais e cam
   assert.match(render, /rotated = false/);
   assert.match(
     styles,
-    /\.botao-desktop-only,\s*\.botao-mobile-size-toggle \{ display: none; \}/,
+    /\.botao-desktop-only,\s*\.botao-mobile-size-toggle\s*\{\s*display: none;/,
   );
   assert.match(styles, /\.botao-mobile-size-toggle \{ display: inline-flex;/);
   assert.match(
@@ -2309,11 +2333,11 @@ test("oferece uma Copa do Mundo independente que respeita as regras atuais e cam
   assert.match(styles, /v90 — desktop landscape is a real table-first mode/);
   assert.match(
     styles,
-    /\.botao-root-landscape \{[\s\S]*?grid-template-columns: minmax\(0,1fr\) clamp\(244px,19vw,320px\);[\s\S]*?grid-template-rows: minmax\(0,1fr\) max-content;/,
+    /\.botao-root-landscape \{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s*clamp\(244px,\s*19vw,\s*320px\);[\s\S]*?grid-template-rows: minmax\(0,\s*1fr\) max-content;/,
   );
   assert.match(
     styles,
-    /\.botao-root-landscape \.botao-table-wrapper \{[\s\S]*?grid-column: 1;[\s\S]*?grid-row: 1 \/ 3;[\s\S]*?width: min\(100%,calc\(\(100dvh - 32px\) \* 516 \/ 316\)\);/,
+    /\.botao-root-landscape \.botao-table-wrapper \{[\s\S]*?grid-column: 1;[\s\S]*?grid-row: 1 \/ 3;[\s\S]*?width: min\(100%,\s*calc\(\(100dvh - 32px\) \* 516 \/ 316\)\);/,
   );
   assert.match(
     styles,
@@ -2351,7 +2375,10 @@ test("corrige competicoes, bola de ouro, rivais e numeros persistentes", async (
   assert.match(adapter, /candidate\.reputation >= 4/);
   assert.match(adapter, /args\.competitionId\.includes\("jogos-ol"\)/);
   assert.match(adapter, /isGlobalFinal \? 4 : 2/);
-  assert.match(engine, /const SQUAD_NUMBER_POOL = \[1, 10, 9, 8, 7, 11/);
+  assert.match(
+    engine,
+    /const SQUAD_NUMBER_POOL = \[[\s\S]{0,80}1,[\s\S]{0,30}10,[\s\S]{0,30}9,[\s\S]{0,30}8,[\s\S]{0,30}7,[\s\S]{0,30}11,/,
+  );
   assert.match(engine, /hashSeed\("futbobo-squad-numbers", teamId\)/);
   assert.match(
     engine,

@@ -29,6 +29,8 @@ import {
   normalizeManagerState,
   setManagerFormation,
   setManagerLineup,
+  setManagerPlayerPosition,
+  sellManagerPlayer,
   signManagerPlayer,
   startManagerCareer,
   type ManagerState,
@@ -60,7 +62,6 @@ const NAV_ITEMS: Array<{
   icon: FutboboIconName;
 }> = [
   { id: "career", label: "Carreira", icon: "career" },
-  { id: "board", label: "Prancheta", icon: "player" },
   { id: "team", label: "Time", icon: "team" },
   { id: "history", label: "Histórico", icon: "history" },
   { id: "stats", label: "Estatísticas", icon: "stats" },
@@ -71,17 +72,19 @@ function PlayerPortrait({
   player,
   state,
   size = 42,
+  neutral = false,
 }: {
   player: WorldPlayer;
   state: ManagerState;
   size?: number;
+  neutral?: boolean;
 }) {
   const appearance = useMemo(
     () => ({
       ...randomPlayerAppearance(hashSeed(state.seed, player.id)),
-      kitPattern: teamKitPattern(state.seed, state.currentClubId),
+      kitPattern: neutral ? 0 : teamKitPattern(state.seed, state.currentClubId),
     }),
-    [player.id, state.currentClubId, state.seed],
+    [neutral, player.id, state.currentClubId, state.seed],
   );
   const club = managerClub(state);
   return (
@@ -91,8 +94,8 @@ function PlayerPortrait({
     >
       <PlayerAppearancePortrait
         appearance={appearance}
-        primary={club.primary}
-        secondary={club.secondary}
+        primary={neutral ? "#f4f4f1" : club.primary}
+        secondary={neutral ? "#c9ceca" : club.secondary}
         size={size}
         frame="compact"
         label={`Retrato de ${player.name}`}
@@ -127,6 +130,9 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const [matchSetup, setMatchSetup] = useState<
     NonNullable<ReturnType<typeof managerMatchSetup>>["setup"] | null
   >(null);
+  const [matchStarted, setMatchStarted] = useState(false);
+  const [formationPreviewOpen, setFormationPreviewOpen] = useState(false);
+  const [previewFormationId, setPreviewFormationId] = useState("muralha");
   const [selectedPlayer, setSelectedPlayer] = useState("");
   const [draggedPlayer, setDraggedPlayer] = useState("");
   const suppressRosterClick = useRef(false);
@@ -152,26 +158,49 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     () => new Map(squad.map((player) => [player.id, player])),
     [squad],
   );
+  const previewLineup = useMemo(() => {
+    const formation = formationById(previewFormationId);
+    const available = formation.slots.map((slot, index) => ({ slot, index }));
+    return state.starters.flatMap((id, playerIndex) => {
+      const player = playerById.get(id);
+      if (!player || !available.length) return [];
+      const preferredIndex = slotIndexForPosition(formation, player.position);
+      let availableIndex = available.findIndex(
+        (candidate) => candidate.index === preferredIndex,
+      );
+      if (availableIndex < 0) {
+        availableIndex = available.reduce(
+          (best, candidate, index) =>
+            Math.abs(candidate.index - preferredIndex) <
+            Math.abs(available[best].index - preferredIndex)
+              ? index
+              : best,
+          Math.min(playerIndex, available.length - 1),
+        );
+      }
+      const [{ slot }] = available.splice(availableIndex, 1);
+      return [{ id, player, slot }];
+    });
+  }, [playerById, previewFormationId, state.starters]);
   const marketOffers = useMemo(() => managerMarketOffers(state), [state]);
   const activeFormation = useMemo(
     () => formationById(state.formationId),
     [state.formationId],
   );
   const decision = useMemo(() => managerDecision(state), [state]);
-  const wins = state.history.filter((item) => item.outcome === "win").length;
-  const goalsFor = state.history.reduce(
-    (sum, item) => sum + Number(item.score.split("×")[0] || 0),
-    0,
+  const careerTotals = useMemo(
+    () =>
+      state.seasonHistory.reduce(
+        (totals, record) => ({
+          matches: totals.matches + record.matches,
+          wins: totals.wins + record.wins,
+          goalsFor: totals.goalsFor + record.goalsFor,
+          goalsAgainst: totals.goalsAgainst + record.goalsAgainst,
+        }),
+        { matches: 0, wins: 0, goalsFor: 0, goalsAgainst: 0 },
+      ),
+    [state.seasonHistory],
   );
-  const goalsAgainst = state.history.reduce(
-    (sum, item) => sum + Number(item.score.split("×")[1] || 0),
-    0,
-  );
-  const squadOverall = squad.length
-    ? Math.round(
-        squad.reduce((sum, player) => sum + player.overall, 0) / squad.length,
-      )
-    : 0;
   const latestSeason = state.seasonHistory.at(-1);
   const jobOffers = useMemo(() => {
     const ids = new Set(state.jobOffers);
@@ -202,19 +231,6 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         ),
     [squad, state.playerStats],
   );
-  const formationUsage = useMemo(
-    () =>
-      Object.entries(
-        state.history.reduce<Record<string, number>>(
-          (all, item) => ({
-            ...all,
-            [item.formationId]: (all[item.formationId] ?? 0) + 1,
-          }),
-          {},
-        ),
-      ).sort(([, a], [, b]) => b - a),
-    [state.history],
-  );
   const worldLeaders = useMemo(
     () =>
       Object.values(state.worldPlayers.players)
@@ -222,6 +238,18 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         .sort((a, b) => b.reputation - a.reputation || b.overall - a.overall)
         .slice(0, 12),
     [state.worldPlayers.players],
+  );
+  const worldProspects = useMemo(
+    () =>
+      Object.values(state.worldPlayers.players)
+        .filter(
+          (player) =>
+            player.status === "active" &&
+            state.season - player.birthSeason <= 23,
+        )
+        .sort((a, b) => b.potential - a.potential || b.overall - a.overall)
+        .slice(0, 12),
+    [state.season, state.worldPlayers.players],
   );
   const worldClubs = useMemo(
     () =>
@@ -290,12 +318,13 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const openMatch = () => {
     const prepared = managerMatchSetup(state);
     if (!prepared) {
-      setNotice("Escolha cinco titulares e três reservas antes da partida.");
+      setNotice("Escolha cinco titulares antes da partida.");
       setTab("team");
       return;
     }
     setState(prepared.state);
     setMatchSetup(prepared.setup);
+    setMatchStarted(false);
   };
   const completeResult = (
     base: ManagerState,
@@ -313,6 +342,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       applyManagerMatchResult(setManagerLineup(base, starters, bench), result),
     );
     setMatchSetup(null);
+    setMatchStarted(false);
     setTab("career");
     setNotice("");
   };
@@ -355,26 +385,74 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     swapPlayerIds(selectedPlayer, nextId);
   };
 
-  if (matchSetup)
+  if (matchSetup && matchStarted)
     return (
-      <div className={styles.matchHost}>
-        <button
-          type="button"
-          className={styles.matchBack}
-          onClick={() => setMatchSetup(null)}
-        >
-          <FutboboIcon name="arrow-left" /> Prancheta
-        </button>
-        <BotaoMatch
-          setup={matchSetup}
-          onFinish={(result) => completeResult(state, matchSetup, result)}
-        />
-      </div>
+      <BotaoMatch
+        setup={matchSetup}
+        onFinish={(result) => completeResult(state, matchSetup, result)}
+      />
     );
+  if (matchSetup) {
+    const lobbyOpponent = opponent ?? club;
+    return (
+      <main className="botao-lobby botao-career-lobby screen-enter">
+        <span className="botao-lobby-kicker">PARTIDA DECISIVA</span>
+        <h1>{state.pendingMatch?.stageName ?? "Final"}</h1>
+        <p className="botao-lobby-lead">
+          {state.pendingMatch?.competitionName} · Agora a taça depende da mesa.
+        </p>
+        <div className="botao-card botao-final-versus">
+          <div className="botao-team">
+            <ClubBadge club={club} size="md" />
+            <strong>{club.shortName}</strong>
+          </div>
+          <div className="botao-versus-mark">
+            <small>DECISÃO</small>
+            <b>×</b>
+          </div>
+          <div className="botao-team botao-team-cpu">
+            <strong>{lobbyOpponent.shortName}</strong>
+            <ClubBadge club={lobbyOpponent} size="md" />
+          </div>
+        </div>
+        <div className="botao-card botao-career-player">
+          <span>SEUS CINCO</span>
+          <strong>
+            {state.starters
+              .map((id) => playerById.get(id)?.name.split(" ").at(-1))
+              .filter(Boolean)
+              .join(" · ")}
+          </strong>
+          <p>
+            A formação será sorteada no início e mudará automaticamente depois
+            de cada gol.
+          </p>
+        </div>
+        <div className="botao-actions">
+          <button
+            type="button"
+            className="botao-primary"
+            onClick={() => setMatchStarted(true)}
+          >
+            Jogar no futebol de botão
+          </button>
+          <button
+            type="button"
+            className="botao-ghost"
+            onClick={() =>
+              completeResult(state, matchSetup, simulateBotaoMatch(matchSetup))
+            }
+          >
+            Simular esta partida
+          </button>
+        </div>
+      </main>
+    );
+  }
   if (!loadedState)
     return (
       <main className={styles.loading} aria-live="polite">
-        Carregando sua prancheta…
+        Carregando sua carreira…
       </main>
     );
   if (state.phase === "onboarding")
@@ -431,7 +509,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 >
                   {CLUBS.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {item.name} · força {item.strength}
+                      {item.name}
                     </option>
                   ))}
                 </select>
@@ -455,8 +533,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           <span>FIM DE CICLO</span>
           <h1>A diretoria encerrou o projeto.</h1>
           <p>
-            Sua reputação continua. Escolha uma nova prancheta e volte para a
-            mesa.
+            Sua reputação continua. Escolha um novo clube e volte para a mesa.
           </p>
           <div>
             {CLUBS.slice(0, 12).map((item) => (
@@ -478,17 +555,23 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     if (state.careerStage === "decision")
       return (
         <div className={`event-stage ${styles.managerEvent}`}>
-          <div className="market-strip">
+          <div className={styles.careerNewsStrip}>
             <span>
-              <small>PRÓXIMO JOGO</small>
+              <small>GIRO DA TEMPORADA</small>
               <strong>
-                {opponent
-                  ? `${club.shortName} × ${opponent.shortName}`
-                  : "Jogo-chave em definição"}
+                {state.history[0]
+                  ? `${resultLabel(state.history[0].outcome)}: ${state.history[0].competitionName}`
+                  : `${club.shortName} abre um novo capítulo`}
               </strong>
             </span>
-            <button type="button" onClick={() => setTab("board")}>
-              Ver prancheta
+            <button
+              type="button"
+              onClick={() => {
+                setTab("world");
+                setWorldSection("now");
+              }}
+            >
+              Ver notícias <FutboboIcon name="arrow-right" />
             </button>
           </div>
           <div className="objective-card">
@@ -557,7 +640,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               className="primary-button"
               onClick={() => setState(continueAfterManagerDecision(state))}
             >
-              Abrir calendário da temporada <span>→</span>
+              Simular temporada <span>→</span>
             </button>
           </div>
         </div>
@@ -568,8 +651,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           <span>META DA DIRETORIA</span>
           <strong>{state.objective}</strong>
           <p>
-            Formação: {activeFormation.name} · cinco titulares e três reservas
-            confirmados.
+            Cinco titulares confirmados · {state.bench.length}{" "}
+            {state.bench.length === 1
+              ? "reserva disponível"
+              : "reservas disponíveis"}
           </p>
           <small>Confiança atual: {Math.round(state.boardTrust)}%</small>
         </div>
@@ -577,7 +662,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           <header>
             <span>{state.pendingMatch?.competitionName ?? "JOGO-CHAVE"}</span>
             <strong>
-              {state.pendingMatch?.stageName ?? "Temporada"} · JOGO{" "}
+              {state.pendingMatch?.stageName ?? "Temporada"} · FINAL{" "}
               {state.pendingMatch?.order ?? 1}/{state.pendingMatch?.total ?? 1}
             </strong>
           </header>
@@ -591,7 +676,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             <div>
               <ClubBadge club={opponent ?? club} size="md" />
               <strong>{opponent?.shortName ?? "Adversário"}</strong>
-              <small>FORÇA {opponent?.strength ?? 0}</small>
+              <small>ADVERSÁRIO</small>
             </div>
           </div>
           <div className={styles.matchActions}>
@@ -607,9 +692,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               onClick={() => {
                 const prepared = managerMatchSetup(state);
                 if (!prepared) {
-                  setNotice(
-                    "Escolha cinco titulares e três reservas antes da partida.",
-                  );
+                  setNotice("Escolha cinco titulares antes da partida.");
                   setTab("team");
                   return;
                 }
@@ -624,11 +707,8 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             </button>
           </div>
           <footer>
-            <button type="button" onClick={() => setTab("board")}>
-              <FutboboIcon name="player" /> Rever formação
-            </button>
             <button type="button" onClick={() => setTab("team")}>
-              <FutboboIcon name="team" /> Rever relacionados
+              <FutboboIcon name="team" /> Rever o time
             </button>
           </footer>
         </article>
@@ -658,6 +738,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         }}
         onPointerUp={(event) => {
           if (event.pointerType === "mouse" || !draggedPlayer) return;
+          if (area === "starter") return;
           const target = document
             .elementFromPoint(event.clientX, event.clientY)
             ?.closest<HTMLElement>("[data-player-id]");
@@ -680,6 +761,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           event.dataTransfer.dropEffect = "move";
         }}
         onDrop={(event) => {
+          if (area === "starter") return;
           event.preventDefault();
           const sourceId =
             event.dataTransfer.getData("text/plain") || draggedPlayer;
@@ -799,45 +881,164 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         <div className={`panel-screen ${styles.panel}`}>
           <header className={styles.panelHeading}>
             <span>TIME</span>
-            <h2>Cinco em campo. Três no banco.</h2>
+            <h2>Seu time, do seu jeito.</h2>
             <p>
-              {selectedPlayer
-                ? "Agora toque no atleta que vai trocar de lugar."
-                : "Arraste um atleta para outra posição ou toque em dois nomes para trocar."}
+              Arraste cada titular livremente pelo campo. Nenhum outro jogador
+              se move junto.
             </p>
+            <button
+              type="button"
+              className={styles.previewFormationButton}
+              onClick={() => setFormationPreviewOpen(true)}
+            >
+              <FutboboIcon name="player" /> Ver posições nas formações
+            </button>
           </header>
           <div className={styles.teamLayout}>
-            <section className={styles.teamPitch}>
+            <section
+              className={styles.teamPitch}
+              onDragOver={(event) => {
+                if (state.starters.includes(draggedPlayer))
+                  event.preventDefault();
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                const id =
+                  event.dataTransfer.getData("text/plain") || draggedPlayer;
+                if (!state.starters.includes(id)) return;
+                const rect = event.currentTarget.getBoundingClientRect();
+                setState(
+                  setManagerPlayerPosition(state, id, {
+                    x: ((event.clientX - rect.left) / rect.width) * 100,
+                    y: ((event.clientY - rect.top) / rect.height) * 100,
+                  }),
+                );
+                suppressRosterClick.current = true;
+                setDraggedPlayer("");
+              }}
+              onPointerUp={(event) => {
+                if (!draggedPlayer || !state.starters.includes(draggedPlayer))
+                  return;
+                const rect = event.currentTarget.getBoundingClientRect();
+                setState(
+                  setManagerPlayerPosition(state, draggedPlayer, {
+                    x: ((event.clientX - rect.left) / rect.width) * 100,
+                    y: ((event.clientY - rect.top) / rect.height) * 100,
+                  }),
+                );
+                suppressRosterClick.current = true;
+                setDraggedPlayer("");
+              }}
+            >
               <div className={styles.previewLines} />
               {state.starters.map((id) => {
-                const player = playerById.get(id);
-                const slot =
-                  formationPreview.find((item) => item.player.id === id)
-                    ?.slot ?? activeFormation.slots[0];
-                const gridColumn =
-                  player && player.position === "GOL"
-                    ? 2
-                    : slot.lane < 0.42
-                      ? 1
-                      : slot.lane > 0.58
-                        ? 3
-                        : 2;
-                const gridRow =
-                  slot.depth < 0.32 ? 1 : slot.depth < 0.76 ? 2 : 3;
+                const point = state.lineupPositions[id] ?? { x: 50, y: 50 };
                 return (
-                  <div key={id} style={{ gridColumn, gridRow }}>
+                  <div
+                    key={id}
+                    className={styles.freePlayerSlot}
+                    style={{ left: `${point.x}%`, top: `${point.y}%` }}
+                  >
                     {rosterPlayer(id, "starter")}
                   </div>
                 );
               })}
             </section>
             <aside>
-              <span className={styles.listLabel}>BANCO · 3 RESERVAS</span>
+              <span className={styles.listLabel}>
+                BANCO · {state.bench.length}/3 RESERVAS
+              </span>
               <div className={styles.benchList}>
-                {state.bench.map((id) => rosterPlayer(id, "bench"))}
+                {state.bench.map((id) => {
+                  const player = playerById.get(id);
+                  if (!player) return null;
+                  return (
+                    <div key={id} className={styles.benchRow}>
+                      {rosterPlayer(id, "bench")}
+                      <button
+                        type="button"
+                        className={styles.sellPlayer}
+                        onClick={() => {
+                          setState(sellManagerPlayer(state, id));
+                          setNotice(
+                            `${player.name} foi vendido. A vaga no banco está aberta.`,
+                          );
+                        }}
+                      >
+                        Vender · {money(Math.round(marketFee(player) * 0.72))}
+                      </button>
+                    </div>
+                  );
+                })}
+                {!state.bench.length ? (
+                  <p className={styles.emptyBench}>
+                    Banco vazio. Contrate até três reservas no Mundo.
+                  </p>
+                ) : null}
               </div>
             </aside>
           </div>
+          {formationPreviewOpen ? (
+            <div
+              className={styles.formationModal}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Posições nas formações"
+            >
+              <section>
+                <header>
+                  <span>
+                    <small>CONSULTA</small>
+                    <strong>Onde cada jogador ficaria</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFormationPreviewOpen(false)}
+                  >
+                    ×
+                  </button>
+                </header>
+                <nav>
+                  {BOTAO_FORMATIONS.map((formation) => (
+                    <button
+                      type="button"
+                      key={formation.id}
+                      aria-pressed={previewFormationId === formation.id}
+                      onClick={() => setPreviewFormationId(formation.id)}
+                    >
+                      <strong>{formation.name}</strong>
+                      <small>{formation.shape}</small>
+                    </button>
+                  ))}
+                </nav>
+                <div className={styles.modalPitch}>
+                  <div className={styles.previewLines} />
+                  {previewLineup.map(({ id, player, slot }) => {
+                    return (
+                      <span
+                        key={id}
+                        style={{
+                          left: `${slot.lane * 100}%`,
+                          top: `${slot.depth * 100}%`,
+                        }}
+                      >
+                        <PlayerPortrait
+                          player={player}
+                          state={state}
+                          size={38}
+                        />
+                        <b>{player.name.split(" ").at(-1)}</b>
+                      </span>
+                    );
+                  })}
+                </div>
+                <p>
+                  É só uma prévia. Durante a partida o desenho é aleatório e
+                  muda a cada gol.
+                </p>
+              </section>
+            </div>
+          ) : null}
         </div>
       );
     if (tab === "history")
@@ -874,8 +1075,11 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 </p>
               </div>
               <b className={timelineStyles.ovr}>
-                {squadOverall}
-                <small>TIME</small>
+                {
+                  state.seasonMatches.filter((match) => match.outcome === "win")
+                    .length
+                }
+                <small>VITÓRIAS</small>
               </b>
             </article>
 
@@ -932,8 +1136,8 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       ) : null}
                     </div>
                     <b className={timelineStyles.ovr}>
-                      {record.squadOverall}
-                      <small>TIME</small>
+                      {record.wins}
+                      <small>VITÓRIAS</small>
                     </b>
                   </article>
                 );
@@ -953,31 +1157,33 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             <span>ESTATÍSTICAS</span>
             <h2>O retrato do seu trabalho.</h2>
             <p>
-              Campanha coletiva, desempenho por temporada e produção real dos
-              oito atletas.
+              Campanha coletiva, desempenho por temporada e produção de todo o
+              elenco.
             </p>
           </header>
           <div className={styles.managerStatHero}>
             <div>
               <small>JOGOS</small>
-              <strong>{state.history.length}</strong>
+              <strong>{careerTotals.matches}</strong>
               <span>{state.seasonHistory.length} temporada(s)</span>
             </div>
             <div>
               <small>APROVEITAMENTO</small>
               <strong>
-                {state.history.length
-                  ? Math.round((wins / state.history.length) * 100)
+                {careerTotals.matches
+                  ? Math.round((careerTotals.wins / careerTotals.matches) * 100)
                   : 0}
                 <em>%</em>
               </strong>
-              <span>{wins} vitória(s)</span>
+              <span>{careerTotals.wins} vitória(s)</span>
             </div>
             <div>
               <small>SALDO DE GOLS</small>
-              <strong>{goalsFor - goalsAgainst}</strong>
+              <strong>
+                {careerTotals.goalsFor - careerTotals.goalsAgainst}
+              </strong>
               <span>
-                {goalsFor} pró · {goalsAgainst} contra
+                {careerTotals.goalsFor} pró · {careerTotals.goalsAgainst} contra
               </span>
             </div>
             <div>
@@ -1000,7 +1206,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               <header>
                 <span>
                   <small>PRODUÇÃO DO ELENCO</small>
-                  <strong>Os oito sob seu comando</strong>
+                  <strong>Todos sob seu comando</strong>
                 </span>
                 <div aria-hidden="true">
                   <b>J</b>
@@ -1052,22 +1258,41 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               </article>
               <article className={styles.formationReport}>
                 <header>
-                  <small>FORMAÇÕES</small>
-                  <strong>Desenhos mais usados</strong>
+                  <small>CAMPANHAS</small>
+                  <strong>Últimas temporadas</strong>
                 </header>
                 <div>
-                  {formationUsage.length ? (
-                    formationUsage.map(([id, count]) => (
-                      <p key={id}>
-                        <span>
-                          <strong>{formationById(id).name}</strong>
-                          <small>{formationById(id).shape}</small>
-                        </span>
-                        <b>{count}×</b>
-                      </p>
-                    ))
+                  {state.seasonHistory.length ? (
+                    state.seasonHistory
+                      .slice(-5)
+                      .reverse()
+                      .map((record) => (
+                        <p key={`${record.season}-${record.clubId}`}>
+                          <span>
+                            <strong>
+                              {record.season} ·{" "}
+                              {
+                                CLUBS.find((item) => item.id === record.clubId)
+                                  ?.shortName
+                              }
+                            </strong>
+                            <small>
+                              {record.wins}V · {record.draws}E · {record.losses}
+                              D
+                            </small>
+                          </span>
+                          <b>
+                            {
+                              record.competitions.filter(
+                                (item) => item.champion,
+                              ).length
+                            }{" "}
+                            taça(s)
+                          </b>
+                        </p>
+                      ))
                   ) : (
-                    <p>A estreia registrará seu primeiro desenho.</p>
+                    <p>A primeira temporada abrirá este arquivo.</p>
                   )}
                 </div>
               </article>
@@ -1131,7 +1356,8 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                     <span>OBSERVAÇÃO DO ELENCO</span>
                     <strong>Três nomes disponíveis.</strong>
                     <small>
-                      Contratar troca diretamente o reserva de menor OVR.
+                      A contratação ocupa uma vaga aberta no banco (
+                      {state.bench.length}/3).
                     </small>
                   </header>
                   <div>
@@ -1142,7 +1368,11 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                         onClick={() => {
                           const next = signManagerPlayer(state, player.id);
                           if (next === state)
-                            setNotice("O caixa não comporta essa contratação.");
+                            setNotice(
+                              state.squadIds.length >= 8
+                                ? "Venda um reserva para abrir uma vaga."
+                                : "O caixa não comporta essa contratação.",
+                            );
                           else {
                             setState(next);
                             setNotice(
@@ -1155,6 +1385,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                           player={player}
                           state={state}
                           size={42}
+                          neutral
                         />
                         <span>
                           <strong>{player.name}</strong>
@@ -1191,8 +1422,8 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                             {rival?.shortName ?? "Adversário"}
                           </strong>
                           <p>
-                            {resultLabel(item.outcome)} ·{" "}
-                            {formationById(item.formationId).name}
+                            {resultLabel(item.outcome)} · {item.substitutions}{" "}
+                            {item.substitutions === 1 ? "troca" : "trocas"}
                           </p>
                         </span>
                         {item.outcome === "win" ? <b>●</b> : null}
@@ -1214,14 +1445,16 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             <section className={worldStyles.sectionStack}>
               <header>
                 <small>CLUBES</small>
-                <strong>Forças do futebol mundial</strong>
-                <p>Seu clube aparece destacado no ranking.</p>
+                <strong>Clubes em evidência</strong>
+                <p>
+                  Tradição, momento e liga — o índice interno não é exibido.
+                </p>
               </header>
               <article className={worldStyles.playerBoard}>
                 <header>
                   <span>
                     <small>RANKING DE CLUBES</small>
-                    <strong>Potência atual</strong>
+                    <strong>Protagonistas do momento</strong>
                   </span>
                   <b>{worldClubs.length}</b>
                 </header>
@@ -1247,7 +1480,13 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                           )?.name
                         }
                       </small>
-                      <span>{rankedClub.strength} FOR</span>
+                      <span>
+                        {rankedClub.reputation >= 8
+                          ? "ELITE"
+                          : rankedClub.reputation >= 6
+                            ? "DESTAQUE"
+                            : "TRADIÇÃO"}
+                      </span>
                     </p>
                   ))}
                 </div>
@@ -1313,6 +1552,56 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       ))}
                   </div>
                 </article>
+                <article className={worldStyles.playerBoard}>
+                  <header>
+                    <span>
+                      <small>FUTURO</small>
+                      <strong>Maiores potenciais</strong>
+                    </span>
+                    <b>SUB-23</b>
+                  </header>
+                  <div>
+                    {worldProspects.map((player, index) => (
+                      <p key={player.id}>
+                        <b>#{index + 1}</b>
+                        <strong>{player.name}</strong>
+                        <small>
+                          {state.season - player.birthSeason} anos ·{" "}
+                          {player.position}
+                        </small>
+                        <span>{player.potential} POT</span>
+                      </p>
+                    ))}
+                  </div>
+                </article>
+                <article className={worldStyles.playerBoard}>
+                  <header>
+                    <span>
+                      <small>MERCADO</small>
+                      <strong>Atletas mais valorizados</strong>
+                    </span>
+                    <b>TOP 12</b>
+                  </header>
+                  <div>
+                    {worldLeaders
+                      .slice()
+                      .sort((a, b) => marketFee(b) - marketFee(a))
+                      .map((player, index) => (
+                        <p key={player.id}>
+                          <b>#{index + 1}</b>
+                          <strong>{player.name}</strong>
+                          <small>
+                            {
+                              CLUBS.find(
+                                (item) => item.id === player.currentClubId,
+                              )?.shortName
+                            }
+                          </small>
+                          <span>{money(marketFee(player))}</span>
+                        </p>
+                      ))}
+                  </div>
+                </article>
               </div>
             </section>
           ) : null}
@@ -1364,6 +1653,59 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                   </div>
                 ) : null}
               </div>
+              <article className={worldStyles.playerBoard}>
+                <header>
+                  <span>
+                    <small>CLUBES IMPORTANTES</small>
+                    <strong>Dossiê histórico do universo</strong>
+                  </span>
+                  <b>
+                    {Math.max(1, state.season - new Date().getFullYear() + 1)}{" "}
+                    ano(s)
+                  </b>
+                </header>
+                <div>
+                  {worldClubs.slice(0, 10).map((importantClub, index) => {
+                    const titles = state.seasonHistory.reduce(
+                      (total, record) =>
+                        total +
+                        (record.clubId === importantClub.id
+                          ? record.competitions.filter(
+                              (competition) => competition.champion,
+                            ).length
+                          : 0),
+                      0,
+                    );
+                    return (
+                      <p
+                        key={importantClub.id}
+                        className={
+                          importantClub.id === club.id
+                            ? worldStyles.protagonistRow
+                            : ""
+                        }
+                      >
+                        <b>#{index + 1}</b>
+                        <strong>{importantClub.shortName}</strong>
+                        <small>
+                          {
+                            LEAGUES.find(
+                              (league) => league.id === importantClub.leagueId,
+                            )?.name
+                          }
+                        </small>
+                        <span>
+                          {titles
+                            ? `${titles} TÍTULO(S)`
+                            : importantClub.reputation >= 8
+                              ? "GIGANTE"
+                              : "TRADICIONAL"}
+                        </span>
+                      </p>
+                    );
+                  })}
+                </div>
+              </article>
             </section>
           ) : null}
         </div>
@@ -1371,7 +1713,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     return null;
   };
 
-  if (state.phase === "result" && state.lastResult)
+  if (state.phase === "result")
     return (
       <main className="app-shell app-shell-season-result">
         <section
@@ -1404,13 +1746,15 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               FIM DA TEMPORADA {state.season}
             </span>
             <div
-              className={`result-symbol ${state.lastResult.outcome === "win" ? "winner" : ""}`}
+              className={`result-symbol ${latestSeason?.competitions.some((competition) => competition.champion) ? "winner" : ""}`}
             >
               <FutboboIcon
                 name={
-                  state.lastResult.outcome === "win"
+                  latestSeason?.competitions.some(
+                    (competition) => competition.champion,
+                  )
                     ? "trophy"
-                    : state.lastResult.outcome === "loss"
+                    : (latestSeason?.wins ?? 0) < (latestSeason?.losses ?? 0)
                       ? "trend-down"
                       : "trend-up"
                 }
@@ -1425,8 +1769,8 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             </h1>
             <p>
               {latestSeason
-                ? `${latestSeason.matches} partidas decisivas, ${latestSeason.wins} vitórias e saldo de ${latestSeason.goalsFor - latestSeason.goalsAgainst} gols.`
-                : `${state.lastResult.goalsFor} × ${state.lastResult.goalsAgainst} na última partida.`}{" "}
+                ? `${latestSeason.matches} partidas na temporada, ${latestSeason.wins} vitórias e saldo de ${latestSeason.goalsFor - latestSeason.goalsAgainst} gols.`
+                : "A temporada foi simulada até o fim."}{" "}
               A diretoria fecha o ano com {Math.round(state.boardTrust)}% de
               confiança no seu trabalho.
             </p>
@@ -1482,7 +1826,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       <ClubBadge club={offer} size="sm" />
                       <span>
                         <strong>{offer.shortName}</strong>
-                        <small>força {offer.strength}</small>
+                        <small>proposta para o próximo ciclo</small>
                       </span>
                       <FutboboIcon name="arrow-right" />
                     </button>
@@ -1547,7 +1891,11 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             value={state.reputation}
             color="#f4c430"
           />
-          <Progress label="Elenco" value={squadOverall} color="#67dd78" />
+          <Progress
+            label="Banco"
+            value={(state.bench.length / 3) * 100}
+            color="#67dd78"
+          />
           <Progress
             label="Caixa"
             value={Math.min(100, state.budget / 150_000)}
@@ -1564,8 +1912,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             </strong>
           </span>
           <span>
-            <small>FORMAÇÃO</small>
-            <strong>{activeFormation.name}</strong>
+            <small>TEMPORADA</small>
+            <strong>
+              {state.careerStage === "match" ? "FINAL" : "EM ANDAMENTO"}
+            </strong>
           </span>
           <span>
             <small>RELACIONADOS</small>

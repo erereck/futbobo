@@ -103,6 +103,8 @@ export type ManagerSeasonRecord = {
   competitions: ManagerCompetitionResult[];
 };
 
+export type ManagerLineupPosition = { x: number; y: number };
+
 export type ManagerLastResult = {
   matchId: string;
   outcome: "win" | "loss" | "draw";
@@ -145,11 +147,13 @@ export type ManagerState = {
   starters: string[];
   bench: string[];
   formationId: string;
+  lineupPositions: Record<string, ManagerLineupPosition>;
   pendingMatch: ManagerMatchPlan | null;
   matchQueue: ManagerMatchPlan[];
   seasonMatches: ManagerHistoryEntry[];
   history: ManagerHistoryEntry[];
   seasonHistory: ManagerSeasonRecord[];
+  pendingSeasonRecord: ManagerSeasonRecord | null;
   lastResult: ManagerLastResult | null;
   marketOffers: string[];
   playerStats: Record<string, ManagerPlayerStat>;
@@ -319,26 +323,53 @@ function continentalCompetitionFor(club: Club) {
 function makeSeasonMatches(
   state: Pick<
     ManagerState,
-    "seed" | "currentClubId" | "currentLeagueId" | "season"
+    | "seed"
+    | "currentClubId"
+    | "currentLeagueId"
+    | "season"
+    | "seasonMomentum"
+    | "squadIds"
+    | "worldPlayers"
   >,
 ): ManagerMatchPlan[] {
   const club = cleanClub(state.currentClubId);
   const league = LEAGUES.find((item) => item.id === club.leagueId);
   const continental = continentalCompetitionFor(club);
+  const squad = state.squadIds
+    .map((id) => state.worldPlayers.players[id])
+    .filter((player): player is WorldPlayer => Boolean(player));
+  const squadLevel = squad.length
+    ? squad.reduce((sum, player) => sum + player.overall, 0) / squad.length
+    : club.strength;
+  const campaignLevel =
+    club.strength * 0.72 + squadLevel * 0.28 + state.seasonMomentum;
+  const cupRoll = seeded(
+    hashSeed(state.seed, "manager-cup", state.season),
+    state.season,
+  );
+  const continentalRoll = seeded(
+    hashSeed(state.seed, "manager-continental", state.season),
+    state.season,
+  );
+  const reachedCupFinal =
+    cupRoll < clamp(0.18 + (campaignLevel - 60) / 85, 0.12, 0.72);
+  const continentalEligible =
+    club.strength >= 70 || (league?.prestige ?? 0) >= 3;
+  const reachedContinentalFinal =
+    continentalEligible &&
+    continentalRoll < clamp(0.08 + (campaignLevel - 68) / 105, 0.05, 0.48);
   const competitionPlans = [
-    {
-      id: "domesticLeague",
-      name: league?.name ?? "Liga nacional",
-      stage: "Rodada decisiva",
-      scope: "domestic" as const,
-    },
-    {
-      id: "domesticCup",
-      name: league?.cupName ?? "Copa nacional",
-      stage: "Final",
-      scope: "domestic" as const,
-    },
-    ...(club.strength >= 70 || (league?.prestige ?? 0) >= 3
+    ...(reachedCupFinal
+      ? [
+          {
+            id: "domesticCup",
+            name: league?.cupName ?? "Copa nacional",
+            stage: "Final",
+            scope: "domestic" as const,
+          },
+        ]
+      : []),
+    ...(reachedContinentalFinal
       ? [
           {
             id: continental.id,
@@ -370,6 +401,19 @@ function makeSeasonMatches(
       total,
     };
   });
+}
+
+function defaultLineupPositions(ids: string[]) {
+  const defaults = [
+    { x: 50, y: 84 },
+    { x: 28, y: 64 },
+    { x: 70, y: 55 },
+    { x: 34, y: 34 },
+    { x: 64, y: 18 },
+  ];
+  return Object.fromEntries(
+    ids.slice(0, 5).map((id, index) => [id, defaults[index]]),
+  );
 }
 
 function chooseLineup(players: WorldPlayer[]) {
@@ -458,11 +502,13 @@ export function createManagerState(seed = defaultSeed()): ManagerState {
     starters: [],
     bench: [],
     formationId: "muralha",
+    lineupPositions: {},
     pendingMatch: null,
     matchQueue: [],
     seasonMatches: [],
     history: [],
     seasonHistory: [],
+    pendingSeasonRecord: null,
     lastResult: null,
     marketOffers: [],
     playerStats: {},
@@ -530,9 +576,9 @@ export function applyManagerDecision(
 }
 
 export function continueAfterManagerDecision(state: ManagerState) {
-  return state.phase === "career" && state.careerStage === "consequence"
-    ? { ...state, careerStage: "match" as const }
-    : state;
+  if (state.phase !== "career" || state.careerStage !== "consequence")
+    return state;
+  return simulateManagerSeason(state);
 }
 
 function blankPlayerStat(): ManagerPlayerStat {
@@ -553,6 +599,213 @@ function playerStatsForSquad(state: ManagerState, ids: string[]) {
   const stats = { ...state.playerStats };
   for (const id of ids) if (!stats[id]) stats[id] = blankPlayerStat();
   return stats;
+}
+
+function simulateSquadSeasonStats(state: ManagerState, matches: number) {
+  const stats = playerStatsForSquad(state, state.squadIds);
+  const starters = new Set(state.starters);
+  const players = managerSquad(state);
+  for (const [index, player] of players.entries()) {
+    const current = { ...(stats[player.id] ?? blankPlayerStat()) };
+    const roll = seeded(
+      hashSeed(state.seed, player.id, state.season),
+      state.season + index * 19,
+    );
+    const appearances = starters.has(player.id)
+      ? Math.max(1, matches - Math.floor(roll * 5))
+      : Math.max(4, Math.floor(matches * (0.3 + roll * 0.32)));
+    const starts = starters.has(player.id)
+      ? Math.max(1, appearances - Math.floor(roll * 3))
+      : Math.floor(appearances * 0.2);
+    const attackWeight =
+      player.position === "CA"
+        ? 0.46
+        : player.position === "MEI"
+          ? 0.27
+          : player.position === "MC"
+            ? 0.14
+            : player.position === "ZAG"
+              ? 0.05
+              : 0.01;
+    const goals = Math.max(
+      0,
+      Math.round(appearances * attackWeight * (0.45 + roll)),
+    );
+    const assists = Math.max(
+      0,
+      Math.round(
+        appearances *
+          (player.position === "MEI"
+            ? 0.22
+            : player.position === "MC"
+              ? 0.16
+              : player.position === "CA"
+                ? 0.1
+                : 0.04) *
+          (0.55 + roll),
+      ),
+    );
+    current.appearances += appearances;
+    current.starts += starts;
+    current.substitutionsIn += Math.max(0, appearances - starts);
+    current.substitutionsOut += starters.has(player.id)
+      ? Math.floor(appearances * 0.26)
+      : 0;
+    current.goals += goals;
+    current.assists += assists;
+    current.touches += appearances * Math.round(7 + roll * 8);
+    current.flicks += appearances * Math.round(4 + roll * 5);
+    current.distance += appearances * (72 + roll * 45);
+    stats[player.id] = current;
+  }
+  return stats;
+}
+
+function simulateManagerSeason(state: ManagerState): ManagerState {
+  const club = managerClub(state);
+  const league = LEAGUES.find((item) => item.id === club.leagueId);
+  const squad = managerSquad(state);
+  const squadOverall = squad.length
+    ? Math.round(
+        squad.reduce((sum, player) => sum + player.overall, 0) / squad.length,
+      )
+    : 0;
+  const performance =
+    club.strength * 0.68 + squadOverall * 0.32 + state.seasonMomentum;
+  const leagueRoll = seeded(
+    hashSeed(state.seed, "manager-league", state.season),
+    state.season * 13,
+  );
+  const leaguePosition = clamp(
+    Math.round(
+      1 +
+        (94 - performance) / 4.2 +
+        leagueRoll * 4 -
+        state.seasonMomentum * 0.3,
+    ),
+    1,
+    20,
+  );
+  const matches = 38;
+  const wins = clamp(
+    Math.round(25 - leaguePosition * 0.68 + leagueRoll * 4),
+    7,
+    30,
+  );
+  const draws = clamp(Math.round(7 + (1 - leagueRoll) * 5), 3, 15);
+  const losses = Math.max(0, matches - wins - draws);
+  const goalsFor = Math.max(
+    24,
+    Math.round(35 + wins * 1.45 + performance * 0.16),
+  );
+  const goalsAgainst = Math.max(
+    18,
+    Math.round(19 + losses * 1.32 + (90 - performance) * 0.25),
+  );
+  const matchQueue = makeSeasonMatches(state);
+  const queueIds = new Set(matchQueue.map((match) => match.competitionId));
+  const continental = continentalCompetitionFor(club);
+  const cupStage = queueIds.has("domesticCup")
+    ? "FINALISTA"
+    : ["Semifinal", "Quartas de final", "Oitavas de final"][
+        Math.floor(
+          seeded(
+            hashSeed(state.seed, "cup-stage", state.season),
+            state.season,
+          ) * 3,
+        )
+      ];
+  const competitions: ManagerCompetitionResult[] = [
+    {
+      id: "domesticLeague",
+      name: league?.name ?? "Liga nacional",
+      stage: leaguePosition === 1 ? "CAMPEÃO" : `${leaguePosition}º lugar`,
+      champion: leaguePosition === 1,
+    },
+    {
+      id: "domesticCup",
+      name: league?.cupName ?? "Copa nacional",
+      stage: cupStage,
+      champion: false,
+    },
+  ];
+  if (club.strength >= 70 || (league?.prestige ?? 0) >= 3) {
+    competitions.push({
+      id: continental.id,
+      name: continental.name,
+      stage: queueIds.has(continental.id)
+        ? "FINALISTA"
+        : seeded(
+              hashSeed(state.seed, "continental-stage", state.season),
+              state.season,
+            ) < 0.5
+          ? "Fase de grupos"
+          : "Quartas de final",
+      champion: false,
+    });
+  }
+  const trustDelta =
+    leaguePosition <= 4
+      ? 8
+      : leaguePosition <= 8
+        ? 3
+        : leaguePosition <= 13
+          ? -3
+          : -10;
+  const nextTrust = clamp(state.boardTrust + trustDelta + state.seasonMomentum);
+  const nextReputation = clamp(
+    state.reputation +
+      (leaguePosition === 1
+        ? 7
+        : leaguePosition <= 4
+          ? 3
+          : leaguePosition >= 15
+            ? -2
+            : 1),
+  );
+  const record: ManagerSeasonRecord = {
+    season: state.season,
+    age: state.age,
+    clubId: state.currentClubId,
+    leagueId: state.currentLeagueId,
+    matches,
+    wins,
+    draws,
+    losses,
+    goalsFor,
+    goalsAgainst,
+    boardTrust: nextTrust,
+    reputation: nextReputation,
+    squadOverall,
+    competitions,
+  };
+  const completed = matchQueue.length === 0;
+  const nextBase: ManagerState = {
+    ...state,
+    phase: completed ? "result" : nextTrust <= 0 ? "dismissed" : "career",
+    careerStage: completed ? "result" : "match",
+    boardTrust: nextTrust,
+    reputation: nextReputation,
+    objective:
+      leaguePosition <= 4
+        ? "Sustente o clube entre os protagonistas."
+        : "Transforme a campanha em evolução na próxima temporada.",
+    budget:
+      state.budget +
+      Math.max(120_000, wins * 42_000 + (leaguePosition === 1 ? 900_000 : 0)),
+    playerStats: simulateSquadSeasonStats(state, matches),
+    pendingSeasonRecord: completed ? null : record,
+    seasonHistory: completed
+      ? [...state.seasonHistory, record].slice(-30)
+      : state.seasonHistory,
+    matchQueue,
+    pendingMatch: matchQueue[0] ?? null,
+    lastResult: null,
+    jobOffers: [],
+  };
+  if (!completed) return nextBase;
+  const offers = managerJobOffers({ ...nextBase, phase: "career" });
+  return { ...nextBase, jobOffers: offers.map((offer) => offer.id) };
 }
 
 export function startManagerCareer(
@@ -588,10 +841,12 @@ export function startManagerCareer(
     squadIds: players.slice(0, 8).map((player) => player.id),
     starters: lineup.starters,
     bench: lineup.bench,
+    lineupPositions: defaultLineupPositions(lineup.starters),
     pendingMatch: null,
     matchQueue: [],
     seasonMatches: [],
     lastResult: null,
+    pendingSeasonRecord: null,
     marketOffers: [],
     playerStats: playerStatsForSquad(
       state,
@@ -602,15 +857,9 @@ export function startManagerCareer(
     lastDecision: null,
     seasonMomentum: 0,
   };
-  const matchQueue = makeSeasonMatches(next);
-  const started = {
-    ...next,
-    matchQueue,
-    pendingMatch: matchQueue[0] ?? null,
-  };
   return {
-    ...started,
-    marketOffers: managerMarketOffers(started).map((player) => player.id),
+    ...next,
+    marketOffers: managerMarketOffers(next).map((player) => player.id),
   };
 }
 
@@ -631,8 +880,35 @@ export function setManagerLineup(
         bench.indexOf(id) === index,
     )
     .slice(0, 3);
-  if (cleanStarters.length !== 5 || cleanBench.length !== 3) return state;
-  return { ...state, starters: cleanStarters, bench: cleanBench };
+  if (cleanStarters.length !== 5) return state;
+  const previousPositions = state.lineupPositions ?? {};
+  const defaults = defaultLineupPositions(cleanStarters);
+  return {
+    ...state,
+    starters: cleanStarters,
+    bench: cleanBench,
+    lineupPositions: Object.fromEntries(
+      cleanStarters.map((id) => [id, previousPositions[id] ?? defaults[id]]),
+    ),
+  };
+}
+
+export function setManagerPlayerPosition(
+  state: ManagerState,
+  playerId: string,
+  position: ManagerLineupPosition,
+) {
+  if (!state.starters.includes(playerId)) return state;
+  return {
+    ...state,
+    lineupPositions: {
+      ...state.lineupPositions,
+      [playerId]: {
+        x: clamp(position.x, 8, 92),
+        y: clamp(position.y, 8, 92),
+      },
+    },
+  };
 }
 
 export function setManagerFormation(state: ManagerState, formationId: string) {
@@ -690,39 +966,27 @@ export function signManagerPlayer(state: ManagerState, playerId: string) {
   )
     return state;
   const fee = marketFee(player);
-  if (state.budget < fee || state.squadIds.length < 8) return state;
-  const replacedId =
-    state.bench
-      .map((id) => state.worldPlayers.players[id])
-      .filter((candidate): candidate is WorldPlayer => Boolean(candidate))
-      .sort((a, b) => a.overall - b.overall || a.id.localeCompare(b.id))[0]
-      ?.id ?? "";
-  if (!replacedId) return state;
+  if (
+    state.budget < fee ||
+    state.squadIds.length >= 8 ||
+    state.bench.length >= 3
+  )
+    return state;
   const players = { ...state.worldPlayers.players };
-  const replacedPlayer = players[replacedId];
-  if (replacedPlayer)
-    players[replacedId] = releasePlayerFromClub(replacedPlayer, state.season);
   players[playerId] = movePlayerToClub(
     player,
     state.currentClubId,
     state.season,
     fee,
   );
-  const nextSquadIds = state.squadIds.map((id) =>
-    id === replacedId ? playerId : id,
-  );
-  const nextStarters = state.starters.map((id) =>
-    id === replacedId ? playerId : id,
-  );
-  const nextBench = state.bench.map((id) =>
-    id === replacedId ? playerId : id,
-  );
+  const nextSquadIds = [...state.squadIds, playerId];
+  const nextBench = [...state.bench, playerId].slice(0, 3);
   const nextWorldPlayers = { ...state.worldPlayers, players };
   return {
     ...state,
     budget: state.budget - fee,
     squadIds: nextSquadIds,
-    starters: nextStarters,
+    starters: state.starters,
     bench: nextBench,
     worldPlayers: nextWorldPlayers,
     playerStats: playerStatsForSquad(state, nextSquadIds),
@@ -731,6 +995,33 @@ export function signManagerPlayer(state: ManagerState, playerId: string) {
       ...state,
       squadIds: nextSquadIds,
       worldPlayers: nextWorldPlayers,
+    }).map((offer) => offer.id),
+  };
+}
+
+export function sellManagerPlayer(state: ManagerState, playerId: string) {
+  if (!state.bench.includes(playerId)) return state;
+  const player = state.worldPlayers.players[playerId];
+  if (!player) return state;
+  const saleValue = Math.round(marketFee(player) * 0.72);
+  const players = {
+    ...state.worldPlayers.players,
+    [playerId]: releasePlayerFromClub(player, state.season),
+  };
+  const squadIds = state.squadIds.filter((id) => id !== playerId);
+  const bench = state.bench.filter((id) => id !== playerId);
+  const worldPlayers = { ...state.worldPlayers, players };
+  return {
+    ...state,
+    budget: state.budget + saleValue,
+    squadIds,
+    bench,
+    worldPlayers,
+    marketOffers: managerMarketOffers({
+      ...state,
+      squadIds,
+      bench,
+      worldPlayers,
     }).map((offer) => offer.id),
   };
 }
@@ -774,8 +1065,7 @@ export function managerMatchSetup(
     state.careerStage !== "match" ||
     !state.pendingMatch ||
     !state.currentClubId ||
-    state.starters.length < 5 ||
-    state.bench.length < 3
+    state.starters.length < 5
   )
     return null;
   const opponent = cleanClub(state.pendingMatch.opponentId);
@@ -797,12 +1087,7 @@ export function managerMatchSetup(
   const userBench = state.bench
     .map((id) => indexed.get(id))
     .filter((player): player is WorldPlayer => Boolean(player));
-  if (
-    userPlayers.length < 5 ||
-    userBench.length < 3 ||
-    cpuLineup.starters.length < 5
-  )
-    return null;
+  if (userPlayers.length < 5 || cpuLineup.starters.length < 5) return null;
   const cpuStarters = cpuLineup.starters
     .map((id) => opponentPlayers.find((player) => player.id === id))
     .filter((player): player is WorldPlayer => Boolean(player));
@@ -848,7 +1133,21 @@ export function managerMatchSetup(
         user: { starters: userRoster, bench: userBenchRoster },
         cpu: { starters: cpuRoster, bench: cpuBenchRoster },
       },
-      userFormationId: state.formationId,
+      userFormationId: [
+        "muralha",
+        "diamante",
+        "linha",
+        "piramide",
+        "ferrolho",
+        "avalanche",
+      ][
+        Math.floor(
+          seeded(
+            hashSeed(state.seed, state.pendingMatch.id, "user-formation"),
+            state.season * 17,
+          ) * 6,
+        )
+      ],
       cpuFormationId: [
         "muralha",
         "diamante",
@@ -926,46 +1225,41 @@ export function applyManagerMatchResult(
     (match) => match.id !== plan?.id,
   );
   const seasonComplete = remainingQueue.length === 0;
-  const squad = managerSquad(state);
-  const squadOverall = squad.length
-    ? Math.round(
-        squad.reduce((sum, player) => sum + player.overall, 0) / squad.length,
-      )
-    : 0;
-  const seasonRecord: ManagerSeasonRecord = {
+  const baseRecord = state.pendingSeasonRecord ?? {
     season: state.season,
     age: state.age,
     clubId: state.currentClubId,
     leagueId: state.currentLeagueId,
-    matches: seasonMatches.length,
-    wins: seasonMatches.filter((match) => match.outcome === "win").length,
-    draws: seasonMatches.filter((match) => match.outcome === "draw").length,
-    losses: seasonMatches.filter((match) => match.outcome === "loss").length,
-    goalsFor: seasonMatches.reduce(
-      (sum, match) => sum + Number(match.score.split("×")[0] || 0),
-      0,
-    ),
-    goalsAgainst: seasonMatches.reduce(
-      (sum, match) => sum + Number(match.score.split("×")[1] || 0),
-      0,
-    ),
+    matches: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    goalsFor: 0,
+    goalsAgainst: 0,
     boardTrust: nextTrust,
     reputation: nextReputation,
-    squadOverall,
-    competitions: seasonMatches.map((match) => ({
-      id: match.competitionId,
-      name: match.competitionName,
-      stage:
-        match.outcome === "win"
-          ? "CAMPEÃO"
-          : match.competitionName ===
-              LEAGUES.find((league) => league.id === match.leagueId)?.name
-            ? match.outcome === "draw"
-              ? "2º lugar"
-              : "3º lugar"
-            : "Vice",
-      champion: match.outcome === "win",
-    })),
+    squadOverall: 0,
+    competitions: [],
+  };
+  const seasonRecord: ManagerSeasonRecord = {
+    ...baseRecord,
+    matches: baseRecord.matches + 1,
+    wins: baseRecord.wins + (outcome === "win" ? 1 : 0),
+    draws: baseRecord.draws + (outcome === "draw" ? 1 : 0),
+    losses: baseRecord.losses + (outcome === "loss" ? 1 : 0),
+    goalsFor: baseRecord.goalsFor + result.goalsFor,
+    goalsAgainst: baseRecord.goalsAgainst + result.goalsAgainst,
+    boardTrust: nextTrust,
+    reputation: nextReputation,
+    competitions: baseRecord.competitions.map((competition) =>
+      competition.id === plan?.competitionId
+        ? {
+            ...competition,
+            stage: outcome === "win" ? "CAMPEÃO" : "Vice-campeão",
+            champion: outcome === "win",
+          }
+        : competition,
+    ),
   };
   const jobOffers = seasonComplete
     ? managerJobOffers({
@@ -1002,6 +1296,7 @@ export function applyManagerMatchResult(
     seasonHistory: seasonComplete
       ? [...state.seasonHistory, seasonRecord].slice(-30)
       : state.seasonHistory,
+    pendingSeasonRecord: seasonComplete ? null : seasonRecord,
     playerStats,
     jobOffers:
       nextTrust <= 0 || !seasonComplete ? [] : jobOffers.map((club) => club.id),
@@ -1041,13 +1336,30 @@ export function continueManagerSeason(state: ManagerState) {
       8,
     ),
   };
+  const preservedIds = state.squadIds.filter((id) => {
+    const player = withWorld.worldPlayers.players[id];
+    return Boolean(
+      player &&
+      player.status !== "retired" &&
+      player.currentClubId === state.currentClubId,
+    );
+  });
   const refreshedPlayers = worldPlayersAtClub(
     withWorld.worldPlayers,
     state.currentClubId,
-  ).sort((a, b) => b.overall - a.overall || a.id.localeCompare(b.id));
+  )
+    .filter(
+      (player) => preservedIds.includes(player.id) || preservedIds.length < 5,
+    )
+    .sort((a, b) => b.overall - a.overall || a.id.localeCompare(b.id));
   const withRoster = {
     ...withWorld,
-    squadIds: refreshedPlayers.slice(0, 8).map((player) => player.id),
+    squadIds: [
+      ...preservedIds,
+      ...refreshedPlayers
+        .map((player) => player.id)
+        .filter((id) => !preservedIds.includes(id)),
+    ].slice(0, 8),
   };
   const squad = managerSquad(withRoster).sort(
     (a, b) => b.overall - a.overall || a.id.localeCompare(b.id),
@@ -1070,9 +1382,18 @@ export function continueManagerSeason(state: ManagerState) {
     starters,
     bench,
     squadIds: squad.slice(0, 8).map((player) => player.id),
+    lineupPositions: {
+      ...defaultLineupPositions(starters),
+      ...Object.fromEntries(
+        starters
+          .filter((id) => state.lineupPositions[id])
+          .map((id) => [id, state.lineupPositions[id]]),
+      ),
+    },
     pendingMatch: null,
     matchQueue: [],
     seasonMatches: [],
+    pendingSeasonRecord: null,
     marketOffers: managerMarketOffers(withRoster).map((player) => player.id),
     phase: "career" as const,
     careerStage: "decision" as const,
@@ -1080,12 +1401,7 @@ export function continueManagerSeason(state: ManagerState) {
     lastDecision: null,
     seasonMomentum: 0,
   };
-  const matchQueue = makeSeasonMatches(next);
-  return {
-    ...next,
-    matchQueue,
-    pendingMatch: matchQueue[0] ?? null,
-  };
+  return next;
 }
 
 export function hireManagerAtClub(state: ManagerState, clubId: string) {
@@ -1414,7 +1730,7 @@ export function normalizeManagerState(
     );
   });
   const squadIds = club
-    ? (rawSquadIds.length >= 8
+    ? (rawSquadIds.length >= 5
         ? rawSquadIds
         : clubPlayers.map((player) => player.id)
       ).slice(0, 8)
@@ -1426,7 +1742,7 @@ export function normalizeManagerState(
   let bench = uniqueIds(merged.bench)
     .filter((id) => allowed.has(id) && !starters.includes(id))
     .slice(0, 3);
-  if (club && (starters.length !== 5 || bench.length !== 3)) {
+  if (club && starters.length !== 5) {
     const lineup = chooseLineup(
       squadIds
         .map((id) => worldPlayers.players[id])
@@ -1436,14 +1752,10 @@ export function normalizeManagerState(
     bench = lineup.bench;
   }
   const lastResult = normalizeLastResult(merged.lastResult);
-  const requestedPhase: ManagerPhase =
-    phase === "result" && !lastResult ? "career" : phase;
+  const requestedPhase: ManagerPhase = phase;
   const safePhase: ManagerPhase =
     requestedPhase === "career" &&
-    (!club ||
-      squadIds.length < 8 ||
-      starters.length !== 5 ||
-      bench.length !== 3)
+    (!club || squadIds.length < 5 || starters.length !== 5)
       ? "onboarding"
       : requestedPhase;
   const savedStage: ManagerCareerStage =
@@ -1459,14 +1771,6 @@ export function normalizeManagerState(
         ? "decision"
         : savedStage;
   const savedPendingMatch = normalizePendingMatch(merged.pendingMatch, season);
-  const plannedMatches = club
-    ? makeSeasonMatches({
-        seed,
-        currentClubId: club.id,
-        currentLeagueId: club.leagueId,
-        season,
-      })
-    : [];
   const savedMatchQueue = Array.isArray(merged.matchQueue)
     ? merged.matchQueue
         .map((match) => normalizePendingMatch(match, season))
@@ -1476,7 +1780,7 @@ export function normalizeManagerState(
     safePhase === "career"
       ? savedMatchQueue.length
         ? savedMatchQueue
-        : plannedMatches
+        : []
       : [];
   const pendingMatch =
     safePhase === "career"
@@ -1487,6 +1791,11 @@ export function normalizeManagerState(
         : (matchQueue[0] ?? null)
       : null;
   const seasonHistory = normalizeSeasonHistory(merged.seasonHistory, season);
+  const pendingSeasonRecord =
+    normalizeSeasonHistory(
+      merged.pendingSeasonRecord ? [merged.pendingSeasonRecord] : [],
+      season,
+    )[0] ?? null;
   const history = normalizeHistory(merged.history, season);
   const completedSeasonCount = seasonHistory.length
     ? seasonHistory.length
@@ -1530,6 +1839,29 @@ export function normalizeManagerState(
       typeof merged.formationId === "string"
         ? formationById(merged.formationId).id
         : base.formationId,
+    lineupPositions: (() => {
+      const raw =
+        merged.lineupPositions && typeof merged.lineupPositions === "object"
+          ? merged.lineupPositions
+          : {};
+      const defaults = defaultLineupPositions(starters);
+      return Object.fromEntries(
+        starters.map((id) => {
+          const point = (raw as Record<string, unknown>)[id];
+          const value =
+            point && typeof point === "object" && !Array.isArray(point)
+              ? (point as Record<string, unknown>)
+              : null;
+          return [
+            id,
+            {
+              x: clamp(Number(value?.x) || defaults[id].x, 8, 92),
+              y: clamp(Number(value?.y) || defaults[id].y, 8, 92),
+            },
+          ];
+        }),
+      );
+    })(),
     pendingMatch,
     matchQueue,
     seasonMatches: normalizeHistory(merged.seasonMatches, season).filter(
@@ -1537,6 +1869,7 @@ export function normalizeManagerState(
     ),
     history,
     seasonHistory,
+    pendingSeasonRecord,
     lastResult,
     marketOffers: uniqueIds(merged.marketOffers).slice(0, 3),
     jobOffers: uniqueIds(merged.jobOffers).slice(0, 3),

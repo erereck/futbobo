@@ -4,7 +4,7 @@
 
 ## 1. Definição em uma frase
 
-O Modo Técnico é a carreira atual vista do banco: o jogador continua tomando decisões rápidas, simulando temporadas e jogando partidas-chave, mas agora escolhe os cinco titulares, os três reservas, a formação e as trocas durante a mesa.
+O Modo Técnico é a carreira atual vista do banco: o jogador continua tomando decisões rápidas, simulando temporadas e jogando partidas-chave, mas agora escolhe os cinco titulares, administra até três reservas e comanda as trocas durante a mesa.
 
 Não é um simulador administrativo e não deve tentar reproduzir Football Manager.
 
@@ -23,7 +23,7 @@ Se uma informação existir apenas para preencher uma tela, ela sai. Se o jogado
 
 - O jogo já possui o esqueleto de modo `manager`, mas ainda não possui um estado real de técnico.
 - O universo de `World Players` já mantém jogadores persistentes e materializa um núcleo de 14 atletas por clube.
-- A aba Time já representa cinco titulares e três reservas.
+- A aba Time representa cinco titulares e até três reservas.
 - A carreira já trabalha com decisões, simulação de temporada, partidas-chave, resultados e histórico.
 - A mesa já possui cinco peças, seis formações, IA, pênaltis e simulação headless usando o mesmo motor.
 - A mesa é fechada: bola e peças rebatem nas tabelas. Isso permanece igual.
@@ -49,10 +49,10 @@ Não incluir origem profissional, árvore de habilidade, licença, equipe técni
 O ritmo deve continuar próximo ao da carreira de jogador:
 
 1. aba Carreira apresenta o objetivo e a próxima decisão;
-2. o técnico pode revisar formação e 5+3;
+2. o técnico pode revisar os cinco titulares e até três reservas;
 3. resolve uma decisão/evento curto;
 4. a temporada ou bloco é simulado;
-5. partidas-chave entram na fila atual de Jogar/Simular;
+5. somente finais realmente alcançadas entram na fila atual de Jogar/Simular;
 6. o resultado altera confiança, reputação e futuro no clube;
 7. no fim da temporada pode aparecer uma contratação, venda ou proposta de emprego.
 
@@ -60,8 +60,8 @@ Não criar calendário semanal, 38 telas de rodada ou capítulos artificiais. Um
 
 ### O que torna o modo diferente
 
-- o técnico escolhe os oito relacionados;
-- a formação escolhida é realmente usada na mesa;
+- o técnico escolhe os cinco titulares e administra até três vagas no banco;
+- as formações são aleatórias e mudam depois de cada gol;
 - todas as peças têm jogador, rosto, posição e OVR próprios;
 - usar demais uma peça consome o fôlego dela;
 - reservas podem entrar a qualquer momento válido;
@@ -71,7 +71,7 @@ Essas são as diferenças centrais. Todo o resto é suporte.
 
 ## 5. Navegação: o mesmo esqueleto, levemente adaptado
 
-Continuam existindo exatamente seis abas.
+Existem cinco abas. A Prancheta permanece oculta por enquanto.
 
 ### 1. Carreira
 
@@ -81,20 +81,20 @@ Mantém o papel atual de conduzir o save. Mostra apenas:
 - objetivo da diretoria;
 - confiança no trabalho;
 - próxima decisão;
-- sequência de partidas decisivas da temporada;
+- sequência de finais alcançadas na temporada;
 - ação principal para continuar.
 
 Contratação, venda, desfalque ou proposta de emprego aparecem aqui quando precisam de resposta. Não exigem que o jogador procure uma tela escondida.
 
-### 2. Prancheta
+### Prancheta (oculta)
 
-Substitui Jogador e responde uma única pergunta: **como os cinco começarão a próxima partida?**
+As seis formações aparecem somente como consulta dentro de Time; não são selecionáveis.
 
-- escolha entre as seis formações já existentes;
+- consulta entre as seis formações já existentes;
 - prévia visual dos cinco titulares naquela formação;
 - adversário, competição e posição da partida no calendário quando houver jogo pendente.
 
-Não possui Plano A/Plano B, sliders, treino, capitão, instruções por jogador ou gatilhos automáticos. A formação pode ser alterada antes do jogo; durante a partida ela só é reorganizada nos reinícios que o motor já possui.
+Não possui Plano A/Plano B, sliders, treino, capitão ou instruções por jogador. A consulta não altera a escalação: o motor sorteia a formação no início e depois de cada gol.
 
 ### 3. Time
 
@@ -102,8 +102,9 @@ Uma única página, sem labirinto de submenus:
 
 - campo com cinco titulares;
 - faixa com três reservas;
-- o banco fecha o elenco com exatamente três reservas;
-- arrastar um atleta troca sua posição; tocar em dois atletas permanece como alternativa;
+- o banco aceita de zero a três reservas;
+- arrastar um titular altera apenas a coordenada daquele atleta;
+- vender um reserva abre uma vaga real;
 - cada jogador mostra somente foto, nome, posição, idade, OVR e disponibilidade.
 
 Quando a janela estiver aberta, a própria página pode exibir uma ação curta de mercado. Fora da janela, nenhum botão de mercado vazio ocupa espaço.
@@ -114,7 +115,7 @@ Reutiliza a estrutura atual com perspectiva do técnico:
 
 - clube e escudo à esquerda, exatamente como na linha do tempo do jogador;
 - idade do técnico, temporadas e mudanças de clube;
-- campanha coletiva com J/V/E/D, gols, força do time e confiança;
+- campanha coletiva com J/V/E/D, gols e confiança;
 - títulos conquistados pelo time.
 
 ### 5. Estatísticas
@@ -124,7 +125,7 @@ Somente números úteis:
 - campanha do clube;
 - gols e assistências dos jogadores;
 - partidas e uso de cada atleta;
-- formações mais usadas;
+- campanhas das últimas temporadas;
 - evolução da confiança por temporada.
 
 Não criar dezenas de filtros ou relatórios de scouting.
@@ -133,8 +134,8 @@ Não criar dezenas de filtros ou relatórios de scouting.
 
 Reutiliza a mesma navegação interna do Mundo do jogador:
 
-- Agora, com notícias e próximas partidas;
-- Clubes, com ranking de força;
+- Agora, com notícias e resultados decisivos recentes;
+- Clubes, com tradição e momento sem expor o índice interno de força;
 - Jogadores, com líderes de OVR e reputação;
 - Arquivo, com as campanhas completas do técnico.
 
@@ -153,8 +154,8 @@ O save de técnico precisa guardar somente:
 - orçamento simples de transferências;
 - universo de jogadores já existente;
 - IDs dos cinco titulares;
-- IDs dos três reservas;
-- formação escolhida;
+- IDs de até três reservas;
+- coordenadas livres dos titulares na aba Time;
 - competições, fila de partidas, resultados e histórico;
 - propostas ou decisões realmente pendentes.
 
@@ -175,9 +176,8 @@ A confiança da diretoria é o único medidor de risco. A reputação existe par
 
 ### Elenco
 
-- O elenco do técnico possui exatamente oito jogadores persistentes.
-- Cinco começam como titulares e três formam todo o banco; não existe grupo fora da relação.
-- Os seis restantes só precisam aparecer como opções de escalação.
+- O elenco do técnico possui cinco titulares e até três reservas persistentes.
+- Cinco começam como titulares; vender um reserva mantém a vaga aberta.
 - Lesão ou suspensão pode tornar um jogador indisponível por evento, sem criar departamento médico.
 - OVR e posição determinam encaixe e qualidade.
 
@@ -189,7 +189,7 @@ O mercado é uma decisão de janela, não um catálogo infinito:
 
 1. o jogo mostra a principal carência do elenco;
 2. apresenta até três candidatos;
-3. o técnico pode contratar um, recusar ou vender/substituir alguém;
+3. o técnico pode contratar para uma vaga aberta, recusar ou vender um reserva;
 4. o orçamento é atualizado;
 5. o jogador passa a fazer parte dos mesmos `World Players` persistentes.
 
@@ -198,14 +198,13 @@ Não incluir inicialmente salário, agente, bônus, observadores, negociação e
 ## 8. Formação
 
 - Reutilizar as seis formações atuais.
-- O técnico escolhe uma antes da partida.
-- A formação define posições concretas das cinco peças na saída.
-- A CPU escolhe sua formação usando força e encaixe do próprio elenco.
-- O Modo Técnico não gira automaticamente por todas as formações depois de cada gol.
-- Depois de gol ou mudança de período, os cinco voltam para a formação escolhida.
-- Não existe bônus oculto de “tática”. A vantagem vem das posições físicas das peças.
+- Time oferece uma prévia de onde cada titular ficaria em cada desenho.
+- A prévia nunca escolhe a formação da partida.
+- Os dois times recebem uma formação sorteada no início.
+- Depois de cada gol, os dois times recebem um novo desenho aleatório.
+- Não existe bônus oculto de “tática”. A diferença vem somente das posições físicas das peças.
 
-Isso dá autoria ao técnico sem introduzir controles que a física não representa.
+Isso mantém as partidas variadas sem prometer um controle tático que a física não representa.
 
 ## 9. Stamina essencial
 
@@ -252,7 +251,7 @@ O fôlego zera sua história ao fim da partida. Não alimenta treino, lesão ou 
 
 ### Regra final
 
-- três reservas;
+- até três reservas;
 - até três substituições;
 - sem reentrada;
 - sem desfazer depois de confirmar;
@@ -297,7 +296,7 @@ São atualizados:
 
 ### Tempo
 
-O relógio da partida e o contador de inatividade continuam correndo enquanto o painel está aberto. A troca precisa ser uma decisão rápida e não pode virar pausa tática ilimitada.
+Abrir o painel pausa automaticamente o relógio, a física, a CPU e a regra dos sete segundos. Confirmar, cancelar ou fechar retoma a partida e reinicia a janela de decisão do turno.
 
 ### CPU
 
@@ -312,10 +311,10 @@ Ela confirma instantaneamente, mantém as coordenadas e respeita três trocas e 
 
 ## 11. Partida com jogadores reais dos dois lados
 
-O motor precisa receber oito atletas por equipe:
+O motor precisa receber de cinco a oito atletas por equipe:
 
 - cinco titulares;
-- três reservas;
+- até três reservas;
 - ID persistente;
 - nome, número, posição, OVR;
 - potência e controle derivados;
@@ -399,7 +398,7 @@ Esses itens não são “conteúdo futuro obrigatório”. Só devem voltar se o
 
 O módulo continua independente da carreira. Seu contrato genérico passa a aceitar:
 
-- oito jogadores por lado;
+- cinco titulares e até três reservas por lado;
 - formação inicial;
 - stamina ao vivo;
 - substituições imediatas;
@@ -411,8 +410,8 @@ O adaptador continua sendo a única ponte entre `ManagerState` e o motor.
 
 A simulação headless precisa usar:
 
-- os mesmos cinco e três reservas;
-- a mesma formação;
+- os mesmos cinco titulares e as vagas ocupadas do banco;
+- a mesma formação aleatória definida para aquela simulação;
 - o mesmo consumo de stamina;
 - a mesma decisão de substituição da CPU;
 - os mesmos limites de troca.
@@ -425,13 +424,13 @@ Jogar e simular não podem se transformar em regras diferentes.
 
 - save de técnico;
 - criação simples e escolha do clube;
-- Carreira, Prancheta e Time;
-- elenco fechado em oito, formação e 5+3;
+- Carreira e Time com a Prancheta oculta;
+- cinco titulares e até três reservas, com vagas reais no elenco;
 - objetivo e confiança.
 
 ### Fase 2 — Mesa de técnico
 
-- oito jogadores individualizados por lado;
+- cinco titulares e até três reservas individualizados por lado;
 - stamina por distância ativa;
 - troca imediata e irreversível;
 - decisão de troca da CPU;
@@ -493,9 +492,9 @@ O Modo Técnico está pronto quando o jogador consegue:
 
 1. criar o técnico e escolher um clube;
 2. começar aos 40 anos e envelhecer uma vez por temporada;
-3. montar cinco titulares e três reservas por arraste ou toque;
-4. escolher uma das formações existentes;
-5. tomar uma decisão e seguir direto para as partidas de liga, copa e continental;
+3. mover livremente os cinco titulares e administrar até três reservas;
+4. consultar onde os jogadores ficam em cada formação sem escolhê-la;
+5. tomar uma decisão, simular o ano e jogar somente as finais alcançadas;
 6. jogar partidas com atletas reais dos dois lados;
 7. perceber uma peça cansar porque foi usada demais;
 8. trocar imediatamente no próprio turno, sem reposicionar e sem desfazer;
@@ -503,4 +502,4 @@ O Modo Técnico está pronto quando o jogador consegue:
 10. receber consequência de resultado, confiança, mercado e propostas para o técnico;
 11. terminar uma carreira sem ter administrado telas que não queria abrir.
 
-A assinatura do modo é simples: **cinco peças, três reservas, uma formação e decisões que aparecem diretamente na mesa**.
+A assinatura do modo é simples: **cinco peças, até três reservas, formações que mantêm a mesa viva e decisões que levam direto ao próximo momento importante**.
