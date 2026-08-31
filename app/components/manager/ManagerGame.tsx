@@ -13,9 +13,10 @@ import {
   slotIndexForPosition,
 } from "../../botao/formations";
 import BotaoMatch from "../../botao/BotaoMatch";
+import TeamCrest from "../../botao/TeamCrest";
 import { hashSeed } from "../../botao/rng";
 import { simulateBotaoMatch } from "../../botao/simulate";
-import type { BotaoMatchResult } from "../../botao/types";
+import type { BotaoMatchResult, BotaoMatchSetup } from "../../botao/types";
 import {
   acceptManagerJobOffer,
   applyManagerDecision,
@@ -33,9 +34,7 @@ import {
   managerSquad,
   marketFee,
   normalizeManagerState,
-  setManagerFormation,
   setManagerLineup,
-  setManagerPlayerPosition,
   sellManagerPlayer,
   signManagerPlayer,
   startManagerCareer,
@@ -56,11 +55,15 @@ import {
 } from "../../player-appearance";
 import FutboboIcon, { type FutboboIconName } from "../FutboboIcon";
 import { BrandMark, ClubBadge, Progress } from "../career/CareerPrimitives";
+import {
+  WorldPulseTicker,
+  type WorldPulseHeadline,
+} from "../career/CareerWorld";
 import timelineStyles from "../career/CareerTimeline.module.css";
 import worldStyles from "../career/CareerWorld.module.css";
 import styles from "./ManagerGame.module.css";
 
-type ManagerTab = "career" | "board" | "team" | "history" | "stats" | "world";
+type ManagerTab = "career" | "team" | "history" | "stats" | "world";
 type ManagerWorldSection = "now" | "clubs" | "players" | "archive";
 type ManagerRosterDrag = {
   id: string;
@@ -70,6 +73,10 @@ type ManagerRosterDrag = {
   startX: number;
   startY: number;
   moved: boolean;
+} | null;
+type ManagerMatchSummary = {
+  setup: BotaoMatchSetup;
+  result: BotaoMatchResult;
 } | null;
 const NAV_ITEMS: Array<{
   id: ManagerTab;
@@ -146,6 +153,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     NonNullable<ReturnType<typeof managerMatchSetup>>["setup"] | null
   >(null);
   const [matchStarted, setMatchStarted] = useState(false);
+  const [matchSummary, setMatchSummary] = useState<ManagerMatchSummary>(null);
   const [formationPreviewOpen, setFormationPreviewOpen] = useState(false);
   const [previewFormationId, setPreviewFormationId] = useState("muralha");
   const [selectedPlayer, setSelectedPlayer] = useState("");
@@ -154,11 +162,13 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const rosterDragRef = useRef<ManagerRosterDrag>(null);
   const rosterDragLayerRef = useRef<HTMLDivElement | null>(null);
   const rosterDragCleanupRef = useRef<() => void>(() => undefined);
-  const teamPitchRef = useRef<HTMLElement | null>(null);
   const [managerName, setManagerName] = useState("");
   const [nationality, setNationality] = useState("brasil");
   const [clubId, setClubId] = useState("");
   const [notice, setNotice] = useState("");
+  const shouldAutoAdvanceConsequence =
+    loadedState?.phase === "career" &&
+    loadedState.careerStage === "consequence";
 
   useEffect(() => {
     const timer = window.setTimeout(() => setState(loadManagerState()), 0);
@@ -175,6 +185,15 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     },
     [],
   );
+  useEffect(() => {
+    if (!shouldAutoAdvanceConsequence) return;
+    const timer = window.setTimeout(() => {
+      setState((current) =>
+        current ? continueAfterManagerDecision(current) : current,
+      );
+    }, 5000);
+    return () => window.clearTimeout(timer);
+  }, [shouldAutoAdvanceConsequence]);
 
   const club = managerClub(state);
   const opponent = managerOpponent(state);
@@ -208,10 +227,6 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     });
   }, [playerById, previewFormationId, state.starters]);
   const marketOffers = useMemo(() => managerMarketOffers(state), [state]);
-  const activeFormation = useMemo(
-    () => formationById(state.formationId),
-    [state.formationId],
-  );
   const decision = useMemo(() => managerDecision(state), [state]);
   const careerTotals = useMemo(
     () =>
@@ -288,44 +303,32 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         .slice(0, 20),
     [],
   );
-
-  const formationPreview = useMemo(() => {
-    const remaining = state.starters
-      .map((id) => playerById.get(id))
-      .filter((player): player is WorldPlayer => Boolean(player));
-    const minDepth = Math.min(
-      ...activeFormation.slots.map((slot) => slot.depth),
-    );
-    return activeFormation.slots
-      .map((slot, slotIndex) => {
-        let bestIndex = 0;
-        let bestCost = Number.POSITIVE_INFINITY;
-        remaining.forEach((player, index) => {
-          const cost =
-            player.position === "GOL"
-              ? Math.abs(slot.depth - minDepth) * 100 +
-                Math.abs(slot.lane - 0.5)
-              : Math.abs(
-                  slotIndexForPosition(activeFormation, player.position) -
-                    slotIndex,
-                );
-          if (cost < bestCost) {
-            bestCost = cost;
-            bestIndex = index;
-          }
-        });
-        const player = remaining.splice(bestIndex, 1)[0];
-        return player ? { player, slot } : null;
-      })
-      .filter(
-        (
-          item,
-        ): item is {
-          player: WorldPlayer;
-          slot: (typeof activeFormation.slots)[number];
-        } => Boolean(item),
-      );
-  }, [activeFormation, playerById, state.starters]);
+  const managerHeadlines = useMemo<WorldPulseHeadline[]>(() => {
+    const items: WorldPulseHeadline[] = [];
+    if (state.pendingMatch)
+      items.push({
+        id: `next-${state.pendingMatch.id}`,
+        title: `${club.shortName} enfrenta ${opponent?.shortName ?? "um adversário"} pela ${state.pendingMatch.competitionName}`,
+      });
+    if (state.lastDecision)
+      items.push({
+        id: `decision-${state.season}-${state.lastDecision.choiceId}`,
+        title: state.lastDecision.consequence,
+      });
+    state.history.slice(0, 4).forEach((match) => {
+      const rival = CLUBS.find((candidate) => candidate.id === match.opponentId);
+      items.push({
+        id: `match-${match.id}`,
+        title: `${club.shortName} ${match.score} ${rival?.shortName ?? "Adversário"} · ${match.competitionName}`,
+      });
+    });
+    if (!items.length)
+      items.push({
+        id: `opening-${state.season}-${club.id}`,
+        title: `${club.shortName} abre um novo capítulo com ${state.name}`,
+      });
+    return items.slice(0, 6);
+  }, [club.id, club.shortName, opponent?.shortName, state.history, state.lastDecision, state.name, state.pendingMatch, state.season]);
 
   const start = () => {
     const selectedClub = clubId || CLUBS[0]?.id || "";
@@ -366,6 +369,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     setState(
       applyManagerMatchResult(setManagerLineup(base, starters, bench), result),
     );
+    setMatchSummary({ setup, result });
     setMatchSetup(null);
     setMatchStarted(false);
     setTab("career");
@@ -503,27 +507,62 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     }
     if (targetId && targetId !== current.id && targetArea !== current.area) {
       swapPlayerIds(current.id, targetId);
-      return;
     }
-    const pitch = teamPitchRef.current;
-    if (current.area !== "starter" || !pitch) return;
-    const rect = pitch.getBoundingClientRect();
-    if (
-      clientX < rect.left ||
-      clientX > rect.right ||
-      clientY < rect.top ||
-      clientY > rect.bottom
-    )
-      return;
-    setState(
-      setManagerPlayerPosition(state, current.id, {
-        x: ((clientX - rect.left) / rect.width) * 100,
-        y: ((clientY - rect.top) / rect.height) * 100,
-      }),
-    );
-    setSelectedPlayer("");
-    setNotice("");
   };
+
+  if (matchSummary) {
+    const { result, setup } = matchSummary;
+    const won = result.outcome === "win";
+    return (
+      <main className="botao-lobby botao-career-result screen-enter">
+        <p className="botao-lobby-lead">
+          {setup.competitionName} · {setup.stageName}
+          {result.simulated ? " · simulada" : ""}
+        </p>
+        <div
+          className={`botao-headline ${won ? "botao-headline-win" : "botao-headline-loss"}`}
+        >
+          {won ? "VITÓRIA" : result.outcome === "draw" ? "EMPATE" : "DERROTA"}
+        </div>
+        <div className="botao-card">
+          <div className="botao-scoreboard">
+            <div className="botao-team">
+              <TeamCrest team={setup.userTeam} />
+              <strong>{setup.userTeam.shortName}</strong>
+            </div>
+            <div className="botao-score">
+              <b>{result.goalsFor}</b>
+              <span>×</span>
+              <b>{result.goalsAgainst}</b>
+            </div>
+            <div className="botao-team botao-team-cpu">
+              <strong>{setup.cpuTeam.shortName}</strong>
+              <TeamCrest team={setup.cpuTeam} />
+            </div>
+          </div>
+          <div className="botao-formation-row">
+            <span className="botao-chip botao-chip-you">
+              {result.manager?.substitutions.filter((item) => item.side === "user").length ?? 0} troca(s)
+            </span>
+            <span className="botao-chip botao-chip-stat">
+              Decisão do técnico registrada
+            </span>
+          </div>
+        </div>
+        <div className="botao-actions">
+          <button
+            type="button"
+            className="botao-primary"
+            onClick={() => setMatchSummary(null)}
+          >
+            {state.pendingMatch
+              ? "Próxima partida"
+              : "Ver resumo da temporada"}
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   if (matchSetup && matchStarted)
     return (
@@ -564,8 +603,8 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               .join(" · ")}
           </strong>
           <p>
-            A formação será sorteada no início e mudará automaticamente depois
-            de cada gol.
+            Muralha abre a partida. Depois de cada gol, os desenhos avançam na
+            mesma rotação do Rumo ao Estrelato.
           </p>
         </div>
         <div className="botao-actions">
@@ -695,30 +734,18 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     if (state.careerStage === "decision")
       return (
         <div className={`event-stage ${styles.managerEvent}`}>
-          <div className={styles.careerNewsStrip}>
-            <span>
-              <small>GIRO DA TEMPORADA</small>
-              <strong>
-                {state.history[0]
-                  ? `${resultLabel(state.history[0].outcome)}: ${state.history[0].competitionName}`
-                  : `${club.shortName} abre um novo capítulo`}
-              </strong>
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setTab("world");
-                setWorldSection("now");
-              }}
-            >
-              Ver notícias <FutboboIcon name="arrow-right" />
-            </button>
-          </div>
           <div className="objective-card">
             <span>META DA DIRETORIA</span>
             <strong>{state.objective}</strong>
             <p>Suas decisões e o jogo-chave alteram a confiança no trabalho.</p>
             <small>Confiança atual: {Math.round(state.boardTrust)}%</small>
+            <WorldPulseTicker
+              headlines={managerHeadlines}
+              onOpen={() => {
+                setTab("world");
+                setWorldSection("now");
+              }}
+            />
           </div>
           <div className={`event-art ${styles.decisionArt}`}>
             <span className="event-tag">{decision.tag}</span>
@@ -773,14 +800,20 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           </div>
           <div className="consequence-note">
             <strong>{state.lastDecision.headline}</strong>
-            <span>Agora leve a decisão para a escalação e para a mesa.</span>
+            <span>Agora veja como essa decisão atravessou a temporada.</span>
           </div>
-          <div className="mobile-action-dock">
+          <div className="consequence-autoplay" aria-live="polite">
+            <span>Avançando automaticamente em 5 segundos</span>
+            <div>
+              <i />
+            </div>
+          </div>
+          <div className="mobile-action-dock consequence-action-dock">
             <button
               className="primary-button"
               onClick={() => setState(continueAfterManagerDecision(state))}
             >
-              Simular temporada <span>→</span>
+              Ir para os jogos da temporada <span>→</span>
             </button>
           </div>
         </div>
@@ -797,6 +830,13 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               : "reservas disponíveis"}
           </p>
           <small>Confiança atual: {Math.round(state.boardTrust)}%</small>
+          <WorldPulseTicker
+            headlines={managerHeadlines}
+            onOpen={() => {
+              setTab("world");
+              setWorldSection("now");
+            }}
+          />
         </div>
         <article className={styles.keyMatch}>
           <header>
@@ -866,6 +906,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         data-player-id={id}
         data-player-area={area}
         className={`${styles.rosterPlayer} ${styles[area]} ${selectedPlayer === id ? styles.selectedPlayer : ""} ${rosterDrag?.id === id && rosterDrag.moved ? styles.draggingPlayer : ""} ${rosterDragHover === id ? styles.rosterDropTarget : ""}`}
+        aria-label={`${area === "starter" ? "Titular" : "Reserva"}: ${player.name}`}
         aria-pressed={selectedPlayer === id}
         onPointerDown={(event) => startRosterDrag(id, area, event)}
         onClick={(event) => {
@@ -888,103 +929,16 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   };
 
   const renderPanel = () => {
-    if (tab === "board")
-      return (
-        <div className={`panel-screen ${styles.panel}`}>
-          <header className={styles.panelHeading}>
-            <span>PRANCHETA</span>
-            <h2>Prepare a próxima partida.</h2>
-            <p>
-              O desenho posiciona os cinco na mesa. Escalação e trocas ficam na
-              aba Time.
-            </p>
-          </header>
-          <div className={styles.boardLayout}>
-            <div className={styles.formationPreview}>
-              <div className={styles.previewLines} />
-              {formationPreview.map(({ player, slot }) => (
-                <div
-                  key={player.id}
-                  className={styles.previewPlayer}
-                  style={{
-                    left:
-                      player.position === "GOL" ? "50%" : `${slot.lane * 100}%`,
-                    top: `${slot.depth * 100}%`,
-                  }}
-                >
-                  <PlayerPortrait player={player} state={state} size={42} />
-                  <strong>{player.name.split(" ").at(-1)}</strong>
-                  <span>
-                    {player.position} · {player.overall}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div>
-              <div className={styles.boardOpponent}>
-                <span>PRÓXIMO JOGO</span>
-                <strong>
-                  {club.shortName} × {opponent?.shortName ?? "Adversário"}
-                </strong>
-                <small>
-                  {state.pendingMatch?.competitionName} ·{" "}
-                  {state.pendingMatch?.stageName}
-                </small>
-              </div>
-              <div className={styles.competitionRail}>
-                {[...state.seasonMatches]
-                  .slice()
-                  .reverse()
-                  .map((match) => (
-                    <span key={match.id} className={styles.playedMatch}>
-                      <b>{match.score}</b>
-                      <small>{match.competitionName}</small>
-                    </span>
-                  ))}
-                {state.matchQueue.map((match) => (
-                  <span
-                    key={match.id}
-                    className={
-                      match.id === state.pendingMatch?.id
-                        ? styles.nextMatch
-                        : ""
-                    }
-                  >
-                    <b>{match.order}</b>
-                    <small>{match.competitionName}</small>
-                  </span>
-                ))}
-              </div>
-              <div className={styles.formationGrid}>
-                {BOTAO_FORMATIONS.map((formation) => (
-                  <button
-                    type="button"
-                    key={formation.id}
-                    className={
-                      state.formationId === formation.id
-                        ? styles.formationActive
-                        : ""
-                    }
-                    onClick={() =>
-                      setState(setManagerFormation(state, formation.id))
-                    }
-                  >
-                    <span>{formation.shape}</span>
-                    <strong>{formation.name}</strong>
-                    <small>{formation.hint}</small>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
     if (tab === "team")
       return (
         <div className={`panel-screen ${styles.panel}`}>
           <header className={styles.panelHeading}>
             <span>TIME</span>
-            <h2>Seu time, do seu jeito.</h2>
+            <h2>Escolha quem começa.</h2>
+            <p>
+              Troque titulares e reservas. O desenho em campo muda sozinho na
+              rotação clássica do Futbobo.
+            </p>
             <button
               type="button"
               className={styles.previewFormationButton}
@@ -994,23 +948,32 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             </button>
           </header>
           <div className={styles.teamLayout}>
-            <section
-              ref={teamPitchRef}
-              className={`${styles.teamPitch} ${rosterDrag?.area === "starter" && rosterDrag.moved ? styles.pitchDragActive : ""}`}
-            >
-              <div className={styles.previewLines} />
-              {state.starters.map((id) => {
-                const point = state.lineupPositions[id] ?? { x: 50, y: 50 };
-                return (
-                  <div
-                    key={id}
-                    className={styles.freePlayerSlot}
-                    style={{ left: `${point.x}%`, top: `${point.y}%` }}
-                  >
-                    {rosterPlayer(id, "starter")}
-                  </div>
-                );
-              })}
+            <section className={styles.lineupBoard}>
+              <header className={styles.lineupBoardHeader}>
+                <span>
+                  <small>OS CINCO</small>
+                  <strong>Titulares da próxima partida</strong>
+                </span>
+                <b>{state.starters.length}/5</b>
+              </header>
+              <div className={styles.lineupGrid}>
+                {state.starters.map((id) => rosterPlayer(id, "starter"))}
+              </div>
+              <div className={styles.formationRotation}>
+                <span>
+                  <small>ROTAÇÃO AUTOMÁTICA</small>
+                  <strong>Um desenho novo a cada gol</strong>
+                </span>
+                <div>
+                  {BOTAO_FORMATIONS.map((formation, index) => (
+                    <span key={formation.id}>
+                      <b>{formation.shape}</b>
+                      <small>{formation.name}</small>
+                      {index < BOTAO_FORMATIONS.length - 1 ? <i>→</i> : null}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </section>
             <aside>
               <span className={styles.listLabel}>
@@ -1117,8 +1080,8 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                   })}
                 </div>
                 <p>
-                  É só uma prévia. Durante a partida o desenho é aleatório e
-                  muda a cada gol.
+                  A partida começa na Muralha e avança uma formação a cada gol,
+                  sempre nesta ordem.
                 </p>
               </section>
             </div>

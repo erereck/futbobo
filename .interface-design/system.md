@@ -139,16 +139,16 @@ Selecoes sem liga recebem uma rota de base recomendada por confederacao. A recom
 - O cabeçalho e o rail esquerdo reutilizam literalmente os componentes e medidas do jogador. O técnico começa aos 40 anos; a idade ocupa o centro do cabeçalho e a confiança ocupa a métrica da direita.
 - A temporada inteira é simulada de uma vez. Liga, copa nacional e competição continental geram campanha; somente finais realmente alcançadas viram partidas jogáveis, em sequência.
 - Navegação mantém cinco destinos: Carreira, Time, Histórico, Estatísticas e Mundo. Prancheta permanece oculta enquanto as formações da partida forem aleatórias.
-- Carreira é a fila obrigatória: notícias, objetivo, confiança e decisão pendente. Não exibe bloco de próximo jogo antes da simulação.
+- Carreira é a fila obrigatória: objetivo, confiança, ticker de notícias no mesmo lugar do modo jogador e decisão pendente. A consequência avança automaticamente em cinco segundos para as partidas, que aparecem em sequência com um placar intermediário antes do resumo da temporada.
 - Time mantém cinco titulares e até três reservas. Vender abre uma vaga real; contratar preenche a vaga e nunca substitui alguém automaticamente.
-- Cada titular possui coordenada própria no campo. Arrastar altera apenas aquele atleta. Durante o gesto, a peça inteira se eleva e acompanha dedo/mouse; o navegador nunca mostra o ghost nativo da imagem. Um modal separado permite consultar o encaixe dos cinco nas seis formações, sem escolher a formação usada na partida.
+- Time é uma relação dinâmica: cinco titulares em 3+2 e até três reservas. Arrastar ou tocar em dois atletas de grupos opostos troca apenas esses nomes; não há coordenada livre. Durante o gesto, a peça inteira se eleva e acompanha dedo/mouse; o navegador nunca mostra o ghost nativo da imagem. Um modal separado permite consultar o encaixe automático dos cinco nas seis formações.
 - Histórico repete a linha do tempo do jogador, trocando produção individual por campanha coletiva: clube à esquerda; J/V/E/D, gols, títulos e confiança por temporada. O índice de força do time nunca é exibido.
 - Estatísticas usam linhas tabulares para todo o elenco e módulos coletivos de campanha. Retratos nunca recebem `flex: 1` nem fundos elípticos; a imagem fica em um frame circular fixo.
 - Mundo mantém a mesma navegação interna do jogador — Agora, Clubes, Jogadores e Arquivo — com noticiário, rankings e memória da carreira do técnico.
 - Stamina existe somente dentro da partida e vem da distância da peça ativa no próprio toque. A peça usa filete semântico; o valor exato aparece apenas quando selecionada ou no painel de troca.
-- Troca é uma mesa visual curta, disponível apenas no próprio turno com a física parada. Cinco peças ficam no campo e até três no banco; arrastar uma sobre a outra faz a troca imediatamente. Não usa selects, texto instrucional ou confirmação intermediária. Toque em duas peças de grupos opostos permanece como alternativa acessível.
+- Troca é uma mesa visual curta, disponível apenas no próprio turno com a física parada. No desktop, os cinco titulares usam 3+2 para dar espaço ao gesto; no mobile, o conjunto permanece compacto. Arrastar uma peça do campo sobre uma do banco faz a troca imediatamente. Não usa selects, texto instrucional ou confirmação intermediária. Toque em duas peças de grupos opostos permanece como alternativa acessível.
 - Abrir a troca pausa relógio, física, CPU e regra dos sete segundos. Confirmar ou cancelar retoma imediatamente.
-- Formações dos dois times são sorteadas no início e novamente depois de cada gol.
+- O time do técnico começa sempre na Muralha e percorre, na ordem do Rumo ao Estrelato, Muralha → Diamante → Linha → Pirâmide → Ferrolho → Avalanche. A rotação avança depois de cada gol e na mudança de período; o adversário também avança a partir do seu desenho inicial.
 - Todo sistema que não muda escalação, comportamento da peça, resultado ou futuro da carreira permanece fora do lançamento.
 
 ## Iconografia

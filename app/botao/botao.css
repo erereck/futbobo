@@ -718,6 +718,28 @@
 .botao-substitution-piece-lifted {
   opacity: 0.18;
 }
+
+@media (min-width: 541px) {
+  .botao-substitution-card {
+    width: min(100%, 620px);
+  }
+  .botao-substitution-field {
+    min-height: 246px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-rows: repeat(2, 96px);
+    gap: 6px 10px;
+    padding: 18px 34px;
+  }
+  .botao-substitution-field > .botao-substitution-piece {
+    grid-column: span 2;
+  }
+  .botao-substitution-field > .botao-substitution-piece:nth-child(4) {
+    grid-column: 2 / span 2;
+  }
+  .botao-substitution-field > .botao-substitution-piece:nth-child(5) {
+    grid-column: 4 / span 2;
+  }
+}
 .botao-substitution-drag-layer {
   position: fixed;
   z-index: 100;

@@ -1133,29 +1133,6 @@ export function managerMatchSetup(
         user: { starters: userRoster, bench: userBenchRoster },
         cpu: { starters: cpuRoster, bench: cpuBenchRoster },
       },
-      userFormationId: [
-        "muralha",
-        "diamante",
-        "linha",
-        "piramide",
-        "ferrolho",
-        "avalanche",
-      ][
-        Math.floor(
-          seeded(
-            hashSeed(state.seed, state.pendingMatch.id, "user-formation"),
-            state.season * 17,
-          ) * 6,
-        )
-      ],
-      cpuFormationId: [
-        "muralha",
-        "diamante",
-        "linha",
-        "piramide",
-        "ferrolho",
-        "avalanche",
-      ][Math.floor(seeded(state.seed, state.season * 17) * 6)],
     },
   };
 }

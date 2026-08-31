@@ -146,7 +146,7 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
   assert.match(manager, /useState<ManagerState \| null>\(null\)/);
   assert.match(manager, /if \(!loadedState\) return/);
   assert.match(manager, /setNotice\(""\)/);
-  assert.match(manager, /setManagerPlayerPosition/);
+  assert.match(manager, /setManagerLineup/);
   assert.match(manager, /continueAfterManagerDecision/);
   assert.match(
     manager,
@@ -185,14 +185,17 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
   assert.match(botaoMatch, /data-substitution-target/);
   assert.match(botaoMatch, /startSubstitutionDrag/);
   assert.doesNotMatch(botaoMatch, /Escolha um botão para sair/);
-  assert.match(engine, /setup\.managerMode[\s\S]*rng\.int/);
+  assert.match(engine, /const selectedUserFormation = formation/);
+  assert.match(engine, /state\.formationIndex\.user \+= 1/);
   assert.match(model, /function normalizeHistory/);
   assert.match(model, /const safePhase/);
   assert.match(world, /function normalizeWorldPlayer/);
   assert.match(layout, /viewportFit: "cover"/);
   assert.doesNotMatch(layout, /maximumScale/);
-  assert.match(styles, /\.formationPreview/);
-  assert.match(styles, /\.freePlayerSlot/);
+  assert.match(styles, /\.lineupGrid/);
+  assert.match(styles, /\.lineupGrid > \.starter:nth-child\(4\)/);
+  assert.match(manager, /WorldPulseTicker/);
+  assert.match(manager, /Avançando automaticamente em 5 segundos/);
   assert.match(styles, /\.formationModal/);
 });
 

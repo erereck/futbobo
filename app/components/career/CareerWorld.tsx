@@ -30,13 +30,9 @@ function rankingPosition(entries: Array<{ value: number }>, index: number) {
   return entries.findIndex((entry) => entry.value === entries[index].value) + 1;
 }
 
-export function WorldPulseButton({ state, onOpen }: { state: GameState; onOpen: () => void }) {
-  const headlines = useMemo(() => {
-    const news = buildWorldSnapshot(state).news.slice(0, 6).map((item) => ({ id: item.id, title: item.title }));
-    if (news.length) return news;
-    const pulse = worldPulseForState(state);
-    return pulse ? [{ id: `pulse-${state.season}`, title: pulse.title }] : [];
-  }, [state]);
+export type WorldPulseHeadline = { id: string; title: string };
+
+export function WorldPulseTicker({ headlines, onOpen }: { headlines: WorldPulseHeadline[]; onOpen: () => void }) {
   const [headlineIndex, setHeadlineIndex] = useState(0);
   const [tickerMoving, setTickerMoving] = useState(false);
   const headlineKey = headlines.map((headline) => headline.id).join("|");
@@ -70,6 +66,16 @@ export function WorldPulseButton({ state, onOpen }: { state: GameState; onOpen: 
     </span>
     <b><FutboboIcon name="arrow-right" /></b>
   </button>;
+}
+
+export function WorldPulseButton({ state, onOpen }: { state: GameState; onOpen: () => void }) {
+  const headlines = useMemo<WorldPulseHeadline[]>(() => {
+    const news = buildWorldSnapshot(state).news.slice(0, 6).map((item) => ({ id: item.id, title: item.title }));
+    if (news.length) return news;
+    const pulse = worldPulseForState(state);
+    return pulse ? [{ id: `pulse-${state.season}`, title: pulse.title }] : [];
+  }, [state]);
+  return <WorldPulseTicker headlines={headlines} onOpen={onOpen} />;
 }
 
 function EntityBadge({ ledger, entityId }: { ledger: CompetitionLedgerView; entityId: string }) {

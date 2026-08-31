@@ -447,18 +447,10 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
   const managerMode = Boolean(setup.managerMode && setup.managerRosters);
   const managerRoster = setup.managerRosters;
   const formation = formationByIndex(0);
-  const selectedUserFormation =
-    managerMode && setup.userFormationId
-      ? (Array.from({ length: 6 }, (_, index) => formationByIndex(index)).find(
-          (candidate) => candidate.id === setup.userFormationId,
-        ) ?? formation)
-      : formation;
-  const selectedCpuFormation =
-    managerMode && setup.cpuFormationId
-      ? (Array.from({ length: 6 }, (_, index) => formationByIndex(index)).find(
-          (candidate) => candidate.id === setup.cpuFormationId,
-        ) ?? formation)
-      : formationByIndex(0);
+  const selectedUserFormation = formation;
+  const selectedCpuFormation = managerMode
+    ? formationByIndex(rng.int(0, 5))
+    : formation;
   const userSlot = managerMode
     ? -1
     : slotIndexForPosition(selectedUserFormation, setup.player.position);
@@ -1243,17 +1235,8 @@ export function resumeAfterGoal(state: BotaoMatchState): BotaoEvent[] {
     state.version += 1;
     return events;
   }
-  if (state.setup.managerMode) {
-    // No modo técnico a formação é uma leitura do momento, não uma escolha
-    // fixa: depois de cada gol os dois times sorteiam outro desenho.
-    state.formationIndex.user =
-      (state.formationIndex.user + 1 + state.rng.int(0, 4)) % 6;
-    state.formationIndex.cpu =
-      (state.formationIndex.cpu + 1 + state.rng.int(0, 4)) % 6;
-  } else {
-    state.formationIndex.user += 1;
-    state.formationIndex.cpu += 1;
-  }
+  state.formationIndex.user += 1;
+  state.formationIndex.cpu += 1;
   placeTeams(state);
   events.push({
     type: "formation",
@@ -1327,10 +1310,8 @@ export function startNextPeriod(state: BotaoMatchState): BotaoEvent[] {
     state.period > rules.halves ? rules.extraSeconds : rules.halfSeconds;
   state.clock = state.periodSeconds;
   state.finalShotGrace = false;
-  if (!state.setup.managerMode) {
-    state.formationIndex.user += 1;
-    state.formationIndex.cpu += 1;
-  }
+  state.formationIndex.user += 1;
+  state.formationIndex.cpu += 1;
   placeTeams(state);
   events.push({
     type: "formation",
@@ -1923,10 +1904,8 @@ export function commitPenalty(
       if (limit > 0 && inRegulation && state.score.cpu >= limit)
         finishMatch(state, "goal-limit", events);
     } else {
-      if (!state.setup.managerMode) {
-        state.formationIndex.user += 1;
-        state.formationIndex.cpu += 1;
-      }
+      state.formationIndex.user += 1;
+      state.formationIndex.cpu += 1;
       placeTeams(state);
       events.push({
         type: "formation",
