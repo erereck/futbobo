@@ -1479,7 +1479,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         award.includes("Chuteira de Ouro") ||
         award.includes("Rei das Assistências"),
       ));
-      const worldCupBallonSurge = Boolean(playsInEurope && (resolvedWorldCupStats?.goals ?? 0) >= 8);
+      const worldCupBallonSurge = Boolean((resolvedWorldCupStats?.goals ?? 0) >= 8);
       const manualBallonEligible = Boolean(
         seasonResolved &&
         resolvedResult &&
@@ -3334,8 +3334,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                     <span><small>FASE DE GRUPOS · SIMULADA</small><strong>{seasonWorldCupRecord.tournamentStats.groupAppearances}J · {seasonWorldCupRecord.tournamentStats.groupGoals}G · {seasonWorldCupRecord.tournamentStats.groupAssists}A</strong></span>
                     <span><small>MATA-MATA</small><strong>{seasonWorldCupRecord.tournamentStats.knockoutAppearances}J · {seasonWorldCupRecord.tournamentStats.knockoutGoals}G · {seasonWorldCupRecord.tournamentStats.knockoutAssists}A</strong></span>
                   </div>
-                  {isEuropeanClub(currentClub) && seasonWorldCupRecord.tournamentStats.goals >= 8 && (
-                    <div className="world-cup-ballon-surge"><b>◉</b><span><strong>A eleição mudou de figura</strong><small>Oito ou mais gols na Copa, jogando na Europa, colocaram seu nome no centro da disputa pela Bola de Ouro.</small></span></div>
+                  {seasonWorldCupRecord.tournamentStats.goals >= 8 && (
+                    <div className="world-cup-ballon-surge"><b>◉</b><span><strong>A eleição mudou de figura</strong><small>Oito ou mais gols na Copa colocaram seu nome no centro da disputa pela Bola de Ouro.</small></span></div>
                   )}
                 </section>
               )}
