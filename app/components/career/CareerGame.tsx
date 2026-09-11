@@ -1169,6 +1169,29 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           : null;
         const qualificationClub = clubById(current.currentClubId);
         const qualificationLeague = leagueById(current.lastResult?.leagueId ?? qualificationClub.leagueId);
+        const finalGoalContributions = matchResult.playerGoals + matchResult.playerAssists;
+        const relevantFinalForManagerTrust =
+          !matchResult.simulated &&
+          !matchResult.walkover &&
+          match.stageName === "Final" &&
+          !["domesticSuperCup", "uefaSuperCup", "recopaSudamericana"].includes(competitionId);
+        const finalManagerTrustBoost = relevantFinalForManagerTrust
+          ? finalGoalContributions >= 3
+            ? 50
+            : finalGoalContributions === 2
+              ? 30
+              : 0
+          : 0;
+        const boostedManagerTrust = clamp(current.managerTrust + finalManagerTrustBoost);
+        const boostedSquadRole = finalManagerTrustBoost > 0
+          ? calculateSquadRole(
+              current.overall,
+              qualificationClub,
+              qualificationLeague.prestige,
+              boostedManagerTrust,
+              current.age,
+            )
+          : current.squadRole;
         const resolvedLeagueResult = updatedLastCompetitions.find((competition) => competition.id === "domesticLeague");
         const resolvedLeaguePosition = resolvedLeagueResult?.champion
           ? 1
@@ -1228,6 +1251,16 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           reputation: clamp(current.reputation + (resolvedChampion ? 3 : nextWorldStage ? 1 : -1)),
           fanSupport: clamp(current.fanSupport + (resolvedChampion ? 6 : nextWorldStage ? 2 : -3)),
           morale: clamp(current.morale + (resolvedChampion ? 4 : nextWorldStage ? 2 : -2)),
+          managerTrust: boostedManagerTrust,
+          squadRole: boostedSquadRole,
+          currentObjective: finalManagerTrustBoost > 0
+            ? createSeasonObjective(
+                positionByKey(current.position),
+                boostedSquadRole,
+                current.season,
+                current.seed + current.history.length * 31,
+              )
+            : current.currentObjective,
           worldQualifiedSeason: qualifiesForWorld
             ? match.season + 1
             : lostWorldTicket
@@ -1244,6 +1277,11 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               : resolvedSetup
               ? describeFinal(resolvedSetup, matchResult)
               : `${match.competitionName}: ${resolvedChampion ? "campeão" : "vice"}.`,
+            ...(finalManagerTrustBoost > 0
+              ? [
+                  `Confiança do treinador +${finalManagerTrustBoost}% após ${finalGoalContributions} participações em gol na final${boostedSquadRole !== current.squadRole ? ` · novo status: ${ROLE_LABELS[boostedSquadRole]}` : ""}.`,
+                ]
+              : []),
             ...current.newsFeed,
           ].slice(0, 16),
         };
