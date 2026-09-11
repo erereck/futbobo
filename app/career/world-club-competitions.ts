@@ -1,5 +1,5 @@
 import { CLUBS, leagueById } from "../game-data";
-import type { Country } from "../game-data";
+import type { Club, Country } from "../game-data";
 import type { GameState, SeasonRecord } from "./model";
 import type { WorldPlayer } from "./world-player-model";
 import { clubConfederation } from "./academy";
@@ -244,6 +244,64 @@ function worldPlayerSquadBoost(state: GameState, clubId: string, season: number)
     }, 0);
 }
 
+/**
+ * Nota usada só para a simulação dos torneios do mundo vivo.
+ * `reputation` sozinha não pode definir quem é elite: alguns clubes de ligas
+ * menores têm reputação alta por tradição/academia, mas força atual bem menor.
+ */
+function competitionRating(
+  state: GameState,
+  club: Club,
+  season: number,
+  titles: Record<string, number>,
+) {
+  const league = leagueById(club.leagueId);
+  const squadBoost = worldPlayerSquadBoost(state, club.id, season);
+  const squadBonus = Math.min(8, squadBoost / 18);
+  const historyBonus = Math.min(3.5, Math.sqrt(titles[club.id] ?? 0) * 0.9);
+  const reputationBonus = (club.reputation - 3) * 0.7;
+  const leagueBonus = (league.prestige - 3) * 0.55;
+
+  return club.strength + squadBonus + historyBonus + reputationBonus + leagueBonus;
+}
+
+function championsCandidates(
+  state: GameState,
+  available: Club[],
+  season: number,
+  titles: Record<string, number>,
+  salt: number,
+) {
+  const rated = available.map((club) => ({
+    club,
+    rating: competitionRating(state, club, season, titles),
+  }));
+  const bucket = (min: number, max = Number.POSITIVE_INFINITY) =>
+    rated.filter(({ rating }) => rating >= min && rating < max).map(({ club }) => club);
+
+  // A maior parte das edições fica entre os times realmente de ponta.
+  // Zebras continuam existindo, mas uma campanha de time médio vira evento raro,
+  // em vez de consequência comum de uma reputação inflada.
+  const elite = bucket(86);
+  const contenders = bucket(82, 86);
+  const outsiders = bucket(78, 82);
+  const longShots = bucket(74, 78);
+  const roll = seeded(state.seed, season * 9187 + salt);
+
+  if (roll < 0.8 && elite.length) return elite;
+  if (roll < 0.97 && contenders.length) return contenders;
+  if (roll < 0.995 && outsiders.length) return outsiders;
+  if (longShots.length) return longShots;
+
+  return elite.length
+    ? elite
+    : contenders.length
+      ? contenders
+      : outsiders.length
+        ? outsiders
+        : available;
+}
+
 function pickWinner(
   state: GameState,
   config: CompetitionConfig,
@@ -270,13 +328,9 @@ function pickWinner(
   const salt = config.id.length * 71;
   const upset = seeded(state.seed, season * 5501 + salt) < 0.1;
   let candidates = upset && strong.length ? strong : elite.length ? elite : strong.length ? strong : available;
+
   if (config.id === "champions-league") {
-    const fiveStar = available.filter((club) => club.reputation >= 5);
-    const fourStar = available.filter((club) => club.reputation === 4);
-    const tierRoll = seeded(state.seed, season * 9187 + salt);
-    const preferred = tierRoll < 0.6 ? fiveStar : fourStar;
-    const secondary = tierRoll < 0.6 ? fourStar : fiveStar;
-    candidates = preferred.length ? preferred : secondary.length ? secondary : available;
+    candidates = championsCandidates(state, available, season, titles, salt);
   }
 
   return candidates
@@ -284,12 +338,17 @@ function pickWinner(
       const league = leagueById(club.leagueId);
       const historyPull = titles[club.id] ?? 0;
       const squadBoost = worldPlayerSquadBoost(state, club.id, season);
+      const rating = competitionRating(state, club, season, titles);
+      const strengthWeight = config.id === "champions-league"
+        ? Math.pow(Math.max(1, rating - 55), 4) * 0.9
+        : Math.pow(Math.max(1, club.strength - 55), 3) * 0.9;
       const weight = Math.max(
         1,
+        strengthWeight +
         club.reputation ** 4 * 4 +
         league.prestige ** 3 * 2.5 +
         historyPull * 24 +
-        squadBoost,
+        squadBoost * 1.5,
       );
       const roll = Math.max(0.000001, seeded(state.seed, season * 5801 + index * 67 + salt));
       return { clubId: club.id, score: Math.pow(roll, 1 / weight) };
