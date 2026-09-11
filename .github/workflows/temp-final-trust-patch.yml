@@ -1,0 +1,111 @@
+name: Temporary final trust patch
+
+on:
+  push:
+    branches:
+      - fix/final-manager-trust-boost
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[auto-patch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/final-manager-trust-boost
+      - name: Apply focused CareerGame patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/components/career/CareerGame.tsx')
+          text = path.read_text()
+
+          old = '''        const qualificationClub = clubById(current.currentClubId);
+        const qualificationLeague = leagueById(current.lastResult?.leagueId ?? qualificationClub.leagueId);
+        const resolvedLeagueResult = updatedLastCompetitions.find((competition) => competition.id === "domesticLeague");'''
+          new = '''        const qualificationClub = clubById(current.currentClubId);
+        const qualificationLeague = leagueById(current.lastResult?.leagueId ?? qualificationClub.leagueId);
+        const finalGoalContributions = matchResult.playerGoals + matchResult.playerAssists;
+        const relevantFinalForManagerTrust =
+          !matchResult.simulated &&
+          !matchResult.walkover &&
+          match.stageName === "Final" &&
+          !["domesticSuperCup", "uefaSuperCup", "recopaSudamericana"].includes(competitionId);
+        const finalManagerTrustBoost = relevantFinalForManagerTrust
+          ? finalGoalContributions >= 3
+            ? 50
+            : finalGoalContributions === 2
+              ? 30
+              : 0
+          : 0;
+        const boostedManagerTrust = clamp(current.managerTrust + finalManagerTrustBoost);
+        const boostedSquadRole = finalManagerTrustBoost > 0
+          ? calculateSquadRole(
+              current.overall,
+              qualificationClub,
+              qualificationLeague.prestige,
+              boostedManagerTrust,
+              current.age,
+            )
+          : current.squadRole;
+        const resolvedLeagueResult = updatedLastCompetitions.find((competition) => competition.id === "domesticLeague");'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected trust anchor once, found {text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          old = '''          reputation: clamp(current.reputation + (resolvedChampion ? 3 : nextWorldStage ? 1 : -1)),
+          fanSupport: clamp(current.fanSupport + (resolvedChampion ? 6 : nextWorldStage ? 2 : -3)),
+          morale: clamp(current.morale + (resolvedChampion ? 4 : nextWorldStage ? 2 : -2)),
+          worldQualifiedSeason: qualifiesForWorld'''
+          new = '''          reputation: clamp(current.reputation + (resolvedChampion ? 3 : nextWorldStage ? 1 : -1)),
+          fanSupport: clamp(current.fanSupport + (resolvedChampion ? 6 : nextWorldStage ? 2 : -3)),
+          morale: clamp(current.morale + (resolvedChampion ? 4 : nextWorldStage ? 2 : -2)),
+          managerTrust: boostedManagerTrust,
+          squadRole: boostedSquadRole,
+          currentObjective: finalManagerTrustBoost > 0
+            ? createSeasonObjective(
+                positionByKey(current.position),
+                boostedSquadRole,
+                current.season,
+                current.seed + current.history.length * 31,
+              )
+            : current.currentObjective,
+          worldQualifiedSeason: qualifiesForWorld'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected state anchor once, found {text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          old = '''              ? describeFinal(resolvedSetup, matchResult)
+              : `${match.competitionName}: ${resolvedChampion ? "campeão" : "vice"}.`,
+            ...current.newsFeed,'''
+          new = '''              ? describeFinal(resolvedSetup, matchResult)
+              : `${match.competitionName}: ${resolvedChampion ? "campeão" : "vice"}.`,
+            ...(finalManagerTrustBoost > 0
+              ? [
+                  `Confiança do treinador +${finalManagerTrustBoost}% após ${finalGoalContributions} participações em gol na final${boostedSquadRole !== current.squadRole ? ` · novo status: ${ROLE_LABELS[boostedSquadRole]}` : ""}.`,
+                ]
+              : []),
+            ...current.newsFeed,'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected news anchor once, found {text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+      - name: Commit patch
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/components/career/CareerGame.tsx
+          git commit -m "feat: boost manager trust after decisive finals [auto-patch]"
+          git push origin HEAD:fix/final-manager-trust-boost
