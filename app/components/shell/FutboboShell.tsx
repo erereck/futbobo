@@ -28,7 +28,7 @@ import { InstallScreen, NewsScreen, SettingsScreen } from "./ShellUtilityScreens
 import FutboboIcon from "../FutboboIcon";
 import { FUTBOBO_VERSION, FUTBOBO_VERSION_NAME } from "../../version";
 
-type ShellScreen = "home" | "modes" | "saves" | "manager-saves" | "achievements" | "hall" | "hall-career" | "hall-card" | "settings" | "install" | "news" | "career" | "manager" | "legacy-tool";
+type ShellScreen = "home" | "modes" | "saves" | "manager-saves" | "achievements" | "hall" | "hall-career" | "hall-card" | "settings" | "install" | "news" | "other-games" | "career" | "manager" | "legacy-tool";
 type BootAction = "new" | "continue" | "settings" | "install" | "news" | null;
 
 function safeHall() {
@@ -281,6 +281,7 @@ export default function FutboboShell() {
             <button type="button" onClick={() => setScreen("achievements")}><span><FutboboIcon name="medal" /></span>Conquistas</button>
             <button type="button" onClick={() => setScreen("install")}><span><FutboboIcon name="download" /></span>Instalar</button>
             <button type="button" onClick={() => setScreen("news")}><span><FutboboIcon name="news" /></span>Novidades</button>
+            <button type="button" onClick={() => setScreen("other-games")}><span><FutboboIcon name="globe" /></span>Outros jogos</button>
           </nav>
         </section>
       )}
@@ -288,6 +289,23 @@ export default function FutboboShell() {
       {screen === "settings" && <SettingsScreen />}
       {screen === "install" && <InstallScreen />}
       {screen === "news" && <NewsScreen />}
+
+      {screen === "other-games" && (
+        <section className={styles.panelScreen}>
+          <header className={styles.panelHeading}><span>ERILAB</span><h2>Outros jogos.</h2><p>Mais projetos para abrir e jogar direto no navegador.</p></header>
+          <div className={styles.modeList}>
+            <a className={styles.modeCard} href="https://erereck.github.io/gamebobo" target="_blank" rel="noreferrer">
+              <span className={styles.modeIndex}>01</span><div><small>SIMULADOR</small><strong>Gamebobo</strong><p>Crie jogos, evolua seu estúdio e tente dominar gerações inteiras.</p></div><b><FutboboIcon name="arrow-right" /></b>
+            </a>
+            <a className={styles.modeCard} href="https://erereck.github.io/pokebobo" target="_blank" rel="noreferrer">
+              <span className={styles.modeIndex}>02</span><div><small>POKÉMON</small><strong>Pokebobo</strong><p>Monte sua carreira de treinador e avance cidade por cidade.</p></div><b><FutboboIcon name="arrow-right" /></b>
+            </a>
+            <a className={styles.modeCard} href="https://mmmweb.vercel.app" target="_blank" rel="noreferrer">
+              <span className={styles.modeIndex}>03</span><div><small>MINIMALISTA</small><strong>Muito, Muito Minimalista</strong><p>Abra o MMM Web e jogue direto pelo navegador.</p></div><b><FutboboIcon name="arrow-right" /></b>
+            </a>
+          </div>
+        </section>
+      )}
 
       {screen === "modes" && (
         <section className={styles.panelScreen}>
