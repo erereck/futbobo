@@ -3204,6 +3204,50 @@ button:active:not(:disabled) { transform: scale(.98); }
   .career-phase-career.career-tab-event .event-heading p { line-height: 1.25; }
 }
 
+/* O capítulo ganha um símbolo de cena no espaço entre a meta e as escolhas. */
+@media (max-width: 540px) and (min-height: 701px) {
+  .career-phase-career.career-tab-event > .event-stage { position: relative; }
+  .career-phase-career.career-tab-event .event-art {
+    position: absolute;
+    top: 35%;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    display: flex;
+    height: min(18dvh, 140px);
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: radial-gradient(circle, rgba(244,196,48,.05), transparent 62%);
+    pointer-events: none;
+  }
+  .career-phase-career.career-tab-event .event-art::before {
+    width: 150px;
+    height: 150px;
+    right: calc(50% - 75px);
+    bottom: calc(50% - 75px);
+    border-width: 1px;
+    border-color: rgba(244,196,48,.12);
+  }
+  .career-phase-career.career-tab-event .event-tag { display: none; }
+  .career-phase-career.career-tab-event .event-watermark {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    color: rgba(244,196,48,.22);
+    font-size: clamp(70px, 13dvh, 108px);
+    line-height: 1;
+    animation: event-symbol-breathe 4s ease-in-out infinite;
+  }
+  @keyframes event-symbol-breathe {
+    50% { opacity: .62; transform: scale(1.07); }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .career-phase-career.career-tab-event .event-watermark { animation: none; }
+}
+
 /* v85 — responsive match desk. The creation room uses the whole desktop
    viewport, while the mobile event deck gives every decision a real row. */
 @media (min-width: 900px) {

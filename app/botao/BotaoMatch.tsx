@@ -93,6 +93,7 @@ const DEFAULT_LOCAL_PLAYER_NAMES: Record<BotaoSide, string> = {
 };
 
 type Flash = { text: string; tone: "goal" | "info" | "bad" } | null;
+type MatchMoment = { id: string; label: string; detail: string; tone: "goal" | "info" | "bad" } | null;
 type SubstitutionDrag = {
   kind: "starter" | "bench";
   id: string;
@@ -192,6 +193,10 @@ export default function BotaoMatch({
   const replayGoalCapturedRef = useRef(false);
   const finalShotAnnouncedRef = useRef(false);
   const pausedAtRef = useRef<number | null>(null);
+  // A primeira jogada começa no primeiro chute válido, dando tempo de ler a
+  // mesa sem perder o relógio ou receber pênalti antes de jogar.
+  const firstTouchReady = !setup.managerMode && !startInPenalties && machine.turn === "user";
+  const awaitingFirstTouchRef = useRef(firstTouchReady);
   // Timers guardados em ref: efeitos sem lista de dependências rodam a cada
   // render, e limpar no cleanup cancelaria a transição no meio do caminho.
   const timersRef = useRef<{
@@ -212,6 +217,7 @@ export default function BotaoMatch({
 
   const [, setTick] = useState(0);
   const [flash, setFlash] = useState<Flash>(null);
+  const [matchMoment, setMatchMoment] = useState<MatchMoment>(null);
   const [cpuThinking, setCpuThinking] = useState(false);
   const [muted, setMuted] = useState(() => isBotaoMuted());
   const [shaking, setShaking] = useState(false);
@@ -220,6 +226,7 @@ export default function BotaoMatch({
   const [desktopLandscape, setDesktopLandscape] = useState(false);
   const [compactMobileTable, setCompactMobileTable] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [awaitingFirstTouch, setAwaitingFirstTouch] = useState(firstTouchReady);
   const [formerClubGoalPrompt, setFormerClubGoalPrompt] = useState<{
     goalNumber: number;
   } | null>(null);
@@ -366,11 +373,13 @@ export default function BotaoMatch({
         if (event.type === "post") {
           playBotaoSound("post");
           showFlash("NA TRAVE!", "info", 1100);
+          if (!setup.managerMode) setMatchMoment({ id: `post-${machine.turns}-${event.side}`, label: "BOLA NA TRAVE", detail: `${event.side === "user" ? setup.userTeam.shortName : setup.cpuTeam.shortName} quase mudou o placar.`, tone: "info" });
         }
         if (event.type === "idle-reset")
           showFlash("Bola ao centro", "info", 1100);
         if (event.type === "inactivity-penalty") {
           showFlash("PÊNALTI POR DEMORA!", "bad", 1700);
+          if (!setup.managerMode) setMatchMoment({ id: `delay-${machine.turns}`, label: "PÊNALTI POR DEMORA", detail: `${setup.cpuTeam.shortName} recebe a cobrança.`, tone: "bad" });
           setAnnouncement(
             localMatch
               ? "O tempo da jogada terminou."
@@ -380,9 +389,12 @@ export default function BotaoMatch({
         if (event.type === "period-end") {
           playBotaoSound("whistle");
           showFlash("FIM DO TEMPO", "info", 1400);
+          if (!setup.managerMode) setMatchMoment({ id: `interval-${event.period}`, label: "APITO DO ÁRBITRO", detail: `${setup.userTeam.shortName} ${machine.score.user} × ${machine.score.cpu} ${setup.cpuTeam.shortName}`, tone: "info" });
         }
-        if (event.type === "penalty")
+        if (event.type === "penalty") {
           playBotaoSound(event.scored ? "goal" : "save");
+          if (!setup.managerMode) setMatchMoment({ id: `penalty-${machine.penalties?.round}-${event.side}-${machine.penalties?.results[event.side].length}`, label: event.scored ? "PÊNALTI CONVERTIDO" : "PÊNALTI PERDIDO", detail: `${event.side === "user" ? setup.userTeam.shortName : setup.cpuTeam.shortName} · ${machine.penalties?.score.user ?? 0} × ${machine.penalties?.score.cpu ?? 0}`, tone: event.scored ? "goal" : "bad" });
+        }
         if (event.type === "goal") {
           const replayNow = performance.now();
           const finalFrame = replayFrame(
@@ -454,6 +466,12 @@ export default function BotaoMatch({
           setAnnouncement(
             `${text} ${event.scorer}. Placar ${machine.score.user} a ${machine.score.cpu}.`,
           );
+          if (!setup.managerMode) setMatchMoment({
+            id: `goal-${machine.timeline.length}-${event.side}`,
+            label: event.ownGoal ? "GOL CONTRA" : `GOL · ${event.side === "user" ? setup.userTeam.shortName : setup.cpuTeam.shortName}`,
+            detail: `${event.scorer}${event.assist ? ` · passe de ${event.assist}` : ""} · ${machine.score.user} × ${machine.score.cpu}`,
+            tone: localMatch || mine ? "goal" : "bad",
+          });
           if (!localMatch && mine && event.byUser && setup.formerClub) {
             formerClubPromptRef.current = true;
             setFormerClubGoalPrompt({
@@ -464,7 +482,7 @@ export default function BotaoMatch({
       }
       bump();
     },
-    [bump, localMatch, machine, playerNames, setup.formerClub, showFlash],
+    [bump, localMatch, machine, playerNames, setup.cpuTeam.shortName, setup.formerClub, setup.managerMode, setup.userTeam.shortName, showFlash],
   );
 
   // ------------------------------------------------------------- loop de jogo
@@ -482,7 +500,7 @@ export default function BotaoMatch({
       lastFrameRef.current = time;
       frameCountRef.current += 1;
 
-      const pausedNow = pausedRef.current;
+      const pausedNow = pausedRef.current || awaitingFirstTouchRef.current;
 
       // Relógio da partida e regra disciplinar usam o mesmo tempo ativo. Se a
       // partida estiver pausada, nenhum dos dois avança.
@@ -994,6 +1012,10 @@ export default function BotaoMatch({
         if (endEvents.length > 0) handleEvents(endEvents);
       }
       if (fired) {
+        if (awaitingFirstTouchRef.current) {
+          awaitingFirstTouchRef.current = false;
+          setAwaitingFirstTouch(false);
+        }
         trailRef.current.length = 0;
         playBotaoSound("flick", computed.ratio);
         vibrate(Math.round(10 + computed.ratio * 30));
@@ -1002,6 +1024,18 @@ export default function BotaoMatch({
     },
     [bump, handleEvents, showFlash],
   );
+
+  const onPointerCancel = useCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (setup.managerMode) {
+      onPointerUp(event);
+      return;
+    }
+    if (pointerRef.current !== event.pointerId) return;
+    pointerRef.current = null;
+    aimRef.current = null;
+    selectedRef.current = null;
+    bump();
+  }, [bump, onPointerUp, setup.managerMode]);
 
   // ------------------------------------------------------------------- HUD
   const state = machine;
@@ -1253,12 +1287,13 @@ export default function BotaoMatch({
                 : `${paused ? "Pausado" : periodName(state)} · ${formatClock(state.clock)}`}
           </span>
         </div>
+        {!setup.managerMode && !penalties && <div className="botao-time-progress" role="progressbar" aria-label="Andamento do tempo" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.max(0, Math.min(100, 100 * (1 - state.clock / Math.max(1, state.periodSeconds)))))}><span style={{ width: `${Math.max(0, Math.min(100, 100 * (1 - state.clock / Math.max(1, state.periodSeconds))))}%` }} /></div>}
         <div className="botao-scoreboard">
           <div className="botao-team">
             <TeamCrest team={setup.userTeam} />
             <strong>{setup.userTeam.shortName}</strong>
           </div>
-          <div className="botao-score">
+          <div key={!setup.managerMode ? `${state.score.user}-${state.score.cpu}` : undefined} className={`botao-score ${!setup.managerMode ? "botao-score-animated" : ""}`}>
             <b>{state.score.user}</b>
             <span>×</span>
             <b>{state.score.cpu}</b>
@@ -1341,6 +1376,7 @@ export default function BotaoMatch({
             ) : null}
           </div>
         )}
+        {!setup.managerMode && matchMoment && <div key={matchMoment.id} className={`botao-match-moment botao-match-moment-${matchMoment.tone}`} role="status" aria-live="polite" aria-atomic="true"><span>{matchMoment.label}</span><strong>{matchMoment.detail}</strong></div>}
       </header>
       {formerClubGoalPrompt && setup.formerClub && (
         <div
@@ -1389,11 +1425,11 @@ export default function BotaoMatch({
         <canvas
           ref={canvasRef}
           className="botao-canvas"
-          aria-label={`Mesa de futebol de botão. ${setup.userTeam.shortName} ${state.score.user}, ${setup.cpuTeam.shortName} ${state.score.cpu}. ${localMatch ? `Vez de ${activeLocalName}.` : yourTurn ? "Sua vez de tacar." : "Vez do adversário."}`}
+          aria-label={`Mesa de futebol de botão. ${setup.userTeam.shortName} ${state.score.user}, ${setup.cpuTeam.shortName} ${state.score.cpu}. ${localMatch ? `Vez de ${activeLocalName}.` : yourTurn ? setup.managerMode ? "Sua vez de tacar." : "Sua vez de chutar." : "Vez do adversário."}`}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerCancel={onPointerCancel}
         />
         {flash ? (
           <div className={`botao-flash botao-flash-${flash.tone}`}>
@@ -1407,8 +1443,8 @@ export default function BotaoMatch({
             aria-live="assertive"
           >
             <div>
-              <small>SEM ENROLAR</small>
-              <span>chute antes do zero ou é pênalti para o adversário</span>
+              <small>{setup.managerMode ? "SEM ENROLAR" : "SEU TEMPO"}</small>
+              <span>{setup.managerMode ? "chute antes do zero ou é pênalti para o adversário" : "Chute antes do zero para evitar pênalti ao adversário"}</span>
             </div>
             <strong>{idleCountdown}</strong>
           </div>
@@ -1608,6 +1644,10 @@ export default function BotaoMatch({
               : penalties.turn === "user"
                 ? `${penalties.round}ª cobrança · bate ${penaltyShooter(state).label} — arraste e solte no tempo do goleiro`
                 : `${penalties.round}ª cobrança · ${setup.cpuTeam.shortName} ${penaltyShooter(state).label} vai bater`}
+          </p>
+        ) : awaitingFirstTouch && (state.phase === "aim" || state.phase === "kickoff") ? (
+          <p className="botao-turn botao-turn-active botao-turn-first-touch">
+            Arraste um botão para começar · o relógio espera seu primeiro chute
           </p>
         ) : localMatch &&
           (state.phase === "aim" || state.phase === "kickoff") ? (

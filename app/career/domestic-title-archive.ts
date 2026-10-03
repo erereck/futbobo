@@ -1,6 +1,7 @@
-import { CLUBS } from "../game-data";
+import { CLUBS, leagueById } from "../game-data";
 import type { GameState, SeasonRecord } from "./model";
 import { clubById, seeded } from "./shared";
+import { BRAZIL_CUP_ARCHIVE_ONLY_CLUBS, BRAZIL_CUP_HISTORIC_CHAMPIONS } from "./brazil-cup-history";
 
 export type DomesticTitleLedger = {
   id: string;
@@ -10,7 +11,8 @@ export type DomesticTitleLedger = {
   champions: Array<{
     season: number;
     winnerId: string;
-    source: "generated" | "player";
+    runnerUpId?: string;
+    source: "historic" | "generated" | "player";
   }>;
   titleTable: Array<{ entityId: string; titles: number; rank: number }>;
 };
@@ -58,18 +60,7 @@ const DOMESTIC_COMPETITIONS: DomesticCompetitionConfig[] = [
     countryId: "brasil",
     leagueId: "brasileirao",
     competitionId: "domesticCup",
-    historicTitles: {
-      Cruzeiro: 6,
-      Grêmio: 5,
-      Flamengo: 5,
-      Palmeiras: 4,
-      Corinthians: 3,
-      "Atlético Mineiro": 2,
-      "São Paulo": 1,
-      Fluminense: 1,
-      Internacional: 1,
-      "Athletico Paranaense": 1,
-    },
+    historicTitles: {}, // A Copa usa o registro ano a ano, inclusive clubes fora do catálogo jogável.
   },
   {
     id: "domestic-premier",
@@ -310,6 +301,12 @@ function resolveClubId(label: string) {
 }
 
 function historicalTitles(config: DomesticCompetitionConfig) {
+  if (config.id === "domestic-copa-do-brasil") {
+    return BRAZIL_CUP_HISTORIC_CHAMPIONS.reduce<Record<string, number>>((titles, champion) => {
+      titles[champion.winnerId] = (titles[champion.winnerId] ?? 0) + 1;
+      return titles;
+    }, {});
+  }
   const titles: Record<string, number> = {};
   Object.entries(config.historicTitles).forEach(([label, count]) => {
     const clubId = resolveClubId(label);
@@ -318,12 +315,20 @@ function historicalTitles(config: DomesticCompetitionConfig) {
   return titles;
 }
 
+export function domesticArchiveClubName(clubId: string) {
+  return BRAZIL_CUP_ARCHIVE_ONLY_CLUBS[clubId] ?? clubById(clubId).shortName;
+}
+
+export function isDomesticArchiveOnlyClub(clubId: string) {
+  return clubId in BRAZIL_CUP_ARCHIVE_ONLY_CLUBS;
+}
+
 function rankedTitles(titles: Record<string, number>) {
   let previousTitles = -1;
   let rank = 0;
   return Object.entries(titles)
     .filter(([, count]) => count > 0)
-    .sort((a, b) => b[1] - a[1] || clubById(a[0]).shortName.localeCompare(clubById(b[0]).shortName, "pt-BR"))
+    .sort((a, b) => b[1] - a[1] || domesticArchiveClubName(a[0]).localeCompare(domesticArchiveClubName(b[0]), "pt-BR"))
     .map(([entityId, count], index) => {
       if (count !== previousTitles) rank = index + 1;
       previousTitles = count;
@@ -349,8 +354,10 @@ function pickGeneratedWinner(
   excludedClubIds: Set<string>,
 ) {
   const candidates = CLUBS.filter((club) =>
-    club.leagueId === config.leagueId &&
     club.countryId === config.countryId &&
+    (config.competitionId === "domesticCup"
+      ? leagueById(club.leagueId).cupName === leagueById(config.leagueId).cupName
+      : club.leagueId === config.leagueId) &&
     !excludedClubIds.has(club.id)
   );
   const fallback = candidates.length
@@ -374,20 +381,42 @@ function buildDomesticCompetition(
   latestCompletedSeason: number,
 ): DomesticTitleLedger {
   const titles = historicalTitles(config);
-  const champions: DomesticTitleLedger["champions"] = [];
+  const champions: DomesticTitleLedger["champions"] = config.id === "domestic-copa-do-brasil"
+    ? BRAZIL_CUP_HISTORIC_CHAMPIONS.map((champion) => ({ ...champion, source: "historic" as const }))
+    : [];
 
   for (let season = 2027; season <= latestCompletedSeason; season += 1) {
-    const playerRecord = records.find((record) => record.season === season && recordLeagueId(record) === config.leagueId);
+    // Copas nacionais também são disputadas por clubes da segunda divisão.
+    // A liga continua exigindo a divisão exata para não atribuir uma Série B à Série A.
+    const playerRecord = records.find((record) => {
+      if (record.season !== season || clubById(record.clubId).countryId !== config.countryId) return false;
+      if (config.competitionId === "domesticLeague") return recordLeagueId(record) === config.leagueId;
+      return leagueById(recordLeagueId(record)).cupName === leagueById(config.leagueId).cupName;
+    });
     const competition = playerRecord?.competitions.find((item) => item.id === config.competitionId);
     const playerWon = Boolean(playerRecord && competition?.champion);
+    const playerVice = Boolean(playerRecord && competition?.stage === "Vice");
+    const playedFinal = config.competitionId === "domesticCup" ? playerRecord?.botaoResults?.find(({ match }) =>
+      match.source === "club" && match.competitionId === "domesticCup" && match.stageName === "Final"
+    ) : undefined;
     const excludedClubIds = new Set<string>();
     if (playerRecord && !playerWon) excludedClubIds.add(playerRecord.clubId);
     const winnerId = playerWon
       ? playerRecord!.clubId
-      : pickGeneratedWinner(state, config, season, titles, excludedClubIds);
+      : playerVice && playedFinal && CLUBS.some((club) => club.id === playedFinal.match.opponentId)
+        ? playedFinal.match.opponentId
+        : pickGeneratedWinner(state, config, season, titles, excludedClubIds);
+
+    const runnerUpId = config.id === "domestic-copa-do-brasil"
+      ? playerWon && playedFinal && playedFinal.match.opponentId !== winnerId
+        ? playedFinal.match.opponentId
+        : playerVice
+          ? playerRecord!.clubId
+          : pickGeneratedWinner(state, config, season, titles, new Set([...excludedClubIds, winnerId]))
+      : undefined;
 
     titles[winnerId] = (titles[winnerId] ?? 0) + 1;
-    champions.push({ season, winnerId, source: playerWon ? "player" : "generated" });
+    champions.push({ season, winnerId, runnerUpId, source: playerWon || (playerVice && Boolean(playedFinal)) ? "player" : "generated" });
   }
 
   return {

@@ -203,13 +203,19 @@ function competitionNews(record: SeasonRecord): WorldNewsItem[] {
   const champions = record.competitions.filter((competition) => competition.champion);
   if (!champions.length) return [];
   const major = champions.find((competition) => MAJOR_COMPETITIONS.has(competition.id)) ?? champions[0];
+  const otherTitles = champions.filter((competition) => competition.id !== major.id);
+  const campaign = record.position === "GOL"
+    ? `${record.cleanSheets} jogos sem sofrer gol em ${record.appearances} partidas`
+    : `${record.goals} gols e ${record.assists} assistências em ${record.appearances} partidas`;
   return [{
     id: `club-title-${record.season}-${major.id}-${record.clubId}`,
     season: record.season,
     category: "career",
     priority: MAJOR_COMPETITIONS.has(major.id) ? "major" : "normal",
     title: `${club.shortName} conquista ${major.name}`,
-    summary: champions.length > 1 ? `${champions.length} títulos na temporada.` : "Título confirmado.",
+    summary: otherTitles.length
+      ? `Também levou ${otherTitles.map((competition) => competition.name).join(" e ")}. ${campaign}.`
+      : `${campaign}.`,
   }];
 }
 
@@ -226,7 +232,9 @@ function awardNews(state: GameState, record: SeasonRecord): WorldNewsItem[] {
     category: "award",
     priority: major ? "major" : "normal",
     title: award === "Bola de Ouro" ? `${state.name} vence a Bola de Ouro` : `${state.name}: ${award}`,
-    summary: `${clubById(record.clubId).shortName} · ${record.overall} OVR`,
+    summary: record.position === "GOL"
+      ? `${clubById(record.clubId).shortName} · ${record.cleanSheets} jogos sem sofrer gol, ${record.overall} OVR.`
+      : `${clubById(record.clubId).shortName} · ${record.goals} gols, ${record.assists} assistências, ${record.overall} OVR.`,
   }];
 }
 
@@ -238,14 +246,17 @@ function transferNews(state: GameState) {
     if (previous.clubId === record.clubId) return;
     const from = clubById(previous.clubId);
     const to = clubById(record.clubId);
-    const hadPlayedThere = state.history.slice(0, index - 1).some((item) => item.clubId === record.clubId);
+    const previousSeasonsThere = state.history.slice(0, index - 1).filter((item) => item.clubId === record.clubId).length;
+    const hadPlayedThere = previousSeasonsThere > 0;
     news.push({
       id: `transfer-${record.season}-${from.id}-${to.id}`,
       season: record.season,
       category: "transfer",
       priority: hadPlayedThere ? "major" : "normal",
       title: hadPlayedThere ? `${state.name} volta ao ${to.shortName}` : `${state.name} troca ${from.shortName} por ${to.shortName}`,
-      summary: hadPlayedThere ? "Reencontro com um antigo clube." : "Novo capítulo da carreira.",
+      summary: hadPlayedThere
+        ? `Volta após ${previousSeasonsThere} temporada${previousSeasonsThere > 1 ? "s" : ""} pelo clube; deixa o ${from.shortName}.`
+        : `Após ${previous.appearances} partidas pelo ${from.shortName}, chega a ${to.city}.`,
     });
   });
 
@@ -260,7 +271,9 @@ function transferNews(state: GameState) {
       category: "transfer",
       priority: returning ? "major" : "normal",
       title: returning ? `${state.name} está de volta ao ${to.shortName}` : `${state.name} chega ao ${to.shortName}`,
-      summary: returning ? "O mundo lembra dessa camisa." : `Saída do ${from.shortName}.`,
+      summary: returning
+        ? `Retorna a ${to.city} depois de ${last.appearances} jogos pelo ${from.shortName}.`
+        : `Novo destino: ${to.city}. A última temporada foi no ${from.shortName}.`,
     });
   }
   return news;
@@ -308,7 +321,7 @@ function careerMilestoneNews(state: GameState): WorldNewsItem[] {
           category: "record",
           priority: threshold >= 300 ? "major" : "normal",
           title: `${state.name} chega a ${threshold} gols`,
-          summary: `${clubById(record.clubId).shortName} · marca histórica da carreira.`,
+          summary: `${record.goals} gols na temporada pelo ${clubById(record.clubId).shortName}; ${total} no acumulado.`,
         });
       }
       nextThresholdIndex += 1;
@@ -326,7 +339,9 @@ function nationalNews(state: GameState) {
       category: "career",
       priority: "major",
       title: `${countryById(record.countryId ?? state.nationality).name} vence ${record.name}`,
-      summary: `${state.name} fez parte do título.`,
+      summary: record.tournamentStats
+        ? `${state.name}: ${record.tournamentStats.appearances} jogos, ${record.tournamentStats.goals} gols e ${record.tournamentStats.assists} assistências.`
+        : `${state.name} esteve no elenco campeão da ${record.name}.`,
     }));
 }
 
@@ -341,8 +356,8 @@ function rivalNews(state: GameState): WorldNewsItem[] {
     season: state.season,
     category: "rival",
     priority: rival.awards >= 3 || rival.overall >= 90 ? "major" : "normal",
-    title: rival.awards > 0 ? `${rival.name} também está colecionando prêmios` : `${rival.name} chama atenção`,
-    summary: `${clubById(rival.currentClubId).shortName} · ${rival.overall} OVR · ${rival.awards} prêmio(s)`,
+    title: rival.awards > 0 ? `${rival.name} chega a ${rival.awards} prêmio${rival.awards > 1 ? "s" : ""}` : `${rival.name} alcança ${rival.overall} OVR`,
+    summary: `${clubById(rival.currentClubId).shortName} · ${rival.overall} OVR${rival.awards ? ` · ${rival.awards} reconhecimento${rival.awards > 1 ? "s" : ""}` : ""}.`,
   }];
 }
 

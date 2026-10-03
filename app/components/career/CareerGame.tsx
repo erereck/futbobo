@@ -47,6 +47,7 @@ import TransferMarketScreen from "./TransferMarketScreen";
 import PressConferenceDialog from "./PressConferenceDialog";
 import CycleShopDialog from "./CycleShopDialog";
 import { worldFinalOpponentForSeason } from "../../career/world-club-competitions";
+import { seasonResultStory } from "../../career/season-narrative";
 import FutboboIcon from "../FutboboIcon";
 
 type CareerGameProps = {
@@ -355,6 +356,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     .sort((a, b) => b.score - a.score);
   const todayChallengeBest = todayChallengeResults[0] ?? null;
   const currentClub = useMemo(() => clubById(displayGame.currentClubId || displayGame.academyClubId), [displayGame.currentClubId, displayGame.academyClubId]);
+  const seasonStory = game.lastResult ? seasonResultStory(game.lastResult, clubById(game.lastResult.clubId).shortName) : null;
   const seasonClubTitles = game.lastResult?.competitions.filter((competition) => competition.champion) ?? [];
   const seasonNationalTitles = game.lastResult
     ? game.nationalHistory.filter((record) => record.season === game.lastResult?.season && record.champion)
@@ -3196,8 +3198,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             <div className="result-stage screen-enter">
               <span className="result-kicker">TEMPORADA {game.lastResult.season}</span>
               <div className={`result-symbol ${game.lastResult.title ? "winner" : game.lastResult.breakoutBonus > 0 ? "breakout" : ""}`}><FutboboIcon name={game.lastResult.title ? "trophy" : game.lastResult.development < 0 ? "trend-down" : "trend-up"} /></div>
-              <h1>{game.lastResult.title ? "Temporada de campeão!" : game.lastResult.breakoutBonus > 0 ? "Você explodiu de vez!" : game.lastResult.development > 0 ? "Você subiu de nível" : game.lastResult.development < 0 ? "Uma temporada dura" : "Mais um ano de estrada"}</h1>
-              <p>{game.lastResult.title ? "Seu nome agora está gravado em uma taça." : game.lastResult.breakoutBonus > 0 ? "Uma temporada absurda acelerou sua carreira como poucas vezes acontece." : "A temporada terminou e a carreira ganhou mais um capítulo."}</p>
+              <h1>{seasonStory?.headline}</h1>
+              <p>{seasonStory?.detail}</p>
               <div className="season-stat-grid">
                 <Metric label="Jogos" value={game.lastResult.appearances} />
                 <Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.lastResult.cleanSheets : game.lastResult.goals} tone="green" />

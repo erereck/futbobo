@@ -180,16 +180,17 @@ export function worldPlayerNewsForState(state: GameState): WorldPlayerNewsProjec
       });
     }
 
-    for (const spell of player.clubHistory) {
+    for (const [index, spell] of player.clubHistory.entries()) {
       if (spell.moveType !== "permanent" || spell.transferFee < 60_000_000) continue;
       const millions = Math.round(spell.transferFee / 1_000_000);
+      const previous = player.clubHistory[index - 1];
       news.push({
         id: `world-player-transfer-${player.id}-${spell.joinedSeason}-${spell.clubId}`,
         season: spell.joinedSeason,
         category: "transfer",
         priority: spell.transferFee >= 120_000_000 ? "major" : "normal",
         title: `${player.name} fecha com o ${clubShortName(spell.clubId)}`,
-        summary: `€${millions} mi · uma das grandes movimentações do mercado.`,
+        summary: `€${millions} mi${previous ? ` · saída do ${clubShortName(previous.clubId)}` : ""} · contrato a partir de ${spell.joinedSeason}.`,
       });
     }
 
