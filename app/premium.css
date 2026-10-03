@@ -3248,6 +3248,36 @@ button:active:not(:disabled) { transform: scale(.98); }
   .career-phase-career.career-tab-event .event-watermark { animation: none; }
 }
 
+@media (max-width: 540px) {
+  .career-status-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: hidden;
+  }
+  .career-status-strip > span,
+  .career-status-strip .retirement-trigger {
+    min-width: 0;
+    padding-inline: 5px;
+  }
+  .career-status-strip strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+@media (min-width: 900px) {
+  .career-shell > .career-header {
+    grid-template-columns: minmax(0, 1fr) 43px 63px;
+    gap: 4px;
+    padding-inline: 12px;
+  }
+  .career-shell .club-identity { gap: 5px; }
+  .career-shell .club-identity strong { font-size: 15px; }
+  .career-shell .career-age strong { font-size: 32px; }
+  .career-shell .player-identity { gap: 3px; }
+  .career-shell .player-identity > span strong { font-size: 23px; }
+  .career-shell .mini-avatar { width: 27px; height: 34px; font-size: 10px; }
+}
+
 /* v85 — responsive match desk. The creation room uses the whole desktop
    viewport, while the mobile event deck gives every decision a real row. */
 @media (min-width: 900px) {

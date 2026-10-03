@@ -114,7 +114,7 @@ export type BotaoEvent =
   | { type: "inactivity-penalty" }
   | { type: "period-end"; period: number }
   | { type: "formation"; userFormation: string; cpuFormation: string }
-  | { type: "penalty"; side: BotaoSide; scored: boolean }
+  | { type: "penalty"; side: BotaoSide; scored: boolean; reason: "shootout" | "inactivity"; round: number; score: { user: number; cpu: number } }
   | { type: "match-end"; decision: BotaoDecision };
 
 export type BotaoPenaltyState = {
@@ -1879,7 +1879,7 @@ export function commitPenalty(
         : "Pênalti por demora defendido"
       : `Pênalti ${penalties.round}: ${scored ? "na rede" : "perdeu"}`,
   });
-  events.push({ type: "penalty", side, scored });
+  events.push({ type: "penalty", side, scored, reason: inactivityPenalty ? "inactivity" : "shootout", round: penalties.round, score: { ...penalties.score } });
 
   if (state.penaltyReason === "inactivity") {
     const keeperIndex = state.bodies.findIndex(

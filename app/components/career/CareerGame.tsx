@@ -2411,9 +2411,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           {match.competitionName} · {match.stageName}
           {result.walkover ? " · W.O. por abandono" : result.simulated ? " · simulada" : ""}
         </p>
-        <div className={`botao-headline ${result.champion ? "botao-headline-win" : "botao-headline-loss"}`}>
+        <h1 className={`botao-headline ${result.champion ? "botao-headline-win" : "botao-headline-loss"}`}>
           {result.walkover ? "DERROTA POR W.O." : result.champion ? (match.stageName === "Final" ? "CAMPEÃO" : "CLASSIFICADO") : match.stageName === "Final" ? "VICE" : "ELIMINADO"}
-        </div>
+        </h1>
         {result.walkover && (
           <div className="botao-card botao-walkover-notice">
             <span>W.O. REGISTRADO</span>
@@ -2447,7 +2447,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                 );
               })}
             </div>
-          ) : <p className="botao-result-empty">{result.walkover ? "Partida encerrada por abandono. Placar administrativo de 3 × 0." : "Nenhum gol antes da disputa por pênaltis."}</p>}
+          ) : <p className="botao-result-empty">{result.walkover ? "Partida encerrada por abandono. Placar administrativo de 3 × 0." : result.decision === "penalties" ? "A decisão foi para os pênaltis depois de um jogo sem gols." : "A partida terminou sem gols."}</p>}
           {activeGoalReplay !== null && result.replays?.[activeGoalReplay] && (
             <GoalReplay
               replay={result.replays[activeGoalReplay]}

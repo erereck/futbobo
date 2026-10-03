@@ -4,8 +4,8 @@ import type { SeasonResult } from "./model";
 export function seasonResultStory(result: SeasonResult, clubName: string) {
   const titles = result.competitions.filter((competition) => competition.champion);
   const production = result.position === "GOL"
-    ? `${result.cleanSheets} jogos sem sofrer gol em ${result.appearances} partidas`
-    : `${result.goals} gols e ${result.assists} assistências em ${result.appearances} partidas`;
+    ? `${result.cleanSheets} ${result.cleanSheets === 1 ? "jogo" : "jogos"} sem sofrer gol em ${result.appearances} ${result.appearances === 1 ? "partida" : "partidas"}`
+    : `${result.goals} ${result.goals === 1 ? "gol" : "gols"} e ${result.assists} ${result.assists === 1 ? "assistência" : "assistências"} em ${result.appearances} ${result.appearances === 1 ? "partida" : "partidas"}`;
   const seasonLine = `${clubName}: ${production}.`;
 
   if (titles.length > 1) return {
@@ -21,7 +21,7 @@ export function seasonResultStory(result: SeasonResult, clubName: string) {
     detail: `${result.promotion} ${seasonLine}`,
   };
   if (result.breakoutBonus > 0) return {
-    headline: `Uma temporada fora da curva`,
+    headline: `Salto de ${result.breakoutBonus} OVR no ${clubName}`,
     detail: `${seasonLine} A explosão de talento acrescentou ${result.breakoutBonus} OVR.`,
   };
   if (result.development > 0) return {
@@ -29,7 +29,7 @@ export function seasonResultStory(result: SeasonResult, clubName: string) {
     detail: seasonLine,
   };
   if (result.development < 0) return {
-    headline: `Ano difícil no ${clubName}`,
+    headline: `${clubName}: ${Math.abs(result.development)} OVR a menos`,
     detail: `${seasonLine} Seu nível caiu ${Math.abs(result.development)} OVR.`,
   };
   return {

@@ -25,6 +25,7 @@ export type ClubDossier = {
     season: number;
     result: "champion" | "runner-up";
     opponent: string;
+    opponentId: string;
     source: "historic" | "generated" | "player";
   }>;
 };
@@ -77,6 +78,7 @@ export function buildClubDossier(
       opponent: final.winnerId === clubId
         ? final.runnerUpId ? domesticArchiveClubName(final.runnerUpId) : ""
         : domesticArchiveClubName(final.winnerId),
+      opponentId: final.winnerId === clubId ? final.runnerUpId ?? "" : final.winnerId,
       source: final.source,
     }))
     .sort((a, b) => b.season - a.season) ?? [];

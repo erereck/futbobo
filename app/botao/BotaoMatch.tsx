@@ -242,6 +242,14 @@ export default function BotaoMatch({
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
 
+  useEffect(() => {
+    if (!matchMoment) return;
+    const timer = window.setTimeout(() => {
+      setMatchMoment((current) => current?.id === matchMoment.id ? null : current);
+    }, 6000);
+    return () => window.clearTimeout(timer);
+  }, [matchMoment]);
+
   const togglePause = useCallback(() => {
     setPaused((current) => {
       const next = !current;
@@ -346,6 +354,19 @@ export default function BotaoMatch({
     return () => desktop.removeEventListener("change", syncOrientation);
   }, []);
 
+  useEffect(() => {
+    if (setup.managerMode) return;
+    try {
+      const saved = window.localStorage.getItem("futbobo_player_match_muted");
+      if (saved === null) return;
+      const next = saved === "1";
+      setMuted(next);
+      setBotaoMuted(next);
+    } catch {
+      // O áudio continua controlável quando o navegador bloqueia storage.
+    }
+  }, [setup.managerMode]);
+
   // Voltando de segundo plano o rAF ficou parado: zera o relógio de frame para
   // não descontar de uma vez o tempo em que o app esteve fora da tela. A regra
   // dos 7s usa o mesmo delta ativo do jogo, então também fica congelada.
@@ -373,7 +394,11 @@ export default function BotaoMatch({
         if (event.type === "post") {
           playBotaoSound("post");
           showFlash("NA TRAVE!", "info", 1100);
-          if (!setup.managerMode) setMatchMoment({ id: `post-${machine.turns}-${event.side}`, label: "BOLA NA TRAVE", detail: `${event.side === "user" ? setup.userTeam.shortName : setup.cpuTeam.shortName} quase mudou o placar.`, tone: "info" });
+          if (!setup.managerMode) {
+            const team = event.side === "user" ? setup.userTeam.shortName : setup.cpuTeam.shortName;
+            setMatchMoment({ id: `post-${machine.turns}-${event.side}`, label: "BOLA NA TRAVE", detail: `${team} quase mudou o placar.`, tone: "info" });
+            setAnnouncement(`Bola na trave de ${team}.`);
+          }
         }
         if (event.type === "idle-reset")
           showFlash("Bola ao centro", "info", 1100);
@@ -389,11 +414,21 @@ export default function BotaoMatch({
         if (event.type === "period-end") {
           playBotaoSound("whistle");
           showFlash("FIM DO TEMPO", "info", 1400);
-          if (!setup.managerMode) setMatchMoment({ id: `interval-${event.period}`, label: "APITO DO ÁRBITRO", detail: `${setup.userTeam.shortName} ${machine.score.user} × ${machine.score.cpu} ${setup.cpuTeam.shortName}`, tone: "info" });
+          if (!setup.managerMode) {
+            setMatchMoment({ id: `interval-${event.period}`, label: "APITO DO ÁRBITRO", detail: `${setup.userTeam.shortName} ${machine.score.user} × ${machine.score.cpu} ${setup.cpuTeam.shortName}`, tone: "info" });
+            setAnnouncement(`Fim do ${event.period}º tempo. ${setup.userTeam.shortName} ${machine.score.user} a ${machine.score.cpu} ${setup.cpuTeam.shortName}.`);
+          }
         }
         if (event.type === "penalty") {
           playBotaoSound(event.scored ? "goal" : "save");
-          if (!setup.managerMode) setMatchMoment({ id: `penalty-${machine.penalties?.round}-${event.side}-${machine.penalties?.results[event.side].length}`, label: event.scored ? "PÊNALTI CONVERTIDO" : "PÊNALTI PERDIDO", detail: `${event.side === "user" ? setup.userTeam.shortName : setup.cpuTeam.shortName} · ${machine.penalties?.score.user ?? 0} × ${machine.penalties?.score.cpu ?? 0}`, tone: event.scored ? "goal" : "bad" });
+          if (!setup.managerMode) {
+            const team = event.side === "user" ? setup.userTeam.shortName : setup.cpuTeam.shortName;
+            const penaltyScore = event.reason === "inactivity" ? machine.score : event.score;
+            setMatchMoment({ id: `penalty-${event.reason}-${event.round}-${event.side}-${machine.turns}`, label: event.reason === "inactivity" ? (event.scored ? "PÊNALTI POR DEMORA" : "PÊNALTI DEFENDIDO") : (event.scored ? "PÊNALTI CONVERTIDO" : "PÊNALTI PERDIDO"), detail: `${team} · ${penaltyScore.user} × ${penaltyScore.cpu}`, tone: event.scored ? "goal" : "bad" });
+            setAnnouncement(event.reason === "inactivity"
+              ? `${team} ${event.scored ? "converteu" : "perdeu"} o pênalti por demora. Placar: ${penaltyScore.user} a ${penaltyScore.cpu}.`
+              : `${team} ${event.scored ? "converteu" : "perdeu"} o pênalti. Disputa: ${penaltyScore.user} a ${penaltyScore.cpu}.`);
+          }
         }
         if (event.type === "goal") {
           const replayNow = performance.now();
@@ -492,6 +527,12 @@ export default function BotaoMatch({
       const state = matchRef.current;
       const canvas = canvasRef.current;
       if (!state || !canvas) return;
+      // Uma aba em segundo plano pode receber rAF esporádicos. Ignorá-los
+      // impede que o jogador volte com um pênalti por demora já cobrado.
+      if (!setup.managerMode && document.hidden) {
+        lastFrameRef.current = 0;
+        return;
+      }
       const context = canvas.getContext("2d");
       if (!context) return;
 
@@ -750,7 +791,7 @@ export default function BotaoMatch({
       );
     });
     return () => cancelAnimationFrame(frame);
-  }, [handleEvents, bump, showFlash, desktopLandscape, localMatch, showcase]);
+  }, [handleEvents, bump, showFlash, desktopLandscape, localMatch, showcase, setup.managerMode]);
 
   // -------------------------------------------------------- gol e intervalo
   useEffect(() => {
@@ -1261,10 +1302,12 @@ export default function BotaoMatch({
     );
   };
 
+  const RootElement = setup.managerMode ? "div" : "main";
   return (
-    <div
+    <RootElement
       className={`botao-root ${showcase ? "botao-root-showcase" : ""} ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""}`}
     >
+      {!setup.managerMode && <h1 className="botao-sr-only">{setup.competitionName} · {setup.stageName}: {setup.userTeam.shortName} contra {setup.cpuTeam.shortName}</h1>}
       <header className="botao-hud">
         <div className="botao-hud-top">
           {showcase ? (
@@ -1376,7 +1419,7 @@ export default function BotaoMatch({
             ) : null}
           </div>
         )}
-        {!setup.managerMode && matchMoment && <div key={matchMoment.id} className={`botao-match-moment botao-match-moment-${matchMoment.tone}`} role="status" aria-live="polite" aria-atomic="true"><span>{matchMoment.label}</span><strong>{matchMoment.detail}</strong></div>}
+        {!setup.managerMode && matchMoment && <div key={matchMoment.id} className={`botao-match-moment botao-match-moment-${matchMoment.tone}`} aria-hidden="true"><span>{matchMoment.label}</span><strong>{matchMoment.detail}</strong></div>}
       </header>
       {formerClubGoalPrompt && setup.formerClub && (
         <div
@@ -1713,6 +1756,9 @@ export default function BotaoMatch({
               const next = !muted;
               setMuted(next);
               setBotaoMuted(next);
+              if (!setup.managerMode) {
+                try { window.localStorage.setItem("futbobo_player_match_muted", next ? "1" : "0"); } catch { /* preferência opcional */ }
+              }
               if (!next) unlockAudio();
             }}
           >
@@ -1749,6 +1795,6 @@ export default function BotaoMatch({
       <div className="botao-sr-only" role="status" aria-live="polite">
         {announcement}
       </div>
-    </div>
+    </RootElement>
   );
 }

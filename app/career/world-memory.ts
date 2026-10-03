@@ -256,7 +256,7 @@ function transferNews(state: GameState) {
       title: hadPlayedThere ? `${state.name} volta ao ${to.shortName}` : `${state.name} troca ${from.shortName} por ${to.shortName}`,
       summary: hadPlayedThere
         ? `Volta após ${previousSeasonsThere} temporada${previousSeasonsThere > 1 ? "s" : ""} pelo clube; deixa o ${from.shortName}.`
-        : `Após ${previous.appearances} partidas pelo ${from.shortName}, chega a ${to.city}.`,
+        : `Após ${previous.appearances} partidas na última temporada pelo ${from.shortName}, chega a ${to.city}.`,
     });
   });
 
@@ -272,7 +272,7 @@ function transferNews(state: GameState) {
       priority: returning ? "major" : "normal",
       title: returning ? `${state.name} está de volta ao ${to.shortName}` : `${state.name} chega ao ${to.shortName}`,
       summary: returning
-        ? `Retorna a ${to.city} depois de ${last.appearances} jogos pelo ${from.shortName}.`
+        ? `Retorna a ${to.city} depois de ${last.appearances} jogos na última temporada pelo ${from.shortName}.`
         : `Novo destino: ${to.city}. A última temporada foi no ${from.shortName}.`,
     });
   }

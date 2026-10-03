@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { countryById } from "../../game-data";
 import type { GameState } from "../../career/model";
 import { buildDomesticTitleArchive, domesticArchiveClubName, isDomesticArchiveOnlyClub } from "../../career/domestic-title-archive";
@@ -92,7 +92,7 @@ function entityName(ledger: CompetitionLedgerView, entityId: string) {
   return ledger.entityType === "country" ? countryById(entityId).name : domesticArchiveClubName(entityId);
 }
 
-function CompetitionCard({ ledger, state, open, onToggle }: { ledger: CompetitionLedgerView; state: GameState; open: boolean; onToggle: () => void }) {
+function CompetitionCard({ ledger, state, open, onToggle, onSelectClub }: { ledger: CompetitionLedgerView; state: GameState; open: boolean; onToggle: () => void; onSelectClub?: (clubId: string) => void }) {
   const leader = ledger.titleTable[0];
   const leaderName = leader ? entityName(ledger, leader.entityId) : ledger.label;
   const highlightedId = ledger.entityType === "country" ? state.nationality : state.currentClubId;
@@ -107,13 +107,19 @@ function CompetitionCard({ ledger, state, open, onToggle }: { ledger: Competitio
     </button>
     {open && <div className={styles.competitionDetails}>
       {ledger.id === "domestic-copa-do-brasil" && <div className={styles.timelineLabel}><strong>Final por final</strong><span>{champions.length} edições no arquivo · campeão e vice</span></div>}
-      {champions.length > 0 && <div className={`${styles.championTimeline} ${ledger.id === "domestic-copa-do-brasil" ? styles.cupTimeline : ""}`} aria-label={ledger.id === "domestic-copa-do-brasil" ? "Finais da Copa do Brasil por temporada" : undefined}>{champions.map((champion) => {
+      {champions.length > 0 && <div className={`${styles.championTimeline} ${ledger.id === "domestic-copa-do-brasil" ? styles.cupTimeline : ""}`} role={ledger.id === "domestic-copa-do-brasil" ? "group" : undefined} aria-label={ledger.id === "domestic-copa-do-brasil" ? "Finais da Copa do Brasil por temporada" : undefined}>{champions.map((champion) => {
         const name = entityName(ledger, champion.winnerId);
-        return <article key={`${ledger.id}-${champion.season}`}><EntityBadge ledger={ledger} entityId={champion.winnerId} /><span><small>{champion.season} · CAMPEÃO</small><strong>{name}</strong>{champion.runnerUpId && <em>vice: {entityName(ledger, champion.runnerUpId)}</em>}</span></article>;
+        const content = <><EntityBadge ledger={ledger} entityId={champion.winnerId} /><span><small>{champion.season} · CAMPEÃO</small><strong>{name}</strong>{champion.runnerUpId && <em>vice: {entityName(ledger, champion.runnerUpId)}</em>}</span></>;
+        return ledger.id === "domestic-copa-do-brasil" && onSelectClub
+          ? <button type="button" className={styles.cupFinalRow} key={`${ledger.id}-${champion.season}`} onClick={() => onSelectClub(champion.winnerId)} aria-label={`Abrir ficha de ${name}, campeão da Copa do Brasil em ${champion.season}`}>{content}</button>
+          : <article key={`${ledger.id}-${champion.season}`}>{content}</article>;
       })}</div>}
       <div className={styles.ranking}>{ledger.titleTable.map((entry) => {
         const name = entityName(ledger, entry.entityId);
-        return <article className={entry.entityId === highlightedId ? styles.highlighted : ""} key={entry.entityId}><b>#{entry.rank}</b><EntityBadge ledger={ledger} entityId={entry.entityId} /><strong>{name}</strong><span>{entry.titles}</span></article>;
+        const row = <><b>#{entry.rank}</b><EntityBadge ledger={ledger} entityId={entry.entityId} /><strong>{name}</strong><span>{entry.titles}</span></>;
+        return ledger.id === "domestic-copa-do-brasil" && onSelectClub
+          ? <button type="button" className={`${styles.rankingClubRow} ${entry.entityId === highlightedId ? styles.highlighted : ""}`} key={entry.entityId} onClick={() => onSelectClub(entry.entityId)} aria-label={`Abrir ficha de ${name}, ${entry.titles} ${entry.titles === 1 ? "Copa do Brasil" : "Copas do Brasil"}`}>{row}</button>
+          : <article className={entry.entityId === highlightedId ? styles.highlighted : ""} key={entry.entityId}>{row}</article>;
       })}</div>
     </div>}
   </section>;
@@ -124,7 +130,11 @@ function PlayerBoard({ title, eyebrow, unit, entries }: { title: string; eyebrow
 }
 
 export default function CareerWorld({ state }: { state: GameState }) {
+  const pageRef = useRef<HTMLDivElement>(null);
   const [section, setSection] = useState<WorldSection>("now");
+  const [selectedClub, setSelectedClub] = useState({ ownerClubId: state.currentClubId, id: state.currentClubId });
+  const selectedClubId = selectedClub.ownerClubId === state.currentClubId ? selectedClub.id : state.currentClubId;
+  const selectClub = (clubId: string) => setSelectedClub({ ownerClubId: state.currentClubId, id: clubId });
   const [competitionOpen, setCompetitionOpen] = useState("");
   const [officialOpen, setOfficialOpen] = useState("");
   const [domesticTitlesOpen, setDomesticTitlesOpen] = useState(false);
@@ -142,18 +152,24 @@ export default function CareerWorld({ state }: { state: GameState }) {
     { title: "Maiores transferências", eyebrow: "MERCADO", unit: "€ mi", entries: worldPlayerTransferLeaders(state, 16) },
   ], [state]);
   const featured = snapshot.news[0];
+  const currentClub = clubById(state.currentClubId);
+  const openClubDossier = (clubId: string) => {
+    selectClub(clubId);
+    setSection("clubs");
+    if (pageRef.current) pageRef.current.scrollTop = 0;
+  };
   const nationalCompetitions = snapshot.competitionLedgers.filter((ledger) => ledger.entityType === "country");
   const clubCompetitions = snapshot.competitionLedgers.filter((ledger) => ledger.entityType === "club");
 
-  return <div className={`panel-screen screen-enter ${styles.page}`}>
-    <header className={styles.heading}><span>MUNDO</span><strong>{state.season} no mundo.</strong><p>Notícias, campeões e recordes do seu universo.</p></header>
-    <nav className={styles.sectionNav} aria-label="Seções do Mundo">{SECTION_ITEMS.map((item) => <button type="button" key={item.id} className={section === item.id ? styles.activeSection : ""} aria-pressed={section === item.id} onClick={() => { setSection(item.id); setCompetitionOpen(""); window.scrollTo({ top: 0, behavior: "smooth" }); }}><FutboboIcon name={item.icon} /><span><small>{item.hint}</small><strong>{item.label}</strong></span></button>)}</nav>
+  return <div ref={pageRef} className={`panel-screen screen-enter ${styles.page}`}>
+    <header className={styles.heading}><span>MUNDO</span><h1>{state.season} no mundo.</h1><p>Notícias, campeões e recordes do seu universo.</p></header>
+    <nav className={styles.sectionNav} aria-label="Seções do Mundo">{SECTION_ITEMS.map((item) => <button type="button" key={item.id} className={section === item.id ? styles.activeSection : ""} aria-pressed={section === item.id} onClick={() => { setSection(item.id); setCompetitionOpen(""); if (pageRef.current) pageRef.current.scrollTop = 0; window.scrollTo({ top: 0, behavior: "smooth" }); }}><FutboboIcon name={item.icon} /><span><small>{item.hint}</small><strong>{item.label}</strong></span></button>)}</nav>
 
-    {section === "now" && <>{featured ? <article className={`${styles.featured} ${featured.priority === "major" ? styles.major : ""}`}><small>{CATEGORY_LABELS[featured.category]} · {featured.season}</small><strong>{featured.title}</strong><p>{featured.summary}</p></article> : <div className={styles.empty}><strong>Ainda não há manchetes da carreira.</strong><span>As primeiras partidas e decisões vão aparecer aqui.</span></div>}{snapshot.news.length > 1 && <section className={styles.newsSection}><header><span>GIRO DO MUNDO</span><small>Mais recentes</small></header><div>{snapshot.news.slice(1, 13).map((item) => <article key={item.id}><time>{item.season}</time><span><small>{CATEGORY_LABELS[item.category]}</small><strong>{item.title}</strong><p>{item.summary}</p></span>{item.priority === "major" && <b>●</b>}</article>)}</div></section>}</>}
+    {section === "now" && <>{featured ? <article className={`${styles.featured} ${featured.priority === "major" ? styles.major : ""}`}><small>{CATEGORY_LABELS[featured.category]} · {featured.season}</small><strong>{featured.title}</strong><p>{featured.summary}</p></article> : <div className={styles.empty}><strong>Ainda não há manchetes da carreira.</strong><span>As primeiras partidas e decisões vão aparecer aqui.</span></div>}{currentClub.countryId === "brasil" && <button className={styles.cupShortcut} type="button" onClick={() => openClubDossier(state.currentClubId)}><span><FutboboIcon name="trophy" /></span><span><small>COPA DO BRASIL · ARQUIVO</small><strong>Finais e títulos do {currentClub.shortName}</strong></span><b>→</b></button>}{snapshot.news.length > 1 && <section className={styles.newsSection}><header><span>GIRO DO MUNDO</span><small>Mais recentes</small></header><div>{snapshot.news.slice(1, 13).map((item) => <article key={item.id}><time>{item.season}</time><span><small>{CATEGORY_LABELS[item.category]}</small><strong>{item.title}</strong><p>{item.summary}</p></span>{item.priority === "major" && <b>●</b>}</article>)}</div></section>}</>}
 
     {section === "national" && <section className={styles.sectionStack}><header><small>SELEÇÕES</small><strong>Torneios e campeões</strong><p>Copas do Mundo e competições continentais.</p></header>{nationalCompetitions.map((ledger) => <CompetitionCard key={ledger.id} ledger={ledger} state={state} open={competitionOpen === ledger.id} onToggle={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} />)}</section>}
-    {section === "clubs" && <section className={styles.sectionStack}><ClubDossierPanel currentClubId={state.currentClubId} competitionLedgers={clubCompetitions} domesticLedgers={domesticTitleLedgers} /><header><small>COMPETIÇÕES</small><strong>O mapa dos campeões</strong><p>Abra uma taça para ver os vencedores e o ranking do seu universo.</p></header>{clubCompetitions.map((ledger) => <CompetitionCard key={ledger.id} ledger={ledger} state={state} open={competitionOpen === ledger.id} onToggle={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} />)}</section>}
-    {section === "players" && <section className={styles.sectionStack}><header><small>JOGADORES</small><strong>Quem está deixando marca</strong><p>Mais nomes, mais estatísticas e o mercado do seu universo.</p></header><div className={styles.playerGrid}>{playerBoards.map((board) => <PlayerBoard key={board.title} {...board} />)}</div></section>}
+    {section === "clubs" && <section className={styles.sectionStack}><ClubDossierPanel currentClubId={state.currentClubId} selectedClubId={selectedClubId} onSelectClub={selectClub} competitionLedgers={clubCompetitions} domesticLedgers={domesticTitleLedgers} /><header><small>COMPETIÇÕES</small><strong>Campeões continentais e mundiais</strong><p>Abra uma taça para ver os vencedores e o ranking do seu universo.</p></header>{clubCompetitions.map((ledger) => <CompetitionCard key={ledger.id} ledger={ledger} state={state} open={competitionOpen === ledger.id} onToggle={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} />)}</section>}
+    {section === "players" && <section className={styles.sectionStack}><header><small>JOGADORES</small><strong>Gols, passes e transferências</strong><p>Os números de quem joga no seu universo.</p></header><div className={styles.playerGrid}>{playerBoards.map((board) => <PlayerBoard key={board.title} {...board} />)}</div></section>}
     {section === "archive" && <>
       <section className={styles.competitionCard}>
         <button type="button" onClick={() => { setDomesticTitlesOpen((current) => !current); setCompetitionOpen(""); }} aria-expanded={domesticTitlesOpen}>
@@ -161,10 +177,10 @@ export default function CareerWorld({ state }: { state: GameState }) {
           <span><small>ARQUIVO · CLUBES</small><strong>Títulos nacionais</strong><em>Brasileirão, Copa do Brasil e principais ligas e copas</em></span><b>{domesticTitlesOpen ? "−" : "+"}</b>
         </button>
         {domesticTitlesOpen && <div className={styles.competitionDetails}><div className={styles.sectionStack} style={{ padding: 9 }}>
-          {domesticTitleLedgers.map((ledger) => <CompetitionCard key={ledger.id} ledger={ledger} state={state} open={competitionOpen === ledger.id} onToggle={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} />)}
+          {domesticTitleLedgers.map((ledger) => <CompetitionCard key={ledger.id} ledger={ledger} state={state} open={competitionOpen === ledger.id} onToggle={() => setCompetitionOpen((current) => current === ledger.id ? "" : ledger.id)} onSelectClub={ledger.id === "domestic-copa-do-brasil" ? openClubDossier : undefined} />)}
         </div></div>}
       </section>
-      <section className={styles.officialSection}><header><span>ARQUIVO VIVO</span><small>Recordes históricos que não se repetem nas outras abas</small></header><div>{officialRankings.map((board) => {
+      <section className={styles.officialSection}><header><span>ARQUIVO VIVO</span><small>Recordes de seleções, carreiras e torneios</small></header><div>{officialRankings.map((board) => {
         const open = officialOpen === board.id; const highlightedIndex = board.entries.findIndex((entry) => entry.highlight); const highlighted = highlightedIndex >= 0 ? board.entries[highlightedIndex] : null;
         return <article className={`${styles.officialCard} ${board.living ? styles.livingCard : ""}`} key={board.id}><button type="button" onClick={() => setOfficialOpen((current) => current === board.id ? "" : board.id)} aria-expanded={open}><span><small>{board.eyebrow}</small><strong>{board.label}</strong><em>{board.entries[0]?.label} · {board.entries[0]?.value} {board.unit}{highlighted && highlightedIndex > 0 ? ` · ${highlighted.label} #${rankingPosition(board.entries, highlightedIndex)}` : ""}</em></span><b>{open ? "−" : "+"}</b></button>{open && <div className={styles.officialRanking}><div className={styles.officialRows}>{board.entries.map((entry, index) => <div className={entry.highlight ? styles.livingEntry : ""} key={`${board.id}-${entry.label}`}><b>#{rankingPosition(board.entries, index)}</b><strong>{entry.label}</strong><span>{entry.value}</span></div>)}</div><small>{board.cutoff}</small></div>}</article>;
       })}</div></section>

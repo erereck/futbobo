@@ -197,11 +197,11 @@ export default function BotaoStandalonePage() {
           {setup.competitionName} · {setup.stageName}
           {result.simulated ? " · simulada" : ""}
         </p>
-        <div
+        <h1
           className={`botao-headline ${won ? "botao-headline-win" : "botao-headline-loss"}`}
         >
           {won ? "CAMPEÃO" : result.outcome === "draw" ? "EMPATE" : "VICE"}
-        </div>
+        </h1>
         <div className="botao-card">
           <div className="botao-scoreboard">
             <div className="botao-team">
@@ -221,7 +221,7 @@ export default function BotaoStandalonePage() {
           <div className="botao-formation-row">
             <span className="botao-chip">
               {result.decision === "penalties"
-                ? `Pênaltis ${result.penaltyFor} x ${result.penaltyAgainst}`
+                ? `Pênaltis ${result.penaltyFor} × ${result.penaltyAgainst}`
                 : result.decision === "goal-limit"
                   ? "Decidido no 3º gol"
                   : result.decision === "extra-time"
@@ -308,7 +308,7 @@ export default function BotaoStandalonePage() {
             </div>
           ) : (
             <p className="botao-result-empty">
-              Nenhum gol antes da disputa por pênaltis.
+              {result.decision === "penalties" ? "A decisão foi para os pênaltis depois de um jogo sem gols." : "A partida terminou sem gols."}
             </p>
           )}
           {activeReplay !== null && result.replays?.[activeReplay] && (
