@@ -39,7 +39,7 @@ export function WorldPulseTicker({ headlines, onOpen }: { headlines: WorldPulseH
   const headlineKey = headlines.map((headline) => headline.id).join("|");
 
   useEffect(() => {
-    if (headlines.length < 2) return;
+    if (headlines.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let swapTimer = 0;
     const interval = window.setInterval(() => {
       setTickerMoving(true);
@@ -59,7 +59,7 @@ export function WorldPulseTicker({ headlines, onOpen }: { headlines: WorldPulseH
   const next = headlines[(headlineIndex + 1) % headlines.length];
   return <button type="button" className={styles.pulse} onClick={onOpen} aria-label={`Abrir Mundo: ${current.title}`}>
     <span><i /> MUNDO</span>
-    <span className={styles.pulseViewport} aria-live="polite">
+    <span className={styles.pulseViewport} aria-live="off">
       <span className={`${styles.pulseTrack} ${tickerMoving ? styles.pulseMoving : ""}`}>
         <strong>{current.title}</strong>
         <strong aria-hidden="true">{next.title}</strong>
