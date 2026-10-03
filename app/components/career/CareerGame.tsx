@@ -3722,7 +3722,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           )}
 
           {activeTab === "stats" && game.phase === "career" && (
-            <div className="panel-screen statistics-screen screen-enter">
+            <div className="panel-screen statistics-screen screen-enter" role="region" tabIndex={0} aria-label="Estatísticas da carreira">
               <header className="statistics-hero">
                 <span>CENTRAL ESTATÍSTICA</span>
                 <h2>Sua carreira em números</h2>

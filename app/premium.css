@@ -3980,6 +3980,8 @@ p,
 }
 
 .career-phase-career.career-tab-event .decision-button small { color: #a2b3a7; }
+.career-tab-stats .metric span { color: #a2b3a7; }
+.career-tab-stats .statistics-screen:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 @media (max-width: 540px) {
   .career-phase-career.career-tab-event .decision-button small { font-size: 9px; }
 }
