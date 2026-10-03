@@ -89,6 +89,10 @@ export type WorldTransferRecord = {
   fee: number;
 };
 
+function counted(value: number, singular: string, plural: string) {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
 export type WorldSnapshot = {
   news: WorldNewsItem[];
   worldCupChampions: WorldCompetitionChampion[];
@@ -205,8 +209,8 @@ function competitionNews(record: SeasonRecord): WorldNewsItem[] {
   const major = champions.find((competition) => MAJOR_COMPETITIONS.has(competition.id)) ?? champions[0];
   const otherTitles = champions.filter((competition) => competition.id !== major.id);
   const campaign = record.position === "GOL"
-    ? `${record.cleanSheets} jogos sem sofrer gol em ${record.appearances} partidas`
-    : `${record.goals} gols e ${record.assists} assistências em ${record.appearances} partidas`;
+    ? `${counted(record.cleanSheets, "jogo", "jogos")} sem sofrer gol em ${counted(record.appearances, "partida", "partidas")}`
+    : `${counted(record.goals, "gol", "gols")} e ${counted(record.assists, "assistência", "assistências")} em ${counted(record.appearances, "partida", "partidas")}`;
   return [{
     id: `club-title-${record.season}-${major.id}-${record.clubId}`,
     season: record.season,
@@ -233,8 +237,8 @@ function awardNews(state: GameState, record: SeasonRecord): WorldNewsItem[] {
     priority: major ? "major" : "normal",
     title: award === "Bola de Ouro" ? `${state.name} vence a Bola de Ouro` : `${state.name}: ${award}`,
     summary: record.position === "GOL"
-      ? `${clubById(record.clubId).shortName} · ${record.cleanSheets} jogos sem sofrer gol, ${record.overall} OVR.`
-      : `${clubById(record.clubId).shortName} · ${record.goals} gols, ${record.assists} assistências, ${record.overall} OVR.`,
+      ? `${clubById(record.clubId).shortName} · ${counted(record.cleanSheets, "jogo", "jogos")} sem sofrer gol, ${record.overall} OVR.`
+      : `${clubById(record.clubId).shortName} · ${counted(record.goals, "gol", "gols")}, ${counted(record.assists, "assistência", "assistências")}, ${record.overall} OVR.`,
   }];
 }
 
@@ -340,7 +344,7 @@ function nationalNews(state: GameState) {
       priority: "major",
       title: `${countryById(record.countryId ?? state.nationality).name} vence ${record.name}`,
       summary: record.tournamentStats
-        ? `${state.name}: ${record.tournamentStats.appearances} jogos, ${record.tournamentStats.goals} gols e ${record.tournamentStats.assists} assistências.`
+        ? `${state.name}: ${counted(record.tournamentStats.appearances, "jogo", "jogos")}, ${counted(record.tournamentStats.goals, "gol", "gols")} e ${counted(record.tournamentStats.assists, "assistência", "assistências")}.`
         : `${state.name} esteve no elenco campeão da ${record.name}.`,
     }));
 }
@@ -392,7 +396,7 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
       category: "world-cup",
       priority: "major",
       title: `${winner.name} é campeão do mundo`,
-      summary: `${result.season} · agora soma ${titles[result.winnerCountryId]} título(s) na história.`,
+      summary: `${result.season} · agora soma ${counted(titles[result.winnerCountryId], "título", "títulos")} na história.`,
     });
   }
 

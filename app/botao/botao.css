@@ -2569,3 +2569,9 @@
 @keyframes botao-score-pop{0%{transform:scale(.87);filter:brightness(1.6)}60%{transform:scale(1.08)}100%{transform:scale(1);filter:brightness(1)}}
 @media(max-width:540px){.botao-match-moment{grid-template-columns:1fr;gap:3px;padding:7px 9px}.botao-match-moment>strong{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.botao-time-progress>span{transition:none}.botao-match-moment,.botao-score-animated{animation:none}}
+.botao-key-hint{display:none}
+@media(min-width:900px){
+  .botao-root-player{background:radial-gradient(ellipse 36% 56% at 50% 49%,rgba(30,94,55,.11),transparent 85%),radial-gradient(ellipse 32% 44% at 9% 47%,rgba(244,196,48,.025),transparent 88%),radial-gradient(ellipse 32% 44% at 91% 47%,rgba(244,196,48,.025),transparent 88%),var(--bg,#07110d)}
+  .botao-root-player .botao-table-wrapper{box-shadow:0 0 0 6px var(--bg,#050b08),0 0 72px rgba(45,133,78,.16)}
+  .botao-key-hint{display:block;color:#91a398;font:800 9px/1 ui-monospace,monospace;letter-spacing:.1em;text-align:center}
+}

@@ -3978,3 +3978,8 @@ p,
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
+
+.career-phase-career.career-tab-event .decision-button small { color: #a2b3a7; }
+@media (max-width: 540px) {
+  .career-phase-career.career-tab-event .decision-button small { font-size: 9px; }
+}

@@ -258,6 +258,16 @@ export default function BotaoMatch({
     });
   }, []);
 
+  const toggleSound = useCallback(() => {
+    const next = !muted;
+    setMuted(next);
+    setBotaoMuted(next);
+    if (!setup.managerMode) {
+      try { window.localStorage.setItem("futbobo_player_match_muted", next ? "1" : "0"); } catch { /* preferência opcional */ }
+    }
+    if (!next) unlockAudio();
+  }, [muted, setup.managerMode]);
+
   useEffect(() => {
     pausedRef.current = paused;
     const now = performance.now();
@@ -366,6 +376,24 @@ export default function BotaoMatch({
       // O áudio continua controlável quando o navegador bloqueia storage.
     }
   }, [setup.managerMode]);
+
+  useEffect(() => {
+    if (setup.managerMode) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+      if ((event.target as HTMLElement | null)?.closest("input, textarea, select, [contenteditable='true']")) return;
+      const key = event.key.toLocaleLowerCase("pt-BR");
+      if (key === "p" && matchRef.current?.phase !== "finished" && !substitutionOpen && !formerClubGoalPrompt) {
+        event.preventDefault();
+        togglePause();
+      } else if (key === "m") {
+        event.preventDefault();
+        toggleSound();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [setup.managerMode, substitutionOpen, formerClubGoalPrompt, togglePause, toggleSound]);
 
   // Voltando de segundo plano o rAF ficou parado: zera o relógio de frame para
   // não descontar de uma vez o tempo em que o app esteve fora da tela. A regra
@@ -1305,7 +1333,7 @@ export default function BotaoMatch({
   const RootElement = setup.managerMode ? "div" : "main";
   return (
     <RootElement
-      className={`botao-root ${showcase ? "botao-root-showcase" : ""} ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""}`}
+      className={`botao-root ${!setup.managerMode ? "botao-root-player" : ""} ${showcase ? "botao-root-showcase" : ""} ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""}`}
     >
       {!setup.managerMode && <h1 className="botao-sr-only">{setup.competitionName} · {setup.stageName}: {setup.userTeam.shortName} contra {setup.cpuTeam.shortName}</h1>}
       <header className="botao-hud">
@@ -1741,6 +1769,7 @@ export default function BotaoMatch({
               type="button"
               className="botao-ghost botao-pause-toggle"
               aria-pressed={paused}
+              title={!setup.managerMode ? "Atalho: P" : undefined}
               onClick={togglePause}
             >
               <span aria-hidden="true">{paused ? "▶" : "II"}</span>
@@ -1752,15 +1781,8 @@ export default function BotaoMatch({
             type="button"
             className="botao-ghost"
             aria-pressed={muted}
-            onClick={() => {
-              const next = !muted;
-              setMuted(next);
-              setBotaoMuted(next);
-              if (!setup.managerMode) {
-                try { window.localStorage.setItem("futbobo_player_match_muted", next ? "1" : "0"); } catch { /* preferência opcional */ }
-              }
-              if (!next) unlockAudio();
-            }}
+            title={!setup.managerMode ? "Atalho: M" : undefined}
+            onClick={toggleSound}
           >
             {muted ? "Som off" : "Som on"}
           </button>
@@ -1791,6 +1813,7 @@ export default function BotaoMatch({
             {compactMobileTable ? "Ampliar mesa" : "Encolher mesa"}
           </button>
         </div>
+        {!setup.managerMode && <span className="botao-key-hint">ATALHOS: P PAUSA · M SOM</span>}
       </footer>
       <div className="botao-sr-only" role="status" aria-live="polite">
         {announcement}
