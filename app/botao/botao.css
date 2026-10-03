@@ -1132,10 +1132,8 @@
 }
 
 .botao-headline {
-  margin: 0;
   font-family: var(--display, "Arial Black", Impact, sans-serif);
   font-size: 34px;
-  line-height: 1.1;
   letter-spacing: -0.04em;
   text-align: center;
 }
@@ -2570,6 +2568,7 @@
 @media(max-width:540px){.botao-match-moment{grid-template-columns:1fr;gap:3px;padding:7px 9px}.botao-match-moment>strong{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.botao-time-progress>span{transition:none}.botao-match-moment,.botao-score-animated{animation:none}}
 .botao-key-hint{display:none}
+.botao-lobby>h1.botao-headline{margin:0;line-height:1.1}
 @media(min-width:900px){
   .botao-root-player{background:radial-gradient(ellipse 36% 56% at 50% 49%,rgba(30,94,55,.11),transparent 85%),radial-gradient(ellipse 32% 44% at 9% 47%,rgba(244,196,48,.025),transparent 88%),radial-gradient(ellipse 32% 44% at 91% 47%,rgba(244,196,48,.025),transparent 88%),var(--bg,#07110d)}
   .botao-root-player .botao-table-wrapper{box-shadow:0 0 0 6px var(--bg,#050b08),0 0 72px rgba(45,133,78,.16)}
