@@ -736,7 +736,7 @@ export default function BotaoMatch({
                 PENALTY_PAUSE_MS,
               );
               const commitWhenRunning = () => {
-                if (pausedRef.current) {
+                if (pausedRef.current || (!setup.managerMode && document.hidden)) {
                   timersRef.current.penalty = window.setTimeout(
                     commitWhenRunning,
                     120,
@@ -827,7 +827,7 @@ export default function BotaoMatch({
     if (!state || state.phase !== "goal" || timersRef.current.goal !== null)
       return;
     const resumeGoal = () => {
-      if (pausedRef.current || formerClubPromptRef.current) {
+      if (pausedRef.current || formerClubPromptRef.current || (!setup.managerMode && document.hidden)) {
         timersRef.current.goal = window.setTimeout(resumeGoal, 120);
         return;
       }
@@ -845,7 +845,7 @@ export default function BotaoMatch({
       }
     };
     timersRef.current.goal = window.setTimeout(resumeGoal, GOAL_PAUSE_MS);
-  }, [signature, handleEvents, showFlash, paused]);
+  }, [signature, handleEvents, showFlash, paused, setup.managerMode]);
 
   // -------------------------------------------------------------- vez da CPU
   useEffect(() => {
@@ -868,7 +868,7 @@ export default function BotaoMatch({
 
     setCpuThinking(true);
     const playCpuTurn = () => {
-      if (pausedRef.current) {
+      if (pausedRef.current || (!setup.managerMode && document.hidden)) {
         timersRef.current.cpu = window.setTimeout(playCpuTurn, 120);
         return;
       }
@@ -918,7 +918,7 @@ export default function BotaoMatch({
       bump();
     };
     timersRef.current.cpu = window.setTimeout(playCpuTurn, CPU_THINK_MS);
-  }, [signature, bump, paused, localMatch]);
+  }, [signature, bump, paused, localMatch, setup.managerMode]);
 
   // ------------------------------------------------------------------- fim
   useEffect(() => {
@@ -955,11 +955,16 @@ export default function BotaoMatch({
       2400,
     );
     vibrate(won ? [0, 90, 60, 90, 60, 160] : [0, 200]);
-    timersRef.current.finish = window.setTimeout(() => {
+    const finishWhenVisible = () => {
+      if (!setup.managerMode && document.hidden) {
+        timersRef.current.finish = window.setTimeout(finishWhenVisible, 120);
+        return;
+      }
       timersRef.current.finish = null;
       onFinishRef.current(result);
-    }, 1800);
-  }, [signature, showFlash, localMatch, formerClubGoalPrompt]);
+    };
+    timersRef.current.finish = window.setTimeout(finishWhenVisible, 1800);
+  }, [signature, showFlash, localMatch, formerClubGoalPrompt, setup.managerMode]);
 
   // -------------------------------------------------------------- interação
   const shootableAt = useCallback(
