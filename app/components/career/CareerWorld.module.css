@@ -13,3 +13,46 @@
 .pulseTrack strong{display:block;overflow:hidden;color:#eef3ef;font-size:8px;line-height:10px;text-overflow:ellipsis;white-space:nowrap}
 .pulseMoving{transform:translateY(-10px);transition:transform 280ms cubic-bezier(.77,0,.175,1)}
 .pulse>b{display:grid;place-items:center;font-size:12px}
+
+.archiveBadge{width:30px;height:30px;display:grid;place-items:center;border:1px solid rgba(244,196,48,.23);border-radius:8px;background:#182319;color:#f4c430;font:900 10px/1 ui-monospace,monospace}
+.heading h1{margin:0;font-size:25px;line-height:1.1;letter-spacing:-.03em}
+.timelineLabel{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.05)}
+.timelineLabel strong{color:#e3d39a;font-size:10px}
+.timelineLabel span{color:#819187;font-size:9px}
+.cupTimeline{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-columns:auto;max-height:42dvh;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
+.cupTimeline article{min-height:53px}
+.championTimeline article>span:last-child>em{overflow:hidden;color:#819187;font-size:9px;font-style:normal;text-overflow:ellipsis;white-space:nowrap}
+.cupTimeline small{font-size:8px}.cupTimeline strong{font-size:10px}
+.cupFinalRow{min-width:0;display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:7px;align-content:center;padding:5px 9px;background:#0b1510;color:#eef3ef}
+.cupFinalWinner{min-width:0;min-height:33px;grid-column:1/-1;display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:7px;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.cupFinalWinner>span:last-child{min-width:0;display:grid;gap:3px}.cupFinalWinner strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cupFinalRunner{min-width:0;grid-column:2;padding:3px 0;border:0;background:transparent;color:#a6b7ab;font-size:9px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.cupFinalRunner span{color:#f4c430}.cupFinalWinner:hover strong,.cupFinalRunner:hover{color:#f4c430}
+.cupFinalWinner:focus-visible,.cupFinalRunner:focus-visible{outline:2px solid #f4c430;outline-offset:2px}
+.rankingClubRow{width:100%;min-height:45px;display:grid;grid-template-columns:34px 34px minmax(0,1fr) 34px;align-items:center;gap:7px;padding:6px 11px;border:0;border-bottom:1px solid rgba(255,255,255,.04);background:transparent;color:#eef3ef;text-align:left;cursor:pointer}
+.rankingClubRow>b{color:#708077;font:900 8px/1 ui-monospace,monospace}
+.rankingClubRow>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
+.rankingClubRow>span:last-child{justify-self:end;color:#f4c430;font-weight:900}
+.rankingClubRow:hover{background:#182619}
+.rankingClubRow:focus-visible{outline:2px solid #f4c430;outline-offset:-3px}
+.cupShortcut{width:100%;min-height:63px;display:grid;grid-template-columns:34px minmax(0,1fr) 17px;align-items:center;gap:9px;padding:10px 12px;border:1px solid rgba(244,196,48,.22);border-radius:11px;background:linear-gradient(100deg,rgba(244,196,48,.075),#0d1711 65%);color:#f1f4ee;text-align:left;cursor:pointer}
+.cupShortcut>span:first-child{display:grid;place-items:center;color:#f4c430;font-size:20px}
+.cupShortcut>span:nth-child(2){display:grid;gap:4px;min-width:0}
+.cupShortcut small{color:#c3a63f;font:900 8px/1 ui-monospace,monospace;letter-spacing:.1em}
+.cupShortcut strong{overflow:hidden;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
+.cupShortcut b{color:#f4c430;font-size:18px}
+.cupShortcut:hover{border-color:rgba(244,196,48,.5);background:#192219}
+.competitionCard>button:hover,.officialCard>button:hover{background:rgba(244,196,48,.045)}
+.competitionCard>button:focus-visible,.officialCard>button:focus-visible,.sectionNav button:focus-visible,.cupShortcut:focus-visible{outline:2px solid #f4c430;outline-offset:-3px}
+@media(prefers-reduced-motion:reduce){.pulseMoving{transition:none}}
+@media(max-width:560px){
+  .heading h1{font-size:21px}
+  .cupTimeline{grid-template-columns:1fr;max-height:37dvh}
+  .cupTimeline article,.cupFinalRow{min-height:49px}
+  .sectionNav{grid-template-columns:repeat(5,minmax(0,1fr));overflow:visible;position:sticky;top:0;z-index:8;gap:2px;padding:4px}
+  .sectionNav button{grid-template-columns:1fr;justify-items:center;gap:3px;min-height:53px;padding:5px 1px}
+  .sectionNav button>span{text-align:center;gap:0}
+  .sectionNav button small{display:none}
+  .sectionNav button strong{font-size:9px}
+  .sectionNav button>svg{font-size:16px}
+}

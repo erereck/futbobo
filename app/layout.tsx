@@ -4,6 +4,8 @@ import "./globals.css";
 import "./premium.css";
 import "./mobile-career-nav.css";
 
+const publicAssetRoot = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 const manrope = localFont({
   src: "../public/fonts/manrope-latin.woff2",
   variable: "--font-manrope",
@@ -63,10 +65,10 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "favicon.svg",
-    shortcut: "favicon.svg",
+    icon: `${publicAssetRoot}/favicon.svg`,
+    shortcut: `${publicAssetRoot}/favicon.svg`,
   },
-  manifest: "manifest.webmanifest",
+  manifest: `${publicAssetRoot}/manifest.webmanifest`,
   openGraph: {
     title: "Futbobo — Simulador de Carreira de Jogador de Futebol",
     description:
@@ -75,13 +77,13 @@ export const metadata: Metadata = {
     url: "https://futbobo.top/",
     siteName: "Futbobo",
     locale: "pt_BR",
-    images: [{ url: "og-v6.png", width: 1200, height: 630, alt: "Futbobo — Sua carreira, seu legado" }],
+    images: [{ url: `${publicAssetRoot}/og-v6.png`, width: 1200, height: 630, alt: "Futbobo — Sua carreira, seu legado" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Futbobo — Simulador de Carreira de Jogador de Futebol",
     description: "Crie seu jogador, construa uma carreira mundial e jogue as maiores finais no futebol de botão.",
-    images: ["og-v6.png"],
+    images: [`${publicAssetRoot}/og-v6.png`],
   },
 };
 

@@ -12,6 +12,8 @@ import Link from "next/link";
 import { CLUBS, POSITIONS, type Club, type PositionKey } from "../game-data";
 import BotaoMatch from "./BotaoMatch";
 import GoalReplay from "./GoalReplay";
+import BotaoMatchStats from "./BotaoMatchStats";
+import { describeMatchTurningPoint } from "./result-story";
 import TeamCrest from "./TeamCrest";
 import "./botao.css";
 import {
@@ -197,11 +199,11 @@ export default function BotaoStandalonePage() {
           {setup.competitionName} · {setup.stageName}
           {result.simulated ? " · simulada" : ""}
         </p>
-        <div
+        <h1
           className={`botao-headline ${won ? "botao-headline-win" : "botao-headline-loss"}`}
         >
           {won ? "CAMPEÃO" : result.outcome === "draw" ? "EMPATE" : "VICE"}
-        </div>
+        </h1>
         <div className="botao-card">
           <div className="botao-scoreboard">
             <div className="botao-team">
@@ -218,10 +220,11 @@ export default function BotaoStandalonePage() {
               <TeamCrest team={setup.cpuTeam} />
             </div>
           </div>
+          <p className="botao-match-recap">{describeMatchTurningPoint(result, setup)}</p>
           <div className="botao-formation-row">
             <span className="botao-chip">
               {result.decision === "penalties"
-                ? `Pênaltis ${result.penaltyFor} x ${result.penaltyAgainst}`
+                ? `Pênaltis ${result.penaltyFor} × ${result.penaltyAgainst}`
                 : result.decision === "goal-limit"
                   ? "Decidido no 3º gol"
                   : result.decision === "extra-time"
@@ -239,32 +242,7 @@ export default function BotaoStandalonePage() {
             <span className="botao-chip">{result.turns} toques</span>
           </div>
         </div>
-        <div className="botao-card">
-          <span className="botao-card-title">Números da mesa</span>
-          {(
-            [
-              [
-                "Toques dados",
-                result.stats.user.flicks,
-                result.stats.cpu.flicks,
-              ],
-              [
-                "Encostou na bola",
-                result.stats.user.touches,
-                result.stats.cpu.touches,
-              ],
-              ["Na trave", result.stats.user.posts, result.stats.cpu.posts],
-            ] as Array<[string, number, number]>
-          ).map(([label, mine, theirs]) => (
-            <div key={label} className="botao-stat-row">
-              <b className={mine >= theirs ? "botao-stat-lead" : ""}>{mine}</b>
-              <span>{label}</span>
-              <b className={theirs >= mine ? "botao-stat-lead" : ""}>
-                {theirs}
-              </b>
-            </div>
-          ))}
-        </div>
+        <BotaoMatchStats result={result} />
         <div className="botao-card">
           <span className="botao-card-title">Gols da partida</span>
           {matchGoals.length > 0 ? (
@@ -308,7 +286,7 @@ export default function BotaoStandalonePage() {
             </div>
           ) : (
             <p className="botao-result-empty">
-              Nenhum gol antes da disputa por pênaltis.
+              {result.decision === "penalties" ? "A decisão foi para os pênaltis depois de um jogo sem gols." : "A partida terminou sem gols."}
             </p>
           )}
           {activeReplay !== null && result.replays?.[activeReplay] && (

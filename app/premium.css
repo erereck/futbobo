@@ -3204,6 +3204,80 @@ button:active:not(:disabled) { transform: scale(.98); }
   .career-phase-career.career-tab-event .event-heading p { line-height: 1.25; }
 }
 
+/* O capítulo ganha um símbolo de cena no espaço entre a meta e as escolhas. */
+@media (max-width: 540px) and (min-height: 701px) {
+  .career-phase-career.career-tab-event > .event-stage { position: relative; }
+  .career-phase-career.career-tab-event .event-art {
+    position: absolute;
+    top: 35%;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    display: flex;
+    height: min(18dvh, 140px);
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    border: 0;
+    background: radial-gradient(circle, rgba(244,196,48,.05), transparent 62%);
+    pointer-events: none;
+  }
+  .career-phase-career.career-tab-event .event-art::before {
+    width: 150px;
+    height: 150px;
+    right: calc(50% - 75px);
+    bottom: calc(50% - 75px);
+    border-width: 1px;
+    border-color: rgba(244,196,48,.12);
+  }
+  .career-phase-career.career-tab-event .event-tag { display: none; }
+  .career-phase-career.career-tab-event .event-watermark {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    color: rgba(244,196,48,.22);
+    font-size: clamp(70px, 13dvh, 108px);
+    line-height: 1;
+    animation: event-symbol-breathe 4s ease-in-out infinite;
+  }
+  @keyframes event-symbol-breathe {
+    50% { opacity: .62; transform: scale(1.07); }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .career-phase-career.career-tab-event .event-watermark { animation: none; }
+}
+
+@media (max-width: 540px) {
+  .career-status-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: hidden;
+  }
+  .career-status-strip > span,
+  .career-status-strip .retirement-trigger {
+    min-width: 0;
+    padding-inline: 5px;
+  }
+  .career-status-strip strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+@media (min-width: 900px) {
+  .career-shell > .career-header {
+    grid-template-columns: minmax(0, 1fr) 43px 63px;
+    gap: 4px;
+    padding-inline: 12px;
+  }
+  .career-shell .club-identity { gap: 5px; }
+  .career-shell .club-identity strong { font-size: 15px; }
+  .career-shell .career-age strong { font-size: 32px; }
+  .career-shell .player-identity { gap: 3px; }
+  .career-shell .player-identity > span strong { font-size: 23px; }
+  .career-shell .mini-avatar { width: 27px; height: 34px; font-size: 10px; }
+}
+
 /* v85 — responsive match desk. The creation room uses the whole desktop
    viewport, while the mobile event deck gives every decision a real row. */
 @media (min-width: 900px) {
@@ -3903,4 +3977,11 @@ p,
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+}
+
+.career-phase-career.career-tab-event .decision-button small { color: #a2b3a7; }
+.career-tab-stats .metric span { color: #a2b3a7; }
+.career-tab-stats .statistics-screen:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+@media (max-width: 540px) {
+  .career-phase-career.career-tab-event .decision-button small { font-size: 9px; }
 }

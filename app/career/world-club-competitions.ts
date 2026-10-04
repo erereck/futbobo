@@ -406,7 +406,9 @@ function buildContinentalCompetition(
           category: "career",
           priority: "major",
           title: `${club.shortName} conquista ${config.label}`,
-          summary: `${season} · ${titles[winnerId]} título(s) no histórico deste universo.`,
+          summary: titles[winnerId] === 1
+            ? `Primeira taça do clube na competição. A conquista entra no arquivo de ${season}.`
+            : `${titles[winnerId]}ª taça do clube na competição, registrada em ${season}.`,
         });
       }
     }

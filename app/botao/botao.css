@@ -2024,6 +2024,25 @@
   min-width: 44px;
   min-height: 44px;
 }
+.botao-match-recap {
+  margin: 0;
+  padding: 9px 11px;
+  border-left: 2px solid var(--gold, #f4c430);
+  border-radius: 0 7px 7px 0;
+  background: rgba(244, 196, 48, 0.055);
+  color: #cbd7cd;
+  font-size: 11px;
+  line-height: 1.5;
+}
+@media (max-width: 560px) {
+  .botao-lobby .botao-team strong {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.05;
+    white-space: normal;
+  }
+}
 
 @media (hover: hover) {
   .botao-primary:hover {
@@ -2550,4 +2569,27 @@
   .botao-substitution-piece-ghost {
     animation: none;
   }
+}
+
+/* Leitura de jogo: relógio e último lance ficam no HUD, sem pausar a mesa. */
+.botao-time-progress{height:3px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.09)}
+.botao-time-progress>span{display:block;height:100%;border-radius:inherit;background:var(--gold,#f4c430);transition:width 120ms linear}
+.botao-match-moment{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:9px;min-height:32px;padding:7px 10px;border:1px solid rgba(244,196,48,.16);border-radius:9px;background:rgba(244,196,48,.065);animation:botao-moment-enter 260ms ease-out both}
+.botao-match-moment>span{color:var(--gold,#f4c430);font:900 8px/1 ui-monospace,monospace;letter-spacing:.08em;white-space:nowrap}
+.botao-match-moment>strong{min-width:0;overflow:hidden;color:var(--text,#f5f7f2);font-size:10px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.botao-match-moment-bad{border-color:rgba(255,90,78,.2);background:rgba(255,90,78,.07)}
+.botao-match-moment-bad>span{color:var(--red,#ff5a4e)}
+.botao-match-moment-info{border-color:var(--line,rgba(168,211,181,.15));background:rgba(168,211,181,.045)}
+.botao-match-moment-info>span{color:var(--muted,#9fb3a6)}
+.botao-score-animated{animation:botao-score-pop 420ms cubic-bezier(.16,1,.3,1) both}
+@keyframes botao-moment-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes botao-score-pop{0%{transform:scale(.87);filter:brightness(1.6)}60%{transform:scale(1.08)}100%{transform:scale(1);filter:brightness(1)}}
+@media(max-width:540px){.botao-match-moment{grid-template-columns:1fr;gap:3px;padding:7px 9px}.botao-match-moment>strong{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.botao-time-progress>span{transition:none}.botao-match-moment,.botao-score-animated{animation:none}}
+.botao-key-hint{display:none}
+.botao-lobby>h1.botao-headline{margin:0;line-height:1.1}
+@media(min-width:900px){
+  .botao-root-player{background:radial-gradient(ellipse 36% 56% at 50% 49%,rgba(30,94,55,.11),transparent 85%),radial-gradient(ellipse 32% 44% at 9% 47%,rgba(244,196,48,.025),transparent 88%),radial-gradient(ellipse 32% 44% at 91% 47%,rgba(244,196,48,.025),transparent 88%),var(--bg,#07110d)}
+  .botao-root-player .botao-table-wrapper{box-shadow:0 0 0 6px var(--bg,#050b08),0 0 72px rgba(45,133,78,.16)}
+  .botao-key-hint{display:block;color:#91a398;font:800 9px/1 ui-monospace,monospace;letter-spacing:.1em;text-align:center}
 }

@@ -261,7 +261,9 @@ export function buildLivingNationalCompetitions(state: GameState): LivingNationa
           category: "career",
           priority: "major",
           title: `${country.name} vence ${config.label}`,
-          summary: `${season} · ${titles[winnerId]} título(s) no histórico deste universo.`,
+          summary: titles[winnerId] === 1
+            ? `Primeiro título da seleção na competição, registrado em ${season}.`
+            : `${titles[winnerId]}ª conquista da seleção, registrada em ${season}.`,
         });
       }
     }

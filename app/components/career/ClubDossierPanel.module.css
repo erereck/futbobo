@@ -1,0 +1,62 @@
+.archive{display:grid;gap:10px;margin-bottom:8px}
+.heading{display:grid;gap:5px;padding:8px 3px 2px}
+.heading>span,.identity small,.cupSpotlight small{color:#f4c430;font:900 8px/1 ui-monospace,monospace;letter-spacing:.14em}
+.heading strong{font-size:21px;line-height:1.1;letter-spacing:-.025em}
+.heading p{max-width:58ch;margin:0;color:#90a096;font-size:10px;line-height:1.5}
+.backToCup{justify-self:start;min-height:34px;padding:5px 10px;border:1px solid rgba(244,196,48,.25);border-radius:8px;background:#182418;color:#f4c430;font-size:10px;font-weight:800;cursor:pointer}.backToCup:hover{border-color:#f4c430;background:#26311d}
+.searchRow{display:flex;align-items:end;gap:8px}
+.search{min-width:0;flex:1;display:grid;gap:5px;color:#90a096;font:800 8px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}
+.search input{width:100%;height:42px;padding:0 13px;border:1px solid rgba(255,255,255,.14);border-radius:10px;outline:0;background:#0d1711;color:#eef3ef;font:600 12px/1 inherit;letter-spacing:normal;text-transform:none}
+.search input:focus-visible{border-color:#f4c430;box-shadow:0 0 0 3px rgba(244,196,48,.13)}
+.search input::placeholder{color:#708077}
+.myClub{height:42px;padding:0 13px;border:1px solid rgba(244,196,48,.3);border-radius:10px;background:#182418;color:#f4c430;font-size:10px;font-weight:800;cursor:pointer}
+.clubStrip{display:flex;align-items:center;gap:6px;overflow-x:auto;min-height:36px;padding-bottom:3px;scrollbar-width:thin}
+.clubStrip button{flex:0 0 auto;min-height:31px;padding:0 10px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:#0d1711;color:#a2afa6;font-size:10px;font-weight:700;cursor:pointer}
+.clubStrip button:hover,.clubStrip .selectedClub{border-color:rgba(244,196,48,.45);background:#24301d;color:#f4c430}
+.clubStrip>span{flex:0 0 auto;color:#75867b;font-size:9px}
+.dossier{overflow:hidden;border:1px solid rgba(244,196,48,.2);border-radius:15px;background:linear-gradient(150deg,rgba(244,196,48,.075),transparent 42%),#0d1711}
+.identity{display:flex;align-items:center;gap:13px;padding:18px}
+.badge{width:60px;height:60px;flex:0 0 auto;display:grid;place-items:center;border:1px solid rgba(244,196,48,.25);border-radius:14px;background:#152018;color:#f4c430;font-size:20px;font-weight:900}
+.badge :global(.club-badge){width:48px!important;height:48px!important}
+.identity>div:last-child{min-width:0;display:grid;gap:4px}
+.identity strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:22px;letter-spacing:-.03em}
+.identity>div:last-child>span{color:#a4b2a9;font-size:10px}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-block:1px solid rgba(255,255,255,.065)}
+.metrics>div{display:grid;gap:3px;padding:11px 16px;border-right:1px solid rgba(255,255,255,.065)}
+.metrics>div:last-child{border-right:0}
+.metrics strong{color:#f4c430;font:900 22px/1 ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.metrics span{color:#91a097;font-size:9px}
+.cupSpotlight{display:grid;gap:11px;padding:15px 18px;border-bottom:1px solid rgba(255,255,255,.065)}
+.cupSpotlight>div:first-child{display:grid;gap:4px}
+.cupSpotlight strong{font-size:18px}
+.cupSpotlight>div:first-child>span{color:#91a097;font-size:10px}
+.years{display:flex;flex-wrap:wrap;gap:5px}
+.years span{padding:6px 8px;border:1px solid rgba(255,255,255,.1);border-radius:6px;background:#111e15;color:#bbc8be;font:800 10px/1 ui-monospace,monospace}
+.years .saveYear{border-color:rgba(244,196,48,.42);background:#2d2b16;color:#f4c430}
+.years em{color:#9aa99e;font-size:10px;font-style:normal}
+.runnerUps{margin:0;color:#84968b;font-size:9px;line-height:1.4}
+.cupFinals{overflow:hidden;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:#0a140e}
+.finalsHeading{display:flex;justify-content:space-between;gap:8px;padding:9px 11px;border-bottom:1px solid rgba(255,255,255,.07)}
+.finalsHeading strong{color:#c4d0c6;font-size:11px}.finalsHeading span{color:#819187;font-size:9px}
+.finalsList{max-height:230px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.finalsList>div{display:grid;grid-template-columns:34px 62px minmax(0,1fr) 43px;align-items:center;gap:7px;min-height:34px;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.045)}
+.finalsList>div:last-child{border-bottom:0}
+.finalsList time{color:#93a49a;font:800 10px/1 ui-monospace,monospace}
+.finalsList strong{color:#a9b5ac;font-size:10px}
+.finalsList .finalWon strong{color:#f4c430}
+.finalsList>div>span{min-width:0;overflow:hidden;color:#c4d0c6;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.finalsList>div>button{min-width:0;overflow:hidden;padding:3px 0;border:0;background:transparent;color:#c4d0c6;font:inherit;font-size:10px;text-align:left;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.finalsList>div>button:hover{color:#f4c430}
+.finalsList>div>button span{color:#f4c430}
+.finalsList small{color:#76877b;font-size:9px;text-align:right}
+.honours{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:rgba(255,255,255,.05)}
+.honours>div{min-width:0;display:grid;align-content:start;gap:6px;padding:13px 17px;background:#0d1711}
+.honours>div>div{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.honours strong{font-size:11px}.honours>div>div>span{flex:0 0 auto;color:#f4c430;font-size:10px;font-weight:900}
+.honours small,.honours p{margin:0;color:#84968b;font-size:9px;line-height:1.4}
+.empty{margin:0;padding:18px;color:#90a096;font-size:10px}
+.dossier footer{padding:10px 17px;border-top:1px solid rgba(255,255,255,.055);color:#708077;font-size:8px;line-height:1.4}
+.archive button:focus-visible{outline:2px solid #f4c430;outline-offset:2px}
+@media(max-width:560px){.heading strong{font-size:19px}.identity{padding:14px}.identity strong{font-size:19px}.metrics>div{padding:10px 12px}.metrics strong{font-size:19px}.metrics span{font-size:9px}.honours{grid-template-columns:1fr}.cupSpotlight{padding:14px}}
+@media(max-width:560px){.finalsList>div{grid-template-columns:34px 55px minmax(0,1fr);row-gap:2px}.finalsList small{grid-column:2/-1;text-align:left}}
+@media(min-width:900px){.cupSpotlightSplit{grid-template-columns:minmax(250px,.38fr) minmax(0,1fr);grid-template-areas:"summary finals" "years finals";align-items:start;column-gap:20px}.cupSpotlightSplit>div:first-child{grid-area:summary}.cupSpotlightSplit>.years{grid-area:years}.cupSpotlightSplit>.cupFinals{grid-area:finals}}

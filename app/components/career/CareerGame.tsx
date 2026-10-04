@@ -11,6 +11,8 @@ import { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prest
 import { ACHIEVEMENTS, NEWS_TEMPLATES, fillNewsTemplate, findRivalry } from "../../mega-expansion";
 import BotaoMatch from "../../botao/BotaoMatch";
 import GoalReplay from "../../botao/GoalReplay";
+import BotaoMatchStats from "../../botao/BotaoMatchStats";
+import { describeMatchTurningPoint } from "../../botao/result-story";
 import TeamCrest from "../../botao/TeamCrest";
 import AndroidInstallDialog from "../../AndroidInstallDialog";
 import PlayerAppearanceEditor, { PlayerAppearancePortrait } from "../../PlayerAppearanceEditor";
@@ -47,6 +49,7 @@ import TransferMarketScreen from "./TransferMarketScreen";
 import PressConferenceDialog from "./PressConferenceDialog";
 import CycleShopDialog from "./CycleShopDialog";
 import { worldFinalOpponentForSeason } from "../../career/world-club-competitions";
+import { seasonResultStory } from "../../career/season-narrative";
 import FutboboIcon from "../FutboboIcon";
 
 type CareerGameProps = {
@@ -355,6 +358,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     .sort((a, b) => b.score - a.score);
   const todayChallengeBest = todayChallengeResults[0] ?? null;
   const currentClub = useMemo(() => clubById(displayGame.currentClubId || displayGame.academyClubId), [displayGame.currentClubId, displayGame.academyClubId]);
+  const seasonStory = game.lastResult ? seasonResultStory(game.lastResult, clubById(game.lastResult.clubId).shortName) : null;
   const seasonClubTitles = game.lastResult?.competitions.filter((competition) => competition.champion) ?? [];
   const seasonNationalTitles = game.lastResult
     ? game.nationalHistory.filter((record) => record.season === game.lastResult?.season && record.champion)
@@ -2409,9 +2413,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           {match.competitionName} · {match.stageName}
           {result.walkover ? " · W.O. por abandono" : result.simulated ? " · simulada" : ""}
         </p>
-        <div className={`botao-headline ${result.champion ? "botao-headline-win" : "botao-headline-loss"}`}>
+        <h1 className={`botao-headline ${result.champion ? "botao-headline-win" : "botao-headline-loss"}`}>
           {result.walkover ? "DERROTA POR W.O." : result.champion ? (match.stageName === "Final" ? "CAMPEÃO" : "CLASSIFICADO") : match.stageName === "Final" ? "VICE" : "ELIMINADO"}
-        </div>
+        </h1>
         {result.walkover && (
           <div className="botao-card botao-walkover-notice">
             <span>W.O. REGISTRADO</span>
@@ -2425,12 +2429,15 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             <div className="botao-score"><b>{result.goalsFor}</b><span>×</span><b>{result.goalsAgainst}</b></div>
             <div className="botao-team botao-team-cpu"><strong>{setup.cpuTeam.shortName}</strong><TeamCrest team={setup.cpuTeam} /></div>
           </div>
+          {!result.walkover && <p className="botao-match-recap">{describeMatchTurningPoint(result, setup)}</p>}
           <div className="botao-formation-row">
             {result.decision === "penalties" && <span className="botao-chip">Pênaltis {result.penaltyFor} × {result.penaltyAgainst}</span>}
             <span className="botao-chip botao-chip-you">Você: {result.playerGoals}G · {result.playerAssists}A</span>
             {result.manOfTheMatch && <span className="botao-chip botao-chip-stat">Melhor em campo</span>}
+            {!result.walkover && <span className="botao-chip">{result.turns} toques</span>}
           </div>
         </div>
+        {!result.walkover && <BotaoMatchStats result={result} />}
         <div className="botao-card">
           <span className="botao-card-title">Gols da partida</span>
           {result.timeline.some(isMatchGoal) ? (
@@ -2445,7 +2452,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                 );
               })}
             </div>
-          ) : <p className="botao-result-empty">{result.walkover ? "Partida encerrada por abandono. Placar administrativo de 3 × 0." : "Nenhum gol antes da disputa por pênaltis."}</p>}
+          ) : <p className="botao-result-empty">{result.walkover ? "Partida encerrada por abandono. Placar administrativo de 3 × 0." : result.decision === "penalties" ? "A decisão foi para os pênaltis depois de um jogo sem gols." : "A partida terminou sem gols."}</p>}
           {activeGoalReplay !== null && result.replays?.[activeGoalReplay] && (
             <GoalReplay
               replay={result.replays[activeGoalReplay]}
@@ -3196,8 +3203,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             <div className="result-stage screen-enter">
               <span className="result-kicker">TEMPORADA {game.lastResult.season}</span>
               <div className={`result-symbol ${game.lastResult.title ? "winner" : game.lastResult.breakoutBonus > 0 ? "breakout" : ""}`}><FutboboIcon name={game.lastResult.title ? "trophy" : game.lastResult.development < 0 ? "trend-down" : "trend-up"} /></div>
-              <h1>{game.lastResult.title ? "Temporada de campeão!" : game.lastResult.breakoutBonus > 0 ? "Você explodiu de vez!" : game.lastResult.development > 0 ? "Você subiu de nível" : game.lastResult.development < 0 ? "Uma temporada dura" : "Mais um ano de estrada"}</h1>
-              <p>{game.lastResult.title ? "Seu nome agora está gravado em uma taça." : game.lastResult.breakoutBonus > 0 ? "Uma temporada absurda acelerou sua carreira como poucas vezes acontece." : "A temporada terminou e a carreira ganhou mais um capítulo."}</p>
+              <h1>{seasonStory?.headline}</h1>
+              <p>{seasonStory?.detail}</p>
               <div className="season-stat-grid">
                 <Metric label="Jogos" value={game.lastResult.appearances} />
                 <Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.lastResult.cleanSheets : game.lastResult.goals} tone="green" />
@@ -3720,7 +3727,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           )}
 
           {activeTab === "stats" && game.phase === "career" && (
-            <div className="panel-screen statistics-screen screen-enter">
+            <div className="panel-screen statistics-screen screen-enter" role="region" tabIndex={0} aria-label="Estatísticas da carreira">
               <header className="statistics-hero">
                 <span>CENTRAL ESTATÍSTICA</span>
                 <h2>Sua carreira em números</h2>
