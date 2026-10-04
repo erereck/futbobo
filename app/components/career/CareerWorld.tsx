@@ -107,7 +107,7 @@ function CompetitionCard({ ledger, state, open, onToggle, onSelectClub }: { ledg
   const newestChampions = [...ledger.champions].reverse();
   const champions = ledger.id === "domestic-copa-do-brasil" ? newestChampions : newestChampions.slice(0, 10);
   return <section className={styles.competitionCard}>
-    <button type="button" onClick={onToggle} aria-expanded={open}>
+    <button type="button" id={ledger.id === "domestic-copa-do-brasil" ? "copa-do-brasil-archive-toggle" : undefined} onClick={onToggle} aria-expanded={open}>
       <span className={styles.trophy}><FutboboIcon name={ledger.entityType === "country" ? "globe" : "trophy"} /></span>
       <span><small>{ledger.label.toLocaleUpperCase("pt-BR")}</small><strong>{leader ? `${leaderName} · ${leader.titles} ${leader.titles === 1 ? "título" : "títulos"}` : ledger.label}</strong>{highlighted && <em>{highlightedName}: #{highlighted.rank} · {highlighted.titles}</em>}</span><b>{open ? "−" : "+"}</b>
     </button>
@@ -187,6 +187,7 @@ export default function CareerWorld({ state }: { state: GameState }) {
     window.requestAnimationFrame(() => {
       const timeline = pageRef.current?.querySelector<HTMLElement>('[aria-label="Finais da Copa do Brasil por temporada"]');
       if (!timeline) return;
+      pageRef.current?.querySelector<HTMLButtonElement>("#copa-do-brasil-archive-toggle")?.focus({ preventScroll: true });
       timeline.scrollTop = cupTimelineScrollRef.current;
       timeline.scrollIntoView({ block: "center" });
     });
