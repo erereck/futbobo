@@ -93,7 +93,6 @@ const DEFAULT_LOCAL_PLAYER_NAMES: Record<BotaoSide, string> = {
 };
 
 type Flash = { text: string; tone: "goal" | "info" | "bad" } | null;
-type MatchMoment = { id: string; label: string; detail: string; tone: "goal" | "info" | "bad" } | null;
 type SubstitutionDrag = {
   kind: "starter" | "bench";
   id: string;
@@ -217,7 +216,6 @@ export default function BotaoMatch({
 
   const [, setTick] = useState(0);
   const [flash, setFlash] = useState<Flash>(null);
-  const [matchMoment, setMatchMoment] = useState<MatchMoment>(null);
   const [cpuThinking, setCpuThinking] = useState(false);
   const [muted, setMuted] = useState(() => isBotaoMuted());
   const [shaking, setShaking] = useState(false);
@@ -241,14 +239,6 @@ export default function BotaoMatch({
   const pausedRef = useRef(false);
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
-
-  useEffect(() => {
-    if (!matchMoment) return;
-    const timer = window.setTimeout(() => {
-      setMatchMoment((current) => current?.id === matchMoment.id ? null : current);
-    }, 6000);
-    return () => window.clearTimeout(timer);
-  }, [matchMoment]);
 
   const togglePause = useCallback(() => {
     setPaused((current) => {
@@ -424,7 +414,6 @@ export default function BotaoMatch({
           showFlash("NA TRAVE!", "info", 1100);
           if (!setup.managerMode) {
             const team = event.side === "user" ? setup.userTeam.shortName : setup.cpuTeam.shortName;
-            setMatchMoment({ id: `post-${machine.turns}-${event.side}`, label: "BOLA NA TRAVE", detail: `${team} quase mudou o placar.`, tone: "info" });
             setAnnouncement(`Bola na trave de ${team}.`);
           }
         }
@@ -432,7 +421,6 @@ export default function BotaoMatch({
           showFlash("Bola ao centro", "info", 1100);
         if (event.type === "inactivity-penalty") {
           showFlash("PÊNALTI POR DEMORA!", "bad", 1700);
-          if (!setup.managerMode) setMatchMoment({ id: `delay-${machine.turns}`, label: "PÊNALTI POR DEMORA", detail: `${setup.cpuTeam.shortName} recebe a cobrança.`, tone: "bad" });
           setAnnouncement(
             localMatch
               ? "O tempo da jogada terminou."
@@ -443,7 +431,6 @@ export default function BotaoMatch({
           playBotaoSound("whistle");
           showFlash("FIM DO TEMPO", "info", 1400);
           if (!setup.managerMode) {
-            setMatchMoment({ id: `interval-${event.period}`, label: "APITO DO ÁRBITRO", detail: `${setup.userTeam.shortName} ${machine.score.user} × ${machine.score.cpu} ${setup.cpuTeam.shortName}`, tone: "info" });
             setAnnouncement(`Fim do ${event.period}º tempo. ${setup.userTeam.shortName} ${machine.score.user} a ${machine.score.cpu} ${setup.cpuTeam.shortName}.`);
           }
         }
@@ -452,7 +439,6 @@ export default function BotaoMatch({
           if (!setup.managerMode) {
             const team = event.side === "user" ? setup.userTeam.shortName : setup.cpuTeam.shortName;
             const penaltyScore = event.reason === "inactivity" ? machine.score : event.score;
-            setMatchMoment({ id: `penalty-${event.reason}-${event.round}-${event.side}-${machine.turns}`, label: event.reason === "inactivity" ? (event.scored ? "PÊNALTI POR DEMORA" : "PÊNALTI DEFENDIDO") : (event.scored ? "PÊNALTI CONVERTIDO" : "PÊNALTI PERDIDO"), detail: `${team} · ${penaltyScore.user} × ${penaltyScore.cpu}`, tone: event.scored ? "goal" : "bad" });
             setAnnouncement(event.reason === "inactivity"
               ? `${team} ${event.scored ? "converteu" : "perdeu"} o pênalti por demora. Placar: ${penaltyScore.user} a ${penaltyScore.cpu}.`
               : `${team} ${event.scored ? "converteu" : "perdeu"} o pênalti. Disputa: ${penaltyScore.user} a ${penaltyScore.cpu}.`);
@@ -529,12 +515,6 @@ export default function BotaoMatch({
           setAnnouncement(
             `${text} ${event.scorer}. Placar ${machine.score.user} a ${machine.score.cpu}.`,
           );
-          if (!setup.managerMode) setMatchMoment({
-            id: `goal-${machine.timeline.length}-${event.side}`,
-            label: event.ownGoal ? "GOL CONTRA" : `GOL · ${event.side === "user" ? setup.userTeam.shortName : setup.cpuTeam.shortName}`,
-            detail: `${event.scorer}${event.assist ? ` · passe de ${event.assist}` : ""} · ${machine.score.user} × ${machine.score.cpu}`,
-            tone: localMatch || mine ? "goal" : "bad",
-          });
           if (!localMatch && mine && event.byUser && setup.formerClub) {
             formerClubPromptRef.current = true;
             setFormerClubGoalPrompt({
@@ -1452,7 +1432,6 @@ export default function BotaoMatch({
             ) : null}
           </div>
         )}
-        {!setup.managerMode && matchMoment && <div key={matchMoment.id} className={`botao-match-moment botao-match-moment-${matchMoment.tone}`} aria-hidden="true"><span>{matchMoment.label}</span><strong>{matchMoment.detail}</strong></div>}
       </header>
       {formerClubGoalPrompt && setup.formerClub && (
         <div
