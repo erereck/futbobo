@@ -31,8 +31,8 @@ export type ClubDossier = {
 };
 
 export const CLUB_ARCHIVE_INDEX = [
-  ...CLUBS.map((club) => ({ id: club.id, name: club.shortName, countryId: club.countryId })),
-  ...Object.entries(BRAZIL_CUP_ARCHIVE_ONLY_CLUBS).map(([id, name]) => ({ id, name, countryId: "brasil" })),
+  ...CLUBS.map((club) => ({ id: club.id, name: club.shortName, fullName: club.name, countryId: club.countryId })),
+  ...Object.entries(BRAZIL_CUP_ARCHIVE_ONLY_CLUBS).map(([id, name]) => ({ id, name, fullName: name, countryId: "brasil" })),
 ];
 
 /** Deriva cada ficha dos mesmos campeões e rankings do Mundo; nada é salvo em duplicidade. */

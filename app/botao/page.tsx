@@ -12,6 +12,8 @@ import Link from "next/link";
 import { CLUBS, POSITIONS, type Club, type PositionKey } from "../game-data";
 import BotaoMatch from "./BotaoMatch";
 import GoalReplay from "./GoalReplay";
+import BotaoMatchStats from "./BotaoMatchStats";
+import { describeMatchTurningPoint } from "./result-story";
 import TeamCrest from "./TeamCrest";
 import "./botao.css";
 import {
@@ -218,6 +220,7 @@ export default function BotaoStandalonePage() {
               <TeamCrest team={setup.cpuTeam} />
             </div>
           </div>
+          <p className="botao-match-recap">{describeMatchTurningPoint(result, setup)}</p>
           <div className="botao-formation-row">
             <span className="botao-chip">
               {result.decision === "penalties"
@@ -239,32 +242,7 @@ export default function BotaoStandalonePage() {
             <span className="botao-chip">{result.turns} toques</span>
           </div>
         </div>
-        <div className="botao-card">
-          <span className="botao-card-title">Números da mesa</span>
-          {(
-            [
-              [
-                "Toques dados",
-                result.stats.user.flicks,
-                result.stats.cpu.flicks,
-              ],
-              [
-                "Encostou na bola",
-                result.stats.user.touches,
-                result.stats.cpu.touches,
-              ],
-              ["Na trave", result.stats.user.posts, result.stats.cpu.posts],
-            ] as Array<[string, number, number]>
-          ).map(([label, mine, theirs]) => (
-            <div key={label} className="botao-stat-row">
-              <b className={mine >= theirs ? "botao-stat-lead" : ""}>{mine}</b>
-              <span>{label}</span>
-              <b className={theirs >= mine ? "botao-stat-lead" : ""}>
-                {theirs}
-              </b>
-            </div>
-          ))}
-        </div>
+        <BotaoMatchStats result={result} />
         <div className="botao-card">
           <span className="botao-card-title">Gols da partida</span>
           {matchGoals.length > 0 ? (

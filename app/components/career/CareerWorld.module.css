@@ -23,11 +23,12 @@
 .cupTimeline article{min-height:53px}
 .championTimeline article>span:last-child>em{overflow:hidden;color:#819187;font-size:9px;font-style:normal;text-overflow:ellipsis;white-space:nowrap}
 .cupTimeline small{font-size:8px}.cupTimeline strong{font-size:10px}
-.cupFinalRow{min-width:0;min-height:53px;display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:7px;padding:9px;border:0;background:#0b1510;color:#eef3ef;text-align:left;cursor:pointer}
-.cupFinalRow>span:last-child{min-width:0;display:grid;gap:3px}
-.cupFinalRow>span:last-child>em{overflow:hidden;color:#819187;font-size:9px;font-style:normal;text-overflow:ellipsis;white-space:nowrap}
-.cupFinalRow:hover{background:#182619}
-.cupFinalRow:focus-visible{position:relative;outline:2px solid #f4c430;outline-offset:-3px}
+.cupFinalRow{min-width:0;display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:7px;align-content:center;padding:5px 9px;background:#0b1510;color:#eef3ef}
+.cupFinalWinner{min-width:0;min-height:33px;grid-column:1/-1;display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:7px;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.cupFinalWinner>span:last-child{min-width:0;display:grid;gap:3px}.cupFinalWinner strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cupFinalRunner{min-width:0;grid-column:2;padding:3px 0;border:0;background:transparent;color:#a6b7ab;font-size:9px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.cupFinalRunner span{color:#f4c430}.cupFinalWinner:hover strong,.cupFinalRunner:hover{color:#f4c430}
+.cupFinalWinner:focus-visible,.cupFinalRunner:focus-visible{outline:2px solid #f4c430;outline-offset:2px}
 .rankingClubRow{width:100%;min-height:45px;display:grid;grid-template-columns:34px 34px minmax(0,1fr) 34px;align-items:center;gap:7px;padding:6px 11px;border:0;border-bottom:1px solid rgba(255,255,255,.04);background:transparent;color:#eef3ef;text-align:left;cursor:pointer}
 .rankingClubRow>b{color:#708077;font:900 8px/1 ui-monospace,monospace}
 .rankingClubRow>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}

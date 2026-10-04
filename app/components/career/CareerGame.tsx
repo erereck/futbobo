@@ -11,6 +11,8 @@ import { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prest
 import { ACHIEVEMENTS, NEWS_TEMPLATES, fillNewsTemplate, findRivalry } from "../../mega-expansion";
 import BotaoMatch from "../../botao/BotaoMatch";
 import GoalReplay from "../../botao/GoalReplay";
+import BotaoMatchStats from "../../botao/BotaoMatchStats";
+import { describeMatchTurningPoint } from "../../botao/result-story";
 import TeamCrest from "../../botao/TeamCrest";
 import AndroidInstallDialog from "../../AndroidInstallDialog";
 import PlayerAppearanceEditor, { PlayerAppearancePortrait } from "../../PlayerAppearanceEditor";
@@ -2427,12 +2429,15 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             <div className="botao-score"><b>{result.goalsFor}</b><span>×</span><b>{result.goalsAgainst}</b></div>
             <div className="botao-team botao-team-cpu"><strong>{setup.cpuTeam.shortName}</strong><TeamCrest team={setup.cpuTeam} /></div>
           </div>
+          {!result.walkover && <p className="botao-match-recap">{describeMatchTurningPoint(result, setup)}</p>}
           <div className="botao-formation-row">
             {result.decision === "penalties" && <span className="botao-chip">Pênaltis {result.penaltyFor} × {result.penaltyAgainst}</span>}
             <span className="botao-chip botao-chip-you">Você: {result.playerGoals}G · {result.playerAssists}A</span>
             {result.manOfTheMatch && <span className="botao-chip botao-chip-stat">Melhor em campo</span>}
+            {!result.walkover && <span className="botao-chip">{result.turns} toques</span>}
           </div>
         </div>
+        {!result.walkover && <BotaoMatchStats result={result} />}
         <div className="botao-card">
           <span className="botao-card-title">Gols da partida</span>
           {result.timeline.some(isMatchGoal) ? (

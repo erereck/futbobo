@@ -16,12 +16,14 @@ export default function ClubDossierPanel({
   currentClubId,
   selectedClubId,
   onSelectClub,
+  onReturnToCup,
   competitionLedgers,
   domesticLedgers,
 }: {
   currentClubId: string;
   selectedClubId: string;
   onSelectClub: (clubId: string) => void;
+  onReturnToCup?: () => void;
   competitionLedgers: WorldCompetitionLedger[];
   domesticLedgers: DomesticTitleLedger[];
 }) {
@@ -35,7 +37,7 @@ export default function ClubDossierPanel({
   const matches = useMemo(() => {
     const needle = normalized(query.trim());
     return CLUB_ARCHIVE_INDEX
-      .filter((club) => needle ? normalized(club.name).includes(needle) : club.countryId === selected?.countryId)
+      .filter((club) => needle ? normalized(club.name).includes(needle) || normalized(club.fullName).includes(needle) : club.countryId === selected?.countryId)
       .sort((a, b) => a.id === selectedClubId ? -1 : b.id === selectedClubId ? 1 : a.name.localeCompare(b.name, "pt-BR"));
   }, [query, selected?.countryId, selectedClubId]);
 
@@ -50,6 +52,7 @@ export default function ClubDossierPanel({
       <strong>Taças e finais de cada clube.</strong>
       <p>Busque um clube para ver suas conquistas. A Copa do Brasil tem cada final registrada; o save acrescenta novas taças a cada temporada.</p>
     </header>
+    {onReturnToCup && <button type="button" className={styles.backToCup} onClick={onReturnToCup}>← Voltar às finais da Copa do Brasil</button>}
     <div className={styles.searchRow}>
       <label className={styles.search}>
         <span>Buscar clube</span>

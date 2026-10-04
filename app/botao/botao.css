@@ -2024,6 +2024,25 @@
   min-width: 44px;
   min-height: 44px;
 }
+.botao-match-recap {
+  margin: 0;
+  padding: 9px 11px;
+  border-left: 2px solid var(--gold, #f4c430);
+  border-radius: 0 7px 7px 0;
+  background: rgba(244, 196, 48, 0.055);
+  color: #cbd7cd;
+  font-size: 11px;
+  line-height: 1.5;
+}
+@media (max-width: 560px) {
+  .botao-lobby .botao-team strong {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.05;
+    white-space: normal;
+  }
+}
 
 @media (hover: hover) {
   .botao-primary:hover {

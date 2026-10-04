@@ -1718,7 +1718,7 @@ export default function BotaoMatch({
           </p>
         ) : awaitingFirstTouch && (state.phase === "aim" || state.phase === "kickoff") ? (
           <p className="botao-turn botao-turn-active botao-turn-first-touch">
-            Arraste um botão para começar · o relógio espera seu primeiro chute
+            Puxe um botão para trás e solte · o relógio começa no chute
           </p>
         ) : localMatch &&
           (state.phase === "aim" || state.phase === "kickoff") ? (

@@ -33,7 +33,7 @@ export function seasonResultStory(result: SeasonResult, clubName: string) {
     detail: `${seasonLine} Seu nível caiu ${Math.abs(result.development)} OVR.`,
   };
   return {
-    headline: `${result.appearances} jogos pelo ${clubName}`,
+    headline: `${result.appearances} ${result.appearances === 1 ? "jogo" : "jogos"} pelo ${clubName}`,
     detail: `${seasonLine} O nível terminou estável em ${result.overall} OVR.`,
   };
 }
