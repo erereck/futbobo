@@ -693,8 +693,11 @@ function simulateManagerSeason(state: ManagerState): ManagerState {
     7,
     30,
   );
-  const draws = clamp(Math.round(7 + (1 - leagueRoll) * 5), 3, 15);
-  const losses = Math.max(0, matches - wins - draws);
+  const draws = Math.min(
+    matches - wins,
+    clamp(Math.round(7 + (1 - leagueRoll) * 5), 3, 15),
+  );
+  const losses = matches - wins - draws;
   const goalsFor = Math.max(
     24,
     Math.round(35 + wins * 1.45 + performance * 0.16),
@@ -921,6 +924,43 @@ function marketZone(position: WorldPlayer["position"]) {
   if (position === "ZAG" || position === "LD" || position === "LE") return "defense";
   if (position === "CA" || position === "PD" || position === "PE") return "attack";
   return "midfield";
+}
+
+/** Escala um jogador por setor e reserva a quinta vaga ao melhor nome de linha. */
+export function suggestManagerLineup(state: ManagerState): ManagerState {
+  const ranked = managerSquad(state).sort(
+    (a, b) => b.overall - a.overall || a.id.localeCompare(b.id),
+  );
+  if (ranked.length < 5) return state;
+  const picked: WorldPlayer[] = [];
+  for (const zone of ["goal", "defense", "midfield", "attack"]) {
+    const player = ranked.find(
+      (candidate) =>
+        marketZone(candidate.position) === zone &&
+        !picked.some((selected) => selected.id === candidate.id),
+    );
+    if (player) picked.push(player);
+  }
+  for (const player of ranked) {
+    if (picked.length >= 5) break;
+    if (picked.some((selected) => selected.id === player.id)) continue;
+    if (marketZone(player.position) === "goal" && picked.length >= 1) continue;
+    picked.push(player);
+  }
+  for (const player of ranked) {
+    if (picked.length >= 5) break;
+    if (!picked.some((selected) => selected.id === player.id)) picked.push(player);
+  }
+  const starters = picked.map((player) => player.id);
+  const bench = state.squadIds
+    .filter((id) => !starters.includes(id))
+    .slice(0, 3);
+  if (
+    starters.every((id, index) => state.starters[index] === id) &&
+    bench.every((id, index) => state.bench[index] === id)
+  )
+    return state;
+  return setManagerLineup(state, starters, bench);
 }
 
 export function managerMarketFit(state: ManagerState, player: WorldPlayer) {

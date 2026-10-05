@@ -282,8 +282,14 @@
   line-height: 1.5;
   text-wrap: pretty;
 }
-.previewFormationButton {
+.lineupQuickActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 12px;
+}
+.previewFormationButton {
+  margin-top: 0;
   color: #f4c430;
 }
 .teamLayout {

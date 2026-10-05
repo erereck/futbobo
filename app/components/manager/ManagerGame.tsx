@@ -45,6 +45,7 @@ import {
   sellManagerPlayer,
   signManagerPlayer,
   startManagerCareer,
+  suggestManagerLineup,
   type ManagerState,
 } from "../../career/manager-model";
 import {
@@ -1044,16 +1045,34 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               Toque em dois jogadores ou arraste um até outro para trocar. Escolha
               abaixo a formação de entrada; depois de cada gol, ela avança na rotação.
             </p>
-            <button
-              type="button"
-              className={styles.previewFormationButton}
-              onClick={() => {
-                setPreviewFormationId(state.formationId);
-                setFormationPreviewOpen(true);
-              }}
-            >
-              <FutboboIcon name="player" /> Ver posições nas formações
-            </button>
+            <div className={styles.lineupQuickActions}>
+              <button
+                type="button"
+                className={styles.previewFormationButton}
+                onClick={() => {
+                  const next = suggestManagerLineup(state);
+                  if (next !== state) setState(next);
+                  setSelectedPlayer("");
+                  setNotice(
+                    next === state
+                      ? "O melhor cinco já está escalado."
+                      : "Melhor cinco escalado. Você ainda pode fazer trocas manuais.",
+                  );
+                }}
+              >
+                <FutboboIcon name="team" /> Escalar melhor cinco
+              </button>
+              <button
+                type="button"
+                className={styles.previewFormationButton}
+                onClick={() => {
+                  setPreviewFormationId(state.formationId);
+                  setFormationPreviewOpen(true);
+                }}
+              >
+                <FutboboIcon name="player" /> Ver posições nas formações
+              </button>
+            </div>
           </header>
           <div className={styles.teamLayout}>
             <section className={styles.lineupBoard}>
