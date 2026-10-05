@@ -1525,6 +1525,7 @@
   cursor: pointer;
 }
 .jobs button span {
+  min-width: 0;
   flex: 1;
   text-align: left;
 }
@@ -1535,6 +1536,10 @@
 .jobs button small {
   color: #aab8ac;
   font-size: 8px;
+}
+.jobs button small + small {
+  margin-top: 3px;
+  color: #f4c430;
 }
 
 .onboardingRoot,
@@ -1652,7 +1657,7 @@
 }
 .dismissed section > div {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 22px;
 }
@@ -1667,6 +1672,22 @@
   color: #f2f5ed;
   background: #0b1812;
   cursor: pointer;
+}
+.dismissed button > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+}
+.dismissed button strong {
+  font-size: 12px;
+}
+.dismissed button small {
+  color: #aab8ac;
+  font-size: 9px;
+}
+.dismissed button small:last-child {
+  color: #f4c430;
 }
 .loading {
   min-height: 100dvh;
@@ -1888,7 +1909,7 @@
     padding: 16px;
   }
   .dismissed section > div {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 }
 

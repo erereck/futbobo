@@ -34,6 +34,7 @@ import {
   managerMarketOffers,
   managerMatchSetup,
   managerOpponent,
+  managerRecoveryOffers,
   managerSaleValue,
   managerSquad,
   marketFee,
@@ -293,12 +294,14 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     (competition) => competition.champion,
   );
   const lastMatchWasAbandoned =
+    state.history[0]?.season === state.season &&
     state.history[0]?.id === state.lastResult?.matchId &&
     state.history[0]?.walkover === true;
   const jobOffers = useMemo(() => {
     const ids = new Set(state.jobOffers);
     return CLUBS.filter((item) => ids.has(item.id)).slice(0, 3);
   }, [state.jobOffers]);
+  const recoveryOffers = useMemo(() => managerRecoveryOffers(state), [state]);
   const playerStatsRows = useMemo(
     () =>
       squad
@@ -699,20 +702,25 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     return (
       <main className={`app-shell ${styles.dismissed}`}>
         <section>
-          <span>FIM DE CICLO</span>
+          <span>FIM DE CICLO · {state.season}</span>
           <h1>A diretoria encerrou o projeto.</h1>
           <p>
-            Sua reputação continua. Escolha um novo clube e volte para a mesa.
+            Seu trabalho continua em {state.season + 1}. Escolha o próximo
+            clube; seu histórico e o mundo seguem com você.
           </p>
           <div>
-            {CLUBS.slice(0, 12).map((item) => (
+            {recoveryOffers.map((item) => (
               <button
                 type="button"
                 key={item.id}
                 onClick={() => setState(hireManagerAtClub(state, item.id))}
               >
                 <ClubBadge club={item} size="sm" />
-                <span>{item.shortName}</span>
+                <span>
+                  <strong>{item.shortName}</strong>
+                  <small>{LEAGUES.find((league) => league.id === item.leagueId)?.name ?? "Liga nacional"}</small>
+                  <small>Caixa inicial {money(Math.round(item.strength * 115_000))}</small>
+                </span>
               </button>
             ))}
           </div>
@@ -1944,16 +1952,19 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       <ClubBadge club={offer} size="sm" />
                       <span>
                         <strong>{offer.shortName}</strong>
-                        <small>proposta para o próximo ciclo</small>
+                        <small>{LEAGUES.find((league) => league.id === offer.leagueId)?.name ?? "Liga nacional"}</small>
+                        <small>Caixa inicial {money(Math.round(offer.strength * 115_000))}</small>
                       </span>
                       <FutboboIcon name="arrow-right" />
                     </button>
                   ))}
                   <button
                     type="button"
-                    onClick={() => setState(dismissManagerJobOffers(state))}
+                    onClick={() =>
+                      setState(continueManagerSeason(dismissManagerJobOffers(state)))
+                    }
                   >
-                    Continuar no {club.shortName}
+                    Seguir no {club.shortName} em {state.season + 1}
                   </button>
                 </div>
               </article>

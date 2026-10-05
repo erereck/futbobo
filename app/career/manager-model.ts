@@ -1081,6 +1081,30 @@ export function sellManagerPlayer(state: ManagerState, playerId: string) {
   };
 }
 
+export function managerRecoveryOffers(state: ManagerState) {
+  if (state.phase !== "dismissed") return [] as Club[];
+  const current = managerClub(state);
+  const targetStrength = clamp(
+    current.strength - 7 + (state.reputation - 50) * 0.15,
+    45,
+    90,
+  );
+  return CLUBS.filter(
+    (club) =>
+      club.id !== current.id &&
+      club.strength <= Math.max(current.strength + 2, targetStrength + 5),
+  )
+    .map((club) => ({
+      club,
+      score:
+        Math.abs(club.strength - targetStrength) +
+        seeded(hashSeed(state.seed, "manager-recovery", state.season, club.id), state.season) * 6,
+    }))
+    .sort((a, b) => a.score - b.score || b.club.reputation - a.club.reputation)
+    .slice(0, 5)
+    .map(({ club }) => club);
+}
+
 export function replaceManagerPlayer(
   state: ManagerState,
   incomingId: string,
@@ -1101,17 +1125,8 @@ export function replaceManagerPlayer(
 }
 
 export function acceptManagerJobOffer(state: ManagerState, clubId: string) {
-  if (
-    !state.jobOffers.includes(clubId) &&
-    !managerJobOffers({ ...state, phase: "career" }).some(
-      (club) => club.id === clubId,
-    )
-  )
-    return state;
-  const base =
-    state.phase === "result"
-      ? continueManagerSeason({ ...state, jobOffers: [] })
-      : { ...state, jobOffers: [] };
+  if (state.phase !== "result" || !state.jobOffers.includes(clubId)) return state;
+  const base = continueManagerSeason({ ...state, jobOffers: [] });
   const moved = startManagerCareer(base, {
     name: state.name,
     nationality: state.nationality,
@@ -1460,30 +1475,48 @@ export function continueManagerSeason(state: ManagerState) {
 }
 
 export function hireManagerAtClub(state: ManagerState, clubId: string) {
+  if (
+    state.phase !== "dismissed" ||
+    !managerRecoveryOffers(state).some((club) => club.id === clubId)
+  ) return state;
+  const unfinished = state.pendingSeasonRecord;
+  const alreadyRecorded = state.seasonHistory.some(
+    (record) => record.season === state.season && record.clubId === state.currentClubId,
+  );
+  const seasonHistory = unfinished && !alreadyRecorded
+    ? [
+        ...state.seasonHistory,
+        {
+          ...unfinished,
+          boardTrust: state.boardTrust,
+          reputation: state.reputation,
+          competitions: unfinished.competitions.map((competition) =>
+            competition.stage === "FINALISTA"
+              ? { ...competition, stage: "Final não disputada", champion: false }
+              : competition,
+          ),
+        },
+      ].slice(-30)
+    : state.seasonHistory;
+  const nextSeason = state.season + 1;
+  const worldPlayers = advanceWorldPlayerUniverse(state.worldPlayers, {
+    season: nextSeason,
+    focusClubId: state.currentClubId,
+  });
   const restarted = startManagerCareer(
     {
-      ...createManagerState(state.seed),
-      name: state.name,
-      nationality: state.nationality,
-      season: state.season,
-      age: state.age,
-      history: state.history,
-      seasonHistory: state.seasonHistory,
-      playerStats: state.playerStats,
+      ...state,
+      season: nextSeason,
+      age: state.age + 1,
+      worldPlayers,
+      seasonHistory,
     },
-    {
-      name: state.name,
-      nationality: state.nationality,
-      clubId,
-    },
+    { name: state.name, nationality: state.nationality, clubId },
   );
   return {
     ...restarted,
     reputation: Math.max(30, state.reputation),
     boardTrust: 58,
-    history: state.history,
-    seasonHistory: state.seasonHistory,
-    playerStats: state.playerStats,
   };
 }
 
