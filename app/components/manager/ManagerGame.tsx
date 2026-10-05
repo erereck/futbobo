@@ -9,8 +9,9 @@ import {
 } from "react";
 import {
   BOTAO_FORMATIONS,
+  arrangeManagerStarters,
   formationById,
-  slotIndexForPosition,
+  type BotaoSlot,
 } from "../../botao/formations";
 import BotaoMatch from "../../botao/BotaoMatch";
 import TeamCrest from "../../botao/TeamCrest";
@@ -28,12 +29,14 @@ import {
   hireManagerAtClub,
   managerClub,
   managerDecision,
+  managerMarketFit,
   managerMarketOffers,
   managerMatchSetup,
   managerOpponent,
   managerSquad,
   marketFee,
   normalizeManagerState,
+  setManagerFormation,
   setManagerLineup,
   sellManagerPlayer,
   signManagerPlayer,
@@ -152,7 +155,6 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const [matchSetup, setMatchSetup] = useState<
     NonNullable<ReturnType<typeof managerMatchSetup>>["setup"] | null
   >(null);
-  const [matchStarted, setMatchStarted] = useState(false);
   const [matchSummary, setMatchSummary] = useState<ManagerMatchSummary>(null);
   const [formationPreviewOpen, setFormationPreviewOpen] = useState(false);
   const [previewFormationId, setPreviewFormationId] = useState("muralha");
@@ -202,29 +204,26 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     () => new Map(squad.map((player) => [player.id, player])),
     [squad],
   );
+  const startingLineup = useMemo(() => {
+    const formation = formationById(state.formationId);
+    const starters = state.starters
+      .map((id) => playerById.get(id))
+      .filter((player): player is WorldPlayer => Boolean(player));
+    return arrangeManagerStarters(starters, formation).map((player, index) => ({
+      player,
+      slot: formation.slots[index],
+    }));
+  }, [playerById, state.formationId, state.starters]);
   const previewLineup = useMemo(() => {
     const formation = formationById(previewFormationId);
-    const available = formation.slots.map((slot, index) => ({ slot, index }));
-    return state.starters.flatMap((id, playerIndex) => {
-      const player = playerById.get(id);
-      if (!player || !available.length) return [];
-      const preferredIndex = slotIndexForPosition(formation, player.position);
-      let availableIndex = available.findIndex(
-        (candidate) => candidate.index === preferredIndex,
-      );
-      if (availableIndex < 0) {
-        availableIndex = available.reduce(
-          (best, candidate, index) =>
-            Math.abs(candidate.index - preferredIndex) <
-            Math.abs(available[best].index - preferredIndex)
-              ? index
-              : best,
-          Math.min(playerIndex, available.length - 1),
-        );
-      }
-      const [{ slot }] = available.splice(availableIndex, 1);
-      return [{ id, player, slot }];
-    });
+    const starters = state.starters
+      .map((id) => playerById.get(id))
+      .filter((player): player is WorldPlayer => Boolean(player));
+    return arrangeManagerStarters(starters, formation).map((player, index) => ({
+      id: player.id,
+      player,
+      slot: formation.slots[index],
+    }));
   }, [playerById, previewFormationId, state.starters]);
   const marketOffers = useMemo(() => managerMarketOffers(state), [state]);
   const decision = useMemo(() => managerDecision(state), [state]);
@@ -352,7 +351,6 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     }
     setState(prepared.state);
     setMatchSetup(prepared.setup);
-    setMatchStarted(false);
   };
   const completeResult = (
     base: ManagerState,
@@ -371,33 +369,18 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     );
     setMatchSummary({ setup, result });
     setMatchSetup(null);
-    setMatchStarted(false);
     setTab("career");
     setNotice("");
   };
   const swapPlayerIds = (firstId: string, nextId: string) => {
     if (!firstId || firstId === nextId) return;
-    const starters = state.starters.map((id) =>
-      id === firstId ? nextId : id === nextId ? firstId : id,
-    );
-    const bench = state.bench.map((id) =>
-      id === firstId ? nextId : id === nextId ? firstId : id,
-    );
-    const aRelated =
-      state.starters.includes(firstId) || state.bench.includes(firstId);
-    const bRelated =
-      state.starters.includes(nextId) || state.bench.includes(nextId);
-    if (aRelated !== bRelated) {
-      if (state.starters.includes(firstId))
-        starters[state.starters.indexOf(firstId)] = nextId;
-      else if (state.bench.includes(firstId))
-        bench[state.bench.indexOf(firstId)] = nextId;
-      else if (state.starters.includes(nextId))
-        starters[state.starters.indexOf(nextId)] = firstId;
-      else if (state.bench.includes(nextId))
-        bench[state.bench.indexOf(nextId)] = firstId;
-    }
-    setState(setManagerLineup(state, starters, bench));
+    setState((current) => current && current.squadIds.includes(firstId) && current.squadIds.includes(nextId)
+      ? setManagerLineup(
+          current,
+          current.starters.map((id) => id === firstId ? nextId : id === nextId ? firstId : id),
+          current.bench.map((id) => id === firstId ? nextId : id === nextId ? firstId : id),
+        )
+      : current);
     setSelectedPlayer("");
     setRosterDrag(null);
     rosterDragRef.current = null;
@@ -481,7 +464,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         .elementFromPoint(clientX, clientY)
         ?.closest<HTMLElement>("[data-player-id]");
       const nextHover =
-        target?.dataset.playerArea !== current.area
+        target?.dataset.playerId !== current.id
           ? (target?.dataset.playerId ?? "")
           : "";
       setRosterDragHover((previous) =>
@@ -497,7 +480,6 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       .elementFromPoint(clientX, clientY)
       ?.closest<HTMLElement>("[data-player-id]");
     const targetId = target?.dataset.playerId ?? "";
-    const targetArea = target?.dataset.playerArea;
     rosterDragRef.current = null;
     setRosterDrag(null);
     setRosterDragHover("");
@@ -505,7 +487,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       swapPlayers(current.id);
       return;
     }
-    if (targetId && targetId !== current.id && targetArea !== current.area) {
+    if (targetId && targetId !== current.id) {
       swapPlayerIds(current.id, targetId);
     }
   };
@@ -564,70 +546,13 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     );
   }
 
-  if (matchSetup && matchStarted)
+  if (matchSetup)
     return (
       <BotaoMatch
         setup={matchSetup}
         onFinish={(result) => completeResult(state, matchSetup, result)}
       />
     );
-  if (matchSetup) {
-    const lobbyOpponent = opponent ?? club;
-    return (
-      <main className="botao-lobby botao-career-lobby screen-enter">
-        <span className="botao-lobby-kicker">PARTIDA DECISIVA</span>
-        <h1>{state.pendingMatch?.stageName ?? "Final"}</h1>
-        <p className="botao-lobby-lead">
-          {state.pendingMatch?.competitionName} · Agora a taça depende da mesa.
-        </p>
-        <div className="botao-card botao-final-versus">
-          <div className="botao-team">
-            <ClubBadge club={club} size="md" />
-            <strong>{club.shortName}</strong>
-          </div>
-          <div className="botao-versus-mark">
-            <small>DECISÃO</small>
-            <b>×</b>
-          </div>
-          <div className="botao-team botao-team-cpu">
-            <strong>{lobbyOpponent.shortName}</strong>
-            <ClubBadge club={lobbyOpponent} size="md" />
-          </div>
-        </div>
-        <div className="botao-card botao-career-player">
-          <span>SEUS CINCO</span>
-          <strong>
-            {state.starters
-              .map((id) => playerById.get(id)?.name.split(" ").at(-1))
-              .filter(Boolean)
-              .join(" · ")}
-          </strong>
-          <p>
-            Muralha abre a partida. Depois de cada gol, os desenhos avançam na
-            mesma rotação do Rumo ao Estrelato.
-          </p>
-        </div>
-        <div className="botao-actions">
-          <button
-            type="button"
-            className="botao-primary"
-            onClick={() => setMatchStarted(true)}
-          >
-            Jogar no futebol de botão
-          </button>
-          <button
-            type="button"
-            className="botao-ghost"
-            onClick={() =>
-              completeResult(state, matchSetup, simulateBotaoMatch(matchSetup))
-            }
-          >
-            Simular esta partida
-          </button>
-        </div>
-      </main>
-    );
-  }
   if (!loadedState)
     return (
       <main className={styles.loading} aria-live="polite">
@@ -842,7 +767,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           <header>
             <span>{state.pendingMatch?.competitionName ?? "JOGO-CHAVE"}</span>
             <strong>
-              {state.pendingMatch?.stageName ?? "Temporada"} · FINAL{" "}
+              {state.pendingMatch?.stageName ?? "Temporada"} · JOGO{" "}
               {state.pendingMatch?.order ?? 1}/{state.pendingMatch?.total ?? 1}
             </strong>
           </header>
@@ -859,13 +784,17 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               <small>ADVERSÁRIO</small>
             </div>
           </div>
+          <div className={styles.matchLineup}>
+            <span>SEUS CINCO · {formationById(state.formationId).name} {formationById(state.formationId).shape}</span>
+            <strong>{startingLineup.map(({ player }) => player.name.split(" ").at(-1)).join(" · ")}</strong>
+          </div>
           <div className={styles.matchActions}>
             <button
               type="button"
               className={styles.primaryAction}
               onClick={openMatch}
             >
-              <FutboboIcon name="play" /> Jogar partida
+              <FutboboIcon name="play" /> Jogar no futebol de botão
             </button>
             <button
               type="button"
@@ -883,7 +812,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 );
               }}
             >
-              Simular com a mesma IA
+              Simular esta partida
             </button>
           </div>
           <footer>
@@ -896,7 +825,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     );
   };
 
-  const rosterPlayer = (id: string, area: "starter" | "bench") => {
+  const rosterPlayer = (id: string, area: "starter" | "bench", slot?: BotaoSlot) => {
     const player = playerById.get(id);
     if (!player) return null;
     return (
@@ -905,6 +834,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         key={id}
         data-player-id={id}
         data-player-area={area}
+        style={slot ? { left: `${slot.lane * 100}%`, top: `${14 + slot.depth * 70}%` } : undefined}
         className={`${styles.rosterPlayer} ${styles[area]} ${selectedPlayer === id ? styles.selectedPlayer : ""} ${rosterDrag?.id === id && rosterDrag.moved ? styles.draggingPlayer : ""} ${rosterDragHover === id ? styles.rosterDropTarget : ""}`}
         aria-label={`${area === "starter" ? "Titular" : "Reserva"}: ${player.name}`}
         aria-pressed={selectedPlayer === id}
@@ -928,6 +858,46 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     );
   };
 
+  const renderMarket = () => marketOffers.length ? (
+    <section className={styles.market} aria-label="Mercado do elenco">
+      <header>
+        <span>MERCADO</span>
+        <strong>Reforços para o seu elenco</strong>
+        <small>Caixa: {money(state.budget)} · Banco: {state.bench.length}/3</small>
+      </header>
+      <div>
+        {marketOffers.map((player) => {
+          const fee = marketFee(player);
+          const canSign = state.squadIds.length < 8 && state.bench.length < 3 && state.budget >= fee;
+          const currentClub = CLUBS.find((item) => item.id === player.currentClubId);
+          return (
+            <button
+              type="button"
+              key={player.id}
+              disabled={!canSign}
+              aria-label={`${player.name}, ${player.position}, ${player.overall} OVR, ${money(fee)}${canSign ? ", contratar" : ", indisponível"}`}
+              onClick={() => {
+                const next = signManagerPlayer(state, player.id);
+                if (next !== state) {
+                  setState(next);
+                  setNotice(`${player.name} assinou com o ${club.shortName}.`);
+                }
+              }}
+            >
+              <PlayerPortrait player={player} state={state} size={42} neutral />
+              <span>
+                <strong>{player.name}</strong>
+                <small>{player.position} · {player.overall} OVR · {currentClub?.shortName ?? "Agente livre"}</small>
+                <small>{managerMarketFit(state, player)}</small>
+              </span>
+              <b>{money(fee)}<small>{canSign ? "CONTRATAR" : state.squadIds.length >= 8 ? "ABRA VAGA" : "SEM CAIXA"}</small></b>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  ) : null;
+
   const renderPanel = () => {
     if (tab === "team")
       return (
@@ -936,13 +906,16 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             <span>TIME</span>
             <h2>Escolha quem começa.</h2>
             <p>
-              Troque titulares e reservas. O desenho em campo muda sozinho na
-              rotação clássica do Futbobo.
+              Toque em dois jogadores ou arraste um até outro para trocar. Escolha
+              abaixo a formação de entrada; depois de cada gol, ela avança na rotação.
             </p>
             <button
               type="button"
               className={styles.previewFormationButton}
-              onClick={() => setFormationPreviewOpen(true)}
+              onClick={() => {
+                setPreviewFormationId(state.formationId);
+                setFormationPreviewOpen(true);
+              }}
             >
               <FutboboIcon name="player" /> Ver posições nas formações
             </button>
@@ -957,20 +930,24 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 <b>{state.starters.length}/5</b>
               </header>
               <div className={styles.lineupGrid}>
-                {state.starters.map((id) => rosterPlayer(id, "starter"))}
+                {startingLineup.map(({ player, slot }) => rosterPlayer(player.id, "starter", slot))}
               </div>
               <div className={styles.formationRotation}>
                 <span>
-                  <small>ROTAÇÃO AUTOMÁTICA</small>
-                  <strong>Um desenho novo a cada gol</strong>
+                  <small>FORMAÇÃO INICIAL</small>
+                  <strong>Escolha a entrada · depois avança a cada gol</strong>
                 </span>
                 <div>
-                  {BOTAO_FORMATIONS.map((formation, index) => (
-                    <span key={formation.id}>
+                  {BOTAO_FORMATIONS.map((formation) => (
+                    <button
+                      type="button"
+                      key={formation.id}
+                      aria-pressed={state.formationId === formation.id}
+                      onClick={() => setState((current) => current ? setManagerFormation(current, formation.id) : current)}
+                    >
                       <b>{formation.shape}</b>
                       <small>{formation.name}</small>
-                      {index < BOTAO_FORMATIONS.length - 1 ? <i>→</i> : null}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -1009,6 +986,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               </div>
             </aside>
           </div>
+          {renderMarket()}
           {rosterDrag?.moved && playerById.get(rosterDrag.id) ? (
             <div
               ref={rosterDragLayerRef}
@@ -1397,55 +1375,6 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                     : `O trabalho de ${state.name} terminou o ano com ${Math.round(state.boardTrust)}% de confiança.`}
                 </p>
               </article>
-              {marketOffers.length ? (
-                <article className={styles.market}>
-                  <header>
-                    <span>OBSERVAÇÃO DO ELENCO</span>
-                    <strong>Três nomes disponíveis.</strong>
-                    <small>
-                      A contratação ocupa uma vaga aberta no banco (
-                      {state.bench.length}/3).
-                    </small>
-                  </header>
-                  <div>
-                    {marketOffers.map((player) => (
-                      <button
-                        type="button"
-                        key={player.id}
-                        onClick={() => {
-                          const next = signManagerPlayer(state, player.id);
-                          if (next === state)
-                            setNotice(
-                              state.squadIds.length >= 8
-                                ? "Venda um reserva para abrir uma vaga."
-                                : "O caixa não comporta essa contratação.",
-                            );
-                          else {
-                            setState(next);
-                            setNotice(
-                              `${player.name} assinou com o ${club.shortName}.`,
-                            );
-                          }
-                        }}
-                      >
-                        <PlayerPortrait
-                          player={player}
-                          state={state}
-                          size={42}
-                          neutral
-                        />
-                        <span>
-                          <strong>{player.name}</strong>
-                          <small>
-                            {player.position} · {player.overall} OVR
-                          </small>
-                        </span>
-                        <b>{money(marketFee(player))}</b>
-                      </button>
-                    ))}
-                  </div>
-                </article>
-              ) : null}
               <section className={worldStyles.newsSection}>
                 <header>
                   <span>GIRO DO MUNDO</span>

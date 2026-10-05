@@ -10,6 +10,8 @@
 
 import { createRng, hashSeed, type Rng } from "./rng";
 import {
+  arrangeManagerStarters,
+  formationById,
   formationByIndex,
   slotIndexForPosition,
   type BotaoFormation,
@@ -22,7 +24,6 @@ import type {
   BotaoSide,
   BotaoSideStats,
   BotaoTimelineEntry,
-  BotaoPlayer,
 } from "./types";
 
 export const FIELD = {
@@ -379,36 +380,6 @@ function createPost(id: string, x: number, y: number): BotaoBody {
   };
 }
 
-/**
- * O elenco do modo técnico chega em uma ordem de futebol, mas cada desenho
- * da mesa possui uma ordem física própria. Encaixar os atletas no slot mais
- * próximo da sua posição evita, por exemplo, que um MEI seja usado como
- * goleiro quando a formação troca de desenho. Em caso de empate, a ordem do
- * elenco permanece como desempate — a identidade nunca muda, só o lugar.
- */
-function arrangeManagerStarters(
-  starters: BotaoPlayer[],
-  formation: BotaoFormation,
-): BotaoPlayer[] {
-  const remaining = starters.slice();
-  const arranged: BotaoPlayer[] = [];
-  for (let slot = 0; slot < formation.slots.length; slot += 1) {
-    let bestIndex = 0;
-    let bestCost = Number.POSITIVE_INFINITY;
-    remaining.forEach((player, index) => {
-      const preferred = slotIndexForPosition(formation, player.position);
-      const cost = Math.abs(preferred - slot);
-      if (cost < bestCost) {
-        bestCost = cost;
-        bestIndex = index;
-      }
-    });
-    const [picked] = remaining.splice(bestIndex, 1);
-    if (picked) arranged.push(picked);
-  }
-  return arranged;
-}
-
 const SQUAD_NUMBER_POOL = [
   1, 10, 9, 8, 7, 11, 6, 4, 5, 3, 2, 14, 17, 18, 19, 20, 21, 23, 27, 30, 33, 42,
   47, 66, 77, 88, 99,
@@ -447,9 +418,13 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
   const managerMode = Boolean(setup.managerMode && setup.managerRosters);
   const managerRoster = setup.managerRosters;
   const formation = formationByIndex(0);
-  const selectedUserFormation = formation;
+  const selectedUserFormation = managerMode
+    ? formationById(setup.userFormationId ?? formation.id)
+    : formation;
   const selectedCpuFormation = managerMode
-    ? formationByIndex(rng.int(0, 5))
+    ? setup.cpuFormationId
+      ? formationById(setup.cpuFormationId)
+      : formationByIndex(rng.int(0, 5))
     : formation;
   const userSlot = managerMode
     ? -1

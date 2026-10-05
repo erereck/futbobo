@@ -206,6 +206,22 @@
   color: #f4c430;
   font: 800 28px var(--font-barlow-condensed, sans-serif);
 }
+.matchLineup {
+  display: grid;
+  gap: 5px;
+  padding: 13px 16px 0;
+}
+.matchLineup span {
+  color: #f4c430;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+.matchLineup strong {
+  color: #dce7dd;
+  font-size: 11px;
+  line-height: 1.45;
+}
 .matchActions {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
@@ -493,24 +509,21 @@
   font: 900 13px var(--font-barlow-condensed, sans-serif);
 }
 .lineupGrid {
-  min-height: 326px;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(138px, auto));
-  align-items: center;
-  gap: 8px;
-  padding: 18px 28px 10px;
+  position: relative;
+  min-height: 420px;
+  background: linear-gradient(transparent 49.8%, rgba(226, 239, 228, .15) 50%, transparent 50.2%);
 }
 .lineupGrid > .starter {
-  width: 100%;
-  min-height: 132px;
-  grid-column: span 2;
+  position: absolute;
+  width: 96px;
+  min-height: 104px;
+  transform: translate(-50%, -50%);
 }
-.lineupGrid > .starter:nth-child(4) {
-  grid-column: 2 / span 2;
+.lineupGrid > .starter:active {
+  transform: translate(-50%, -50%) scale(.98);
 }
-.lineupGrid > .starter:nth-child(5) {
-  grid-column: 4 / span 2;
+.lineupGrid > .rosterDropTarget {
+  transform: translate(-50%, -50%) scale(1.04);
 }
 .formationRotation {
   display: grid;
@@ -534,7 +547,7 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 4px;
 }
-.formationRotation > div > span {
+.formationRotation > div > button {
   position: relative;
   min-width: 0;
   min-height: 58px;
@@ -544,7 +557,13 @@
   gap: 3px;
   border: 1px solid rgba(226, 239, 228, 0.08);
   border-radius: 9px;
+  color: #dce7dd;
   background: rgba(226, 239, 228, 0.035);
+  cursor: pointer;
+}
+.formationRotation > div > button[aria-pressed="true"] {
+  border-color: rgba(244, 196, 48, .75);
+  background: rgba(244, 196, 48, .13);
 }
 .formationRotation > div b {
   color: #f4c430;
@@ -557,14 +576,6 @@
   font-size: 7px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.formationRotation > div i {
-  position: absolute;
-  z-index: 2;
-  right: -8px;
-  color: rgba(244, 196, 48, 0.62);
-  font-size: 11px;
-  font-style: normal;
 }
 .teamLayout > aside {
   min-width: 0;
@@ -1239,7 +1250,8 @@
   white-space: nowrap;
 }
 .market {
-  margin-bottom: 12px;
+  max-width: 980px;
+  margin: 16px auto 0;
   border: 1px solid rgba(244, 196, 48, 0.2);
   border-radius: 14px;
   padding: 14px;
@@ -1264,7 +1276,7 @@
 }
 .market > div {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 12px;
 }
@@ -1280,6 +1292,10 @@
   background: #102219;
   text-align: left;
   cursor: pointer;
+}
+.market button:disabled {
+  border-color: rgba(226, 239, 228, .06);
+  cursor: not-allowed;
 }
 .market button > span:nth-child(2) {
   min-width: 0;
@@ -1301,9 +1317,21 @@
   font-size: 8px;
 }
 .market button b {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
   color: #f4c430;
   font-size: 9px;
   white-space: nowrap;
+}
+.market button b small {
+  margin: 0;
+  color: #67dd78;
+  font-size: 7px;
+  letter-spacing: .06em;
+}
+.market button:disabled b small {
+  color: #aab8ac;
 }
 .worldGrid {
   display: grid;
@@ -1631,6 +1659,28 @@
   }
 }
 
+@media (min-width: 900px) {
+  .managerCareer:global(.career-shell) > .matchStage {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-content: start;
+    overflow-y: auto;
+  }
+  .managerCareer .matchStage > :global(.objective-card) {
+    grid-column: 1;
+    grid-row: 1;
+    width: min(760px, calc(100% - 32px));
+    margin: 18px auto 0;
+  }
+  .managerCareer .matchStage > .keyMatch {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    height: auto;
+    margin: 14px auto 32px;
+  }
+}
+
 @media (max-width: 700px) {
   .managerCareer {
     --manager-edge: 12px;
@@ -1682,14 +1732,11 @@
     padding: 10px;
   }
   .lineupGrid {
-    min-height: 300px;
-    grid-template-rows: repeat(2, minmax(126px, auto));
-    gap: 4px;
-    padding: 14px 8px 8px;
+    min-height: 400px;
   }
   .lineupGrid > .starter {
-    width: 100%;
-    min-height: 120px;
+    width: 88px;
+    min-height: 100px;
   }
   .formationRotation {
     overflow: hidden;

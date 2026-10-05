@@ -915,21 +915,69 @@ export function setManagerFormation(state: ManagerState, formationId: string) {
   return { ...state, formationId: formationById(formationId).id };
 }
 
+function marketZone(position: WorldPlayer["position"]) {
+  if (position === "GOL") return "goal";
+  if (position === "ZAG" || position === "LD" || position === "LE") return "defense";
+  if (position === "CA" || position === "PD" || position === "PE") return "attack";
+  return "midfield";
+}
+
+export function managerMarketFit(state: ManagerState, player: WorldPlayer) {
+  const squad = managerSquad(state);
+  const samePosition = squad.filter((member) => member.position === player.position);
+  if (!samePosition.length) return `Novo perfil: ${player.position}`;
+  if (player.overall >= Math.max(...samePosition.map((member) => member.overall)) + 3)
+    return "Disputa vaga entre os cinco";
+  if (player.potential >= player.overall + 8) return "Projeto para o futuro";
+  return "Mais opção para a rotação";
+}
+
 export function managerMarketOffers(state: ManagerState) {
-  return Object.values(state.worldPlayers.players)
+  const squad = managerSquad(state);
+  const average = squad.length
+    ? squad.reduce((total, player) => total + player.overall, 0) / squad.length
+    : managerClub(state).strength;
+  const candidates = Object.values(state.worldPlayers.players)
     .filter(
       (player) =>
         player.status === "active" &&
         player.currentClubId !== state.currentClubId &&
         !state.squadIds.includes(player.id),
-    )
-    .sort(
-      (a, b) =>
-        b.overall - a.overall ||
-        b.potential - a.potential ||
-        a.id.localeCompare(b.id),
-    )
-    .slice(0, 3);
+    );
+  const byId = new Map(candidates.map((player) => [player.id, player]));
+  const saved = state.marketOffers.map((id) => byId.get(id)).filter((player): player is WorldPlayer => Boolean(player));
+  if (saved.length >= 4) return saved.slice(0, 4);
+  const targetZoneCount: Record<string, number> = { goal: 1, defense: 2, midfield: 3, attack: 2 };
+  const score = (player: WorldPlayer) => {
+    const zone = marketZone(player.position);
+    const inZone = squad.filter((member) => marketZone(member.position) === zone);
+    const strongest = inZone.length ? Math.max(...inZone.map((member) => member.overall)) : average - 5;
+    const need = inZone.length < targetZoneCount[zone] ? 11 : 0;
+    const quality = clamp(player.overall - strongest, -12, 14) * 1.7;
+    const development = Math.max(0, player.potential - player.overall) * 0.45;
+    const expensive = marketFee(player) > state.budget ? 12 : marketFee(player) > state.budget * 0.6 ? 4 : 0;
+    const leap = Math.max(0, player.overall - Math.max(managerClub(state).strength, average) - 9) * 3;
+    const variety = seeded(hashSeed(state.seed, "manager-market", state.season, player.id), state.season) * 7;
+    return need + quality + development + variety - expensive - leap;
+  };
+  const fourthBest = [...candidates].sort((a, b) => b.overall - a.overall)[3]?.overall ?? 0;
+  const competitive = candidates.filter((player) => player.overall >= Math.min(average - 10, fourthBest));
+  const ranked = competitive
+    .sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id));
+  const picked: WorldPlayer[] = [];
+  const usedZones = new Set<string>();
+  for (const player of ranked) {
+    const zone = marketZone(player.position);
+    if (usedZones.has(zone)) continue;
+    picked.push(player);
+    usedZones.add(zone);
+    if (picked.length === 4) break;
+  }
+  for (const player of ranked) {
+    if (picked.length === 4) break;
+    if (!picked.includes(player)) picked.push(player);
+  }
+  return picked;
 }
 
 export function marketFee(player: WorldPlayer) {
@@ -993,6 +1041,7 @@ export function signManagerPlayer(state: ManagerState, playerId: string) {
     jobOffers: state.jobOffers,
     marketOffers: managerMarketOffers({
       ...state,
+      marketOffers: [],
       squadIds: nextSquadIds,
       worldPlayers: nextWorldPlayers,
     }).map((offer) => offer.id),
@@ -1019,6 +1068,7 @@ export function sellManagerPlayer(state: ManagerState, playerId: string) {
     worldPlayers,
     marketOffers: managerMarketOffers({
       ...state,
+      marketOffers: [],
       squadIds,
       bench,
       worldPlayers,
@@ -1129,6 +1179,7 @@ export function managerMatchSetup(
         extraSeconds: 45,
       },
       managerMode: true,
+      userFormationId: state.formationId,
       managerRosters: {
         user: { starters: userRoster, bench: userBenchRoster },
         cpu: { starters: cpuRoster, bench: cpuBenchRoster },
@@ -1371,7 +1422,7 @@ export function continueManagerSeason(state: ManagerState) {
     matchQueue: [],
     seasonMatches: [],
     pendingSeasonRecord: null,
-    marketOffers: managerMarketOffers(withRoster).map((player) => player.id),
+    marketOffers: managerMarketOffers({ ...withRoster, marketOffers: [] }).map((player) => player.id),
     phase: "career" as const,
     careerStage: "decision" as const,
     decisionId: decisionForSeason(state.seed, nextSeason).id,
@@ -1848,7 +1899,7 @@ export function normalizeManagerState(
     seasonHistory,
     pendingSeasonRecord,
     lastResult,
-    marketOffers: uniqueIds(merged.marketOffers).slice(0, 3),
+    marketOffers: uniqueIds(merged.marketOffers).slice(0, 4),
     jobOffers: uniqueIds(merged.jobOffers).slice(0, 3),
     playerStats:
       merged.playerStats && typeof merged.playerStats === "object"
