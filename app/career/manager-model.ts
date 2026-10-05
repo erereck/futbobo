@@ -77,6 +77,7 @@ export type ManagerHistoryEntry = {
   score: string;
   formationId: string;
   substitutions: number;
+  walkover?: boolean;
 };
 
 export type ManagerCompetitionResult = {
@@ -984,6 +985,10 @@ export function marketFee(player: WorldPlayer) {
   return Math.round(player.overall * player.overall * 160);
 }
 
+export function managerSaleValue(player: WorldPlayer) {
+  return Math.round(marketFee(player) * 0.72);
+}
+
 /** Até três convites de clubes que fazem sentido para a reputação atual. */
 export function managerJobOffers(state: ManagerState) {
   if (state.phase !== "career" || state.reputation < 45) return [] as Club[];
@@ -1052,7 +1057,7 @@ export function sellManagerPlayer(state: ManagerState, playerId: string) {
   if (!state.bench.includes(playerId)) return state;
   const player = state.worldPlayers.players[playerId];
   if (!player) return state;
-  const saleValue = Math.round(marketFee(player) * 0.72);
+  const saleValue = managerSaleValue(player);
   const players = {
     ...state.worldPlayers.players,
     [playerId]: releasePlayerFromClub(player, state.season),
@@ -1074,6 +1079,25 @@ export function sellManagerPlayer(state: ManagerState, playerId: string) {
       worldPlayers,
     }).map((offer) => offer.id),
   };
+}
+
+export function replaceManagerPlayer(
+  state: ManagerState,
+  incomingId: string,
+  outgoingId: string,
+) {
+  const incoming = state.worldPlayers.players[incomingId];
+  const outgoing = state.worldPlayers.players[outgoingId];
+  if (
+    !incoming || incoming.status !== "active" ||
+    state.squadIds.includes(incomingId) ||
+    !outgoing || !state.bench.includes(outgoingId) ||
+    state.budget + managerSaleValue(outgoing) < marketFee(incoming)
+  ) return state;
+  const afterSale = sellManagerPlayer(state, outgoingId);
+  if (afterSale === state) return state;
+  const afterSigning = signManagerPlayer(afterSale, incomingId);
+  return afterSigning === afterSale ? state : afterSigning;
 }
 
 export function acceptManagerJobOffer(state: ManagerState, clubId: string) {
@@ -1191,8 +1215,10 @@ export function managerMatchSetup(
 export function applyManagerMatchResult(
   state: ManagerState,
   result: BotaoMatchResult,
-) {
+): ManagerState {
   const plan = state.pendingMatch;
+  if (state.phase !== "career" || state.careerStage !== "match" || !plan || plan.id !== result.matchId)
+    return state;
   const outcome = result.outcome;
   const trustDelta =
     (outcome === "win" ? 9 : outcome === "draw" ? 2 : -10) +
@@ -1247,6 +1273,7 @@ export function applyManagerMatchResult(
     score: String(result.goalsFor) + " × " + String(result.goalsAgainst),
     formationId: state.formationId,
     substitutions: result.manager?.substitutions.length ?? 0,
+    walkover: result.walkover === true,
   };
   const seasonMatches = [...state.seasonMatches, history];
   const remainingQueue = state.matchQueue.filter(
@@ -1565,6 +1592,7 @@ function normalizeHistory(
           ? formationById(item.formationId).id
           : "muralha",
       substitutions: Math.max(0, Math.floor(Number(item.substitutions) || 0)),
+      walkover: item.walkover === true,
     }))
     .slice(0, 72);
 }

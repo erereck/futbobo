@@ -14,6 +14,7 @@ import {
   type BotaoSlot,
 } from "../../botao/formations";
 import BotaoMatch from "../../botao/BotaoMatch";
+import { walkoverBotaoResult } from "../../botao/adapter";
 import TeamCrest from "../../botao/TeamCrest";
 import { hashSeed } from "../../botao/rng";
 import { simulateBotaoMatch } from "../../botao/simulate";
@@ -33,9 +34,11 @@ import {
   managerMarketOffers,
   managerMatchSetup,
   managerOpponent,
+  managerSaleValue,
   managerSquad,
   marketFee,
   normalizeManagerState,
+  replaceManagerPlayer,
   setManagerFormation,
   setManagerLineup,
   sellManagerPlayer,
@@ -137,13 +140,43 @@ function money(value: number) {
 function resultLabel(value: "win" | "loss" | "draw") {
   return value === "win" ? "VITÓRIA" : value === "loss" ? "DERROTA" : "EMPATE";
 }
+const managerMatchProgressKey = (careerId: string) =>
+  `futbobo:manager-match-in-progress:v1:${careerId}`;
+
 function loadManagerState() {
-  if (typeof window === "undefined") return createManagerState(1);
+  if (typeof window === "undefined")
+    return { state: createManagerState(1), abandoned: false };
   const activeId = getActiveCareerId();
   const saved = activeId ? readCareerSlotState(activeId) : null;
-  return saved && "mode" in saved && saved.mode === "manager"
+  const state = saved && "mode" in saved && saved.mode === "manager"
     ? normalizeManagerState(saved)
     : createManagerState();
+  const markerKey = managerMatchProgressKey(activeId);
+  try {
+    const marker = JSON.parse(localStorage.getItem(markerKey) ?? "null") as {
+      matchId?: string;
+    } | null;
+    if (!marker) return { state, abandoned: false };
+    if (state.pendingMatch?.id !== marker.matchId) {
+      localStorage.removeItem(markerKey);
+      return { state, abandoned: false };
+    }
+    const prepared = managerMatchSetup(state);
+    if (!prepared || prepared.setup.matchId !== marker.matchId) {
+      localStorage.removeItem(markerKey);
+      return { state, abandoned: false };
+    }
+    const afterAbandon = applyManagerMatchResult(
+      prepared.state,
+      walkoverBotaoResult(prepared.setup),
+    );
+    localStorage.setItem(SAVE_KEY, JSON.stringify(afterAbandon));
+    syncActiveCareerSlot();
+    localStorage.removeItem(markerKey);
+    return { state: afterAbandon, abandoned: true };
+  } catch {
+    return { state, abandoned: false };
+  }
 }
 
 export default function ManagerGame({ onExit }: { onExit?: () => void }) {
@@ -159,6 +192,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const [formationPreviewOpen, setFormationPreviewOpen] = useState(false);
   const [previewFormationId, setPreviewFormationId] = useState("muralha");
   const [selectedPlayer, setSelectedPlayer] = useState("");
+  const [transferTargetId, setTransferTargetId] = useState("");
   const [rosterDrag, setRosterDrag] = useState<ManagerRosterDrag>(null);
   const [rosterDragHover, setRosterDragHover] = useState("");
   const rosterDragRef = useRef<ManagerRosterDrag>(null);
@@ -173,9 +207,22 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     loadedState.careerStage === "consequence";
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setState(loadManagerState()), 0);
+    const timer = window.setTimeout(() => {
+      const restored = loadManagerState();
+      setState(restored.state);
+      if (restored.abandoned)
+        setNotice("Partida abandonada: derrota por W.O. registrada no histórico.");
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+  useEffect(() => {
+    if (!transferTargetId) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setTransferTargetId("");
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [transferTargetId]);
   useEffect(() => {
     if (!loadedState) return;
     localStorage.setItem(SAVE_KEY, JSON.stringify(loadedState));
@@ -226,6 +273,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     }));
   }, [playerById, previewFormationId, state.starters]);
   const marketOffers = useMemo(() => managerMarketOffers(state), [state]);
+  const transferTarget = marketOffers.find((player) => player.id === transferTargetId);
   const decision = useMemo(() => managerDecision(state), [state]);
   const careerTotals = useMemo(
     () =>
@@ -241,6 +289,12 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     [state.seasonHistory],
   );
   const latestSeason = state.seasonHistory.at(-1);
+  const seasonHasTitle = latestSeason?.competitions.some(
+    (competition) => competition.champion,
+  );
+  const lastMatchWasAbandoned =
+    state.history[0]?.id === state.lastResult?.matchId &&
+    state.history[0]?.walkover === true;
   const jobOffers = useMemo(() => {
     const ids = new Set(state.jobOffers);
     return CLUBS.filter((item) => ids.has(item.id)).slice(0, 3);
@@ -318,7 +372,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       const rival = CLUBS.find((candidate) => candidate.id === match.opponentId);
       items.push({
         id: `match-${match.id}`,
-        title: `${club.shortName} ${match.score} ${rival?.shortName ?? "Adversário"} · ${match.competitionName}`,
+        title: `${club.shortName} ${match.score} ${rival?.shortName ?? "Adversário"} · ${match.competitionName}${match.walkover ? " · W.O." : ""}`,
       });
     });
     if (!items.length)
@@ -349,6 +403,12 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       setTab("team");
       return;
     }
+    localStorage.setItem(SAVE_KEY, JSON.stringify(prepared.state));
+    syncActiveCareerSlot();
+    localStorage.setItem(
+      managerMatchProgressKey(getActiveCareerId()),
+      JSON.stringify({ matchId: prepared.setup.matchId, startedAt: Date.now() }),
+    );
     setState(prepared.state);
     setMatchSetup(prepared.setup);
   };
@@ -357,6 +417,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     setup: NonNullable<ReturnType<typeof managerMatchSetup>>["setup"],
     result: BotaoMatchResult,
   ) => {
+    if (base.pendingMatch?.id !== result.matchId) return;
     const starters =
       setup.managerRosters?.user.starters
         .map((player) => player.id)
@@ -364,9 +425,13 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     const bench = base.squadIds
       .filter((id) => !starters.includes(id))
       .slice(0, 3);
-    setState(
-      applyManagerMatchResult(setManagerLineup(base, starters, bench), result),
+    const next = applyManagerMatchResult(
+      setManagerLineup(base, starters, bench), result,
     );
+    localStorage.setItem(SAVE_KEY, JSON.stringify(next));
+    syncActiveCareerSlot();
+    localStorage.removeItem(managerMatchProgressKey(getActiveCareerId()));
+    setState(next);
     setMatchSummary({ setup, result });
     setMatchSetup(null);
     setTab("career");
@@ -868,15 +933,25 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       <div>
         {marketOffers.map((player) => {
           const fee = marketFee(player);
-          const canSign = state.squadIds.length < 8 && state.bench.length < 3 && state.budget >= fee;
+          const fullSquad = state.squadIds.length >= 8 || state.bench.length >= 3;
+          const canSign = !fullSquad && state.budget >= fee;
+          const canReplace = fullSquad && state.bench.some((id) => {
+            const outgoing = playerById.get(id);
+            return outgoing && state.budget + managerSaleValue(outgoing) >= fee;
+          });
+          const available = canSign || canReplace;
           const currentClub = CLUBS.find((item) => item.id === player.currentClubId);
           return (
             <button
               type="button"
               key={player.id}
-              disabled={!canSign}
-              aria-label={`${player.name}, ${player.position}, ${player.overall} OVR, ${money(fee)}${canSign ? ", contratar" : ", indisponível"}`}
+              disabled={!available}
+              aria-label={`${player.name}, ${player.position}, ${player.overall} OVR, ${money(fee)}${canReplace ? ", trocar por reserva" : canSign ? ", contratar" : ", indisponível"}`}
               onClick={() => {
+                if (canReplace) {
+                  setTransferTargetId(player.id);
+                  return;
+                }
                 const next = signManagerPlayer(state, player.id);
                 if (next !== state) {
                   setState(next);
@@ -890,7 +965,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 <small>{player.position} · {player.overall} OVR · {currentClub?.shortName ?? "Agente livre"}</small>
                 <small>{managerMarketFit(state, player)}</small>
               </span>
-              <b>{money(fee)}<small>{canSign ? "CONTRATAR" : state.squadIds.length >= 8 ? "ABRA VAGA" : "SEM CAIXA"}</small></b>
+              <b>{money(fee)}<small>{canReplace ? "TROCAR RESERVA" : canSign ? "CONTRATAR" : "SEM CAIXA"}</small></b>
             </button>
           );
         })}
@@ -973,20 +1048,85 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                           );
                         }}
                       >
-                        Vender · {money(Math.round(marketFee(player) * 0.72))}
+                        Vender · {money(managerSaleValue(player))}
                       </button>
                     </div>
                   );
                 })}
                 {!state.bench.length ? (
                   <p className={styles.emptyBench}>
-                    Banco vazio. Contrate até três reservas no Mundo.
+                    Banco vazio. Contrate até três reservas no Mercado abaixo.
                   </p>
                 ) : null}
               </div>
             </aside>
           </div>
           {renderMarket()}
+          {transferTarget ? (
+            <div
+              className={`${styles.formationModal} ${styles.transferModal}`}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Contratar ${transferTarget.name}`}
+            >
+              <section>
+                <header>
+                  <span>
+                    <small>JANELA DE TRANSFERÊNCIAS</small>
+                    <strong>Quem sai para {transferTarget.name} chegar?</strong>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Fechar negociação"
+                    autoFocus
+                    onClick={() => setTransferTargetId("")}
+                  >
+                    ×
+                  </button>
+                </header>
+                <p>
+                  O elenco tem oito jogadores. Escolha um reserva para vender e
+                  liberar a vaga. O valor da venda entra na mesma negociação.
+                </p>
+                <div className={styles.transferChoices}>
+                  {state.bench.map((id) => {
+                    const outgoing = playerById.get(id);
+                    if (!outgoing) return null;
+                    const sale = managerSaleValue(outgoing);
+                    const net = marketFee(transferTarget) - sale;
+                    const affordable = state.budget >= net;
+                    return (
+                      <button
+                        type="button"
+                        key={id}
+                        disabled={!affordable}
+                        onClick={() => {
+                          const next = replaceManagerPlayer(state, transferTarget.id, id);
+                          if (next === state) return;
+                          setState(next);
+                          setTransferTargetId("");
+                          setNotice(`${transferTarget.name} chegou; ${outgoing.name} deixou o elenco.`);
+                        }}
+                      >
+                        <PlayerPortrait player={outgoing} state={state} size={40} />
+                        <span>
+                          <strong>{outgoing.name}</strong>
+                          <small>{outgoing.position} · {outgoing.overall} OVR · venda {money(sale)}</small>
+                        </span>
+                        <b>
+                          {affordable
+                            ? net >= 0
+                              ? `CUSTO LÍQUIDO ${money(net)}`
+                              : `CAIXA +${money(-net)}`
+                            : "SEM CAIXA"}
+                        </b>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+          ) : null}
           {rosterDrag?.moved && playerById.get(rosterDrag.id) ? (
             <div
               ref={rosterDragLayerRef}
@@ -1058,8 +1198,8 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                   })}
                 </div>
                 <p>
-                  A partida começa na Muralha e avança uma formação a cada gol,
-                  sempre nesta ordem.
+                  A partida começa em {formationById(state.formationId).name} e
+                  avança uma formação a cada gol, nesta ordem.
                 </p>
               </section>
             </div>
@@ -1398,8 +1538,9 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                             {rival?.shortName ?? "Adversário"}
                           </strong>
                           <p>
-                            {resultLabel(item.outcome)} · {item.substitutions}{" "}
-                            {item.substitutions === 1 ? "troca" : "trocas"}
+                            {item.walkover
+                              ? "W.O. POR ABANDONO"
+                              : `${resultLabel(item.outcome)} · ${item.substitutions} ${item.substitutions === 1 ? "troca" : "trocas"}`}
                           </p>
                         </span>
                         {item.outcome === "win" ? <b>●</b> : null}
@@ -1722,13 +1863,11 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               FIM DA TEMPORADA {state.season}
             </span>
             <div
-              className={`result-symbol ${latestSeason?.competitions.some((competition) => competition.champion) ? "winner" : ""}`}
+              className={`result-symbol ${seasonHasTitle ? "winner" : ""}`}
             >
               <FutboboIcon
                 name={
-                  latestSeason?.competitions.some(
-                    (competition) => competition.champion,
-                  )
+                  seasonHasTitle
                     ? "trophy"
                     : (latestSeason?.wins ?? 0) < (latestSeason?.losses ?? 0)
                       ? "trend-down"
@@ -1737,13 +1876,16 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               />
             </div>
             <h1>
-              {latestSeason?.competitions.some(
-                (competition) => competition.champion,
-              )
-                ? "Uma temporada com taça."
-                : "A temporada está encerrada."}
+              {lastMatchWasAbandoned
+                ? "Derrota por W.O. registrada."
+                : seasonHasTitle
+                  ? "Uma temporada com taça."
+                  : "A temporada está encerrada."}
             </h1>
             <p>
+              {lastMatchWasAbandoned
+                ? "A partida iniciada foi abandonada e terminou em 0 × 3. "
+                : ""}
               {latestSeason
                 ? `${latestSeason.matches} partidas na temporada, ${latestSeason.wins} vitórias e saldo de ${latestSeason.goalsFor - latestSeason.goalsAgainst} gols.`
                 : "A temporada foi simulada até o fim."}{" "}

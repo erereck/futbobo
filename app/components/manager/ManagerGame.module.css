@@ -1111,6 +1111,61 @@
   color: #819087;
   font-size: 10px;
 }
+.transferModal > section {
+  width: min(580px, 100%);
+}
+.transferChoices {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.transferChoices button {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 2px;
+  border: 1px solid rgba(226, 239, 228, .12);
+  border-radius: 10px;
+  padding: 9px;
+  color: #f2f5ed;
+  background: #102219;
+  text-align: left;
+  cursor: pointer;
+}
+.transferChoices button:hover:not(:disabled) {
+  border-color: rgba(244, 196, 48, .65);
+  background: #173325;
+}
+.transferChoices button:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+.transferChoices button > span {
+  min-width: 0;
+}
+.transferChoices button > span:first-child {
+  grid-row: span 2;
+}
+.transferChoices strong,
+.transferChoices small {
+  display: block;
+}
+.transferChoices strong {
+  font-size: 11px;
+}
+.transferChoices small {
+  margin-top: 3px;
+  color: #aab8ac;
+  font-size: 8px;
+}
+.transferChoices b {
+  grid-column: 2;
+  color: #f4c430;
+  font-size: 9px;
+  white-space: nowrap;
+}
 
 .historyList,
 .statHero,
