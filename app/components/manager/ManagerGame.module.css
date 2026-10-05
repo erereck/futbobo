@@ -1713,6 +1713,97 @@
   background: transparent;
   cursor: pointer;
 }
+.archiveDetails {
+  display: grid;
+  gap: 12px;
+  padding: 13px 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  background: #0a140e;
+}
+.archiveSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.archiveSummary span {
+  padding: 6px 8px;
+  border: 1px solid rgba(244, 196, 48, .16);
+  border-radius: 6px;
+  color: #d8d6b8;
+  font-size: 9px;
+  font-weight: 800;
+}
+.archiveCompetitions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.archiveCompetitions > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 7px;
+  background: #111d15;
+}
+.archiveCompetitions strong {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archiveCompetitions span {
+  flex: 0 0 auto;
+  color: #8c9d90;
+  font-size: 9px;
+}
+.archiveCompetitions .archiveChampion {
+  color: #f4c430;
+  font-weight: 900;
+}
+.archiveMatches {
+  display: grid;
+  gap: 0;
+}
+.archiveMatches > small {
+  margin-bottom: 5px;
+  color: #819386;
+  font: 900 8px/1 ui-monospace, monospace;
+  letter-spacing: .1em;
+}
+.archiveMatches > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 10px;
+  padding: 7px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+}
+.archiveMatches > div span {
+  grid-column: 1 / -1;
+  color: #819386;
+  font-size: 8px;
+}
+.archiveMatches > div strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archiveMatches > div em {
+  color: #f4c430;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+}
+.archiveMatches p {
+  margin: 0;
+  color: #819386;
+  font-size: 9px;
+}
 
 @media (min-width: 1100px) {
   .managerCareer :global(.bottom-nav) {
@@ -1871,6 +1962,9 @@
     font-size: 31px;
   }
   .managerStatsGrid {
+    grid-template-columns: 1fr;
+  }
+  .archiveCompetitions {
     grid-template-columns: 1fr;
   }
   .squadProduction > div > article {

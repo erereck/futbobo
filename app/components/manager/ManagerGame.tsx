@@ -186,6 +186,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const state = loadedState ?? loadingState;
   const [tab, setTab] = useState<ManagerTab>("career");
   const [worldSection, setWorldSection] = useState<ManagerWorldSection>("now");
+  const [openArchiveSeason, setOpenArchiveSeason] = useState<string | null>(null);
   const [matchSetup, setMatchSetup] = useState<
     NonNullable<ReturnType<typeof managerMatchSetup>>["setup"] | null
   >(null);
@@ -278,16 +279,20 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const decision = useMemo(() => managerDecision(state), [state]);
   const careerTotals = useMemo(
     () =>
-      state.seasonHistory.reduce(
+      [
+        ...state.seasonHistory,
+        ...(state.pendingSeasonRecord ? [state.pendingSeasonRecord] : []),
+      ].reduce(
         (totals, record) => ({
           matches: totals.matches + record.matches,
           wins: totals.wins + record.wins,
+          draws: totals.draws + record.draws,
           goalsFor: totals.goalsFor + record.goalsFor,
           goalsAgainst: totals.goalsAgainst + record.goalsAgainst,
         }),
-        { matches: 0, wins: 0, goalsFor: 0, goalsAgainst: 0 },
+        { matches: 0, wins: 0, draws: 0, goalsFor: 0, goalsAgainst: 0 },
       ),
-    [state.seasonHistory],
+    [state.pendingSeasonRecord, state.seasonHistory],
   );
   const latestSeason = state.seasonHistory.at(-1);
   const seasonHasTitle = latestSeason?.competitions.some(
@@ -327,26 +332,72 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         ),
     [squad, state.playerStats],
   );
-  const worldLeaders = useMemo(
+  const activeWorldPlayers = useMemo(
     () =>
-      Object.values(state.worldPlayers.players)
-        .filter((player) => player.status === "active")
+      Object.values(state.worldPlayers.players).filter(
+        (player) => player.status === "active",
+      ),
+    [state.worldPlayers.players],
+  );
+  const worldByOverall = useMemo(
+    () =>
+      activeWorldPlayers
+        .slice()
+        .sort((a, b) => b.overall - a.overall || b.reputation - a.reputation)
+        .slice(0, 12),
+    [activeWorldPlayers],
+  );
+  const worldByReputation = useMemo(
+    () =>
+      activeWorldPlayers
+        .slice()
         .sort((a, b) => b.reputation - a.reputation || b.overall - a.overall)
         .slice(0, 12),
-    [state.worldPlayers.players],
+    [activeWorldPlayers],
+  );
+  const worldByValue = useMemo(
+    () =>
+      activeWorldPlayers
+        .slice()
+        .sort((a, b) => marketFee(b) - marketFee(a) || b.overall - a.overall)
+        .slice(0, 12),
+    [activeWorldPlayers],
   );
   const worldProspects = useMemo(
     () =>
-      Object.values(state.worldPlayers.players)
-        .filter(
-          (player) =>
-            player.status === "active" &&
-            state.season - player.birthSeason <= 23,
-        )
+      activeWorldPlayers
+        .filter((player) => state.season - player.birthSeason <= 23)
         .sort((a, b) => b.potential - a.potential || b.overall - a.overall)
         .slice(0, 12),
-    [state.season, state.worldPlayers.players],
+    [activeWorldPlayers, state.season],
   );
+  const trajectoryClubs = useMemo(() => {
+    const grouped = new Map<
+      string,
+      { seasons: number; titles: number; wins: number }
+    >();
+    for (const record of state.seasonHistory) {
+      const current = grouped.get(record.clubId) ?? {
+        seasons: 0,
+        titles: 0,
+        wins: 0,
+      };
+      current.seasons += 1;
+      current.titles += record.competitions.filter(
+        (competition) => competition.champion,
+      ).length;
+      current.wins += record.wins;
+      grouped.set(record.clubId, current);
+    }
+    if (!grouped.has(state.currentClubId))
+      grouped.set(state.currentClubId, { seasons: 0, titles: 0, wins: 0 });
+    return [...grouped.entries()].sort(
+      (a, b) =>
+        b[1].titles - a[1].titles ||
+        b[1].wins - a[1].wins ||
+        b[1].seasons - a[1].seasons,
+    );
+  }, [state.currentClubId, state.seasonHistory]);
   const worldClubs = useMemo(
     () =>
       CLUBS.slice()
@@ -373,9 +424,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       });
     state.history.slice(0, 4).forEach((match) => {
       const rival = CLUBS.find((candidate) => candidate.id === match.opponentId);
+      const matchClub = CLUBS.find((candidate) => candidate.id === match.clubId);
       items.push({
         id: `match-${match.id}`,
-        title: `${club.shortName} ${match.score} ${rival?.shortName ?? "Adversário"} · ${match.competitionName}${match.walkover ? " · W.O." : ""}`,
+        title: `${matchClub?.shortName ?? "Clube"} ${match.score} ${rival?.shortName ?? "Adversário"} · ${match.competitionName}${match.walkover ? " · W.O." : ""}`,
       });
     });
     if (!items.length)
@@ -1338,17 +1390,26 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             <div>
               <small>JOGOS</small>
               <strong>{careerTotals.matches}</strong>
-              <span>{state.seasonHistory.length} temporada(s)</span>
+              <span>
+                {state.seasonHistory.length} temporada(s) concluída(s)
+                {state.pendingSeasonRecord ? " · temporada em curso" : ""}
+              </span>
             </div>
             <div>
               <small>APROVEITAMENTO</small>
               <strong>
                 {careerTotals.matches
-                  ? Math.round((careerTotals.wins / careerTotals.matches) * 100)
+                  ? Math.round(
+                      ((careerTotals.wins * 3 + careerTotals.draws) /
+                        (careerTotals.matches * 3)) *
+                        100,
+                    )
                   : 0}
                 <em>%</em>
               </strong>
-              <span>{careerTotals.wins} vitória(s)</span>
+              <span>
+                {careerTotals.wins} vitória(s) · {careerTotals.draws} empate(s)
+              </span>
             </div>
             <div>
               <small>SALDO DE GOLS</small>
@@ -1572,14 +1633,14 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 <small>CLUBES</small>
                 <strong>Clubes em evidência</strong>
                 <p>
-                  Tradição, momento e liga — o índice interno não é exibido.
+                  Clubes de maior força no início da carreira, por liga.
                 </p>
               </header>
               <article className={worldStyles.playerBoard}>
                 <header>
                   <span>
                     <small>RANKING DE CLUBES</small>
-                    <strong>Protagonistas do momento</strong>
+                    <strong>Força dos clubes</strong>
                   </span>
                   <b>{worldClubs.length}</b>
                 </header>
@@ -1605,13 +1666,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                           )?.name
                         }
                       </small>
-                      <span>
-                        {rankedClub.reputation >= 8
-                          ? "ELITE"
-                          : rankedClub.reputation >= 6
-                            ? "DESTAQUE"
-                            : "TRADIÇÃO"}
-                      </span>
+                      <span>{rankedClub.city}</span>
                     </p>
                   ))}
                 </div>
@@ -1633,10 +1688,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       <small>NÍVEL ATUAL</small>
                       <strong>Craques da geração</strong>
                     </span>
-                    <b>{worldLeaders.length}</b>
+                    <b>{worldByOverall.length}</b>
                   </header>
                   <div>
-                    {worldLeaders.map((player, index) => (
+                    {worldByOverall.map((player, index) => (
                       <p key={player.id}>
                         <b>#{index + 1}</b>
                         <strong>{player.name}</strong>
@@ -1658,23 +1713,17 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       <small>REPUTAÇÃO</small>
                       <strong>Nomes mais influentes</strong>
                     </span>
-                    <b>{worldLeaders.length}</b>
+                    <b>{worldByReputation.length}</b>
                   </header>
                   <div>
-                    {worldLeaders
-                      .slice()
-                      .sort(
-                        (a, b) =>
-                          b.reputation - a.reputation || b.overall - a.overall,
-                      )
-                      .map((player, index) => (
-                        <p key={player.id}>
-                          <b>#{index + 1}</b>
-                          <strong>{player.name}</strong>
-                          <small>{player.position}</small>
-                          <span>{player.reputation} REP</span>
-                        </p>
-                      ))}
+                    {worldByReputation.map((player, index) => (
+                      <p key={player.id}>
+                        <b>#{index + 1}</b>
+                        <strong>{player.name}</strong>
+                        <small>{player.position}</small>
+                        <span>{player.reputation} REP</span>
+                      </p>
+                    ))}
                   </div>
                 </article>
                 <article className={worldStyles.playerBoard}>
@@ -1708,23 +1757,20 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                     <b>TOP 12</b>
                   </header>
                   <div>
-                    {worldLeaders
-                      .slice()
-                      .sort((a, b) => marketFee(b) - marketFee(a))
-                      .map((player, index) => (
-                        <p key={player.id}>
-                          <b>#{index + 1}</b>
-                          <strong>{player.name}</strong>
-                          <small>
-                            {
-                              CLUBS.find(
-                                (item) => item.id === player.currentClubId,
-                              )?.shortName
-                            }
-                          </small>
-                          <span>{money(marketFee(player))}</span>
-                        </p>
-                      ))}
+                    {worldByValue.map((player, index) => (
+                      <p key={player.id}>
+                        <b>#{index + 1}</b>
+                        <strong>{player.name}</strong>
+                        <small>
+                          {
+                            CLUBS.find(
+                              (item) => item.id === player.currentClubId,
+                            )?.shortName
+                          }
+                        </small>
+                        <span>{money(marketFee(player))}</span>
+                      </p>
+                    ))}
                   </div>
                 </article>
               </div>
@@ -1746,12 +1792,28 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       CLUBS.find(
                         (candidate) => candidate.id === record.clubId,
                       ) ?? club;
+                    const archiveKey = `${record.season}-${record.clubId}`;
+                    const archiveMatches = state.history
+                      .filter(
+                        (match) =>
+                          match.season === record.season &&
+                          match.clubId === record.clubId,
+                      )
+                      .reverse();
                     return (
                       <article
                         className={worldStyles.officialCard}
-                        key={`${record.season}-${record.clubId}`}
+                        key={archiveKey}
                       >
-                        <button type="button">
+                        <button
+                          type="button"
+                          aria-expanded={openArchiveSeason === archiveKey}
+                          onClick={() =>
+                            setOpenArchiveSeason((current) =>
+                              current === archiveKey ? null : archiveKey,
+                            )
+                          }
+                        >
                           <span>
                             <small>
                               {record.season} · {record.age} ANOS
@@ -1768,6 +1830,66 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                           </span>
                           <b>{record.boardTrust}</b>
                         </button>
+                        {openArchiveSeason === archiveKey ? (
+                          <div className={styles.archiveDetails}>
+                            <div className={styles.archiveSummary}>
+                              <span>{record.wins} vitórias</span>
+                              <span>{record.draws} empates</span>
+                              <span>{record.losses} derrotas</span>
+                              <span>
+                                {record.goalsFor - record.goalsAgainst > 0
+                                  ? "+"
+                                  : ""}
+                                {record.goalsFor - record.goalsAgainst} saldo
+                              </span>
+                            </div>
+                            <div className={styles.archiveCompetitions}>
+                              {record.competitions.map((competition) => (
+                                <div key={competition.id}>
+                                  <strong>{competition.name}</strong>
+                                  <span
+                                    className={
+                                      competition.champion
+                                        ? styles.archiveChampion
+                                        : ""
+                                    }
+                                  >
+                                    {competition.stage}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className={styles.archiveMatches}>
+                              <small>
+                                HISTÓRICO RECENTE · {archiveMatches.length}/
+                                {record.matches} PARTIDAS
+                              </small>
+                              {archiveMatches.map((match) => {
+                                const rival = CLUBS.find(
+                                  (candidate) => candidate.id === match.opponentId,
+                                );
+                                return (
+                                  <div key={match.id}>
+                                    <span>
+                                      {match.competitionName} · {match.stageName}
+                                    </span>
+                                    <strong>
+                                      {recordClub.shortName} {match.score}{" "}
+                                      {rival?.shortName ?? "Adversário"}
+                                    </strong>
+                                    <em>{match.walkover ? "W.O." : resultLabel(match.outcome)}</em>
+                                  </div>
+                                );
+                              })}
+                              {!archiveMatches.length ? (
+                                <p>
+                                  Detalhes das partidas não estão mais no
+                                  histórico recente.
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : null}
                       </article>
                     );
                   })}
@@ -1781,26 +1903,17 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               <article className={worldStyles.playerBoard}>
                 <header>
                   <span>
-                    <small>CLUBES IMPORTANTES</small>
-                    <strong>Dossiê histórico do universo</strong>
+                    <small>SUA TRAJETÓRIA</small>
+                    <strong>Clubes que você comandou</strong>
                   </span>
-                  <b>
-                    {Math.max(1, state.season - new Date().getFullYear() + 1)}{" "}
-                    ano(s)
-                  </b>
+                  <b>{trajectoryClubs.length}</b>
                 </header>
                 <div>
-                  {worldClubs.slice(0, 10).map((importantClub, index) => {
-                    const titles = state.seasonHistory.reduce(
-                      (total, record) =>
-                        total +
-                        (record.clubId === importantClub.id
-                          ? record.competitions.filter(
-                              (competition) => competition.champion,
-                            ).length
-                          : 0),
-                      0,
+                  {trajectoryClubs.map(([importantClubId, totals], index) => {
+                    const importantClub = CLUBS.find(
+                      (candidate) => candidate.id === importantClubId,
                     );
+                    if (!importantClub) return null;
                     return (
                       <p
                         key={importantClub.id}
@@ -1820,11 +1933,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                           }
                         </small>
                         <span>
-                          {titles
-                            ? `${titles} TÍTULO(S)`
-                            : importantClub.reputation >= 8
-                              ? "GIGANTE"
-                              : "TRADICIONAL"}
+                          {totals.titles} taça(s) · {totals.seasons} temporada(s)
                         </span>
                       </p>
                     );
