@@ -101,7 +101,10 @@ function sanitizeIndex(value: unknown): CareerSaveMeta[] {
       clubId: item.clubId || "",
       season: Number(item.season) || new Date().getFullYear(),
       position: item.position || "MEI",
-      overall: Number(item.overall) || 50,
+      overall:
+        typeof item.overall === "number" && Number.isFinite(item.overall)
+          ? Math.max(item.mode === "manager" ? 0 : 1, Math.round(item.overall))
+          : 50,
       phase: item.phase || "identity",
       achievementsEligible: item.achievementsEligible !== false,
     }))
