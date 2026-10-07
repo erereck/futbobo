@@ -1313,6 +1313,7 @@
 .market {
   max-width: 980px;
   margin: 16px auto 0;
+  scroll-margin-top: 16px;
   border: 1px solid rgba(244, 196, 48, 0.2);
   border-radius: 14px;
   padding: 14px;
@@ -1332,6 +1333,41 @@
   font: 800 19px var(--font-barlow-condensed, sans-serif);
 }
 .market header small {
+  color: #aab8ac;
+  font-size: 10px;
+}
+.marketFocus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+.market .marketFocus button {
+  min-height: 32px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  border-color: rgba(226, 239, 228, .12);
+  border-radius: 7px;
+  padding: 6px 10px;
+  color: #aab8ac;
+  font-size: 9px;
+  font-weight: 800;
+}
+.market .marketFocus button[aria-pressed="true"] {
+  border-color: rgba(244, 196, 48, .42);
+  color: #f4c430;
+  background: rgba(244, 196, 48, .1);
+}
+.market .marketFocus button:focus-visible {
+  outline: 2px solid #f4c430;
+  outline-offset: 2px;
+}
+.marketEmpty {
+  margin: 12px 0 0;
+  padding: 14px;
+  border: 1px dashed rgba(226, 239, 228, .13);
+  border-radius: 8px;
   color: #aab8ac;
   font-size: 10px;
 }

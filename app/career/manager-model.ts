@@ -166,6 +166,12 @@ export type ManagerState = {
 
 const STARTER_POSITIONS = ["GOL", "ZAG", "MC", "MEI", "CA"] as const;
 const SHIRT_NUMBERS = [1, 4, 8, 10, 9, 12, 14, 17, 20, 22, 24, 27, 30, 33];
+export type ManagerMarketFocus =
+  | "all"
+  | "goal"
+  | "defense"
+  | "midfield"
+  | "attack";
 
 const MANAGER_DECISIONS: ManagerDecision[] = [
   {
@@ -967,13 +973,18 @@ export function managerMarketFit(state: ManagerState, player: WorldPlayer) {
   const squad = managerSquad(state);
   const samePosition = squad.filter((member) => member.position === player.position);
   if (!samePosition.length) return `Novo perfil: ${player.position}`;
-  if (player.overall >= Math.max(...samePosition.map((member) => member.overall)) + 3)
-    return "Disputa vaga entre os cinco";
-  if (player.potential >= player.overall + 8) return "Projeto para o futuro";
-  return "Mais opção para a rotação";
+  const gain =
+    player.overall - Math.max(...samePosition.map((member) => member.overall));
+  if (gain > 0) return `+${gain} OVR na posição ${player.position}`;
+  if (player.potential >= player.overall + 8)
+    return `Potencial +${player.potential - player.overall} OVR`;
+  return `Opção para ${player.position}`;
 }
 
-export function managerMarketOffers(state: ManagerState) {
+export function managerMarketOffers(
+  state: ManagerState,
+  focus: ManagerMarketFocus = "all",
+) {
   const squad = managerSquad(state);
   const average = squad.length
     ? squad.reduce((total, player) => total + player.overall, 0) / squad.length
@@ -987,7 +998,7 @@ export function managerMarketOffers(state: ManagerState) {
     );
   const byId = new Map(candidates.map((player) => [player.id, player]));
   const saved = state.marketOffers.map((id) => byId.get(id)).filter((player): player is WorldPlayer => Boolean(player));
-  if (saved.length >= 4) return saved.slice(0, 4);
+  if (focus === "all" && saved.length >= 4) return saved.slice(0, 4);
   const targetZoneCount: Record<string, number> = { goal: 1, defense: 2, midfield: 3, attack: 2 };
   const score = (player: WorldPlayer) => {
     const zone = marketZone(player.position);
@@ -1005,6 +1016,28 @@ export function managerMarketOffers(state: ManagerState) {
   const competitive = candidates.filter((player) => player.overall >= Math.min(average - 10, fourthBest));
   const ranked = competitive
     .sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id));
+  if (focus !== "all") {
+    const reachableOverall =
+      Math.max(managerClub(state).strength, average) + 14;
+    const fullSquad = state.squadIds.length >= 8 || state.bench.length >= 3;
+    const resale = fullSquad
+      ? Math.max(
+          0,
+          ...state.bench.map((id) => {
+            const player = state.worldPlayers.players[id];
+            return player ? managerSaleValue(player) : 0;
+          }),
+        )
+      : 0;
+    return ranked
+      .filter(
+        (player) =>
+          marketZone(player.position) === focus &&
+          player.overall <= reachableOverall &&
+          marketFee(player) <= state.budget + resale,
+      )
+      .slice(0, 4);
+  }
   const picked: WorldPlayer[] = [];
   const usedZones = new Set<string>();
   for (const player of ranked) {

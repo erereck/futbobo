@@ -46,6 +46,7 @@ import {
   signManagerPlayer,
   startManagerCareer,
   suggestManagerLineup,
+  type ManagerMarketFocus,
   type ManagerState,
 } from "../../career/manager-model";
 import {
@@ -187,6 +188,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const state = loadedState ?? loadingState;
   const [tab, setTab] = useState<ManagerTab>("career");
   const [worldSection, setWorldSection] = useState<ManagerWorldSection>("now");
+  const [marketFocus, setMarketFocus] = useState<ManagerMarketFocus>("all");
   const [openArchiveSeason, setOpenArchiveSeason] = useState<string | null>(null);
   const [matchSetup, setMatchSetup] = useState<
     NonNullable<ReturnType<typeof managerMatchSetup>>["setup"] | null
@@ -200,6 +202,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const [rosterDragHover, setRosterDragHover] = useState("");
   const rosterDragRef = useRef<ManagerRosterDrag>(null);
   const rosterDragLayerRef = useRef<HTMLDivElement | null>(null);
+  const marketRef = useRef<HTMLElement | null>(null);
   const rosterDragCleanupRef = useRef<() => void>(() => undefined);
   const [managerName, setManagerName] = useState("");
   const [nationality, setNationality] = useState("brasil");
@@ -275,7 +278,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       slot: formation.slots[index],
     }));
   }, [playerById, previewFormationId, state.starters]);
-  const marketOffers = useMemo(() => managerMarketOffers(state), [state]);
+  const marketOffers = useMemo(
+    () => managerMarketOffers(state, marketFocus),
+    [marketFocus, state],
+  );
   const transferTarget = marketOffers.find((player) => player.id === transferTargetId);
   const decision = useMemo(() => managerDecision(state), [state]);
   const careerTotals = useMemo(
@@ -788,7 +794,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           <div className="objective-card">
             <span>META DA DIRETORIA</span>
             <strong>{state.objective}</strong>
-            <p>Suas decisões e o jogo-chave alteram a confiança no trabalho.</p>
+            <p>
+              Quer reforçar? Abra Time antes desta decisão. O elenco conta na
+              campanha.
+            </p>
             <small>Confiança atual: {Math.round(state.boardTrust)}%</small>
             <WorldPulseTicker
               headlines={managerHeadlines}
@@ -984,13 +993,35 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     );
   };
 
-  const renderMarket = () => marketOffers.length ? (
-    <section className={styles.market} aria-label="Mercado do elenco">
+  const renderMarket = () => (
+    <section
+      ref={marketRef}
+      className={styles.market}
+      aria-label="Mercado do elenco"
+    >
       <header>
         <span>MERCADO</span>
         <strong>Reforços para o seu elenco</strong>
         <small>Caixa: {money(state.budget)} · Banco: {state.bench.length}/3</small>
       </header>
+      <nav className={styles.marketFocus} aria-label="Buscar reforços por setor">
+        {([
+          ["all", "Sugestões"],
+          ["goal", "Goleiro"],
+          ["defense", "Defesa"],
+          ["midfield", "Meio"],
+          ["attack", "Ataque"],
+        ] as Array<[ManagerMarketFocus, string]>).map(([focus, label]) => (
+          <button
+            type="button"
+            key={focus}
+            aria-pressed={marketFocus === focus}
+            onClick={() => setMarketFocus(focus)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
       <div>
         {marketOffers.map((player) => {
           const fee = marketFee(player);
@@ -1031,8 +1062,14 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           );
         })}
       </div>
+      {!marketOffers.length ? (
+        <p className={styles.marketEmpty}>
+          Nenhum reforço viável para este setor agora. Consulte outro setor ou
+          avance a temporada.
+        </p>
+      ) : null}
     </section>
-  ) : null;
+  );
 
   const renderPanel = () => {
     if (tab === "team")
@@ -1046,6 +1083,18 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               abaixo a formação de entrada; depois de cada gol, ela avança na rotação.
             </p>
             <div className={styles.lineupQuickActions}>
+              <button
+                type="button"
+                className={styles.previewFormationButton}
+                onClick={() =>
+                  marketRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  })
+                }
+              >
+                <FutboboIcon name="wallet" /> Ir ao mercado
+              </button>
               <button
                 type="button"
                 className={styles.previewFormationButton}
