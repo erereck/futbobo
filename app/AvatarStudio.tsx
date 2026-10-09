@@ -35,7 +35,7 @@ function CharacterCanvas({
   primary: string;
   secondary: string;
   number: number;
-  variant: "full" | "button";
+  variant: "full" | "button" | "mini";
   className?: string;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -49,22 +49,24 @@ function CharacterCanvas({
     }
     ctx.clearRect(0, 0, element.width, element.height);
     ctx.save();
-    ctx.translate(110, 108);
+    const mini = variant === "mini";
+    const radius = mini ? 30 : 81;
+    ctx.translate(mini ? 42 : 110, mini ? 41 : 108);
     ctx.fillStyle = "rgba(0,0,0,.25)";
-    ctx.beginPath(); ctx.ellipse(4, 10, 88, 81, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(2, 5, radius + 6, radius, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = primary;
-    ctx.beginPath(); ctx.arc(0, 0, 81, 0, Math.PI * 2); ctx.fill();
-    drawPlayerBust(ctx, appearance, primary, secondary, 81);
-    ctx.strokeStyle = "#f4c430"; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.arc(0, 0, 84, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
+    drawPlayerBust(ctx, appearance, primary, secondary, radius);
+    ctx.strokeStyle = "#f4c430"; ctx.lineWidth = mini ? 2 : 5;
+    ctx.beginPath(); ctx.arc(0, 0, radius + (mini ? 1 : 3), 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }, [appearance, primary, secondary, number, variant]);
   return (
     <canvas
       ref={canvas}
       className={className}
-      width={variant === "full" ? 360 : 220}
-      height={variant === "full" ? 530 : 220}
+      width={variant === "full" ? 360 : variant === "mini" ? 84 : 220}
+      height={variant === "full" ? 530 : variant === "mini" ? 84 : 220}
       role="img"
       aria-label={variant === "full" ? "Boneco completo da cabeça às chuteiras" : "Prévia real do busto no botão de futebol"}
     />
@@ -120,7 +122,7 @@ function OptionGrid({
             onClick={() => onSelect(index)} aria-pressed={selected === index}
             title={label}>
             {visual && appearance && primary && secondary &&
-              <CharacterCanvas appearance={{ ...appearance, hairStyle: index }} primary={primary} secondary={secondary} number={10} variant="button" className="avatar-mini-head" />}
+              <CharacterCanvas appearance={{ ...appearance, hairStyle: index }} primary={primary} secondary={secondary} number={10} variant="mini" className="avatar-mini-head" />}
             <span>{label}</span>
             {selected === index && <b aria-hidden="true">✓</b>}
           </button>
