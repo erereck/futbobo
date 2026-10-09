@@ -430,21 +430,26 @@ export function drawPlayerBust(
   ctx.fillStyle = shade(skin, -18); ctx.fillRect(-1.5 * scale, -2 * scale, 3 * scale, 5 * scale);
   drawHair(ctx, appearance.hairStyle, hair, scale);
   drawBeard(ctx, appearance.beard, shade(hair, -5), scale);
-  const mouth = shade(skin, -56);
-  ctx.strokeStyle = mouth; ctx.fillStyle = mouth; ctx.lineWidth = 1.7 * scale; ctx.lineCap = "round";
-  if (appearance.face === 0) ctx.fillRect(-5 * scale, 4 * scale, 10 * scale, 1.6 * scale);
-  else if (appearance.face === 1) { ctx.beginPath(); ctx.moveTo(-5 * scale, 5 * scale); ctx.quadraticCurveTo(1 * scale, 7 * scale, 6 * scale, 3 * scale); ctx.stroke(); }
-  else if (appearance.face === 2) { ctx.beginPath(); ctx.arc(0, 2.6 * scale, 3.8 * scale, .08, Math.PI - .08); ctx.stroke(); }
-  else if (appearance.face === 3) { ctx.fillRect(-4 * scale, 4 * scale, 8 * scale, 2.3 * scale); }
-  else if (appearance.face === 4) { ctx.beginPath(); ctx.arc(0, 3 * scale, 3 * scale, .2, Math.PI - .2); ctx.stroke(); }
-  else if (appearance.face === 5) { ctx.beginPath(); ctx.ellipse(0, 5 * scale, 2.7 * scale, 3.4 * scale, 0, 0, Math.PI * 2); ctx.fill(); }
-  else if (appearance.face === 6) { ctx.fillStyle = "#f5eee2"; ctx.fillRect(-4.5 * scale, 3.2 * scale, 9 * scale, 3.5 * scale); ctx.fillStyle = mouth; ctx.fillRect(-4.5 * scale, 6 * scale, 9 * scale, 1.1 * scale); }
-  else if (appearance.face === 7) { ctx.beginPath(); ctx.moveTo(-3 * scale, 5 * scale); ctx.quadraticCurveTo(0, 2.4 * scale, 3 * scale, 5 * scale); ctx.quadraticCurveTo(0, 7 * scale, -3 * scale, 5 * scale); ctx.fill(); }
-  else { ctx.beginPath(); ctx.moveTo(-4.5 * scale, 5.3 * scale); ctx.quadraticCurveTo(-.5 * scale, 7.4 * scale, 4.5 * scale, 3 * scale); ctx.stroke(); }
+  drawPlayerMouth(ctx, appearance.face, skin, scale);
   drawHeadAccessories(ctx, appearance, skin, hair, scale);
   ctx.restore();
 }
 
+
+/** Exactly one mouth implementation for the editor figure and the in-game button. */
+function drawPlayerMouth(ctx: CanvasRenderingContext2D, face: number, skin: string, scale: number) {
+  const mouth = shade(skin, -56);
+  ctx.strokeStyle = mouth; ctx.fillStyle = mouth; ctx.lineWidth = 1.7 * scale; ctx.lineCap = "round";
+  if (face === 0) ctx.fillRect(-5 * scale, 4 * scale, 10 * scale, 1.6 * scale);
+  else if (face === 1) { ctx.beginPath(); ctx.moveTo(-5 * scale, 5 * scale); ctx.quadraticCurveTo(1 * scale, 7 * scale, 6 * scale, 3 * scale); ctx.stroke(); }
+  else if (face === 2) { ctx.beginPath(); ctx.arc(0, 2.6 * scale, 3.8 * scale, .08, Math.PI - .08); ctx.stroke(); }
+  else if (face === 3) { ctx.fillRect(-4 * scale, 4 * scale, 8 * scale, 2.3 * scale); }
+  else if (face === 4) { ctx.beginPath(); ctx.arc(0, 3 * scale, 3 * scale, .2, Math.PI - .2); ctx.stroke(); }
+  else if (face === 5) { ctx.beginPath(); ctx.ellipse(0, 5 * scale, 2.7 * scale, 3.4 * scale, 0, 0, Math.PI * 2); ctx.fill(); }
+  else if (face === 6) { ctx.fillStyle = "#f5eee2"; ctx.fillRect(-4.5 * scale, 3.2 * scale, 9 * scale, 3.5 * scale); ctx.fillStyle = mouth; ctx.fillRect(-4.5 * scale, 6 * scale, 9 * scale, 1.1 * scale); }
+  else if (face === 7) { ctx.beginPath(); ctx.moveTo(-3 * scale, 5 * scale); ctx.quadraticCurveTo(0, 2.4 * scale, 3 * scale, 5 * scale); ctx.quadraticCurveTo(0, 7 * scale, -3 * scale, 5 * scale); ctx.fill(); }
+  else { ctx.beginPath(); ctx.moveTo(-4.5 * scale, 5.3 * scale); ctx.quadraticCurveTo(-.5 * scale, 7.4 * scale, 4.5 * scale, 3 * scale); ctx.stroke(); }
+}
 
 /** Additional facial details shared by the in-match button and the full-body studio model. */
 function drawHeadAccessories(ctx: CanvasRenderingContext2D, appearance: PlayerAppearance, skin: string, hair: string, scale: number) {
@@ -594,13 +599,7 @@ export function drawPlayerFullBody(
   ctx.fillRect(-1.5 * hs, -2 * hs, 3 * hs, 5 * hs);
   drawHair(ctx, a.hairStyle, hair, hs);
   drawBeard(ctx, a.beard, shade(hair, -5), hs);
-  const mouth = shade(skin, -56);
-  ctx.strokeStyle = mouth; ctx.fillStyle = mouth; ctx.lineWidth = 1.7 * hs; ctx.lineCap = "round";
-  if (a.face === 0 || a.face === 3) ctx.fillRect(-5 * hs, 4 * hs, 10 * hs, 1.6 * hs);
-  else if (a.face === 5) { ctx.beginPath(); ctx.ellipse(0, 5 * hs, 2.7 * hs, 3.4 * hs, 0, 0, Math.PI * 2); ctx.fill(); }
-  else if (a.face === 6) { ctx.fillStyle = "#f5eee2"; ctx.fillRect(-4.5 * hs, 3.2 * hs, 9 * hs, 3.5 * hs); }
-  else if (a.face === 7) { ctx.beginPath(); ctx.ellipse(0, 5 * hs, 3 * hs, 1.7 * hs, 0, 0, Math.PI * 2); ctx.fill(); }
-  else { ctx.beginPath(); ctx.moveTo(-5 * hs, 3.5 * hs); ctx.quadraticCurveTo(0, (a.face === 4 ? 8 : 10) * hs, 5 * hs, 3.5 * hs); ctx.stroke(); }
+  drawPlayerMouth(ctx, a.face, skin, hs);
   drawHeadAccessories(ctx, a, skin, hair, hs);
   ctx.restore();
   ctx.restore();
