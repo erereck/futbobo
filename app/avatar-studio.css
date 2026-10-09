@@ -183,7 +183,9 @@
   border-radius: 8px;
   background: #1b3022;
   color: #e8f1e8;
-  font: 900 12px/1.1 inherit;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.1;
   cursor: pointer;
 }
 .avatar-stage-actions button:hover:not(:disabled) { border-color: #e8c558; background: #263c27; }
