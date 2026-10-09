@@ -562,7 +562,7 @@ export function drawPlayerFullBody(
   polygon([[-42 * width, 151], [42 * width, 151], [52 * width, 238], [45 * width, 248], [-45 * width, 248], [-52 * width, 238]], shade(primary, -12));
   ctx.save();
   ctx.beginPath(); ctx.moveTo(-42 * width, 151); ctx.lineTo(42 * width, 151); ctx.lineTo(49 * width, 244); ctx.lineTo(-49 * width, 244); ctx.closePath(); ctx.clip();
-  ctx.save(); ctx.translate(0, 135); ctx.scale(width * 1.12, 3.6); drawKit(ctx, a.kitPattern, primary, secondary, 1); ctx.restore();
+  ctx.save(); ctx.translate(0, 135); ctx.scale(width * 2.2, 3.6); drawKit(ctx, a.kitPattern, primary, secondary, 1); ctx.restore();
   ctx.restore();
   rounded(-30 * width, 158, 60 * width, 3, 1, "rgba(255,255,255,.15)");
   rounded(-8, 148, 16, 15, 3, shade(skin, -12));
