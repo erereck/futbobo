@@ -11,6 +11,15 @@ export type PlayerAppearance = {
   customSkinColor?: string;
   customHairColor?: string;
   customEyeColor?: string;
+  build?: number;
+  stature?: number;
+  glasses?: number;
+  facialDetail?: number;
+  headwear?: number;
+  sleeves?: number;
+  socks?: number;
+  boots?: number;
+  customShortsColor?: string;
 };
 
 export type BotaoVisualRoster = {
@@ -34,6 +43,14 @@ export const HAIR_STYLE_NAMES = [
 ];
 export const BEARD_NAMES = ["Sem barba", "Cavanhaque", "Barba cheia", "Bigode", "Barba curta", "Barba desenhada", "Bigode fino", "Barba por fazer"];
 export const FACE_NAMES = ["Sério", "Confiante", "Sorriso", "Concentrado", "Tranquilo", "Surpreso", "Dentes à mostra", "Bico", "Sorriso torto"];
+export const BUILD_NAMES = ["Leve", "Equilibrado", "Atlético", "Forte"];
+export const STATURE_NAMES = ["Baixo", "Médio", "Alto"];
+export const GLASSES_NAMES = ["Sem óculos", "Redondos", "Quadrados", "Escuros"];
+export const DETAIL_NAMES = ["Nenhum", "Sardas", "Cicatriz", "Curativo"];
+export const HEADWEAR_NAMES = ["Nenhum", "Faixa", "Bandana", "Testeira"];
+export const SLEEVES_NAMES = ["Curtas", "Longas", "Dobradas"];
+export const SOCKS_NAMES = ["Altos", "Médios", "Baixos"];
+export const BOOT_COLORS = ["#f4f4ee", "#141919", "#f2c438", "#f75b55", "#58c5f3", "#7c5fe1", "#7ce0ab", "#e8843c"];
 export const KIT_PATTERN_NAMES = ["Faixa central", "Liso", "Listras", "Metade a metade", "Faixa diagonal", "Chevrons", "Ombros", "Pinstripes", "Faixa horizontal", "Quadriculado", "Degradê", "Mangas contrastantes"];
 
 export const DEFAULT_PLAYER_APPEARANCE: PlayerAppearance = {
@@ -46,6 +63,14 @@ export const DEFAULT_PLAYER_APPEARANCE: PlayerAppearance = {
   beard: 0,
   brow: 1,
   kitPattern: 1,
+  build: 1,
+  stature: 1,
+  glasses: 0,
+  facialDetail: 0,
+  headwear: 0,
+  sleeves: 0,
+  socks: 0,
+  boots: 1,
 };
 
 function clampIndex(value: number, length: number) {
@@ -74,6 +99,15 @@ export function normalizePlayerAppearance(value?: Partial<PlayerAppearance> | nu
     customSkinColor: safeHex(value?.customSkinColor),
     customHairColor: safeHex(value?.customHairColor),
     customEyeColor: safeHex(value?.customEyeColor),
+    build: clampIndex(value?.build ?? 1, BUILD_NAMES.length),
+    stature: clampIndex(value?.stature ?? 1, STATURE_NAMES.length),
+    glasses: clampIndex(value?.glasses ?? 0, GLASSES_NAMES.length),
+    facialDetail: clampIndex(value?.facialDetail ?? 0, DETAIL_NAMES.length),
+    headwear: clampIndex(value?.headwear ?? 0, HEADWEAR_NAMES.length),
+    sleeves: clampIndex(value?.sleeves ?? 0, SLEEVES_NAMES.length),
+    socks: clampIndex(value?.socks ?? 0, SOCKS_NAMES.length),
+    boots: clampIndex(value?.boots ?? 1, BOOT_COLORS.length),
+    customShortsColor: safeHex(value?.customShortsColor),
   };
 }
 
@@ -407,5 +441,167 @@ export function drawPlayerBust(
   else if (appearance.face === 6) { ctx.fillStyle = "#f5eee2"; ctx.fillRect(-4.5 * scale, 3.2 * scale, 9 * scale, 3.5 * scale); ctx.fillStyle = mouth; ctx.fillRect(-4.5 * scale, 6 * scale, 9 * scale, 1.1 * scale); }
   else if (appearance.face === 7) { ctx.beginPath(); ctx.moveTo(-3 * scale, 5 * scale); ctx.quadraticCurveTo(0, 2.4 * scale, 3 * scale, 5 * scale); ctx.quadraticCurveTo(0, 7 * scale, -3 * scale, 5 * scale); ctx.fill(); }
   else { ctx.beginPath(); ctx.moveTo(-4.5 * scale, 5.3 * scale); ctx.quadraticCurveTo(-.5 * scale, 7.4 * scale, 4.5 * scale, 3 * scale); ctx.stroke(); }
+  drawHeadAccessories(ctx, appearance, skin, hair, scale);
+  ctx.restore();
+}
+
+
+/** Additional facial details shared by the in-match button and the full-body studio model. */
+function drawHeadAccessories(ctx: CanvasRenderingContext2D, appearance: PlayerAppearance, skin: string, hair: string, scale: number) {
+  const p = (value: number) => value * scale;
+  ctx.save();
+  if (appearance.facialDetail === 1) {
+    ctx.fillStyle = shade(skin, -43);
+    for (const side of [-1, 1]) for (let i = 0; i < 3; i++) {
+      ctx.beginPath(); ctx.arc(p(side * (5.5 + (i % 2) * 2.4)), p(-.5 + i * 1.7), p(.45), 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (appearance.facialDetail === 2) {
+    ctx.strokeStyle = shade(skin, -70); ctx.lineWidth = p(.9);
+    ctx.beginPath(); ctx.moveTo(p(7), p(-1)); ctx.lineTo(p(10), p(6)); ctx.stroke();
+  } else if (appearance.facialDetail === 3) {
+    ctx.fillStyle = "#f0d8b8"; ctx.fillRect(p(6), p(1.3), p(7), p(3));
+    ctx.strokeStyle = "#d5a98c"; ctx.lineWidth = p(.6); ctx.strokeRect(p(6), p(1.3), p(7), p(3));
+    ctx.fillStyle = "#dba98c"; ctx.fillRect(p(9), p(1.3), p(1), p(3));
+  }
+  if (appearance.glasses) {
+    const dark = appearance.glasses === 3;
+    ctx.strokeStyle = dark ? "#171b20" : shade(hair, 6);
+    ctx.lineWidth = p(1.15);
+    for (const sign of [-1, 1]) {
+      ctx.beginPath();
+      if (appearance.glasses === 1) ctx.arc(p(sign * 6.7), p(-4.1), p(4.15), 0, Math.PI * 2);
+      else ctx.roundRect(p(sign * 6.7 - 4.1), p(-8.5), p(8.2), p(8.4), p(1.35));
+      if (dark) { ctx.fillStyle = "rgba(17,23,34,.8)"; ctx.fill(); }
+      ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(p(-2.5), p(-4.4)); ctx.lineTo(p(2.5), p(-4.4)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p(-11), p(-6)); ctx.lineTo(p(-14), p(-7)); ctx.moveTo(p(11), p(-6)); ctx.lineTo(p(14), p(-7)); ctx.stroke();
+  }
+  if (appearance.headwear) {
+    ctx.fillStyle = appearance.headwear === 2 ? "#f4c430" : appearance.headwear === 3 ? "#f5f5ef" : "#ef6252";
+    const y = appearance.headwear === 3 ? -16 : -13;
+    ctx.fillRect(p(-14.2), p(y), p(28.4), p(appearance.headwear === 2 ? 4 : 2.6));
+    if (appearance.headwear === 2) {
+      ctx.beginPath(); ctx.moveTo(p(12), p(-9)); ctx.lineTo(p(17), p(-1)); ctx.lineTo(p(19), p(-10)); ctx.closePath(); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+/** Front-facing footballer for the creator. Uses the SAME head primitives as the match bust. */
+export function drawPlayerFullBody(
+  ctx: CanvasRenderingContext2D,
+  appearanceValue: PlayerAppearance,
+  primary: string,
+  secondary: string,
+  number = 10,
+) {
+  const a = normalizePlayerAppearance(appearanceValue);
+  const skin = a.customSkinColor ?? SKIN_COLORS[a.skin];
+  const hair = a.customHairColor ?? HAIR_COLORS[a.hairColor];
+  const eyes = a.customEyeColor ?? EYE_COLORS[a.eyeColor];
+  const shorts = a.customShortsColor ?? shade(secondary, -4);
+  const boots = BOOT_COLORS[a.boots ?? 1];
+  const width = [0.86, 1, 1.12, 1.23][a.build ?? 1];
+  const legHeight = [.94, 1, 1.065][a.stature ?? 1];
+  const scale = Math.min(ctx.canvas.width / 320, ctx.canvas.height / 472);
+
+  ctx.save();
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.translate(ctx.canvas.width / 2, (ctx.canvas.height - 452 * scale) / 2);
+  ctx.scale(scale, scale);
+  ctx.translate(0, 232);
+  ctx.scale(1, legHeight);
+  ctx.translate(0, -232);
+
+  const rounded = (x: number, y: number, w: number, h: number, radius: number, color: string) => {
+    ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(x, y, w, h, radius); ctx.fill();
+  };
+  const polygon = (points: number[][], fill: string) => {
+    ctx.fillStyle = fill; ctx.beginPath(); ctx.moveTo(points[0][0], points[0][1]);
+    for (const [x, y] of points.slice(1)) ctx.lineTo(x, y);
+    ctx.closePath(); ctx.fill();
+  };
+
+  // Field contact shadow is deliberately subtle, not a fake 3D ground plane.
+  ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.beginPath(); ctx.ellipse(0, 442, 76, 10, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Legs: two distinct forms with socks and ankle details.
+  for (const sign of [-1, 1]) {
+    const x = sign * 25;
+    polygon([[x - 17, 283], [x + 17, 283], [x + 14, 355], [x + 10, 407], [x - 11, 407], [x - 15, 351]], shade(skin, sign === -1 ? -5 : -13));
+    const top = [331, 350, 369][a.socks ?? 0];
+    rounded(x - 16, top, 32, 65 + (331 - top), 5, primary);
+    rounded(x - 16, top, 32, 8, 2, secondary);
+    rounded(x - 16, top + 10, 32, 3, 0, "rgba(255,255,255,.19)");
+    rounded(x - 14, 398, 28, 17, 4, shade(skin, -10));
+    rounded(x - 22, 410, 47, 25, 8, boots);
+    rounded(x - 25, 429, 51, 7, 3, shade(boots, -36));
+    ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(x - 5, 415 + i * 4); ctx.lineTo(x + 9, 415 + i * 4); ctx.stroke(); }
+  }
+
+  // Shorts with side seams, consistent with player's club kit.
+  polygon([[-47 * width, 239], [47 * width, 239], [52 * width, 296], [4, 300], [0, 281], [-4, 300], [-52 * width, 296]], shorts);
+  ctx.fillStyle = secondary; ctx.fillRect(-48 * width, 244, 96 * width, 7);
+  rounded(-47 * width, 252, 5, 37, 1, primary);
+  rounded(42 * width, 252, 5, 37, 1, primary);
+
+  // Arms are independent of the torso and stay legible in long sleeves.
+  for (const sign of [-1, 1]) {
+    const sx = sign;
+    polygon([[sx * 42 * width, 156], [sx * 62 * width, 163], [sx * 77 * width, 225], [sx * 59 * width, 233], [sx * 44 * width, 192]], skin);
+    const sleeveEnd = a.sleeves === 1 ? 229 : a.sleeves === 2 ? 193 : 185;
+    polygon([[sx * 38 * width, 155], [sx * 62 * width, 164], [sx * (62 + (sleeveEnd - 164) * .24) * width, sleeveEnd], [sx * (42 + (sleeveEnd - 155) * .21) * width, sleeveEnd]], primary);
+    if (a.sleeves === 2) rounded(Math.min(sx * 52, sx * 66) * width, sleeveEnd - 4, 15 * width, 5, 1, secondary);
+    if (a.sleeves === 1) rounded(Math.min(sx * 58, sx * 72) * width, 224, 16 * width, 6, 1, secondary);
+    rounded(sx * 66 * width - 9, 227, 20, 19, 7, skin);
+  }
+
+  // Shirt silhouette, shadow and collar.
+  polygon([[-42 * width, 151], [42 * width, 151], [52 * width, 238], [45 * width, 248], [-45 * width, 248], [-52 * width, 238]], shade(primary, -12));
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(-42 * width, 151); ctx.lineTo(42 * width, 151); ctx.lineTo(49 * width, 244); ctx.lineTo(-49 * width, 244); ctx.closePath(); ctx.clip();
+  ctx.save(); ctx.translate(0, 135); ctx.scale(width * 1.12, 3.6); drawKit(ctx, a.kitPattern, primary, secondary, 1); ctx.restore();
+  ctx.restore();
+  rounded(-30 * width, 158, 60 * width, 3, 1, "rgba(255,255,255,.15)");
+  rounded(-8, 148, 16, 15, 3, shade(skin, -12));
+  polygon([[-13, 151], [0, 167], [13, 151], [8, 151], [0, 159], [-8, 151]], secondary);
+
+  // Shirt number is real career data, not a decorative fixed label.
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = "900 32px Arial, sans-serif"; ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(0,0,0,.35)";
+  const jersey = String(number > 0 ? number : 10).slice(0, 2);
+  ctx.strokeText(jersey, 0, 204); ctx.fillStyle = "#ffffff"; ctx.fillText(jersey, 0, 204);
+  rounded(-24, 220, 48, 3, 1, "rgba(255,255,255,.18)");
+
+  // Neck and head use the same hair, eyes, beard and face coordinates as the button.
+  rounded(-12, 130, 24, 25, 3, shade(skin, -15));
+  const hs = 2.35;
+  ctx.save(); ctx.translate(0, 107);
+  drawHairBack(ctx, a.hairStyle, shade(hair, -7), hs);
+  rounded(-14 * hs, -17 * hs, 28 * hs, 27 * hs, 4 * hs, skin);
+  rounded(-15 * hs, -8 * hs, 2 * hs, 7 * hs, hs, shade(skin, -13));
+  rounded(13 * hs, -8 * hs, 2 * hs, 7 * hs, hs, shade(skin, -13));
+  ctx.fillStyle = eyes;
+  ctx.fillRect(-8 * hs, -6 * hs, 4 * hs, 3.5 * hs);
+  ctx.fillRect(4 * hs, -6 * hs, 4 * hs, 3.5 * hs);
+  ctx.fillStyle = shade(hair, 12);
+  ctx.fillRect(-9 * hs, (-10 + (a.brow ?? 1)) * hs, 6 * hs, 1.6 * hs);
+  ctx.fillRect(3 * hs, (-10 + (a.brow ?? 1)) * hs, 6 * hs, 1.6 * hs);
+  ctx.fillStyle = shade(skin, -18);
+  ctx.fillRect(-1.5 * hs, -2 * hs, 3 * hs, 5 * hs);
+  drawHair(ctx, a.hairStyle, hair, hs);
+  drawBeard(ctx, a.beard, shade(hair, -5), hs);
+  const mouth = shade(skin, -56);
+  ctx.strokeStyle = mouth; ctx.fillStyle = mouth; ctx.lineWidth = 1.7 * hs; ctx.lineCap = "round";
+  if (a.face === 0 || a.face === 3) ctx.fillRect(-5 * hs, 4 * hs, 10 * hs, 1.6 * hs);
+  else if (a.face === 5) { ctx.beginPath(); ctx.ellipse(0, 5 * hs, 2.7 * hs, 3.4 * hs, 0, 0, Math.PI * 2); ctx.fill(); }
+  else if (a.face === 6) { ctx.fillStyle = "#f5eee2"; ctx.fillRect(-4.5 * hs, 3.2 * hs, 9 * hs, 3.5 * hs); }
+  else if (a.face === 7) { ctx.beginPath(); ctx.ellipse(0, 5 * hs, 3 * hs, 1.7 * hs, 0, 0, Math.PI * 2); ctx.fill(); }
+  else { ctx.beginPath(); ctx.moveTo(-5 * hs, 3.5 * hs); ctx.quadraticCurveTo(0, (a.face === 4 ? 8 : 10) * hs, 5 * hs, 3.5 * hs); ctx.stroke(); }
+  drawHeadAccessories(ctx, a, skin, hair, hs);
+  ctx.restore();
   ctx.restore();
 }
