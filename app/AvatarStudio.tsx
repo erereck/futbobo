@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
-  BEARD_NAMES, BOOT_COLORS, BUILD_NAMES, DETAIL_NAMES, EYE_COLORS, FACE_NAMES,
+  BEARD_NAMES, BOOT_COLORS, BUILD_NAMES, DEFAULT_PLAYER_APPEARANCE, DETAIL_NAMES, EYE_COLORS, FACE_NAMES,
   GLASSES_NAMES, HAIR_COLORS, HAIR_STYLE_NAMES, HEADWEAR_NAMES, KIT_PATTERN_NAMES,
   SKIN_COLORS, SLEEVES_NAMES, SOCKS_NAMES, STATURE_NAMES,
   drawPlayerBust, drawPlayerFullBody, normalizePlayerAppearance, randomPlayerAppearance,
@@ -300,7 +300,7 @@ export default function AvatarStudio({
               ))}
             </div>
           </div>
-          <button type="button" className="avatar-reset" onClick={() => remember({ ...normalizePlayerAppearance(null), kitPattern: appearance.kitPattern })}>
+          <button type="button" className="avatar-reset" onClick={() => remember({ ...DEFAULT_PLAYER_APPEARANCE, kitPattern: appearance.kitPattern })}>
             Restaurar aparência original
           </button>
         </div>
