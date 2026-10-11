@@ -2604,26 +2604,108 @@ test("abre a carreira para microestados e novos azarões internacionais", async 
 });
 
 test("recorta estampas do uniforme dentro da camisa", async () => {
+  const body = await readFile(
+    new URL("../app/character/body.ts", import.meta.url),
+    "utf8",
+  );
+  const kit = await readFile(
+    new URL("../app/character/kit.ts", import.meta.url),
+    "utf8",
+  );
+  const drawJersey = body.slice(
+    body.indexOf("export function drawJersey"),
+    body.indexOf("function contrastFor"),
+  );
+
+  assert.match(drawJersey, /ctx\.clip\(path\);\s*paintKitPattern\(/);
+  assert.match(drawJersey, /ctx\.restore\(\);/);
+  assert.match(
+    kit,
+    /case 4: \/\/ Faixa diagonal[\s\S]*?ctx\.rotate\(-0\.62\)/,
+    "a faixa diagonal continua existindo dentro do recorte",
+  );
+});
+
+async function importAppearanceModel(t) {
+  try {
+    return await import("../app/player-appearance.ts");
+  } catch (error) {
+    if (error?.code === "ERR_UNKNOWN_FILE_EXTENSION") {
+      t.skip("Node sem suporte nativo a TypeScript");
+      return null;
+    }
+    throw error;
+  }
+}
+
+test("migra visuais salvos no modelo antigo para o personagem novo", async (t) => {
+  const model = await importAppearanceModel(t);
+  if (!model) return;
+  const legacy = {
+    version: 2,
+    skin: 4,
+    hairColor: 2,
+    eyeColor: 3,
+    hairStyle: 21,
+    face: 6,
+    beard: 2,
+    brow: 2,
+    kitPattern: 5,
+    customHairColor: "#123456",
+  };
+  const migrated = model.normalizePlayerAppearance(legacy);
+
+  assert.equal(migrated.version, 3);
+  assert.equal(model.HAIR_STYLE_NAMES[migrated.hairStyle], "Mini afro");
+  assert.equal(model.FACE_NAMES[migrated.face], "Sorrisão");
+  assert.equal(model.BEARD_NAMES[migrated.beard], "Barba cheia");
+  assert.equal(model.BROW_NAMES[migrated.brow], "Grossa");
+  assert.equal(migrated.customHairColor, "#123456");
+  assert.equal(migrated.skin, 4);
+  assert.deepEqual(model.normalizePlayerAppearance({ ...migrated }), migrated);
+});
+
+test("sorteios de elenco sao deterministicos e dentro das opcoes", async (t) => {
+  const model = await importAppearanceModel(t);
+  if (!model) return;
+  for (let seed = 0; seed < 200; seed += 1) {
+    const appearance = model.randomPlayerAppearance(seed);
+    assert.deepEqual(model.randomPlayerAppearance(seed), appearance);
+    for (const [key, count] of Object.entries(model.APPEARANCE_OPTION_COUNTS)) {
+      assert.ok(
+        Number.isInteger(appearance[key]) && appearance[key] >= 0 && appearance[key] < count,
+        `${key} fora da faixa: ${appearance[key]}`,
+      );
+    }
+  }
+});
+
+test("estudio de personagem mostra corpo inteiro e a peca de botao", async () => {
   const appearance = await readFile(
     new URL("../app/player-appearance.ts", import.meta.url),
     "utf8",
   );
-  const drawKit = appearance.slice(
-    appearance.indexOf("function drawKit"),
-    appearance.indexOf("function drawBeard"),
+  const editor = await readFile(
+    new URL("../app/PlayerAppearanceEditor.tsx", import.meta.url),
+    "utf8",
   );
+  const render = await readFile(
+    new URL("../app/botao/render.ts", import.meta.url),
+    "utf8",
+  );
+  const creation = await readFile(
+    new URL("../app/components/career/PlayerCreationV2.tsx", import.meta.url),
+    "utf8",
+  );
+  const optionCount = (name) =>
+    (appearance.slice(appearance.indexOf(`export const ${name} = [`)).split("];")[0].match(/"[^"]+"/g) ?? []).length;
 
-  assert.match(
-    drawKit,
-    /ctx\.rect\(-22 \* scale, 7 \* scale, 44 \* scale, 27 \* scale\);/,
-  );
-  assert.match(drawKit, /ctx\.clip\(\);/);
-  assert.match(
-    drawKit,
-    /ctx\.rotate\(-\.56\)/,
-    "a faixa diagonal continua existindo dentro do recorte",
-  );
-  assert.match(drawKit, /ctx\.restore\(\);\s*\}/);
+  assert.ok(optionCount("HAIR_STYLE_NAMES") >= 40, "pelo menos 40 cortes de cabelo");
+  assert.ok(optionCount("FACE_NAMES") >= 16, "pelo menos 16 expressões");
+  assert.match(render, /export function drawBotaoPiecePreview/);
+  assert.match(editor, /drawBotaoPiecePreview\(/);
+  assert.match(editor, /drawCharacterFullBody\(/);
+  assert.match(creation, /<PlayerAppearanceEditor[\s\S]*?kitPreview[\s\S]*?footer=\{identityFooter\}/);
 });
 
 test("publica metadados completos para buscadores no dominio oficial", async () => {

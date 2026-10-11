@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { PlayerAppearancePortrait as Portrait } from "../../PlayerAppearanceEditor";
-import { DEFAULT_PLAYER_APPEARANCE, normalizePlayerAppearance, randomPlayerAppearance, type PlayerAppearance } from "../../player-appearance";
+import { DEFAULT_PLAYER_APPEARANCE, HAIR_STYLE_BALD, normalizePlayerAppearance, randomPlayerAppearance, type PlayerAppearance } from "../../player-appearance";
 import type { GameState } from "../../career/model";
 import { SAVE_KEY } from "../../career/state";
 import { clubById } from "../../career/shared";
@@ -108,7 +108,7 @@ function FullBodyPlayer({
   presenter?: boolean;
 }) {
   const suit = SUITS[suitVariant];
-  const fullAppearance = presenter ? { ...appearance, hairStyle: 12, beard: 0, face: 1 } : appearance;
+  const fullAppearance = presenter ? { ...appearance, hairStyle: HAIR_STYLE_BALD, beard: 0, face: 1 } : appearance;
   const vars = {
     "--avatar-scale": scale,
     "--kit-primary": primary,
@@ -183,7 +183,7 @@ export default function CinematicEventPrototype() {
     () => FINALIST_NAMES.map((_, index) => randomPlayerAppearance(player.seed + 911 * (index + 1))),
     [player.seed],
   );
-  const presenterAppearance = useMemo(() => ({ ...randomPlayerAppearance(player.seed + 7721), hairStyle: 12, beard: 0, face: 1 }), [player.seed]);
+  const presenterAppearance = useMemo(() => ({ ...randomPlayerAppearance(player.seed + 7721), hairStyle: HAIR_STYLE_BALD, beard: 0, face: 1 }), [player.seed]);
   const seasonLabel = Math.max(2026, player.season);
 
   const goNext = () => {

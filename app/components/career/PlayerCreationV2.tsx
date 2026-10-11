@@ -152,7 +152,8 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
   const choosePosition = (position: PositionKey) => {
     const number = DEFAULT_NUMBER[position];
     setShirtNumberInput(String(number));
-    setGame((current) => ({ ...current, position, number, phase: "nationality" }));
+    // Goleiro já entra no estúdio de luvas; dá para tirar na aba Estilo.
+    setGame((current) => ({ ...current, position, number, phase: "nationality", playerAppearance: { ...current.playerAppearance, gloves: position === "GOL" ? 1 : 0 } }));
   };
 
   const chooseCountry = (countryId: string) => {
@@ -252,35 +253,41 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
   }
 
   if (game.phase === "academy") {
+    const identityFooter = (
+      <div className={styles.identityFooter}>
+        <button type="button" className={styles.footerChip} onClick={() => setCountryPickerOpen(true)}>
+          <NationBadge country={selectedCountry} size="sm" />
+          <span><small>PAÍS</small><strong>{selectedCountry.name}</strong></span>
+        </button>
+        <button type="button" className={`${styles.footerChip} ${styles.storyOption}`} onClick={() => setStoryPickerOpen(true)}>
+          <span className={styles.storyIcon}>{selectedStory.icon}</span>
+          <span><small>{selectedStory.tagline}</small><strong>{displayStoryTitle(selectedStory.id, selectedStory.title)}</strong></span>
+        </button>
+        <button className={`${styles.primary} ${styles.footerContinue}`} type="button" onClick={goClub}>
+          <span className={styles.continueLong}>Escolher primeiro clube</span>
+          <span className={styles.continueShort}>Continuar</span>
+          <b>→</b>
+        </button>
+      </div>
+    );
     return (
       <section className={`${styles.page} ${styles.identityPage}`}>
         <SetupHeader step="4 · IDENTIDADE" title="Monte seu jogador." onBack={() => setGame((current) => ({ ...current, phase: "nationality" }))} />
         <div className={styles.identityStage}>
           {appearanceEnabled ? (
-            <div className={styles.appearanceWrap}>
-              <PlayerAppearanceEditor
-                compact
-                value={game.playerAppearance}
-                onChange={(playerAppearance) => setGame((current) => ({ ...current, playerAppearance }))}
-                playerName={game.name}
-                number={game.number}
-                previewExtras={(
-                  <div className={styles.previewOptions}>
-                    <button type="button" className={styles.previewOption} onClick={() => setCountryPickerOpen(true)}><NationBadge country={selectedCountry} size="sm" /><span><small>PAÍS</small><strong>{selectedCountry.name}</strong></span><b>›</b></button>
-                    <button type="button" className={`${styles.previewOption} ${styles.storyOption}`} onClick={() => setStoryPickerOpen(true)}><span className={styles.storyIcon}>{selectedStory.icon}</span><span><small>{selectedStory.tagline}</small><strong>{displayStoryTitle(selectedStory.id, selectedStory.title)}</strong></span><b>›</b></button>
-                    <button className={`${styles.primary} ${styles.previewContinue}`} type="button" onClick={goClub}>Escolher primeiro clube <b>→</b></button>
-                  </div>
-                )}
-              />
-            </div>
+            <PlayerAppearanceEditor
+              value={game.playerAppearance}
+              onChange={(playerAppearance) => setGame((current) => ({ ...current, playerAppearance }))}
+              playerName={game.name}
+              number={game.number}
+              position={game.position}
+              kitPreview
+              footer={identityFooter}
+            />
           ) : (
             <div className={styles.appearanceDisabled}>
               <b>#{game.number}</b><strong>{game.name}</strong><small>Personagens personalizados estão desativados nas configurações.</small>
-              <div className={styles.previewOptions}>
-                <button type="button" className={styles.previewOption} onClick={() => setCountryPickerOpen(true)}><NationBadge country={selectedCountry} size="sm" /><span><small>PAÍS</small><strong>{selectedCountry.name}</strong></span><b>›</b></button>
-                <button type="button" className={`${styles.previewOption} ${styles.storyOption}`} onClick={() => setStoryPickerOpen(true)}><span className={styles.storyIcon}>{selectedStory.icon}</span><span><small>{selectedStory.tagline}</small><strong>{displayStoryTitle(selectedStory.id, selectedStory.title)}</strong></span><b>›</b></button>
-                <button className={`${styles.primary} ${styles.previewContinue}`} type="button" onClick={goClub}>Escolher primeiro clube <b>→</b></button>
-              </div>
+              {identityFooter}
             </div>
           )}
         </div>

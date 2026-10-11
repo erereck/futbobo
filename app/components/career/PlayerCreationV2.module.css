@@ -36,20 +36,9 @@
 .footChoice button { min-height:52px; border:1px solid rgba(255,255,255,.12); border-radius:9px; background:#111a15; color:#aebbb2; font-weight:850; cursor:pointer; }
 .footChoice .selectedChoice { border-color:#f4c430; color:#f7dc72; background:#25230f; }
 
-.identityStage { width:min(1050px,calc(100% - 28px)); margin:auto; padding:22px 0 54px; display:grid; grid-template-columns:minmax(0,1.3fr) 330px; gap:22px; align-items:start; }
-.appearanceWrap { min-width:0; }
-.appearanceWrap :global(.appearance-editor) { min-height:0; }
-.appearanceWrap :global(.appearance-palette button) { width:30px !important; height:30px !important; min-width:30px !important; aspect-ratio:1/1 !important; border-radius:50% !important; padding:0 !important; }
-.appearanceWrap :global(.appearance-preview canvas) { max-width:100%; height:auto !important; aspect-ratio:1; }
 .appearanceDisabled { min-height:440px; border:1px solid rgba(255,255,255,.1); border-radius:14px; background:#0e1711; display:grid; place-content:center; justify-items:center; gap:9px; text-align:center; }
 .appearanceDisabled b { font-size:76px; color:#f4c430; }
 .appearanceDisabled small { color:#84938a; max-width:280px; }
-.identityOptions { position:sticky; top:90px; display:grid; gap:8px; }
-.optionCard { width:100%; min-height:78px; padding:11px 13px; border:1px solid rgba(255,255,255,.11); border-radius:11px; background:#101914; color:white; display:grid; grid-template-columns:52px minmax(0,1fr) 20px; gap:10px; align-items:center; text-align:left; cursor:pointer; }
-.optionCard > span:nth-child(2) { display:grid; gap:4px; }
-.optionCard small { color:#789083; font:800 8px/1 ui-monospace,monospace; }
-.optionCard strong { font-size:14px; }
-.optionCard > b { justify-self:end; }
 .storyIcon { width:45px; height:45px; border-radius:50%; display:grid; place-items:center; background:#1b2119; color:#f4c430; font-size:18px; }
 .storyOption small { color:#b7a85c; }
 
@@ -100,15 +89,6 @@
 .contractOffers .academyOffer { border-color:rgba(244,196,48,.5); background:linear-gradient(110deg,#29250e,#101914 72%); }
 
 @media (max-width:760px) {
-  .identityStage { grid-template-columns:1fr; width:min(100% - 18px,620px); padding-top:9px; }
-  .appearanceWrap { max-height:61dvh; overflow:auto; border:1px solid rgba(255,255,255,.08); border-radius:12px; }
-  .appearanceWrap :global(.appearance-editor) { display:grid !important; grid-template-columns:150px minmax(0,1fr) !important; align-items:start !important; }
-  .appearanceWrap :global(.appearance-preview) { position:sticky !important; top:0; padding:9px !important; }
-  .appearanceWrap :global(.appearance-preview canvas) { width:138px !important; height:138px !important; }
-  .appearanceWrap :global(.appearance-preview strong), .appearanceWrap :global(.appearance-preview small) { max-width:135px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .appearanceWrap :global(.appearance-controls) { padding:10px !important; min-width:0; }
-  .appearanceWrap :global(.appearance-palette > div) { display:flex !important; flex-wrap:wrap !important; }
-  .identityOptions { position:static; }
   .clubToolbar { grid-template-columns:1fr 1fr; }
   .clubToolbar > button:first-child { grid-column:1/-1; }
   .clubCards { grid-template-columns:1fr; }
@@ -121,10 +101,6 @@
   .pitch { width:min(100%,390px); min-height:590px; }
   .position { width:52px; height:52px; }
   .fieldStage { padding-top:12px; }
-  .appearanceWrap :global(.appearance-editor) { grid-template-columns:124px minmax(0,1fr) !important; }
-  .appearanceWrap :global(.appearance-preview canvas) { width:112px !important; height:112px !important; }
-  .appearanceWrap :global(.appearance-preview strong), .appearanceWrap :global(.appearance-preview small) { max-width:110px; }
-  .appearanceWrap :global(.appearance-palette button) { width:27px !important; height:27px !important; min-width:27px !important; }
   .contractOffers button { grid-template-columns:62px minmax(0,1fr) 20px; padding-inline:11px; }
 }
 
@@ -139,20 +115,6 @@
 .shirtStepper button { align-self:center; width:58px; height:58px; border:1px solid rgba(244,196,48,.28); border-radius:12px; background:#111a15; color:#f4c430; font-size:28px; font-weight:900; cursor:pointer; }
 .shirtStepper button:hover { border-color:#f4c430; background:#1a2116; }
 
-.identityStage { width:min(1180px,calc(100% - 28px)); grid-template-columns:1fr; padding-top:18px; }
-.appearanceWrap { width:100%; min-width:0; }
-.appearanceWrap :global(.appearance-editor) { width:100% !important; max-width:none !important; }
-.appearanceWrap :global(.appearance-preview-extras) { width:100%; }
-.previewOptions { width:100%; display:grid; gap:7px; margin-top:7px; }
-.previewOption { width:100%; min-height:54px; border:1px solid rgba(255,255,255,.11); border-radius:9px; background:#101914; color:white; display:grid; grid-template-columns:40px minmax(0,1fr) 14px; align-items:center; gap:8px; padding:7px 9px; text-align:left; cursor:pointer; }
-.previewOption > span:nth-child(2) { display:grid; gap:3px; min-width:0; }
-.previewOption small { color:#789083; font:800 7px/1 ui-monospace,monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.previewOption strong { font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.previewOption > b { justify-self:end; }
-.previewOption .storyIcon, .storyIcon { width:34px; height:34px; font-size:14px; }
-.previewOption :global(.nation-badge) { max-width:36px; max-height:36px; }
-.previewContinue { width:100%; min-height:48px; }
-
 .picker { display:flex; flex-direction:column; grid-template-rows:none; }
 .picker > header, .warning, .search { flex:0 0 auto; }
 .pickerGrid, .allClubs, .storyList { min-height:0; flex:1 1 auto; }
@@ -164,17 +126,6 @@
   .shirtStepper { grid-template-columns:52px minmax(0,160px) 52px; }
   .shirtStepper input { font-size:88px; }
   .shirtStepper button { width:52px; height:52px; }
-  .identityStage { width:min(100% - 18px,760px); padding-top:9px; }
-  .appearanceWrap { max-height:calc(100dvh - 88px); }
-  .appearanceWrap :global(.appearance-editor) { grid-template-columns:150px minmax(0,1fr) !important; }
-  .appearanceWrap :global(.appearance-preview) { z-index:2; }
-  .previewOptions { gap:5px; margin-top:5px; }
-  .previewOption { min-height:44px; grid-template-columns:32px minmax(0,1fr) 10px; gap:5px; padding:5px 6px; }
-  .previewOption :global(.nation-badge) { width:30px !important; height:30px !important; min-width:30px !important; }
-  .previewOption .storyIcon, .storyIcon { width:30px; height:30px; }
-  .previewOption strong { font-size:9px; }
-  .previewOption small { font-size:6px; }
-  .previewContinue { min-height:44px; font-size:10px; padding-inline:9px; }
   .clubCards > button { grid-template-columns:46px minmax(0,1fr) 20px; min-width:0; }
   .clubCards :global(.club-badge-md) { width:44px !important; height:44px !important; min-width:44px !important; }
   .allClubs button { min-width:0; }
@@ -191,97 +142,41 @@
   .positionPage .pitch { height:min(520px,calc(100dvh - 108px)); }
   .position { width:clamp(39px,6.7dvh,49px); height:clamp(39px,6.7dvh,49px); }
   .position small { display:none; }
-  .appearanceWrap :global(.appearance-editor) { grid-template-columns:140px minmax(0,1fr) !important; }
-  .appearanceWrap :global(.appearance-preview canvas) { width:116px !important; height:116px !important; }
-  .appearanceWrap :global(.appearance-preview strong), .appearanceWrap :global(.appearance-preview small) { max-width:122px; }
-  .appearanceWrap :global(.appearance-palette button) { width:26px !important; height:26px !important; min-width:26px !important; }
   .contractOffers button { grid-template-columns:40px minmax(0,1fr) 18px; gap:12px; padding:11px 9px; }
   .contractOffers :global(.club-badge-lg) { width:40px !important; height:40px !important; min-width:40px !important; max-width:40px !important; max-height:40px !important; }
 }
 
-/* UX FINAL POLISH V3 */
-/* Swatches are rigid squares before border-radius, so flex/grid compression can never turn them into ovals. */
-.appearanceWrap :global(.appearance-palette button) {
-  width:30px !important;
-  height:30px !important;
-  min-width:30px !important;
-  min-height:30px !important;
-  max-width:30px !important;
-  max-height:30px !important;
-  flex:0 0 30px !important;
-  aspect-ratio:1 / 1 !important;
-  border-radius:50% !important;
-  box-sizing:border-box !important;
+/* ESTÚDIO DE PERSONAGEM */
+.identityPage { height:100dvh; min-height:100dvh; overflow:hidden; }
+.identityStage { width:min(1340px,calc(100% - 28px)); height:calc(100dvh - 68px); min-height:0; margin:0 auto; padding:14px 0 16px; }
+.identityFooter { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; gap:8px; align-items:stretch; }
+.footerChip { min-width:0; min-height:52px; border:1px solid rgba(255,255,255,.11); border-radius:12px; background:#111b15; color:white; display:grid; grid-template-columns:38px minmax(0,1fr); align-items:center; gap:9px; padding:6px 10px 6px 7px; text-align:left; cursor:pointer; transition:border-color .12s ease; }
+.footerChip:hover { border-color:rgba(244,196,48,.5); }
+.footerChip > span:last-child { display:grid; gap:3px; min-width:0; }
+.footerChip small { color:#789083; font:800 8px/1 ui-monospace,monospace; letter-spacing:.08em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.footerChip strong { font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.footerChip :global(.nation-badge) { max-width:36px; max-height:36px; }
+.footerChip .storyIcon { width:36px; height:36px; font-size:15px; }
+.footerContinue { min-height:52px; gap:14px; padding:0 18px; white-space:nowrap; }
+.continueShort { display:none; }
+.appearanceDisabled { height:100%; min-height:0; padding:20px; }
+.appearanceDisabled .identityFooter { width:min(680px,100%); margin-top:14px; }
+
+@media (max-width:860px) {
+  .identityStage { width:calc(100% - 16px); padding:8px 0; }
+  .identityFooter { grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; gap:6px; }
+  .footerChip { min-height:46px; grid-template-columns:30px minmax(0,1fr); gap:6px; padding:5px 7px 5px 5px; border-radius:11px; }
+  .footerChip :global(.nation-badge) { width:30px !important; height:30px !important; min-width:30px !important; }
+  .footerChip .storyIcon { width:30px; height:30px; font-size:13px; }
+  .footerChip strong { font-size:11px; }
+  .footerChip small { font-size:7px; }
+  .footerContinue { min-height:46px; padding:0 13px; gap:8px; font-size:12px; }
+  .continueLong { display:none; }
+  .continueShort { display:inline; }
 }
 
-/* Desktop identity is a viewport screen: no page scroll, with a slightly tighter preview to guarantee fit. */
-@media (min-width:761px) {
-  .identityPage {
-    height:100dvh;
-    min-height:100dvh;
-    overflow:hidden;
-  }
-  .identityPage .identityStage {
-    height:calc(100dvh - 68px);
-    min-height:0;
-    padding:8px 0 10px;
-    align-content:center;
-    overflow:hidden;
-  }
-  .identityPage .appearanceWrap {
-    max-height:calc(100dvh - 86px);
-    overflow:hidden;
-  }
-  .identityPage .appearanceWrap :global(.appearance-editor) {
-    max-height:100%;
-    overflow:hidden;
-  }
-  .identityPage .appearanceWrap :global(.appearance-preview canvas) {
-    width:min(240px,32dvh) !important;
-    height:min(240px,32dvh) !important;
-  }
-  .identityPage .previewOptions { gap:5px; margin-top:5px; }
-  .identityPage .previewOption { min-height:48px; }
-  .identityPage .previewContinue { min-height:44px; }
-}
-
-/* On phones give the preview/country/story column a little more room and let controls take the remainder. */
-@media (max-width:760px) {
-  .appearanceWrap :global(.appearance-editor) {
-    grid-template-columns:minmax(168px,44%) minmax(0,1fr) !important;
-  }
-  .appearanceWrap :global(.appearance-preview canvas) {
-    width:142px !important;
-    height:142px !important;
-  }
-  .appearanceWrap :global(.appearance-palette button) {
-    width:28px !important;
-    height:28px !important;
-    min-width:28px !important;
-    min-height:28px !important;
-    max-width:28px !important;
-    max-height:28px !important;
-    flex-basis:28px !important;
-  }
-}
-
-@media (max-width:480px) {
-  .appearanceWrap :global(.appearance-editor) {
-    grid-template-columns:minmax(152px,46%) minmax(0,1fr) !important;
-  }
-  .appearanceWrap :global(.appearance-preview canvas) {
-    width:128px !important;
-    height:128px !important;
-  }
-  .appearanceWrap :global(.appearance-preview strong),
-  .appearanceWrap :global(.appearance-preview small) { max-width:142px; }
-  .appearanceWrap :global(.appearance-palette button) {
-    width:26px !important;
-    height:26px !important;
-    min-width:26px !important;
-    min-height:26px !important;
-    max-width:26px !important;
-    max-height:26px !important;
-    flex-basis:26px !important;
-  }
+@media (max-width:380px) {
+  .footerChip { grid-template-columns:30px; justify-content:center; padding:5px; }
+  .footerChip > span:last-child { display:none; }
+  .identityFooter { grid-template-columns:auto auto minmax(0,1fr); }
 }

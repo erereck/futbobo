@@ -15,7 +15,7 @@ import BotaoMatchStats from "../../botao/BotaoMatchStats";
 import { describeMatchTurningPoint } from "../../botao/result-story";
 import TeamCrest from "../../botao/TeamCrest";
 import AndroidInstallDialog from "../../AndroidInstallDialog";
-import PlayerAppearanceEditor, { PlayerAppearancePortrait } from "../../PlayerAppearanceEditor";
+import PlayerAppearanceEditor, { CharacterCanvas, PlayerAppearancePortrait } from "../../PlayerAppearanceEditor";
 import { teamKitPattern, visualRosterForMatch } from "../../player-appearance";
 import { checkForAndroidUpdate, isAndroidDevice, isNativeAndroid, openAndroidDownload } from "../../android-app";
 import type { AndroidRelease } from "../../android-app";
@@ -2700,19 +2700,18 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       {appearanceEditorOpen && appSettings.characterButtonsEnabled !== false && game.phase === "career" && (
         <div className="modal-backdrop appearance-editor-backdrop" role="presentation" onMouseDown={() => setAppearanceEditorOpen(false)}>
           <section className="appearance-editor-sheet" role="dialog" aria-modal="true" aria-labelledby="appearance-editor-title" onMouseDown={(event) => event.stopPropagation()}>
-            <header><div><span>VESTIÁRIO</span><h2 id="appearance-editor-title">Personalizar jogador</h2></div><button type="button" className="icon-button" aria-label="Fechar editor" onClick={() => setAppearanceEditorOpen(false)}>×</button></header>
-            <p>Altere quando quiser. A nova aparência entra em campo já na próxima partida.</p>
+            <header><div><span>VESTIÁRIO</span><h2 id="appearance-editor-title">Personalizar jogador</h2><p>A nova aparência entra em campo já na próxima partida.</p></div><button type="button" className="icon-button" aria-label="Fechar editor" onClick={() => setAppearanceEditorOpen(false)}>×</button></header>
             <PlayerAppearanceEditor
-              compact
               value={game.playerAppearance}
               onChange={(playerAppearance) => setGame((current) => ({ ...current, playerAppearance }))}
               playerName={game.name}
               number={game.number}
+              position={game.position}
               primary={currentClub.primary}
               secondary={currentClub.secondary}
               kitPattern={teamKitPattern(game.seed, currentClub.id)}
+              footer={<button type="button" className="primary-button appearance-editor-save" onClick={() => setAppearanceEditorOpen(false)}>Salvar visual <span>✓</span></button>}
             />
-            <button type="button" className="primary-button" onClick={() => setAppearanceEditorOpen(false)}>Salvar visual <span>✓</span></button>
           </section>
         </div>
       )}
@@ -2916,26 +2915,6 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             </div>
           </div>
           <div className="sticky-action"><button className="primary-button" disabled={!game.name.trim()} onClick={() => setGame((current) => ({ ...current, name: current.name.trim(), number: clamp(Number(shirtNumberInput) || 10, 1, 99), phase: appSettings.characterButtonsEnabled !== false ? "appearance" : "nationality" }))}>{appSettings.characterButtonsEnabled !== false ? "Criar meu jogador" : "Escolher nacionalidade"} <span>→</span></button></div>
-        </section>
-      )}
-
-      {false && game.phase === "appearance" && appSettings.characterButtonsEnabled !== false && (
-        <section className="setup-screen appearance-setup-screen screen-enter">
-          <header className="step-header">
-            <button className="icon-button" onClick={() => setGame((current) => ({ ...current, phase: "identity" }))} aria-label="Voltar">←</button>
-            <div><span>PASSO 2 DE 6</span><strong>Como você aparece dentro da mesa?</strong></div>
-            <div className="step-count">02</div>
-          </header>
-          <div className="setup-content">
-            <div className="appearance-setup-heading"><span>SEU PERSONAGEM</span><h2>Crie um rosto que você reconheça no primeiro toque.</h2><p>O uniforme começa neutro. Assim que você escolher um clube, ele assume automaticamente as cores da nova camisa.</p></div>
-            <PlayerAppearanceEditor
-              value={game.playerAppearance}
-              onChange={(playerAppearance) => setGame((current) => ({ ...current, playerAppearance }))}
-              playerName={game.name}
-              number={game.number}
-            />
-          </div>
-          <div className="sticky-action"><button className="primary-button" onClick={() => setGame((current) => ({ ...current, phase: "nationality" }))}>Escolher nacionalidade <span>→</span></button></div>
         </section>
       )}
 
@@ -3433,6 +3412,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               <div className="profile-hero"><div className="academy-avatar"><span>{game.number}</span><small>{game.position}</small></div><div><span>{game.archetype}</span><h2>{game.name}</h2><p>{position.style} · {game.foot}</p></div></div>
               {appSettings.characterButtonsEnabled !== false && (
                 <section className="player-appearance-profile">
+                  <CharacterCanvas className="player-appearance-figure" mode="body" animate appearance={game.playerAppearance} kit={{ primary: currentClub.primary, secondary: currentClub.secondary, pattern: teamKitPattern(game.seed, currentClub.id) }} number={game.number} label={`Corpo inteiro de ${game.name}`} />
                   <PlayerAppearancePortrait appearance={{ ...game.playerAppearance, kitPattern: teamKitPattern(game.seed, currentClub.id) }} primary={currentClub.primary} secondary={currentClub.secondary} size={112} label={`Visual de ${game.name}`} />
                   <div><span>IDENTIDADE VISUAL</span><strong>Seu rosto dentro da mesa</strong><p>O personagem permanece; o uniforme muda com cada transferência.</p></div>
                   <button type="button" className="secondary-button" onClick={() => setAppearanceEditorOpen(true)}>Personalizar</button>

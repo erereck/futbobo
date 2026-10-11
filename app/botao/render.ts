@@ -15,7 +15,8 @@ import {
 import { fieldThemeForMatch, type BotaoFieldTheme } from "./field-themes";
 import { readableInk } from "./kits";
 import type { BotaoGoalReplay, BotaoMatchSetup, BotaoSide } from "./types";
-import { drawPlayerBust, type PlayerAppearance } from "../player-appearance";
+import type { PlayerAppearance } from "../player-appearance";
+import { drawPlayerBust } from "../character/render";
 
 export const VIEW_PAD_X = 8;
 export const VIEW_PAD_Y = FIELD.goalDepth + 8;
@@ -478,6 +479,42 @@ function drawDisc(
   }
   ctx.restore();
   ctx.restore();
+}
+
+/**
+ * Desenha a peça do jogador exatamente como na mesa (mesmo disco, aro e selo "VC"),
+ * centrada na origem e em unidades de campo. Usada pela prévia do criador de personagem.
+ */
+export function drawBotaoPiecePreview(
+  ctx: CanvasRenderingContext2D,
+  args: { appearance: PlayerAppearance; primary: string; secondary: string; number: number; pulse?: number },
+) {
+  const body: BotaoBody = {
+    id: "preview-player",
+    kind: "disc",
+    side: "user",
+    x: 0,
+    y: 0,
+    vx: 0,
+    vy: 0,
+    radius: FIELD.discRadius,
+    mass: 2,
+    friction: 0,
+    isUserPlayer: true,
+    number: args.number,
+    label: `#${args.number}`,
+    power: 0,
+    control: 0,
+    slot: 0,
+    stamina: 100,
+    distanceActive: 0,
+  };
+  drawDisc(ctx, body, { primary: args.primary, secondary: args.secondary }, {
+    selected: false,
+    ready: false,
+    pulse: args.pulse ?? 0.6,
+    appearance: args.appearance,
+  });
 }
 
 function bodyAppearance(setup: BotaoMatchSetup, body: BotaoBody): PlayerAppearance | null {

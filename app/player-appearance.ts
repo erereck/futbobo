@@ -1,9 +1,14 @@
+// Modelo de dados do personagem. O desenho vive em app/character/; aqui ficam
+// as opções, a migração de saves antigos e as aparências determinísticas dos
+// elencos gerados pelo jogo.
+
 export type PlayerAppearance = {
-  version?: 2;
+  version?: 2 | 3;
   skin: number;
   hairColor: number;
   eyeColor: number;
   hairStyle: number;
+  /** Expressão facial. */
   face: number;
   beard: number;
   brow: number;
@@ -11,6 +16,25 @@ export type PlayerAppearance = {
   customSkinColor?: string;
   customHairColor?: string;
   customEyeColor?: string;
+  faceShape: number;
+  eyeShape: number;
+  nose: number;
+  ears: number;
+  marks: number;
+  /** 0 = sem mechas; demais valores apontam para HAIR_TIP_COLORS[valor - 1]. */
+  hairTip: number;
+  build: number;
+  height: number;
+  pose: number;
+  headwear: number;
+  glasses: number;
+  earrings: number;
+  wristband: number;
+  tattoo: number;
+  gloves: number;
+  socks: number;
+  boots: number;
+  accessoryColor: number;
 };
 
 export type BotaoVisualRoster = {
@@ -28,53 +52,205 @@ export const HAIR_COLORS = [
 const NATURAL_HAIR_COLOR_INDICES = [0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 13];
 const COLORED_HAIR_COLOR_INDICES = [8, 9, 10, 14, 15, 16, 17, 18, 19];
 export const EYE_COLORS = ["#111816", "#35251d", "#31505b", "#49633c", "#765139", "#7c8f98", "#5c3f76", "#1f6a74", "#9a742d", "#9eb4cf"];
+export const HAIR_TIP_COLORS = ["#f4efe2", "#e9c66f", "#d8642e", "#f07ab4", "#3f8fe0", "#4fc27a", "#9b5ce0", "#f59a2b"];
+export const HAIR_TIP_NAMES = ["Platinado", "Loiro", "Ruivo", "Rosa", "Azul", "Verde", "Roxo", "Laranja"];
+
 export const HAIR_STYLE_NAMES = [
-  "Clássico", "Franja", "Cacheado", "Moicano", "Black power", "Raspado", "Tranças", "Lateral", "Topete", "Dreads", "Coque", "Descolorido", "Careca",
-  "Mullet", "Corte tigelinha", "Faux hawk", "Twists", "Franja longa", "Undercut", "Rabo de cavalo", "Risca dupla", "Mini afro",
+  "Careca", "Raspado", "Militar", "Clássico", "Franja", "Pixie", "Entradas", "Coroa", "Risca dupla",
+  "Social", "Topete", "Pra trás", "Undercut", "Espetado", "Tigelinha", "Franja longa", "Surfista", "Mullet", "Chanel",
+  "Moicano", "Crista", "Faux hawk", "Cascão 2002", "Flat top",
+  "Cacheado", "Cachos volumosos", "Mini afro", "Black power", "Twists", "Tranças nagô", "Dreads",
+  "Dreads longos", "Tranças box", "Longo liso", "Longo ondulado", "Juba",
+  "Coque", "Coque alto", "Coque baixo", "Rabo de cavalo", "Rabo alto", "Duas tranças",
 ];
-export const BEARD_NAMES = ["Sem barba", "Cavanhaque", "Barba cheia", "Bigode", "Barba curta", "Barba desenhada", "Bigode fino", "Barba por fazer"];
-export const FACE_NAMES = ["Sério", "Confiante", "Sorriso", "Concentrado", "Tranquilo", "Surpreso", "Dentes à mostra", "Bico", "Sorriso torto"];
+export const HAIR_STYLE_GROUPS: Array<{ id: string; label: string; styles: number[] }> = [
+  { id: "curtos", label: "Curtos", styles: [0, 1, 2, 3, 4, 5, 6, 7, 8] },
+  { id: "medios", label: "Médios", styles: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18] },
+  { id: "ousados", label: "Ousados", styles: [19, 20, 21, 22, 23, 8, 17] },
+  { id: "crespos", label: "Crespos", styles: [24, 25, 26, 27, 28, 29, 30] },
+  { id: "longos", label: "Longos", styles: [31, 32, 33, 34, 35, 16] },
+  { id: "presos", label: "Presos", styles: [36, 37, 38, 39, 40, 41] },
+];
+export const HAIR_STYLE_BALD = 0;
+
+export const FACE_NAMES = [
+  "Sério", "Confiante", "Sorriso", "Sorrisão", "Gargalhada", "Focado", "Raçudo", "Grito de gol", "Surpreso",
+  "Piscadinha", "Tranquilo", "Marrento", "Zoeiro", "Tímido", "Preocupado", "Frio", "Emocionado", "Beijinho",
+];
+export const BEARD_NAMES = [
+  "Sem barba", "Por fazer", "Bigode", "Bigode fino", "Bigodão", "Cavanhaque", "Barbicha", "Bigode e cavanhaque",
+  "Barba desenhada", "Costeletas", "Barba curta", "Barba cheia", "Lenhador",
+];
+export const BROW_NAMES = ["Fina", "Suave", "Reta", "Grossa", "Arqueada", "Com risco"];
+export const FACE_SHAPE_NAMES = ["Oval", "Redondo", "Quadrado", "Fino", "Coração", "Largo"];
+export const EYE_SHAPE_NAMES = ["Redondos", "Amendoados", "Puxados", "Expressivos", "Pequenos", "Serenos"];
+export const NOSE_NAMES = ["Botão", "Reto", "Arredondado", "Largo", "Fino", "Arrebitado"];
+export const EAR_NAMES = ["Normais", "Pequenas", "De abano"];
+export const MARK_NAMES = ["Nenhuma", "Sardas", "Pinta", "Cicatriz", "Bochechas rosadas", "Olheiras", "Eye black", "Curativo", "Pintura de torcida"];
+export const BUILD_NAMES = ["Magro", "Atlético", "Forte", "Parrudo"];
+export const HEIGHT_NAMES = ["Baixo", "Médio", "Alto"];
+export const POSE_NAMES = ["Relaxado", "Mãos na cintura", "Braços cruzados", "Comemorando", "Joinha", "Apontando pro céu"];
+export const HEADWEAR_NAMES = ["Nenhum", "Faixa", "Faixa fina", "Bandana"];
+export const GLASSES_NAMES = ["Nenhum", "Óculos esportivo", "Óculos de proteção"];
+export const EARRING_NAMES = ["Nenhum", "Brilhante", "Dois brilhantes", "Argolas"];
+export const WRISTBAND_NAMES = ["Nenhuma", "Uma", "Duas"];
+export const TATTOO_NAMES = ["Nenhuma", "Tribal", "Braço fechado", "Escrita", "Estrelas"];
+export const GLOVE_NAMES = ["Sem luvas", "Luvas de goleiro"];
+export const SOCK_NAMES = ["Meião alto", "Abaixado", "Com fita"];
+export const BOOT_COLORS = ["#16171a", "#f3f4ef", "#e8b923", "#b7f23a", "#ff6a2b", "#ff5fa8", "#2f7df6", "#e23b3b", "#b9c2cc", "#8a4dff"];
+export const BOOT_NAMES = ["Preta", "Branca", "Dourada", "Verde-limão", "Laranja neon", "Rosa", "Azul", "Vermelha", "Prata", "Roxa"];
+export const ACCESSORY_COLORS = ["#f5f5f0", "#17181b", "#e23b3b", "#f4c430", "#2f6fe0", "#2fae5f", "#ff6fb1", "#ff8a2b", "#8a4dff", "#29c7d8", "#8c949c", "#b7f23a"];
 export const KIT_PATTERN_NAMES = ["Faixa central", "Liso", "Listras", "Metade a metade", "Faixa diagonal", "Chevrons", "Ombros", "Pinstripes", "Faixa horizontal", "Quadriculado", "Degradê", "Mangas contrastantes"];
 
+/** Tamanho de cada lista de opções, usado para normalizar e sortear. */
+export const APPEARANCE_OPTION_COUNTS = {
+  skin: SKIN_COLORS.length,
+  hairColor: HAIR_COLORS.length,
+  eyeColor: EYE_COLORS.length,
+  hairStyle: HAIR_STYLE_NAMES.length,
+  face: FACE_NAMES.length,
+  beard: BEARD_NAMES.length,
+  brow: BROW_NAMES.length,
+  kitPattern: KIT_PATTERN_NAMES.length,
+  faceShape: FACE_SHAPE_NAMES.length,
+  eyeShape: EYE_SHAPE_NAMES.length,
+  nose: NOSE_NAMES.length,
+  ears: EAR_NAMES.length,
+  marks: MARK_NAMES.length,
+  hairTip: HAIR_TIP_COLORS.length + 1,
+  build: BUILD_NAMES.length,
+  height: HEIGHT_NAMES.length,
+  pose: POSE_NAMES.length,
+  headwear: HEADWEAR_NAMES.length,
+  glasses: GLASSES_NAMES.length,
+  earrings: EARRING_NAMES.length,
+  wristband: WRISTBAND_NAMES.length,
+  tattoo: TATTOO_NAMES.length,
+  gloves: GLOVE_NAMES.length,
+  socks: SOCK_NAMES.length,
+  boots: BOOT_COLORS.length,
+  accessoryColor: ACCESSORY_COLORS.length,
+} as const;
+
+export type AppearanceOptionKey = keyof typeof APPEARANCE_OPTION_COUNTS;
+
 export const DEFAULT_PLAYER_APPEARANCE: PlayerAppearance = {
-  version: 2,
+  version: 3,
   skin: 2,
-  hairColor: 0,
-  eyeColor: 0,
-  hairStyle: 1,
+  hairColor: 1,
+  eyeColor: 1,
+  hairStyle: 3,
   face: 1,
   beard: 0,
-  brow: 1,
+  brow: 2,
   kitPattern: 1,
+  faceShape: 0,
+  eyeShape: 0,
+  nose: 0,
+  ears: 0,
+  marks: 0,
+  hairTip: 0,
+  build: 1,
+  height: 1,
+  pose: 0,
+  headwear: 0,
+  glasses: 0,
+  earrings: 0,
+  wristband: 0,
+  tattoo: 0,
+  gloves: 0,
+  socks: 0,
+  boots: 0,
+  accessoryColor: 0,
 };
 
-function clampIndex(value: number, length: number) {
-  return Math.max(0, Math.min(length - 1, Math.round(Number.isFinite(value) ? value : 0)));
+function clampIndex(value: unknown, length: number) {
+  const number = typeof value === "number" && Number.isFinite(value) ? value : 0;
+  return Math.max(0, Math.min(length - 1, Math.round(number)));
 }
 
 function safeHex(value?: string) {
   return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : undefined;
 }
 
+// v1 -> v2 (o primeiro editor tinha listas com outra ordem).
+const V1_HAIR_TO_V2 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 2, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 2, 19, 20, 21];
+const V1_SKIN_TO_V2 = [0, 1, 3, 5, 6, 7, 8, 9];
+const V1_FACE_TO_V2 = [0, 1, 2, 3, 3, 4, 5, 6, 7, 8];
+// v2 -> v3 (modelo novo com corpo inteiro).
+const V2_HAIR_TO_V3 = [3, 4, 24, 19, 27, 1, 29, 9, 10, 30, 36, 1, 0, 17, 14, 21, 28, 15, 12, 39, 8, 26];
+const V2_FACE_TO_V3 = [0, 1, 2, 5, 10, 8, 3, 17, 11];
+const V2_BEARD_TO_V3 = [0, 5, 11, 2, 10, 8, 3, 1];
+const V2_BROW_TO_V3 = [1, 2, 3];
+const V2_BLEACHED_HAIR = 11;
+
+const normalizedCache = new WeakMap<object, PlayerAppearance>();
+
 export function normalizePlayerAppearance(value?: Partial<PlayerAppearance> | null): PlayerAppearance {
-  const legacy = value?.version !== 2;
-  const legacyHairMap = [0, 1, 2, 3, 4, 5, 6, 7, 8, 2, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 2, 19, 20, 21];
-  const legacySkinMap = [0, 1, 3, 5, 6, 7, 8, 9];
-  const legacyFaceMap = [0, 1, 2, 3, 3, 4, 5, 6, 7, 8];
-  return {
-    version: 2,
-    skin: clampIndex(legacy ? legacySkinMap[value?.skin ?? DEFAULT_PLAYER_APPEARANCE.skin] ?? 3 : value?.skin ?? DEFAULT_PLAYER_APPEARANCE.skin, SKIN_COLORS.length),
-    hairColor: clampIndex(value?.hairColor ?? DEFAULT_PLAYER_APPEARANCE.hairColor, HAIR_COLORS.length),
-    eyeColor: clampIndex(value?.eyeColor ?? DEFAULT_PLAYER_APPEARANCE.eyeColor, EYE_COLORS.length),
-    hairStyle: clampIndex(legacy ? legacyHairMap[value?.hairStyle ?? DEFAULT_PLAYER_APPEARANCE.hairStyle] ?? 0 : value?.hairStyle ?? DEFAULT_PLAYER_APPEARANCE.hairStyle, HAIR_STYLE_NAMES.length),
-    face: clampIndex(legacy ? legacyFaceMap[value?.face ?? DEFAULT_PLAYER_APPEARANCE.face] ?? 0 : value?.face ?? DEFAULT_PLAYER_APPEARANCE.face, FACE_NAMES.length),
-    beard: clampIndex(value?.beard ?? DEFAULT_PLAYER_APPEARANCE.beard, BEARD_NAMES.length),
-    brow: clampIndex(value?.brow ?? DEFAULT_PLAYER_APPEARANCE.brow, 3),
-    kitPattern: clampIndex(value?.kitPattern ?? DEFAULT_PLAYER_APPEARANCE.kitPattern, KIT_PATTERN_NAMES.length),
-    customSkinColor: safeHex(value?.customSkinColor),
-    customHairColor: safeHex(value?.customHairColor),
-    customEyeColor: safeHex(value?.customEyeColor),
+  if (value && typeof value === "object") {
+    const cached = normalizedCache.get(value);
+    if (cached) return cached;
+  }
+  const source: Partial<PlayerAppearance> = value ?? {};
+  const fromV3 = source.version === 3;
+  const fromV2 = source.version === 2;
+  const legacy = !fromV3 && !fromV2 && value != null;
+  const pick = <K extends AppearanceOptionKey>(key: K) =>
+    clampIndex(source[key] ?? DEFAULT_PLAYER_APPEARANCE[key], APPEARANCE_OPTION_COUNTS[key]);
+
+  let hairStyle = pick("hairStyle");
+  let face = pick("face");
+  let beard = pick("beard");
+  let brow = pick("brow");
+  let skin = pick("skin");
+  let hairTip = pick("hairTip");
+
+  if (!fromV3 && value != null) {
+    const v2Hair = legacy ? V1_HAIR_TO_V2[source.hairStyle ?? 0] ?? 0 : clampIndex(source.hairStyle, V2_HAIR_TO_V3.length);
+    const v2Face = legacy ? V1_FACE_TO_V2[source.face ?? 0] ?? 0 : clampIndex(source.face, V2_FACE_TO_V3.length);
+    hairStyle = V2_HAIR_TO_V3[v2Hair] ?? 3;
+    face = V2_FACE_TO_V3[v2Face] ?? 1;
+    beard = V2_BEARD_TO_V3[clampIndex(source.beard, V2_BEARD_TO_V3.length)] ?? 0;
+    brow = V2_BROW_TO_V3[clampIndex(source.brow ?? 1, V2_BROW_TO_V3.length)] ?? 2;
+    if (v2Hair === V2_BLEACHED_HAIR) hairTip = 1;
+    if (legacy) skin = clampIndex(V1_SKIN_TO_V2[source.skin ?? 2] ?? 3, SKIN_COLORS.length);
+  }
+
+  const normalized: PlayerAppearance = {
+    version: 3,
+    skin,
+    hairColor: pick("hairColor"),
+    eyeColor: pick("eyeColor"),
+    hairStyle,
+    face,
+    beard,
+    brow,
+    kitPattern: pick("kitPattern"),
+    customSkinColor: safeHex(source.customSkinColor),
+    customHairColor: safeHex(source.customHairColor),
+    customEyeColor: safeHex(source.customEyeColor),
+    faceShape: pick("faceShape"),
+    eyeShape: pick("eyeShape"),
+    nose: pick("nose"),
+    ears: pick("ears"),
+    marks: pick("marks"),
+    hairTip,
+    build: pick("build"),
+    height: pick("height"),
+    pose: pick("pose"),
+    headwear: pick("headwear"),
+    glasses: pick("glasses"),
+    earrings: pick("earrings"),
+    wristband: pick("wristband"),
+    tattoo: pick("tattoo"),
+    gloves: pick("gloves"),
+    socks: pick("socks"),
+    boots: pick("boots"),
+    accessoryColor: pick("accessoryColor"),
   };
+  if (value && typeof value === "object") normalizedCache.set(value, normalized);
+  normalizedCache.set(normalized, normalized);
+  return normalized;
 }
 
 function hashParts(...parts: Array<string | number>) {
@@ -100,19 +276,80 @@ function randomFromSeed(seed: number) {
   };
 }
 
+function weighted<T>(random: () => number, entries: Array<[T, number]>): T {
+  const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+  let roll = random() * total;
+  for (const [value, weight] of entries) {
+    roll -= weight;
+    if (roll <= 0) return value;
+  }
+  return entries[entries.length - 1][0];
+}
+
+// Elencos parecem elencos: cortes curtos dominam, visuais extravagantes aparecem às vezes.
+const SQUAD_HAIR_WEIGHTS: Array<[number, number]> = [
+  [0, 4], [1, 9], [2, 8], [3, 9], [4, 4], [5, 1], [6, 3], [7, 2], [8, 3],
+  [9, 6], [10, 5], [11, 4], [12, 7], [13, 4], [14, 2], [15, 2], [16, 3], [17, 2], [18, 0.6],
+  [19, 2], [20, 1], [21, 4], [22, 0.5], [23, 1.5],
+  [24, 5], [25, 3], [26, 4], [27, 1.5], [28, 2.5], [29, 2.5], [30, 2.5],
+  [31, 1], [32, 0.8], [33, 1.2], [34, 1.2], [35, 0.6],
+  [36, 2.5], [37, 1.2], [38, 1], [39, 1], [40, 0.6], [41, 0.4],
+];
+const SQUAD_FACE_WEIGHTS: Array<[number, number]> = [
+  [0, 9], [1, 9], [2, 7], [3, 4], [4, 1.5], [5, 7], [6, 2], [7, 1], [8, 1], [9, 1.5],
+  [10, 5], [11, 4], [12, 1], [13, 1.5], [14, 1], [15, 4], [16, 0.6], [17, 0.6],
+];
+
 export function randomPlayerAppearance(seed = Math.floor(Math.random() * 2147483647)): PlayerAppearance {
   const random = randomFromSeed(hashParts("futbobo-player", seed));
   const hairColorPool = random() < 0.03 ? COLORED_HAIR_COLOR_INDICES : NATURAL_HAIR_COLOR_INDICES;
+  const pickIndex = (length: number) => Math.floor(random() * length);
   return {
-    version: 2,
-    skin: Math.floor(random() * SKIN_COLORS.length),
-    hairColor: hairColorPool[Math.floor(random() * hairColorPool.length)],
-    eyeColor: Math.floor(random() * EYE_COLORS.length),
+    version: 3,
+    skin: pickIndex(SKIN_COLORS.length),
+    hairColor: hairColorPool[pickIndex(hairColorPool.length)],
+    eyeColor: pickIndex(EYE_COLORS.length),
+    hairStyle: weighted(random, SQUAD_HAIR_WEIGHTS),
+    face: weighted(random, SQUAD_FACE_WEIGHTS),
+    beard: random() < 0.55 ? 0 : 1 + pickIndex(BEARD_NAMES.length - 1),
+    brow: pickIndex(BROW_NAMES.length - 1),
+    kitPattern: 1,
+    faceShape: pickIndex(FACE_SHAPE_NAMES.length),
+    eyeShape: pickIndex(EYE_SHAPE_NAMES.length),
+    nose: pickIndex(NOSE_NAMES.length),
+    ears: random() < 0.86 ? 0 : 1 + pickIndex(2),
+    marks: random() < 0.78 ? 0 : weighted(random, [[1, 4], [2, 3], [3, 1.5], [4, 2], [5, 1], [6, 1], [7, 0.8], [8, 0.4]]),
+    hairTip: random() < 0.94 ? 0 : 1 + pickIndex(HAIR_TIP_COLORS.length),
+    build: weighted(random, [[0, 3], [1, 6], [2, 3], [3, 1]]),
+    height: weighted(random, [[0, 2], [1, 5], [2, 3]]),
+    pose: pickIndex(POSE_NAMES.length),
+    headwear: random() < 0.9 ? 0 : 1 + pickIndex(HEADWEAR_NAMES.length - 1),
+    glasses: random() < 0.985 ? 0 : 1 + pickIndex(GLASSES_NAMES.length - 1),
+    earrings: random() < 0.82 ? 0 : 1 + pickIndex(EARRING_NAMES.length - 1),
+    wristband: random() < 0.75 ? 0 : 1 + pickIndex(2),
+    tattoo: random() < 0.72 ? 0 : 1 + pickIndex(TATTOO_NAMES.length - 1),
+    gloves: 0,
+    socks: weighted(random, [[0, 7], [1, 2], [2, 2]]),
+    boots: pickIndex(BOOT_COLORS.length),
+    accessoryColor: pickIndex(ACCESSORY_COLORS.length),
+  };
+}
+
+/** Sorteio do estúdio: mais ousado que o dos elencos, preservando a pose escolhida. */
+export function randomStudioAppearance(current: PlayerAppearance, seed = Math.floor(Math.random() * 2147483647)): PlayerAppearance {
+  const random = randomFromSeed(hashParts("futbobo-studio", seed));
+  const base = randomPlayerAppearance(seed);
+  return {
+    ...base,
     hairStyle: Math.floor(random() * HAIR_STYLE_NAMES.length),
     face: Math.floor(random() * FACE_NAMES.length),
-    beard: random() < 0.58 ? 0 : 1 + Math.floor(random() * (BEARD_NAMES.length - 1)),
-    brow: Math.floor(random() * 3),
-    kitPattern: 1,
+    hairColor: random() < 0.12 ? COLORED_HAIR_COLOR_INDICES[Math.floor(random() * COLORED_HAIR_COLOR_INDICES.length)] : base.hairColor,
+    hairTip: random() < 0.82 ? 0 : 1 + Math.floor(random() * HAIR_TIP_COLORS.length),
+    headwear: random() < 0.78 ? 0 : 1 + Math.floor(random() * (HEADWEAR_NAMES.length - 1)),
+    glasses: random() < 0.94 ? 0 : 1 + Math.floor(random() * (GLASSES_NAMES.length - 1)),
+    kitPattern: current.kitPattern,
+    pose: current.pose,
+    gloves: current.gloves,
   };
 }
 
@@ -125,10 +362,11 @@ function appearanceForNationalTeam(seed: number, countryId?: string) {
   if (!countryId) return appearance;
   const random = randomFromSeed(hashParts(seed, countryId, "national-identity"));
   if (SUB_SAHARAN_COUNTRIES.has(countryId)) {
-    const weighted = [5, 6, 6, 7, 7, 7, 8, 8, 9, 9];
-    appearance.skin = weighted[Math.floor(random() * weighted.length)];
+    const weightedSkin = [5, 6, 6, 7, 7, 7, 8, 8, 9, 9];
+    const textured = [24, 26, 1, 27, 28, 29, 30, 8, 2, 23, 0, 25];
+    appearance.skin = weightedSkin[Math.floor(random() * weightedSkin.length)];
     appearance.hairColor = random() < 0.92 ? 0 : 1;
-    appearance.hairStyle = [2, 4, 5, 6, 9, 16, 20, 21][Math.floor(random() * 8)];
+    appearance.hairStyle = textured[Math.floor(random() * textured.length)];
   } else if (NORTH_AFRICAN_COUNTRIES.has(countryId)) {
     appearance.skin = [3, 3, 4, 4, 5, 5, 6][Math.floor(random() * 7)];
     appearance.hairColor = [0, 0, 1, 1, 2][Math.floor(random() * 5)];
@@ -190,222 +428,13 @@ export function careerSquadAppearance(args: {
   return { ...appearance, kitPattern: teamKitPattern(args.seed, args.teamId) };
 }
 
-function shade(hex: string, amount: number) {
-  const clean = hex.replace("#", "");
-  const value = Number.parseInt(clean, 16);
-  const red = Math.max(0, Math.min(255, (value >> 16) + amount));
-  const green = Math.max(0, Math.min(255, ((value >> 8) & 255) + amount));
-  const blue = Math.max(0, Math.min(255, (value & 255) + amount));
-  return `rgb(${red},${green},${blue})`;
-}
-
-function drawHairBack(ctx: CanvasRenderingContext2D, style: number, color: string, scale: number) {
-  ctx.fillStyle = color;
-  if ([6, 9, 13, 17, 19].includes(style)) {
-    const leftLength = style === 17 ? 23 : style === 19 ? 19 : 16;
-    ctx.fillRect(-16 * scale, -15 * scale, 5 * scale, leftLength * scale);
-    ctx.fillRect(11 * scale, -15 * scale, 5 * scale, leftLength * scale);
-  }
-  if (style === 13) ctx.fillRect(-11 * scale, 0, 22 * scale, 9 * scale);
-  if (style === 19) {
-    ctx.fillRect(12 * scale, -11 * scale, 8 * scale, 17 * scale);
-    ctx.beginPath(); ctx.arc(19 * scale, 4 * scale, 5 * scale, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-function drawHair(ctx: CanvasRenderingContext2D, style: number, color: string, scale: number) {
-  const top = -19 * scale;
-  const left = -14 * scale;
-  const width = 28 * scale;
-  ctx.fillStyle = color;
-  const scalpCap = (capColor = color, depth = 8) => {
-    ctx.fillStyle = capColor;
-    ctx.beginPath(); ctx.roundRect(left, top, width, depth * scale, 3 * scale); ctx.fill();
-    ctx.fillRect(left, top + 4 * scale, 3 * scale, Math.max(2, depth - 3) * scale);
-    ctx.fillRect(11 * scale, top + 4 * scale, 3 * scale, Math.max(2, depth - 3) * scale);
-    ctx.fillStyle = color;
+export function appearanceColors(appearance: PlayerAppearance) {
+  return {
+    skin: appearance.customSkinColor ?? SKIN_COLORS[appearance.skin] ?? SKIN_COLORS[2],
+    hair: appearance.customHairColor ?? HAIR_COLORS[appearance.hairColor] ?? HAIR_COLORS[0],
+    eyes: appearance.customEyeColor ?? EYE_COLORS[appearance.eyeColor] ?? EYE_COLORS[0],
+    hairTip: appearance.hairTip > 0 ? HAIR_TIP_COLORS[appearance.hairTip - 1] : undefined,
+    accessory: ACCESSORY_COLORS[appearance.accessoryColor] ?? ACCESSORY_COLORS[0],
+    boots: BOOT_COLORS[appearance.boots] ?? BOOT_COLORS[0],
   };
-  if (style === 12) return;
-  if (style === 0) {
-    scalpCap(color, 8);
-    ctx.fillRect(left, top + 5 * scale, 4 * scale, 5 * scale);
-    ctx.fillRect(10 * scale, top + 5 * scale, 4 * scale, 5 * scale);
-  } else if (style === 1) {
-    scalpCap(color, 8);
-    ctx.beginPath(); ctx.moveTo(left, top + 6 * scale); ctx.lineTo(14 * scale, top + 6 * scale); ctx.lineTo(9 * scale, top + 11 * scale);
-    ctx.lineTo(2 * scale, top + 7 * scale); ctx.lineTo(-4 * scale, top + 12 * scale); ctx.lineTo(-9 * scale, top + 7 * scale); ctx.closePath(); ctx.fill();
-  } else if ([2, 21].includes(style)) {
-    const curlRadius = style === 21 ? 4.8 : 4;
-    const count = style === 21 ? 9 : 8;
-    for (let index = 0; index < count; index += 1) {
-      const x = left + (index + 0.5) * width / count;
-      const y = top + (index % 2) * 2 * scale - (style === 21 ? 2 * scale : 0);
-      ctx.beginPath(); ctx.arc(x, y, curlRadius * scale, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.fillRect(left, top + 1 * scale, width, 6 * scale);
-  } else if (style === 3 || style === 15) {
-    const crestHalf = (style === 3 ? 4.5 : 7) * scale;
-    const crestTop = style === 3 ? top - 11 * scale : top - 7 * scale;
-    const hairline = top + 9 * scale;
-    ctx.beginPath();
-    ctx.moveTo(-crestHalf, hairline);
-    ctx.lineTo(-crestHalf, top + 1 * scale);
-    ctx.quadraticCurveTo(-3 * scale, crestTop + 2 * scale, -1 * scale, crestTop);
-    ctx.quadraticCurveTo(1 * scale, crestTop - 1 * scale, 3 * scale, crestTop + 2 * scale);
-    ctx.lineTo(crestHalf, top + 1 * scale);
-    ctx.lineTo(crestHalf, hairline);
-    ctx.closePath();
-    ctx.fill();
-  } else if (style === 4) {
-    ctx.beginPath(); ctx.arc(0, -15 * scale, 17 * scale, Math.PI, Math.PI * 2); ctx.fill();
-    for (let index = 0; index < 9; index += 1) {
-      const angle = Math.PI + Math.PI * index / 8;
-      ctx.beginPath(); ctx.arc(Math.cos(angle) * 14 * scale, -14 * scale + Math.sin(angle) * 10 * scale, 5 * scale, 0, Math.PI * 2); ctx.fill();
-    }
-  } else if (style === 5 || style === 20) {
-    scalpCap(shade(color, style === 20 ? 34 : 22), 6);
-    if (style === 20) { ctx.fillStyle = color; ctx.fillRect(-10 * scale, top, 2 * scale, 8 * scale); ctx.fillRect(-5 * scale, top, 2 * scale, 8 * scale); }
-  } else if (style === 6 || style === 9 || style === 16) {
-    scalpCap(color, 6);
-    const count = style === 9 ? 7 : style === 16 ? 8 : 5;
-    for (let index = 0; index < count; index += 1) {
-      const length = style === 9 ? 13 : style === 16 ? 8 + (index % 2) * 3 : 8 + (index % 2) * 4;
-      ctx.fillRect((left + 1 * scale) + index * (width - 2 * scale) / count, top + 5 * scale, 2.2 * scale, length * scale);
-    }
-  } else if (style === 7 || style === 18) {
-    scalpCap(shade(color, style === 18 ? 24 : 8), 7);
-    ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(left, top + 7 * scale); ctx.lineTo(left + 4 * scale, top - 2 * scale); ctx.lineTo(left + width, top);
-    ctx.lineTo(left + width, top + 7 * scale); ctx.lineTo(style === 18 ? 2 * scale : left + width, top + 7 * scale); ctx.closePath(); ctx.fill();
-    if (style === 18) ctx.fillRect(9 * scale, top + 4 * scale, 5 * scale, 11 * scale);
-  } else if (style === 8) {
-    scalpCap(color, 7); ctx.beginPath(); ctx.moveTo(left, top + 7 * scale); ctx.lineTo(-8 * scale, top - 7 * scale); ctx.lineTo(9 * scale, top - 4 * scale); ctx.lineTo(14 * scale, top + 7 * scale); ctx.closePath(); ctx.fill();
-  } else if (style === 10 || style === 19) {
-    scalpCap(color, 9); ctx.beginPath(); ctx.arc((style === 19 ? 10 : 7) * scale, top - 4 * scale, 7 * scale, 0, Math.PI * 2); ctx.fill();
-  } else if (style === 11) {
-    scalpCap("#eee5c9", 8); ctx.fillStyle = color; ctx.fillRect(left, top + 5 * scale, 6 * scale, 5 * scale);
-  } else if (style === 13) {
-    scalpCap(color, 7); ctx.fillRect(-14 * scale, top + 5 * scale, 7 * scale, 19 * scale);
-  } else if (style === 14) {
-    ctx.beginPath(); ctx.arc(0, top + 5 * scale, 15 * scale, Math.PI, Math.PI * 2); ctx.fill(); ctx.fillRect(left, top + 3 * scale, width, 7 * scale);
-  } else if (style === 17) {
-    scalpCap(color, 7);
-    ctx.beginPath(); ctx.moveTo(-2 * scale, top + 5 * scale); ctx.lineTo(14 * scale, top + 7 * scale); ctx.lineTo(10 * scale, 1 * scale); ctx.lineTo(2 * scale, -2 * scale); ctx.closePath(); ctx.fill();
-  }
-}
-
-function drawKit(ctx: CanvasRenderingContext2D, pattern: number, primary: string, secondary: string, scale: number) {
-  // Cada estampa pertence ao tecido. Sem este recorte, padrões rotacionados
-  // (principalmente a faixa diagonal) continuam sendo pintados por trás do
-  // pescoço e da cabeça, mesmo que o busto externo esteja dentro do disco.
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(-22 * scale, 7 * scale, 44 * scale, 27 * scale);
-  ctx.clip();
-  ctx.fillStyle = primary; ctx.fillRect(-22 * scale, 7 * scale, 44 * scale, 27 * scale);
-  ctx.fillStyle = secondary;
-  switch (pattern) {
-    case 0: ctx.fillRect(-5 * scale, 7 * scale, 10 * scale, 27 * scale); break;
-    case 2: for (let x = -18; x <= 18; x += 9) ctx.fillRect(x * scale, 7 * scale, 4 * scale, 27 * scale); break;
-    case 3: ctx.fillRect(0, 7 * scale, 22 * scale, 27 * scale); break;
-    case 4:
-      ctx.save(); ctx.translate(0, 20 * scale); ctx.rotate(-.56); ctx.fillRect(-4 * scale, -32 * scale, 8 * scale, 64 * scale); ctx.restore(); break;
-    case 5:
-      ctx.beginPath(); ctx.moveTo(-18 * scale, 10 * scale); ctx.lineTo(0, 20 * scale); ctx.lineTo(18 * scale, 10 * scale); ctx.lineTo(18 * scale, 15 * scale); ctx.lineTo(0, 25 * scale); ctx.lineTo(-18 * scale, 15 * scale); ctx.closePath(); ctx.fill(); break;
-    case 6: ctx.fillRect(-22 * scale, 7 * scale, 44 * scale, 7 * scale); ctx.fillRect(-22 * scale, 7 * scale, 8 * scale, 14 * scale); ctx.fillRect(14 * scale, 7 * scale, 8 * scale, 14 * scale); break;
-    case 7: for (let x = -19; x <= 19; x += 6) ctx.fillRect(x * scale, 7 * scale, 1.4 * scale, 27 * scale); break;
-    case 8: ctx.fillRect(-22 * scale, 17 * scale, 44 * scale, 8 * scale); break;
-    case 9:
-      for (let y = 7; y < 34; y += 8) for (let x = -22; x < 22; x += 8) if (((x + 22) / 8 + (y - 7) / 8) % 2 === 0) ctx.fillRect(x * scale, y * scale, 8 * scale, 8 * scale); break;
-    case 10: ctx.globalAlpha = .48; for (let y = 7; y < 34; y += 4) { ctx.globalAlpha += .07; ctx.fillRect(-22 * scale, y * scale, 44 * scale, 4 * scale); } ctx.globalAlpha = 1; break;
-    case 11: ctx.fillRect(-22 * scale, 7 * scale, 9 * scale, 27 * scale); ctx.fillRect(13 * scale, 7 * scale, 9 * scale, 27 * scale); break;
-  }
-  ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.fillRect(-22 * scale, 7 * scale, 44 * scale, 2 * scale);
-  ctx.restore();
-}
-
-function drawBeard(ctx: CanvasRenderingContext2D, beard: number, color: string, scale: number) {
-  if (beard === 0) return;
-  ctx.save();
-  ctx.fillStyle = color;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.35 * scale;
-  ctx.lineCap = "round";
-
-  if (beard === 1) {
-    ctx.fillRect(-2.8 * scale, 7 * scale, 5.6 * scale, 4.8 * scale);
-    ctx.fillRect(-4 * scale, 2.1 * scale, 3.2 * scale, 1.5 * scale);
-    ctx.fillRect(.8 * scale, 2.1 * scale, 3.2 * scale, 1.5 * scale);
-  } else if (beard === 2) {
-    ctx.beginPath();
-    ctx.moveTo(-12 * scale, -.5 * scale); ctx.lineTo(-7.5 * scale, 8.5 * scale);
-    ctx.quadraticCurveTo(0, 13.2 * scale, 7.5 * scale, 8.5 * scale);
-    ctx.lineTo(12 * scale, -.5 * scale); ctx.lineTo(10 * scale, 9.5 * scale);
-    ctx.quadraticCurveTo(0, 15 * scale, -10 * scale, 9.5 * scale); ctx.closePath(); ctx.fill();
-  } else if (beard === 3) {
-    ctx.beginPath();
-    ctx.moveTo(-7.5 * scale, 2 * scale); ctx.quadraticCurveTo(-4 * scale, .6 * scale, -.7 * scale, 2.7 * scale);
-    ctx.quadraticCurveTo(-4 * scale, 4.4 * scale, -7.5 * scale, 2 * scale); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(7.5 * scale, 2 * scale); ctx.quadraticCurveTo(4 * scale, .6 * scale, .7 * scale, 2.7 * scale);
-    ctx.quadraticCurveTo(4 * scale, 4.4 * scale, 7.5 * scale, 2 * scale); ctx.fill();
-  } else if (beard === 4) {
-    ctx.beginPath();
-    ctx.moveTo(-11 * scale, 3 * scale); ctx.lineTo(-8 * scale, 8.5 * scale);
-    ctx.quadraticCurveTo(0, 12.2 * scale, 8 * scale, 8.5 * scale); ctx.lineTo(11 * scale, 3 * scale);
-    ctx.lineTo(9 * scale, 9.8 * scale); ctx.quadraticCurveTo(0, 14 * scale, -9 * scale, 9.8 * scale); ctx.closePath(); ctx.fill();
-  } else if (beard === 5) {
-    ctx.fillRect(-11 * scale, 1 * scale, 2.2 * scale, 7.5 * scale);
-    ctx.fillRect(8.8 * scale, 1 * scale, 2.2 * scale, 7.5 * scale);
-    ctx.beginPath(); ctx.arc(0, 8.2 * scale, 4.3 * scale, 0, Math.PI); ctx.stroke();
-    ctx.fillRect(-2.1 * scale, 8.1 * scale, 4.2 * scale, 3.5 * scale);
-  } else if (beard === 6) {
-    ctx.fillRect(-7 * scale, 2.1 * scale, 5.8 * scale, 1.1 * scale);
-    ctx.fillRect(1.2 * scale, 2.1 * scale, 5.8 * scale, 1.1 * scale);
-  } else {
-    const dots = [[-9,3],[-5,5],[-1,7],[3,6],[7,4],[-7,8],[-3,10],[2,10],[6,8],[-10,6],[10,6]];
-    for (const [x, y] of dots) { ctx.globalAlpha = .72; ctx.beginPath(); ctx.arc(x * scale, y * scale, .85 * scale, 0, Math.PI * 2); ctx.fill(); }
-  }
-  ctx.restore();
-}
-
-export function drawPlayerBust(
-  ctx: CanvasRenderingContext2D,
-  appearanceValue: PlayerAppearance,
-  primary: string,
-  secondary: string,
-  radius: number,
-  contentOffsetY = 0,
-) {
-  const appearance = normalizePlayerAppearance(appearanceValue);
-  const skin = appearance.customSkinColor ?? SKIN_COLORS[appearance.skin];
-  const hair = appearance.customHairColor ?? HAIR_COLORS[appearance.hairColor];
-  const eyes = appearance.customEyeColor ?? EYE_COLORS[appearance.eyeColor];
-  const scale = radius / 28;
-
-  ctx.save();
-  ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.clip();
-  ctx.fillStyle = shade(primary, -24); ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
-  ctx.translate(0, contentOffsetY);
-  drawKit(ctx, appearance.kitPattern, primary, secondary, scale);
-  ctx.fillStyle = shade(skin, -12); ctx.fillRect(-4 * scale, 4 * scale, 8 * scale, 8 * scale);
-  drawHairBack(ctx, appearance.hairStyle, shade(hair, -7), scale);
-  ctx.fillStyle = skin; ctx.beginPath(); ctx.roundRect(-14 * scale, -17 * scale, 28 * scale, 27 * scale, 4 * scale); ctx.fill();
-  ctx.fillStyle = shade(skin, -13); ctx.fillRect(-15 * scale, -8 * scale, 2 * scale, 7 * scale); ctx.fillRect(13 * scale, -8 * scale, 2 * scale, 7 * scale);
-  ctx.fillStyle = eyes; ctx.fillRect(-8 * scale, -6 * scale, 4 * scale, 3.5 * scale); ctx.fillRect(4 * scale, -6 * scale, 4 * scale, 3.5 * scale);
-  ctx.fillStyle = shade(hair, 12); const browY = (-10 + appearance.brow) * scale; ctx.fillRect(-9 * scale, browY, 6 * scale, 1.6 * scale); ctx.fillRect(3 * scale, browY, 6 * scale, 1.6 * scale);
-  ctx.fillStyle = shade(skin, -18); ctx.fillRect(-1.5 * scale, -2 * scale, 3 * scale, 5 * scale);
-  drawHair(ctx, appearance.hairStyle, hair, scale);
-  drawBeard(ctx, appearance.beard, shade(hair, -5), scale);
-  const mouth = shade(skin, -56);
-  ctx.strokeStyle = mouth; ctx.fillStyle = mouth; ctx.lineWidth = 1.7 * scale; ctx.lineCap = "round";
-  if (appearance.face === 0) ctx.fillRect(-5 * scale, 4 * scale, 10 * scale, 1.6 * scale);
-  else if (appearance.face === 1) { ctx.beginPath(); ctx.moveTo(-5 * scale, 5 * scale); ctx.quadraticCurveTo(1 * scale, 7 * scale, 6 * scale, 3 * scale); ctx.stroke(); }
-  else if (appearance.face === 2) { ctx.beginPath(); ctx.arc(0, 2.6 * scale, 3.8 * scale, .08, Math.PI - .08); ctx.stroke(); }
-  else if (appearance.face === 3) { ctx.fillRect(-4 * scale, 4 * scale, 8 * scale, 2.3 * scale); }
-  else if (appearance.face === 4) { ctx.beginPath(); ctx.arc(0, 3 * scale, 3 * scale, .2, Math.PI - .2); ctx.stroke(); }
-  else if (appearance.face === 5) { ctx.beginPath(); ctx.ellipse(0, 5 * scale, 2.7 * scale, 3.4 * scale, 0, 0, Math.PI * 2); ctx.fill(); }
-  else if (appearance.face === 6) { ctx.fillStyle = "#f5eee2"; ctx.fillRect(-4.5 * scale, 3.2 * scale, 9 * scale, 3.5 * scale); ctx.fillStyle = mouth; ctx.fillRect(-4.5 * scale, 6 * scale, 9 * scale, 1.1 * scale); }
-  else if (appearance.face === 7) { ctx.beginPath(); ctx.moveTo(-3 * scale, 5 * scale); ctx.quadraticCurveTo(0, 2.4 * scale, 3 * scale, 5 * scale); ctx.quadraticCurveTo(0, 7 * scale, -3 * scale, 5 * scale); ctx.fill(); }
-  else { ctx.beginPath(); ctx.moveTo(-4.5 * scale, 5.3 * scale); ctx.quadraticCurveTo(-.5 * scale, 7.4 * scale, 4.5 * scale, 3 * scale); ctx.stroke(); }
-  ctx.restore();
 }
