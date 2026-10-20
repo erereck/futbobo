@@ -20,7 +20,7 @@ import { ACHIEVEMENTS } from "../../mega-expansion";
 import { clubById } from "../../career/shared";
 import { legacySummaryForHallEntry } from "../../career/legacy-prestige";
 import CareerGame from "../career/CareerGame";
-import ManagerGame from "../manager/ManagerGame";
+import CareerAccessDialog from "./CareerAccessDialog";
 import HallCareerViewer from "../career/HallCareerViewer";
 import { BrandMark, ClubBadge } from "../career/CareerPrimitives";
 import styles from "./FutboboShell.module.css";
@@ -28,7 +28,7 @@ import { InstallScreen, NewsScreen, SettingsScreen } from "./ShellUtilityScreens
 import FutboboIcon from "../FutboboIcon";
 import { FUTBOBO_VERSION, FUTBOBO_VERSION_NAME } from "../../version";
 
-type ShellScreen = "home" | "modes" | "saves" | "manager-saves" | "achievements" | "hall" | "hall-career" | "hall-card" | "settings" | "install" | "news" | "other-games" | "career" | "manager" | "legacy-tool";
+type ShellScreen = "home" | "modes" | "saves" | "achievements" | "hall" | "hall-career" | "hall-card" | "settings" | "install" | "news" | "other-games" | "career" | "legacy-tool";
 type BootAction = "new" | "continue" | "settings" | "install" | "news" | null;
 
 function safeHall() {
@@ -65,6 +65,7 @@ function SaveCard({ meta, onPlay, onDelete }: { meta: CareerSaveMeta; onPlay: ()
         <span className={styles.saveBadge}>{club ? <ClubBadge club={club} size="md" /> : <b>+</b>}</span>
         <span className={styles.saveCopy}>
           <strong>{meta.name || "Nova carreira"}</strong>
+          {meta.pin && <small>Protegida por senha</small>}
           <small>{club?.shortName ?? "Categorias de base"} · {meta.position} · {meta.season}</small>
           <em>{(manager ? "Confiança " : "OVR ") + meta.overall} · {formatLastPlayed(meta.lastPlayedAt)}</em>
         </span>
@@ -79,19 +80,18 @@ export default function FutboboShell() {
   const [screen, setScreen] = useState<ShellScreen>("home");
   const [bootAction, setBootAction] = useState<BootAction>(null);
   const [saves, setSaves] = useState<CareerSaveMeta[]>([]);
-  const [managerSaves, setManagerSaves] = useState<CareerSaveMeta[]>([]);
   const [unlocks, setUnlocks] = useState<GlobalAchievementUnlock[]>([]);
   const [hall, setHall] = useState<CareerHallEntry[]>([]);
   const [selectedHallEntry, setSelectedHallEntry] = useState<CareerHallEntry | null>(null);
   const [selectedAchievementId, setSelectedAchievementId] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState("");
+  const [accessDialog, setAccessDialog] = useState<"new" | CareerSaveMeta | null>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const launchedCareerRef = useRef(false);
   const toolClickedRef = useRef(false);
 
   const refreshLibrary = () => {
     setSaves(listCareerSaves("player"));
-    setManagerSaves(listCareerSaves("manager"));
     setUnlocks(listGlobalAchievementUnlocks());
     setHall(safeHall());
   };
@@ -102,7 +102,7 @@ export default function FutboboShell() {
   }, []);
 
   useEffect(() => {
-    if (screen !== "career" && screen !== "manager") return;
+    if (screen !== "career") return;
     const sync = () => {
       syncActiveCareerSlot();
       refreshLibrary();
@@ -184,8 +184,6 @@ export default function FutboboShell() {
 
   const playableSaves = useMemo(() => saves.filter((meta) => meta.phase !== "summary"), [saves]);
   const continueMeta = playableSaves[0] ?? null;
-  const playableManagerSaves = useMemo(() => managerSaves.filter((meta) => meta.phase !== "summary"), [managerSaves]);
-  const continueManagerMeta = playableManagerSaves[0] ?? null;
   const achievementMap = useMemo(() => new Map(unlocks.map((item) => [item.achievementId, item])), [unlocks]);
   const selectedAchievement = ACHIEVEMENTS.find((item) => item.id === selectedAchievementId) ?? null;
   const selectedUnlock = selectedAchievement ? achievementMap.get(selectedAchievement.id) : undefined;
@@ -193,40 +191,34 @@ export default function FutboboShell() {
     .map((entry) => ({ entry, legacy: legacySummaryForHallEntry(entry) }))
     .sort((a, b) => b.legacy.score - a.legacy.score || b.entry.finishedAt - a.entry.finishedAt), [hall]);
 
-  const launchExisting = (id: string) => {
-    if (!activateCareerSlot(id)) return;
+  const openCareer = async (id: string, pin = "") => {
+    if (!await activateCareerSlot(id, pin)) return false;
+    setAccessDialog(null);
     launchedCareerRef.current = true;
     setBootAction("continue");
     setScreen("career");
+    return true;
   };
 
-  const launchNew = () => {
-    const slot = createCareerSlot("player");
-    if (!slot) return;
+  const launchExisting = (id: string) => {
+    const meta = saves.find((item) => item.id === id);
+    if (meta?.pin) setAccessDialog(meta);
+    else void openCareer(id);
+  };
+
+  const launchNew = async (pin: string) => {
+    const slot = await createCareerSlot("player", pin);
+    if (!slot) return false;
+    setAccessDialog(null);
     launchedCareerRef.current = true;
     setBootAction("new");
     setScreen("career");
     refreshLibrary();
-  };
-
-  const launchManagerExisting = (id: string) => {
-    if (!activateCareerSlot(id)) return;
-    setScreen("manager");
-  };
-
-  const launchManagerNew = () => {
-    const slot = createCareerSlot("manager");
-    if (!slot) return;
-    setScreen("manager");
-    refreshLibrary();
+    return true;
   };
 
   if (screen === "career") {
     return <div ref={hostRef} className={styles.careerHost}><CareerGame /></div>;
-  }
-
-  if (screen === "manager") {
-    return <ManagerGame onExit={() => { syncActiveCareerSlot(); setScreen("home"); refreshLibrary(); }} />;
   }
 
   if (screen === "hall-career" && selectedHallEntry) {
@@ -268,7 +260,7 @@ export default function FutboboShell() {
 
       <header className={styles.topline}>
         <div className={styles.wordmark}><BrandMark /><strong>FUTBOBO</strong></div>
-        {screen !== "home" && <button type="button" onClick={() => setScreen(screen === "saves" || screen === "manager-saves" ? "modes" : "home")}><FutboboIcon name="arrow-left" /> Voltar</button>}
+        {screen !== "home" && <button type="button" onClick={() => setScreen(screen === "saves" ? "modes" : "home")}><FutboboIcon name="arrow-left" /> Voltar</button>}
       </header>
 
       {screen === "home" && (
@@ -314,8 +306,8 @@ export default function FutboboShell() {
             <button type="button" className={styles.modeCard} onClick={() => setScreen("saves")}>
               <span className={styles.modeIndex}>01</span><div><small>MODO PRINCIPAL</small><strong>Rumo ao Estrelato</strong><p>Crie seu jogador do zero, ganhe títulos e prêmios individuais.</p></div><b><FutboboIcon name="arrow-right" /></b>
             </button>
-            <button type="button" className={styles.modeCard} onClick={() => setScreen("manager-saves")}>
-              <span className={styles.modeIndex}>02</span><div><small>MODO TÉCNICO</small><strong className={styles.modeTitle}>Carreira de Técnico <em className={styles.betaTag}>BETA</em></strong><p>Escolha um clube, monte os cinco da mesa e decida quando trocar.</p></div><b><FutboboIcon name="arrow-right" /></b>
+            <button type="button" className={`${styles.modeCard} ${styles.disabledMode}`} disabled>
+              <span className={styles.modeIndex}>02</span><div><small>MODO TÉCNICO</small><strong className={styles.modeTitle}>Carreira de Técnico <em className={styles.betaTag}>BLOQUEADO</em></strong><p>Modo temporariamente indisponível.</p></div><b><FutboboIcon name="arrow-right" /></b>
             </button>
             <Link className={styles.modeCard} href="/copa"><span className={styles.modeIndex}>03</span><div><small>PARTIDA RÁPIDA</small><strong>Copa do Mundo</strong><p>Jogue uma Copa do Mundo rápida com qualquer seleção.</p></div><b><FutboboIcon name="arrow-right" /></b></Link>
             <Link className={styles.modeCard} href="/x1"><span className={styles.modeIndex}>04</span><div><small>DOIS JOGADORES</small><strong>1x1 Local</strong><p>Jogue uma partida de futebol de botão contra o seu amigo.</p></div><b><FutboboIcon name="arrow-right" /></b></Link>
@@ -325,12 +317,12 @@ export default function FutboboShell() {
 
       {screen === "saves" && (
         <section className={styles.panelScreen}>
-          <header className={styles.panelHeading}><span>RUMO AO ESTRELATO</span><h2>Suas carreiras.</h2><p>Até 10 histórias em andamento. Carreiras encerradas ficam guardadas no Hall da Fama.</p></header>
+          <header className={styles.panelHeading}><span>RUMO AO ESTRELATO</span><h2>Suas carreiras.</h2><p>Crie quantas histórias quiser. Carreiras encerradas ficam guardadas no Hall da Fama.</p></header>
           <div className={styles.saveActions}>
             <button type="button" className={styles.continueButton} disabled={!continueMeta} onClick={() => continueMeta && launchExisting(continueMeta.id)}>
               <small>ÚLTIMA CARREIRA</small><strong>{continueMeta ? "Continuar carreira" : "Nenhuma carreira ainda"}</strong><span>{continueMeta ? `${continueMeta.name} · ${formatLastPlayed(continueMeta.lastPlayedAt)}` : "Crie seu primeiro jogador"}</span><b><FutboboIcon name="arrow-right" /></b>
             </button>
-            <button type="button" className={styles.newButton} disabled={playableSaves.length >= 10} onClick={launchNew}><span>＋</span><strong>Nova carreira</strong><small>{playableSaves.length}/10 slots usados</small></button>
+            <button type="button" className={styles.newButton} onClick={() => setAccessDialog("new")}><span>＋</span><strong>Nova carreira</strong><small>{playableSaves.length} carreira{playableSaves.length === 1 ? "" : "s"} salva{playableSaves.length === 1 ? "" : "s"}</small></button>
           </div>
           <div className={styles.saveGrid}>
             {playableSaves.map((meta) => <SaveCard key={meta.id} meta={meta} onPlay={() => launchExisting(meta.id)} onDelete={() => setConfirmDeleteId(meta.id)} />)}
@@ -338,26 +330,6 @@ export default function FutboboShell() {
           {confirmDeleteId && (
             <div className={styles.confirmOverlay} role="dialog" aria-modal="true">
               <div><span>EXCLUIR CARREIRA</span><strong>Essa história vai desaparecer do aparelho.</strong><p>Conquistas globais que já foram desbloqueadas continuam na sua coleção.</p><footer><button type="button" onClick={() => setConfirmDeleteId("")}>Cancelar</button><button type="button" className={styles.danger} onClick={() => { deleteCareerSlot(confirmDeleteId); setConfirmDeleteId(""); refreshLibrary(); }}>Excluir</button></footer></div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {screen === "manager-saves" && (
-        <section className={styles.panelScreen}>
-          <header className={styles.panelHeading}><span>CARREIRA DE TÉCNICO</span><h2>Suas pranchetas.</h2><p>Até 10 projetos. Cada um guarda elenco, formação, confiança e os jogos que você comandou.</p></header>
-          <div className={styles.saveActions}>
-            <button type="button" className={styles.continueButton} disabled={!continueManagerMeta} onClick={() => continueManagerMeta && launchManagerExisting(continueManagerMeta.id)}>
-              <small>ÚLTIMA PRANCHETA</small><strong>{continueManagerMeta ? "Continuar carreira" : "Nenhum projeto ainda"}</strong><span>{continueManagerMeta ? continueManagerMeta.name + " · " + formatLastPlayed(continueManagerMeta.lastPlayedAt) : "Escolha um clube e assine seu primeiro contrato"}</span><b><FutboboIcon name="arrow-right" /></b>
-            </button>
-            <button type="button" className={styles.newButton} disabled={playableManagerSaves.length >= 10} onClick={launchManagerNew}><span>＋</span><strong>Nova carreira</strong><small>{playableManagerSaves.length}/10 slots usados</small></button>
-          </div>
-          <div className={styles.saveGrid}>
-            {playableManagerSaves.map((meta) => <SaveCard key={meta.id} meta={meta} onPlay={() => launchManagerExisting(meta.id)} onDelete={() => setConfirmDeleteId(meta.id)} />)}
-          </div>
-          {confirmDeleteId && (
-            <div className={styles.confirmOverlay} role="dialog" aria-modal="true">
-              <div><span>EXCLUIR PRANCHETA</span><strong>Esse projeto vai desaparecer do aparelho.</strong><p>O modo jogador e as conquistas globais não são afetados.</p><footer><button type="button" onClick={() => setConfirmDeleteId("")}>Cancelar</button><button type="button" className={styles.danger} onClick={() => { deleteCareerSlot(confirmDeleteId); setConfirmDeleteId(""); refreshLibrary(); }}>Excluir</button></footer></div>
             </div>
           )}
         </section>
@@ -392,6 +364,8 @@ export default function FutboboShell() {
           </div>
         </section>
       )}
+
+      {accessDialog && <CareerAccessDialog creating={accessDialog === "new"} name={accessDialog === "new" ? undefined : accessDialog.name} onClose={() => setAccessDialog(null)} onSubmit={(pin) => accessDialog === "new" ? launchNew(pin) : openCareer(accessDialog.id, pin)} />}
 
       <footer className={styles.footer}>
         <div><span><FutboboIcon name="career" /> {CLUBS.length} clubes</span><span><FutboboIcon name="player" /> 12 posições</span><span><FutboboIcon name="trophy" /> {LEAGUES.length} ligas</span><span><FutboboIcon name="globe" /> {COUNTRIES.length} seleções</span></div>

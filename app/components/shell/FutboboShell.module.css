@@ -75,6 +75,23 @@
 .newButton strong { font-size: 17px; }
 .newButton small { opacity: .67; }
 .newButton:disabled { filter: grayscale(1); opacity: .45; cursor: default; }
+.accessDialog { width: min(450px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid rgba(255,255,255,.13); border-radius: 16px; background: #0c120e; color: var(--ink); padding: 24px; }
+.accessDialog::backdrop { background: rgba(0,0,0,.72); backdrop-filter: blur(9px); }
+.accessDialog form { display: grid; gap: 16px; }
+.accessDialog form > span { color: var(--gold); font-size: 10px; font-weight: 800; letter-spacing: .14em; }
+.accessDialog h2 { margin: 0; font-size: 28px; }
+.accessDialog p { margin: 0; color: var(--muted); line-height: 1.5; }
+.pinToggle { display: flex; align-items: center; gap: 12px; min-height: 44px; cursor: pointer; }
+.pinToggle input { width: 20px; height: 20px; accent-color: var(--gold); }
+.pinField { display: grid; gap: 8px; font-size: 14px; }
+.pinField input { min-width: 0; width: 100%; min-height: 48px; box-sizing: border-box; border: 1px solid rgba(255,255,255,.16); border-radius: 8px; background: #07110d; color: var(--ink); padding: 12px; font-size: 22px; letter-spacing: .4em; }
+.pinField small { color: var(--muted); line-height: 1.5; }
+.accessDialog .pinError { color: #ef6258; }
+.accessDialog footer { display: flex; justify-content: flex-end; gap: 8px; }
+.accessDialog footer button { min-height: 44px; border: 1px solid rgba(255,255,255,.13); border-radius: 8px; background: #121a15; color: var(--ink); padding: 10px 16px; cursor: pointer; }
+.accessDialog footer button[type="submit"] { background: var(--gold); color: #12150f; font-weight: 800; }
+.accessDialog button:disabled { opacity: .45; cursor: default; }
+.accessDialog :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 
 .saveGrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
 .saveCard { position: relative; min-width: 0; }
