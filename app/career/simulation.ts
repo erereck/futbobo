@@ -16,6 +16,7 @@ import { worldFinalOpponentForSeason } from "./world-club-competitions";
 import { evaluateBallonDor } from "./ballon-dor";
 import { clubWithPlayerImpact } from "./player-club-impact";
 import { resolveExtraSecondDivisionPromotion } from "./second-divisions";
+import { starPromotionRankBoost } from "./promotion";
 
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
@@ -198,7 +199,8 @@ export function simulateSeason(
   const recopaSudamericanaChampion = playsRecopaSudamericana && seeded(state.seed, state.season * 83) * 100 < superCupChance * 0.92;
   const campeonesCupChampion = playsCampeonesCup && seeded(state.seed, state.season * 89) * 100 < superCupChance * 0.94;
   const leagueClubCount = Math.max(2, CLUBS.filter((candidate) => candidate.leagueId === league.id).length);
-  const expectedPosition = (leagueClubCount + 1) / 2 - (strength - 74) * 0.45 - playerImpact * 0.08;
+  const promotionRankBoost = starPromotionRankBoost(league.id, affected.overall, appearances);
+  const expectedPosition = (leagueClubCount + 1) / 2 - (strength - 74) * 0.45 - playerImpact * 0.08 - promotionRankBoost;
   const leaguePosition = leagueChampion
     ? 1
     : clamp(Math.round(expectedPosition + seeded(state.seed, state.season * 59) * 8 - 4), 2, leagueClubCount);
