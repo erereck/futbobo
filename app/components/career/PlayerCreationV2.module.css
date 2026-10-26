@@ -64,6 +64,7 @@
 .clubCards > button:hover { border-color:rgba(244,196,48,.5); }
 .clubCards span { display:grid; gap:3px; }
 .clubCards small { color:#829087; }
+.clubCards .contractTerm, .allClubs .contractTerm, .contractOffers .contractTerm { color:#aab8ac; font-size:11px; line-height:1.4; font-style:normal; font-variant-numeric:tabular-nums; letter-spacing:normal; text-transform:none; }
 .clubNote { margin-top:13px; }
 
 .pickerOverlay { position:fixed; inset:0; z-index:80; display:grid; place-items:center; padding:17px; background:rgba(0,0,0,.74); backdrop-filter:blur(8px); }

@@ -5,6 +5,7 @@ import { CLUBS, COUNTRIES, FORMATIONS, LEAGUES, POSITIONS } from "../../game-dat
 import type { PositionKey } from "../../game-data";
 import type { GameState } from "../../career/model";
 import { defaultAcademyCountry, randomClubSelection } from "../../career/academy";
+import { createContract } from "../../career-systems";
 import { POSITION_FIELD_SPOTS } from "../../career/performance";
 import { clubById } from "../../career/shared";
 import { setActiveCareerAchievementsEligible } from "../../career/save-system";
@@ -301,12 +302,12 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
             <button type="button" className={styles.freeChoice} onClick={() => setAllClubsOpen(true)}>Escolher qualquer time</button>
           </header>
           <div className={styles.clubCards}>
-            {academyClubs.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id)}><ClubBadge club={club} size="md" /><span><strong>{club.shortName}</strong><small>{club.city}</small></span><b>→</b></button>)}
+            {academyClubs.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id)}><ClubBadge club={club} size="md" /><span><strong>{club.shortName}</strong><small>{club.city}</small><small className={styles.contractTerm}>Base: 4–6 anos · até os 16–18</small></span><b>→</b></button>)}
           </div>
-          <p className={styles.clubNote}>Ao escolher um clube, a sua formação de base é sorteada automaticamente e a simulação começa.</p>
+          <p className={styles.clubNote}>O vínculo de base dura até a revelação, entre 16 e 18 anos. A formação é sorteada ao escolher o clube.</p>
         </div>
         {clubCountryPickerOpen && <Picker title="País da base" onClose={() => setClubCountryPickerOpen(false)}><div className={styles.pickerGrid}>{filteredClubCountries.map((country) => <button type="button" key={country.id} onClick={() => { setGame((current) => ({ ...current, academyCountryId: country.id, academyClubId: "" })); setClubCountryPickerOpen(false); }}><NationBadge country={country} size="sm" /><strong>{country.name}</strong></button>)}</div></Picker>}
-        {allClubsOpen && <Picker title="Carreira personalizada" onClose={() => setAllClubsOpen(false)}><div className={styles.warning}><b>!</b><span><strong>Escolher qualquer clube desativa conquistas nesta carreira.</strong><small>A carreira continua normal; apenas achievements globais não serão concedidos.</small></span></div><input className={styles.search} autoFocus placeholder="Pesquisar clube" value={clubSearch} onChange={(event) => setClubSearch(event.target.value)} /><div className={styles.allClubs}>{allClubResults.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id, true)}><ClubBadge club={club} size="sm" /><span><strong>{club.shortName}</strong><small>{COUNTRIES.find((country) => country.id === club.countryId)?.name}</small></span></button>)}</div></Picker>}
+        {allClubsOpen && <Picker title="Carreira personalizada" onClose={() => setAllClubsOpen(false)}><div className={styles.warning}><b>!</b><span><strong>Escolher qualquer clube desativa conquistas nesta carreira.</strong><small>A carreira continua normal; apenas achievements globais não serão concedidos.</small></span></div><input className={styles.search} autoFocus placeholder="Pesquisar clube" value={clubSearch} onChange={(event) => setClubSearch(event.target.value)} /><div className={styles.allClubs}>{allClubResults.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id, true)}><ClubBadge club={club} size="sm" /><span><strong>{club.shortName}</strong><small>{COUNTRIES.find((country) => country.id === club.countryId)?.name}</small><small className={styles.contractTerm}>Base: 4–6 anos · até os 16–18</small></span></button>)}</div></Picker>}
       </section>
     );
   }
@@ -329,7 +330,8 @@ export function FirstContractV2({ game, onBack, onSign }: { game: GameState; onB
         <div className={styles.contractOffers}>
           {offers.map((clubId, index) => {
             const club = clubById(clubId);
-            return <button type="button" key={clubId} className={index === 0 ? styles.academyOffer : ""} onClick={() => onSign(clubId)}><ClubBadge club={club} size="lg" /><span><small>{index === 0 ? "CONTINUAR NA SUA BASE" : "NOVA PROPOSTA"}</small><strong>{club.name}</strong><em>{index === 0 ? "O caminho conhecido continua aberto." : index === 1 ? "Uma porta diferente para buscar minutos." : "Outro projeto quer apostar no seu começo."}</em></span><b>→</b></button>;
+            const { years } = createContract(game.overall, game.age, club, game.seed);
+            return <button type="button" key={clubId} className={index === 0 ? styles.academyOffer : ""} onClick={() => onSign(clubId)}><ClubBadge club={club} size="lg" /><span><small>{index === 0 ? "CONTINUAR NA SUA BASE" : "NOVA PROPOSTA"}</small><strong>{club.name}</strong><small className={styles.contractTerm}>Contrato: {years} ano{years === 1 ? "" : "s"}</small><em>{index === 0 ? "O caminho conhecido continua aberto." : index === 1 ? "Uma porta diferente para buscar minutos." : "Outro projeto quer apostar no seu começo."}</em></span><b>→</b></button>;
           })}
         </div>
       </div>

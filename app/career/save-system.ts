@@ -17,6 +17,7 @@ export type CareerSaveMeta = {
   overall: number;
   phase: string;
   achievementsEligible: boolean;
+  pin?: { salt: string; hash: string };
 };
 
 export type GlobalAchievementUnlock = {
@@ -32,7 +33,16 @@ const INDEX_KEY = "futbobo:career-slots:v2";
 const ACTIVE_KEY = "futbobo:career-active-slot:v2";
 const ACHIEVEMENTS_KEY = "futbobo:achievements-global:v2";
 const SLOT_PREFIX = "futbobo:career-slot:v2:";
-const MAX_SLOTS_PER_MODE = 10;
+
+export function isValidCareerPin(pin: string) {
+  return /^[0-9]{4}$/.test(pin);
+}
+
+async function hashPin(pin: string, salt: string) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(pin), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: new TextEncoder().encode(salt), iterations: 100_000, hash: "SHA-256" }, key, 256);
+  return Array.from(new Uint8Array(bits), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -104,8 +114,7 @@ function sanitizeIndex(value: unknown): CareerSaveMeta[] {
       overall: Number(item.overall) || 50,
       phase: item.phase || "identity",
       achievementsEligible: item.achievementsEligible !== false,
-    }))
-    .slice(0, MAX_SLOTS_PER_MODE * 2);
+    }));
 }
 
 export function listCareerSaves(mode?: CareerMode) {
@@ -123,9 +132,12 @@ function createId(mode: CareerMode) {
   return `${mode}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export function createCareerSlot(mode: CareerMode = "player") {
+export async function createCareerSlot(mode: CareerMode = "player", pin = "") {
+  if (mode === "manager") return null;
+  if (pin && !isValidCareerPin(pin)) throw new Error("A senha deve ter exatamente 4 números.");
+  const protection = pin ? { salt: crypto.randomUUID(), hash: "" } : undefined;
+  if (protection) protection.hash = await hashPin(pin, protection.salt);
   const index = listCareerSaves();
-  if (index.filter((item) => item.mode === mode).length >= MAX_SLOTS_PER_MODE) return null;
   const now = Date.now();
   const meta: CareerSaveMeta = {
     id: createId(mode),
@@ -139,6 +151,7 @@ export function createCareerSlot(mode: CareerMode = "player") {
     overall: 50,
     phase: "identity",
     achievementsEligible: true,
+    ...(protection ? { pin: protection } : {}),
   };
   writeIndex([meta, ...index]);
   localStorage.setItem(ACTIVE_KEY, meta.id);
@@ -146,10 +159,11 @@ export function createCareerSlot(mode: CareerMode = "player") {
   return meta;
 }
 
-export function activateCareerSlot(id: string) {
+export async function activateCareerSlot(id: string, pin = "") {
   const index = listCareerSaves();
   const meta = index.find((item) => item.id === id);
-  if (!meta) return false;
+  if (!meta || meta.mode === "manager") return false;
+  if (meta.pin && (!isValidCareerPin(pin) || await hashPin(pin, meta.pin.salt) !== meta.pin.hash)) return false;
   const raw = localStorage.getItem(slotKey(id));
   if (!raw) return false;
   try {
