@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { CLUBS, COUNTRIES, FORMATIONS, LEAGUES, POSITIONS } from "../../game-data";
+import { CLUBS, COUNTRIES, FORMATIONS, POSITIONS, leagueById } from "../../game-data";
 import type { PositionKey } from "../../game-data";
 import type { GameState } from "../../career/model";
-import { defaultAcademyCountry, randomClubSelection } from "../../career/academy";
+import { academyClubOptions, defaultAcademyCountry } from "../../career/academy";
 import { clubPickerGroups } from "../../career/club-picker";
 import { createContract } from "../../career-systems";
 import { POSITION_FIELD_SPOTS } from "../../career/performance";
@@ -82,42 +82,7 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
     ?? COUNTRIES.find((country) => country.id === defaultAcademyCountry(game.nationality))
     ?? COUNTRIES.find((country) => playableCountryIds.has(country.id))
     ?? COUNTRIES[0];
-  const academyClubs = useMemo(() => {
-    const limit = 6;
-    const countryClubs = CLUBS.filter((club) => club.countryId === academyCountry.id);
-    const divisions = LEAGUES
-      .filter((league) => league.countryId === academyCountry.id)
-      .sort((a, b) => b.prestige - a.prestige);
-    const countrySalt = [...academyCountry.id].reduce((total, char) => total + char.charCodeAt(0), 0);
-    const baseSalt = 3500 + countrySalt * 17;
-
-    if (divisions.length < 2) {
-      return randomClubSelection(countryClubs, limit, game.seed, baseSalt);
-    }
-
-    const perDivision = Math.floor(limit / 2);
-    const firstDivision = randomClubSelection(
-      countryClubs.filter((club) => club.leagueId === divisions[0].id),
-      perDivision,
-      game.seed,
-      baseSalt + 101,
-    );
-    const secondDivision = randomClubSelection(
-      countryClubs.filter((club) => club.leagueId === divisions[1].id),
-      perDivision,
-      game.seed,
-      baseSalt + 211,
-    );
-    const selected = [...firstDivision, ...secondDivision];
-
-    if (selected.length < limit) {
-      const selectedIds = new Set(selected.map((club) => club.id));
-      const fallbackPool = countryClubs.filter((club) => !selectedIds.has(club.id));
-      selected.push(...randomClubSelection(fallbackPool, limit - selected.length, game.seed, baseSalt + 307));
-    }
-
-    return selected.slice(0, limit);
-  }, [academyCountry.id, game.seed]);
+  const academyClubs = useMemo(() => academyClubOptions(academyCountry.id, game.seed), [academyCountry.id, game.seed]);
   const filteredCountries = useMemo(() => {
     const needle = countrySearch.trim().toLocaleLowerCase("pt-BR");
     return COUNTRIES
@@ -297,7 +262,7 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
             <button type="button" className={styles.freeChoice} onClick={() => setAllClubsOpen(true)}>Escolher qualquer time</button>
           </header>
           <div className={styles.clubCards}>
-            {academyClubs.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id)}><ClubBadge club={club} size="md" /><span><strong>{club.shortName}</strong><small>{club.city}</small><small className={styles.contractTerm}>Base: 4–6 anos · até os 16–18</small></span><b>→</b></button>)}
+            {academyClubs.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id)}><ClubBadge club={club} size="md" /><span><strong>{club.shortName}</strong><small>{club.city} · {leagueById(club.leagueId).name}</small><small className={styles.contractTerm}>Base: 4–6 anos · até os 16–18</small></span><b>→</b></button>)}
           </div>
           <p className={styles.clubNote}>O vínculo de base dura até a revelação, entre 16 e 18 anos. A formação é sorteada ao escolher o clube.</p>
         </div>

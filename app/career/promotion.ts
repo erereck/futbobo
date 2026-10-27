@@ -1,6 +1,8 @@
 /** Ligas em que a carreira do jogador pode conquistar acesso à primeira divisão. */
 const PROMOTION_LEAGUES = new Set([
   "brasileirao-b",
+  "brasileirao-c",
+  "brasileirao-d",
   "championship",
   "segunda-division",
   "serie-b-italia",

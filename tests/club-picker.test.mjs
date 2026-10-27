@@ -24,7 +24,7 @@ test("diretório inclui todos os clubes uma única vez e organiza as divisões",
   assert.equal(listed.length, CLUBS.length);
   assert.equal(new Set(listed.map((club) => club.id)).size, CLUBS.length);
   const brazil = groups.find((group) => group.country.id === "brasil");
-  assert.deepEqual(brazil.leagues.map(({ league, division }) => [league.id, division]), [["brasileirao", 1], ["brasileirao-b", 2]]);
+  assert.deepEqual(brazil.leagues.map(({ league, division }) => [league.id, division]), [["brasileirao", 1], ["brasileirao-b", 2], ["brasileirao-c", 3], ["brasileirao-d", 4]]);
   const england = groups.find((group) => group.country.id === "inglaterra");
   assert.deepEqual(england.leagues.map(({ league, division }) => [league.id, division]), [["premier", 1], ["championship", 2]]);
   for (const id of ["segunda-division", "serie-b-italia", "2-bundesliga", "ligue-2", "liga-portugal-2"]) {

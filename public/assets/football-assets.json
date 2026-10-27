@@ -2572,7 +2572,7 @@
     },
     "goias": {
       "providerName": "Goiás Esporte Clube",
-      "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/3395.png"
+      "externalSource": "https://static.goiasec.com.br/upload/editor/2021/04/ESCUDO-OFICIAL-PANTONE-3537C-1-1024x1024.png"
     },
     "al-ahly-cairo": {
       "providerId": "138995",
@@ -3680,6 +3680,470 @@
     "partizan": {
       "providerName": "Fudbalski Klub Partizan",
       "externalSource": "https://a.espncdn.com/i/teamlogos/soccer/500/541.png"
+    },
+    "athletic": {
+      "providerName": "Athletic",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/athletic.9f09aa77.png"
+    },
+    "fortaleza": {
+      "providerName": "Fortaleza",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/fortaleza.b0aa0e9c.png"
+    },
+    "londrina": {
+      "providerName": "Londrina",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/londrina.87afbee1.png"
+    },
+    "sao-bernardo": {
+      "providerName": "São Bernardo",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/sao-bernardo.469ae35c.png"
+    },
+    "itabaiana": {
+      "providerName": "Itabaiana",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/itabaiana.d5e947da.png"
+    },
+    "anapolis": {
+      "providerName": "Anápolis",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/anapolis.6340f789.png"
+    },
+    "barra": {
+      "providerName": "Barra",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/barra.949cc5c7.png"
+    },
+    "botafogo-pb": {
+      "providerName": "Botafogo PB",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/botafogo-pb.cd294317.png"
+    },
+    "brusque": {
+      "providerName": "Brusque",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/brusque.5511cc9f.png"
+    },
+    "caxias": {
+      "providerName": "Caxias",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/caxias.87683e4f.png"
+    },
+    "confianca": {
+      "providerName": "Confiança",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/confianca.5fd4e2d0.png"
+    },
+    "floresta": {
+      "providerName": "Floresta",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/floresta.f5b8e67a.png"
+    },
+    "inter-de-limeira": {
+      "providerName": "Inter de Limeira",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/inter-de-limeira.052ad3c9.png"
+    },
+    "ituano": {
+      "providerName": "Ituano",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/ituano.2f59703e.png"
+    },
+    "maranhao": {
+      "providerName": "Maranhão",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/maranhao.6afcb6d2.png"
+    },
+    "maringa": {
+      "providerName": "Maringá",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/maringa.ca053062.png"
+    },
+    "santa-cruz": {
+      "providerName": "Santa Cruz",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/santa-cruz.dec0f5ff.png"
+    },
+    "ypiranga": {
+      "providerName": "Ypiranga",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/ypiranga.121585e7.png"
+    },
+    "ferroviaria": {
+      "providerName": "Ferroviaria",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/ferroviaria.ee71494b.png"
+    },
+    "volta-redonda": {
+      "providerName": "Volta Redonda",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/volta-redonda.9e002e7b.png"
+    },
+    "nacional-am": {
+      "providerName": "Nacional Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/nacional-am.aa54e40a.png"
+    },
+    "manauara": {
+      "providerName": "Manauara Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/manauara.cf8ca82f.png"
+    },
+    "sao-raimundo-rr": {
+      "providerName": "São Raimundo-RR",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/sao-raimundo-rr.98fc977b.png"
+    },
+    "manaus": {
+      "providerName": "Manaus Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/manaus.2b5d81f0.png"
+    },
+    "gremio-atletico-sampaio": {
+      "providerName": "Grêmio Atlético Sampaio (GAS)",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/gremio-atletico-sampaio.fcf1c01a.png"
+    },
+    "monte-roraima": {
+      "providerName": "Monte Roraima",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/monte-roraima.03cd524e.png"
+    },
+    "porto-velho": {
+      "providerName": "Porto Velho Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/porto-velho.b560f3ea.png"
+    },
+    "araguaina": {
+      "providerName": "Araguaína Futebol e Regatas",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/araguaina.469013e4.png"
+    },
+    "guapore": {
+      "providerName": "Guaporé Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/guapore.fb955764.png"
+    },
+    "independencia-ac": {
+      "providerName": "Independência Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/independencia-ac.c4e57851.png"
+    },
+    "galvez": {
+      "providerName": "Galvez Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/galvez.a1e7e88d.png"
+    },
+    "humaita-ac": {
+      "providerName": "Sport Clube Humaitá",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/humaita-ac.bf6d9cf7.png"
+    },
+    "gama": {
+      "providerName": "Sociedade Esportiva do Gama",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/gama.c7592aa4.png"
+    },
+    "luverdense": {
+      "providerName": "Luverdense Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/luverdense.dc71e0c4.png"
+    },
+    "aparecidense": {
+      "providerName": "Associação Atlética Aparecidense",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/aparecidense.c9783bb2.png"
+    },
+    "brasiliense": {
+      "providerName": "Brasiliense Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/brasiliense.f0e85301.png"
+    },
+    "primavera": {
+      "providerName": "Primavera Atlético Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/primavera.74d207eb.png"
+    },
+    "inhumas": {
+      "providerName": "Inhumas Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/inhumas.4105deec.png"
+    },
+    "capital-cf": {
+      "providerName": "Capital Clube de Futebol",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/capital-cf.ff7ea45a.png"
+    },
+    "goiatuba": {
+      "providerName": "Goiatuba Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/goiatuba.b67e8789.png"
+    },
+    "mixto": {
+      "providerName": "Mixto Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/mixto.907746e2.png"
+    },
+    "operario-varzea-grandense": {
+      "providerName": "Operário Várzea-Grandense",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/operario-varzea-grandense.253f6334.png"
+    },
+    "uniao-rondonopolis": {
+      "providerName": "União Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/uniao-rondonopolis.4ace726e.png"
+    },
+    "ceilandia": {
+      "providerName": "Ceilândia Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/ceilandia.9d5edd5c.png"
+    },
+    "imperatriz": {
+      "providerName": "Sociedade Imperatriz de Desportos",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/imperatriz.369c3edf.png"
+    },
+    "trem": {
+      "providerName": "Trem Desportivo Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/trem.ad0923df.png"
+    },
+    "aguia-de-maraba": {
+      "providerName": "Águia de Marabá Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/aguia-de-maraba.7f9508bc.png"
+    },
+    "tuna-luso": {
+      "providerName": "Tuna Luso Brasileira",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/tuna-luso.7e7b3f7a.png"
+    },
+    "tocantinopolis": {
+      "providerName": "Tocantinópolis Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/tocantinopolis.2da49083.png"
+    },
+    "oratorio": {
+      "providerName": "Oratório Recreativo Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/oratorio.4ec32521.png"
+    },
+    "maracana": {
+      "providerName": "Maracanã Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/maracana.18b69502.png"
+    },
+    "iguatu": {
+      "providerName": "Associação Desportiva Iguatu",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/iguatu.c4c1ad09.png"
+    },
+    "iape": {
+      "providerName": "Instituto de Administração de Projetos Educacionais Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/iape.528d170a.png"
+    },
+    "sampaio-correa": {
+      "providerName": "Sampaio Corrêa Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/sampaio-correa.d4b29471.png"
+    },
+    "moto-club-sao-luis": {
+      "providerName": "Moto Club de São Luís",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/moto-club-sao-luis.3d27f76d.png"
+    },
+    "parnahyba": {
+      "providerName": "Parnahyba Sport Club",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/parnahyba.401ea299.png"
+    },
+    "fluminense-pi": {
+      "providerName": "Fluminense Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/fluminense-pi.759d6101.png"
+    },
+    "piaui": {
+      "providerName": "Piauí Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/piaui.88945bc6.png"
+    },
+    "ferroviario-ce": {
+      "providerName": "Ferroviário Atlético Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/ferroviario-ce.2c64a451.png"
+    },
+    "altos": {
+      "providerName": "Associação Atlética de Altos",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/altos.c6ee62f2.png"
+    },
+    "atletico-cearense": {
+      "providerName": "Futebol Clube Atlético Cearense",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/atletico-cearense.82726b02.png"
+    },
+    "tirol": {
+      "providerName": "Centro de Formação de Atletas Tirol",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/tirol.1be4d69a.png"
+    },
+    "america-rn": {
+      "providerName": "América de Natal",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/america-rn.a6b4beff.png"
+    },
+    "maguary-pe": {
+      "providerName": "Associação Atlética Maguary",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/maguary-pe.17d7315d.png"
+    },
+    "abc": {
+      "providerName": "ABC Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/abc.9a745131.png"
+    },
+    "sousa": {
+      "providerName": "Sousa Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/sousa.9975e730.png"
+    },
+    "central-pe": {
+      "providerName": "Central Sport Club",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/central-pe.c91595e2.png"
+    },
+    "laguna-rn": {
+      "providerName": "Clube Laguna SAF",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/laguna-rn.0aee2f03.png"
+    },
+    "treze": {
+      "providerName": "Treze FC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/treze.55f18fd3.png"
+    },
+    "sergipe": {
+      "providerName": "Club Sportivo Sergipe",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/sergipe.c2f55fbf.png"
+    },
+    "serra-branca": {
+      "providerName": "Serra Branca EC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/serra-branca.73a0a5a3.png"
+    },
+    "lagarto": {
+      "providerName": "Lagarto FC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/lagarto.67b58658.png"
+    },
+    "retro": {
+      "providerName": "Retrô FC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/retro.039fab4b.png"
+    },
+    "decisao": {
+      "providerName": "Decisão Goiana FC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/decisao.f13fb16e.png"
+    },
+    "csa": {
+      "providerName": "CSA",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/csa.2cf265ce.png"
+    },
+    "juazeirense": {
+      "providerName": "Juazeirense",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/juazeirense.0df2ca83.png"
+    },
+    "asa": {
+      "providerName": "ASA de Arapiraca",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/asa.27f46fa4.png"
+    },
+    "jacuipense": {
+      "providerName": "EC Jacuipense",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/jacuipense.cdb2e255.png"
+    },
+    "cse": {
+      "providerName": "CSE",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/cse.ce7ac827.png"
+    },
+    "atletico-de-alagoinhas": {
+      "providerName": "Atlético de Alagoinhas",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/atletico-de-alagoinhas.927acbb6.png"
+    },
+    "uberlandia": {
+      "providerName": "Uberlândia Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/uberlandia.b6151a23.png"
+    },
+    "betim": {
+      "providerName": "Betim Futebol",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/betim.10e75926.png"
+    },
+    "crac": {
+      "providerName": "CRAC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/crac.7f30bbc5.png"
+    },
+    "ivinhema": {
+      "providerName": "Ivinhema Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/ivinhema.99731d8a.png"
+    },
+    "abecat-ouvidorense": {
+      "providerName": "ABECAT Ouvidorense",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/abecat-ouvidorense.6214f2e8.png"
+    },
+    "operario-ms": {
+      "providerName": "Operário-MS",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/operario-ms.33bf1adc.png"
+    },
+    "democrata-gv": {
+      "providerName": "Democrata-GV",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/democrata-gv.c2af088c.png"
+    },
+    "tombense": {
+      "providerName": "Tombense FC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/tombense.6e1646b6.png"
+    },
+    "vitoria-es": {
+      "providerName": "Vitória-ES",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/vitoria-es.7e4646c9.png"
+    },
+    "rio-branco-es": {
+      "providerName": "Rio Branco-ES",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/rio-branco-es.b248ea71.png"
+    },
+    "porto-ba": {
+      "providerName": "Porto-BA",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/porto-ba.114dbd8f.png"
+    },
+    "real-noroeste": {
+      "providerName": "Real Noroeste",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/real-noroeste.7dd7667f.png"
+    },
+    "portuguesa": {
+      "providerName": "Associação Portuguesa de Desportos",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/portuguesa.6da8e896.png"
+    },
+    "agua-santa": {
+      "providerName": "Esporte Clube Água Santa",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/agua-santa.0b3791e2.png"
+    },
+    "portuguesa-rj": {
+      "providerName": "Associação Atlética Portuguesa (RJ)",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/portuguesa-rj.e342eeed.png"
+    },
+    "america-rj": {
+      "providerName": "America Football Club (RJ)",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/america-rj.d8446fdf.png"
+    },
+    "madureira": {
+      "providerName": "Madureira Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/madureira.ad576967.png"
+    },
+    "pouso-alegre": {
+      "providerName": "Pouso Alegre Futebol Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/pouso-alegre.85045133.png"
+    },
+    "xv-de-piracicaba": {
+      "providerName": "XV de Piracicaba",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/xv-de-piracicaba.d0047ee0.png"
+    },
+    "noroeste": {
+      "providerName": "Noroeste",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/noroeste.dd255d98.png"
+    },
+    "velo-clube": {
+      "providerName": "Velo Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/velo-clube.33b51a08.png"
+    },
+    "sampaio-correa-rj": {
+      "providerName": "Sampaio Corrêa-RJ",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/sampaio-correa-rj.7dfcc301.png"
+    },
+    "nova-iguacu": {
+      "providerName": "Nova Iguaçu FC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/nova-iguacu.c1664d9d.png"
+    },
+    "marica": {
+      "providerName": "Maricá FC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/marica.575b4c19.png"
+    },
+    "santa-catarina": {
+      "providerName": "Santa Catarina Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/santa-catarina.80932de8.png"
+    },
+    "cianorte": {
+      "providerName": "Cianorte FC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/cianorte.b4bce48b.png"
+    },
+    "fc-cascavel": {
+      "providerName": "FC Cascavel",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/fc-cascavel.83bda8b6.png"
+    },
+    "sao-luiz": {
+      "providerName": "EC São Luiz",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/sao-luiz.22928afc.png"
+    },
+    "joinville": {
+      "providerName": "Joinville Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/joinville.d6f74fec.png"
+    },
+    "guarany-de-bage": {
+      "providerName": "Guarany de Bagé",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/guarany-de-bage.c1ca842b.png"
+    },
+    "blumenau": {
+      "providerName": "Blumenau Esporte Clube",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/blumenau.7461ade9.png"
+    },
+    "marcilio-dias": {
+      "providerName": "Marcílio Dias",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/marcilio-dias.29307a4b.png"
+    },
+    "sao-joseense": {
+      "providerName": "São Joseense",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/sao-joseense.755b3936.png"
+    },
+    "sao-jose-rs": {
+      "providerName": "EC São José",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/sao-jose-rs.7fef3330.png"
+    },
+    "brasil-de-pelotas": {
+      "providerName": "Brasil de Pelotas",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/brasil-de-pelotas.7a2ad104.png"
+    },
+    "azuriz": {
+      "providerName": "Azuriz FC",
+      "externalSource": "https://assets.football-logos.cc/logos/brazil/700x700/azuriz.75998bd9.png"
     }
   },
   "flags": {
@@ -4571,6 +5035,14 @@
     "cafChampions": {
       "providerName": "CAF Champions League",
       "source": "https://upload.wikimedia.org/wikipedia/en/thumb/7/7e/CAF_Champions_League_logo.svg/512px-CAF_Champions_League_logo.svg.png"
+    },
+    "league:brasileirao-c": {
+      "providerName": "Brasileirão Série C",
+      "source": "https://assets.football-logos.cc/logos/brazil/700x700/brazilian-serie-c.81968f68.png"
+    },
+    "league:brasileirao-d": {
+      "providerName": "Brasileirão Série D",
+      "source": "https://assets.football-logos.cc/logos/brazil/700x700/brazilian-serie-d.869d9825.png"
     }
   }
 }

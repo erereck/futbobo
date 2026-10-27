@@ -1,3 +1,5 @@
+import { BRAZIL_LOWER_CLUBS } from "./brazil-2026-clubs";
+
 export type PositionKey =
   | "GOL"
   | "LD"
@@ -366,6 +368,8 @@ export const LEAGUES: League[] = [
   // Segundas divisões: sem vaga continental pela liga, mas a copa nacional ainda
   // vale — time da Série B que ganha a Copa do Brasil vai à Libertadores.
   { id: "brasileirao-b", countryId: "brasil", name: "Brasileirão Série B", cupName: "Copa do Brasil", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "brasileirao-c", countryId: "brasil", name: "Brasileirão Série C", cupName: "Copa do Brasil", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "brasileirao-d", countryId: "brasil", name: "Brasileirão Série D", cupName: "Copa do Brasil", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   { id: "championship", countryId: "inglaterra", name: "EFL Championship", cupName: "FA Cup", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   // Novas rotas fora do eixo tradicional. Na África e na Austrália,
   // `championsPlaces` representa vagas na competição continental local.
@@ -929,7 +933,7 @@ const CHINA_CLUBS: Club[] = [
 const BRAZIL_B_CLUBS: Club[] = [
   { id: "sport", name: "Sport Club do Recife", shortName: "Sport", abbr: "SPT", city: "Recife", state: "PE", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#111111", reputation: 3, strength: 71, academy: 4 },
   { id: "ceara", name: "Ceará Sporting Club", shortName: "Ceará", abbr: "CEA", city: "Fortaleza", state: "CE", countryId: "brasil", leagueId: "brasileirao-b", primary: "#111111", secondary: "#f5f5f5", reputation: 3, strength: 71, academy: 3 },
-  { id: "goias", name: "Goiás Esporte Clube", shortName: "Goiás", abbr: "GOI", city: "Goiânia", state: "GO", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5c400", reputation: 3, strength: 70, academy: 4 },
+  { id: "goias", name: "Goiás Esporte Clube", shortName: "Goiás", abbr: "GOI", city: "Goiânia", state: "GO", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#ffffff", reputation: 3, strength: 70, academy: 4 },
   { id: "atletico-go", name: "Atlético Clube Goianiense", shortName: "Atlético-GO", abbr: "ACG", city: "Goiânia", state: "GO", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#111111", reputation: 3, strength: 70, academy: 3 },
   { id: "cuiaba", name: "Cuiabá Esporte Clube", shortName: "Cuiabá", abbr: "CUI", city: "Cuiabá", state: "MT", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5c400", reputation: 2, strength: 69, academy: 2 },
   { id: "america-mg", name: "América Futebol Clube", shortName: "América-MG", abbr: "AME", city: "Belo Horizonte", state: "MG", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5f5f5", reputation: 3, strength: 68, academy: 4 },
@@ -939,14 +943,14 @@ const BRAZIL_B_CLUBS: Club[] = [
   { id: "avai", name: "Avaí Futebol Clube", shortName: "Avaí", abbr: "AVA", city: "Florianópolis", state: "SC", countryId: "brasil", leagueId: "brasileirao-b", primary: "#0057a8", secondary: "#f5f5f5", reputation: 2, strength: 67, academy: 3 },
   { id: "ponte-preta", name: "Associação Atlética Ponte Preta", shortName: "Ponte Preta", abbr: "PON", city: "Campinas", state: "SP", countryId: "brasil", leagueId: "brasileirao-b", primary: "#111111", secondary: "#f5f5f5", reputation: 2, strength: 66, academy: 4 },
   { id: "crb", name: "Clube de Regatas Brasil", shortName: "CRB", abbr: "CRB", city: "Maceió", state: "AL", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#111111", reputation: 2, strength: 66, academy: 2 },
-  { id: "paysandu", name: "Paysandu Sport Club", shortName: "Paysandu", abbr: "PAY", city: "Belém", state: "PA", countryId: "brasil", leagueId: "brasileirao-b", primary: "#0057a8", secondary: "#f5f5f5", reputation: 2, strength: 65, academy: 2 },
+  { id: "paysandu", name: "Paysandu Sport Club", shortName: "Paysandu", abbr: "PAY", city: "Belém", state: "PA", countryId: "brasil", leagueId: "brasileirao-c", primary: "#0057a8", secondary: "#f5f5f5", reputation: 2, strength: 65, academy: 2 },
   { id: "vila-nova", name: "Vila Nova Futebol Clube", shortName: "Vila Nova", abbr: "VIL", city: "Goiânia", state: "GO", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 65, academy: 2 },
   { id: "botafogo-sp", name: "Botafogo Futebol Clube", shortName: "Botafogo-SP", abbr: "BSP", city: "Ribeirão Preto", state: "SP", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#111111", reputation: 2, strength: 65, academy: 2 },
-  { id: "guarani", name: "Guarani Futebol Clube", shortName: "Guarani", abbr: "GUA", city: "Campinas", state: "SP", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5f5f5", reputation: 2, strength: 64, academy: 3 },
+  { id: "guarani", name: "Guarani Futebol Clube", shortName: "Guarani", abbr: "GUA", city: "Campinas", state: "SP", countryId: "brasil", leagueId: "brasileirao-c", primary: "#00703c", secondary: "#f5f5f5", reputation: 2, strength: 64, academy: 3 },
   { id: "nautico", name: "Clube Náutico Capibaribe", shortName: "Náutico", abbr: "NAU", city: "Recife", state: "PE", countryId: "brasil", leagueId: "brasileirao-b", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 64, academy: 3 },
   { id: "operario-pr", name: "Operário Ferroviário Esporte Clube", shortName: "Operário-PR", abbr: "OPE", city: "Ponta Grossa", state: "PR", countryId: "brasil", leagueId: "brasileirao-b", primary: "#111111", secondary: "#f5f5f5", reputation: 1, strength: 64, academy: 2 },
-  { id: "figueirense", name: "Figueirense Futebol Clube", shortName: "Figueirense", abbr: "FIG", city: "Florianópolis", state: "SC", countryId: "brasil", leagueId: "brasileirao-b", primary: "#111111", secondary: "#f5f5f5", reputation: 2, strength: 63, academy: 3 },
-  { id: "amazonas", name: "Amazonas Futebol Clube", shortName: "Amazonas", abbr: "AMA", city: "Manaus", state: "AM", countryId: "brasil", leagueId: "brasileirao-b", primary: "#00703c", secondary: "#f5c400", reputation: 1, strength: 62, academy: 2 },
+  { id: "figueirense", name: "Figueirense Futebol Clube", shortName: "Figueirense", abbr: "FIG", city: "Florianópolis", state: "SC", countryId: "brasil", leagueId: "brasileirao-c", primary: "#111111", secondary: "#f5f5f5", reputation: 2, strength: 63, academy: 3 },
+  { id: "amazonas", name: "Amazonas Futebol Clube", shortName: "Amazonas", abbr: "AMA", city: "Manaus", state: "AM", countryId: "brasil", leagueId: "brasileirao-c", primary: "#00703c", secondary: "#f5c400", reputation: 1, strength: 62, academy: 2 },
 ];
 
 // EFL Championship. Segunda divisão inglesa: dinheiro de primeira, vaga
@@ -1247,6 +1251,7 @@ const CZECH_CLUBS: Club[] = [
 export const CLUBS: Club[] = [
   ...BRAZIL_CLUBS,
   ...BRAZIL_B_CLUBS,
+  ...BRAZIL_LOWER_CLUBS,
   ...ENGLAND_B_CLUBS,
   ...SAUDI_CLUBS,
   ...JAPAN_CLUBS,

@@ -2,6 +2,7 @@ import { CLUBS, LEAGUES, POSITIONS, countryById, leagueById } from "../game-data
 import type { Club, ContinentalSlot, Country, PositionKey } from "../game-data";
 import { clubById, seeded } from "./shared";
 import type { GameState } from "./model";
+import { leagueDivision } from "./league-divisions";
 
 export function randomClubSelection(pool: Club[], count: number, seed: number, salt: number, excludedIds: string[] = []) {
   return pool
@@ -10,6 +11,28 @@ export function randomClubSelection(pool: Club[], count: number, seed: number, s
     .sort((a, b) => a.order - b.order)
     .slice(0, count)
     .map(({ club }) => club);
+}
+
+/** Sorteia três clubes por divisão quando o país oferece quatro divisões. */
+export function academyClubOptions(countryId: string, seed: number): Club[] {
+  const countryClubs = CLUBS.filter((club) => club.countryId === countryId);
+  const divisions = LEAGUES.filter((league) => league.countryId === countryId && countryClubs.some((club) => club.leagueId === league.id))
+    .sort((a, b) => leagueDivision(a.id) - leagueDivision(b.id) || b.prestige - a.prestige);
+  const countrySalt = [...countryId].reduce((total, char) => total + char.charCodeAt(0), 0);
+  const baseSalt = 3500 + countrySalt * 17;
+  if ([1, 2, 3, 4].every((tier) => divisions.some((league) => leagueDivision(league.id) === tier))) {
+    const selected = [1, 2, 3, 4].flatMap((tier, index) => randomClubSelection(
+      countryClubs.filter((club) => leagueDivision(club.leagueId) === tier), 3, seed, baseSalt + 101 + index * 110,
+    ));
+    const ids = new Set(selected.map((club) => club.id));
+    return [...selected, ...randomClubSelection(countryClubs.filter((club) => !ids.has(club.id)), 12 - selected.length, seed, baseSalt + 701)].slice(0, 12);
+  }
+  if (divisions.length < 2) return randomClubSelection(countryClubs, 6, seed, baseSalt);
+  const selected = divisions.slice(0, 2).flatMap((league, index) => randomClubSelection(
+    countryClubs.filter((club) => club.leagueId === league.id), 3, seed, baseSalt + 101 + index * 110,
+  ));
+  const ids = new Set(selected.map((club) => club.id));
+  return [...selected, ...randomClubSelection(countryClubs.filter((club) => !ids.has(club.id)), 6 - selected.length, seed, baseSalt + 307)].slice(0, 6);
 }
 
 export const REGIONAL_ACADEMY_ROUTES: Record<string, string[]> = {
@@ -248,7 +271,7 @@ export function isEuropeanClub(club: Club) {
 }
 
 export function initialContinentalSlot(club: Club): ContinentalSlot | null {
-  if (club.leagueId === "brasileirao-b" || club.leagueId === "championship") return null;
+  if (club.leagueId === "brasileirao-b" || club.leagueId === "championship" || club.leagueId === "brasileirao-c" || club.leagueId === "brasileirao-d") return null;
   const confederation = clubConfederation(club);
   if (confederation === "SOUTH_AMERICA") return club.reputation >= 4 ? "libertadores" : club.reputation >= 3 ? "sudamericana" : null;
   if (confederation === "NORTH_AMERICA") return club.reputation >= 4 ? "concacaf" : null;
@@ -269,6 +292,7 @@ export function continentalSlotAfterSeason(
   cupChampion: boolean,
   leaguePosition: number,
 ): ContinentalSlot | null {
+  if (league.id === "brasileirao-c" || league.id === "brasileirao-d") return cupChampion ? "libertadores" : null;
   const isSecondDivision = league.id === "brasileirao-b" || league.id === "championship";
   if (isSecondDivision) {
     if (!cupChampion) return null;
