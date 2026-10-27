@@ -366,6 +366,13 @@ export type AppSettings = {
   characterButtonsEnabled?: boolean;
   /** Partidas de botão com bonecos 3D no lugar dos discos. Só o desenho muda. */
   botao3d?: boolean;
+  /**
+   * 3D mais leve (sem torcida nem sombra projetada, resolução adaptável). Liga
+   * sozinho quando a partida não roda bem; só vale com o Modo 3D ligado.
+   */
+  botao3dPerformance?: boolean;
+  /** O jogador desligou o modo desempenho na mão: a detecção não liga de novo. */
+  botao3dPerformanceUserOff?: boolean;
 };
 
 export type InstallPromptEvent = Event & {

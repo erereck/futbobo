@@ -16,7 +16,17 @@ const SQUASH_LIFE = 0.4;
 export type BallViewOptions = {
   /** Sem esticar nem achatar: a bola só rola e quica. */
   reducedMotion?: boolean;
+  /**
+   * Modo desempenho 3D: sem sombra projetada (fica a sombra de contato, que já
+   * assenta a bola no gramado) e textura com metade da resolução.
+   */
+  performance?: boolean;
 };
+
+// Esfera: 32 × 20 contorna liso até no close da festa (a 100 px de raio, o
+// polígono fica a menos de meio pixel do círculo) com metade dos triângulos de 40 × 28.
+const SPHERE_WIDTH_SEGMENTS = 32;
+const SPHERE_HEIGHT_SEGMENTS = 20;
 
 function soccerCenters() {
   const phi = (1 + Math.sqrt(5)) / 2;
@@ -41,46 +51,87 @@ function soccerCenters() {
   return { pentagons, hexagons };
 }
 
-export function soccerBallTexture(width = 512, height = 256) {
+/**
+ * Pixels da bola já calculados, por tamanho: a conta sai uma vez por sessão.
+ * Guarda os bytes, não o canvas: canvas 2D acelerado perde o conteúdo quando a
+ * GPU cai (o mesmo evento que derruba o WebGL), e a bola da partida
+ * reconstruída sairia preta. Cada textura ganha um canvas novo (putImageData,
+ * menos de 1 ms).
+ */
+const ballPixels = new Map<string, ImageData>();
+
+function paintSoccerBall(width: number, height: number) {
   const { pentagons, hexagons } = soccerCenters();
-  const centers = [...pentagons.map((center) => ({ center, dark: true })), ...hexagons.map((center) => ({ center, dark: false }))];
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d")!;
-  const image = ctx.createImageData(width, height);
-  const direction = new THREE.Vector3();
+  // Centros em números soltos (os pentágonos, escuros, vêm primeiro): o laço de
+  // 131 mil pixels não chama método nem cria objeto. Mesma conta e mesma ordem
+  // do produto escalar do Vector3: imagem idêntica byte a byte.
+  const centers = [...pentagons, ...hexagons];
+  const count = centers.length;
+  const cx = new Float64Array(count);
+  const cy = new Float64Array(count);
+  const cz = new Float64Array(count);
+  centers.forEach((center, index) => {
+    cx[index] = center.x;
+    cy[index] = center.y;
+    cz[index] = center.z;
+  });
+  const darkUntil = pentagons.length;
+  const sinLongitude = new Float64Array(width);
+  const cosLongitude = new Float64Array(width);
+  for (let x = 0; x < width; x += 1) {
+    const longitude = ((x + 0.5) / width) * Math.PI * 2 - Math.PI;
+    sinLongitude[x] = Math.sin(longitude);
+    cosLongitude[x] = Math.cos(longitude);
+  }
+  const image = new ImageData(width, height);
+  const pixels = image.data;
   for (let y = 0; y < height; y += 1) {
     const latitude = (0.5 - (y + 0.5) / height) * Math.PI;
+    const cosLatitude = Math.cos(latitude);
+    const dy = Math.sin(latitude);
     for (let x = 0; x < width; x += 1) {
-      const longitude = ((x + 0.5) / width) * Math.PI * 2 - Math.PI;
-      direction.set(Math.cos(latitude) * Math.sin(longitude), Math.sin(latitude), Math.cos(latitude) * Math.cos(longitude));
+      const dx = cosLatitude * sinLongitude[x];
+      const dz = cosLatitude * cosLongitude[x];
       let best = -2;
       let second = -2;
-      let dark = false;
-      for (const entry of centers) {
-        const dot = entry.center.dot(direction);
+      let bestIndex = 0;
+      for (let index = 0; index < count; index += 1) {
+        const dot = cx[index] * dx + cy[index] * dy + cz[index] * dz;
         if (dot > best) {
           second = best;
           best = dot;
-          dark = entry.dark;
+          bestIndex = index;
         } else if (dot > second) {
           second = dot;
         }
       }
+      const dark = bestIndex < darkUntil;
       const seam = best - second < 0.012;
       let value = dark ? 28 : 246;
       if (seam) value = dark ? 40 : 150;
       // Leve variação de couro.
       value += ((x * 13 + y * 7) % 5) - 2;
       const offset = (y * width + x) * 4;
-      image.data[offset] = value;
-      image.data[offset + 1] = value;
-      image.data[offset + 2] = dark ? value + 4 : value - 2;
-      image.data[offset + 3] = 255;
+      pixels[offset] = value;
+      pixels[offset + 1] = value;
+      pixels[offset + 2] = dark ? value + 4 : value - 2;
+      pixels[offset + 3] = 255;
     }
   }
-  ctx.putImageData(image, 0, 0);
+  return image;
+}
+
+export function soccerBallTexture(width = 512, height = 256) {
+  const key = `${width}x${height}`;
+  let image = ballPixels.get(key);
+  if (!image) {
+    image = paintSoccerBall(width, height);
+    ballPixels.set(key, image);
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext("2d")!.putImageData(image, 0, 0);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
@@ -90,6 +141,8 @@ export function soccerBallTexture(width = 512, height = 256) {
 /**
  * Sombra de contato e halo numa textura só: miolo escuro do tamanho da bola
  * (ela "pesa" no gramado) e um anel creme fraco que a separa do fundo.
+ * Pintada a cada textura (um degradê, frações de ms): canvas guardado poderia
+ * voltar em branco depois de uma queda da GPU.
  */
 function contactTexture() {
   const size = 128;
@@ -158,12 +211,20 @@ export class BallView {
 
   constructor(private readonly radius: number, options: BallViewOptions = {}) {
     this.calm = Boolean(options.reducedMotion);
-    this.texture = soccerBallTexture();
+    const lite = Boolean(options.performance);
+    // A bola ocupa ~30 px no plano de jogo: 256 × 128 só amacia a costura no close extremo.
+    this.texture = lite ? soccerBallTexture(256, 128) : soccerBallTexture();
     this.sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(radius, 40, 28),
+      new THREE.SphereGeometry(radius, SPHERE_WIDTH_SEGMENTS, SPHERE_HEIGHT_SEGMENTS),
       new THREE.MeshStandardMaterial({ map: this.texture, roughness: 0.42, metalness: 0 }),
     );
-    this.sphere.castShadow = true;
+    // Sombra do sol: no modo desempenho fica só a de contato (que já assenta a bola).
+    // Sem customDepthMaterial próprio: um material só da bola seria mais um
+    // programa na passada de sombra (compilado no primeiro quadro, fora do
+    // compileAsync) para poupar a cor de ~2 mil texels. Quem montar um material
+    // de profundidade sem cor dividido por todos os casters opacos pendura o
+    // mesmo em sphere.customDepthMaterial.
+    this.sphere.castShadow = !lite;
     this.unalign.position.y = radius;
     this.unalign.add(this.sphere);
     this.squash.add(this.unalign);

@@ -1411,6 +1411,7 @@ button:active:not(:disabled) { transform: scale(.98); }
 .character-button-settings > button span { display: grid; gap: 3px; }
 .character-button-settings > button strong { font-size: 12px; }
 .character-button-settings > button small { color: var(--muted); font-size: 9px; line-height: 1.4; }
+.character-button-settings > button:disabled { opacity: .45; cursor: not-allowed; }
 
 .player-appearance-profile {
   display: grid;

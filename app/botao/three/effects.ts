@@ -3,13 +3,30 @@
 //
 // Tudo sai de quatro malhas fixas criadas no construtor: dois pools de
 // partículas instanciadas (um com mistura normal, outro aditivo), um conjunto
-// de anéis no chão e o holofote. No pior caso são 4 draw calls; parado, zero.
+// de anéis no chão e o holofote. No pior caso são 4 draw calls; parado, zero:
+// malha sem nada vivo fica invisível e o three nem troca de programa por ela.
 // Nada projeta sombra e nada aqui lê ou escreve o motor: é só desenho.
+//
+// Os programas continuam compilando antes do primeiro chute: o compile do
+// three percorre a cena inteira, inclusive o que está invisível. O resto do
+// primeiro uso (atlas, buffers, uniforms) sai no prepare(), no quadro
+// descartável da visão.
 
 import * as THREE from "three";
 import { FIELD } from "../engine";
 
-export type EffectsOptions = { surface: "grass" | "futsal"; reducedMotion?: boolean; lowPower?: boolean };
+export type EffectsOptions = {
+  surface: "grass" | "futsal";
+  reducedMotion?: boolean;
+  /** Tela pequena: pools menores e sem o cone do holofote. */
+  lowPower?: boolean;
+  /**
+   * Modo desempenho 3D: metade das partículas, sem os halos grandes (clarões
+   * em disco), sem o cone do holofote e com os brilhos da festa mais espaçados.
+   * Estrela, anéis no chão e poeira continuam: são o retorno do lance.
+   */
+  performance?: boolean;
+};
 
 // ------------------------------------------------------------- atlas
 
@@ -90,27 +107,36 @@ function cellAlpha(cell: number, u: number, v: number, grain: number) {
   }
 }
 
+const ATLAS_WIDTH = ATLAS_CELL * 4;
+const ATLAS_HEIGHT = ATLAS_CELL * 2;
+/** Bytes do atlas: calculados uma vez por sessão; cada contexto só ganha a sua textura. */
+let atlasPixels: Uint8Array | null = null;
+
+function atlasData() {
+  if (atlasPixels) return atlasPixels;
+  const data = new Uint8Array(ATLAS_WIDTH * ATLAS_HEIGHT);
+  for (let j = 0; j < ATLAS_HEIGHT; j += 1) {
+    // Linha 0 da textura é a de baixo (flipY desligado): célula da linha de cima do atlas = j alto.
+    const row = 1 - Math.floor(j / ATLAS_CELL);
+    const v = (((j % ATLAS_CELL) + 0.5) / ATLAS_CELL) * 2 - 1;
+    for (let i = 0; i < ATLAS_WIDTH; i += 1) {
+      const cell = Math.floor(i / ATLAS_CELL) + row * 4;
+      const u = (((i % ATLAS_CELL) + 0.5) / ATLAS_CELL) * 2 - 1;
+      const noise = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453;
+      const grain = noise - Math.floor(noise);
+      data[j * ATLAS_WIDTH + i] = Math.round(clamp01(cellAlpha(cell, u, v, grain)) * 255);
+    }
+  }
+  atlasPixels = data;
+  return data;
+}
+
 /**
  * Atlas 4×2 de máscaras num canal só (R8, 32 KB). Calculado pixel a pixel,
  * sem canvas: o mesmo resultado em qualquer WebView.
  */
 function createAtlas() {
-  const width = ATLAS_CELL * 4;
-  const height = ATLAS_CELL * 2;
-  const data = new Uint8Array(width * height);
-  for (let j = 0; j < height; j += 1) {
-    // Linha 0 da textura é a de baixo (flipY desligado): célula da linha de cima do atlas = j alto.
-    const row = 1 - Math.floor(j / ATLAS_CELL);
-    const v = (((j % ATLAS_CELL) + 0.5) / ATLAS_CELL) * 2 - 1;
-    for (let i = 0; i < width; i += 1) {
-      const cell = Math.floor(i / ATLAS_CELL) + row * 4;
-      const u = (((i % ATLAS_CELL) + 0.5) / ATLAS_CELL) * 2 - 1;
-      const noise = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453;
-      const grain = noise - Math.floor(noise);
-      data[j * width + i] = Math.round(clamp01(cellAlpha(cell, u, v, grain)) * 255);
-    }
-  }
-  const texture = new THREE.DataTexture(data, width, height, THREE.RedFormat, THREE.UnsignedByteType);
+  const texture = new THREE.DataTexture(atlasData(), ATLAS_WIDTH, ATLAS_HEIGHT, THREE.RedFormat, THREE.UnsignedByteType);
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.generateMipmaps = true;
@@ -134,7 +160,8 @@ const ADDITIVE_FOG = /* glsl */ `
 
 // GLSL só com ASCII (alguns drivers recusam acento até em comentário).
 // iA = x, y, z, rotação; iB = largura, altura, célula, modo (0 billboard,
-// 1 deitado no chão, 2 em pé no plano XY); iC = rgb, alfa.
+// 1 deitado no chão, 2 em pé no plano XY); iC = rgb, alfa. Os três vêm
+// intercalados de um buffer só (12 floats por instância): um upload por quadro.
 // Billboard: o quad é puxado um pouco para a câmera, senão a nuvem corta reto
 // no gramado. Deitado: o mesmo giro de rotation.x = -PI/2 (+y local vira -Z).
 const POOL_VERTEX = /* glsl */ `
@@ -277,10 +304,18 @@ function fogUniforms() {
   return THREE.UniformsUtils.merge([THREE.UniformsLib.fog]);
 }
 
-function uploadRange(attribute: THREE.BufferAttribute, count: number) {
-  attribute.clearUpdateRanges();
-  attribute.addUpdateRange(0, count);
-  attribute.needsUpdate = true;
+function uploadRange(buffer: THREE.InterleavedBuffer, count: number) {
+  buffer.clearUpdateRanges();
+  buffer.addUpdateRange(0, count);
+  buffer.needsUpdate = true;
+}
+
+/** Buffer por instância, reescrito a cada quadro, lido como atributos vec4 lado a lado. */
+function instanceBuffer(geometry: THREE.BufferGeometry, slots: number, names: string[]) {
+  const stride = names.length * 4;
+  const buffer = new THREE.InstancedInterleavedBuffer(new Float32Array(slots * stride), stride).setUsage(THREE.DynamicDrawUsage);
+  names.forEach((name, index) => geometry.setAttribute(name, new THREE.InterleavedBufferAttribute(buffer, 4, index * 4)));
+  return buffer;
 }
 
 // --------------------------------------------------------- partículas
@@ -394,6 +429,10 @@ const P_STRIDE = 29;
 const FLOOR_Y = 0.5;
 /** Teto do billboard: acima disso é só overdraw (o gargalo real no Android). */
 const MAX_BILLBOARD = 60;
+/** No modo desempenho o teto desce: os quads grandes são os que mais pintam a tela. */
+const MAX_BILLBOARD_LITE = 36;
+/** Floats por instância no buffer intercalado (iA, iB, iC). */
+const Q_STRIDE = 12;
 
 /**
  * Pool de quads instanciados num draw call. Vivas ficam compactadas no começo;
@@ -403,15 +442,24 @@ class FxPool {
   readonly mesh: THREE.Mesh;
   private readonly geometry: THREE.InstancedBufferGeometry;
   private readonly material: THREE.ShaderMaterial;
-  private readonly attrA: THREE.InstancedBufferAttribute;
-  private readonly attrB: THREE.InstancedBufferAttribute;
-  private readonly attrC: THREE.InstancedBufferAttribute;
+  private readonly buffer: THREE.InstancedInterleavedBuffer;
+  private readonly quads: Float32Array;
+  /** Cópia do que a GPU já tem: marca parada no gramado não sobe de novo a cada quadro. */
+  private readonly sent: Float32Array;
+  private sentCount = 0;
   private readonly data: Float32Array;
   private readonly slots: number;
   private alive = 0;
   private written = 0;
 
-  constructor(private readonly capacity: number, extra: number, atlas: THREE.Texture, additive: boolean, renderOrder: number) {
+  constructor(
+    private readonly capacity: number,
+    extra: number,
+    atlas: THREE.Texture,
+    additive: boolean,
+    renderOrder: number,
+    private readonly maxBillboard = MAX_BILLBOARD,
+  ) {
     this.slots = capacity + extra;
     this.data = new Float32Array(capacity * P_STRIDE);
     const plane = new THREE.PlaneGeometry(1, 1);
@@ -419,15 +467,9 @@ class FxPool {
     this.geometry.setIndex(plane.getIndex());
     this.geometry.setAttribute("position", plane.getAttribute("position"));
     this.geometry.setAttribute("uv", plane.getAttribute("uv"));
-    const attribute = () => new THREE.InstancedBufferAttribute(new Float32Array(this.slots * 4), 4).setUsage(THREE.DynamicDrawUsage);
-    this.attrA = attribute();
-    this.attrB = attribute();
-    this.attrC = attribute();
-    this.geometry.setAttribute("iA", this.attrA);
-    this.geometry.setAttribute("iB", this.attrB);
-    this.geometry.setAttribute("iC", this.attrC);
-    // Vazio = 0 instâncias: o programa compila no primeiro quadro (sem engasgo no
-    // primeiro chute) e o three pula o draw enquanto não houver nada.
+    this.buffer = instanceBuffer(this.geometry, this.slots, ["iA", "iB", "iC"]);
+    this.quads = this.buffer.array as Float32Array;
+    this.sent = new Float32Array(this.quads.length);
     this.geometry.instanceCount = 0;
 
     const uniforms = fogUniforms();
@@ -450,6 +492,13 @@ class FxPool {
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = renderOrder;
     this.mesh.matrixAutoUpdate = false;
+    // Vazio = invisível: o three nem entra no draw (sem trocar programa nem mistura).
+    this.mesh.visible = false;
+  }
+
+  /** Partículas vivas (sem contar os quads avulsos do quadro). */
+  get live() {
+    return this.alive;
   }
 
   spawn(spec: Spawn) {
@@ -557,22 +606,20 @@ class FxPool {
   /** Quad avulso (marcas no gramado) escrito antes das partículas: fica por baixo. */
   quad(x: number, y: number, z: number, rot: number, width: number, height: number, cell: number, flat: number, r: number, g: number, b: number, a: number) {
     if (this.written >= this.slots) return;
-    const k = this.written * 4;
-    const A = this.attrA.array as Float32Array;
-    const B = this.attrB.array as Float32Array;
-    const C = this.attrC.array as Float32Array;
-    A[k] = x;
-    A[k + 1] = y;
-    A[k + 2] = z;
-    A[k + 3] = rot;
-    B[k] = width;
-    B[k + 1] = height;
-    B[k + 2] = cell;
-    B[k + 3] = flat;
-    C[k] = r;
-    C[k + 1] = g;
-    C[k + 2] = b;
-    C[k + 3] = a;
+    const k = this.written * Q_STRIDE;
+    const q = this.quads;
+    q[k] = x;
+    q[k + 1] = y;
+    q[k + 2] = z;
+    q[k + 3] = rot;
+    q[k + 4] = width;
+    q[k + 5] = height;
+    q[k + 6] = cell;
+    q[k + 7] = flat;
+    q[k + 8] = r;
+    q[k + 9] = g;
+    q[k + 10] = b;
+    q[k + 11] = a;
     this.written += 1;
   }
 
@@ -619,8 +666,8 @@ class FxPool {
       }
       const flat = d[o + P_FLAT];
       if (flat === 0) {
-        if (width > MAX_BILLBOARD) width = MAX_BILLBOARD;
-        if (height > MAX_BILLBOARD) height = MAX_BILLBOARD;
+        if (width > this.maxBillboard) width = this.maxBillboard;
+        if (height > this.maxBillboard) height = this.maxBillboard;
       }
       this.quad(
         d[o + P_X], d[o + P_Y], d[o + P_Z], rot, width, height, d[o + P_CELL], flat,
@@ -635,11 +682,32 @@ class FxPool {
   end() {
     const count = this.written;
     this.geometry.instanceCount = count;
-    if (count === 0) return;
+    // Atribuído todo quadro (não só na troca): se alguém mexer no visible por
+    // fora (pré-compilação), o quadro seguinte já corrige.
+    this.mesh.visible = count > 0;
+    if (count === 0) {
+      this.sentCount = 0;
+      return;
+    }
+    const length = count * Q_STRIDE;
+    const q = this.quads;
+    const sent = this.sent;
+    if (count === this.sentCount) {
+      // Partícula viva muda todo quadro e para no primeiro float; só marcas
+      // paradas no gramado chegam ao fim sem diferença.
+      let same = true;
+      for (let index = 0; index < length; index += 1) {
+        if (q[index] !== sent[index]) {
+          same = false;
+          break;
+        }
+      }
+      if (same) return;
+    }
+    sent.set(q.subarray(0, length));
+    this.sentCount = count;
     // Sobe só o trecho em uso (sem range, o three mandaria o buffer inteiro).
-    uploadRange(this.attrA, count * 4);
-    uploadRange(this.attrB, count * 4);
-    uploadRange(this.attrC, count * 4);
+    uploadRange(this.buffer, length);
   }
 
   dispose() {
@@ -674,8 +742,8 @@ class RingSet {
   readonly mesh: THREE.Mesh;
   private readonly geometry: THREE.InstancedBufferGeometry;
   private readonly material: THREE.ShaderMaterial;
-  private readonly attrA: THREE.InstancedBufferAttribute;
-  private readonly attrB: THREE.InstancedBufferAttribute;
+  /** rA e rB intercalados (8 floats por anel). */
+  private readonly buffer: THREE.InstancedInterleavedBuffer;
   private readonly data: Float32Array;
   private count = 0;
 
@@ -698,10 +766,7 @@ class RingSet {
     this.geometry = new THREE.InstancedBufferGeometry();
     this.geometry.setIndex(indices);
     this.geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    this.attrA = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 4), 4).setUsage(THREE.DynamicDrawUsage);
-    this.attrB = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 4), 4).setUsage(THREE.DynamicDrawUsage);
-    this.geometry.setAttribute("rA", this.attrA);
-    this.geometry.setAttribute("rB", this.attrB);
+    this.buffer = instanceBuffer(this.geometry, capacity, ["rA", "rB"]);
     this.geometry.instanceCount = 0;
     const uniforms = fogUniforms();
     uniforms.uY = { value: RING_Y };
@@ -718,6 +783,7 @@ class RingSet {
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 3;
     this.mesh.matrixAutoUpdate = false;
+    this.mesh.visible = false;
   }
 
   add(x: number, z: number, r0: number, r1: number, w0: number, w1: number, life: number, delay: number, color: THREE.Color, intensity: number, alpha: number) {
@@ -755,8 +821,7 @@ class RingSet {
 
   update(dt: number) {
     const d = this.data;
-    const A = this.attrA.array as Float32Array;
-    const B = this.attrB.array as Float32Array;
+    const A = this.buffer.array as Float32Array;
     let written = 0;
     let index = 0;
     while (index < this.count) {
@@ -773,21 +838,21 @@ class RingSet {
       if (local < 0) continue;
       const t = local / d[o + R_LIFE];
       const ease = 1 - (1 - t) * (1 - t) * (1 - t);
-      const k = written * 4;
+      const k = written * 8;
       A[k] = d[o + R_X];
       A[k + 1] = d[o + R_Z];
       A[k + 2] = d[o + R_R0] + (d[o + R_R1] - d[o + R_R0]) * ease;
       A[k + 3] = d[o + R_W0] + (d[o + R_W1] - d[o + R_W0]) * t;
-      B[k] = d[o + R_RED];
-      B[k + 1] = d[o + R_GREEN];
-      B[k + 2] = d[o + R_BLUE];
-      B[k + 3] = d[o + R_ALPHA] * Math.pow(1 - t, 1.5) * Math.min(1, t / 0.05);
+      A[k + 4] = d[o + R_RED];
+      A[k + 5] = d[o + R_GREEN];
+      A[k + 6] = d[o + R_BLUE];
+      A[k + 7] = d[o + R_ALPHA] * Math.pow(1 - t, 1.5) * Math.min(1, t / 0.05);
       written += 1;
     }
     this.geometry.instanceCount = written;
+    this.mesh.visible = written > 0;
     if (written === 0) return;
-    uploadRange(this.attrA, written * 4);
-    uploadRange(this.attrB, written * 4);
+    uploadRange(this.buffer, written * 8);
   }
 
   dispose() {
@@ -813,7 +878,7 @@ const SPOT_BEAM = 0.13;
  */
 class Spotlight {
   readonly mesh: THREE.Mesh;
-  private readonly geometry: THREE.InstancedBufferGeometry;
+  private readonly geometry: THREE.BufferGeometry;
   private readonly material: THREE.ShaderMaterial;
   private amount = 0;
   private wanted = 0;
@@ -859,14 +924,12 @@ class Spotlight {
         indices.push(bottom, top, bottom + 2, bottom + 2, top, top + 2);
       }
     }
-    this.geometry = new THREE.InstancedBufferGeometry();
+    this.geometry = new THREE.BufferGeometry();
     this.geometry.setIndex(indices);
     this.geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
     this.geometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
     this.geometry.setAttribute("aKind", new THREE.Float32BufferAttribute(kinds, 1));
     this.geometry.setAttribute("aT", new THREE.Float32BufferAttribute(ts, 1));
-    // 0/1 instância liga e desliga sem trocar .visible (programa já compilado).
-    this.geometry.instanceCount = 0;
     const uniforms = fogUniforms();
     uniforms.uColor = { value: new THREE.Color("#fff2d0") };
     uniforms.uPool = { value: 0 };
@@ -883,6 +946,9 @@ class Spotlight {
     this.mesh = new THREE.Mesh(this.geometry, this.material);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 7;
+    // Apagado = invisível (o programa já compilou com a cena: o compile do three
+    // percorre também o que está escondido).
+    this.mesh.visible = false;
   }
 
   set(point: { x: number; z: number } | null) {
@@ -899,6 +965,11 @@ class Spotlight {
   }
 
   update(dt: number) {
+    // Apagado e sem pedido: nada a fazer (o caso da partida inteira fora da festa).
+    if (this.amount === 0 && this.wanted === 0) {
+      this.mesh.visible = false;
+      return;
+    }
     if (dt > 0) {
       if (this.amount < this.wanted) this.amount = Math.min(this.wanted, this.amount + dt / 0.35);
       else if (this.amount > this.wanted) this.amount = Math.max(this.wanted, this.amount - dt / 0.4);
@@ -909,7 +980,7 @@ class Spotlight {
     const eased = this.amount * this.amount * (3 - 2 * this.amount);
     this.material.uniforms.uPool.value = SPOT_POOL * eased;
     this.material.uniforms.uBeam.value = SPOT_BEAM * eased;
-    this.geometry.instanceCount = eased > 0.002 ? 1 : 0;
+    this.mesh.visible = eased > 0.002;
   }
 
   dispose() {
@@ -937,6 +1008,8 @@ const MARK_MAX_LENGTH = 90;
 const LIT = 1.1;
 /** Intervalo mínimo entre clarões de impacto: choque em cadeia não pisca acima de 2.5 Hz. */
 const FLASH_GAP = 0.4;
+/** Modo desempenho: a festa chama sparkle a cada ~0,32 s; aceita uma leva a cada ~0,6 s. */
+const SPARKLE_GAP_LITE = 0.55;
 const WHITE = new THREE.Color(1, 1, 1);
 
 export class Effects {
@@ -950,8 +1023,12 @@ export class Effects {
   private readonly futsal: boolean;
   private readonly reduced: boolean;
   private readonly low: boolean;
-  /** Multiplicador de quantidade (metade no celular fraco). */
+  /** Modo desempenho 3D: sem halos grandes, sem lascas no carrinho, festa mais espaçada. */
+  private readonly lite: boolean;
+  /** Multiplicador de quantidade (metade no celular fraco e no modo desempenho). */
   private readonly amount: number;
+  /** Último brilho aceito (o modo desempenho segura um a cada SPARKLE_GAP_LITE). */
+  private lastSparkle = -1;
 
   // Teto global: balde de fichas. Rajadas cabem; spam (bola colada no pé) não.
   private readonly rate: number;
@@ -982,7 +1059,9 @@ export class Effects {
   constructor(options: EffectsOptions) {
     this.futsal = options.surface === "futsal";
     this.reduced = Boolean(options.reducedMotion);
-    this.low = Boolean(options.lowPower);
+    this.lite = Boolean(options.performance);
+    // Modo desempenho pesa como o celular fraco: pools menores e metade de tudo.
+    this.low = Boolean(options.lowPower) || this.lite;
     this.amount = this.low ? 0.5 : 1;
     this.rate = this.low ? 200 : 400;
     this.burst = this.low ? 75 : 150;
@@ -994,10 +1073,12 @@ export class Effects {
     this.markAlpha = this.futsal ? 0.2 : 0.4;
 
     this.atlas = createAtlas();
+    const maxBillboard = this.lite ? MAX_BILLBOARD_LITE : MAX_BILLBOARD;
     // Normal por baixo (poeira, grama, marcas), aditivo por cima (estrelas, brilhos).
-    this.soft = new FxPool(this.low ? 128 : 256, MAX_MARKS, this.atlas, false, 4);
-    this.glow = new FxPool(this.low ? 192 : 384, 0, this.atlas, true, 8);
+    this.soft = new FxPool(this.low ? 128 : 256, MAX_MARKS, this.atlas, false, 4, maxBillboard);
+    this.glow = new FxPool(this.low ? 192 : 384, 0, this.atlas, true, 8, maxBillboard);
     this.rings = new RingSet(this.low ? 8 : 16, this.low ? 48 : 64);
+    // Cone só na tela grande e fora do modo desempenho: a poça no gramado fica sempre.
     this.spot = new Spotlight(!this.low);
     this.group.add(this.rings.mesh, this.soft.mesh, this.spot.mesh, this.glow.mesh);
   }
@@ -1191,7 +1272,8 @@ export class Effects {
       this.slidePuffs -= puffs;
       this.dust(x - dx * 2, z - dz * 2, puffs, 0.4, dx * 0.5, dz * 0.5);
     }
-    if (this.reduced) return;
+    // Modo desempenho: só poeira e a marca no gramado, sem o spray de lascas.
+    if (this.reduced || this.lite) return;
 
     this.slideChips += (this.futsal ? 14 : 36) * this.amount * dt;
     const wanted = Math.floor(this.slideChips);
@@ -1314,7 +1396,8 @@ export class Effects {
       p.fadeOut = 1.4;
       this.glow.spawn(p);
     }
-    if (flash && this.takeOne()) {
+    // Halo suave em volta da estrela: o quad maior do choque, fora no modo desempenho.
+    if (flash && !this.lite && this.takeOne()) {
       const p = this.spec.reset();
       p.cell = CELL_DISC;
       p.x = x;
@@ -1384,7 +1467,7 @@ export class Effects {
     this.rings.add(x, z, 4, reach, 11, 3, 0.95, 0, team, 1.15, 0.85);
     this.rings.add(x, z, 4, reach * 0.72, 7, 2, 0.8, 0.16, this.tint(color, 0.7, this.tintB), 1, 0.45);
     if (!this.low) this.rings.add(x, z, 3, reach * 0.48, 5, 1.5, 0.65, 0.32, team, 1, 0.35);
-    if (this.takeOne()) {
+    if (!this.lite && this.takeOne()) {
       // Clarão rente ao chão no ponto de partida.
       const p = this.spec.reset();
       p.cell = CELL_DISC;
@@ -1406,6 +1489,11 @@ export class Effects {
   sparkle(x: number, y: number, z: number, color: string, count = 6) {
     // count 0 pede nenhum brilho (count() arredondaria para 1).
     if (this.reduced || !(count > 0)) return;
+    if (this.lite) {
+      // Modo desempenho: metade por leva (count) e no máximo uma leva a cada SPARKLE_GAP_LITE.
+      if (this.lastSparkle >= 0 && this.clock - this.lastSparkle < SPARKLE_GAP_LITE) return;
+      this.lastSparkle = this.clock;
+    }
     const n = this.take(this.count(count));
     const team = this.tint(color, 0.45, this.tintA);
     for (let index = 0; index < n; index += 1) {
@@ -1473,7 +1561,7 @@ export class Effects {
       p.fadeOut = 1.2;
       this.glow.spawn(p);
     }
-    if (this.takeOne()) {
+    if (!this.lite && this.takeOne()) {
       const p = this.spec.reset();
       p.cell = CELL_DISC;
       p.x = x;
@@ -1531,6 +1619,22 @@ export class Effects {
     this.spot.set(point);
   }
 
+  /**
+   * Primeiro uso na GPU antes da partida: sobe o atlas (com mipmaps) e deixa as
+   * quatro malhas visíveis só para o quadro descartável do prepare da visão.
+   * Vazias, não pintam nada (0 instâncias; holofote com intensidade 0), mas o
+   * three já cria buffers e VAO e lê os uniforms de cada programa, que senão
+   * ficariam para o quadro do primeiro chute. Chame logo antes desse render: o
+   * update() seguinte devolve o visible certo.
+   */
+  prepare(renderer: THREE.WebGLRenderer) {
+    renderer.initTexture(this.atlas);
+    this.soft.mesh.visible = true;
+    this.glow.mesh.visible = true;
+    this.rings.mesh.visible = true;
+    this.spot.mesh.visible = true;
+  }
+
   /** dt já vem escalado (câmera lenta). camera para billboard. */
   update(dt: number, camera: THREE.Camera) {
     // Aba voltando do fundo não pode despejar meio segundo de física de uma vez.
@@ -1538,13 +1642,28 @@ export class Effects {
     this.clock += step;
     this.tokens = Math.min(this.burst, this.tokens + this.rate * step);
 
-    camera.updateMatrixWorld();
-    const e = camera.matrixWorld.elements;
-    const rightLength = Math.hypot(e[0], e[1], e[2]) || 1;
-    const upLength = Math.hypot(e[4], e[5], e[6]) || 1;
-
     this.soft.step(step);
     this.glow.step(step);
+    const particles = this.soft.live > 0 || this.glow.live > 0;
+    let rx = 1;
+    let ry = 0;
+    let rz = 0;
+    let ux = 0;
+    let uy = 1;
+    let uz = 0;
+    if (particles) {
+      // Eixos da câmera só servem às partículas vivas (faíscas alinhadas na tela).
+      camera.updateMatrixWorld();
+      const e = camera.matrixWorld.elements;
+      const rightLength = Math.hypot(e[0], e[1], e[2]) || 1;
+      const upLength = Math.hypot(e[4], e[5], e[6]) || 1;
+      rx = e[0] / rightLength;
+      ry = e[1] / rightLength;
+      rz = e[2] / rightLength;
+      ux = e[4] / upLength;
+      uy = e[5] / upLength;
+      uz = e[6] / upLength;
+    }
 
     this.soft.begin();
     const m = this.marks;
@@ -1572,11 +1691,11 @@ export class Effects {
         this.markColor.r, this.markColor.g, this.markColor.b, alpha,
       );
     }
-    this.soft.writeParticles(e[0] / rightLength, e[1] / rightLength, e[2] / rightLength, e[4] / upLength, e[5] / upLength, e[6] / upLength);
+    this.soft.writeParticles(rx, ry, rz, ux, uy, uz);
     this.soft.end();
 
     this.glow.begin();
-    this.glow.writeParticles(e[0] / rightLength, e[1] / rightLength, e[2] / rightLength, e[4] / upLength, e[5] / upLength, e[6] / upLength);
+    this.glow.writeParticles(rx, ry, rz, ux, uy, uz);
     this.glow.end();
 
     this.rings.update(step);

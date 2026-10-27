@@ -408,18 +408,19 @@ const ATLAS_PAD = 0.04;
 
 /**
  * Junta as 6 faces de uma caixa (ordem do BoxGeometry) num canvas 3×2. Uma
- * textura por caixa = um draw call por caixa, em vez de seis.
+ * textura por caixa = um draw call por caixa, em vez de seis. Com `columns`
+ * monta grades maiores (o atlas "pixel" do boneco usa 4×3).
  */
-function atlasCanvas(faces: HTMLCanvasElement[], cellWidth: number, cellHeight: number, pixelated: boolean, pad = ATLAS_PAD) {
-  const canvas = makeCanvas(cellWidth * 3, cellHeight * 2);
+function atlasCanvas(faces: HTMLCanvasElement[], cellWidth: number, cellHeight: number, pixelated: boolean, pad = ATLAS_PAD, columns = 3) {
+  const canvas = makeCanvas(cellWidth * columns, cellHeight * Math.max(2, Math.ceil(faces.length / columns)));
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingEnabled = !pixelated;
   // Pixel art: margem em texels inteiros para o miolo sair 1:1, sem pixel torto.
   const padX = pixelated ? Math.round(cellWidth * pad) : cellWidth * pad;
   const padY = pixelated ? Math.round(cellHeight * pad) : cellHeight * pad;
   faces.forEach((face, index) => {
-    const x = (index % 3) * cellWidth;
-    const y = Math.floor(index / 3) * cellHeight;
+    const x = (index % columns) * cellWidth;
+    const y = Math.floor(index / columns) * cellHeight;
     // Esticada até a borda (a margem herda as cores da beirada), depois no miolo.
     ctx.drawImage(face, x, y, cellWidth, cellHeight);
     ctx.drawImage(face, x + padX, y + padY, cellWidth - padX * 2, cellHeight - padY * 2);
@@ -459,12 +460,19 @@ export function headBoxGeometry() {
 /** Um atlas por humor do rosto; trocar a expressão é só trocar o `map`. */
 export type HeadTextures = Record<FaceMood, THREE.Texture>;
 
+/** As 5 faces fixas da cabeça: +x, -x, +y, -y e -z (a frente, +z, é o rosto de cada humor). */
+function paintHeadFaces(look: ResolvedLook) {
+  return {
+    sideFront: paintSide(look, true),
+    sideBack: paintSide(look, false),
+    top: paintTop(look),
+    bottom: gridCanvas(shadeHex(look.skin, -24)).canvas,
+    back: paintBack(look),
+  };
+}
+
 export function createHeadTextures(look: ResolvedLook): HeadTextures {
-  const sideFront = paintSide(look, true);
-  const sideBack = paintSide(look, false);
-  const top = paintTop(look);
-  const bottom = gridCanvas(shadeHex(look.skin, -24)).canvas;
-  const back = paintBack(look);
+  const { sideFront, sideBack, top, bottom, back } = paintHeadFaces(look);
   const build = (mood: FaceMood) =>
     canvasTexture(atlasCanvas([sideFront, sideBack, top, bottom, paintFace(look, mood), back], HEAD_CELL, HEAD_CELL, true, HEAD_ATLAS_PAD), true);
   return {
@@ -587,6 +595,11 @@ export function createKitTextures(args: {
   secondary: string;
   number: number;
 }): KitTextures {
+  return { torso: canvasTexture(paintKitAtlas(args)) };
+}
+
+/** Atlas 3×2 da camisa (192×192), na ordem do BoxGeometry. */
+function paintKitAtlas(args: { pattern: number; primary: string; secondary: string; number: number }) {
   const { pattern, primary, secondary } = args;
   const width = 64;
   const height = 96;
@@ -659,24 +672,129 @@ export function createKitTextures(args: {
   bottomCtx.fillStyle = shadeHex(primary, -30);
   bottomCtx.fillRect(0, 0, 8, 8);
 
-  return {
-    torso: canvasTexture(atlasCanvas([left.canvas, right.canvas, topCanvas, bottomCanvas, front.canvas, back.canvas], width, height, false)),
-  };
+  return atlasCanvas([left.canvas, right.canvas, topCanvas, bottomCanvas, front.canvas, back.canvas], width, height, false);
+}
+
+/** Texels de altura das listras (meião, chuteira). */
+const STRIPE_TEXELS = 32;
+
+/**
+ * Pinta as faixas de cima para baixo em `height` texels, com o mesmo
+ * arredondamento da listra original de 32 (a fronteira cai na mesma fração).
+ */
+function paintStripes(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, colors: Array<[string, number]>) {
+  const scale = height / STRIPE_TEXELS;
+  let row = 0;
+  for (const [color, share] of colors) {
+    const rows = Math.min(Math.round(share * STRIPE_TEXELS), STRIPE_TEXELS - row);
+    ctx.fillStyle = color;
+    if (rows > 0) ctx.fillRect(x, y + row * scale, width, rows * scale);
+    row += rows;
+  }
+  if (row < STRIPE_TEXELS) ctx.fillRect(x, y + row * scale, width, (STRIPE_TEXELS - row) * scale);
 }
 
 /** Meião com a faixa do clube no alto e chuteira com solado: uma textura cada. */
 export function stripeTexture(colors: Array<[string, number]>) {
-  const canvas = makeCanvas(8, 32);
-  const ctx = canvas.getContext("2d")!;
-  let y = 0;
-  for (const [color, share] of colors) {
-    const height = Math.round(share * 32);
-    ctx.fillStyle = color;
-    ctx.fillRect(0, y, 8, height);
-    y += height;
-  }
-  if (y < 32) ctx.fillRect(0, y, 8, 32 - y);
+  const canvas = makeCanvas(8, STRIPE_TEXELS);
+  paintStripes(canvas.getContext("2d")!, 0, 0, 8, STRIPE_TEXELS, colors);
   return canvasTexture(canvas, true);
+}
+
+// ------------------------------------------------------ atlas do boneco
+
+// Atlas "pixel" do boneco (o mesmo filtro Nearest da cabeça), 4×3 células de
+// HEAD_CELL: as 5 faces fixas da cabeça, os 6 humores do rosto e uma célula com
+// meião, chuteira e retalhos de cor sólida. Junto com o atlas da camisa, é tudo
+// o que o boneco desenha: um material, uma malha, um draw call.
+const PIXEL_COLUMNS = 4;
+const PIXEL_ROWS = 3;
+const PIXEL_WIDTH = HEAD_CELL * PIXEL_COLUMNS;
+const PIXEL_HEIGHT = HEAD_CELL * PIXEL_ROWS;
+/** Célula de cada face da caixa da cabeça (ordem do BoxGeometry: +x, -x, +y, -y, +z, -z). */
+const HEAD_FACE_CELLS = [0, 1, 2, 3, 5, 4] as const;
+/** Primeira célula dos humores (na ordem de FACE_MOODS); a frente da cabeça aponta para ela. */
+const MOOD_CELL = 5;
+/** Célula das listras e cores sólidas. */
+const MISC_CELL = 11;
+/** Listras na célula: 2 texels por texel da listra original, com margem em cima e embaixo. */
+const STRIPE_PAD = 4;
+const STRIPE_HEIGHT = STRIPE_TEXELS * 2;
+const STRIPE_WIDTH = 28;
+const STRIPE_COUNT = 2;
+/** Retalhos sólidos: coluna à direita das listras, 8 texels de altura cada. */
+const SOLID_X = STRIPE_WIDTH * STRIPE_COUNT;
+const SOLID_HEIGHT = 8;
+const SOLID_COUNT = Math.floor(HEAD_CELL / SOLID_HEIGHT);
+
+const cellX = (cell: number) => (cell % PIXEL_COLUMNS) * HEAD_CELL;
+const cellY = (cell: number) => Math.floor(cell / PIXEL_COLUMNS) * HEAD_CELL;
+
+/** Deslocamento de UV da frente da cabeça, do rosto "normal" até cada humor. */
+export const FACE_MOOD_SHIFT: Readonly<Record<FaceMood, readonly [number, number]>> = (() => {
+  const result = {} as Record<FaceMood, readonly [number, number]>;
+  FACE_MOODS.forEach((mood, index) => {
+    const cell = MOOD_CELL + index;
+    result[mood] = [(cellX(cell) - cellX(MOOD_CELL)) / PIXEL_WIDTH, -(cellY(cell) - cellY(MOOD_CELL)) / PIXEL_HEIGHT];
+  });
+  return result;
+})();
+
+export type FigurePixelAtlas = {
+  texture: THREE.Texture;
+  /** UV no atlas para o UV local (0..1) da face `face` (ordem do BoxGeometry) da cabeça. */
+  head: (face: number, u: number, v: number) => [number, number];
+  /** Listra `index` (na ordem pedida): u fixo no meio do retalho, `v` (0..1) ao longo da altura. */
+  stripe: (index: number, v: number) => [number, number];
+  /** Centro do retalho de cor sólida `index` (na ordem pedida). */
+  solid: (index: number) => [number, number];
+};
+
+/**
+ * Uma textura por boneco no lugar dos 6 atlas da cabeça e das 2 listras.
+ * Mesmos texels e mesmo filtro: a cabeça e as listras ficam idênticas. As
+ * cores sólidas são lidas num ponto fixo (derivada zero = nível 0 do mipmap,
+ * sem sangrar para o vizinho).
+ */
+export function createFigurePixelAtlas(look: ResolvedLook, parts: { stripes: Array<Array<[string, number]>>; solids: string[] }): FigurePixelAtlas {
+  if (parts.stripes.length > STRIPE_COUNT || parts.solids.length > SOLID_COUNT) throw new Error("atlas do boneco: peças demais");
+  const { sideFront, sideBack, top, bottom, back } = paintHeadFaces(look);
+  const faces = [sideFront, sideBack, top, bottom, back, ...FACE_MOODS.map((mood) => paintFace(look, mood))];
+  const canvas = atlasCanvas(faces, HEAD_CELL, HEAD_CELL, true, HEAD_ATLAS_PAD, PIXEL_COLUMNS);
+  const ctx = canvas.getContext("2d")!;
+  const miscX = cellX(MISC_CELL);
+  const miscY = cellY(MISC_CELL);
+  parts.stripes.forEach((colors, index) => {
+    const x = miscX + index * STRIPE_WIDTH;
+    // Margens repetem a primeira e a última faixa (mipmap sem cor vizinha).
+    ctx.fillStyle = colors[0][0];
+    ctx.fillRect(x, miscY, STRIPE_WIDTH, STRIPE_PAD);
+    paintStripes(ctx, x, miscY + STRIPE_PAD, STRIPE_WIDTH, STRIPE_HEIGHT, colors);
+    ctx.fillRect(x, miscY + STRIPE_PAD + STRIPE_HEIGHT, STRIPE_WIDTH, HEAD_CELL - STRIPE_PAD - STRIPE_HEIGHT);
+  });
+  parts.solids.forEach((color, index) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(miscX + SOLID_X, miscY + index * SOLID_HEIGHT, HEAD_CELL - SOLID_X, SOLID_HEIGHT);
+  });
+  const pad = HEAD_ATLAS_PAD;
+  return {
+    texture: canvasTexture(canvas, true),
+    head: (face, u, v) => {
+      const cell = HEAD_FACE_CELLS[face];
+      const column = cell % PIXEL_COLUMNS;
+      const row = Math.floor(cell / PIXEL_COLUMNS);
+      // Linha 0 do canvas é o alto da textura (v perto de 1).
+      return [(column + pad + u * (1 - pad * 2)) / PIXEL_COLUMNS, (PIXEL_ROWS - 1 - row + pad + v * (1 - pad * 2)) / PIXEL_ROWS];
+    },
+    stripe: (index, v) => [
+      (miscX + index * STRIPE_WIDTH + STRIPE_WIDTH / 2) / PIXEL_WIDTH,
+      1 - (miscY + STRIPE_PAD + (1 - v) * STRIPE_HEIGHT) / PIXEL_HEIGHT,
+    ],
+    solid: (index) => [
+      (miscX + (SOLID_X + HEAD_CELL) / 2) / PIXEL_WIDTH,
+      1 - (miscY + (index + 0.5) * SOLID_HEIGHT) / PIXEL_HEIGHT,
+    ],
+  };
 }
 
 // ------------------------------------------------------- sprites/decalques

@@ -11,7 +11,7 @@ import { ROLE_LABELS, calculateSquadRole, createContract, createSeasonObjective 
 import { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prestige";
 import { ACHIEVEMENTS, NEWS_TEMPLATES, fillNewsTemplate, findRivalry } from "../../mega-expansion";
 import BotaoMatch from "../../botao/BotaoMatch";
-import { rememberBotao3dPreference } from "../../botao/view-mode";
+import { BOTAO3D_PERFORMANCE_EVENT, rememberBotao3dPerformance, rememberBotao3dPreference, resolveBotao3dPerformance } from "../../botao/view-mode";
 import GoalReplay from "../../botao/GoalReplay";
 import BotaoMatchStats from "../../botao/BotaoMatchStats";
 import { describeMatchTurningPoint } from "../../botao/result-story";
@@ -101,6 +101,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     botaoPenaltyRounds: 5,
     characterButtonsEnabled: true,
     botao3d: false,
+    botao3dPerformance: false,
+    botao3dPerformanceUserOff: false,
   });
   const [characterName, setCharacterName] = useState("");
   const [characterPosition, setCharacterPosition] = useState<PositionKey>("MEI");
@@ -181,6 +183,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         botaoPenaltyRounds: storedSettings.botaoPenaltyRounds === 3 ? 3 : 5,
         characterButtonsEnabled: storedSettings.characterButtonsEnabled !== false,
         botao3d: storedSettings.botao3d === true,
+        // O que uma partida fora do app ligou sozinha (só no espelho) também vale.
+        botao3dPerformance: resolveBotao3dPerformance(storedSettings).enabled,
+        botao3dPerformanceUserOff: resolveBotao3dPerformance(storedSettings).userOff,
       };
       applyCustomClubDefinitions(sanitizedSettings.customClubs ?? []);
       queueMicrotask(() => setAppSettings(sanitizedSettings));
@@ -197,7 +202,17 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     if (!settingsLoadedRef.current) return;
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
     rememberBotao3dPreference(appSettings.botao3d === true);
+    rememberBotao3dPerformance({ enabled: appSettings.botao3dPerformance === true, userOff: appSettings.botao3dPerformanceUserOff === true });
   }, [appSettings]);
+
+  // A partida liga o modo desempenho sozinha quando o aparelho engasga: sem
+  // isto, o próximo save das configurações gravaria o valor velho por cima.
+  useEffect(() => {
+    // Já ligado (ou desligado na mão): sem render novo da carreira no meio da partida.
+    const onAutoPerformance = () => setAppSettings((current) => (current.botao3dPerformanceUserOff === true || current.botao3dPerformance === true ? current : { ...current, botao3dPerformance: true }));
+    window.addEventListener(BOTAO3D_PERFORMANCE_EVENT, onAutoPerformance);
+    return () => window.removeEventListener(BOTAO3D_PERFORMANCE_EVENT, onAutoPerformance);
+  }, []);
 
   useEffect(() => {
     if (appSettings.characterButtonsEnabled === false && game.phase === "appearance") {
@@ -890,6 +905,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         botaoPenaltyRounds: payload.settings?.botaoPenaltyRounds ?? 5,
         characterButtonsEnabled: payload.settings?.characterButtonsEnabled !== false,
         botao3d: payload.settings?.botao3d === true,
+        botao3dPerformance: payload.settings?.botao3dPerformance === true,
+        botao3dPerformanceUserOff: payload.settings?.botao3dPerformanceUserOff === true,
       };
       const importedHall = Array.isArray(payload.hallOfFame)
         ? (payload.hallOfFame as CareerHallEntry[])
@@ -2663,6 +2680,18 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               >
                 <b>{appSettings.botao3d ? "3D" : "2D"}</b>
                 <span><strong>{appSettings.botao3d ? "Modo 3D ativado" : "Mesa clássica"}</strong><small>{appSettings.botao3d ? "Mesma partida e mesmas regras, com jogadores 3D animados. Botão direito gira o campo." : "Ative para trocar a mesa de botões por um estádio 3D com bonecos animados."}</small></span>
+              </button>
+              <button
+                type="button"
+                className={appSettings.botao3d && appSettings.botao3dPerformance ? "selected" : ""}
+                aria-pressed={appSettings.botao3d === true && appSettings.botao3dPerformance === true}
+                disabled={appSettings.botao3d !== true}
+                onClick={() => setAppSettings((current) => (current.botao3dPerformance === true
+                  ? { ...current, botao3dPerformance: false, botao3dPerformanceUserOff: true }
+                  : { ...current, botao3dPerformance: true, botao3dPerformanceUserOff: false }))}
+              >
+                <b>{appSettings.botao3d && appSettings.botao3dPerformance ? "FPS" : "HD"}</b>
+                <span><strong>{appSettings.botao3d && appSettings.botao3dPerformance ? "Modo desempenho 3D ativado" : "Modo desempenho 3D"}</strong><small>{appSettings.botao3d ? "3D mais leve para PC ou celular fraco: sem torcida nem sombras projetadas, com resolução que se ajusta sozinha. Liga sozinho se a partida engasgar." : "Disponível com o Modo 3D ligado."}</small></span>
               </button>
             </section>
             <div className="settings-section-heading"><span>PERSONAGENS</span><strong>Rivais e nomes do seu universo</strong></div>

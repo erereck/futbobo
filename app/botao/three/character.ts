@@ -13,21 +13,19 @@
 // 8×12×4, 32 de altura) e escalado por PX para unidades de campo.
 
 import * as THREE from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { PlayerAppearance } from "../../player-appearance";
 import {
+  FACE_MOOD_SHIFT,
   atlasBoxGeometry,
-  createHeadTextures,
+  createFigurePixelAtlas,
   createKitTextures,
-  headBoxGeometry,
   mixHex,
   radialTexture,
   resolveLook,
   shadeHex,
   sleeveColor,
-  stripeTexture,
   type FaceMood,
-  type HeadTextures,
+  type FigurePixelAtlas,
   type ResolvedLook,
 } from "./textures";
 
@@ -42,6 +40,7 @@ const PIVOT_H = 13;
 
 const boxCache = new Map<string, THREE.BoxGeometry>();
 
+/** Caixa-modelo (só é lida: as peças são copiadas para a malha do boneco). */
 function box(width: number, height: number, depth: number) {
   const key = `${width}|${height}|${depth}`;
   let geometry = boxCache.get(key);
@@ -52,22 +51,96 @@ function box(width: number, height: number, depth: number) {
   return geometry;
 }
 
-function solid(color: string, roughness = 0.82) {
-  return new THREE.MeshStandardMaterial({ color, roughness, metalness: 0 });
-}
+/**
+ * De onde a peça tira a cor. "shirt": UV já no atlas da camisa; o resto lê o
+ * atlas "pixel" (cabeça com humor, listra do meião/chuteira ou cor sólida).
+ */
+type Paint =
+  | { kind: "shirt" }
+  | { kind: "head" }
+  | { kind: "stripe"; index: number }
+  | { kind: "solid"; index: number };
 
-function mesh(geometry: THREE.BufferGeometry, material: THREE.Material | THREE.Material[]) {
-  const result = new THREE.Mesh(geometry, material);
-  result.castShadow = true;
-  result.receiveShadow = true;
-  return result;
-}
+/** Acabamento por vértice (no lugar de um material por peça): rugosidade, metal, brilho próprio, projeta sombra (0/1). */
+type Finish = readonly [roughness: number, metalness: number, emissive: number, shadow: number];
 
-/** `Object3D.add` devolve o pai; isto devolve a peça já posicionada. */
-function place(parent: THREE.Object3D, child: THREE.Mesh, y: number) {
-  child.position.y = y;
-  parent.add(child);
-  return child;
+/** UV fixo no atlas da camisa para quem lê o atlas "pixel" (derivada zero, nível 0 do mipmap). */
+const SHIRT_IDLE_UV = 0.5;
+
+/**
+ * Junta todas as caixas do boneco numa geometria só, já na pose de descanso
+ * (coordenadas de mundo com o boneco na origem), cada vértice preso com peso
+ * 1 ao osso da sua peça. O SkinnedMesh desenha tudo num draw call.
+ */
+class FigureGeometryBuilder {
+  private readonly position: number[] = [];
+  private readonly normal: number[] = [];
+  private readonly uv: number[] = [];
+  private readonly pixel: number[] = [];
+  private readonly finish: number[] = [];
+  private readonly bone: number[] = [];
+  private readonly index: number[] = [];
+  private readonly vertex = new THREE.Vector3();
+  private readonly normalMatrix = new THREE.Matrix3();
+
+  constructor(private readonly atlas: FigurePixelAtlas) {}
+
+  add(geometry: THREE.BufferGeometry, matrix: THREE.Matrix4, bone: number, paint: Paint, finish: Finish) {
+    const base = this.position.length / 3;
+    const positions = geometry.getAttribute("position");
+    const normals = geometry.getAttribute("normal");
+    const uvs = geometry.getAttribute("uv");
+    const normalMatrix = this.normalMatrix.getNormalMatrix(matrix);
+    const vertex = this.vertex;
+    const atlas = this.atlas;
+    for (let index = 0; index < positions.count; index += 1) {
+      vertex.fromBufferAttribute(positions, index).applyMatrix4(matrix);
+      this.position.push(vertex.x, vertex.y, vertex.z);
+      vertex.fromBufferAttribute(normals, index).applyMatrix3(normalMatrix).normalize();
+      this.normal.push(vertex.x, vertex.y, vertex.z);
+      const u = uvs.getX(index);
+      const v = uvs.getY(index);
+      if (paint.kind === "shirt") {
+        this.uv.push(u, v);
+        this.pixel.push(0, 0, 0);
+      } else {
+        this.uv.push(SHIRT_IDLE_UV, SHIRT_IDLE_UV);
+        if (paint.kind === "head") {
+          // Com 1 segmento por eixo, cada face da caixa tem 4 vértices seguidos; a frente (+z) é a 4.
+          const face = Math.floor(index / 4);
+          const [hu, hv] = atlas.head(face, u, v);
+          this.pixel.push(hu, hv, face === 4 ? 2 : 1);
+        } else {
+          const [pu, pv] = paint.kind === "stripe" ? atlas.stripe(paint.index, v) : atlas.solid(paint.index);
+          this.pixel.push(pu, pv, 1);
+        }
+      }
+      this.finish.push(finish[0], finish[1], finish[2], finish[3]);
+      this.bone.push(bone, 0, 0, 0);
+    }
+    const indices = geometry.getIndex();
+    if (indices) {
+      for (let index = 0; index < indices.count; index += 1) this.index.push(base + indices.getX(index));
+    } else {
+      for (let index = 0; index < positions.count; index += 1) this.index.push(base + index);
+    }
+  }
+
+  build() {
+    const geometry = new THREE.BufferGeometry();
+    const count = this.position.length / 3;
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(this.position, 3));
+    geometry.setAttribute("normal", new THREE.Float32BufferAttribute(this.normal, 3));
+    geometry.setAttribute("uv", new THREE.Float32BufferAttribute(this.uv, 2));
+    geometry.setAttribute("figPixel", new THREE.Float32BufferAttribute(this.pixel, 3));
+    geometry.setAttribute("figFinish", new THREE.Float32BufferAttribute(this.finish, 4));
+    geometry.setAttribute("skinIndex", new THREE.Uint8BufferAttribute(this.bone, 4));
+    const weights = new Uint8Array(count * 4);
+    for (let index = 0; index < count; index += 1) weights[index * 4] = 255;
+    geometry.setAttribute("skinWeight", new THREE.BufferAttribute(weights, 4, true));
+    geometry.setIndex(this.index);
+    return geometry;
+  }
 }
 
 let blobTexture: THREE.Texture | null = null;
@@ -87,7 +160,8 @@ function contactShadow() {
 // ------------------------------------------------------- contorno de luz
 
 const RIM_DEFAULT = "#fff1c2";
-const RIM_PROGRAM_KEY = "futbobo-figure-rim-v2";
+/** Chave fixa: todos os bonecos (e o criador de personagem) usam o mesmo programa. */
+const RIM_PROGRAM_KEY = "futbobo-figure-skinned-v3";
 const RIM_MAX = 0.6;
 /** Raio (unidades de campo) da cápsula pé→cabeça que define a borda do boneco. */
 const RIM_RADIUS = 10.5;
@@ -100,13 +174,70 @@ type RimUniforms = {
   uRimB: { value: THREE.Vector3 };
 };
 
-const RIM_VERTEX_HEAD = "#include <common>\nuniform vec3 uRimA;\nuniform vec3 uRimB;\nvarying vec2 vRimA;\nvarying vec2 vRimB;";
+type FigureUniforms = RimUniforms & {
+  /** Atlas "pixel" (cabeça, humores, meião, chuteira, cores sólidas). */
+  uPixelMap: { value: THREE.Texture | null };
+  /** Deslocamento do UV do rosto até o humor da vez. */
+  uFaceShift: { value: THREE.Vector2 };
+  uFigEmissive: { value: THREE.Color };
+};
+
+/** Brilho próprio da braçadeira de capitão (o mesmo `emissive` do material de antes). */
+const ARMBAND_EMISSIVE = new THREE.Color("#6b4b00");
+
+// Cada vértice tem um osso só, com peso 1: busca uma matriz em vez de quatro.
+const SKINBASE_ONE_BONE = [
+  "#ifdef USE_SKINNING",
+  "  mat4 boneMatX = getBoneMatrix( skinIndex.x );",
+  "  mat4 boneMatY = boneMatX;",
+  "  mat4 boneMatZ = boneMatX;",
+  "  mat4 boneMatW = boneMatX;",
+  "#endif",
+].join("\n");
+
+const RIM_VERTEX_HEAD = [
+  "#include <common>",
+  "uniform vec3 uRimA;",
+  "uniform vec3 uRimB;",
+  "uniform vec2 uFaceShift;",
+  "attribute vec3 figPixel;",
+  "attribute vec4 figFinish;",
+  "varying vec2 vRimA;",
+  "varying vec2 vRimB;",
+  "varying vec2 vPixelUv;",
+  "varying float vPixel;",
+  "varying vec3 vFinish;",
+].join("\n");
 const RIM_VERTEX_BODY = [
   "#include <project_vertex>",
   "vRimA = ( viewMatrix * vec4( uRimA, 1.0 ) ).xy;",
   "vRimB = ( viewMatrix * vec4( uRimB, 1.0 ) ).xy;",
+  // z: 0 lê a camisa, 1 o atlas "pixel", 2 o atlas "pixel" com o humor (frente da cabeça).
+  "vPixelUv = figPixel.xy + uFaceShift * step( 1.5, figPixel.z );",
+  "vPixel = step( 0.5, figPixel.z );",
+  "vFinish = figFinish.xyz;",
 ].join("\n");
-const RIM_FRAGMENT_HEAD = "#include <common>\nuniform float uRimStrength;\nuniform vec3 uRimColor;\nvarying vec2 vRimA;\nvarying vec2 vRimB;";
+const RIM_FRAGMENT_HEAD = [
+  "#include <common>",
+  "uniform float uRimStrength;",
+  "uniform vec3 uRimColor;",
+  "uniform sampler2D uPixelMap;",
+  "uniform vec3 uFigEmissive;",
+  "varying vec2 vRimA;",
+  "varying vec2 vRimB;",
+  "varying vec2 vPixelUv;",
+  "varying float vPixel;",
+  "varying vec3 vFinish;",
+].join("\n");
+// As duas leituras ficam fora de desvio (derivadas do mipmap válidas); o
+// triângulo inteiro tem o mesmo vPixel, então o mix escolhe uma delas exata.
+const FIGURE_MAP_FRAGMENT = [
+  "#ifdef USE_MAP",
+  "  diffuseColor *= mix( texture2D( map, vMapUv ), texture2D( uPixelMap, vPixelUv ), vPixel );",
+  "#else",
+  "  diffuseColor *= texture2D( uPixelMap, vPixelUv );",
+  "#endif",
+].join("\n");
 const RIM_FRAGMENT_BODY = [
   "if ( uRimStrength > 0.001 ) {",
   // Distância, na tela, até o eixo do boneco: só a faixa de fora acende.
@@ -122,36 +253,76 @@ const RIM_FRAGMENT_BODY = [
 ].join("\n");
 
 /**
- * Luz de recorte nas bordas do boneco: destaca o time sem seta nem plaqueta.
- * Em boneco de caixas o fresnel puro acende faces inteiras; aqui ele é
- * recortado por uma cápsula em volta do eixo do boneco (na tela), então só a
- * silhueta brilha, de qualquer ângulo de câmera. Os uniforms são do boneco e
- * divididos por todos os materiais dele; a chave fixa de programa faz todos os
- * bonecos usarem os mesmos shaders (nenhum programa novo por boneco).
+ * Material único do boneco, com a luz de recorte nas bordas: destaca o time
+ * sem seta nem plaqueta. Em boneco de caixas o fresnel puro acende faces
+ * inteiras; aqui ele é recortado por uma cápsula em volta do eixo do boneco
+ * (na tela), então só a silhueta brilha, de qualquer ângulo de câmera.
+ *
+ * O resto do patch junta os 11 materiais de antes num só: a cor vem do atlas
+ * da camisa ou do atlas "pixel" (por vértice), a rugosidade, o metal e o
+ * brilho próprio vêm de atributos por vértice. A chave fixa de programa faz
+ * todos os bonecos usarem os mesmos shaders (nenhum programa novo por boneco).
  */
-function installRim(material: THREE.MeshStandardMaterial, uniforms: RimUniforms) {
+function installFigureShader(material: THREE.MeshStandardMaterial, uniforms: FigureUniforms) {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uRimStrength = uniforms.uRimStrength;
     shader.uniforms.uRimColor = uniforms.uRimColor;
     shader.uniforms.uRimA = uniforms.uRimA;
     shader.uniforms.uRimB = uniforms.uRimB;
+    shader.uniforms.uPixelMap = uniforms.uPixelMap;
+    shader.uniforms.uFaceShift = uniforms.uFaceShift;
+    shader.uniforms.uFigEmissive = uniforms.uFigEmissive;
     shader.vertexShader = shader.vertexShader
       .replace("#include <common>", RIM_VERTEX_HEAD)
+      .replace("#include <skinbase_vertex>", SKINBASE_ONE_BONE)
       .replace("#include <project_vertex>", RIM_VERTEX_BODY);
     shader.fragmentShader = shader.fragmentShader
       .replace("#include <common>", RIM_FRAGMENT_HEAD)
+      .replace("#include <map_fragment>", FIGURE_MAP_FRAGMENT)
+      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = vFinish.x;")
+      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = vFinish.y;")
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += uFigEmissive * vFinish.z;")
       .replace("#include <opaque_fragment>", RIM_FRAGMENT_BODY);
   };
   material.customProgramCacheKey = () => RIM_PROGRAM_KEY;
 }
 
+let figureDepthMaterial: THREE.MeshDepthMaterial | null = null;
+
+// Peças pequenas (mão, luva, braçadeira) não projetam sombra, como antes: o
+// triângulo inteiro vira um ponto fora da tela e não é desenhado.
+const DEPTH_SKIP_SMALL = [
+  "#include <project_vertex>",
+  "if ( figFinish.w < 0.5 ) gl_Position = vec4( 0.0, 0.0, 2.0, 1.0 );",
+].join("\n");
+
+/**
+ * Passe de sombra de todos os bonecos: um material só (um programa só, sem
+ * alternar com os outros casters), sem escrever cor (o mapa de sombra só lê a
+ * profundidade) e com a busca de um osso só.
+ */
+function figureDepthMaterialShared() {
+  if (!figureDepthMaterial) {
+    const material = new THREE.MeshDepthMaterial({ colorWrite: false });
+    material.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nattribute vec4 figFinish;")
+        .replace("#include <skinbase_vertex>", SKINBASE_ONE_BONE)
+        .replace("#include <project_vertex>", DEPTH_SKIP_SMALL);
+    };
+    material.customProgramCacheKey = () => "futbobo-figure-depth-v2";
+    figureDepthMaterial = material;
+  }
+  return figureDepthMaterial;
+}
+
 // ---------------------------------------------------------------- cabelo
 
 /**
- * Volumes de cabelo em blocos, fundidos num único mesh (um draw call por
- * cabeça). A textura cuida da linha do cabelo; isto dá a silhueta vista de cima.
+ * Volumes de cabelo em blocos (no espaço do pescoço). Entram na malha única
+ * do boneco; a textura cuida da linha do cabelo, isto dá a silhueta vista de cima.
  */
-function buildHair(look: ResolvedLook, material: THREE.Material): THREE.Mesh | null {
+function buildHair(look: ResolvedLook, addPart: (geometry: THREE.BufferGeometry, matrix: THREE.Matrix4) => void) {
   const parts: THREE.Object3D[] = [];
   const add = (w: number, h: number, d: number, x: number, y: number, z: number, rotX = 0, rotZ = 0) => {
     const part = new THREE.Mesh(box(w, h, d));
@@ -205,14 +376,10 @@ function buildHair(look: ResolvedLook, material: THREE.Material): THREE.Mesh | n
     case 21: add(9.3, 2.5, 9.3, 0, 8.9, 0); break;
     default: break;
   }
-  if (parts.length === 0) return null;
-  const geometries = parts.map((part) => {
+  for (const part of parts) {
     part.updateMatrix();
-    return (part as THREE.Mesh).geometry.clone().applyMatrix4(part.matrix);
-  });
-  const merged = mergeGeometries(geometries);
-  geometries.forEach((geometry) => geometry.dispose());
-  return merged ? mesh(merged, material) : null;
+    addPart((part as THREE.Mesh).geometry, part.matrix);
+  }
 }
 
 // ------------------------------------------------------------------ pose
@@ -231,79 +398,134 @@ const POSE_KEYS = [
 type PoseKey = (typeof POSE_KEYS)[number];
 type Pose = Record<PoseKey, number>;
 
-const KEY_COUNT = POSE_KEYS.length;
-const ARM_KEYS: readonly PoseKey[] = ["shLX", "shLY", "shLZ", "shRX", "shRY", "shRZ", "elL", "elR"];
-const TRUNK_KEYS: readonly PoseKey[] = ["torsoX", "torsoY", "torsoZ", "neckX", "neckY", "neckZ"];
-const LOWER_KEYS: readonly PoseKey[] = [
+/** 1 nas chaves que uma camada puxa, 0 no resto (na ordem de POSE_KEYS). */
+type PoseMask = Float64Array;
+
+function poseMask(keys: readonly PoseKey[]): PoseMask {
+  const mask = new Float64Array(POSE_KEYS.length);
+  for (const key of keys) mask[POSE_KEYS.indexOf(key)] = 1;
+  return mask;
+}
+
+/** Braços e tronco (as ações "upper" partem deles). */
+const UPPER_KEYS = poseMask([
+  "shLX", "shLY", "shLZ", "shRX", "shRY", "shRZ", "elL", "elR",
+  "torsoX", "torsoY", "torsoZ", "neckX", "neckY", "neckZ",
+]);
+const LOWER_KEYS = poseMask([
   "bodyX", "bodyY", "bodyZ", "bodyRotX", "bodyRotZ", "pivX", "pivZ", "spinY", "hipsY",
   "hipLX", "hipLZ", "hipRX", "hipRZ", "kneeL", "kneeR", "ankleL", "ankleR",
-];
-const KICK_KEYS: readonly PoseKey[] = [
+]);
+const KICK_KEYS = poseMask([
   "bodyY", "torsoX", "torsoY", "neckX",
   "shLX", "shLY", "shLZ", "shRX", "shRY", "shRZ", "elL", "elR",
   "hipLX", "hipLZ", "hipRX", "hipRZ", "kneeL", "kneeR", "ankleL", "ankleR",
-];
-const LUNGE_KEYS: readonly PoseKey[] = [
+]);
+const LUNGE_KEYS = poseMask([
   "bodyY", "torsoX", "shLX", "shLZ", "elL", "shRX", "shRZ", "elR", "hipLX", "kneeL", "hipRX", "kneeR",
-];
+]);
 /** Tudo menos a meia-volta (o mergulho manda no corpo inteiro). */
-const BODY_KEYS: readonly PoseKey[] = POSE_KEYS.filter((key) => key !== "spinY");
-const BRAKE_KEYS: readonly PoseKey[] = [
+const BODY_KEYS = poseMask(POSE_KEYS.filter((key) => key !== "spinY"));
+const BRAKE_KEYS = poseMask([
   "bodyY", "bodyRotX", "torsoX", "torsoZ", "hipsY",
   "shLX", "shLY", "shLZ", "shRX", "shRY", "shRZ", "elL", "elR",
   "hipLX", "hipLZ", "hipRX", "hipRZ", "kneeL", "kneeR", "ankleL", "ankleR",
-];
-const MIRROR_SWAP: ReadonlyArray<readonly [PoseKey, PoseKey]> = [
-  ["shLX", "shRX"], ["shLY", "shRY"], ["shLZ", "shRZ"], ["elL", "elR"],
-  ["hipLX", "hipRX"], ["hipLZ", "hipRZ"], ["kneeL", "kneeR"], ["ankleL", "ankleR"],
-];
-const MIRROR_NEGATE: readonly PoseKey[] = [
-  "shLY", "shRY", "shLZ", "shRZ", "hipLZ", "hipRZ",
-  "torsoY", "torsoZ", "neckY", "neckZ", "bodyX", "bodyRotZ", "pivZ", "spinY", "hipsY",
-];
+]);
+
+// As operações de pose rodam várias vezes por boneco por quadro: escritas
+// campo a campo (acesso monomórfico), sem laço por nome de chave.
 
 function zeroPose(): Pose {
-  return Object.fromEntries(POSE_KEYS.map((key) => [key, 0])) as Pose;
+  return {
+    bodyX: 0, bodyY: 0, bodyZ: 0, bodyRotX: 0, bodyRotZ: 0, pivX: 0, pivZ: 0, spinY: 0,
+    hipsY: 0, torsoX: 0, torsoY: 0, torsoZ: 0, neckX: 0, neckY: 0, neckZ: 0, shLX: 0,
+    shLY: 0, shLZ: 0, shRX: 0, shRY: 0, shRZ: 0, elL: 0, elR: 0, hipLX: 0,
+    hipLZ: 0, hipRX: 0, hipRZ: 0, kneeL: 0, kneeR: 0, ankleL: 0, ankleR: 0,
+  };
 }
 
-function clearPose(pose: Pose) {
-  for (let index = 0; index < KEY_COUNT; index += 1) pose[POSE_KEYS[index]] = 0;
+function clearPose(p: Pose) {
+  p.bodyX = 0; p.bodyY = 0; p.bodyZ = 0; p.bodyRotX = 0; p.bodyRotZ = 0; p.pivX = 0; p.pivZ = 0; p.spinY = 0;
+  p.hipsY = 0; p.torsoX = 0; p.torsoY = 0; p.torsoZ = 0; p.neckX = 0; p.neckY = 0; p.neckZ = 0; p.shLX = 0;
+  p.shLY = 0; p.shLZ = 0; p.shRX = 0; p.shRY = 0; p.shRZ = 0; p.elL = 0; p.elR = 0; p.hipLX = 0;
+  p.hipLZ = 0; p.hipRX = 0; p.hipRZ = 0; p.kneeL = 0; p.kneeR = 0; p.ankleL = 0; p.ankleR = 0;
 }
 
-function copyPose(target: Pose, source: Pose) {
-  for (let index = 0; index < KEY_COUNT; index += 1) {
-    const key = POSE_KEYS[index];
-    target[key] = source[key];
-  }
+function copyPose(t: Pose, s: Pose) {
+  t.bodyX = s.bodyX; t.bodyY = s.bodyY; t.bodyZ = s.bodyZ; t.bodyRotX = s.bodyRotX; t.bodyRotZ = s.bodyRotZ; t.pivX = s.pivX;
+  t.pivZ = s.pivZ; t.spinY = s.spinY; t.hipsY = s.hipsY; t.torsoX = s.torsoX; t.torsoY = s.torsoY; t.torsoZ = s.torsoZ;
+  t.neckX = s.neckX; t.neckY = s.neckY; t.neckZ = s.neckZ; t.shLX = s.shLX; t.shLY = s.shLY; t.shLZ = s.shLZ;
+  t.shRX = s.shRX; t.shRY = s.shRY; t.shRZ = s.shRZ; t.elL = s.elL; t.elR = s.elR; t.hipLX = s.hipLX;
+  t.hipLZ = s.hipLZ; t.hipRX = s.hipRX; t.hipRZ = s.hipRZ; t.kneeL = s.kneeL; t.kneeR = s.kneeR; t.ankleL = s.ankleL;
+  t.ankleR = s.ankleR;
 }
 
-function addPose(target: Pose, source: Pose, weight: number) {
+function addPose(t: Pose, s: Pose, w: number) {
+  if (w <= 0.0001) return;
+  t.bodyX += s.bodyX * w; t.bodyY += s.bodyY * w; t.bodyZ += s.bodyZ * w; t.bodyRotX += s.bodyRotX * w; t.bodyRotZ += s.bodyRotZ * w;
+  t.pivX += s.pivX * w; t.pivZ += s.pivZ * w; t.spinY += s.spinY * w; t.hipsY += s.hipsY * w; t.torsoX += s.torsoX * w;
+  t.torsoY += s.torsoY * w; t.torsoZ += s.torsoZ * w; t.neckX += s.neckX * w; t.neckY += s.neckY * w; t.neckZ += s.neckZ * w;
+  t.shLX += s.shLX * w; t.shLY += s.shLY * w; t.shLZ += s.shLZ * w; t.shRX += s.shRX * w; t.shRY += s.shRY * w;
+  t.shRZ += s.shRZ * w; t.elL += s.elL * w; t.elR += s.elR * w; t.hipLX += s.hipLX * w; t.hipLZ += s.hipLZ * w;
+  t.hipRX += s.hipRX * w; t.hipRZ += s.hipRZ * w; t.kneeL += s.kneeL * w; t.kneeR += s.kneeR * w; t.ankleL += s.ankleL * w;
+  t.ankleR += s.ankleR * w;
+}
+
+/** Puxa de `t` em direção a `s` só as chaves da máscara (1 puxa, 0 deixa como está). */
+function blendKeys(t: Pose, s: Pose, weight: number, m: PoseMask) {
   if (weight <= 0.0001) return;
-  for (let index = 0; index < KEY_COUNT; index += 1) {
-    const key = POSE_KEYS[index];
-    target[key] += source[key] * weight;
-  }
+  const a = Math.min(1, weight);
+  t.bodyX += (s.bodyX - t.bodyX) * (a * m[0]);
+  t.bodyY += (s.bodyY - t.bodyY) * (a * m[1]);
+  t.bodyZ += (s.bodyZ - t.bodyZ) * (a * m[2]);
+  t.bodyRotX += (s.bodyRotX - t.bodyRotX) * (a * m[3]);
+  t.bodyRotZ += (s.bodyRotZ - t.bodyRotZ) * (a * m[4]);
+  t.pivX += (s.pivX - t.pivX) * (a * m[5]);
+  t.pivZ += (s.pivZ - t.pivZ) * (a * m[6]);
+  t.spinY += (s.spinY - t.spinY) * (a * m[7]);
+  t.hipsY += (s.hipsY - t.hipsY) * (a * m[8]);
+  t.torsoX += (s.torsoX - t.torsoX) * (a * m[9]);
+  t.torsoY += (s.torsoY - t.torsoY) * (a * m[10]);
+  t.torsoZ += (s.torsoZ - t.torsoZ) * (a * m[11]);
+  t.neckX += (s.neckX - t.neckX) * (a * m[12]);
+  t.neckY += (s.neckY - t.neckY) * (a * m[13]);
+  t.neckZ += (s.neckZ - t.neckZ) * (a * m[14]);
+  t.shLX += (s.shLX - t.shLX) * (a * m[15]);
+  t.shLY += (s.shLY - t.shLY) * (a * m[16]);
+  t.shLZ += (s.shLZ - t.shLZ) * (a * m[17]);
+  t.shRX += (s.shRX - t.shRX) * (a * m[18]);
+  t.shRY += (s.shRY - t.shRY) * (a * m[19]);
+  t.shRZ += (s.shRZ - t.shRZ) * (a * m[20]);
+  t.elL += (s.elL - t.elL) * (a * m[21]);
+  t.elR += (s.elR - t.elR) * (a * m[22]);
+  t.hipLX += (s.hipLX - t.hipLX) * (a * m[23]);
+  t.hipLZ += (s.hipLZ - t.hipLZ) * (a * m[24]);
+  t.hipRX += (s.hipRX - t.hipRX) * (a * m[25]);
+  t.hipRZ += (s.hipRZ - t.hipRZ) * (a * m[26]);
+  t.kneeL += (s.kneeL - t.kneeL) * (a * m[27]);
+  t.kneeR += (s.kneeR - t.kneeR) * (a * m[28]);
+  t.ankleL += (s.ankleL - t.ankleL) * (a * m[29]);
+  t.ankleR += (s.ankleR - t.ankleR) * (a * m[30]);
 }
 
-/** Puxa só as chaves pedidas de `target` em direção a `source`. */
-function blendKeys(target: Pose, source: Pose, weight: number, keys: readonly PoseKey[]) {
-  if (weight <= 0.0001) return;
-  const amount = Math.min(1, weight);
-  for (let index = 0; index < keys.length; index += 1) {
-    const key = keys[index];
-    target[key] += (source[key] - target[key]) * amount;
-  }
+/** Braços e tronco de `s`; o resto de `t` fica. */
+function copyUpper(t: Pose, s: Pose) {
+  t.shLX = s.shLX; t.shLY = s.shLY; t.shLZ = s.shLZ; t.shRX = s.shRX; t.shRY = s.shRY; t.shRZ = s.shRZ; t.elL = s.elL; t.elR = s.elR;
+  t.torsoX = s.torsoX; t.torsoY = s.torsoY; t.torsoZ = s.torsoZ; t.neckX = s.neckX; t.neckY = s.neckY; t.neckZ = s.neckZ;
 }
 
-/** Troca esquerda e direita (canhoto, ajoelhar no outro joelho...). */
-function mirrorPose(pose: Pose) {
-  for (let index = 0; index < MIRROR_SWAP.length; index += 1) {
-    const pair = MIRROR_SWAP[index];
-    const value = pose[pair[0]];
-    pose[pair[0]] = pose[pair[1]];
-    pose[pair[1]] = value;
-  }
-  for (let index = 0; index < MIRROR_NEGATE.length; index += 1) pose[MIRROR_NEGATE[index]] *= -1;
+/** Troca esquerda e direita (canhoto, ajoelhar no outro joelho...); os eixos Y/Z trocam de sinal. */
+function mirrorPose(p: Pose) {
+  let v = p.shLX; p.shLX = p.shRX; p.shRX = v;
+  v = p.shLY; p.shLY = -p.shRY; p.shRY = -v;
+  v = p.shLZ; p.shLZ = -p.shRZ; p.shRZ = -v;
+  v = p.elL; p.elL = p.elR; p.elR = v;
+  v = p.hipLX; p.hipLX = p.hipRX; p.hipRX = v;
+  v = p.hipLZ; p.hipLZ = -p.hipRZ; p.hipRZ = -v;
+  v = p.kneeL; p.kneeL = p.kneeR; p.kneeR = v;
+  v = p.ankleL; p.ankleL = p.ankleR; p.ankleR = v;
+  p.torsoY = -p.torsoY; p.torsoZ = -p.torsoZ; p.neckY = -p.neckY; p.neckZ = -p.neckZ;
+  p.bodyX = -p.bodyX; p.bodyRotZ = -p.bodyRotZ; p.pivZ = -p.pivZ; p.spinY = -p.spinY; p.hipsY = -p.hipsY;
 }
 
 function approach(current: number, target: number, rate: number, dt: number) {
@@ -1183,15 +1405,33 @@ export type FigureOptions = {
   keeperColor?: string;
   captain?: boolean;
   seed?: number;
+  /** Modo desempenho: sem sombra projetada (a sombra de contato fica mais forte). */
+  performance?: boolean;
 };
 
 export type KickKind = "strike" | "block";
 
+// Ordem dos retalhos de cor sólida no atlas "pixel".
+const SOLID_SKIN = 0;
+const SOLID_HAND = 1;
+const SOLID_SLEEVE = 2;
+const SOLID_SHORTS = 3;
+const SOLID_GLOVES = 4;
+const SOLID_HAIR = 5;
+const SOLID_ARMBAND = 6;
+const STRIPE_SOCKS = 0;
+const STRIPE_BOOTS = 1;
+
+/** Raio (unidades de campo) da esfera de recorte: cobre mortal, mergulho e braços para cima. */
+const CULL_RADIUS = FIGURE_HEIGHT * 1.6;
+/** Sombra de contato no modo desempenho (sem sombra projetada): mais escura e um pouco maior. */
+const PERFORMANCE_BLOB_OPACITY = 1.36;
+const PERFORMANCE_BLOB_SCALE = 1.15;
+
 const BOOT_COLORS = ["#141414", "#141414", "#f4f4f2", "#141414", "#ff5a36", "#2f7bff", "#ffd23f", "#2fd38a", "#141414", "#e8e8e8"];
 const CELEBRATIONS = ["jump", "fist", "clap", "jump", "fist"] as const;
 const SADNESS = ["head", "knees", "head", "slump"] as const;
-const STATE_KEYS = ["idle", "ready", "aim", "run", "pushed", "celebrate", "scorer", "sad", "keeper", "step"] as const;
-type WeightKey = (typeof STATE_KEYS)[number];
+type WeightKey = "idle" | "ready" | "aim" | "run" | "pushed" | "celebrate" | "scorer" | "sad" | "keeper" | "step";
 
 const ACTION_IN = 0.12;
 const ACTION_OUT = 0.18;
@@ -1218,34 +1458,40 @@ export class PlayerFigure {
   readonly model = new THREE.Group();
   private readonly body = new THREE.Group();
   private readonly hips = new THREE.Group();
-  private readonly torso = new THREE.Group();
-  private readonly neck = new THREE.Group();
-  private readonly shoulderL = new THREE.Group();
-  private readonly shoulderR = new THREE.Group();
-  private readonly elbowL = new THREE.Group();
-  private readonly elbowR = new THREE.Group();
-  private readonly hipL = new THREE.Group();
-  private readonly hipR = new THREE.Group();
-  private readonly kneeL = new THREE.Group();
-  private readonly kneeR = new THREE.Group();
-  private readonly ankleL = new THREE.Group();
-  private readonly ankleR = new THREE.Group();
+  // Juntas com peça presa: são os ossos do SkinnedMesh.
+  private readonly torso = new THREE.Bone();
+  private readonly neck = new THREE.Bone();
+  private readonly shoulderL = new THREE.Bone();
+  private readonly shoulderR = new THREE.Bone();
+  private readonly elbowL = new THREE.Bone();
+  private readonly elbowR = new THREE.Bone();
+  private readonly hipL = new THREE.Bone();
+  private readonly hipR = new THREE.Bone();
+  private readonly kneeL = new THREE.Bone();
+  private readonly kneeR = new THREE.Bone();
+  private readonly ankleL = new THREE.Bone();
+  private readonly ankleR = new THREE.Bone();
+  /** O boneco inteiro (corpo, cabeça e cabelo): um draw call, um no passe de sombra. */
+  private readonly mesh: THREE.SkinnedMesh;
+  private readonly material: THREE.MeshStandardMaterial;
+  private readonly geometry: THREE.BufferGeometry;
+  private readonly skeleton: THREE.Skeleton;
   private readonly blob: THREE.Mesh;
   private readonly blobMaterial: THREE.MeshBasicMaterial;
-  private readonly faceMaterial: THREE.MeshStandardMaterial;
-  private readonly headTextures: HeadTextures;
-  private readonly materials: THREE.Material[] = [];
+  private blobOpacity = 1;
+  private blobScale = 1;
   private readonly textures: THREE.Texture[] = [];
   private readonly allTextures: THREE.Texture[] = [];
-  /** Cabelo fundido é geometria própria de cada boneco (o resto é compartilhado). */
-  private hairGeometry: THREE.BufferGeometry | null = null;
 
-  // Destaque do time (contorno de luz).
-  private readonly rim: RimUniforms = {
+  // Destaque do time (contorno de luz) e humor do rosto: só uniforms.
+  private readonly rim: FigureUniforms = {
     uRimStrength: { value: 0 },
     uRimColor: { value: new THREE.Color(RIM_DEFAULT) },
     uRimA: { value: new THREE.Vector3() },
     uRimB: { value: new THREE.Vector3(0, FIGURE_HEIGHT, 0) },
+    uPixelMap: { value: null },
+    uFaceShift: { value: new THREE.Vector2() },
+    uFigEmissive: { value: ARMBAND_EMISSIVE },
   };
   private readonly rimUp = new THREE.Vector3();
   private rimTarget = 0;
@@ -1365,94 +1611,121 @@ export class PlayerFigure {
     const shirtPrimary = options.keeper ? options.keeperColor ?? "#c6ff3d" : options.primary;
     const shirtSecondary = options.keeper ? shadeHex(shirtPrimary, -70) : options.secondary;
 
-    // ------------------------------------------------------------- materiais
-    // Cabeça e camisa usam atlas: uma textura e um draw call por caixa.
-    this.headTextures = createHeadTextures(look);
-    this.textures.push(...Object.values(this.headTextures));
-    const track = <T extends THREE.MeshStandardMaterial>(material: T) => {
-      installRim(material, this.rim);
-      this.materials.push(material);
-      return material;
-    };
-    this.faceMaterial = track(new THREE.MeshStandardMaterial({ map: this.headTextures.normal, roughness: 0.78 }));
+    // -------------------------------------------------------------- texturas
+    // Duas por boneco: o atlas da camisa (filtro linear, número legível) e o
+    // atlas "pixel" (cabeça com os 6 humores, meião, chuteira e cores sólidas).
     const kit = createKitTextures({ pattern: options.keeper ? 1 : pattern, primary: shirtPrimary, secondary: shirtSecondary, number: options.number });
-    this.textures.push(kit.torso);
-    const torsoMaterial = track(new THREE.MeshStandardMaterial({ map: kit.torso, roughness: 0.86 }));
-    const skin = track(solid(look.skin, 0.75));
-    const hand = track(solid(shadeHex(look.skin, -10), 0.75));
-    const sleeve = track(solid(options.keeper ? shirtPrimary : sleeveColor(pattern, shirtPrimary, shirtSecondary), 0.86));
     const shortsColor = options.keeper ? "#1d2228" : shirtSecondary === shirtPrimary ? shadeHex(shirtPrimary, -40) : shirtSecondary;
-    const shorts = track(solid(shortsColor, 0.88));
-    const sockMap = stripeTexture([[options.keeper ? "#1d2228" : shirtSecondary, 0.22], [options.keeper ? shadeHex(shirtPrimary, -20) : shirtPrimary, 0.78]]);
-    const bootMap = stripeTexture([[BOOT_COLORS[seed % BOOT_COLORS.length], 0.74], ["#2b2b2b", 0.26]]);
-    this.textures.push(sockMap, bootMap);
-    const socks = track(new THREE.MeshStandardMaterial({ map: sockMap, roughness: 0.9 }));
-    const boots = track(new THREE.MeshStandardMaterial({ map: bootMap, roughness: 0.5 }));
-    const gloves = track(solid(mixHex(shirtPrimary, "#ffffff", 0.35), 0.6));
-    const hairMaterial = track(solid(look.hairTop, 0.92));
-    const armband = track(new THREE.MeshStandardMaterial({ color: "#ffc72c", emissive: "#6b4b00", roughness: 0.4, metalness: 0.3 }));
+    const solids: string[] = [];
+    solids[SOLID_SKIN] = look.skin;
+    solids[SOLID_HAND] = shadeHex(look.skin, -10);
+    solids[SOLID_SLEEVE] = options.keeper ? shirtPrimary : sleeveColor(pattern, shirtPrimary, shirtSecondary);
+    solids[SOLID_SHORTS] = shortsColor;
+    solids[SOLID_GLOVES] = mixHex(shirtPrimary, "#ffffff", 0.35);
+    solids[SOLID_HAIR] = look.hairTop;
+    solids[SOLID_ARMBAND] = "#ffc72c";
+    const stripes: Array<Array<[string, number]>> = [];
+    stripes[STRIPE_SOCKS] = [[options.keeper ? "#1d2228" : shirtSecondary, 0.22], [options.keeper ? shadeHex(shirtPrimary, -20) : shirtPrimary, 0.78]];
+    stripes[STRIPE_BOOTS] = [[BOOT_COLORS[seed % BOOT_COLORS.length], 0.74], ["#2b2b2b", 0.26]];
+    const atlas = createFigurePixelAtlas(look, { stripes, solids });
+    this.textures.push(kit.torso, atlas.texture);
+    this.rim.uPixelMap.value = atlas.texture;
 
     // ------------------------------------------------------------- esqueleto
     this.root.add(this.model);
     this.model.scale.setScalar(PX);
     this.model.add(this.body);
-
     this.hips.position.y = 12;
     this.body.add(this.hips);
     this.hips.add(this.torso);
-    place(this.torso, mesh(atlasBoxGeometry(8, 12, 4), torsoMaterial), 6);
-
     this.neck.position.y = 12;
     this.torso.add(this.neck);
-    place(this.neck, mesh(headBoxGeometry(), this.faceMaterial), 4);
-    const hair = buildHair(look, hairMaterial);
-    if (hair) {
-      this.neck.add(hair);
-      this.hairGeometry = hair.geometry;
-    }
-
-    // Peças pequenas não projetam sombra: metade dos draw calls do passe de sombra.
-    const small = (piece: THREE.Mesh) => {
-      piece.castShadow = false;
-      return piece;
-    };
-    const arm = (shoulder: THREE.Group, elbow: THREE.Group, side: 1 | -1) => {
+    const arms = [[this.shoulderL, this.elbowL, 1], [this.shoulderR, this.elbowR, -1]] as const;
+    for (const [shoulder, elbow, side] of arms) {
       shoulder.position.set(6 * side, 11.5, 0);
       this.torso.add(shoulder);
-      place(shoulder, mesh(box(4, 5.2, 4), sleeve), -2.4);
-      if (options.captain && side === 1) place(shoulder, small(mesh(box(4.3, 1.2, 4.3), armband)), -3.6);
       elbow.position.y = -4.9;
       shoulder.add(elbow);
-      place(elbow, mesh(box(3.6, 5, 3.6), skin), -2.4);
-      place(elbow, small(options.keeper ? mesh(box(4.6, 3, 4.6), gloves) : mesh(box(3.8, 2.2, 3.8), hand)), -5.6);
-    };
-    arm(this.shoulderL, this.elbowL, 1);
-    arm(this.shoulderR, this.elbowR, -1);
-
-    const leg = (hip: THREE.Group, knee: THREE.Group, ankle: THREE.Group, side: 1 | -1) => {
+    }
+    const legs = [[this.hipL, this.kneeL, this.ankleL, 1], [this.hipR, this.kneeR, this.ankleR, -1]] as const;
+    for (const [hip, knee, ankle, side] of legs) {
       hip.position.set(2.05 * side, 0.4, 0);
       this.hips.add(hip);
-      place(hip, mesh(box(4.25, 5.6, 4.3), shorts), -2.5);
       knee.position.y = -5.6;
       hip.add(knee);
-      place(knee, mesh(box(3.75, 4.9, 3.75), socks), -1.9);
       // Tornozelo: a chuteira fica plana no chão ao agachar (sem afundar a ponta).
       ankle.position.y = -4.3;
       knee.add(ankle);
-      const boot = mesh(box(4.05, 2.6, 5.25), boots);
-      boot.position.set(0, -1.1, 0.55);
-      ankle.add(boot);
+    }
+    const bones = [
+      this.torso, this.neck, this.shoulderL, this.shoulderR, this.elbowL, this.elbowR,
+      this.hipL, this.hipR, this.kneeL, this.kneeR, this.ankleL, this.ankleR,
+    ];
+    // Pose de descanso (boneco na origem): é nela que as peças são montadas.
+    this.root.updateMatrixWorld(true);
+
+    // ---------------------------------------------------------------- peças
+    // As mesmas caixas de antes, cada uma presa ao seu osso; os acabamentos
+    // (rugosidade, metal, brilho) são os dos materiais que cada peça tinha, e
+    // mão, luva e braçadeira continuam sem projetar sombra (último valor 0).
+    const builder = new FigureGeometryBuilder(atlas);
+    const local = new THREE.Matrix4();
+    const world = new THREE.Matrix4();
+    const piece = (bone: THREE.Bone, geometry: THREE.BufferGeometry, x: number, y: number, z: number, paint: Paint, finish: Finish) => {
+      world.multiplyMatrices(bone.matrixWorld, local.makeTranslation(x, y, z));
+      builder.add(geometry, world, bones.indexOf(bone), paint, finish);
     };
-    leg(this.hipL, this.kneeL, this.ankleL, 1);
-    leg(this.hipR, this.kneeR, this.ankleR, -1);
+    piece(this.torso, atlasBoxGeometry(8, 12, 4), 0, 6, 0, { kind: "shirt" }, [0.86, 0, 0, 1]);
+    piece(this.neck, box(8, 8, 8), 0, 4, 0, { kind: "head" }, [0.78, 0, 0, 1]);
+    const hairIndex = bones.indexOf(this.neck);
+    buildHair(look, (geometry, matrix) => {
+      builder.add(geometry, world.multiplyMatrices(this.neck.matrixWorld, matrix), hairIndex, { kind: "solid", index: SOLID_HAIR }, [0.92, 0, 0, 1]);
+    });
+    for (const [shoulder, elbow, side] of arms) {
+      piece(shoulder, box(4, 5.2, 4), 0, -2.4, 0, { kind: "solid", index: SOLID_SLEEVE }, [0.86, 0, 0, 1]);
+      if (options.captain && side === 1) piece(shoulder, box(4.3, 1.2, 4.3), 0, -3.6, 0, { kind: "solid", index: SOLID_ARMBAND }, [0.4, 0.3, 1, 0]);
+      piece(elbow, box(3.6, 5, 3.6), 0, -2.4, 0, { kind: "solid", index: SOLID_SKIN }, [0.75, 0, 0, 1]);
+      if (options.keeper) piece(elbow, box(4.6, 3, 4.6), 0, -5.6, 0, { kind: "solid", index: SOLID_GLOVES }, [0.6, 0, 0, 0]);
+      else piece(elbow, box(3.8, 2.2, 3.8), 0, -5.6, 0, { kind: "solid", index: SOLID_HAND }, [0.75, 0, 0, 0]);
+    }
+    for (const [hip, knee, ankle] of legs) {
+      piece(hip, box(4.25, 5.6, 4.3), 0, -2.5, 0, { kind: "solid", index: SOLID_SHORTS }, [0.88, 0, 0, 1]);
+      piece(knee, box(3.75, 4.9, 3.75), 0, -1.9, 0, { kind: "stripe", index: STRIPE_SOCKS }, [0.9, 0, 0, 1]);
+      piece(ankle, box(4.05, 2.6, 5.25), 0, -1.1, 0.55, { kind: "stripe", index: STRIPE_BOOTS }, [0.5, 0, 0, 1]);
+    }
+
+    this.geometry = builder.build();
+    this.material = new THREE.MeshStandardMaterial({ map: kit.torso, roughness: 1, metalness: 0 });
+    installFigureShader(this.material, this.rim);
+    this.mesh = new THREE.SkinnedMesh(this.geometry, this.material);
+    this.mesh.receiveShadow = true;
+    this.mesh.castShadow = true;
+    this.mesh.customDepthMaterial = figureDepthMaterialShared();
+    // Esfera folgada no lugar da calculada na pose (que não acompanha a animação).
+    this.mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, FIGURE_HEIGHT * 0.5, 0), CULL_RADIUS);
+    this.root.add(this.mesh);
+    // As inversas saem da pose de descanso; a malha fica na origem do boneco.
+    this.skeleton = new THREE.Skeleton(bones);
+    this.mesh.bind(this.skeleton, new THREE.Matrix4());
 
     this.blob = contactShadow();
     this.blob.scale.set(24, 24, 1);
     this.root.add(this.blob);
     this.blobMaterial = this.blob.material as THREE.MeshBasicMaterial;
-    this.materials.push(this.blobMaterial);
     this.allTextures.push(...this.textures);
     if (blobTexture) this.allTextures.push(blobTexture);
+    this.setPerformance(options.performance === true);
+  }
+
+  /**
+   * Modo desempenho: o boneco deixa de projetar sombra (a sombra de contato
+   * fica mais escura e um pouco maior para ele continuar no chão). Pode trocar
+   * a qualquer momento: não recompila nada.
+   */
+  setPerformance(performance: boolean) {
+    this.mesh.castShadow = !performance;
+    this.blobOpacity = performance ? PERFORMANCE_BLOB_OPACITY : 1;
+    this.blobScale = performance ? PERFORMANCE_BLOB_SCALE : 1;
   }
 
   // ------------------------------------------------------------- gatilhos
@@ -1548,7 +1821,8 @@ export class PlayerFigure {
     else if (state !== "run" && state !== "pushed") this.sadMood = false;
 
     // ---------------------------------------------------- pesos dos estados
-    for (let index = 0; index < STATE_KEYS.length; index += 1) targets[STATE_KEYS[index]] = 0;
+    targets.idle = targets.ready = targets.aim = targets.run = targets.pushed = 0;
+    targets.celebrate = targets.scorer = targets.sad = targets.keeper = targets.step = 0;
     const moving = Math.min(1, speed / 105);
     const stride = Math.min(1, loco / 25);
     if (state === "pushed") targets.pushed = Math.max(0.35, moving);
@@ -1595,10 +1869,16 @@ export class PlayerFigure {
     else this.spin = approach(this.spin, Math.round(this.spin / TAU) * TAU, 4, dt);
 
     const blendRate = state === "aim" ? 14 : 9;
-    for (let index = 0; index < STATE_KEYS.length; index += 1) {
-      const key = STATE_KEYS[index];
-      w[key] = approach(w[key], targets[key], blendRate, dt);
-    }
+    w.idle = approach(w.idle, targets.idle, blendRate, dt);
+    w.ready = approach(w.ready, targets.ready, blendRate, dt);
+    w.aim = approach(w.aim, targets.aim, blendRate, dt);
+    w.run = approach(w.run, targets.run, blendRate, dt);
+    w.pushed = approach(w.pushed, targets.pushed, blendRate, dt);
+    w.celebrate = approach(w.celebrate, targets.celebrate, blendRate, dt);
+    w.scorer = approach(w.scorer, targets.scorer, blendRate, dt);
+    w.sad = approach(w.sad, targets.sad, blendRate, dt);
+    w.keeper = approach(w.keeper, targets.keeper, blendRate, dt);
+    w.step = approach(w.step, targets.step, blendRate, dt);
     const reserve = this.reserve;
     const free = action ? 0 : 1;
     reserve.celebrate = Math.min(w.celebrate, approach(reserve.celebrate, targets.celebrate * free, blendRate, dt));
@@ -2136,16 +2416,14 @@ export class PlayerFigure {
     else {
       // Braços e tronco partem da pose de baixo; pernas, de pé parado.
       clearPose(out);
-      for (let index = 0; index < ARM_KEYS.length; index += 1) out[ARM_KEYS[index]] = pose[ARM_KEYS[index]];
-      for (let index = 0; index < TRUNK_KEYS.length; index += 1) out[TRUNK_KEYS[index]] = pose[TRUNK_KEYS[index]];
+      copyUpper(out, pose);
       out.bodyY = 0.1 * Math.sin(layer.t * 2.3);
     }
     def.sample(layer.t, out, ctx);
     if (def.mirror && this.side < 0) mirrorPose(out);
     if (layer.spinBaked) out.spinY = 0;
     const legs = def.body === "upper" ? weight * (1 - ctx.moving) : weight;
-    blendKeys(pose, out, weight, ARM_KEYS);
-    blendKeys(pose, out, weight, TRUNK_KEYS);
+    blendKeys(pose, out, weight, UPPER_KEYS);
     blendKeys(pose, out, legs, LOWER_KEYS);
     layer.spin = out.spinY * Math.min(1, legs);
     return 1 - weight * (1 - def.look);
@@ -2381,10 +2659,10 @@ export class PlayerFigure {
 
     // Sombra de contato encolhe no pulo e acompanha o mergulho.
     const lift = Math.max(0, pose.bodyY) * PX;
-    const blobScale = 25 * (1 - Math.min(0.45, lift / 22)) + Math.abs(pose.pivZ) * 6;
+    const blobScale = (25 * (1 - Math.min(0.45, lift / 22)) + Math.abs(pose.pivZ) * 6) * this.blobScale;
     this.blob.scale.set(blobScale, blobScale, 1);
     this.blob.position.x = (pose.bodyX - Math.sin(pose.pivZ) * 4) * PX;
-    this.blobMaterial.opacity = 1 - Math.min(0.5, lift / 18);
+    this.blobMaterial.opacity = (1 - Math.min(0.5, lift / 18)) * this.blobOpacity;
   }
 
   private updateFace(dt: number) {
@@ -2419,15 +2697,18 @@ export class PlayerFigure {
     }
     if (mood !== this.mood) {
       this.mood = mood;
-      // Trocar o map por outro do mesmo formato não precisa recompilar o material.
-      this.faceMaterial.map = this.headTextures[mood];
+      // Os 6 rostos estão no mesmo atlas: o humor é só um deslocamento de UV (uniform).
+      const shift = FACE_MOOD_SHIFT[mood];
+      this.rim.uFaceShift.value.set(shift[0], shift[1]);
     }
   }
 
   dispose() {
-    for (const material of this.materials) material.dispose();
+    this.material.dispose();
+    this.blobMaterial.dispose();
     for (const texture of this.textures) texture.dispose();
-    this.hairGeometry?.dispose();
+    this.geometry.dispose();
+    this.skeleton.dispose();
   }
 }
 

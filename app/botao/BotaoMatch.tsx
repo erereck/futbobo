@@ -74,7 +74,8 @@ import type {
   BotaoSide,
 } from "./types";
 import type { Botao3DView } from "./three/Botao3DView";
-import { readBotao3dPreference, webglAvailable } from "./view-mode";
+import { enableBotao3dPerformanceAuto, readBotao3dPerformance, readBotao3dPreference, webglAvailable } from "./view-mode";
+import { FrameWatch } from "./perf-watch";
 
 const PHYSICS_DT = 1 / 120;
 const MAX_SUBSTEPS = 12;
@@ -240,6 +241,23 @@ export default function BotaoMatch({
   const [view3dReady, setView3dReady] = useState(false);
   const [view3dEpoch, setView3dEpoch] = useState(0);
   const contextLossesRef = useRef(0);
+  /** Modo desempenho 3D: lido ao montar; a vigia de quadros pode ligá-lo no meio da partida. */
+  const performance3dRef = useRef<{ enabled: boolean; userOff: boolean } | null>(null);
+  const frameWatchRef = useRef<FrameWatch | null>(null);
+  const last3dRenderRef = useRef(0);
+  /** Ligou sozinho: a visão é refeita leve no próximo momento calmo (mira ou saída). */
+  const performanceSwitchRef = useRef(false);
+  const skipIntroRef = useRef(false);
+  const watchedPhaseRef = useRef("");
+  const watchedProgramsRef = useRef(0);
+  const [performanceNotice, setPerformanceNotice] = useState(false);
+  /** Refazendo a visão leve: sem mesa 2D por baixo (o laço para junto, como no carregamento). */
+  const [rebuilding3d, setRebuilding3d] = useState(false);
+  /** A visão na tela é a do modo desempenho (avisos sem desfoque nem animação de filtro). */
+  const [lite3d, setLite3d] = useState(false);
+  /** O setup só vale na criação da visão; a carreira refaz o objeto a cada render. */
+  const setupRef = useRef(setup);
+  setupRef.current = setup;
   /** Teto de ~60 quadros só no desenho 3D (a física segue no ritmo da tela). */
   const render3dBudgetRef = useRef(0);
   const render3dElapsedRef = useRef(0);
@@ -258,6 +276,9 @@ export default function BotaoMatch({
     goalNumber: number;
   } | null>(null);
   const [substitutionOpen, setSubstitutionOpen] = useState(false);
+  /** O laço do 3D desenha devagar quando algo opaco cobre a mesa. */
+  const substitutionOpenRef = useRef(false);
+  substitutionOpenRef.current = substitutionOpen;
   const [substitutionOut, setSubstitutionOut] = useState("");
   const [substitutionIn, setSubstitutionIn] = useState("");
   const [substitutionDrag, setSubstitutionDrag] =
@@ -268,6 +289,41 @@ export default function BotaoMatch({
   const pausedRef = useRef(false);
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
+  /**
+   * O HUD só redesenha quando algo que ele mostra mudou (segundo do relógio,
+   * placar, fase, vez, pênaltis…), com uma rede de segurança de 1 s. Antes era a
+   * cada 6 quadros e a cada colisão: 10 a 24 renders por segundo da partida
+   * inteira no mesmo thread do 3D. A barra de tempo anda por ref (`timeBarRef`).
+   */
+  const hudKeyRef = useRef("");
+  const hudBumpedAtRef = useRef(0);
+  const bumpHud = useCallback((force = false) => {
+    const current = matchRef.current;
+    const now = performance.now();
+    const key = current
+      ? `${Math.ceil(current.clock)}|${current.period}|${current.phase}|${current.turn}|${current.turns}|${current.score.user}-${current.score.cpu}|${current.finalShotGrace ? 1 : 0}|${current.penalties ? `${current.penalties.round}${current.penalties.turn}${current.penalties.results.user.length}${current.penalties.results.cpu.length}${current.penalties.shotInFlight ? 1 : 0}` : "-"}|${current.playerGoals}|${current.playerAssists}|${current.timeline.length}|${current.result ? 1 : 0}`
+      : "";
+    if (!force && key === hudKeyRef.current && now - hudBumpedAtRef.current < 1000) return;
+    hudKeyRef.current = key;
+    hudBumpedAtRef.current = now;
+    bump();
+  }, [bump]);
+  const timeBarRef = useRef<HTMLSpanElement | null>(null);
+  const timeBarValueRef = useRef(-1);
+  /** Barra de tempo: escala no compositor, escrita pelo laço (sem render do React nem layout). */
+  const paintTimeBar = useCallback((current: BotaoMatchState) => {
+    const bar = timeBarRef.current;
+    if (!bar) return;
+    const progress = Math.max(0, Math.min(1, 1 - current.clock / Math.max(1, current.periodSeconds)));
+    if (Math.abs(progress - timeBarValueRef.current) < 0.0005) return;
+    timeBarValueRef.current = progress;
+    bar.style.transform = `scaleX(${progress.toFixed(4)})`;
+  }, []);
+  const attachTimeBar = useCallback((element: HTMLSpanElement | null) => {
+    timeBarRef.current = element;
+    timeBarValueRef.current = -1;
+    if (element && matchRef.current) paintTimeBar(matchRef.current);
+  }, [paintTimeBar]);
 
   const togglePause = useCallback(() => {
     setPaused((current) => {
@@ -392,19 +448,23 @@ export default function BotaoMatch({
   useEffect(() => {
     if (!view3d) return;
     let cancelled = false;
+    /** Esta visão perdeu o contexto (pode ser no meio da compilação): nunca vira a visão pronta. */
+    let lost = false;
     let instance: Botao3DView | null = null;
     // Import tardio: quem joga no 2D nunca baixa o three.js.
     import("./three/Botao3DView")
-      .then(({ Botao3DView }) => {
+      .then(async ({ Botao3DView }) => {
         const canvas = canvas3dRef.current;
         if (cancelled || !canvas) return;
         try {
-          instance = new Botao3DView(canvas, setup, {
+          performance3dRef.current ??= readBotao3dPerformance();
+          instance = new Botao3DView(canvas, setupRef.current, {
             landscape: desktopLandscapeRef.current,
             hideUserMarker: localMatch,
             reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-            // Reconstruindo depois de perder o contexto: sem repetir a entrada de transmissão.
-            skipIntro: contextLossesRef.current > 0,
+            performance: performance3dRef.current.enabled,
+            // Reconstruindo (contexto perdido, modo desempenho ligado agora): sem repetir a entrada.
+            skipIntro: contextLossesRef.current > 0 || skipIntroRef.current,
             onGesture: () => {
               // Dois dedos giram o campo: a mira que estava começando é descartada.
               pointerRef.current = null;
@@ -412,6 +472,7 @@ export default function BotaoMatch({
               selectedRef.current = null;
             },
             onContextLost: () => {
+              lost = true;
               // Android apertou a memória ou o app foi para o fundo: refaz o 3D num
               // canvas novo (o motor não depende dele). Na terceira vez fica no 2D.
               contextLossesRef.current += 1;
@@ -421,12 +482,29 @@ export default function BotaoMatch({
               else setView3d(false);
             },
           });
-          view3dRef.current = instance;
-          lastFrameRef.current = 0;
-          setView3dReady(true);
         } catch {
           setView3d(false);
+          return;
         }
+        // Bonecos montados e shaders compilados enquanto "Montando o estádio…"
+        // está na tela: nada de travar no primeiro quadro, na mira ou no gol.
+        const created = instance;
+        try {
+          const current = matchRef.current;
+          if (current) await created.prepare(current);
+        } catch {
+          // Compila no primeiro quadro, como antes.
+        }
+        if (cancelled || lost) return;
+        // "Virar campo" durante a montagem não alcançava a visão ainda escondida.
+        created.setLandscape(desktopLandscapeRef.current);
+        view3dRef.current = created;
+        lastFrameRef.current = 0;
+        last3dRenderRef.current = 0;
+        frameWatchRef.current = new FrameWatch();
+        setLite3d(performance3dRef.current?.enabled === true);
+        setRebuilding3d(false);
+        setView3dReady(true);
       })
       .catch(() => {
         if (!cancelled) setView3d(false);
@@ -437,11 +515,25 @@ export default function BotaoMatch({
       instance?.dispose();
       setView3dReady(false);
     };
-  }, [view3d, view3dEpoch, setup, localMatch]);
+    // matchId e não o objeto: a carreira monta um setup novo a cada render, e recriar
+    // aqui reaproveitaria um canvas com o contexto já derrubado pelo dispose.
+  }, [view3d, view3dEpoch, setup.matchId, localMatch]);
 
   useEffect(() => {
     view3dRef.current?.setLandscape(desktopLandscape);
   }, [desktopLandscape]);
+
+  // O aviso só aparece com a visão nova pronta: o tempo dele conta dali.
+  useEffect(() => {
+    if (!performanceNotice || !view3dReady) return;
+    const timer = window.setTimeout(() => setPerformanceNotice(false), 5200);
+    return () => window.clearTimeout(timer);
+  }, [performanceNotice, view3dReady]);
+
+  // Sem 3D (falhou ao montar, contexto caiu de vez) a mesa 2D volta já.
+  useEffect(() => {
+    if (!view3d) queueMicrotask(() => setRebuilding3d(false));
+  }, [view3d]);
 
   useEffect(() => {
     if (setup.managerMode) return;
@@ -629,13 +721,67 @@ export default function BotaoMatch({
           }
         }
       }
-      bump();
+      // Colisão e toque não mudam o HUD; o resto (gol, trave, apito, pênalti…) redesenha já.
+      bumpHud(events.some((event) => event.type !== "hit" && event.type !== "touch"));
     },
-    [bump, localMatch, machine, playerNames, setup.cpuTeam.shortName, setup.formerClub, setup.managerMode, setup.userTeam.shortName, showFlash],
+    [bumpHud, localMatch, machine, playerNames, setup.cpuTeam.shortName, setup.formerClub, setup.managerMode, setup.userTeam.shortName, showFlash],
   );
 
   // ------------------------------------------------------------- loop de jogo
   useEffect(() => {
+    /**
+     * Vigia do 3D: com o aparelho abaixo de ~42 quadros por segundo por uns
+     * 8 segundos seguidos, liga o modo desempenho (se o jogador não o desligou
+     * na mão) e refaz a visão leve no próximo momento calmo da partida.
+     */
+    const watch3dFrames = (state: BotaoMatchState, view: Botao3DView, time: number, cpuMs: number, covered: boolean) => {
+      const interval = last3dRenderRef.current ? time - last3dRenderRef.current : 0;
+      last3dRenderRef.current = time;
+      const phase = state.phase;
+      const phaseChanged = phase !== watchedPhaseRef.current;
+      watchedPhaseRef.current = phase;
+      const programs = view.compiledPrograms;
+      const compiled = programs !== watchedProgramsRef.current;
+      watchedProgramsRef.current = programs;
+      const preference = performance3dRef.current;
+      const watch = frameWatchRef.current;
+      if (!watch || !preference || preference.enabled || preference.userOff) return;
+      if (performanceSwitchRef.current) return;
+      // O quadro do gol (câmera lenta, confete, telão) e um shader novo compilando
+      // são picos isolados; o resto da festa conta normalmente.
+      if (phaseChanged && phase === "goal") watch.hold(time, 600);
+      if (compiled) watch.hold(time, 250);
+      // Pausa, aba oculta e mesa coberta (desenho de propósito a 12 por segundo) não contam.
+      const measuring = !pausedRef.current && !document.hidden && !covered;
+      if (!watch.sample(time, interval, cpuMs, measuring)) return;
+      // Pode ter sido desligado na mão em outra tela no meio da partida.
+      const latest = readBotao3dPerformance();
+      if (latest.userOff) {
+        performance3dRef.current = latest;
+        return;
+      }
+      enableBotao3dPerformanceAuto();
+      performance3dRef.current = { enabled: true, userOff: false };
+      performanceSwitchRef.current = true;
+    };
+    /**
+     * Troca para a visão leve com a bola parada, ninguém arrastando e na vez de
+     * quem está jogando (a CPU não fica com um chute pendurado). Enquanto a visão
+     * nova monta, a mesa 2D não volta e o laço para como no carregamento:
+     * relógio, 7 s e física esperam.
+     */
+    const switchToPerformance3d = (state: BotaoMatchState) => {
+      if (!performanceSwitchRef.current || pausedRef.current || pointerRef.current !== null) return;
+      if (state.phase !== "aim" && state.phase !== "kickoff") return;
+      if (!localMatch && state.turn !== "user") return;
+      performanceSwitchRef.current = false;
+      skipIntroRef.current = true;
+      view3dRef.current = null;
+      setRebuilding3d(true);
+      setView3dReady(false);
+      setView3dEpoch((epoch) => epoch + 1);
+      setPerformanceNotice(true);
+    };
     let frame = requestAnimationFrame(function loop(time: number) {
       frame = requestAnimationFrame(loop);
       const state = matchRef.current;
@@ -669,8 +815,9 @@ export default function BotaoMatch({
           pointerRef.current !== null,
         );
         if (clockEvents.length > 0) handleEvents(clockEvents);
-        else if (frameCountRef.current % 6 === 0) bump();
+        else bumpHud();
       }
+      paintTimeBar(state);
 
       if (state.finalShotGrace && !finalShotAnnouncedRef.current) {
         finalShotAnnouncedRef.current = true;
@@ -795,8 +942,7 @@ export default function BotaoMatch({
             steps += 1;
           }
           // O HUD precisa acompanhar o cronômetro mesmo em frame sem colisão.
-          if (events.length > 0 || frameCountRef.current % 6 === 0)
-            handleEvents(events);
+          handleEvents(events);
         } else if (state.phase === "penalties" && state.penalties) {
           if (state.penalties.shotInFlight) {
             let steps = 0;
@@ -861,13 +1007,18 @@ export default function BotaoMatch({
       };
       if (view3dInstance) {
         // Celular de 90/120 Hz não precisa desenhar o 3D duas vezes por quadro de 60.
+        // Com intervalo, escolha de pênaltis, trocas ou o aviso do ex-clube cobrindo
+        // a mesa (fundo quase opaco), 12 quadros por segundo bastam e o aparelho esfria.
+        const covered = !pausedRef.current && (state.phase === "interval" || state.phase === "penalty-setup" || substitutionOpenRef.current || formerClubPromptRef.current);
+        const frameTime = covered ? 1 / 12 : 1 / 60;
         render3dBudgetRef.current += elapsed;
         render3dElapsedRef.current += elapsed;
-        if (render3dBudgetRef.current < 1 / 64) return;
-        render3dBudgetRef.current = Math.min(1 / 60, Math.max(0, render3dBudgetRef.current - 1 / 60));
+        if (render3dBudgetRef.current < frameTime - 1 / 960) return;
+        render3dBudgetRef.current = Math.min(frameTime, Math.max(0, render3dBudgetRef.current - frameTime));
         const dt3d = render3dElapsedRef.current;
         render3dElapsedRef.current = 0;
         // Pausado, os bonecos congelam junto com o relógio; a câmera segue viva (modo foto).
+        const renderStarted = performance.now();
         view3dInstance.render(
           state,
           {
@@ -879,7 +1030,10 @@ export default function BotaoMatch({
           pausedRef.current ? 0 : dt3d,
           dt3d,
           pausedRef.current,
+          covered,
         );
+        watch3dFrames(state, view3dInstance, time, performance.now() - renderStarted, covered);
+        switchToPerformance3d(state);
         return;
       }
       if (!canvas || !context) return;
@@ -928,7 +1082,7 @@ export default function BotaoMatch({
       drawMatch(context, state, renderView, time);
     });
     return () => cancelAnimationFrame(frame);
-  }, [handleEvents, bump, showFlash, desktopLandscape, localMatch, showcase, setup.managerMode]);
+  }, [handleEvents, bumpHud, paintTimeBar, showFlash, desktopLandscape, localMatch, showcase, setup.managerMode]);
 
   // -------------------------------------------------------- gol e intervalo
   useEffect(() => {
@@ -1499,7 +1653,7 @@ export default function BotaoMatch({
   const RootElement = setup.managerMode ? "div" : "main";
   return (
     <RootElement
-      className={`botao-root ${!setup.managerMode ? "botao-root-player" : ""} ${showcase ? "botao-root-showcase" : ""} ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""} ${view3dReady ? "botao-root-3d" : ""}`}
+      className={`botao-root ${!setup.managerMode ? "botao-root-player" : ""} ${showcase ? "botao-root-showcase" : ""} ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""} ${view3dReady ? "botao-root-3d" : ""} ${view3dReady && lite3d ? "botao-root-3d-lite" : ""}`}
     >
       {!setup.managerMode && <h1 className="botao-sr-only">{setup.competitionName} · {setup.stageName}: {setup.userTeam.shortName} contra {setup.cpuTeam.shortName}</h1>}
       <header className="botao-hud">
@@ -1524,7 +1678,7 @@ export default function BotaoMatch({
                 : `${paused ? "Pausado" : periodName(state)} · ${formatClock(state.clock)}`}
           </span>
         </div>
-        {!setup.managerMode && !penalties && <div className="botao-time-progress" role="progressbar" aria-label="Andamento do tempo" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.max(0, Math.min(100, 100 * (1 - state.clock / Math.max(1, state.periodSeconds)))))}><span style={{ width: `${Math.max(0, Math.min(100, 100 * (1 - state.clock / Math.max(1, state.periodSeconds))))}%` }} /></div>}
+        {!setup.managerMode && !penalties && <div className="botao-time-progress" role="progressbar" aria-label="Andamento do tempo" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.max(0, Math.min(100, 100 * (1 - state.clock / Math.max(1, state.periodSeconds)))))}><span ref={attachTimeBar} /></div>}
         <div className="botao-scoreboard">
           <div className="botao-team">
             <TeamCrest team={setup.userTeam} />
@@ -1658,7 +1812,7 @@ export default function BotaoMatch({
             : `${VIEW_WIDTH} / ${VIEW_HEIGHT}`,
         }}
       >
-        {!view3dReady ? (
+        {!view3dReady && !rebuilding3d ? (
           <canvas
             ref={canvasRef}
             className="botao-canvas"
@@ -1684,6 +1838,12 @@ export default function BotaoMatch({
         ) : null}
         {view3d && !view3dReady ? (
           <div className="botao-3d-loading" aria-hidden="true">Montando o estádio…</div>
+        ) : null}
+        {performanceNotice && view3dReady ? (
+          <div className="botao-3d-notice" role="status">
+            <b>Modo desempenho 3D ligado</b>
+            <span>A partida estava engasgando. Dá para desligar nas Configurações.</span>
+          </div>
         ) : null}
         {view3dReady && goalCaption ? (
           <div

@@ -35,7 +35,24 @@ const HEMISPHERE_SKY = "#d6ecff";
 const MIN_PITCH = 0.08;
 const MAX_PITCH = 1.05;
 const PICK_HEIGHT = 12;
+/**
+ * Sombra PCF do three r186: 5 leituras com disco de Vogel, ruído e trigonometria
+ * em todo pixel que recebe sombra (gramado, tabelas, bonecos). Uma leitura só,
+ * com o filtro linear de comparação, já dá um PCF 2×2 no hardware: a borda fica
+ * ~1 texel mais firme (imperceptível no desktop, ~1,5 px no celular). Se o three
+ * mudar o trecho, o original continua valendo.
+ */
+function applySingleTapShadows() {
+  const chunk = THREE.ShaderChunk.shadowmap_pars_fragment;
+  const taps = /shadow = \(\s*texture\( shadowMap, vec3\( shadowCoord\.xy \+ vogelDiskSample\( 0, 5, phi \) \* radius, shadowCoord\.z \) \)[\s\S]*?\) \* 0\.2;/;
+  if (!taps.test(chunk)) return;
+  THREE.ShaderChunk.shadowmap_pars_fragment = chunk.replace(taps, "shadow = texture( shadowMap, vec3( shadowCoord.xy, shadowCoord.z ) );");
+}
+applySingleTapShadows();
+
 const POWER_SEGMENTS = 64;
+/** Piso da resolução adaptável do modo desempenho (fração dos pixels CSS). */
+const MIN_PIXEL_RATIO = 0.7;
 const STAMINA_SEGMENTS = 64;
 const KEEPER_COLORS = ["#c6ff3d", "#ff8c1a", "#8a5cff", "#20e0c0", "#ff4fa3", "#22272e"];
 
@@ -43,6 +60,8 @@ export type Botao3DOptions = {
   landscape: boolean;
   hideUserMarker?: boolean;
   reducedMotion?: boolean;
+  /** Modo desempenho 3D: sem torcida nem sombra projetada, resolução adaptável, efeitos enxutos. */
+  performance?: boolean;
   /** Dois dedos na tela: a partida cancela a mira em andamento. */
   onGesture?: () => void;
   /** Recriação depois de perder o contexto: sem a entrada de transmissão de novo. */
@@ -78,6 +97,8 @@ type Entry = {
   /** Identidade da peça; a aparência só é recalculada quando ela muda. */
   identity: string;
   seen: boolean;
+  /** Tempo de animação guardado (modo desempenho: boneco parado anima a meia taxa). */
+  idleDt: number;
 };
 
 const toWorldX = (x: number) => x - HALF_W;
@@ -215,6 +236,8 @@ class Confetti {
       this.mesh.setColorAt(index, this.color.set("#ffffff"));
     }
     this.hideAll();
+    // Sem papel no ar, nem entra na fila de desenho (240 instâncias de escala zero custavam um draw).
+    this.mesh.visible = false;
   }
 
   private hideAll() {
@@ -246,6 +269,7 @@ class Confetti {
     item.life = 2.6 + Math.random() * 1.4;
     item.delay = 0;
     this.active = true;
+    this.mesh.visible = true;
     return item;
   }
 
@@ -332,6 +356,7 @@ class Confetti {
     if (alive === 0) {
       this.active = false;
       this.hideAll();
+      this.mesh.visible = false;
     }
   }
 
@@ -343,6 +368,22 @@ class Confetti {
 }
 
 // ------------------------------------------------------------- mira
+
+/**
+ * Tracejado de uma linha reta de 2 pontos. O computeLineDistances do three cria
+ * um atributo novo (buffer novo na GPU) a cada chamada; aqui ele é criado uma
+ * vez e só o comprimento muda.
+ */
+function setDashLength(geometry: THREE.BufferGeometry, length: number) {
+  let distances = geometry.getAttribute("lineDistance") as THREE.BufferAttribute | undefined;
+  if (!distances) {
+    distances = new THREE.Float32BufferAttribute([0, 0], 1);
+    geometry.setAttribute("lineDistance", distances);
+  }
+  if (distances.getX(1) === length) return;
+  distances.setX(1, length);
+  distances.needsUpdate = true;
+}
 
 class AimView {
   readonly group = new THREE.Group();
@@ -363,6 +404,7 @@ class AimView {
   private readonly pathMaterial: THREE.LineDashedMaterial;
   private readonly pathGeometry: THREE.BufferGeometry;
   private lastArc = -1;
+  private readonly oriented: THREE.Mesh[];
 
   constructor() {
     const flat = (geometry: THREE.BufferGeometry, material: THREE.Material, y: number) => {
@@ -409,6 +451,7 @@ class AimView {
 
     this.group.add(this.lane, this.shaft, this.head, this.stopRing, this.powerTrack, this.powerArc, this.band, this.path);
     this.group.visible = false;
+    this.oriented = [this.shaft, this.head, this.lane];
   }
 
   update(disc: BotaoBody | null, aim: BotaoRenderView["aim"]) {
@@ -437,7 +480,7 @@ class AimView {
 
     const reach = 40 + aim.ratio * 150;
     const start = disc.radius + 3;
-    for (const piece of [this.shaft, this.head, this.lane]) {
+    for (const piece of this.oriented) {
       piece.position.x = x;
       piece.position.z = z;
       // Plano deitado: girar em Z local equivale a girar no chão.
@@ -462,7 +505,7 @@ class AimView {
       pathPositions.setXYZ(0, x, 0.7, z);
       pathPositions.setXYZ(1, x + nx * travel, 0.7, z + ny * travel);
       pathPositions.needsUpdate = true;
-      this.path.computeLineDistances();
+      setDashLength(this.pathGeometry, travel);
     }
 
     this.powerTrack.position.set(x, 0.55, z);
@@ -479,7 +522,7 @@ class AimView {
     bandPositions.setXYZ(0, x, PICK_HEIGHT, z);
     bandPositions.setXYZ(1, toWorldX(aim.dragX), PICK_HEIGHT, toWorldZ(aim.dragY));
     bandPositions.needsUpdate = true;
-    this.band.computeLineDistances();
+    setDashLength(this.bandGeometry, Math.hypot(toWorldX(aim.dragX) - x, toWorldZ(aim.dragY) - z));
   }
 
   dispose() {
@@ -529,11 +572,10 @@ class Trail {
    */
   update(points: Array<{ x: number; y: number }>, radius: number, eye: THREE.Vector3, tint: THREE.Color, fast: boolean) {
     const count = Math.min(points.length, this.max);
+    // Sem rastro (quase a partida inteira), fora da fila de desenho e sem upload.
+    this.mesh.visible = count >= 2;
+    if (count < 2) return;
     this.colors.fill(0);
-    if (count < 2) {
-      this.geometry.setDrawRange(0, 0);
-      return;
-    }
     const start = points.length - count;
     for (let index = 0; index < count; index += 1) {
       const point = points[start + index];
@@ -690,6 +732,10 @@ export class Botao3DView {
   private alwaysMeasure = false;
   private readonly sunOffset = new THREE.Vector3(-170, 430, 210);
   private readonly shadowCenter = new THREE.Vector3();
+  /** Onde estava a caixa da sombra no último mapa desenhado. */
+  private readonly shadowDrawn = new THREE.Vector3(Infinity, 0, Infinity);
+  private shadowDrawnExtent = 0;
+  private shadowParity = false;
   private readonly markerWorld = new THREE.Vector3();
   private readonly cameraRight = new THREE.Vector3();
   private sparkleClock = 0;
@@ -697,21 +743,47 @@ export class Botao3DView {
   private readonly reactions = new Map<string, { action: FigureAction; until: number }>();
   private readonly lastVelocity = new Map<string, { vx: number; vz: number }>();
   private readonly trotters: Entry[] = [];
+  /** Modo desempenho 3D (fixo por visão: a partida refaz a visão para trocar). */
+  private readonly lite: boolean;
+  private disposed = false;
+  /** Tela de toque (celular/tablet): orçamento de pixels menor e MSAA mantido no modo desempenho. */
+  private readonly coarse: boolean;
+  /** Teto de pixels pelo tamanho do canvas; no modo desempenho a resolução anda abaixo dele. */
+  private maxPixelRatio: number;
+  private pixelRatio: number;
+  private frameAverage = 1 / 60;
+  /** CPU gasta no render (média): separa "aparelho lento" de "tela travada em 30 Hz". */
+  private renderCost = 0;
+  private resolutionClock = 0;
+  /** Ritmo antes da última descida: se baixar a resolução não ajudou, o gargalo é a CPU. */
+  private averageBeforeDrop: number | null = null;
+  private resolutionMisses = 0;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly setup: BotaoMatchSetup,
     private options: Botao3DOptions,
   ) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    const lite = options.performance === true;
+    this.lite = lite;
+    this.coarse = window.matchMedia("(pointer: coarse)").matches || Math.min(window.innerWidth, window.innerHeight) < 600;
+    // Modo desempenho: sem o passe de sombra e com orçamento de pixels. No
+    // celular o MSAA resolve dentro do tile da GPU (quase de graça) e fica; no
+    // desktop ele custa banda de memória e sai (o contexto já nasce assim).
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !lite || this.coarse, powerPreference: "high-performance" });
+    this.maxPixelRatio = Math.min(window.devicePixelRatio || 1, lite ? 1.5 : 2);
+    this.pixelRatio = this.maxPixelRatio;
+    this.renderer.setPixelRatio(this.pixelRatio);
+    // Conferir cada shader compilado custa uma ida e volta síncrona à GPU; só em desenvolvimento.
+    this.renderer.debug.checkShaderErrors = process.env.NODE_ENV !== "production";
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
     const small = Math.min(window.innerWidth, window.innerHeight) < 600;
-    this.renderer.shadowMap.enabled = true;
-    // No celular o filtro simples é bem mais barato e, com a câmera alta, quase igual.
-    this.renderer.shadowMap.type = small ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.enabled = !lite;
+    // PCF direto: o r186 tirou o PCFSoft e trocava por PCF no primeiro quadro de
+    // sombra, mudando a chave de todo shader (o compileAsync compilava à toa).
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     this.scene.background = new THREE.Color("#0a1219");
     this.scene.fog = new THREE.Fog("#0a1219", 900, 2400);
@@ -720,7 +792,9 @@ export class Botao3DView {
     this.scene.add(this.hemisphere);
     this.sun = new THREE.DirectionalLight("#fff3df", SUN_INTENSITY);
     this.sun.position.set(-170, 430, 210);
-    this.sun.castShadow = true;
+    this.sun.castShadow = !lite;
+    // O mapa de sombra é refeito sob demanda (ver render): parado, não refaz.
+    this.sun.shadow.autoUpdate = false;
     this.sun.shadow.mapSize.set(small ? 1024 : 2048, small ? 1024 : 2048);
     const shadowCamera = this.sun.shadow.camera;
     shadowCamera.left = -230;
@@ -736,18 +810,19 @@ export class Botao3DView {
     fill.position.set(220, 260, -260);
     this.scene.add(fill);
 
-    this.stadium = new Stadium(setup, this.renderer.capabilities.getMaxAnisotropy(), { reducedMotion: options.reducedMotion });
+    this.stadium = new Stadium(setup, this.renderer.capabilities.getMaxAnisotropy(), { reducedMotion: options.reducedMotion, performance: lite });
     this.scene.add(this.stadium.group);
     // Placas de LED e flashes sobem para a GPU agora, não no quadro do gol.
     this.stadium.prepare(this.renderer);
-    this.ball = new BallView(FIELD.ballRadius, { reducedMotion: options.reducedMotion });
+    this.ball = new BallView(FIELD.ballRadius, { reducedMotion: options.reducedMotion, performance: lite });
     this.scene.add(this.ball.root, this.aim.group, this.trail.mesh);
-    this.confetti = new Confetti(options.reducedMotion ? 80 : 240);
+    this.confetti = new Confetti(options.reducedMotion ? 80 : lite ? 110 : 240);
     this.scene.add(this.confetti.mesh);
     this.effects = new Effects({
       surface: fieldThemeForMatch(setup) === "futsal-blue" ? "futsal" : "grass",
       reducedMotion: options.reducedMotion,
       lowPower: small,
+      performance: lite,
     });
     this.scene.add(this.effects.group);
     this.markerTexture = labelTexture("VC", "#10271d", "#ffc72c");
@@ -1316,6 +1391,7 @@ export class Botao3DView {
       keeper,
       keeperColor: keeper && side ? this.keeperColor(side) : undefined,
       captain: body.isUserPlayer && !this.options.hideUserMarker,
+      performance: this.lite,
       seed: hashString(`${id}|${body.number}`),
     });
     let plate: THREE.Mesh | null = null;
@@ -1375,6 +1451,7 @@ export class Botao3DView {
       sepZ: 0,
       identity: bodyIdentity(body),
       seen: true,
+      idleDt: 0,
     };
   }
 
@@ -1446,12 +1523,26 @@ export class Botao3DView {
    * `dt` é o tempo do jogo (0 quando pausado); `cameraDt` é o tempo real, para a
    * câmera continuar viva na pausa (modo foto) e fluida na câmera lenta.
    * `paused` vem da partida: um quadro com dt zero não liga o modo foto sozinho.
+   * `throttled`: a partida desenha devagar de propósito (mesa coberta).
    */
-  render(state: BotaoMatchState, view: BotaoRenderView, dt: number, cameraDt = dt, paused = dt === 0 && cameraDt > 0) {
-    if (this.contextLost) return;
+  render(state: BotaoMatchState, view: BotaoRenderView, dt: number, cameraDt = dt, paused = dt === 0 && cameraDt > 0, throttled = false) {
+    if (this.contextLost || this.disposed) return;
+    const started = performance.now();
     const step = Math.min(dt, 0.05);
     const cameraStep = Math.min(cameraDt, 0.05);
     if (this.alwaysMeasure) this.sizeDirty = true;
+    // Mesa coberta (intervalo, trocas): a partida desenha devagar de propósito; não é peso.
+    if (this.lite && !paused && !throttled) this.adaptResolution(cameraDt);
+    else if (throttled) {
+      // Uma descida ainda sem avaliação não pode ficar para sempre: volta o degrau.
+      if (this.averageBeforeDrop !== null) {
+        this.pixelRatio = Math.min(this.maxPixelRatio, this.pixelRatio + 0.1);
+        this.renderer.setPixelRatio(this.pixelRatio);
+      }
+      this.resolutionClock = 0;
+      this.averageBeforeDrop = null;
+      this.frameAverage = 1 / 60;
+    }
     this.updatePhotoMode(paused, cameraStep);
     // Câmera lenta do gol: só o desenho desacelera (o motor já está parado).
     let scale = 1;
@@ -1516,6 +1607,7 @@ export class Botao3DView {
     this.trotters.length = 0;
 
     const benchSlots: Record<BotaoSide, number> = { user: 0, cpu: 0 };
+    let anyChasing = false;
     const penaltyGoalTop = penalties ? penalties.turn === "user" : true;
 
     for (const body of state.bodies) {
@@ -1614,6 +1706,7 @@ export class Botao3DView {
         entry.x = targetX;
         entry.z = targetZ;
       }
+      if (entry.chasing) anyChasing = true;
       const flexible = !directive && !physicsMoving;
       if (flexible) this.trotters.push(entry);
       else {
@@ -1667,7 +1760,15 @@ export class Botao3DView {
           entry.figure.triggerKick(Math.min(1, closing / 520), "strike");
         }
       }
-      entry.figure.update(sceneDt, intent);
+      // Pausa (modo foto): a pose está congelada, recalcular daria o mesmo resultado.
+      // Modo desempenho: boneco parado respirando anima a meia taxa (o passo dobra).
+      const still = this.lite && !directive && !physicsMoving && !entry.chasing && (intent.state === "idle" || intent.state === "ready") && !intent.action;
+      if (still && !wasHidden && entry.idleDt === 0 && sceneDt > 0) {
+        entry.idleDt = sceneDt;
+      } else if (!paused || wasHidden) {
+        entry.figure.update(sceneDt + entry.idleDt, intent);
+        entry.idleDt = 0;
+      }
       if (directive?.sliding) {
         this.effects.slideTrail(entry.x, entry.z, Math.sin(directive.intent.heading), Math.cos(directive.intent.heading), sceneDt);
       }
@@ -1810,7 +1911,36 @@ export class Botao3DView {
     this.confetti.update(sceneDt);
     this.updateCamera(cameraStep);
     this.effects.update(sceneDt, this.camera);
+    this.scheduleShadow(state, ball, sceneDt, anyChasing);
     this.renderer.render(this.scene, this.camera);
+    this.renderCost += ((performance.now() - started) / 1000 - this.renderCost) * 0.06;
+  }
+
+  /**
+   * O mapa de sombra (um passe com todos os bonecos, traves e bola) só é refeito
+   * quando algo mudou: a caixa andou, ou a cena se mexeu. Na mira, com a bola
+   * parada e ninguém trotando, os bonecos só respiram e meia taxa basta. Na
+   * pausa (cena congelada) a sombra continua valendo enquanto a caixa não anda.
+   */
+  private scheduleShadow(state: BotaoMatchState, ball: BotaoBody | null, sceneDt: number, anyChasing: boolean) {
+    if (this.lite) return;
+    const shadowCamera = this.sun.shadow.camera;
+    // Rede estufando ou trave tremendo também mexem na sombra.
+    const boxMoved = this.stadium.shadowsChanged()
+      || Math.abs(this.shadowCenter.x - this.shadowDrawn.x) > 0.5
+      || Math.abs(this.shadowCenter.z - this.shadowDrawn.z) > 0.5
+      || Math.abs(shadowCamera.top - this.shadowDrawnExtent) > 0.5;
+    const calm = (state.phase === "aim" || state.phase === "kickoff")
+      && !this.choreo.active
+      && !anyChasing
+      && (!ball || (ball.vx === 0 && ball.vy === 0));
+    this.shadowParity = !this.shadowParity;
+    const update = boxMoved || (sceneDt > 0 && (!calm || this.shadowParity));
+    this.sun.shadow.needsUpdate = update;
+    if (update) {
+      this.shadowDrawn.copy(this.shadowCenter);
+      this.shadowDrawnExtent = shadowCamera.top;
+    }
   }
 
   /**
@@ -1923,22 +2053,59 @@ export class Botao3DView {
     if (this.prewarm.length > 0) return;
     for (const side of ["user", "cpu"] as const) {
       if (this.keepers[side]) continue;
-      const placeholder = {
-        id: "keeper",
-        kind: "keeper",
-        side,
-        x: FIELD.width / 2,
-        y: side === "user" ? FIELD.height : 0,
-        vx: 0,
-        vy: 0,
-        number: 1,
-        isUserPlayer: false,
-      } as BotaoBody;
-      const keeper = this.createEntry(`keeper-${side}`, placeholder, true);
-      keeper.figure.root.visible = false;
-      this.keepers[side] = keeper;
+      this.stageKeeper(side);
       return;
     }
+  }
+
+  /** Programas de shader já compilados (a vigia de quadros ignora o quadro que compila um novo). */
+  get compiledPrograms() {
+    return this.renderer.info.programs?.length ?? 0;
+  }
+
+  /** Goleiro do pênalti montado escondido, antes de precisar dele. */
+  private stageKeeper(side: BotaoSide) {
+    const placeholder = {
+      id: "keeper",
+      kind: "keeper",
+      side,
+      x: FIELD.width / 2,
+      y: side === "user" ? FIELD.height : 0,
+      vx: 0,
+      vy: 0,
+      number: 1,
+      isUserPlayer: false,
+    } as BotaoBody;
+    const keeper = this.createEntry(`keeper-${side}`, placeholder, true);
+    keeper.figure.root.visible = false;
+    this.keepers[side] = keeper;
+  }
+
+  /**
+   * Antes de mostrar a cena: monta bonecos e goleiros, sobe as texturas e
+   * compila todos os shaders (mira, efeitos e goleiros escondidos inclusive),
+   * em paralelo quando o navegador deixa. Sem isso o primeiro quadro, a
+   * primeira mira e o primeiro gol travavam compilando — e a vigia de quadros
+   * tomava esse engasgo por lentidão. Um quadro descartável compila a sombra.
+   */
+  async prepare(state: BotaoMatchState) {
+    for (const body of state.bodies) if (body.kind === "disc") this.entryFor(body);
+    for (const side of ["user", "cpu"] as const) if (!this.keepers[side]) this.stageKeeper(side);
+    for (const texture of this.prewarm.splice(0)) this.renderer.initTexture(texture);
+    // Mira e confete nascem escondidos; o compile do three já percorre os invisíveis.
+    try {
+      await this.renderer.compileAsync(this.scene, this.camera);
+    } catch {
+      // Sem compilação paralela, compila no primeiro quadro como antes.
+    }
+    // A partida pode ter saído (ou o contexto caído) durante a compilação.
+    if (this.contextLost || this.disposed) return;
+    this.resize();
+    this.updateCamera(0);
+    this.sun.shadow.needsUpdate = true;
+    // Pools de efeito ficam visíveis só neste quadro descartável (sobe atlas e buffers).
+    this.effects.prepare(this.renderer);
+    this.renderer.render(this.scene, this.camera);
   }
 
   /**
@@ -2308,6 +2475,43 @@ export class Botao3DView {
     return idleIntent({ state: "aim", faceYaw, aimRatio: aim.valid ? aim.ratio : aim.ratio * 0.5, look: null });
   }
 
+  /**
+   * Modo desempenho: a resolução acompanha o aparelho. Quadro pesado (abaixo de
+   * ~48 por segundo) desce um degrau; com folga por alguns segundos, sobe. Se
+   * descer não melhorou nada, o gargalo é a CPU: volta o degrau e para de
+   * descer por um tempo (imagem borrada sem ganho não serve). Trocar o tamanho
+   * do buffer custa, então no máximo uma troca a cada 1,5 s.
+   */
+  private adaptResolution(frameDt: number) {
+    if (frameDt <= 0 || frameDt > 0.25) return;
+    this.frameAverage += (frameDt - this.frameAverage) * 0.06;
+    this.resolutionClock += frameDt;
+    if (this.resolutionClock < 1.5) return;
+    // Tela presa em 30 Hz (economia de energia) com o render folgado: não é peso.
+    const powerSaver = Math.abs(this.frameAverage - 1 / 30) < 0.0015 && this.renderCost < 0.006;
+    let next = this.pixelRatio;
+    if (this.averageBeforeDrop !== null) {
+      const helped = this.frameAverage < this.averageBeforeDrop * 0.95;
+      this.averageBeforeDrop = null;
+      if (!helped) {
+        // Duas descidas sem ganho: o gargalo não é pixel. Para de descer nesta partida.
+        this.resolutionMisses += 1;
+        next = Math.min(this.maxPixelRatio, this.pixelRatio + 0.1);
+      }
+    } else if (this.frameAverage > 1 / 48 && !powerSaver && this.resolutionMisses < 2 && this.pixelRatio > MIN_PIXEL_RATIO + 0.001) {
+      next = Math.max(MIN_PIXEL_RATIO, this.pixelRatio - 0.1);
+      this.averageBeforeDrop = this.frameAverage;
+    } else if (this.frameAverage < 1 / 57 && this.resolutionClock > 4 && this.pixelRatio < this.maxPixelRatio - 0.001) {
+      next = Math.min(this.maxPixelRatio, this.pixelRatio + 0.05);
+    } else {
+      return;
+    }
+    this.resolutionClock = 0;
+    if (Math.abs(next - this.pixelRatio) < 0.001) return;
+    this.pixelRatio = next;
+    this.renderer.setPixelRatio(next);
+  }
+
   private resize() {
     // Ler clientWidth logo depois do React mexer no HUD força layout: só lê quando o tamanho mudou.
     if (!this.sizeDirty) return;
@@ -2318,6 +2522,16 @@ export class Botao3DView {
     if (width === this.width && height === this.height) return;
     this.width = width;
     this.height = height;
+    // Teto de pixels pelo tamanho. O modo desempenho tem orçamento próprio
+    // (~0,45 MP no celular, ~1 MP no desktop) e a resolução adaptável anda abaixo dele.
+    const dpr = window.devicePixelRatio || 1;
+    const budget = this.lite ? (this.coarse ? 4.5e5 : 1e6) : 8.3e6;
+    const capped = Math.min(dpr, this.lite ? 1.5 : 2, Math.sqrt(budget / (width * height)));
+    // Fora do modo desempenho o teto só morde em canvas gigante (acima de ~4K
+    // físico) e nunca desce de min(dpr, 1,5): a nitidez fica como sempre foi.
+    this.maxPixelRatio = this.lite ? Math.max(MIN_PIXEL_RATIO, capped) : Math.max(Math.min(dpr, 1.5), capped);
+    this.pixelRatio = this.lite ? Math.min(this.pixelRatio, this.maxPixelRatio) : this.maxPixelRatio;
+    this.renderer.setPixelRatio(this.pixelRatio);
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
     // Celular em pé: um pouco mais de abertura para caber o campo sem afastar demais.
@@ -2327,6 +2541,7 @@ export class Botao3DView {
   }
 
   dispose() {
+    this.disposed = true;
     for (const release of this.cleanup) release();
     for (const entry of this.entries.values()) this.disposeEntry(entry);
     for (const keeper of Object.values(this.keepers)) if (keeper) this.disposeEntry(keeper);

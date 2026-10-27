@@ -21,7 +21,12 @@ import { ClubBadge } from "../career/CareerPrimitives";
 import styles from "./ShellUtilityScreens.module.css";
 import { FUTBOBO_VERSION } from "../../version";
 import FutboboIcon from "../FutboboIcon";
-import { rememberBotao3dPreference } from "../../botao/view-mode";
+import {
+  BOTAO3D_PERFORMANCE_EVENT,
+  rememberBotao3dPerformance,
+  rememberBotao3dPreference,
+  resolveBotao3dPerformance,
+} from "../../botao/view-mode";
 
 const DEFAULT_SETTINGS: AppSettings = {
   customCharacters: [],
@@ -33,6 +38,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   botaoPenaltyRounds: 5,
   characterButtonsEnabled: true,
   botao3d: false,
+  botao3dPerformance: false,
+  botao3dPerformanceUserOff: false,
 };
 
 function sanitizeSettings(value: Partial<AppSettings>): AppSettings {
@@ -70,6 +77,9 @@ function sanitizeSettings(value: Partial<AppSettings>): AppSettings {
     botaoPenaltyRounds: value.botaoPenaltyRounds === 3 ? 3 : 5,
     characterButtonsEnabled: value.characterButtonsEnabled !== false,
     botao3d: value.botao3d === true,
+    // O que uma partida fora do app ligou sozinha (só no espelho) também vale.
+    botao3dPerformance: resolveBotao3dPerformance(value).enabled,
+    botao3dPerformanceUserOff: resolveBotao3dPerformance(value).userOff,
   };
 }
 
@@ -149,8 +159,26 @@ export function SettingsScreen() {
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     rememberBotao3dPreference(settings.botao3d === true);
+    rememberBotao3dPerformance({
+      enabled: settings.botao3dPerformance === true,
+      userOff: settings.botao3dPerformanceUserOff === true,
+    });
     applyCustomClubDefinitions(settings.customClubs ?? []);
   }, [settings]);
+
+  // A partida pode ligar o modo desempenho sozinha enquanto esta tela existe.
+  useEffect(() => {
+    const onAutoPerformance = () =>
+      setSettings((current) =>
+        current.botao3dPerformanceUserOff === true ||
+        current.botao3dPerformance === true
+          ? current
+          : { ...current, botao3dPerformance: true },
+      );
+    window.addEventListener(BOTAO3D_PERFORMANCE_EVENT, onAutoPerformance);
+    return () =>
+      window.removeEventListener(BOTAO3D_PERFORMANCE_EVENT, onAutoPerformance);
+  }, []);
 
   const replaceableClubs = useMemo(
     () =>
@@ -342,6 +370,44 @@ export function SettingsScreen() {
                   ...current,
                   botao3d: current.botao3d !== true,
                 }))
+              }
+            >
+              <span />
+            </button>
+          </SettingRow>
+          <SettingRow
+            title="Modo desempenho 3D"
+            description={
+              settings.botao3d === true
+                ? "3D mais leve para PC ou celular fraco: sem torcida nem sombras projetadas, com resolução que se ajusta sozinha. Liga sozinho se a partida engasgar."
+                : "Disponível com o Modo 3D ligado."
+            }
+          >
+            <button
+              type="button"
+              className={styles.toggle}
+              data-active={
+                settings.botao3d === true && settings.botao3dPerformance === true
+              }
+              aria-pressed={
+                settings.botao3d === true && settings.botao3dPerformance === true
+              }
+              aria-label="Modo desempenho 3D"
+              disabled={settings.botao3d !== true}
+              onClick={() =>
+                setSettings((current) =>
+                  current.botao3dPerformance === true
+                    ? {
+                        ...current,
+                        botao3dPerformance: false,
+                        botao3dPerformanceUserOff: true,
+                      }
+                    : {
+                        ...current,
+                        botao3dPerformance: true,
+                        botao3dPerformanceUserOff: false,
+                      },
+                )
               }
             >
               <span />

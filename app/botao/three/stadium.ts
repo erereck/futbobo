@@ -6,8 +6,10 @@
 // gol da CPU (y = 0) fica em -Z e o seu (y = altura) em +Z. O usuário ataca -Z
 // e a CPU ataca +Z.
 //
-// Orçamento: ~16 draw calls no total. Nada liga/desliga `visible` nem troca de
-// tipo de material durante o jogo, então nenhum shader recompila no gol.
+// Orçamento: 13 draw calls no passe principal e 6 no da sombra (modo desempenho:
+// 10 e nenhum). Nada liga/desliga `visible` nem troca de tipo de material
+// durante o jogo, então nenhum shader recompila no gol. Tudo aqui é parado:
+// as matrizes são calculadas uma vez (só a trave que treme recalcula a dela).
 
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -33,6 +35,9 @@ const LED_HEIGHT = 64;
 // Setor visitante: miolo da arquibancada atrás do gol que o visitante ataca.
 const AWAY_HALF_WIDTH = 110;
 const SECTOR_GAP = 10;
+// Modo desempenho: escadas entre os blocos de cadeiras pintadas.
+const AISLE_SPACING = 64;
+const AISLE_WIDTH = 3;
 // A ola dá uma volta no estádio nesse tempo (~260 u/s na arquibancada).
 const WAVE_LAP = 7;
 // Período comum dos balanços ociosos (1.6 e 0.8 rad/s): o relógio da GPU dá a
@@ -40,10 +45,38 @@ const WAVE_LAP = 7;
 const IDLE_PERIOD = (Math.PI * 2 * 20) / 0.8;
 const FLASH_AMBIENT = 0.02;
 const SIDES = ["user", "cpu"] as const;
+const STAND_ROWS = 6;
+const STEP_COLOR = "#252c35";
+const FLOOR_COLOR = "#0b1016";
+const APRON_HALF_W = HALF_W + 42;
+const APRON_HALF_H = HALF_H + 58;
+const FLOOR_HALF = 2000;
+const LAMP_EMISSIVE = "#fff7e0";
+const LAMP_GLOW = 2.4;
+/**
+ * Placa no modo desempenho (MeshBasic): o brilho vira cor acima de 1, que passa
+ * pelo ACES como o emissivo. Ganho que casa com emissivo + difusa da placa PBR.
+ */
+const LED_BASIC_GAIN = 1.3;
+
+/** Acabamento PBR por vértice: [rugosidade, metal, brilho próprio 0..1]. */
+type Finish = readonly [number, number, number];
+const RAIL_FINISH: Finish = [0.55, 0.2, 0];
+const POLE_FINISH: Finish = [0.5, 0, 0];
+const FRAME_FINISH: Finish = [0.35, 0.1, 0];
+const TOWER_FINISH: Finish = [0.6, 0.4, 0];
+const LAMP_FINISH: Finish = [1, 0, 1];
 
 export type StadiumOptions = {
   /** Sem piscar nem tremer: placas trocam de texto sem estrobo, sem flashes, torcida pula menos. */
   reducedMotion?: boolean;
+  /**
+   * Modo desempenho 3D: sem torcida (degraus pintados nas cores dos times),
+   * flashes, fotógrafos e torres; gramado sem PBR e com textura em meia
+   * resolução, placas sem PBR, tabelas e traves em Lambert e nada de sombra.
+   * Fixo por estádio: trocar o modo recria a visão.
+   */
+  performance?: boolean;
 };
 
 type BoardMode = "base" | "goal" | "fim" | "post";
@@ -79,29 +112,34 @@ function attackSign(side: BotaoSide) {
  * Junta peças estáticas numa geometria só. Estádio parado não precisa de
  * um draw call por degrau, trave ou poste — no celular isso faz diferença.
  * Com `color`, grava cor por vértice: peças de cores diferentes no mesmo draw.
+ * Com `finishes`, grava também o acabamento (`finishMaterial`); sem isso, um
+ * `finish` só escurece a cor pelo metal (a parte difusa do PBR, para Lambert).
+ * UV só fica com `keepUv` (quem tem textura): o resto não paga a memória.
  */
 class Baker {
   private readonly parts: THREE.BufferGeometry[] = [];
   private readonly helper = new THREE.Object3D();
   private readonly tint = new THREE.Color();
 
-  add(geometry: THREE.BufferGeometry, position: THREE.Vector3, rotation?: THREE.Euler | THREE.Quaternion, color?: THREE.ColorRepresentation) {
+  constructor(private readonly options: { finishes?: boolean; keepUv?: boolean } = {}) {}
+
+  add(geometry: THREE.BufferGeometry, position: THREE.Vector3, rotation?: THREE.Euler | THREE.Quaternion, color?: THREE.ColorRepresentation, finish?: Finish) {
     this.helper.position.copy(position);
     if (rotation instanceof THREE.Quaternion) this.helper.quaternion.copy(rotation);
     else if (rotation) this.helper.rotation.copy(rotation);
     else this.helper.rotation.set(0, 0, 0);
     this.helper.updateMatrix();
     const part = geometry.clone().applyMatrix4(this.helper.matrix);
+    if (!this.options.keepUv) part.deleteAttribute("uv");
+    const count = part.getAttribute("position").count;
     if (color !== undefined) {
       this.tint.set(color);
-      const count = part.getAttribute("position").count;
-      const colors = new Float32Array(count * 3);
-      for (let index = 0; index < count; index += 1) {
-        colors[index * 3] = this.tint.r;
-        colors[index * 3 + 1] = this.tint.g;
-        colors[index * 3 + 2] = this.tint.b;
-      }
-      part.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      if (finish && !this.options.finishes) this.tint.multiplyScalar(1 - finish[1]);
+      part.setAttribute("color", new THREE.BufferAttribute(repeated(count, this.tint.r, this.tint.g, this.tint.b), 3));
+    }
+    if (this.options.finishes) {
+      const [roughness, metalness, glow] = finish ?? [1, 0, 0];
+      part.setAttribute("aFinish", new THREE.BufferAttribute(repeated(count, roughness, metalness, glow), 3));
     }
     this.parts.push(part);
   }
@@ -113,17 +151,75 @@ class Baker {
     return merged;
   }
 
-  build(material: THREE.Material, receiveShadow = true) {
+  /** Sem sombra recebida por padrão: só chão, gramado, tabelas e traves pedem. */
+  build(material: THREE.Material, receiveShadow = false) {
     const result = new THREE.Mesh(this.geometry(), material);
     result.receiveShadow = receiveShadow;
     return result;
   }
 }
 
+function repeated(count: number, a: number, b: number, c: number) {
+  const values = new Float32Array(count * 3);
+  for (let index = 0; index < count; index += 1) {
+    values[index * 3] = a;
+    values[index * 3 + 1] = b;
+    values[index * 3 + 2] = c;
+  }
+  return values;
+}
+
+/** Peça parada: matriz montada uma vez e fora do `updateMatrixWorld` de cada quadro. */
+function freeze(object: THREE.Object3D) {
+  object.traverse((child) => {
+    child.updateMatrix();
+    child.matrixAutoUpdate = false;
+  });
+}
+
+/**
+ * Moldura no chão entre o retângulo `inner` e o `outer` (meias medidas), sem
+ * nada no miolo: o que fica embaixo do gramado ou do entorno nunca é pintado.
+ * As faixas dos lados entram `overlap` nas de cima e de baixo, sem fresta.
+ */
+function addFrame(baker: Baker, innerX: number, innerZ: number, outerX: number, outerZ: number, y: number, color: string, overlap = 1) {
+  const flat = new THREE.Euler(-Math.PI / 2, 0, 0);
+  const depth = outerZ - innerZ;
+  const band = new THREE.PlaneGeometry(outerX * 2, depth);
+  for (const sign of [-1, 1]) baker.add(band, new THREE.Vector3(0, y, sign * (innerZ + depth / 2)), flat, color);
+  const width = outerX - innerX;
+  const side = new THREE.PlaneGeometry(width, (innerZ + overlap) * 2);
+  for (const sign of [-1, 1]) baker.add(side, new THREE.Vector3(sign * (innerX + width / 2), y, 0), flat, color);
+  band.dispose();
+  side.dispose();
+}
+
+/**
+ * MeshStandard com rugosidade, metal e brilho próprio vindos do vértice
+ * (atributo `aFinish` do Baker): tabelas, mastros, traves, torres e refletores
+ * dividem um programa e um material. O emissivo do material só acende onde o
+ * brilho é 1 (refletores), então animar a intensidade não mexe no resto.
+ */
+function finishMaterial() {
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, emissive: LAMP_EMISSIVE, emissiveIntensity: LAMP_GLOW });
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute vec3 aFinish;\nvarying vec3 vFinish;")
+      .replace("#include <color_vertex>", "#include <color_vertex>\nvFinish = aFinish;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vFinish;")
+      .replace("#include <roughnessmap_fragment>", "float roughnessFactor = vFinish.x;")
+      .replace("#include <metalnessmap_fragment>", "float metalnessFactor = vFinish.y;")
+      .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance *= vFinish.z;");
+  };
+  material.customProgramCacheKey = () => "futbobo-finish";
+  return material;
+}
+
 // ------------------------------------------------------------ texturas
 
-function fieldTexture(setup: BotaoMatchSetup, futsal: boolean, anisotropy: number) {
-  const scale = 4;
+/** `scale` texels por unidade do campo: 4 normal, 2 no modo desempenho (1/4 da memória). */
+function fieldTexture(setup: BotaoMatchSetup, futsal: boolean, anisotropy: number, scale: number) {
   const canvas = document.createElement("canvas");
   canvas.width = FIELD.width * scale;
   canvas.height = FIELD.height * scale;
@@ -131,18 +227,23 @@ function fieldTexture(setup: BotaoMatchSetup, futsal: boolean, anisotropy: numbe
   ctx.scale(scale, scale);
   drawFieldSurface(ctx, setup);
   if (!futsal) {
-    // Grão de grama: de longe some, de perto tira o aspecto de plástico.
+    // Grão de grama: de longe some, de perto tira o aspecto de plástico. Os
+    // traços vão para dois caminhos (claro e escuro): 2 strokes em vez de 14 mil.
     const random = seeded(setup.seed ^ 0x9e3779b9);
-    ctx.lineWidth = 0.35;
+    const light = new Path2D();
+    const dark = new Path2D();
     for (let index = 0; index < 14000; index += 1) {
       const x = random() * FIELD.width;
       const y = random() * FIELD.height;
-      ctx.strokeStyle = random() < 0.5 ? "rgba(255,255,255,0.045)" : "rgba(0,0,0,0.07)";
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + (random() - 0.5) * 1.4, y - 1 - random() * 1.6);
-      ctx.stroke();
+      const path = random() < 0.5 ? light : dark;
+      path.moveTo(x, y);
+      path.lineTo(x + (random() - 0.5) * 1.4, y - 1 - random() * 1.6);
     }
+    ctx.lineWidth = 0.35;
+    ctx.strokeStyle = "rgba(255,255,255,0.045)";
+    ctx.stroke(light);
+    ctx.strokeStyle = "rgba(0,0,0,0.07)";
+    ctx.stroke(dark);
   } else {
     const sheen = ctx.createRadialGradient(FIELD.width / 2, FIELD.height / 2, 10, FIELD.width / 2, FIELD.height / 2, FIELD.height * 0.7);
     sheen.addColorStop(0, "rgba(255,255,255,0.08)");
@@ -159,9 +260,10 @@ function fieldTexture(setup: BotaoMatchSetup, futsal: boolean, anisotropy: numbe
 /**
  * Faixas de corte que clareiam de um lado e escurecem do outro conforme de onde
  * a câmera olha, como a grama deitada na TV. Máscara analítica igual ao desenho
- * de `render.ts`, em coordenadas do campo; no máximo ±5% do brilho.
+ * de `render.ts`, em coordenadas do campo; no máximo ±5% do brilho. Serve para
+ * Standard e Lambert (os dois têm `map_fragment` e `diffuseColor`).
  */
-function addMowingSheen(material: THREE.MeshStandardMaterial, theme: BotaoFieldTheme) {
+function addMowingSheen(material: THREE.Material, theme: BotaoFieldTheme) {
   if (theme === "futsal-blue") return;
   const mode = theme === "classic" ? 0 : theme === "vertical" ? 1 : theme === "checker" ? 2 : 3;
   const mask = [
@@ -394,8 +496,20 @@ class GoalView {
   private readonly backZ: number;
   private moving = false;
   private wobbleT = -1;
+  /** Rede ou trave mexeram no último update (inclusive o quadro em que voltam ao repouso). */
+  changed = false;
 
-  constructor(readonly top: boolean, frameMaterial: THREE.Material, netMaterial: THREE.Material, accent: string, private readonly calm: boolean) {
+  constructor(
+    readonly top: boolean,
+    frameMaterial: THREE.Material,
+    netMaterial: THREE.Material,
+    accent: string,
+    private readonly calm: boolean,
+    /** Sombra (null = modo desempenho, sem sombra). A rede usa a do three por causa do alphaTest. */
+    depthMaterial: THREE.Material | null,
+    /** Acabamento por vértice para o `finishMaterial` (fora do modo desempenho). */
+    finishes: boolean,
+  ) {
     const dir = top ? -1 : 1;
     const lineZ = dir * HALF_H;
     const postZ = dir * (HALF_H + POST_OFFSET);
@@ -413,22 +527,22 @@ class GoalView {
 
     // Traves, travessão, faixas e suportes numa geometria com cor por vértice (1 draw call).
     const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
-    const frame = new Baker();
+    const frame = new Baker({ finishes });
     const white = "#f5f7f4";
     const support = "#d5d9d6";
     const post = new THREE.CylinderGeometry(POST_RADIUS, POST_RADIUS, GOAL_HEIGHT, 18);
-    for (const x of [xL, xR]) frame.add(post, v(x, GOAL_HEIGHT / 2, postZ), undefined, white);
+    for (const x of [xL, xR]) frame.add(post, v(x, GOAL_HEIGHT / 2, postZ), undefined, white, FRAME_FINISH);
     const bar = new THREE.CylinderGeometry(CROSSBAR_RADIUS, CROSSBAR_RADIUS, xR - xL, 16);
-    frame.add(bar, v(0, barY, postZ), new THREE.Euler(0, 0, Math.PI / 2), white);
+    frame.add(bar, v(0, barY, postZ), new THREE.Euler(0, 0, Math.PI / 2), white, FRAME_FINISH);
     // Faixa no pé da trave com a cor do dono do gol.
     const band = new THREE.CylinderGeometry(POST_RADIUS + 0.14, POST_RADIUS + 0.14, 3, 18);
-    for (const x of [xL, xR]) frame.add(band, v(x, 1.5, postZ), undefined, accent);
+    for (const x of [xL, xR]) frame.add(band, v(x, 1.5, postZ), undefined, accent, FRAME_FINISH);
     const up = new THREE.Vector3(0, 1, 0);
     const rotation = new THREE.Quaternion();
     const stanchion = (from: THREE.Vector3, to: THREE.Vector3, radius = 0.6) => {
       const piece = new THREE.CylinderGeometry(radius, radius, from.distanceTo(to), 8);
       rotation.setFromUnitVectors(up, to.clone().sub(from).normalize());
-      frame.add(piece, from.clone().add(to).multiplyScalar(0.5), rotation, support);
+      frame.add(piece, from.clone().add(to).multiplyScalar(0.5), rotation, support, FRAME_FINISH);
       piece.dispose();
     };
     for (const x of [xL, xR]) {
@@ -440,8 +554,9 @@ class GoalView {
     post.dispose();
     bar.dispose();
     band.dispose();
-    const frameMesh = frame.build(frameMaterial);
-    frameMesh.castShadow = true;
+    const frameMesh = frame.build(frameMaterial, depthMaterial !== null);
+    frameMesh.castShadow = depthMaterial !== null;
+    if (depthMaterial) frameMesh.customDepthMaterial = depthMaterial;
     this.frameGeometry = frameMesh.geometry;
     this.frame.add(frameMesh);
 
@@ -469,7 +584,7 @@ class GoalView {
     this.push = Float32Array.from(net.push);
     this.give = Float32Array.from(net.give);
     const netMesh = new THREE.Mesh(this.netGeometry, netMaterial);
-    netMesh.castShadow = true;
+    netMesh.castShadow = depthMaterial !== null;
     this.frame.add(netMesh);
   }
 
@@ -508,6 +623,7 @@ class GoalView {
   }
 
   update(dt: number) {
+    this.changed = this.moving || this.wobbleT >= 0;
     if (this.moving) this.updateNet(dt);
     if (this.wobbleT >= 0) {
       this.wobbleT += dt;
@@ -516,6 +632,8 @@ class GoalView {
         this.frame.position.x = 0;
         this.wobbleT = -1;
       }
+      // O estádio todo tem a matriz congelada: só a trave que treme recalcula.
+      this.frame.updateMatrix();
     }
   }
 
@@ -574,6 +692,173 @@ class GoalView {
 // --------------------------------------------------------- arquibancada
 
 type Fan = { x: number; y: number; z: number; yaw: number; side: BotaoSide };
+
+/**
+ * Fileira de degraus: centro (x, z) e eixo ao longo dela; o bloco vai do chão
+ * até `height`, e `under` é a altura da fileira da frente (0 na primeira).
+ */
+type StandRow = { x: number; z: number; alongX: number; alongZ: number; length: number; outX: number; outZ: number; height: number; under: number; row: number; end: boolean };
+
+/**
+ * Fileiras e lugares das quatro arquibancadas. Os torcedores saem do mesmo
+ * gerador de sempre, na mesma ordem: a mesma semente dá a mesma torcida, e
+ * `random` continua a sequência para as cores.
+ */
+class Stands {
+  readonly fans: Fan[] = [];
+  readonly rows: StandRow[] = [];
+  readonly random: () => number;
+  private readonly home: BotaoSide | null;
+  private readonly away: BotaoSide | null;
+
+  constructor(setup: BotaoMatchSetup) {
+    this.random = seeded(setup.seed ^ 0x51ed27);
+    this.home = setup.neutralVenue ? null : setup.userIsHost ? "user" : "cpu";
+    this.away = this.home === null ? null : this.home === "user" ? "cpu" : "user";
+    const sideOffset = HALF_W + 46;
+    const endOffset = HALF_H + 62;
+    this.stand(-sideOffset, 0, 0, 1, FIELD.height + 90, -1, 0, false);
+    this.stand(sideOffset, 0, 0, 1, FIELD.height + 90, 1, 0, false);
+    this.stand(0, -endOffset, 1, 0, FIELD.width + 60, 0, -1, true);
+    this.stand(0, endOffset, 1, 0, FIELD.width + 60, 0, 1, true);
+  }
+
+  /**
+   * Cada torcida atrás do gol que o time dela ATACA: quem marca vê a própria
+   * gente explodir atrás da rede. Campo neutro: metade/metade; com mandante,
+   * só o miolo atrás do gol que o visitante ataca é do visitante.
+   */
+  sideAt(x: number, z: number, end: boolean): BotaoSide | null {
+    const { home, away } = this;
+    if (home === null || away === null) {
+      if (!end && Math.abs(z) < SECTOR_GAP / 2) return null;
+      return z < 0 ? "user" : "cpu";
+    }
+    if (end && Math.sign(z) === attackSign(away)) {
+      if (Math.abs(x) < AWAY_HALF_WIDTH) return away;
+      // Corredor de cadeiras vazias separa as torcidas, como no estádio de verdade.
+      if (Math.abs(x) < AWAY_HALF_WIDTH + SECTOR_GAP) return null;
+    }
+    return home;
+  }
+
+  private stand(originX: number, originZ: number, alongX: number, alongZ: number, length: number, outX: number, outZ: number, end: boolean) {
+    const random = this.random;
+    for (let row = 0; row < STAND_ROWS; row += 1) {
+      const distance = row * 9 + 4.5;
+      const height = 4 + row * 4.6;
+      const under = row === 0 ? 0 : height - 4.6;
+      this.rows.push({ x: originX + outX * distance, z: originZ + outZ * distance, alongX, alongZ, length, outX, outZ, height, under, row, end });
+      const count = Math.floor(length / 7.6);
+      for (let index = 0; index < count; index += 1) {
+        if (random() < 0.07) continue;
+        const along = (index + 0.5) / count - 0.5;
+        const x = originX + alongX * along * length + outX * distance + (random() - 0.5) * 1.6;
+        const z = originZ + alongZ * along * length + outZ * distance + (random() - 0.5) * 1.6;
+        const yaw = Math.atan2(-outX, -outZ) + (random() - 0.5) * 0.5;
+        const side = this.sideAt(x, z, end);
+        if (side) this.fans.push({ x, y: height, z, yaw, side });
+      }
+    }
+  }
+}
+
+/**
+ * Modo desempenho, sem torcida: cada setor da arquibancada ganha a cor do time
+ * (assento na cor, fileiras alternando com um toque da segunda cor, espelho do
+ * degrau escuro), o corredor vazio fica cinza e escadas de concreto dividem os
+ * blocos de cadeiras. Só as faces que aparecem (assento, espelho, fundo da
+ * última fileira e as pontas): 1 draw call, montado direto nos arrays.
+ */
+function paintStands(stands: Stands, setup: BotaoMatchSetup) {
+  const ink = "#0b1016";
+  const palette = (kind: BotaoSide | null | "aisle", row: number) => {
+    if (kind === "aisle") return { seat: "#454c56", riser: "#2a3038" };
+    if (kind === null) return { seat: row % 2 === 0 ? "#2c333d" : "#262c35", riser: "#1a1f26" };
+    const team = kind === "user" ? setup.userTeam : setup.cpuTeam;
+    const seat = row % 2 === 0 ? mixHex(team.primary, ink, 0.12) : mixHex(mixHex(team.primary, team.secondary, 0.22), ink, 0.3);
+    return { seat, riser: mixHex(team.primary, ink, 0.55) };
+  };
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const colors: number[] = [];
+  const indices: number[] = [];
+  const edgeA = new THREE.Vector3();
+  const edgeB = new THREE.Vector3();
+  const quad = (corners: THREE.Vector3[], normal: THREE.Vector3, color: THREE.Color) => {
+    const base = positions.length / 3;
+    for (const corner of corners) {
+      positions.push(corner.x, corner.y, corner.z);
+      normals.push(normal.x, normal.y, normal.z);
+      colors.push(color.r, color.g, color.b);
+    }
+    // Anti-horário visto do lado da normal: o verso é descartado.
+    edgeA.subVectors(corners[1], corners[0]);
+    edgeB.subVectors(corners[2], corners[0]);
+    if (edgeA.cross(edgeB).dot(normal) >= 0) indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    else indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
+  };
+  const up = new THREE.Vector3(0, 1, 0);
+  const seat = new THREE.Color();
+  const riser = new THREE.Color();
+  for (const row of stands.rows) {
+    const half = row.length / 2;
+    const along = new THREE.Vector3(row.alongX, 0, row.alongZ);
+    const out = new THREE.Vector3(row.outX, 0, row.outZ);
+    const toField = out.clone().negate();
+    const last = row.row === STAND_ROWS - 1;
+    // Ponto da fileira: `t` ao longo dela, `o` para fora (±4.5 = frente/fundo), altura `y`.
+    const at = (t: number, o: number, y: number) => new THREE.Vector3(row.x + along.x * t + out.x * o, y, row.z + along.z * t + out.z * o);
+    // Onde a cor pode trocar ao longo da fileira: meio do campo neutro, setor
+    // visitante, corredor vazio e as escadas (iguais em todas as fileiras).
+    const cuts = new Set([-half, half]);
+    const cut = (where: number) => {
+      if (Math.abs(where) < half) cuts.add(where);
+    };
+    for (const edge of [SECTOR_GAP / 2, AWAY_HALF_WIDTH, AWAY_HALF_WIDTH + SECTOR_GAP]) {
+      cut(edge);
+      cut(-edge);
+    }
+    const aisles: number[] = [];
+    for (let where = -Math.floor((half - AISLE_SPACING / 2) / AISLE_SPACING) * AISLE_SPACING; where < half - AISLE_SPACING / 2; where += AISLE_SPACING) {
+      aisles.push(where);
+      cut(where - AISLE_WIDTH / 2);
+      cut(where + AISLE_WIDTH / 2);
+    }
+    const sorted = [...cuts].sort((a, b) => a - b);
+    const runs: Array<{ from: number; to: number; kind: BotaoSide | null | "aisle" }> = [];
+    for (let index = 0; index + 1 < sorted.length; index += 1) {
+      const middle = (sorted[index] + sorted[index + 1]) / 2;
+      const kind = aisles.some((where) => Math.abs(middle - where) < AISLE_WIDTH / 2)
+        ? "aisle"
+        : stands.sideAt(row.x + row.alongX * middle, row.z + row.alongZ * middle, row.end);
+      const previous = runs[runs.length - 1];
+      if (previous && previous.kind === kind) previous.to = sorted[index + 1];
+      else runs.push({ from: sorted[index], to: sorted[index + 1], kind });
+    }
+    const top = row.height;
+    for (const run of runs) {
+      const colors = palette(run.kind, row.row);
+      seat.set(colors.seat);
+      riser.set(colors.riser);
+      quad([at(run.from, -4.5, top), at(run.to, -4.5, top), at(run.to, 4.5, top), at(run.from, 4.5, top)], up, seat);
+      // Espelho: só o pedaço acima da fileira da frente aparece.
+      quad([at(run.from, -4.5, row.under), at(run.to, -4.5, row.under), at(run.to, -4.5, top), at(run.from, -4.5, top)], toField, riser);
+      if (last) quad([at(run.from, 4.5, 0), at(run.to, 4.5, 0), at(run.to, 4.5, top), at(run.from, 4.5, top)], out, riser);
+      // Pontas da arquibancada (as emendas entre trechos ficam por dentro).
+      for (const [end, sign] of [[-half, -1], [half, 1]] as const) {
+        if ((sign < 0 ? run.from : run.to) !== end) continue;
+        quad([at(end, -4.5, 0), at(end, 4.5, 0), at(end, 4.5, top), at(end, -4.5, top)], along.clone().multiplyScalar(sign), riser);
+      }
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(indices);
+  return geometry;
+}
 
 /**
  * Torcedor de bloco: corpo, cabeça e dois braços numa geometria só, com a peça
@@ -637,6 +922,9 @@ uniform vec2 uStand;
 uniform vec2 uOoh;
 uniform vec2 uSad;
 uniform vec2 uWave;
+// Cabeça e inclinação só dependem do lado: (cos, sin) dos dois lados vêm do JS.
+uniform vec4 uHeadCs;
+uniform vec4 uLeanCs;
 // Giros recebem (cos, sin) prontos: normal e posição usam os mesmos ângulos.
 vec3 fanRotX(vec3 p, vec2 cs) {
   return vec3(p.x, p.y * cs.x - p.z * cs.y, p.y * cs.y + p.z * cs.x);
@@ -654,18 +942,27 @@ vec2 fanCs(float a) {
 const CROWD_POSE = /* glsl */ `
 float fanSide = aFan.z;
 float fanCheer = mix(uCheer.x, uCheer.y, fanSide);
-float fanCheerT = mix(uCheerT.x, uCheerT.y, fanSide);
 float fanStand = mix(uStand.x, uStand.y, fanSide);
 float fanOoh = mix(uOoh.x, uOoh.y, fanSide);
 float fanSad = mix(uSad.x, uSad.y, fanSide);
-float fanDw = abs(fract(aFan.w - uWave.x + 0.5) - 0.5);
-float fanWave = uWave.y * exp(-fanDw * fanDw / 0.0012);
-// Primeiros 0.8 s caóticos, depois todo mundo no mesmo pulo (2.2 Hz). Mistura as
-// saídas, não as fases, para a passagem não acelerar ninguém.
-float fanSync = max(uCalm, smoothstep(0.8, 1.4, fanCheerT));
+// Ola e pulo só custam quando estão acontecendo: parados, dariam zero de qualquer
+// jeito (desvio igual para o lado inteiro, os vértices vizinhos seguem juntos).
+float fanWave = 0.0;
+if (uWave.y > 0.0) {
+  float fanDw = abs(fract(aFan.w - uWave.x + 0.5) - 0.5);
+  fanWave = uWave.y * exp(-fanDw * fanDw / 0.0012);
+}
 float fanArmSign = aPart > 2.5 ? 1.0 : -1.0;
-float fanJump = mix(max(0.0, sin(fanCheerT * 9.0 * aFan.y + aFan.x)), max(0.0, sin(fanCheerT * 13.8)), fanSync);
-float fanSwing = mix(sin(fanCheerT * 11.0 * aFan.y + aFan.x + fanArmSign), sin(fanCheerT * 13.8 + 1.4), fanSync);
+float fanJump = 0.0;
+float fanSwing = 0.0;
+if (fanCheer > 0.0) {
+  float fanCheerT = mix(uCheerT.x, uCheerT.y, fanSide);
+  // Primeiros 0.8 s caóticos, depois todo mundo no mesmo pulo (2.2 Hz). Mistura as
+  // saídas, não as fases, para a passagem não acelerar ninguém.
+  float fanSync = max(uCalm, smoothstep(0.8, 1.4, fanCheerT));
+  fanJump = mix(max(0.0, sin(fanCheerT * 9.0 * aFan.y + aFan.x)), max(0.0, sin(fanCheerT * 13.8)), fanSync);
+  fanSwing = mix(sin(fanCheerT * 11.0 * aFan.y + aFan.x + fanArmSign), sin(fanCheerT * 13.8 + 1.4), fanSync);
+}
 float fanUp = clamp(max(max(fanStand, fanCheer), max(fanOoh, fanWave)), 0.0, 1.0) * (1.0 - fanSad);
 float fanLift = -2.4 * (1.0 - fanUp) - 0.7 * fanSad
   + max(0.0, sin(uTime * 1.6 + aFan.x)) * 0.35 * (1.0 - fanCheer)
@@ -682,8 +979,6 @@ fanAz = mix(fanAz, 2.95, fanWave);
 fanAx = mix(fanAx, 0.0, fanWave);
 fanAz = mix(fanAz, 0.06, fanSad);
 fanAx = mix(fanAx, -0.4, fanSad);
-float fanHead = 0.55 * fanSad - 0.25 * fanOoh - 0.15 * fanCheer;
-float fanLean = 0.14 * fanStand * (1.0 - fanCheer) + 0.2 * fanSad;
 float fanSway = sin(uTime * 0.8 + aFan.x * 2.0) * 0.05 * (1.0 - fanCheer) * (1.0 - fanSad);
 float fanIsHead = step(0.5, aPart) * step(aPart, 1.5);
 float fanIsArm = step(1.5, aPart);
@@ -692,9 +987,11 @@ vec3 fanNeck = vec3(0.0, 7.0, 0.0);
 vColor.rgb = mix(vColor.rgb, aSkin, fanIsHead);
 vec2 fanCsAx = fanCs(fanAx);
 vec2 fanCsAz = fanCs(fanArmSign * fanAz);
-vec2 fanCsHead = fanCs(fanHead);
-vec2 fanCsLean = fanCs(fanLean);
-vec2 fanCsSway = fanCs(fanSway);
+vec2 fanCsHead = mix(uHeadCs.xy, uHeadCs.zw, fanSide);
+vec2 fanCsLean = mix(uLeanCs.xy, uLeanCs.zw, fanSide);
+// Balanço de no máximo 0.05 rad: série de Taylor (erro < 1e-6) no lugar de cos/sin.
+float fanSway2 = fanSway * fanSway;
+vec2 fanCsSway = vec2(1.0 - 0.5 * fanSway2, fanSway * (1.0 - fanSway2 / 6.0));
 vec3 fanNormal = objectNormal;
 fanNormal = mix(fanNormal, fanRotZ(fanRotX(fanNormal, fanCsAx), fanCsAz), fanIsArm);
 fanNormal = mix(fanNormal, fanRotX(fanNormal, fanCsHead), fanIsHead);
@@ -713,11 +1010,12 @@ transformed = fanPoint;
 /**
  * Torcida inteira num draw call. As matrizes são montadas uma vez; pulo, braços,
  * ola e desânimo saem do vertex shader a partir de poucos uniforms por lado.
+ * Não projeta nem recebe sombra, então o programa nasce sem o código de sombra
+ * (o three o ligaria só porque o renderer tem sombra).
  */
 class Crowd {
-  readonly group = new THREE.Group();
-  readonly fans: Fan[] = [];
-  private readonly mesh: THREE.InstancedMesh;
+  readonly fans: Fan[];
+  readonly mesh: THREE.InstancedMesh;
   private readonly material: THREE.MeshLambertMaterial;
   private readonly uniforms = {
     uTime: { value: 0 },
@@ -728,6 +1026,8 @@ class Crowd {
     uOoh: { value: new THREE.Vector2() },
     uSad: { value: new THREE.Vector2() },
     uWave: { value: new THREE.Vector2() },
+    uHeadCs: { value: new THREE.Vector4(1, 0, 1, 0) },
+    uLeanCs: { value: new THREE.Vector4(1, 0, 1, 0) },
   };
   private readonly cheerLeft = [0, 0];
   private readonly cheerAge = [60, 60];
@@ -740,55 +1040,9 @@ class Crowd {
   private tensionTarget = 0;
   private waveT = -1;
 
-  constructor(setup: BotaoMatchSetup, stepMaterial: THREE.Material, calm: boolean) {
-    const random = seeded(setup.seed ^ 0x51ed27);
-    const home: BotaoSide | null = setup.neutralVenue ? null : setup.userIsHost ? "user" : "cpu";
-    const away: BotaoSide | null = home === null ? null : home === "user" ? "cpu" : "user";
-    // Cada torcida atrás do gol que o time dela ATACA: quem marca vê a própria
-    // gente explodir atrás da rede. Campo neutro: metade/metade; com mandante,
-    // só o miolo atrás do gol que o visitante ataca é do visitante.
-    const sideAt = (x: number, z: number, end: boolean): BotaoSide | null => {
-      if (home === null || away === null) {
-        if (!end && Math.abs(z) < SECTOR_GAP / 2) return null;
-        return z < 0 ? "user" : "cpu";
-      }
-      if (end && Math.sign(z) === attackSign(away)) {
-        if (Math.abs(x) < AWAY_HALF_WIDTH) return away;
-        // Corredor de cadeiras vazias separa as torcidas, como no estádio de verdade.
-        if (Math.abs(x) < AWAY_HALF_WIDTH + SECTOR_GAP) return null;
-      }
-      return home;
-    };
-
-    const rows = 6;
-    const steps = new Baker();
-    const stand = (originX: number, originZ: number, alongX: number, alongZ: number, length: number, outX: number, outZ: number, end: boolean) => {
-      for (let row = 0; row < rows; row += 1) {
-        const distance = row * 9 + 4.5;
-        const height = 4 + row * 4.6;
-        const step = new THREE.BoxGeometry(Math.abs(alongX) * length + Math.abs(outX) * 9, height, Math.abs(alongZ) * length + Math.abs(outZ) * 9);
-        steps.add(step, new THREE.Vector3(originX + outX * distance, height / 2, originZ + outZ * distance));
-        step.dispose();
-        const count = Math.floor(length / 7.6);
-        for (let index = 0; index < count; index += 1) {
-          if (random() < 0.07) continue;
-          const along = (index + 0.5) / count - 0.5;
-          const x = originX + alongX * along * length + outX * distance + (random() - 0.5) * 1.6;
-          const z = originZ + alongZ * along * length + outZ * distance + (random() - 0.5) * 1.6;
-          const yaw = Math.atan2(-outX, -outZ) + (random() - 0.5) * 0.5;
-          const side = sideAt(x, z, end);
-          if (side) this.fans.push({ x, y: height, z, yaw, side });
-        }
-      }
-    };
-    const sideOffset = HALF_W + 46;
-    const endOffset = HALF_H + 62;
-    stand(-sideOffset, 0, 0, 1, FIELD.height + 90, -1, 0, false);
-    stand(sideOffset, 0, 0, 1, FIELD.height + 90, 1, 0, false);
-    stand(0, -endOffset, 1, 0, FIELD.width + 60, 0, -1, true);
-    stand(0, endOffset, 1, 0, FIELD.width + 60, 0, 1, true);
-    this.group.add(steps.build(stepMaterial, false));
-
+  constructor(setup: BotaoMatchSetup, stands: Stands, calm: boolean) {
+    const random = stands.random;
+    this.fans = stands.fans;
     const count = this.fans.length;
     const geometry = fanGeometry();
     const fanAttribute = new Float32Array(count * 4);
@@ -797,10 +1051,12 @@ class Crowd {
     this.uniforms.uCalm.value = calm ? 1 : 0;
     this.material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, this.uniforms);
-      shader.vertexShader = shader.vertexShader
+      // O prefixo do three (com o #define) vem antes deste corpo.
+      shader.vertexShader = `#undef USE_SHADOWMAP\n${shader.vertexShader}`
         .replace("#include <common>", `#include <common>\n${CROWD_PARS}`)
         .replace("#include <beginnormal_vertex>", `#include <beginnormal_vertex>\n${CROWD_POSE}`)
         .replace("#include <begin_vertex>", `#include <begin_vertex>\n${CROWD_MOVE}`);
+      shader.fragmentShader = `#undef USE_SHADOWMAP\n${shader.fragmentShader}`;
     };
     this.material.customProgramCacheKey = () => "futbobo-crowd";
     this.mesh = new THREE.InstancedMesh(geometry, this.material, count);
@@ -837,7 +1093,6 @@ class Crowd {
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = false;
     this.mesh.receiveShadow = false;
-    this.group.add(this.mesh);
   }
 
   /** Torcedores de um lado para os flashes (cabeça, um pouco à frente do rosto). */
@@ -901,6 +1156,13 @@ class Crowd {
     uniforms.uStand.value.set(this.tension, this.tension);
     uniforms.uOoh.value.set(this.oohLevel, this.oohLevel);
     uniforms.uSad.value.set(this.sad[0], this.sad[1]);
+    // Cabeça (desânimo baixa, "ooh" e festa levantam) e corpo inclinado por lado.
+    const head0 = 0.55 * this.sad[0] - 0.25 * this.oohLevel - 0.15 * this.cheer[0];
+    const head1 = 0.55 * this.sad[1] - 0.25 * this.oohLevel - 0.15 * this.cheer[1];
+    const lean0 = 0.14 * this.tension * (1 - this.cheer[0]) + 0.2 * this.sad[0];
+    const lean1 = 0.14 * this.tension * (1 - this.cheer[1]) + 0.2 * this.sad[1];
+    uniforms.uHeadCs.value.set(Math.cos(head0), Math.sin(head0), Math.cos(head1), Math.sin(head1));
+    uniforms.uLeanCs.value.set(Math.cos(lean0), Math.sin(lean0), Math.cos(lean1), Math.sin(lean1));
     if (this.waveT >= 0) {
       this.waveT += dt;
       const envelope = Math.max(0, Math.min(1, this.waveT / 0.5, (WAVE_LAP - this.waveT) / 0.6));
@@ -1053,12 +1315,11 @@ class CameraFlashes {
 
 /**
  * Fotógrafos ajoelhados atrás das linhas de fundo, fora da boca do gol, lente
- * para a área. Uma malha com cor por vértice (1 draw call). Devolve também a
- * ponta de cada lente para os flashes.
+ * para a área. Vão para `baker` com cor por vértice (junto com os degraus, 1
+ * draw call). Devolve a ponta de cada lente para os flashes.
  */
-function buildPhotographers(seed: number, futsal: boolean, material: THREE.Material) {
+function buildPhotographers(seed: number, futsal: boolean, baker: Baker) {
   const random = seeded(seed ^ 0x9070);
-  const baker = new Baker();
   const lenses: THREE.Vector3[] = [];
   const up = new THREE.Vector3(0, 1, 0);
   const facing = new THREE.Quaternion();
@@ -1107,8 +1368,7 @@ function buildPhotographers(seed: number, futsal: boolean, material: THREE.Mater
     }
   }
   for (const geometry of [legs, torso, head, cap, arm, body, lens]) geometry.dispose();
-  const mesh = baker.build(material, false);
-  return { mesh, lenses };
+  return lenses;
 }
 
 // ------------------------------------------------------------ bandeirinhas
@@ -1117,31 +1377,66 @@ const FLAG_LENGTH = 7;
 const FLAG_HEIGHT = 5;
 const FLAG_COLUMNS = 7;
 const FLAG_TOP = 22;
+// sin(0.7 t) e sin(7 t) fecham o ciclo juntos aqui: o relógio da GPU dá a volta sem salto.
+const FLAG_PERIOD = (Math.PI * 2) / 0.7;
+
+const CLOTH_PARS = /* glsl */ `
+attribute vec2 aCloth;
+uniform float uClothTime;
+uniform float uClothWind;
+// Onda correndo do mastro para a ponta, mais larga na ponta, girada em volta do
+// mastro pelo vento. aCloth = (0 no mastro..1 na ponta, fase da bandeira);
+// position = pé do pano no mastro (x, altura da linha, z).
+vec3 clothPoint(out vec3 clothNormal) {
+  float k = aCloth.x;
+  // Mesmo vento para todas; cada uma só oscila um pouco em volta dele.
+  float turn = uClothWind + sin(uClothTime * 0.7 + aCloth.y) * 0.15;
+  vec2 cs = vec2(cos(turn), sin(turn));
+  float u = k * ${FLAG_LENGTH.toFixed(1)};
+  float wave = uClothTime * 7.0 - u * 0.9 + aCloth.y;
+  float waveSin = sin(wave);
+  float w = waveSin * 0.6 * k;
+  float slope = -0.54 * cos(wave) * k + waveSin * ${(0.6 / FLAG_LENGTH).toFixed(6)};
+  vec2 n = vec2(-slope, 1.0) * inversesqrt(slope * slope + 1.0);
+  // Local (u, y, w) girado em Y: x = u·cos + w·sin, z = -u·sin + w·cos.
+  clothNormal = vec3(n.x * cs.x + n.y * cs.y, 0.0, -n.x * cs.y + n.y * cs.x);
+  return vec3(position.x + u * cs.x + w * cs.y, position.y - 0.5 * k * k, position.z - u * cs.y + w * cs.x);
+}
+`;
 
 /**
- * Quatro bandeiras de pano numa malha só, todas para o mesmo lado do vento.
- * Os 56 vértices são recalculados uma vez por quadro, com normal analítica.
+ * Quatro bandeiras de pano numa malha só, todas para o mesmo lado do vento. A
+ * onda sai do vertex shader (posição e normal analítica): nada sobe para a GPU
+ * por quadro, só o relógio. A sombra usa a mesma onda.
  */
 class CornerFlags {
   readonly cloth: THREE.Mesh;
-  private readonly position: THREE.BufferAttribute;
-  private readonly normal: THREE.BufferAttribute;
-  private readonly corners: Array<{ x: number; z: number; phase: number }> = [];
-  private readonly wind: number;
+  readonly depthMaterial: THREE.MeshDepthMaterial | null;
+  private readonly uniforms = { uClothTime: { value: 0 }, uClothWind: { value: 0 } };
 
-  constructor(seed: number, material: THREE.Material) {
+  constructor(seed: number, material: THREE.Material, castShadow: boolean) {
     const random = seeded(seed ^ 0xf1a6);
-    this.wind = random() * Math.PI * 2;
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.corners.push({ x: sx * (HALF_W + 7), z: sz * (HALF_H + 7), phase: random() * Math.PI * 2 });
+    this.uniforms.uClothWind.value = random() * Math.PI * 2;
+    const corners: Array<{ x: number; z: number; phase: number }> = [];
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) corners.push({ x: sx * (HALF_W + 7), z: sz * (HALF_H + 7), phase: random() * Math.PI * 2 });
     const perFlag = FLAG_COLUMNS * 2;
-    const count = this.corners.length * perFlag;
+    const count = corners.length * perFlag;
+    const positions = new Float32Array(count * 3);
+    const cloth = new Float32Array(count * 2);
+    corners.forEach((corner, flag) => {
+      for (let row = 0; row < 2; row += 1) {
+        for (let column = 0; column < FLAG_COLUMNS; column += 1) {
+          const index = flag * perFlag + row * FLAG_COLUMNS + column;
+          positions.set([corner.x, FLAG_TOP - FLAG_HEIGHT + row * FLAG_HEIGHT, corner.z], index * 3);
+          cloth.set([column / (FLAG_COLUMNS - 1), corner.phase], index * 2);
+        }
+      }
+    });
     const geometry = new THREE.BufferGeometry();
-    this.position = new THREE.BufferAttribute(new Float32Array(count * 3), 3).setUsage(THREE.DynamicDrawUsage);
-    this.normal = new THREE.BufferAttribute(new Float32Array(count * 3), 3).setUsage(THREE.DynamicDrawUsage);
-    geometry.setAttribute("position", this.position);
-    geometry.setAttribute("normal", this.normal);
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("aCloth", new THREE.BufferAttribute(cloth, 2));
     const indices: number[] = [];
-    for (let flag = 0; flag < this.corners.length; flag += 1) {
+    for (let flag = 0; flag < corners.length; flag += 1) {
       for (let column = 0; column < FLAG_COLUMNS - 1; column += 1) {
         const a = flag * perFlag + column;
         const b = a + 1;
@@ -1151,48 +1446,42 @@ class CornerFlags {
       }
     }
     geometry.setIndex(indices);
-    // Vértices mudam todo quadro: esfera fixa que cobre os quatro cantos.
+    // Os vértices andam no shader: esfera fixa que cobre os quatro cantos.
     geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, FLAG_TOP / 2, 0), Math.hypot(HALF_W + 16, HALF_H + 16) + FLAG_TOP);
+    const uniforms = this.uniforms;
+    material.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, uniforms);
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", `#include <common>\n${CLOTH_PARS}`)
+        .replace("#include <beginnormal_vertex>", "vec3 clothNormal;\nvec3 clothPosition = clothPoint(clothNormal);\nvec3 objectNormal = clothNormal;")
+        .replace("#include <begin_vertex>", "vec3 transformed = clothPosition;");
+    };
+    material.customProgramCacheKey = () => "futbobo-cloth";
     this.cloth = new THREE.Mesh(geometry, material);
-    this.cloth.castShadow = true;
-    this.update(0);
+    this.cloth.castShadow = castShadow;
+    this.depthMaterial = null;
+    if (castShadow) {
+      // A sombra só lê profundidade: sem gravar cor.
+      const depth = new THREE.MeshDepthMaterial({ colorWrite: false });
+      depth.onBeforeCompile = (shader) => {
+        Object.assign(shader.uniforms, uniforms);
+        shader.vertexShader = shader.vertexShader
+          .replace("#include <common>", `#include <common>\n${CLOTH_PARS}`)
+          .replace("#include <begin_vertex>", "vec3 clothNormal;\nvec3 transformed = clothPoint(clothNormal);");
+      };
+      depth.customProgramCacheKey = () => "futbobo-cloth-depth";
+      this.cloth.customDepthMaterial = depth;
+      this.depthMaterial = depth;
+    }
   }
 
   update(time: number) {
-    const perFlag = FLAG_COLUMNS * 2;
-    for (let flag = 0; flag < this.corners.length; flag += 1) {
-      const corner = this.corners[flag];
-      // Mesmo vento para todas; cada uma só oscila um pouco em volta dele.
-      const rotation = this.wind + Math.sin(time * 0.7 + corner.phase) * 0.15;
-      const cos = Math.cos(rotation);
-      const sin = Math.sin(rotation);
-      for (let column = 0; column < FLAG_COLUMNS; column += 1) {
-        const k = column / (FLAG_COLUMNS - 1);
-        const u = k * FLAG_LENGTH;
-        // Onda correndo do mastro para a ponta, mais larga na ponta.
-        const argument = time * 7 - u * 0.9 + corner.phase;
-        const w = Math.sin(argument) * 0.6 * k;
-        const slope = -0.9 * Math.cos(argument) * 0.6 * k + (Math.sin(argument) * 0.6) / FLAG_LENGTH;
-        // Local (u, y, w) girado em Y: x = u·cos + w·sin, z = -u·sin + w·cos.
-        const x = corner.x + u * cos + w * sin;
-        const z = corner.z - u * sin + w * cos;
-        const length = Math.sqrt(slope * slope + 1);
-        const nx = -slope / length;
-        const nz = 1 / length;
-        const droop = 0.5 * k * k;
-        for (let row = 0; row < 2; row += 1) {
-          const index = flag * perFlag + row * FLAG_COLUMNS + column;
-          this.position.setXYZ(index, x, FLAG_TOP - FLAG_HEIGHT + row * FLAG_HEIGHT - droop, z);
-          this.normal.setXYZ(index, nx * cos + nz * sin, 0, -nx * sin + nz * cos);
-        }
-      }
-    }
-    this.position.needsUpdate = true;
-    this.normal.needsUpdate = true;
+    this.uniforms.uClothTime.value = time % FLAG_PERIOD;
   }
 
   dispose() {
     this.cloth.geometry.dispose();
+    this.depthMaterial?.dispose();
   }
 }
 
@@ -1214,12 +1503,15 @@ export class Stadium {
   private readonly calm: boolean;
   private readonly anisotropy: number;
   private readonly goals: Record<"top" | "bottom", GoalView>;
-  private readonly crowd: Crowd;
-  private readonly flashes: CameraFlashes;
+  /** Sem torcida nem flashes no modo desempenho: os métodos da festa só mexem nas placas. */
+  private readonly crowd: Crowd | null;
+  private readonly flashes: CameraFlashes | null;
   private readonly flags: CornerFlags | null;
   private readonly netMaterial: THREE.MeshLambertMaterial;
-  private readonly ledMaterial: THREE.MeshStandardMaterial;
-  private readonly lampMaterial: THREE.MeshStandardMaterial;
+  private readonly ledMaterial: THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
+  /** Tabelas, traves, torres e refletores (o emissivo é o dos refletores); null no modo desempenho. */
+  private readonly finishMaterial: THREE.MeshStandardMaterial | null;
+  private readonly fieldMap: THREE.CanvasTexture;
   private readonly baseBoard: THREE.CanvasTexture;
   private readonly boards = new Map<string, THREE.CanvasTexture>();
   private readonly disposables: Array<{ dispose: () => void }> = [];
@@ -1230,6 +1522,8 @@ export class Stadium {
   constructor(setup: BotaoMatchSetup, anisotropy: number, options: StadiumOptions = {}) {
     this.setup = setup;
     this.calm = Boolean(options.reducedMotion);
+    // Modo desempenho 3D: fixo por estádio (trocar recria a visão).
+    const lite = Boolean(options.performance);
     this.anisotropy = anisotropy;
     const theme = fieldThemeForMatch(setup);
     const futsal = theme === "futsal-blue";
@@ -1237,30 +1531,43 @@ export class Stadium {
       this.disposables.push(item);
       return item;
     };
+    // Um Lambert com cor por vértice pinta chão, degraus e fotógrafos (no modo
+    // desempenho também tabelas, mastros e traves): um material, um programa.
+    const paint = track(new THREE.MeshLambertMaterial({ vertexColors: true }));
+    this.finishMaterial = lite ? null : track(finishMaterial());
+    const solid = this.finishMaterial ?? paint;
+    // Sombra dos opacos sem textura: o mapa de sombra só lê a profundidade.
+    const depthOnly = lite ? null : track(new THREE.MeshDepthMaterial({ colorWrite: false }));
 
-    // Chão em volta e faixa do entorno numa malha só (cor por vértice).
-    const surroundColor = futsal ? "#0b2c42" : "#0d3b24";
+    // Chão: entorno em volta do campo e piso escuro em volta do entorno, em
+    // molduras (nada pintado por baixo do gramado nem do entorno). É o último
+    // opaco: o que já está na frente (gramado, arquibancada, bonecos) descarta
+    // os pixels dele no teste de profundidade antes de iluminar.
     const ground = new Baker();
-    const flat = new THREE.Euler(-Math.PI / 2, 0, 0);
-    const floorPlane = new THREE.PlaneGeometry(4000, 4000);
-    const apronPlane = new THREE.PlaneGeometry(FIELD.width + 84, FIELD.height + 116);
-    ground.add(floorPlane, new THREE.Vector3(0, -0.6, 0), flat, "#0b1016");
-    ground.add(apronPlane, new THREE.Vector3(0, -0.08, 0), flat, surroundColor);
-    floorPlane.dispose();
-    apronPlane.dispose();
-    this.group.add(ground.build(track(new THREE.MeshLambertMaterial({ vertexColors: true }))));
-    const fieldMap = track(fieldTexture(setup, futsal, anisotropy));
-    const fieldMaterial = track(new THREE.MeshStandardMaterial({ map: fieldMap, roughness: futsal ? 0.42 : 0.95, metalness: 0 }));
+    addFrame(ground, HALF_W - 1, HALF_H - 1, APRON_HALF_W, APRON_HALF_H, -0.08, futsal ? "#0b2c42" : "#0d3b24");
+    addFrame(ground, APRON_HALF_W - 1, APRON_HALF_H - 1, FLOOR_HALF, FLOOR_HALF, -0.6, FLOOR_COLOR);
+    const groundMesh = ground.build(paint, !lite);
+    groundMesh.renderOrder = 1;
+    this.group.add(groundMesh);
+    // Gramado depois dos bonecos e antes do chão: embaixo de quem está em pé não ilumina.
+    this.fieldMap = track(fieldTexture(setup, futsal, lite ? Math.min(4, anisotropy) : anisotropy, lite ? 2 : 4));
+    let fieldMaterial: THREE.Material;
+    if (!lite) fieldMaterial = new THREE.MeshStandardMaterial({ map: this.fieldMap, roughness: futsal ? 0.42 : 0.95, metalness: 0 });
+    // Modo desempenho: grama sem PBR (o especular dela é quase nada); a quadra de
+    // futsal mantém um brilho barato (Phong).
+    else if (futsal) fieldMaterial = new THREE.MeshPhongMaterial({ map: this.fieldMap, specular: "#262626", shininess: 28 });
+    else fieldMaterial = new THREE.MeshLambertMaterial({ map: this.fieldMap });
+    track(fieldMaterial);
     addMowingSheen(fieldMaterial, theme);
     const field = new THREE.Mesh(track(new THREE.PlaneGeometry(FIELD.width, FIELD.height)), fieldMaterial);
     field.rotation.x = -Math.PI / 2;
-    field.receiveShadow = true;
+    field.receiveShadow = !lite;
+    field.renderOrder = 0.5;
     this.group.add(field);
 
-    // Tabelas: a bola quica exatamente aqui, então ficam rente às linhas.
-    // Corpo das tabelas numa geometria, painéis de LED em outra (2 draw calls).
-    // As mensagens do gol já nascem prontas: trocar o map não recompila nada.
-    const railMaterial = track(new THREE.MeshStandardMaterial({ color: "#151b22", roughness: 0.55, metalness: 0.2 }));
+    // Tabelas: a bola quica exatamente aqui, então ficam rente às linhas. Corpo
+    // das tabelas e mastros das bandeirinhas numa geometria, painéis de LED em
+    // outra. As mensagens do gol já nascem prontas: trocar o map não recompila nada.
     this.baseBoard = ledBaseTexture(setup, anisotropy);
     this.boardTexture = this.baseBoard;
     this.boards.set("base", this.baseBoard);
@@ -1271,13 +1578,17 @@ export class Stadium {
     }
     // "QUASE!" é o rótulo do quase-gol do Botao3DView: pronto aqui para não desenhar canvas no lance.
     for (const label of ["NA TRAVE!", "QUASE!"]) this.boards.set(`post|${label}`, ledMessageTexture(label, "#04070a", "#ffd23f", anisotropy));
-    this.ledMaterial = track(new THREE.MeshStandardMaterial({ map: this.baseBoard, emissive: "#ffffff", emissiveMap: this.baseBoard, emissiveIntensity: 0.9, roughness: 0.4 }));
-    const railBodies = new Baker();
-    const ledPanels = new Baker();
+    // Modo desempenho: placa sem luz, o brilho vira cor (`updateBoards`).
+    this.ledMaterial = lite
+      ? new THREE.MeshBasicMaterial({ map: this.baseBoard })
+      : new THREE.MeshStandardMaterial({ map: this.baseBoard, emissive: "#ffffff", emissiveMap: this.baseBoard, emissiveIntensity: 0.9, roughness: 0.4 });
+    track(this.ledMaterial);
+    const railBodies = new Baker({ finishes: !lite });
+    const ledPanels = new Baker({ keepUv: true });
     const panelHeight = RAIL_HEIGHT * 0.78;
     const rail = (x: number, z: number, width: number, depth: number, facing: number, length: number) => {
       const body = new THREE.BoxGeometry(width, RAIL_HEIGHT, depth);
-      railBodies.add(body, new THREE.Vector3(x, RAIL_HEIGHT / 2, z));
+      railBodies.add(body, new THREE.Vector3(x, RAIL_HEIGHT / 2, z), undefined, "#151b22", RAIL_FINISH);
       body.dispose();
       const panel = new THREE.PlaneGeometry(length - 1, panelHeight);
       // O texto mantém a proporção: o painel repete a faixa conforme o comprimento.
@@ -1299,85 +1610,108 @@ export class Stadium {
       rail(-HALF_W + endSegment / 2, z, endSegment, RAIL_THICKNESS, facing, endSegment);
       rail(HALF_W - endSegment / 2, z, endSegment, RAIL_THICKNESS, facing, endSegment);
     }
-    const railMesh = railBodies.build(railMaterial);
-    railMesh.castShadow = true;
-    this.group.add(railMesh, ledPanels.build(this.ledMaterial));
+
+    // Bandeirinhas de escanteio (quadra de futsal não tem): mastros com as tabelas.
+    if (!futsal) {
+      const pole = new THREE.CylinderGeometry(0.55, 0.55, FLAG_TOP, 8);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) railBodies.add(pole, new THREE.Vector3(sx * (HALF_W + 7), FLAG_TOP / 2, sz * (HALF_H + 7)), undefined, "#f2f2f2", POLE_FINISH);
+      pole.dispose();
+      const clothMaterial = track(new THREE.MeshLambertMaterial({ color: "#ffd23f", side: THREE.DoubleSide }));
+      this.flags = new CornerFlags(setup.seed, clothMaterial, !lite);
+      this.group.add(this.flags.cloth);
+    } else {
+      this.flags = null;
+    }
+    const railMesh = railBodies.build(solid, !lite);
+    railMesh.castShadow = !lite;
+    if (depthOnly) railMesh.customDepthMaterial = depthOnly;
+    this.group.add(railMesh, ledPanels.build(this.ledMaterial, !lite));
 
     // Gols: trave e rede batendo com a física do motor.
-    const frameMaterial = track(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.1 }));
     const netMap = track(netTexture(anisotropy));
     // Sem MSAA confirmado, alphaTest baixo; `prepare` troca para alpha-to-coverage.
     this.netMaterial = track(new THREE.MeshLambertMaterial({ alphaMap: netMap, color: "#eef1f3", alphaTest: 0.3, side: THREE.DoubleSide }));
     this.goals = {
-      top: new GoalView(true, frameMaterial, this.netMaterial, setup.cpuTeam.primary, this.calm),
-      bottom: new GoalView(false, frameMaterial, this.netMaterial, setup.userTeam.primary, this.calm),
+      top: new GoalView(true, solid, this.netMaterial, setup.cpuTeam.primary, this.calm, depthOnly, !lite),
+      bottom: new GoalView(false, solid, this.netMaterial, setup.userTeam.primary, this.calm, depthOnly, !lite),
     };
     this.group.add(this.goals.top.group, this.goals.bottom.group);
 
-    // Bandeirinhas de escanteio (quadra de futsal não tem).
-    if (!futsal) {
-      const poleMaterial = track(new THREE.MeshStandardMaterial({ color: "#f2f2f2", roughness: 0.5 }));
-      const clothMaterial = track(new THREE.MeshLambertMaterial({ color: "#ffd23f", side: THREE.DoubleSide }));
-      const pole = new THREE.CylinderGeometry(0.55, 0.55, FLAG_TOP, 8);
-      const poles = new Baker();
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) poles.add(pole, new THREE.Vector3(sx * (HALF_W + 7), FLAG_TOP / 2, sz * (HALF_H + 7)));
-      pole.dispose();
-      const polesMesh = poles.build(poleMaterial);
-      polesMesh.castShadow = true;
-      this.flags = new CornerFlags(setup.seed, clothMaterial);
-      this.group.add(polesMesh, this.flags.cloth);
+    // Arquibancada (degraus e fotógrafos numa malha, depois da torcida que os
+    // cobre), torcida e flashes. Modo desempenho: degraus nas cores dos setores.
+    const stands = new Stands(setup);
+    let sceneryMesh: THREE.Mesh;
+    if (lite) {
+      sceneryMesh = new THREE.Mesh(paintStands(stands, setup), paint);
+      this.crowd = null;
+      this.flashes = null;
     } else {
-      this.flags = null;
-    }
-
-    // Arquibancada, fotógrafos e flashes.
-    const stepMaterial = track(new THREE.MeshLambertMaterial({ color: "#252c35" }));
-    this.crowd = new Crowd(setup, stepMaterial, this.calm);
-    this.group.add(this.crowd.group);
-    const photographerMaterial = track(new THREE.MeshLambertMaterial({ vertexColors: true }));
-    const photographers = buildPhotographers(setup.seed, futsal, photographerMaterial);
-    this.group.add(photographers.mesh);
-    const spotRandom = seeded(setup.seed ^ 0x5eed);
-    this.flashes = new CameraFlashes(
-      [this.crowd.spots("user", 60, spotRandom), this.crowd.spots("cpu", 60, spotRandom), photographers.lenses],
-      setup.seed,
-      this.calm,
-    );
-    this.group.add(this.flashes.points);
-
-    // Torres de luz.
-    const towerMaterial = track(new THREE.MeshStandardMaterial({ color: "#2a3038", roughness: 0.6, metalness: 0.4 }));
-    this.lampMaterial = track(new THREE.MeshStandardMaterial({ color: "#ffffff", emissive: "#fff7e0", emissiveIntensity: 2.4 }));
-    const towers = new Baker();
-    const lamps = new Baker();
-    const aim = new THREE.Object3D();
-    const towerGeometry = track(new THREE.BoxGeometry(6, 220, 6));
-    const lampGeometry = track(new THREE.BoxGeometry(34, 18, 4));
-    for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
-        const x = sx * (HALF_W + 120);
-        const z = sz * (HALF_H + 130);
-        towers.add(towerGeometry, new THREE.Vector3(x, 110, z));
-        aim.position.set(x - sx * 3, 222, z - sz * 3);
-        aim.lookAt(0, 0, 0);
-        lamps.add(lampGeometry, aim.position, aim.quaternion);
+      const scenery = new Baker();
+      const lenses = buildPhotographers(setup.seed, futsal, scenery);
+      for (const row of stands.rows) {
+        const step = new THREE.BoxGeometry(Math.abs(row.alongX) * row.length + Math.abs(row.outX) * 9, row.height, Math.abs(row.alongZ) * row.length + Math.abs(row.outZ) * 9);
+        scenery.add(step, new THREE.Vector3(row.x, row.height / 2, row.z), undefined, STEP_COLOR);
+        step.dispose();
       }
+      sceneryMesh = scenery.build(paint);
+      this.crowd = new Crowd(setup, stands, this.calm);
+      this.group.add(this.crowd.mesh);
+      const spotRandom = seeded(setup.seed ^ 0x5eed);
+      this.flashes = new CameraFlashes([this.crowd.spots("user", 60, spotRandom), this.crowd.spots("cpu", 60, spotRandom), lenses], setup.seed, this.calm);
+      this.group.add(this.flashes.points);
     }
-    this.group.add(towers.build(towerMaterial), lamps.build(this.lampMaterial));
+    sceneryMesh.renderOrder = 0.5;
+    this.group.add(sceneryMesh);
+
+    // Torres de luz com os refletores (o brilho vem do acabamento por vértice).
+    if (this.finishMaterial) {
+      const towers = new Baker({ finishes: true });
+      const aim = new THREE.Object3D();
+      const towerGeometry = new THREE.BoxGeometry(6, 220, 6);
+      const lampGeometry = new THREE.BoxGeometry(34, 18, 4);
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          const x = sx * (HALF_W + 120);
+          const z = sz * (HALF_H + 130);
+          towers.add(towerGeometry, new THREE.Vector3(x, 110, z), undefined, "#2a3038", TOWER_FINISH);
+          aim.position.set(x - sx * 3, 222, z - sz * 3);
+          aim.lookAt(0, 0, 0);
+          towers.add(lampGeometry, aim.position, aim.quaternion, "#ffffff", LAMP_FINISH);
+        }
+      }
+      towerGeometry.dispose();
+      lampGeometry.dispose();
+      this.group.add(towers.build(this.finishMaterial));
+    }
+    freeze(this.group);
   }
 
   /**
-   * Chamar logo depois de construir, antes do primeiro quadro: sobe para a GPU
-   * as placas do gol (senão o upload acontece no gol e engasga no Android) e,
-   * se o canvas tem MSAA, passa a rede para alpha-to-coverage — transparência
-   * certa de longe sem ordenar nem cintilar. Os shaders compilam no primeiro
-   * render, porque tudo já está na cena desde o início.
+   * Chamar uma vez, logo depois de construir e antes do primeiro quadro: sobe
+   * para a GPU o gramado e as placas (senão o upload acontece no gol e engasga
+   * no Android) e solta a cópia delas na RAM (~10 MB: a perda de contexto
+   * recria a visão inteira, nada é reenviado). Se o canvas tem MSAA, passa a
+   * rede para alpha-to-coverage — transparência certa de longe sem ordenar nem
+   * cintilar. Os shaders compilam no primeiro render (ou no compile da visão).
    */
   prepare(renderer: THREE.WebGLRenderer) {
-    for (const texture of this.boards.values()) renderer.initTexture(texture);
-    for (const item of this.disposables) if (item instanceof THREE.Texture) renderer.initTexture(item);
-    this.flashes.prepare(renderer);
     const gl = renderer.getContext();
+    const canvases: THREE.CanvasTexture[] = [this.fieldMap];
+    for (const texture of this.boards.values()) {
+      renderer.initTexture(texture);
+      canvases.push(texture);
+    }
+    for (const item of this.disposables) if (item instanceof THREE.Texture) renderer.initTexture(item);
+    this.flashes?.prepare(renderer);
+    if (!gl.isContextLost()) {
+      for (const texture of canvases) {
+        const image = texture.image as HTMLCanvasElement | undefined;
+        if (image && image.width > 1) {
+          image.width = 1;
+          image.height = 1;
+        }
+      }
+    }
     const samples = renderer.getRenderTarget() === null ? Number(gl.getParameter(gl.SAMPLES)) : 0;
     if (samples > 1 && !this.netMaterial.alphaToCoverage) {
       this.netMaterial.alphaTest = 0;
@@ -1392,7 +1726,7 @@ export class Stadium {
 
   /** Lado que marcou (ou venceu) pula; o outro senta desanimado. */
   celebrate(side: BotaoSide, seconds = 3.2) {
-    this.crowd.celebrate(side, seconds, true);
+    this.crowd?.celebrate(side, seconds, true);
   }
 
   /**
@@ -1402,7 +1736,7 @@ export class Stadium {
    */
   crowdReact(kind: "ooh" | "groan" | "cheer", side: BotaoSide, label: string | null = "NA TRAVE!") {
     if (kind === "ooh") {
-      this.crowd.ooh(1.2);
+      this.crowd?.ooh(1.2);
       if (label && this.boardMode !== "goal" && this.boardMode !== "fim") {
         const key = `post|${label}`;
         let texture = this.boards.get(key);
@@ -1413,21 +1747,21 @@ export class Stadium {
         this.showBoard("post", texture);
       }
     } else if (kind === "groan") {
-      this.crowd.groan(side, 2.4);
+      this.crowd?.groan(side, 2.4);
     } else {
-      this.crowd.celebrate(side, 1.6, false);
+      this.crowd?.celebrate(side, 1.6, false);
     }
   }
 
   /** Perigo perto do gol (0..1), todo quadro: a arquibancada vai ficando de pé. */
   setTension(value: number) {
-    this.crowd.setTension(value);
+    this.crowd?.setTension(value);
   }
 
   /** Ola dando uma volta no estádio (~7 s). */
   wave() {
     if (this.calm) return;
-    this.crowd.wave();
+    this.crowd?.wave();
   }
 
   /**
@@ -1445,12 +1779,12 @@ export class Stadium {
     }
     this.showBoard(mode, texture);
     // Apito final: a festa do vencedor dura mais que a de um gol.
-    if (mode === "fim") this.crowd.celebrate(side, 6, true);
+    if (mode === "fim") this.crowd?.celebrate(side, 6, true);
   }
 
   /** Chuva de flashes na torcida de `side` e nas lentes dos fotógrafos, decaindo em `seconds`. */
   cameraFlashes(side: BotaoSide, seconds: number) {
-    this.flashes.trigger(side, seconds);
+    this.flashes?.trigger(side, seconds);
   }
 
   /**
@@ -1461,13 +1795,23 @@ export class Stadium {
     return { x: 0, z: attackSign(side) * (HALF_H + 70) };
   }
 
+  /**
+   * Alguma sombra do estádio mudou no último `update` (rede estufando ou trave
+   * tremendo, até o quadro em que voltam ao lugar): para quem refaz o mapa de
+   * sombra só sob demanda. As bandeirinhas balançam sempre e ficam de fora: a
+   * sombra delas é um fiapo no entorno e pode esperar a próxima atualização.
+   */
+  shadowsChanged() {
+    return this.goals.top.changed || this.goals.bottom.changed;
+  }
+
   update(dt: number, time: number) {
     this.updateBoards(dt);
     this.flags?.update(time);
     this.goals.top.update(dt);
     this.goals.bottom.update(dt);
-    this.crowd.update(dt, time);
-    this.flashes.update(dt);
+    this.crowd?.update(dt, time);
+    this.flashes?.update(dt);
   }
 
   private messageBoard(mode: "goal" | "fim", team: BotaoTeam, color: string) {
@@ -1483,13 +1827,13 @@ export class Stadium {
     this.boardTexture = texture;
     // Mesmo tipo de textura nos dois slots: só troca uniform, sem recompilar.
     this.ledMaterial.map = texture;
-    this.ledMaterial.emissiveMap = texture;
+    if (this.ledMaterial instanceof THREE.MeshStandardMaterial) this.ledMaterial.emissiveMap = texture;
   }
 
   private updateBoards(dt: number) {
     let speed = 0.035;
     let glow = 0.9;
-    let lamp = 2.4;
+    let lamp = LAMP_GLOW;
     if (this.boardMode === "post") {
       this.boardT += dt;
       glow = 1.35;
@@ -1502,20 +1846,21 @@ export class Stadium {
       // Onda quadrada de 2.5 Hz: 3 acesas em 1.2 s, nunca mais rápido que isso.
       if (t < 1.2) glow = this.calm ? 1.6 : Math.sin(Math.PI * 2 * 2.5 * t) >= 0 ? 2.5 : 1.3;
       else glow = loud ? 1.5 : 1.15;
-      if (t < 1.3) lamp = 2.4 * (1 + (this.calm ? 0.35 * Math.sin((Math.PI * t) / 1.3) : 0.9 * lampPulses(t)));
+      if (t < 1.3) lamp = LAMP_GLOW * (1 + (this.calm ? 0.35 * Math.sin((Math.PI * t) / 1.3) : 0.9 * lampPulses(t)));
       if (!loud && this.boardMode === "goal") this.showBoard("base", this.baseBoard);
     }
     const texture = this.boardTexture;
     texture.offset.x = (texture.offset.x + dt * speed) % 1;
-    this.ledMaterial.emissiveIntensity = glow;
-    this.lampMaterial.emissiveIntensity = lamp;
+    if (this.ledMaterial instanceof THREE.MeshStandardMaterial) this.ledMaterial.emissiveIntensity = glow;
+    else this.ledMaterial.color.setScalar(glow * LED_BASIC_GAIN);
+    if (this.finishMaterial) this.finishMaterial.emissiveIntensity = lamp;
   }
 
   dispose() {
     for (const item of this.disposables) item.dispose();
     for (const texture of this.boards.values()) texture.dispose();
-    this.crowd.dispose();
-    this.flashes.dispose();
+    this.crowd?.dispose();
+    this.flashes?.dispose();
     this.flags?.dispose();
     this.goals.top.dispose();
     this.goals.bottom.dispose();

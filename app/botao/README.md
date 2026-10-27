@@ -248,8 +248,26 @@ three/character-stage.ts palco do criador de personagem
   O aviso de pausa deixa o canvas receber botão direito, roda e dois dedos;
   mexeu, o modo foto para de puxar zoom e altura. Ao retomar o zoom volta suave.
 - **Android.** Desenho 3D com teto de ~60 quadros (a física segue o ritmo da
-  tela), texturas pré-carregadas na mira, goleiros montados antes do pênalti,
-  sombra mais barata no celular e recriação automática se o WebGL cair.
+  tela), sombra mais barata no celular e recriação automática se o WebGL cair.
+- **Custo por quadro.** Antes de mostrar a cena, `prepare()` monta bonecos e
+  goleiros, sobe as texturas e compila todos os shaders com `compileAsync`
+  (nada de travar no primeiro quadro, na primeira mira ou no primeiro gol). O
+  mapa de sombra é refeito sob demanda (meia taxa na mira parada, nada na
+  pausa) e com uma leitura PCF em vez de cinco. Teto de pixels pelo tamanho do
+  canvas, nada desenhado quando vazio (confete, rastro, efeitos), mesa coberta
+  por intervalo/trocas a 12 quadros por segundo e HUD do React só quando o que
+  ele mostra muda (barra de tempo por `transform`).
+- **Modo desempenho 3D** (`AppSettings.botao3dPerformance`, logo abaixo do
+  Modo 3D; só liga com ele). Sem torcida nem sombra projetada, efeitos enxutos,
+  boneco parado anima a meia taxa e orçamento de pixels com resolução
+  adaptável (desce quando pesa, sobe quando sobra, para de descer se não
+  ajudar). Só nele (classe `.botao-root-3d-lite`) os avisos ficam sem
+  `backdrop-filter` e as entradas animam só opacidade e `transform`. `perf-watch.ts` mede o ritmo real dos desenhos 3D: abaixo de ~48
+  quadros por segundo (ou muitos quadros atrasados) por duas janelas de 4 s, ou
+  abaixo de 36 numa só, a partida liga o modo, avisa e refaz a visão leve no
+  próximo momento calmo. Economia de energia (tela presa em 30 Hz com a CPU
+  folgada), pausa, mesa coberta e o quadro do gol não contam. Desligado na mão
+  (`botao3dPerformanceUserOff`), nunca religa sozinho.
 - **Configurações fora do app.** Dentro do shell as configurações vivem no
   IndexedDB (`career/indexed-storage.ts`). Copa, X1 e `/botao` rodam fora da
   ponte, então quem grava as configurações também chama
