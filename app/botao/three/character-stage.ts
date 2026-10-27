@@ -4,9 +4,36 @@
 
 import * as THREE from "three";
 import type { PlayerAppearance } from "../../player-appearance";
-import { FIGURE_HEIGHT, PlayerFigure, idleIntent, type FigureIntent } from "./character";
+import { FIGURE_HEIGHT, PlayerFigure, idleIntent, type FigureAction, type FigureIntent } from "./character";
 
 export type StagePose = "idle" | "run" | "kick" | "celebrate";
+
+/**
+ * Vitrine de comemorações do "Gol!": cada uma por alguns segundos, em ciclo.
+ * `face` é o lado para onde o boneco olha (0 = câmera; o siuuu sai de costas
+ * e cai de frente). `speed` > 0 corre no lugar (aviãozinho).
+ */
+const SHOWCASE: ReadonlyArray<{ action: FigureAction; duration: number; face: number; speed?: number }> = [
+  { action: "jumpCheer", duration: 2, face: 0 },
+  { action: "clap", duration: 1.3, face: Math.PI },
+  { action: "siuu", duration: 2.6, face: Math.PI },
+  { action: "kneeSlide", duration: 0.75, face: 0 },
+  { action: "kneelCheer", duration: 2.1, face: 0 },
+  { action: "backflip", duration: 1.15, face: 0 },
+  { action: "pointSky", duration: 1.7, face: 0 },
+  { action: "airplane", duration: 2.8, face: 0, speed: 175 },
+  { action: "flagDance", duration: 2.6, face: 0 },
+  { action: "crestKiss", duration: 2.6, face: 0 },
+];
+const SHOWCASE_LENGTH = SHOWCASE.reduce((sum, item) => sum + item.duration, 0);
+
+/** Correndo: trote → corrida → disparada e de volta, para mostrar as passadas. */
+function runSpeed(time: number) {
+  return 165 + 95 * Math.sin((time / 7) * Math.PI * 2 - Math.PI / 2);
+}
+
+/** Destaque leve do criador: o mesmo contorno que o time do jogador tem em campo. */
+const STAGE_HIGHLIGHT = 0.25;
 
 export class CharacterStage {
   private readonly renderer: THREE.WebGLRenderer;
@@ -30,6 +57,9 @@ export class CharacterStage {
   private height = 0;
   private readonly cleanup: Array<() => void> = [];
   private readonly lookTarget = new THREE.Vector3();
+  private readonly upAxis = new THREE.Vector3(0, 1, 0);
+  /** 1 = retrato; maior abre o quadro para caber o siuuu e o mortal. */
+  private pullBack = 1;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -42,8 +72,7 @@ export class CharacterStage {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // Enquadra da cabeça até a borda da frente do pedestal.
-    this.camera.position.set(0, 36, 122);
-    this.camera.lookAt(0, FIGURE_HEIGHT * 0.38, 0);
+    this.frameCamera();
 
     this.scene.add(new THREE.HemisphereLight("#e4f1ff", "#2c3a2e", 1.15));
     const key = new THREE.DirectionalLight("#fff3df", 2.4);
@@ -119,6 +148,7 @@ export class CharacterStage {
       this.figure.dispose();
     }
     this.figure = new PlayerFigure({ appearance, primary, secondary, number, captain: true, seed: 7 });
+    this.figure.setHighlight(STAGE_HIGHLIGHT);
     this.turntable.add(this.figure.root);
     this.pedestalMaterial.color.set(primary);
     this.rimMaterial.color.set(secondary === primary ? "#ffc72c" : secondary);
@@ -132,25 +162,54 @@ export class CharacterStage {
 
   private intent(): FigureIntent {
     // A cabeça procura a câmera: o boneco olha para quem está criando ele.
-    this.lookTarget.copy(this.camera.position).applyAxisAngle(new THREE.Vector3(0, 1, 0), -this.spin);
+    this.lookTarget.copy(this.camera.position).applyAxisAngle(this.upAxis, -this.spin);
     const look = { x: this.lookTarget.x, z: this.lookTarget.z };
     switch (this.pose) {
       case "run":
-        return idleIntent({ state: "run", speed: 240, heading: 0, faceYaw: 0 });
+        return idleIntent({ state: "run", speed: runSpeed(this.poseTime), heading: 0, faceYaw: 0 });
       case "kick": {
         const cycle = this.poseTime % 2.2;
         if (cycle < 1.1) return idleIntent({ state: "aim", faceYaw: 0, aimRatio: Math.min(1, cycle / 0.95) });
         return idleIntent({ state: "ready", faceYaw: 0, look });
       }
-      case "celebrate":
-        return idleIntent({ state: this.poseTime % 6 < 3 ? "celebrate" : "scorer", faceYaw: 0 });
+      case "celebrate": {
+        const item = this.showcaseItem();
+        return idleIntent({
+          state: item.speed ? "run" : "celebrate",
+          speed: item.speed ?? 0,
+          heading: item.face,
+          faceYaw: item.face,
+          action: item.action,
+        });
+      }
       default:
         return idleIntent({ state: "idle", faceYaw: 0, look });
     }
   }
 
+  private showcaseItem() {
+    let time = this.poseTime % SHOWCASE_LENGTH;
+    for (const item of SHOWCASE) {
+      if (time < item.duration) return item;
+      time -= item.duration;
+    }
+    return SHOWCASE[0];
+  }
+
+  private frameCamera() {
+    const pull = this.pullBack;
+    const lookY = FIGURE_HEIGHT * 0.38 + (pull - 1) * 30;
+    this.camera.position.set(0, lookY + (36 - FIGURE_HEIGHT * 0.38) * pull, 122 * pull);
+    this.camera.lookAt(0, lookY, 0);
+  }
+
   private tick(dt: number) {
     this.resize();
+    const pull = this.pose === "celebrate" ? 1.22 : 1;
+    if (Math.abs(pull - this.pullBack) > 0.0005) {
+      this.pullBack += (pull - this.pullBack) * (1 - Math.exp(-dt * 3));
+      this.frameCamera();
+    }
     const previous = this.poseTime;
     this.poseTime += dt;
     if (!this.drag) {
@@ -162,7 +221,7 @@ export class CharacterStage {
     if (this.figure) {
       if (this.pose === "kick" && previous % 2.2 < 1.1 && this.poseTime % 2.2 >= 1.1) {
         this.figure.triggerLunge();
-        this.figure.triggerKick(1);
+        this.figure.triggerKick(1, "strike");
       }
       this.figure.update(dt, this.intent());
     }

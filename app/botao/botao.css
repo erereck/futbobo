@@ -2632,3 +2632,99 @@
   .botao-canvas-3d { transition: none; }
   .botao-3d-loading { animation: none; }
 }
+
+/* No 3D a câmera desce até quem marcou: o aviso sobe para não tapar a festa. */
+.botao-root-3d .botao-flash {
+  top: 11%;
+}
+.botao-root-3d .botao-flash-goal,
+.botao-root-3d .botao-flash-bad {
+  padding: 8px 26px 7px;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  animation: botao-flash-3d-in 420ms cubic-bezier(0.16, 1.2, 0.3, 1) both;
+}
+@keyframes botao-flash-3d-in {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.9); filter: blur(6px); }
+  55% { opacity: 1; transform: translate(-50%, -50%) scale(0.94); filter: blur(0); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Tarja de transmissão do gol (só no 3D). */
+.botao-goal-caption {
+  --caption-color: #ffc72c;
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 10px;
+  border-left: 4px solid var(--caption-color);
+  border-radius: 6px 14px 14px 6px;
+  background: linear-gradient(90deg, rgba(5, 12, 9, 0.92), rgba(5, 12, 9, 0.74));
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  color: #f5f7f2;
+  pointer-events: none;
+  animation: botao-caption-in 520ms cubic-bezier(0.2, 0.9, 0.2, 1) 260ms both;
+}
+.botao-goal-caption > span {
+  display: grid;
+  min-width: 0;
+}
+.botao-goal-caption small {
+  color: var(--caption-color);
+  font: 900 10px/1.1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.14em;
+  filter: brightness(1.25);
+}
+.botao-goal-caption strong {
+  overflow: hidden;
+  font-family: var(--display, "Barlow Condensed", sans-serif);
+  font-size: 19px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.botao-goal-caption > b {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: rgba(245, 247, 242, 0.08);
+  font-family: var(--display, "Barlow Condensed", sans-serif);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.botao-goal-caption > b i {
+  color: #91a398;
+  font-size: 14px;
+  font-style: normal;
+}
+@keyframes botao-caption-in {
+  from { opacity: 0; transform: translateX(-28px); clip-path: inset(0 100% 0 0); }
+  to { opacity: 1; transform: translateX(0); clip-path: inset(0 0 0 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .botao-root-3d .botao-flash-goal,
+  .botao-root-3d .botao-flash-bad,
+  .botao-goal-caption { animation: none; }
+}
+
+/* Pausa no 3D é "modo foto": a cena congelada continua visível e a câmera gira devagar. */
+.botao-root-3d .botao-pause-overlay {
+  place-content: end center;
+  padding-bottom: 28px;
+  background: linear-gradient(180deg, rgba(5, 11, 8, 0) 42%, rgba(5, 11, 8, 0.9) 100%);
+  /* O canvas por baixo continua recebendo botão direito, roda e dois dedos. */
+  pointer-events: none;
+}
+.botao-root-3d .botao-pause-overlay .botao-primary {
+  pointer-events: auto;
+}
+.botao-root-3d .botao-pause-mark {
+  display: none;
+}

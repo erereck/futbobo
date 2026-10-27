@@ -209,7 +209,9 @@ three/character-stage.ts palco do criador de personagem
   e o WebGL existe; sem WebGL a mesa 2D continua.
 - **Entrada.** O clique vale no boneco inteiro (`pickBodyId`, raio contra um
   segmento vertical) e o arraste é medido num plano na altura da cintura.
-  `aimFromDrag` recebe os mesmos números de campo do 2D.
+  Acerto em cheio vale o boneco da frente; de raspão, o mais centrado (um
+  companheiro na frente não rouba o toque). `aimFromDrag` recebe os mesmos
+  números de campo do 2D.
 - **Câmera.** Botão direito gira (horizontal) e inclina (vertical), roda aproxima,
   dois dedos giram e dão zoom no celular, `C` centraliza. Pênalti tem câmera de
   transmissão atrás do batedor; gol aproxima do gol marcado.
@@ -218,7 +220,36 @@ three/character-stage.ts palco do criador de personagem
   cima. O chute dispara quando a bola muda de velocidade perto do pé — vale
   também no pênalti, que não emite `touch`.
 - **Teletransportes viram trote.** Troca de formação e fila dos pênaltis movem
-  os discos de uma vez no motor; no 3D os bonecos correm até o lugar novo.
+  os discos de uma vez no motor; no 3D os bonecos correm até o lugar novo,
+  desviando uns dos outros. Quem a CPU pode tacar logo (batedor do pênalti,
+  saída com relógio correndo) chega antes dos ~430ms dela. Se o motor mexer num
+  boneco ainda trotando, o resto vira um deslocamento que assenta em ~0,2s; os
+  parados terminam o trote normalmente.
+- **Comemoração (`three/choreography.ts`).** No gol (e no gol que encerra a
+  partida pelo limite, que pula a fase `goal`) quem marcou atravessa o campo:
+  carrinho de joelho vindo na direção da câmera, bandeirinha, aviãozinho, "siuuu",
+  mortal ou beijo no escudo. Os companheiros chegam por trás dele (longe da
+  câmera), quem sofreu desaba. Câmera: primeiro a rede estufando em câmera
+  lenta, depois o close seguindo o artilheiro com o estádio escurecendo e um
+  holofote nele; a câmera solta ~0,45s antes da saída de bola e não volta a
+  mergulhar se a saída atrasar. Gol com o relógio zerado segura o close até o
+  intervalo ou o apito, e o apito ganha a cena do vencedor (mesmo que quem
+  marcou tenha perdido), com a bola ainda no fundo da rede. Pênalti decidido
+  e apito final têm a própria cena; o goleiro que mergulhou fica no chão antes
+  de levantar, e fica em cena no fim da disputa e no gol do pênalti por demora.
+- **Tempo.** Só no 3D: pausa de gol 2,4s (2D: 1,7s), pênalti 1,6s (1,1s), fim
+  2,5s (1,8s) e +450ms na saída da CPU depois de gol. O relógio está parado em
+  todas essas pausas, então a partida é a mesma.
+- **De quem é o boneco.** Sem seta: cada um fica sobre uma base de botão nas
+  cores do time; os do jogador ganham verniz na base e um contorno de luz
+  (`setHighlight`). No X1 local o contorno vai para o time da vez. Camisa da
+  cor do piso (verde na grama, azul no futsal) clareia só o disco da base.
+- **Pausa = modo foto.** Tudo congela no meio da pose e a câmera gira devagar.
+  O aviso de pausa deixa o canvas receber botão direito, roda e dois dedos;
+  mexeu, o modo foto para de puxar zoom e altura. Ao retomar o zoom volta suave.
+- **Android.** Desenho 3D com teto de ~60 quadros (a física segue o ritmo da
+  tela), texturas pré-carregadas na mira, goleiros montados antes do pênalti,
+  sombra mais barata no celular e recriação automática se o WebGL cair.
 - **Configurações fora do app.** Dentro do shell as configurações vivem no
   IndexedDB (`career/indexed-storage.ts`). Copa, X1 e `/botao` rodam fora da
   ponte, então quem grava as configurações também chama

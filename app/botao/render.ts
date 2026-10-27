@@ -61,6 +61,8 @@ export type BotaoRenderView = {
   hideUserMarker?: boolean;
   /** Tratamento 2.5D experimental usado apenas pela rota de protótipo. */
   showcase?: boolean;
+  /** Segundos até a saída de bola depois do gol (o 3D devolve a câmera antes). O 2D ignora. */
+  goalEndsIn?: number | null;
 };
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {

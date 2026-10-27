@@ -81,6 +81,13 @@ const MAX_SUBSTEPS = 12;
 const GOAL_PAUSE_MS = 1700;
 const CPU_THINK_MS = 430;
 const PENALTY_PAUSE_MS = 1100;
+const FINISH_DELAY_MS = 1800;
+// No 3D a câmera desce até quem marcou e o time corre para comemorar, então
+// as pausas crescem um pouco. O relógio já fica parado nessas fases: o jogo
+// em si (tempo, regras, CPU) continua idêntico ao 2D.
+const GOAL_PAUSE_3D_MS = 2400;
+const PENALTY_PAUSE_3D_MS = 1600;
+const FINISH_DELAY_3D_MS = 2500;
 const USER_DECISION_SECONDS = 7;
 const USER_WARNING_SECONDS = 3;
 const REPLAY_SAMPLE_MS = 80;
@@ -231,6 +238,19 @@ export default function BotaoMatch({
   desktopLandscapeRef.current = desktopLandscape;
   const [view3d, setView3d] = useState(false);
   const [view3dReady, setView3dReady] = useState(false);
+  const [view3dEpoch, setView3dEpoch] = useState(0);
+  const contextLossesRef = useRef(0);
+  /** Teto de ~60 quadros só no desenho 3D (a física segue no ritmo da tela). */
+  const render3dBudgetRef = useRef(0);
+  const render3dElapsedRef = useRef(0);
+  /** Quando a saída de bola depois do gol vai acontecer (para a câmera voltar a tempo). */
+  const goalResumeAtRef = useRef<number | null>(null);
+  const [goalCaption, setGoalCaption] = useState<{
+    side: BotaoSide;
+    scorer: string;
+    ownGoal: boolean;
+    minute: string;
+  } | null>(null);
   const [compactMobileTable, setCompactMobileTable] = useState(false);
   const [paused, setPaused] = useState(false);
   const [awaitingFirstTouch, setAwaitingFirstTouch] = useState(firstTouchReady);
@@ -383,11 +403,22 @@ export default function BotaoMatch({
             landscape: desktopLandscapeRef.current,
             hideUserMarker: localMatch,
             reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+            // Reconstruindo depois de perder o contexto: sem repetir a entrada de transmissão.
+            skipIntro: contextLossesRef.current > 0,
             onGesture: () => {
               // Dois dedos giram o campo: a mira que estava começando é descartada.
               pointerRef.current = null;
               aimRef.current = null;
               selectedRef.current = null;
+            },
+            onContextLost: () => {
+              // Android apertou a memória ou o app foi para o fundo: refaz o 3D num
+              // canvas novo (o motor não depende dele). Na terceira vez fica no 2D.
+              contextLossesRef.current += 1;
+              view3dRef.current = null;
+              setView3dReady(false);
+              if (contextLossesRef.current <= 2) window.setTimeout(() => setView3dEpoch((epoch) => epoch + 1), 300);
+              else setView3d(false);
             },
           });
           view3dRef.current = instance;
@@ -406,7 +437,7 @@ export default function BotaoMatch({
       instance?.dispose();
       setView3dReady(false);
     };
-  }, [view3d, setup, localMatch]);
+  }, [view3d, view3dEpoch, setup, localMatch]);
 
   useEffect(() => {
     view3dRef.current?.setLandscape(desktopLandscape);
@@ -558,8 +589,11 @@ export default function BotaoMatch({
           playBotaoSound(mine ? "goal" : "concede");
           goalFlashRef.current = 1;
           goalFlashSideRef.current = event.side;
-          setShaking(true);
-          window.setTimeout(() => setShaking(false), 560);
+          // No 3D quem treme é a câmera; sacudir a moldura junto pareceria defeito.
+          if (!view3dRef.current) {
+            setShaking(true);
+            window.setTimeout(() => setShaking(false), 560);
+          }
           const text = event.ownGoal
             ? "GOL CONTRA"
             : localMatch
@@ -572,8 +606,18 @@ export default function BotaoMatch({
           showFlash(
             text,
             localMatch || mine ? "goal" : "bad",
-            GOAL_PAUSE_MS - 200,
+            (view3dRef.current ? GOAL_PAUSE_3D_MS : GOAL_PAUSE_MS) - 200,
           );
+          if (view3dRef.current) {
+            // Tarja de transmissão: no 3D a câmera está em cima de quem marcou.
+            const elapsedSeconds = Math.max(0, machine.periodSeconds - machine.clock);
+            setGoalCaption({
+              side: event.side,
+              scorer: event.ownGoal ? event.scorer.replace(/\s*\(contra\)$/, "") : event.scorer,
+              ownGoal: event.ownGoal,
+              minute: formatClock(elapsedSeconds),
+            });
+          }
           setAnnouncement(
             `${text} ${event.scorer}. Placar ${machine.score.user} a ${machine.score.cpu}.`,
           );
@@ -765,6 +809,7 @@ export default function BotaoMatch({
             }
             if (outcome && timersRef.current.penalty === null) {
               const scored = outcome.scored;
+              const penaltyPause = view3dInstance ? PENALTY_PAUSE_3D_MS : PENALTY_PAUSE_MS;
               const shooting = state.penalties.turn;
               vibrate(scored ? [0, 50, 40, 90] : 30);
               showFlash(
@@ -776,7 +821,7 @@ export default function BotaoMatch({
                   : scored === (shooting === "user")
                     ? "goal"
                     : "bad",
-                PENALTY_PAUSE_MS,
+                penaltyPause,
               );
               const commitWhenRunning = () => {
                 if (pausedRef.current || (!setup.managerMode && document.hidden)) {
@@ -793,7 +838,7 @@ export default function BotaoMatch({
               };
               timersRef.current.penalty = window.setTimeout(
                 commitWhenRunning,
-                PENALTY_PAUSE_MS,
+                penaltyPause,
               );
             }
           } else {
@@ -815,8 +860,26 @@ export default function BotaoMatch({
         showcase,
       };
       if (view3dInstance) {
-        // Pausado, os bonecos congelam junto com o relógio.
-        view3dInstance.render(state, renderView, pausedRef.current ? 0 : elapsed);
+        // Celular de 90/120 Hz não precisa desenhar o 3D duas vezes por quadro de 60.
+        render3dBudgetRef.current += elapsed;
+        render3dElapsedRef.current += elapsed;
+        if (render3dBudgetRef.current < 1 / 64) return;
+        render3dBudgetRef.current = Math.min(1 / 60, Math.max(0, render3dBudgetRef.current - 1 / 60));
+        const dt3d = render3dElapsedRef.current;
+        render3dElapsedRef.current = 0;
+        // Pausado, os bonecos congelam junto com o relógio; a câmera segue viva (modo foto).
+        view3dInstance.render(
+          state,
+          {
+            ...renderView,
+            goalEndsIn: state.phase === "goal" && goalResumeAtRef.current !== null
+              ? (goalResumeAtRef.current - time) / 1000
+              : null,
+          },
+          pausedRef.current ? 0 : dt3d,
+          dt3d,
+          pausedRef.current,
+        );
         return;
       }
       if (!canvas || !context) return;
@@ -874,13 +937,16 @@ export default function BotaoMatch({
       return;
     const resumeGoal = () => {
       if (pausedRef.current || formerClubPromptRef.current || (!setup.managerMode && document.hidden)) {
+        goalResumeAtRef.current = null;
         timersRef.current.goal = window.setTimeout(resumeGoal, 120);
         return;
       }
+      goalResumeAtRef.current = null;
       timersRef.current.goal = null;
       const current = matchRef.current;
       if (!current) return;
       handleEvents(resumeAfterGoal(current));
+      if (current.phase !== "finished") setGoalCaption(null);
       if (current.phase !== "finished") {
         const formation = formationById(current.formationId.user);
         showFlash(
@@ -890,7 +956,9 @@ export default function BotaoMatch({
         );
       }
     };
-    timersRef.current.goal = window.setTimeout(resumeGoal, GOAL_PAUSE_MS);
+    const goalPause = view3dRef.current ? GOAL_PAUSE_3D_MS : GOAL_PAUSE_MS;
+    goalResumeAtRef.current = performance.now() + goalPause;
+    timersRef.current.goal = window.setTimeout(resumeGoal, goalPause);
   }, [signature, handleEvents, showFlash, paused, setup.managerMode]);
 
   // -------------------------------------------------------------- vez da CPU
@@ -963,7 +1031,10 @@ export default function BotaoMatch({
       setCpuThinking(false);
       bump();
     };
-    timersRef.current.cpu = window.setTimeout(playCpuTurn, CPU_THINK_MS);
+    // No 3D, depois de um gol, o time ainda está trotando para a formação nova:
+    // a CPU espera o trote. O relógio está parado nessa saída, então nada muda no jogo.
+    const kickoffWait = view3dRef.current && state.phase === "kickoff" && state.clockPausedForKickoff ? 450 : 0;
+    timersRef.current.cpu = window.setTimeout(playCpuTurn, CPU_THINK_MS + kickoffWait);
   }, [signature, bump, paused, localMatch, setup.managerMode]);
 
   // ------------------------------------------------------------------- fim
@@ -1009,7 +1080,7 @@ export default function BotaoMatch({
       timersRef.current.finish = null;
       onFinishRef.current(result);
     };
-    timersRef.current.finish = window.setTimeout(finishWhenVisible, 1800);
+    timersRef.current.finish = window.setTimeout(finishWhenVisible, view3dRef.current ? FINISH_DELAY_3D_MS : FINISH_DELAY_MS);
   }, [signature, showFlash, localMatch, formerClubGoalPrompt, setup.managerMode]);
 
   // -------------------------------------------------------------- interação
@@ -1147,7 +1218,12 @@ export default function BotaoMatch({
 
   const onPointerMove = useCallback(
     (event: ReactPointerEvent<HTMLCanvasElement>) => {
-      if (pausedRef.current) return;
+      if (pausedRef.current) {
+        // Pausado (modo foto) nada é tacável: o destaque e a mãozinha não ficam presos.
+        view3dRef.current?.setHover(null);
+        event.currentTarget.style.cursor = "";
+        return;
+      }
       const view = view3dRef.current;
       if (view && pointerRef.current === null) {
         // Passando o mouse: destaca o boneco que pode ser tacado.
@@ -1595,6 +1671,7 @@ export default function BotaoMatch({
         ) : null}
         {view3d ? (
           <canvas
+            key={view3dEpoch}
             ref={canvas3dRef}
             className={`botao-canvas botao-canvas-3d ${view3dReady ? "botao-canvas-3d-ready" : ""}`}
             aria-label={`${tableLabel} Visão 3D: botão direito ou dois dedos giram o campo.`}
@@ -1607,6 +1684,21 @@ export default function BotaoMatch({
         ) : null}
         {view3d && !view3dReady ? (
           <div className="botao-3d-loading" aria-hidden="true">Montando o estádio…</div>
+        ) : null}
+        {view3dReady && goalCaption ? (
+          <div
+            key={`${goalCaption.side}-${state.score.user}-${state.score.cpu}`}
+            className={`botao-goal-caption botao-goal-caption-${goalCaption.side}`}
+            style={{ "--caption-color": goalCaption.side === "user" ? setup.userTeam.primary : setup.cpuTeam.primary } as CSSProperties}
+            aria-hidden="true"
+          >
+            <TeamCrest team={goalCaption.side === "user" ? setup.userTeam : setup.cpuTeam} size={30} />
+            <span>
+              <small>{goalCaption.ownGoal ? "GOL CONTRA" : "GOL"} · {goalCaption.minute}</small>
+              <strong>{goalCaption.scorer}</strong>
+            </span>
+            <b>{state.score.user}<i>×</i>{state.score.cpu}</b>
+          </div>
         ) : null}
         {flash ? (
           <div className={`botao-flash botao-flash-${flash.tone}`}>

@@ -101,7 +101,17 @@ export function canvasTexture(canvas: HTMLCanvasElement, pixelated = false) {
 }
 
 const GRID = 16;
-const CELL = 8;
+/**
+ * Texels por "pixel" do rosto. Com NearestFilter o desenho é o mesmo de 8; a
+ * célula do atlas ganha margem inteira (abaixo) e cada pixel do rosto vira
+ * exatamente 4×4 texels — grade regular e 1/3 da memória de antes.
+ */
+const CELL = 4;
+/** Margem do atlas da cabeça em texels inteiros (contra sangria do mipmap). */
+const HEAD_PAD_TEXELS = 4;
+const HEAD_CELL = GRID * CELL + HEAD_PAD_TEXELS * 2;
+/** Fração da célula da cabeça que é margem (para os UVs). */
+export const HEAD_ATLAS_PAD = HEAD_PAD_TEXELS / HEAD_CELL;
 
 type Pixel = (x: number, y: number, color: string, width?: number, height?: number) => void;
 
@@ -119,7 +129,9 @@ function gridCanvas(fill: string) {
 
 // ---------------------------------------------------------------- cabeça
 
-export type FaceMood = "normal" | "blink" | "shout" | "sad";
+export type FaceMood = "normal" | "blink" | "shout" | "sad" | "surprised" | "grit";
+
+export const FACE_MOODS: readonly FaceMood[] = ["normal", "blink", "shout", "sad", "surprised", "grit"];
 
 const STUBBLE_STYLES = new Set([3, 5, 15, 18, 20]);
 
@@ -174,10 +186,22 @@ function paintHairFront(px: Pixel, look: ResolvedLook) {
 
 function paintBrows(px: Pixel, look: ResolvedLook, mood: FaceMood) {
   const brow = mixHex(shadeHex(look.hair, 10), "#2a1f1a", luminance(look.hair) > 0.7 ? 0.35 : 0);
-  const row = mood === "shout" ? 4 : 5 + (look.brow === 0 ? 1 : 0);
+  const row = mood === "shout" || mood === "surprised" ? 4 : 5 + (look.brow === 0 ? 1 : 0);
   if (mood === "sad") {
     px(3, row + 1, brow, 2, 1); px(5, row, brow, 2, 1);
     px(9, row, brow, 2, 1); px(11, row + 1, brow, 2, 1);
+    return;
+  }
+  if (mood === "grit") {
+    // Raça: sobrancelhas descem em direção ao nariz.
+    px(3, 5, brow, 2, 1); px(5, 6, brow, 2, 1);
+    px(9, 6, brow, 2, 1); px(11, 5, brow, 2, 1);
+    return;
+  }
+  if (mood === "surprised") {
+    // Arqueadas e altas.
+    px(4, row - 1, brow, 2, 1); px(3, row, brow, 1, 1); px(6, row, brow, 1, 1);
+    px(10, row - 1, brow, 2, 1); px(9, row, brow, 1, 1); px(12, row, brow, 1, 1);
     return;
   }
   const thick = look.brow === 2 ? 2 : 1;
@@ -202,6 +226,19 @@ function paintEyes(px: Pixel, look: ResolvedLook, mood: FaceMood) {
   if (mood === "shout") {
     px(3, 7, white, 3, 2); px(10, 7, white, 3, 2);
     px(4, 7, look.eyes, 1, 2); px(11, 7, look.eyes, 1, 2);
+    return;
+  }
+  if (mood === "surprised") {
+    // Olhos arregalados: 3×3 com a pupila pequena no meio.
+    px(3, 6, white, 3, 3); px(10, 6, white, 3, 3);
+    px(4, 7, pupil, 1, 1); px(11, 7, pupil, 1, 1);
+    return;
+  }
+  if (mood === "grit") {
+    // Olhos semicerrados de esforço.
+    px(3, 8, white, 3, 1); px(10, 8, white, 3, 1);
+    px(4, 8, look.eyes, 2, 1); px(10, 8, look.eyes, 2, 1);
+    px(3, 7, shadeHex(look.skin, -26), 3, 1); px(10, 7, shadeHex(look.skin, -26), 3, 1);
     return;
   }
   px(3, 7, white, 3, 2);
@@ -246,6 +283,19 @@ function paintMouth(px: Pixel, look: ResolvedLook, mood: FaceMood) {
   }
   if (mood === "sad") {
     px(6, 12, mouth, 4, 1); px(5, 13, mouth, 1, 1); px(10, 13, mouth, 1, 1);
+    return;
+  }
+  if (mood === "surprised") {
+    // Boca em "O".
+    px(6, 11, mouth, 4, 3);
+    px(7, 12, shadeHex(look.skin, -110), 2, 1);
+    return;
+  }
+  if (mood === "grit") {
+    // Dentes cerrados.
+    px(4, 11, mouth, 8, 3);
+    px(5, 12, teeth, 6, 1);
+    px(7, 12, mouth, 1, 1); px(9, 12, mouth, 1, 1);
     return;
   }
   switch (look.face) {
@@ -360,12 +410,13 @@ const ATLAS_PAD = 0.04;
  * Junta as 6 faces de uma caixa (ordem do BoxGeometry) num canvas 3×2. Uma
  * textura por caixa = um draw call por caixa, em vez de seis.
  */
-function atlasCanvas(faces: HTMLCanvasElement[], cellWidth: number, cellHeight: number, pixelated: boolean) {
+function atlasCanvas(faces: HTMLCanvasElement[], cellWidth: number, cellHeight: number, pixelated: boolean, pad = ATLAS_PAD) {
   const canvas = makeCanvas(cellWidth * 3, cellHeight * 2);
   const ctx = canvas.getContext("2d")!;
   ctx.imageSmoothingEnabled = !pixelated;
-  const padX = cellWidth * ATLAS_PAD;
-  const padY = cellHeight * ATLAS_PAD;
+  // Pixel art: margem em texels inteiros para o miolo sair 1:1, sem pixel torto.
+  const padX = pixelated ? Math.round(cellWidth * pad) : cellWidth * pad;
+  const padY = pixelated ? Math.round(cellHeight * pad) : cellHeight * pad;
   faces.forEach((face, index) => {
     const x = (index % 3) * cellWidth;
     const y = Math.floor(index / 3) * cellHeight;
@@ -379,8 +430,8 @@ function atlasCanvas(faces: HTMLCanvasElement[], cellWidth: number, cellHeight: 
 const atlasGeometryCache = new Map<string, THREE.BoxGeometry>();
 
 /** Caixa com UVs apontando para as células do atlas 3×2. Compartilhada entre bonecos. */
-export function atlasBoxGeometry(width: number, height: number, depth: number) {
-  const key = `${width}|${height}|${depth}`;
+export function atlasBoxGeometry(width: number, height: number, depth: number, pad = ATLAS_PAD) {
+  const key = `${width}|${height}|${depth}|${pad}`;
   const cached = atlasGeometryCache.get(key);
   if (cached) return cached;
   const geometry = new THREE.BoxGeometry(width, height, depth);
@@ -390,14 +441,19 @@ export function atlasBoxGeometry(width: number, height: number, depth: number) {
     const face = Math.floor(vertex / 4);
     const column = face % 3;
     const row = Math.floor(face / 3);
-    const u = (column + ATLAS_PAD + uv.getX(vertex) * (1 - ATLAS_PAD * 2)) / 3;
+    const u = (column + pad + uv.getX(vertex) * (1 - pad * 2)) / 3;
     // Linha 0 do canvas é a metade de cima da textura (v de 0,5 a 1).
-    const v = (1 - row + ATLAS_PAD + uv.getY(vertex) * (1 - ATLAS_PAD * 2)) / 2;
+    const v = (1 - row + pad + uv.getY(vertex) * (1 - pad * 2)) / 2;
     uv.setXY(vertex, u, v);
   }
   geometry.clearGroups();
   atlasGeometryCache.set(key, geometry);
   return geometry;
+}
+
+/** Caixa da cabeça 8×8×8 com os UVs do atlas de margem inteira. */
+export function headBoxGeometry() {
+  return atlasBoxGeometry(8, 8, 8, HEAD_ATLAS_PAD);
 }
 
 /** Um atlas por humor do rosto; trocar a expressão é só trocar o `map`. */
@@ -409,10 +465,16 @@ export function createHeadTextures(look: ResolvedLook): HeadTextures {
   const top = paintTop(look);
   const bottom = gridCanvas(shadeHex(look.skin, -24)).canvas;
   const back = paintBack(look);
-  const cell = GRID * CELL;
   const build = (mood: FaceMood) =>
-    canvasTexture(atlasCanvas([sideFront, sideBack, top, bottom, paintFace(look, mood), back], cell, cell, true), true);
-  return { normal: build("normal"), blink: build("blink"), shout: build("shout"), sad: build("sad") };
+    canvasTexture(atlasCanvas([sideFront, sideBack, top, bottom, paintFace(look, mood), back], HEAD_CELL, HEAD_CELL, true, HEAD_ATLAS_PAD), true);
+  return {
+    normal: build("normal"),
+    blink: build("blink"),
+    shout: build("shout"),
+    sad: build("sad"),
+    surprised: build("surprised"),
+    grit: build("grit"),
+  };
 }
 
 // ---------------------------------------------------------------- camisa
