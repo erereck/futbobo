@@ -1,3 +1,4 @@
+import { ENGLISH_LOWER_CLUBS } from "./english-2026-clubs";
 import { BRAZIL_LOWER_CLUBS } from "./brazil-2026-clubs";
 
 export type PositionKey =
@@ -370,6 +371,8 @@ export const LEAGUES: League[] = [
   { id: "brasileirao-b", countryId: "brasil", name: "Brasileirão Série B", cupName: "Copa do Brasil", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   { id: "brasileirao-c", countryId: "brasil", name: "Brasileirão Série C", cupName: "Copa do Brasil", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   { id: "brasileirao-d", countryId: "brasil", name: "Brasileirão Série D", cupName: "Copa do Brasil", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "league-one", countryId: "inglaterra", name: "EFL League One", cupName: "FA Cup", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "league-two", countryId: "inglaterra", name: "EFL League Two", cupName: "FA Cup", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   { id: "championship", countryId: "inglaterra", name: "EFL Championship", cupName: "FA Cup", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   // Novas rotas fora do eixo tradicional. Na África e na Austrália,
   // `championsPlaces` representa vagas na competição continental local.
@@ -432,7 +435,7 @@ const EUROPE_CLUBS: Club[] = [
   { id: "brentford", name: "Brentford Football Club", shortName: "Brentford", abbr: "BRE", city: "Londres", countryId: "inglaterra", leagueId: "premier", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 71 },
   { id: "brighton", name: "Brighton & Hove Albion Football Club", shortName: "Brighton", abbr: "BHA", city: "Brighton", countryId: "inglaterra", leagueId: "premier", primary: "#4a9fd6", secondary: "#f5f5f5", reputation: 2, strength: 72 },
   { id: "fulham", name: "Fulham Football Club", shortName: "Fulham", abbr: "FUL", city: "Londres", countryId: "inglaterra", leagueId: "premier", primary: "#f5f5f5", secondary: "#111111", reputation: 2, strength: 69 },
-  { id: "wolves", name: "Wolverhampton Wanderers Football Club", shortName: "Wolverhampton", abbr: "WOL", city: "Wolverhampton", countryId: "inglaterra", leagueId: "premier", primary: "#f2b705", secondary: "#111111", reputation: 1, strength: 66 },
+  { id: "wolves", name: "Wolverhampton Wanderers Football Club", shortName: "Wolverhampton", abbr: "WOL", city: "Wolverhampton", countryId: "inglaterra", leagueId: "championship", primary: "#f2b705", secondary: "#111111", reputation: 1, strength: 66 },
   { id: "bournemouth", name: "AFC Bournemouth", shortName: "Bournemouth", abbr: "BOU", city: "Bournemouth", countryId: "inglaterra", leagueId: "premier", primary: "#d71920", secondary: "#111111", reputation: 2, strength: 71 },
   { id: "leeds", name: "Leeds United Football Club", shortName: "Leeds United", abbr: "LEE", city: "Leeds", countryId: "inglaterra", leagueId: "premier", primary: "#f5f5f5", secondary: "#274b9f", reputation: 2, strength: 68 },
   { id: "nottingham-forest", name: "Nottingham Forest Football Club", shortName: "Nottingham Forest", abbr: "NFO", city: "Nottingham", countryId: "inglaterra", leagueId: "premier", primary: "#d71920", secondary: "#f5f5f5", reputation: 2, strength: 69 },
@@ -956,7 +959,7 @@ const BRAZIL_B_CLUBS: Club[] = [
 // EFL Championship. Segunda divisão inglesa: dinheiro de primeira, vaga
 // continental nenhuma — quem sobe muda de patamar em uma temporada.
 const ENGLAND_B_CLUBS: Club[] = [
-  { id: "leicester", name: "Leicester City Football Club", shortName: "Leicester", abbr: "LEI", city: "Leicester", countryId: "inglaterra", leagueId: "championship", primary: "#0053a0", secondary: "#fdbe11", reputation: 3, strength: 74, academy: 4 },
+  { id: "leicester", name: "Leicester City Football Club", shortName: "Leicester", abbr: "LEI", city: "Leicester", countryId: "inglaterra", leagueId: "league-one", primary: "#0053a0", secondary: "#fdbe11", reputation: 3, strength: 74, academy: 4 },
   { id: "southampton", name: "Southampton Football Club", shortName: "Southampton", abbr: "SOU", city: "Southampton", countryId: "inglaterra", leagueId: "championship", primary: "#d71920", secondary: "#ffffff", reputation: 3, strength: 72, academy: 5 },
   { id: "burnley", name: "Burnley Football Club", shortName: "Burnley", abbr: "BUR", city: "Burnley", countryId: "inglaterra", leagueId: "championship", primary: "#6c1d45", secondary: "#97d0e7", reputation: 3, strength: 72, academy: 3 },
   { id: "sheffield-united", name: "Sheffield United Football Club", shortName: "Sheffield Utd", abbr: "SHU", city: "Sheffield", countryId: "inglaterra", leagueId: "championship", primary: "#ec2227", secondary: "#111111", reputation: 3, strength: 71, academy: 4 },
@@ -970,16 +973,16 @@ const ENGLAND_B_CLUBS: Club[] = [
   { id: "swansea", name: "Swansea City Association Football Club", shortName: "Swansea", abbr: "SWA", city: "Swansea", countryId: "inglaterra", leagueId: "championship", primary: "#ffffff", secondary: "#111111", reputation: 2, strength: 66, academy: 4 },
   { id: "blackburn", name: "Blackburn Rovers Football Club", shortName: "Blackburn", abbr: "BLB", city: "Blackburn", countryId: "inglaterra", leagueId: "championship", primary: "#009ee0", secondary: "#ffffff", reputation: 2, strength: 66, academy: 4 },
   { id: "derby-county", name: "Derby County Football Club", shortName: "Derby", abbr: "DER", city: "Derby", countryId: "inglaterra", leagueId: "championship", primary: "#ffffff", secondary: "#111111", reputation: 2, strength: 66, academy: 3 },
-  { id: "sheffield-wednesday", name: "Sheffield Wednesday Football Club", shortName: "Sheffield Wed", abbr: "SHW", city: "Sheffield", countryId: "inglaterra", leagueId: "championship", primary: "#0f4d92", secondary: "#ffffff", reputation: 2, strength: 66, academy: 3 },
+  { id: "sheffield-wednesday", name: "Sheffield Wednesday Football Club", shortName: "Sheffield Wed", abbr: "SHW", city: "Sheffield", countryId: "inglaterra", leagueId: "league-one", primary: "#0f4d92", secondary: "#ffffff", reputation: 2, strength: 66, academy: 3 },
   { id: "qpr", name: "Queens Park Rangers Football Club", shortName: "QPR", abbr: "QPR", city: "Londres", countryId: "inglaterra", leagueId: "championship", primary: "#1d5ba4", secondary: "#ffffff", reputation: 2, strength: 65, academy: 3 },
   { id: "preston", name: "Preston North End Football Club", shortName: "Preston", abbr: "PRE", city: "Preston", countryId: "inglaterra", leagueId: "championship", primary: "#ffffff", secondary: "#0a4595", reputation: 2, strength: 65, academy: 3 },
   { id: "cardiff", name: "Cardiff City Football Club", shortName: "Cardiff", abbr: "CAR", city: "Cardiff", countryId: "inglaterra", leagueId: "championship", primary: "#0070b5", secondary: "#ffffff", reputation: 2, strength: 65, academy: 3 },
   { id: "birmingham", name: "Birmingham City Football Club", shortName: "Birmingham", abbr: "BIR", city: "Birmingham", countryId: "inglaterra", leagueId: "championship", primary: "#003399", secondary: "#ffffff", reputation: 2, strength: 68, academy: 4 },
   { id: "wrexham", name: "Wrexham Association Football Club", shortName: "Wrexham", abbr: "WRE", city: "Wrexham", countryId: "inglaterra", leagueId: "championship", primary: "#d71920", secondary: "#ffffff", reputation: 2, strength: 67, academy: 3 },
   { id: "charlton", name: "Charlton Athletic Football Club", shortName: "Charlton", abbr: "CHA", city: "Londres", countryId: "inglaterra", leagueId: "championship", primary: "#d71920", secondary: "#ffffff", reputation: 2, strength: 65, academy: 4 },
-  { id: "oxford-united", name: "Oxford United Football Club", shortName: "Oxford United", abbr: "OXF", city: "Oxford", countryId: "inglaterra", leagueId: "championship", primary: "#f8dc3d", secondary: "#0b1f3a", reputation: 2, strength: 64, academy: 3 },
+  { id: "oxford-united", name: "Oxford United Football Club", shortName: "Oxford United", abbr: "OXF", city: "Oxford", countryId: "inglaterra", leagueId: "league-one", primary: "#f8dc3d", secondary: "#0b1f3a", reputation: 2, strength: 64, academy: 3 },
   { id: "portsmouth", name: "Portsmouth Football Club", shortName: "Portsmouth", abbr: "POR", city: "Portsmouth", countryId: "inglaterra", leagueId: "championship", primary: "#001489", secondary: "#ffffff", reputation: 2, strength: 64, academy: 3 },
-  { id: "luton", name: "Luton Town Football Club", shortName: "Luton", abbr: "LUT", city: "Luton", countryId: "inglaterra", leagueId: "championship", primary: "#f78f1e", secondary: "#002d5b", reputation: 1, strength: 63, academy: 3 },
+  { id: "luton", name: "Luton Town Football Club", shortName: "Luton", abbr: "LUT", city: "Luton", countryId: "inglaterra", leagueId: "league-one", primary: "#f78f1e", secondary: "#002d5b", reputation: 1, strength: 63, academy: 3 },
 ];
 
 // Egyptian Premier League 2025/26. Al Ahly, Zamalek e Pyramids formam o pote
@@ -1253,6 +1256,7 @@ export const CLUBS: Club[] = [
   ...BRAZIL_B_CLUBS,
   ...BRAZIL_LOWER_CLUBS,
   ...ENGLAND_B_CLUBS,
+  ...ENGLISH_LOWER_CLUBS,
   ...SAUDI_CLUBS,
   ...JAPAN_CLUBS,
   ...KOREA_CLUBS,

@@ -271,7 +271,7 @@ export function isEuropeanClub(club: Club) {
 }
 
 export function initialContinentalSlot(club: Club): ContinentalSlot | null {
-  if (club.leagueId === "brasileirao-b" || club.leagueId === "championship" || club.leagueId === "brasileirao-c" || club.leagueId === "brasileirao-d") return null;
+  if (club.leagueId === "brasileirao-b" || club.leagueId === "championship" || club.leagueId === "brasileirao-c" || club.leagueId === "brasileirao-d" || club.leagueId === "league-one" || club.leagueId === "league-two") return null;
   const confederation = clubConfederation(club);
   if (confederation === "SOUTH_AMERICA") return club.reputation >= 4 ? "libertadores" : club.reputation >= 3 ? "sudamericana" : null;
   if (confederation === "NORTH_AMERICA") return club.reputation >= 4 ? "concacaf" : null;
@@ -293,6 +293,7 @@ export function continentalSlotAfterSeason(
   leaguePosition: number,
 ): ContinentalSlot | null {
   if (league.id === "brasileirao-c" || league.id === "brasileirao-d") return cupChampion ? "libertadores" : null;
+  if (league.id === "league-one" || league.id === "league-two") return cupChampion ? "europa" : null;
   const isSecondDivision = league.id === "brasileirao-b" || league.id === "championship";
   if (isSecondDivision) {
     if (!cupChampion) return null;

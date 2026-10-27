@@ -340,6 +340,8 @@ const CUP_ID_OVERRIDES = {
 };
 
 const EXTERNAL_COMPETITION_ASSETS = {
+  "league:league-one": { path: path.join("leagues", "league-one.png"), providerName: "EFL League One", source: "https://assets.football-logos.cc/logos/england/700x700/efl-league-one.22db0245.png" },
+  "league:league-two": { path: path.join("leagues", "league-two.png"), providerName: "EFL League Two", source: "https://assets.football-logos.cc/logos/england/700x700/efl-league-two.e37d5ec5.png" },
   "league:brasileirao-c": { path: path.join("leagues", "brasileirao-c.png"), providerName: "Brasileirão Série C", source: "https://assets.football-logos.cc/logos/brazil/700x700/brazilian-serie-c.81968f68.png" },
   "league:brasileirao-d": { path: path.join("leagues", "brasileirao-d.png"), providerName: "Brasileirão Série D", source: "https://assets.football-logos.cc/logos/brazil/700x700/brazilian-serie-d.869d9825.png" },
   afcChampions: {
@@ -360,6 +362,54 @@ const EXTERNAL_COMPETITION_ASSETS = {
 };
 
 const EXTERNAL_CLUB_ASSETS = {
+  "afc-wimbledon": "https://assets.football-logos.cc/logos/england/700x700/afc-wimbledon.44f230a3.png",
+  "barnsley": "https://assets.football-logos.cc/logos/england/700x700/barnsley.6998131b.png",
+  "blackpool": "https://assets.football-logos.cc/logos/england/700x700/blackpool.12b48b1e.png",
+  "bradford": "https://assets.football-logos.cc/logos/england/700x700/bradford.c77781e2.png",
+  "bromley": "https://assets.football-logos.cc/logos/england/700x700/bromley.ced2dddc.png",
+  "burton": "https://assets.football-logos.cc/logos/england/700x700/burton.5049d89d.png",
+  "cambridge-united": "https://assets.football-logos.cc/logos/england/700x700/cambridge-united.5eec8b36.png",
+  "doncaster-rovers": "https://assets.football-logos.cc/logos/england/700x700/doncaster-rovers.1274e1f7.png",
+  "huddersfield": "https://assets.football-logos.cc/logos/england/700x700/huddersfield.f923ac1c.png",
+  "leyton-orient": "https://assets.football-logos.cc/logos/england/700x700/leyton-orient.2a1f421b.png",
+  "mansfield": "https://assets.football-logos.cc/logos/england/700x700/mansfield.eccfc124.png",
+  "mk-dons": "https://assets.football-logos.cc/logos/england/700x700/mk-dons.8b3ddd71.png",
+  "notts-county": "https://assets.football-logos.cc/logos/england/700x700/notts-county.d6850575.png",
+  "peterborough": "https://assets.football-logos.cc/logos/england/700x700/peterborough.01110ad5.png",
+  "plymouth-argyle": "https://assets.football-logos.cc/logos/england/700x700/plymouth-argyle.07c1d2ac.png",
+  "reading": "https://assets.football-logos.cc/logos/england/700x700/reading.905092d0.png",
+  "stevenage": "https://assets.football-logos.cc/logos/england/700x700/stevenage.d5c8b3c8.png",
+  "stockport-county": "https://assets.football-logos.cc/logos/england/700x700/stockport-county.9b094327.png",
+  "wigan": "https://assets.football-logos.cc/logos/england/700x700/wigan.497a406a.png",
+  "wycombe": "https://assets.football-logos.cc/logos/england/700x700/wycombe.dc49bcad.png",
+  "accrington": "https://assets.football-logos.cc/logos/england/700x700/accrington.e875991f.png",
+  "barnet": "https://assets.football-logos.cc/logos/england/700x700/barnet.24aa3224.png",
+  "bristol-rovers": "https://assets.football-logos.cc/logos/england/700x700/bristol-rovers.5f0909a2.png",
+  "cheltenham": "https://assets.football-logos.cc/logos/england/700x700/cheltenham.a5db31bf.png",
+  "chesterfield": "https://assets.football-logos.cc/logos/england/700x700/chesterfield.81b6937e.png",
+  "colchester": "https://assets.football-logos.cc/logos/england/700x700/colchester.3c39be93.png",
+  "crawley-town": "https://assets.football-logos.cc/logos/england/700x700/crawley-town.5cd6b2f0.png",
+  "crewe": "https://assets.football-logos.cc/logos/england/700x700/crewe.afbd46b6.png",
+  "exeter": "https://assets.football-logos.cc/logos/england/700x700/exeter.204aaa1d.png",
+  "fleetwood-town": "https://assets.football-logos.cc/logos/england/700x700/fleetwood-town.0979e97e.png",
+  "gillingham": "https://assets.football-logos.cc/logos/england/700x700/gillingham.ff00ff52.png",
+  "grimsby": "https://assets.football-logos.cc/logos/england/700x700/grimsby.2b0e7bd1.png",
+  "newport": "https://assets.football-logos.cc/logos/england/700x700/newport.fa6f7e56.png",
+  "northampton": "https://assets.football-logos.cc/logos/england/700x700/northampton.f9fa9c96.png",
+  "oldham": "https://assets.football-logos.cc/logos/england/700x700/oldham.2ed82911.png",
+  "port-vale": "https://assets.football-logos.cc/logos/england/700x700/port-vale.627eb2f0.png",
+  "rochdale": "https://assets.football-logos.cc/logos/england/700x700/rochdale.067d797f.png",
+  "rotherham": "https://assets.football-logos.cc/logos/england/700x700/rotherham.5ecdf884.png",
+  "salford-city": "https://assets.football-logos.cc/logos/england/700x700/salford-city.36038209.png",
+  "shrewsbury": "https://assets.football-logos.cc/logos/england/700x700/shrewsbury.b46eea8b.png",
+  "swindon-town": "https://assets.football-logos.cc/logos/england/700x700/swindon-town.d59c742b.png",
+  "tranmere": "https://assets.football-logos.cc/logos/england/700x700/tranmere.fae8b954.png",
+  "walsall": "https://assets.football-logos.cc/logos/england/700x700/walsall.79f6ba28.png",
+  "york": "https://assets.football-logos.cc/logos/england/700x700/york.6ed1b103.png",
+  "bolton": "https://assets.football-logos.cc/logos/england/700x700/bolton.ef0a1fe7.png",
+  "lincoln-city": "https://assets.football-logos.cc/logos/england/700x700/lincoln-city.7952f8a6.png",
+  "west-ham": "https://assets.football-logos.cc/logos/england/700x700/west-ham.f5e80dff.png",
+
   "athletic": "https://assets.football-logos.cc/logos/brazil/700x700/athletic.9f09aa77.png",
   "fortaleza": "https://assets.football-logos.cc/logos/brazil/700x700/fortaleza.b0aa0e9c.png",
   "londrina": "https://assets.football-logos.cc/logos/brazil/700x700/londrina.87afbee1.png",
@@ -679,7 +729,7 @@ const STOP_WORDS = new Set([
   "el",
 ]);
 
-const source = (await Promise.all([readFile(DATA_FILE, "utf8"), readFile(path.join(ROOT, "app", "brazil-2026-clubs.ts"), "utf8")])).join("\n");
+const source = (await Promise.all([readFile(DATA_FILE, "utf8"), readFile(path.join(ROOT, "app", "brazil-2026-clubs.ts"), "utf8"), readFile(path.join(ROOT, "app", "english-2026-clubs.ts"), "utf8")])).join("\n");
 const clubs = [...source.matchAll(/\{ id: "([^"]+)", name: "([^"]+)", shortName: "([^"]+)", abbr: "([^"]+)", city: "[^"]+"[^}]*countryId: "([^"]+)", leagueId: "([^"]+)"/g)]
   .map((match) => ({
     id: match[1],

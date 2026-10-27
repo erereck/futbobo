@@ -175,7 +175,7 @@ function candidateEligible(state: GameState, club: Club, context: MarketContext,
   if (options.forceForeign && !isEuropeanClub(club)) return false;
   if (!options.includeForeign && !options.forceForeign && club.countryId !== context.sourceClub.countryId) return false;
   if (SECOND_DIVISION_LEAGUES.has(context.sourceLeagueId) && club.countryId !== context.sourceClub.countryId) return false;
-  if (["brasileirao-c", "brasileirao-d"].includes(context.sourceLeagueId) && club.countryId !== context.sourceClub.countryId) return false;
+  if (["brasileirao-c", "brasileirao-d", "league-one", "league-two"].includes(context.sourceLeagueId) && club.countryId !== context.sourceClub.countryId) return false;
   const role = candidateRole(state, club);
   const strengthGap = competitiveStrength(club) - competitiveStrength(context.sourceClub);
   if (context.mode === "loan") {

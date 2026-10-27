@@ -45,7 +45,8 @@ test("base brasileira oferece exatamente três clubes de cada divisão", () => {
     assert.equal(new Set(clubs.map((club) => club.id)).size, 12);
     for (const id of ["brasileirao", "brasileirao-b", "brasileirao-c", "brasileirao-d"]) assert.equal(clubs.filter((club) => club.leagueId === id).length, 3);
   }
-  assert.equal(academyClubOptions("inglaterra", 12).length, 6);
+  assert.equal(academyClubOptions("inglaterra", 12).length, 12);
+  assert.equal(academyClubOptions("italia", 12).length, 6);
 });
 
 test("Séries C e D não classificam para a Libertadores pela liga", () => {

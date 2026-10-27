@@ -668,6 +668,20 @@ const UPDATES = [
   {
     version: FUTBOBO_VERSION,
     date: "AGORA",
+    title: "Novos Caminhos",
+    lead: "Quatro divisões no Brasil e na Inglaterra abrem novas histórias para sua carreira.",
+    items: [
+      "Séries C e D brasileiras e League One e League Two inglesas",
+      "Três clubes de cada divisão na escolha inicial da base",
+      "Escolha de qualquer clube organizada por países, ligas e divisões",
+      "Escudos dos novos clubes e correção do escudo do Goiás",
+      "Pedidos de empréstimo e novas opções de contrato na QUADRA",
+      "Novos eventos de carreira e equilíbrio da produção em campo",
+    ],
+  },
+  {
+    version: "v95",
+    date: "ANTERIOR",
     title: "Carreira de Técnico",
     lead: "O banco agora é seu: escolha um clube, cuide dos cinco e viva cada competição na mesa.",
     items: [

@@ -106,7 +106,7 @@ test("mostra a versao comunitaria no rodape do menu inicial", async () => {
     new URL("../app/version.ts", import.meta.url),
     "utf8",
   );
-  assert.match(version, /v95/);
+  assert.match(version, /v96/);
   assert.match(styles, /\.welcome-version/);
 });
 
@@ -861,10 +861,9 @@ test("impede ficar no clube depois de um pedido de transferência aceito", async
 });
 
 test("expande o mercado para ligas e clubes das Américas", async () => {
-  const data = await readFile(
-    new URL("../app/game-data.ts", import.meta.url),
-    "utf8",
-  );
+  const data = (await Promise.all([
+    "../app/game-data.ts", "../app/brazil-2026-clubs.ts", "../app/english-2026-clubs.ts",
+  ].map((path) => readFile(new URL(path, import.meta.url), "utf8")))).join("\n");
 
   for (const leagueId of [
     "liga-argentina",
@@ -2794,8 +2793,8 @@ test("lança a v93.10 com elenco persistente, rota do empresário e traição en
   );
   assert.match(shop, /validCountryFocus/);
   assert.match(press, /kind: "betrayal"/);
-  assert.match(version, /FUTBOBO_VERSION = "v95"/);
-  assert.match(version, /FUTBOBO_VERSION_NAME = "CARREIRA DE TÉCNICO"/);
+  assert.match(version, /FUTBOBO_VERSION = "v96"/);
+  assert.match(version, /FUTBOBO_VERSION_NAME = "NOVOS CAMINHOS"/);
 });
 
 test("mantém World Players persistentes, compactos e determinísticos por carreira", async () => {
