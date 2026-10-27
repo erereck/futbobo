@@ -286,3 +286,33 @@
     flex-basis:26px !important;
   }
 }
+
+/* Diretório de ligas: uma linha de campeonato abre as camisas daquela divisão. */
+.leagueDirectory { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:0 12px 16px; }
+.countrySection + .countrySection { margin-top:18px; }
+.countryHeading { display:flex; align-items:center; gap:8px; min-height:38px; padding:0 4px 7px; }
+.countryHeading :global(.nation-badge) { width:24px !important; height:24px !important; min-width:24px !important; }
+.countryHeading strong { font-size:13px; }
+.countryHeading > span:last-child { margin-left:auto; color:#84968a; font-size:10px; font-variant-numeric:tabular-nums; }
+.leagueList { display:grid; gap:6px; }
+.leagueGroup { border:1px solid rgba(226,239,228,.1); border-radius:10px; background:#101c15; overflow:hidden; }
+.leagueGroup[open] { border-color:rgba(244,196,48,.32); }
+.leagueGroup summary { display:flex; align-items:center; gap:10px; min-height:58px; padding:8px 12px; cursor:pointer; list-style:none; }
+.leagueGroup summary::-webkit-details-marker { display:none; }
+.leagueGroup summary:focus-visible, .allClubs button:focus-visible, .search:focus-visible { outline:2px solid #f4c430; outline-offset:-3px; }
+.divisionBadge { display:grid; place-items:center; flex:0 0 36px; height:36px; border-radius:7px; background:#1b3022; color:#f4c430; font:900 18px/1 var(--font-barlow-condensed, "Arial Narrow", sans-serif); }
+.leagueName { min-width:0; flex:1; display:grid; gap:3px; }
+.leagueName strong { font-size:13px; line-height:1.2; }
+.leagueName small { color:#9aaa9e; font-size:10px; }
+.leagueGroup summary > b { color:#9aaa9e; font-size:18px; transition:transform .15s ease; }
+.leagueGroup[open] summary > b { transform:rotate(180deg); }
+.leagueGroup .allClubs { overflow:visible; padding:0 8px 8px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
+.leagueGroup .allClubs button { min-width:0; min-height:58px; background:#0b1710; }
+.leagueGroup .allClubs button:hover { border-color:rgba(244,196,48,.5); }
+.leagueGroup .allClubs button > span:nth-child(2) { min-width:0; flex:1; display:grid; gap:3px; }
+.leagueGroup .allClubs button > :global(.club-badge) { flex:0 0 40px; }
+.leagueGroup .allClubs button strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+.leagueGroup .allClubs button small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
+.leagueGroup .allClubs button > b { color:#91a697; }
+.emptyClubs { margin:10px 0; padding:20px 12px; color:#aab8ac; text-align:center; font-size:13px; }
+@media (max-width:600px) { .leagueGroup .allClubs { grid-template-columns:1fr; } }

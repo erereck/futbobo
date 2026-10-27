@@ -5,6 +5,7 @@ import { CLUBS, COUNTRIES, FORMATIONS, LEAGUES, POSITIONS } from "../../game-dat
 import type { PositionKey } from "../../game-data";
 import type { GameState } from "../../career/model";
 import { defaultAcademyCountry, randomClubSelection } from "../../career/academy";
+import { clubPickerGroups } from "../../career/club-picker";
 import { createContract } from "../../career-systems";
 import { POSITION_FIELD_SPOTS } from "../../career/performance";
 import { clubById } from "../../career/shared";
@@ -126,13 +127,7 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
   const filteredClubCountries = useMemo(() => COUNTRIES
     .filter((country) => playableCountryIds.has(country.id))
     .sort((a, b) => a.id === academyCountry.id ? -1 : b.id === academyCountry.id ? 1 : a.name.localeCompare(b.name, "pt-BR")), [academyCountry.id, playableCountryIds]);
-  const allClubResults = useMemo(() => {
-    const needle = clubSearch.trim().toLocaleLowerCase("pt-BR");
-    return CLUBS
-      .filter((club) => !needle || club.name.toLocaleLowerCase("pt-BR").includes(needle) || club.shortName.toLocaleLowerCase("pt-BR").includes(needle))
-      .sort((a, b) => b.reputation - a.reputation || b.strength - a.strength)
-      .slice(0, 80);
-  }, [clubSearch]);
+  const clubGroups = useMemo(() => clubPickerGroups(clubSearch, academyCountry.id), [clubSearch, academyCountry.id]);
 
   const updateShirtNumber = (raw: string | number) => {
     const number = Math.max(1, Math.min(99, Number(raw) || DEFAULT_NUMBER[game.position]));
@@ -307,7 +302,29 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
           <p className={styles.clubNote}>O vínculo de base dura até a revelação, entre 16 e 18 anos. A formação é sorteada ao escolher o clube.</p>
         </div>
         {clubCountryPickerOpen && <Picker title="País da base" onClose={() => setClubCountryPickerOpen(false)}><div className={styles.pickerGrid}>{filteredClubCountries.map((country) => <button type="button" key={country.id} onClick={() => { setGame((current) => ({ ...current, academyCountryId: country.id, academyClubId: "" })); setClubCountryPickerOpen(false); }}><NationBadge country={country} size="sm" /><strong>{country.name}</strong></button>)}</div></Picker>}
-        {allClubsOpen && <Picker title="Carreira personalizada" onClose={() => setAllClubsOpen(false)}><div className={styles.warning}><b>!</b><span><strong>Escolher qualquer clube desativa conquistas nesta carreira.</strong><small>A carreira continua normal; apenas achievements globais não serão concedidos.</small></span></div><input className={styles.search} autoFocus placeholder="Pesquisar clube" value={clubSearch} onChange={(event) => setClubSearch(event.target.value)} /><div className={styles.allClubs}>{allClubResults.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id, true)}><ClubBadge club={club} size="sm" /><span><strong>{club.shortName}</strong><small>{COUNTRIES.find((country) => country.id === club.countryId)?.name}</small><small className={styles.contractTerm}>Base: 4–6 anos · até os 16–18</small></span></button>)}</div></Picker>}
+        {allClubsOpen && (
+          <Picker title="Escolha qualquer time" onClose={() => setAllClubsOpen(false)}>
+            <div className={styles.warning}><b>!</b><span><strong>Escolher qualquer clube desativa conquistas nesta carreira.</strong><small>A carreira continua normal; apenas achievements globais não serão concedidos.</small></span></div>
+            <input className={styles.search} autoFocus aria-label="Pesquisar clube, liga ou país" placeholder="Pesquisar clube, liga ou país" value={clubSearch} onChange={(event) => setClubSearch(event.target.value)} />
+            <div className={styles.leagueDirectory}>
+              {clubGroups.length === 0 ? <p className={styles.emptyClubs}>Nenhum clube ou liga encontrado. Tente outra busca.</p> : clubGroups.map(({ country, leagues }) => (
+                <section className={styles.countrySection} key={country.id}>
+                  <div className={styles.countryHeading}><NationBadge country={country} size="sm" /><strong>{country.name}</strong><span>{leagues.length} {leagues.length === 1 ? "liga" : "ligas"}</span></div>
+                  <div className={styles.leagueList}>
+                    {leagues.map(({ league, division, clubs }) => (
+                      <details className={styles.leagueGroup} key={`${league.id}:${clubSearch}`} open={Boolean(clubSearch.trim()) || undefined}>
+                        <summary><span className={styles.divisionBadge}>{division}ª</span><span className={styles.leagueName}><strong>{league.name}</strong><small>{division}ª divisão · {clubs.length} {clubs.length === 1 ? "clube" : "clubes"}</small></span><b aria-hidden="true">⌄</b></summary>
+                        <div className={styles.allClubs}>
+                          {clubs.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id, true)}><ClubBadge club={club} size="sm" /><span><strong>{club.shortName}</strong><small>{club.city}</small></span><b aria-hidden="true">→</b></button>)}
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </Picker>
+        )}
       </section>
     );
   }
@@ -316,7 +333,7 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
 }
 
 function Picker({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return <div className={styles.pickerOverlay} role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><section className={styles.picker}><header><strong>{title}</strong><button type="button" onClick={onClose}>×</button></header>{children}</section></div>;
+  return <div className={styles.pickerOverlay} role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><section className={styles.picker}><header><strong>{title}</strong><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>{children}</section></div>;
 }
 
 export function FirstContractV2({ game, onBack, onSign }: { game: GameState; onBack: () => void; onSign: (clubId: string) => void }) {
