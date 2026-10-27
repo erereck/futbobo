@@ -1,3 +1,4 @@
+import { canOfferNationalEvent } from "./national-callups";
 import { CLUBS, COUNTRIES, FORMATIONS, YOUTH_EVENTS, countryById } from "../game-data";
 import type { Club, Country, Effect, GameEvent } from "../game-data";
 import { RIVALRIES } from "../mega-expansion";
@@ -14,6 +15,7 @@ import { formatFollowers, formatMoney, sponsorOfferPool } from "./performance";
 export function eligibleEvents(state: GameState) {
   const club = clubById(state.currentClubId || state.academyClubId);
   return ALL_PRO_EVENTS.filter((event) => {
+    if (!canOfferNationalEvent(state, event.id)) return false;
     if (event.minAge !== undefined && state.age < event.minAge) return false;
     if (event.maxAge !== undefined && state.age > event.maxAge) return false;
     if (event.minOvr !== undefined && state.overall < event.minOvr) return false;

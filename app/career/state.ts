@@ -441,6 +441,7 @@ export function initialState(seedOverride?: number): GameState {
     adaptation: 100,
     abroadSeasons: 0,
     nationalCategory: "none",
+    seniorNationalCallUp: false,
     nationalCaps: 0,
     nationalGoals: 0,
     nationalAssists: 0,
@@ -569,6 +570,9 @@ export function normalizeSave(value: unknown): GameState {
     adaptation: saved.adaptation ?? 100,
     abroadSeasons: saved.abroadSeasons ?? 0,
     nationalCategory: saved.nationalCategory ?? "none",
+    seniorNationalCallUp: Boolean(saved.seniorNationalCallUp || saved.nationalCategory === "main"
+      || (Array.isArray(saved.nationalHistory) && saved.nationalHistory.some((record) => record?.tier === "main"))
+      || (Array.isArray(saved.history) && saved.history.some((record) => record?.eventTitle === "Convocado para a Seleção principal" && record.age >= 24))),
     nationalCaps: saved.nationalCaps ?? 0,
     nationalGoals: saved.nationalGoals ?? 0,
     nationalAssists: saved.nationalAssists ?? 0,

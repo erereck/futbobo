@@ -487,6 +487,7 @@ export type GameState = {
   adaptation: number;
   abroadSeasons: number;
   nationalCategory: NationalTier;
+  seniorNationalCallUp: boolean;
   nationalCaps: number;
   nationalGoals: number;
   nationalAssists: number;
