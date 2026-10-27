@@ -22,10 +22,12 @@ import styles from "./ShellUtilityScreens.module.css";
 import { FUTBOBO_VERSION } from "../../version";
 import FutboboIcon from "../FutboboIcon";
 import {
+  BOTAO3D_ENABLED_EVENT,
   BOTAO3D_PERFORMANCE_EVENT,
   rememberBotao3dPerformance,
   rememberBotao3dPreference,
   resolveBotao3dPerformance,
+  resolveBotao3dPreference,
 } from "../../botao/view-mode";
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -76,7 +78,8 @@ function sanitizeSettings(value: Partial<AppSettings>): AppSettings {
       : 45,
     botaoPenaltyRounds: value.botaoPenaltyRounds === 3 ? 3 : 5,
     characterButtonsEnabled: value.characterButtonsEnabled !== false,
-    botao3d: value.botao3d === true,
+    // Sem o campo salvo, vale o que o convite da home ligou (só no espelho).
+    botao3d: resolveBotao3dPreference(value),
     // O que uma partida fora do app ligou sozinha (só no espelho) também vale.
     botao3dPerformance: resolveBotao3dPerformance(value).enabled,
     botao3dPerformanceUserOff: resolveBotao3dPerformance(value).userOff,
@@ -175,9 +178,17 @@ export function SettingsScreen() {
           ? current
           : { ...current, botao3dPerformance: true },
       );
+    // O convite da home liga o 3D fora desta tela: sem isto o próximo save gravaria o valor velho.
+    const onBotao3dEnabled = () =>
+      setSettings((current) =>
+        current.botao3d === true ? current : { ...current, botao3d: true },
+      );
     window.addEventListener(BOTAO3D_PERFORMANCE_EVENT, onAutoPerformance);
-    return () =>
+    window.addEventListener(BOTAO3D_ENABLED_EVENT, onBotao3dEnabled);
+    return () => {
       window.removeEventListener(BOTAO3D_PERFORMANCE_EVENT, onAutoPerformance);
+      window.removeEventListener(BOTAO3D_ENABLED_EVENT, onBotao3dEnabled);
+    };
   }, []);
 
   const replaceableClubs = useMemo(

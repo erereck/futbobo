@@ -28,6 +28,20 @@ export function readBotao3dPreference(): boolean {
   }
 }
 
+/**
+ * Para quem carrega as configurações: sem o campo salvo (instalação nova que
+ * ligou o 3D pelo convite antes de existir um JSON de configurações), vale o espelho.
+ */
+export function resolveBotao3dPreference(stored: { botao3d?: unknown }): boolean {
+  if (typeof stored.botao3d === "boolean") return stored.botao3d;
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(MIRROR_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 /** Chamado por quem grava as configurações, para as rotas fora do app enxergarem a escolha. */
 export function rememberBotao3dPreference(enabled: boolean) {
   if (typeof window === "undefined") return;
@@ -36,6 +50,68 @@ export function rememberBotao3dPreference(enabled: boolean) {
   } catch {
     // Sem storage o 2D continua sendo o padrão.
   }
+}
+
+/** Avisa quem segura as configurações em memória (carreira, tela de ajustes) que o 3D foi ligado de fora. */
+export const BOTAO3D_ENABLED_EVENT = "futbobo:botao3d-enabled";
+
+/** Liga o Modo 3D fora da tela de ajustes (convite da home) e grava como o ajuste gravaria. */
+export function enableBotao3dPreference() {
+  if (typeof window === "undefined") return;
+  try {
+    // Com a ponte instalada o JSON vai para o IndexedDB, a cópia de verdade, e
+    // quem lê completa os campos que faltarem. Sem ponte e sem configurações, um
+    // JSON parcial no storage físico venceria o IndexedDB na próxima migração
+    // (mesmo cuidado de `enableBotao3dPerformanceAuto`): aí fica só o espelho.
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    if (raw || window.__FUTBOBO_LARGE_STORAGE_BRIDGE__?.installed) {
+      const parsed = raw ? (JSON.parse(raw) as unknown) : null;
+      const settings = parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+      settings.botao3d = true;
+      window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
+  } catch {
+    // O espelho e o aviso abaixo seguram a escolha.
+  }
+  rememberBotao3dPreference(true);
+  window.dispatchEvent(new CustomEvent(BOTAO3D_ENABLED_EVENT, { detail: { enabled: true } }));
+}
+
+// ------------------------------------------------------- convite do Modo 3D
+
+/** Convite único da home. Chave física e fora das configurações: vale para qualquer resposta, para sempre. */
+const OFFER_KEY = "futbobo:botao3d-offer:v1";
+
+/** "on" ligou pelo convite, "later" recusou, "already" já jogava em 3D. */
+export type Botao3dOfferAnswer = "on" | "later" | "already";
+
+export function markBotao3dOfferSeen(answer: Botao3dOfferAnswer) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(OFFER_KEY, answer);
+  } catch {
+    // Sem storage o convite não tem como lembrar; `shouldOfferBotao3d` já não mostra.
+  }
+}
+
+/**
+ * Primeira abertura depois da atualização (ou instalação nova): oferece o 3D
+ * uma vez. Quem já usa o 3D não vê o convite nem depois de desligar.
+ */
+export function shouldOfferBotao3d(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (window.localStorage.getItem(OFFER_KEY) !== null) return false;
+  } catch {
+    // Sem como guardar a resposta, o convite voltaria em toda abertura.
+    return false;
+  }
+  if (readBotao3dPreference()) {
+    markBotao3dOfferSeen("already");
+    return false;
+  }
+  // Sem WebGL não marca: se o aparelho passar a ter, o convite ainda faz sentido.
+  return webglAvailable();
 }
 
 // ------------------------------------------------------- modo desempenho 3D

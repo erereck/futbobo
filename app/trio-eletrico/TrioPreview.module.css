@@ -1,0 +1,291 @@
+/* Painel do trio elétrico: noite de carnaval nas cores da seleção escolhida. */
+
+.page {
+  --c1: #08783e;
+  --c2: #f2b705;
+  --gold: #ffd54a;
+  --gold-hi: #fff4c2;
+  --ink: #fffaf0;
+  --ink-muted: rgba(255, 250, 240, 0.68);
+  position: relative;
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  overflow: hidden;
+  padding: max(20px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  background: #07070d;
+  color: var(--ink);
+  font-family: var(--sans, "Segoe UI"), system-ui, sans-serif;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 45% at 15% 0%, color-mix(in srgb, var(--c1) 45%, transparent), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 10%, color-mix(in srgb, var(--c2) 30%, transparent), transparent 70%),
+    radial-gradient(circle at 20% 30%, var(--c2) 0 2px, transparent 3px),
+    radial-gradient(circle at 70% 60%, #ffffff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 40% 80%, #ff5fa2 0 2px, transparent 3px),
+    radial-gradient(circle at 85% 25%, var(--c2) 0 1.5px, transparent 2.5px);
+  background-size: auto, auto, 220px 180px, 260px 200px, 240px 220px, 200px 160px;
+  animation: confetti 14s linear infinite;
+}
+
+@keyframes confetti {
+  to { background-position: 0 0, 0 0, 0 360px, 0 400px, 0 440px, 0 320px; }
+}
+
+.panel {
+  position: relative;
+  width: min(780px, 100%);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--c2) 40%, transparent);
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(20, 20, 30, 0.96), rgba(8, 8, 14, 0.97));
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.65), 0 0 60px color-mix(in srgb, var(--c1) 22%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* ------------------------------------------------------- cartão-postal */
+
+.postcard {
+  position: relative;
+  height: clamp(220px, 40vw, 320px);
+  overflow: hidden;
+  background: linear-gradient(180deg, #2a2766, #c2507a 60%, #ffb45e);
+}
+.postcardCanvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.postcardShade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, transparent 45%, transparent 60%, rgba(8, 8, 14, 0.95) 100%);
+}
+
+.header {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: clamp(16px, 3.6vw, 26px) clamp(18px, 4vw, 32px);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+.kicker {
+  display: inline-block;
+  padding: 5px 12px 4px 10px;
+  background: var(--c2);
+  color: #111;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-shadow: none;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+.header h1 {
+  margin: 8px 0 4px;
+  color: #fff;
+  font: 900 italic clamp(40px, 9vw, 76px)/0.9 var(--display, Impact), sans-serif;
+  text-transform: uppercase;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35));
+}
+.header p { margin: 0; color: var(--ink); font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* -------------------------------------------------------------- controles */
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+  padding: 22px clamp(18px, 4vw, 32px) 4px;
+}
+.field { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.fieldWide { grid-column: 1 / -1; }
+.fieldLabel { color: var(--c2); font-size: 10px; font-weight: 900; letter-spacing: 0.26em; text-transform: uppercase; filter: brightness(1.2); }
+.fieldNote { min-height: 1.4em; color: var(--ink-muted); font-size: 11px; line-height: 1.4; }
+
+.select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 40px 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 8l5 5 5-5' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 14px center / 16px,
+    rgba(255, 255, 255, 0.05);
+  color: var(--ink);
+  font: 800 14px/1 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  appearance: none;
+  cursor: pointer;
+}
+.select:disabled { opacity: 0.6; cursor: default; }
+.select option { background: #14141c; color: #fffaf0; }
+
+.segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.segmented button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: 800 13px/1 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.segmented button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+.segmented button:disabled { color: rgba(255, 250, 240, 0.3); cursor: not-allowed; }
+.segmented .segmentActive,
+.segmented .segmentActive:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fff1b0, #ffd54a 55%, #d99a12);
+  color: #1a1204;
+  box-shadow: 0 4px 14px rgba(255, 213, 74, 0.28);
+}
+
+.toggle {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 48px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px 0 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font: 800 13px/1 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  cursor: pointer;
+}
+.toggleTrack { position: relative; width: 52px; height: 34px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); transition: background 0.2s; }
+.toggleTrack i { position: absolute; top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 50%; background: #d8d1c0; transition: transform 0.2s, background 0.2s; }
+.toggleOn .toggleTrack { background: linear-gradient(180deg, var(--c2), color-mix(in srgb, var(--c2) 60%, #000)); }
+.toggleOn .toggleTrack i { background: #fff; transform: translateX(18px); }
+
+.characterRow { display: flex; gap: 10px; }
+.characterRow .segmented { flex: 1 1 auto; }
+.shuffle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 50px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--ink);
+  font: 800 13px/1 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  cursor: pointer;
+}
+.shuffle svg { width: 18px; height: 18px; color: var(--gold); }
+.shuffle:disabled { opacity: 0.4; cursor: not-allowed; }
+.shuffle:hover:not(:disabled) { border-color: var(--gold); }
+
+.starsRow { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.stepper {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: 48px 56px 48px;
+  align-items: center;
+  min-height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.stepper button {
+  height: 40px;
+  margin: 0 4px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gold);
+  font: 800 22px/1 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  cursor: pointer;
+}
+.stepper button:hover { background: rgba(255, 213, 74, 0.12); }
+.stepper output { text-align: center; font: 900 24px/1 var(--display, Impact), sans-serif; font-variant-numeric: tabular-nums; }
+.starsPreview {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--gold);
+  font-size: 24px;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 0 12px rgba(255, 213, 74, 0.5);
+}
+
+.watch {
+  display: flex;
+  width: calc(100% - 2 * clamp(18px, 4vw, 32px));
+  min-height: 62px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 22px auto 0;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff1b0 0%, #ffd54a 50%, #d99a12 100%);
+  color: #1a1204;
+  font: 900 18px/1 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 16px 40px rgba(255, 213, 74, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: transform 0.15s, box-shadow 0.2s;
+  animation: watchBeat 0.94s ease-in-out infinite;
+}
+.watch svg { width: 20px; height: 20px; }
+.watch:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 20px 50px rgba(255, 213, 74, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.7); }
+.watch:disabled { opacity: 0.5; cursor: progress; animation: none; }
+
+/* Batida do 128 BPM no botão: dois tempos por ciclo. */
+@keyframes watchBeat {
+  0%, 50% { box-shadow: 0 16px 40px rgba(255, 213, 74, 0.28), 0 0 0 0 rgba(255, 213, 74, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.7); }
+  25%, 75% { box-shadow: 0 16px 40px rgba(255, 213, 74, 0.28), 0 0 0 7px rgba(255, 213, 74, 0), inset 0 1px 0 rgba(255, 255, 255, 0.7); }
+}
+
+.watch:focus-visible,
+.shuffle:focus-visible,
+.toggle:focus-visible,
+.select:focus-visible,
+.stepper button:focus-visible,
+.segmented button:focus-visible,
+.back:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 3px; }
+
+.back {
+  display: block;
+  width: fit-content;
+  margin: 14px auto 22px;
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+.back:hover { color: var(--gold-hi); }
+
+/* Enquanto a cutscene baixa: o mesmo preto da tela de carregamento dela. */
+.veil { position: fixed; inset: 0; z-index: 10000; background: #05050a; }
+
+@media (max-width: 560px) {
+  .controls { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .characterRow { flex-direction: column; }
+  .shuffle { justify-content: center; }
+  .toggle { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .watch { animation: none; }
+}

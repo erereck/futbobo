@@ -15,10 +15,22 @@
 import * as THREE from "three";
 import type { PlayerAppearance } from "../../player-appearance";
 import {
+  EARRING_GOLD,
+  EARRING_HOOPS,
+  EARRING_STUD,
   FACE_MOOD_SHIFT,
+  HEADWEAR_BAND,
+  HEADWEAR_BANDANA,
+  HEADWEAR_CAP,
+  HEADWEAR_TIARA,
+  accessoryShade,
   atlasBoxGeometry,
+  beardColor,
+  coversScalp,
   createFigurePixelAtlas,
   createKitTextures,
+  createSuitTextures,
+  luminance,
   mixHex,
   radialTexture,
   resolveLook,
@@ -27,6 +39,7 @@ import {
   type FaceMood,
   type FigurePixelAtlas,
   type ResolvedLook,
+  type SuitTie,
 } from "./textures";
 
 export const PX = 1.24;
@@ -318,20 +331,74 @@ function figureDepthMaterialShared() {
 
 // ---------------------------------------------------------------- cabelo
 
+/** De onde cada bloco da cabeça tira a cor (um retalho sólido do atlas "pixel"). */
+type HeadTone = "hair" | "hairShade" | "beard" | "accessory" | "accessoryShade" | "gold";
+
+type HeadPart = { geometry: THREE.BufferGeometry; matrix: THREE.Matrix4; tone: HeadTone; y: number };
+
+/** Acima disto (centro do bloco) o cabelo fica dentro do boné/bandana. */
+const UNDER_CAP_Y = 7.9;
+
+const partBounds = new THREE.Box3();
+const wrapBounds = new THREE.Box3();
+const spikeTilt = new THREE.Euler();
+const spikeAxis = new THREE.Vector3();
+
 /**
  * Volumes de cabelo em blocos (no espaço do pescoço). Entram na malha única
  * do boneco; a textura cuida da linha do cabelo, isto dá a silhueta vista de cima.
+ * Junto vem o resto do que sai da cabeça: barba longa, faixa, tiara, nó da
+ * bandana, boné e brincos.
  */
-function buildHair(look: ResolvedLook, addPart: (geometry: THREE.BufferGeometry, matrix: THREE.Matrix4) => void) {
-  const parts: THREE.Object3D[] = [];
+function buildHair(look: ResolvedLook, addPart: (geometry: THREE.BufferGeometry, matrix: THREE.Matrix4, tone: HeadTone) => void) {
+  const parts: HeadPart[] = [];
+  const holder = new THREE.Object3D();
+  let tone: HeadTone = "hair";
   const add = (w: number, h: number, d: number, x: number, y: number, z: number, rotX = 0, rotZ = 0) => {
-    const part = new THREE.Mesh(box(w, h, d));
-    part.position.set(x, y, z);
-    part.rotation.set(rotX, 0, rotZ);
-    parts.push(part);
-    return part;
+    holder.position.set(x, y, z);
+    holder.rotation.set(rotX, 0, rotZ);
+    holder.updateMatrix();
+    parts.push({ geometry: box(w, h, d), matrix: holder.matrix.clone(), tone, y });
   };
   const shell = (height = 1.1, size = 8.5) => add(size, height, size, 0, 8 + height / 2 - 0.15, 0);
+  /** Ponta de cabelo: base larga e bico fino, inclinada para fora do centro da cabeça. */
+  const spike = (x: number, z: number, height: number, width = 1.9) => {
+    spikeTilt.set(z * 0.1, 0, -x * 0.1);
+    spikeAxis.set(0, 1, 0).applyEuler(spikeTilt);
+    const base = 8.3;
+    const piece = height * 0.55;
+    const low = piece / 2;
+    const high = height - piece / 2;
+    add(width, piece, width, x + spikeAxis.x * low, base + spikeAxis.y * low, z + spikeAxis.z * low, spikeTilt.x, spikeTilt.z);
+    add(width * 0.5, piece, width * 0.5, x + spikeAxis.x * high, base + spikeAxis.y * high, z + spikeAxis.z * high, spikeTilt.x, spikeTilt.z);
+  };
+  /**
+   * Caixa que abraça a cabeça e o cabelo que a envolve entre `y0` e `y1`
+   * (faixa, tiara, copa do boné). Rabo, dread e trança são finos e passam por
+   * baixo; nenhuma face fica no mesmo plano do cabelo.
+   */
+  const around = (y0: number, y1: number, half: number) => {
+    wrapBounds.min.set(-half, y0, -half);
+    wrapBounds.max.set(half, y1, half);
+    for (const part of parts) {
+      if (part.tone !== "hair" && part.tone !== "hairShade") continue;
+      if (!part.geometry.boundingBox) part.geometry.computeBoundingBox();
+      partBounds.copy(part.geometry.boundingBox!).applyMatrix4(part.matrix);
+      if (partBounds.max.y < y0 + 0.2 || partBounds.min.y > y1 - 0.2) continue;
+      if (Math.max(partBounds.max.x - partBounds.min.x, partBounds.max.z - partBounds.min.z) < 3) continue;
+      wrapBounds.min.x = Math.min(wrapBounds.min.x, partBounds.min.x);
+      wrapBounds.min.z = Math.min(wrapBounds.min.z, partBounds.min.z);
+      wrapBounds.max.x = Math.max(wrapBounds.max.x, partBounds.max.x);
+      wrapBounds.max.z = Math.max(wrapBounds.max.z, partBounds.max.z);
+    }
+    const margin = 0.15;
+    return {
+      x: (wrapBounds.min.x + wrapBounds.max.x) / 2,
+      z: (wrapBounds.min.z + wrapBounds.max.z) / 2,
+      width: wrapBounds.max.x - wrapBounds.min.x + margin * 2,
+      depth: wrapBounds.max.z - wrapBounds.min.z + margin * 2,
+    };
+  };
   switch (look.hairStyle) {
     case 0: shell(); break;
     case 1: shell(); add(8.5, 1.5, 0.9, 0, 7.4, 4.05); break;
@@ -366,20 +433,161 @@ function buildHair(look: ResolvedLook, addPart: (geometry: THREE.BufferGeometry,
       break;
     case 17: shell(); add(5.2, 3, 0.9, 1.4, 6.8, 4.05); break;
     case 18: add(7.4, 1.8, 8.4, 0, 8.7, 0); break;
-    case 19: {
+    case 19:
       shell(0.9, 8.4);
-      const tail = add(2.1, 5.6, 2.1, 0, 4.8, -5.1, 0.32);
-      tail.position.y = 5.4;
+      add(2.1, 5.6, 2.1, 0, 5.4, -5.1, 0.32);
       add(2.4, 0.9, 2.4, 0, 7.8, -4.6);
       break;
-    }
     case 21: add(9.3, 2.5, 9.3, 0, 8.9, 0); break;
+    // Cascão 2002: só o triângulo da frente, base larga na testa.
+    case 22: add(3.2, 0.8, 2.1, 0, 8.25, 3.05); add(1.8, 0.7, 1.6, 0, 8.2, 1.4); break;
+    case 23:
+      // Longo solto: laterais e costas descendo até o ombro, franja leve de lado.
+      shell(1.2, 8.7);
+      add(0.9, 9, 7.4, -4.45, 3.6, -0.95); add(0.9, 9, 7.4, 4.45, 3.6, -0.95);
+      add(8.9, 10, 0.9, 0, 3.1, -4.45);
+      add(6.2, 1, 0.5, -0.9, 7.35, 4.15, 0, 0.12);
+      break;
+    case 24:
+      shell(1, 8.5);
+      for (const [x, z, height] of [[-2.6, -2.4, 3.2], [0.2, -2.8, 3.6], [2.7, -2.2, 3], [-2.9, 0.6, 3], [0, 0.3, 3.8], [2.8, 0.8, 3.2], [-0.4, 3, 2.8]]) {
+        spike(x, z, height);
+      }
+      break;
+    case 25:
+      // Repartido: duas metades com a risca no meio (sem casca: a risca é a textura do topo) e as cortinas na testa.
+      for (const side of [-1, 1]) {
+        add(3.9, 1.2, 8.5, side * 2.25, 8.4, -0.1, 0, -side * 0.1);
+        add(3.4, 1.1, 0.8, side * 2.3, 7.15, 4.1, 0, -side * 0.42);
+      }
+      break;
+    // Hi-top: o bloco reto bem acima da cabeça; as laterais ficam na máquina.
+    case 26: add(7.6, 5.2, 7.6, 0, 9.6, -0.1); break;
+    case 27:
+      // Nagô: fileiras baixas da testa até a nuca; o couro entre elas é a textura.
+      for (const x of [-3, -1.5, 0, 1.5, 3]) {
+        add(1, 0.55, 8.3, x, 8.2, 0);
+        add(1, 4.6, 0.5, x, 5.75, -4.15);
+      }
+      break;
+    case 28:
+      for (const side of [-1, 1]) {
+        add(3.2, 2.2, 3.2, side * 2.5, 9.3, -0.6);
+        add(2.2, 3.2, 2.2, side * 2.5, 9.5, -0.6);
+      }
+      break;
+    case 29:
+      // Pra trás: rente na frente (os riscos do pente são a textura), volume crescendo para a nuca.
+      add(8.4, 0.6, 2.4, 0, 8.15, 1);
+      add(8.5, 1.3, 4.4, 0, 8.45, -1.95);
+      add(8.6, 1.6, 1.3, 0, 7.7, -3.75);
+      break;
+    case 30:
+      add(1.9, 0.7, 8.6, 0, 8.2, 0);
+      for (const [z, height] of [[-3.4, 3.6], [-1.7, 4.4], [0, 5], [1.7, 4.6], [3.4, 3.8]]) spike(0, z, height, 1.7);
+      break;
+    case 31:
+      // Afro gigante: blocos cruzados para arredondar, bem maior que o black power.
+      add(13, 6.4, 11, 0, 10.2, -1);
+      add(10.4, 8.4, 13, 0, 10, -1);
+      add(14.4, 4.4, 8.6, 0, 9.6, -1.2);
+      add(12.6, 3, 9.4, 0, 5.6, -1.6);
+      add(8.4, 1.2, 8.4, 0, 14.6, -1);
+      break;
+    case 32:
+      // Chanel: capacete até o queixo com a franja reta.
+      shell(1.3, 8.8);
+      add(7.8, 0.5, 7.8, 0, 9.35, 0);
+      add(0.8, 6.6, 8.6, -4.4, 4.9, -0.1); add(0.8, 6.6, 8.6, 4.4, 4.9, -0.1);
+      add(8.8, 6.6, 0.8, 0, 4.9, -4.4);
+      add(8.8, 2.2, 0.8, 0, 7, 4.35);
+      break;
+    case 33: {
+      // Trança longa: elos alternados descendo pelas costas, meio de lado.
+      shell(1, 8.5);
+      add(2.4, 1.4, 1.3, 0.4, 4.2, -4.55);
+      const links = 6;
+      for (let index = 0; index < links; index += 1) {
+        const y = 3 - index * 1.55;
+        const z = -4.65 + (3 - y) * 0.17;
+        const width = 2 - index * 0.12;
+        tone = "hair";
+        add(width, 1.15, 1.5, 0.4, y, z, -0.17);
+        tone = "hairShade";
+        add(width * 0.72, 0.5, 1.2, 0.4, y - 0.78, z + 0.13, -0.17);
+      }
+      tone = "hair";
+      add(1.4, 1.3, 1.2, 0.4, 3 - links * 1.55 - 0.2, -4.65 + (links * 1.55 + 0.2) * 0.17, -0.17);
+      break;
+    }
     default: break;
   }
-  for (const part of parts) {
-    part.updateMatrix();
-    addPart((part as THREE.Mesh).geometry, part.matrix);
+
+  if (coversScalp(look)) {
+    // Boné e bandana: some o volume de cima; fica o que aparece por baixo (franja, nuca, cabelo comprido).
+    for (let index = parts.length - 1; index >= 0; index -= 1) if (parts[index].y > UNDER_CAP_Y) parts.splice(index, 1);
+    // O black power escapa pelos lados (atrás do rosto, sem tapar a sobrancelha).
+    if (look.hairStyle === 4) add(9.8, 2.2, 9.6, 0, 6.6, -1);
   }
+
+  if (look.beard === 8) {
+    // Barba longa: desce do queixo pela frente do peito.
+    tone = "beard";
+    add(6.4, 2.6, 1.5, 0, -0.95, 3.45);
+    add(4.2, 1.7, 1.3, 0, -2.9, 3.35);
+  }
+
+  switch (look.headwear) {
+    case HEADWEAR_BAND: {
+      const ring = around(6.5, 7.5, 4);
+      tone = "accessory";
+      add(ring.width, 1, ring.depth, ring.x, 7, ring.z);
+      break;
+    }
+    case HEADWEAR_TIARA: {
+      const ring = around(7, 7.5, 4);
+      tone = "accessory";
+      add(ring.width, 0.5, ring.depth, ring.x, 7.25, ring.z);
+      break;
+    }
+    case HEADWEAR_BANDANA: {
+      // O nó vai por fora do cabelo comprido da nuca.
+      const nape = around(5.6, 6.8, 4);
+      const back = nape.z - nape.depth / 2;
+      tone = "accessory";
+      add(1.8, 1.3, 1, 0, 6.2, back - 0.25);
+      tone = "accessoryShade";
+      add(0.9, 2.2, 0.4, -0.55, 4.9, back - 0.45, 0.12, 0.22);
+      add(0.9, 1.9, 0.4, 0.6, 5.05, back - 0.4, 0.1, -0.18);
+      break;
+    }
+    case HEADWEAR_CAP: {
+      // Copa do tamanho do que ficou de cabelo; aba para a frente, caída de leve.
+      const crown = around(6.8, 9.4, 4.35);
+      tone = "accessory";
+      add(crown.width, 2.6, crown.depth, crown.x, 8.1, crown.z);
+      add(crown.width - 0.8, 0.6, crown.depth - 0.8, crown.x, 9.6, crown.z);
+      tone = "accessoryShade";
+      add(Math.min(crown.width - 1.2, 7.8), 0.4, 4.2, crown.x, 6.95, crown.z + crown.depth / 2 + 1.7, 0.1);
+      add(1.2, 0.35, 1.2, crown.x, 10.05, crown.z);
+      break;
+    }
+    default: break;
+  }
+
+  if (look.earrings > 0) {
+    // Na ponta da orelha (o pixel dourado da textura fica por baixo); um brinco só vai na esquerda (+x).
+    tone = "gold";
+    for (const side of look.earrings === EARRING_STUD ? [1] : [-1, 1]) {
+      const x = side * 4.2;
+      if (look.earrings === EARRING_HOOPS) {
+        add(0.3, 0.3, 1.3, x, 2.2, 0.25); add(0.3, 0.3, 1.3, x, 1.2, 0.25);
+        add(0.3, 1.3, 0.3, x, 1.7, 0.75); add(0.3, 1.3, 0.3, x, 1.7, -0.25);
+      } else add(0.55, 0.55, 0.55, x, 2.3, 0.25);
+    }
+  }
+
+  for (const part of parts) addPart(part.geometry, part.matrix, part.tone);
 }
 
 // ------------------------------------------------------------------ pose
@@ -600,6 +808,59 @@ const ARM_CLAP: Arm = [-0.87, -0.77, -0.23, -1.06];
 const ARM_CLAP_OPEN: Arm = [-0.43, -0.48, 0.24, -1.45];
 const ARM_HUG: Arm = [-0.49, -0.84, 1.1, -1.34];
 const ARM_SOCK: Arm = [-1.14, -1.46, -0.43, -0.59];
+// Comemorações novas (mesmo cálculo, com as caixas do braço fora do corpo e da cabeça).
+/** Mãos juntas em coração na frente do peito, cotovelos abertos. */
+const ARM_HEART: Arm = [-0.67, -0.92, 0.15, -1.44];
+/** Coração gigante: mãos juntas no topo da cabeça, cotovelos para fora (o braço curto não passa disso). */
+const ARM_HEART_HIGH: Arm = [-1.33, -1.57, 1.68, -0.72];
+/** Dedo nos lábios (a mão boa; espelhada no destro). */
+const ARM_SHUSH: Arm = [-1.57, -0.69, -0.42, -1.18];
+/** "Calma, calma": mão baixa e espalmada para a torcida, batendo no ar. */
+const ARM_CALM: Arm = [0.34, -0.92, 1.05, -0.57];
+const ARM_CALM_UP: Arm = [0.33, -0.65, 1.16, -1.07];
+/** Braços cruzados: o de baixo rente ao peito, o de cima mais à frente (sem um entrar no outro). */
+const ARM_CROSS_LOW: Arm = [-0.43, -2.12, 0.72, -1.06];
+const ARM_CROSS_HIGH: Arm = [-0.55, -2.21, 0.96, -0.58];
+/** Embala neném: antebraços juntos na frente da barriga, um sobre o outro. */
+const ARM_CRADLE_LOW: Arm = [-0.25, -1.99, 0.81, -0.64];
+const ARM_CRADLE_HIGH: Arm = [-1.99, -1.19, -0.81, -0.81];
+// Robô: braço e antebraço sempre em ângulo reto.
+const ARM_ROBOT_UP: Arm = [-1.57, 0, 1.57, -1.57];
+const ARM_ROBOT_DOWN: Arm = [1.57, 0, 1.57, -1.57];
+const ARM_ROBOT_FRONT: Arm = [0, 0, 0.12, -1.57];
+const ARM_ROBOT_REACH: Arm = [-1.57, 0, 0.12, -1.57];
+/** Dancinha: punho na altura do ombro e na da cintura, cotovelo dobrado. */
+const ARM_DANCE_HIGH: Arm = [-0.85, -0.2, 0.4, -1.85];
+const ARM_DANCE_LOW: Arm = [-0.1, -0.25, 0.3, -1.5];
+// Cerimônia (vistos de frente e de perto: nada atravessa o terno).
+const ARM_APPLAUD: Arm = [-0.81, -0.81, -0.1, -1.19];
+const ARM_APPLAUD_OPEN: Arm = [-0.59, -0.68, 0.1, -1.35];
+const ARM_SAD_CLAP: Arm = [-0.51, -1.31, 0.27, -1.04];
+const ARM_SAD_CLAP_OPEN: Arm = [-0.29, -0.8, 0.26, -1.22];
+/** Tchau: o cotovelo fica parado no alto e só o antebraço vai e volta. */
+const ARM_WAVE_OUT: Arm = [-2.08, -0.38, 1.01, -0.3];
+const ARM_WAVE_IN: Arm = [-1.43, -0.6, 1.3, -1.52];
+/** Mãos dadas na frente do cinto (o braço não alcança mais baixo sem entrar no corpo). */
+const ARM_CLASP: Arm = [-0.61, -2.37, 0.36, -0.59];
+/** Braços abertos de "não acredito", palmas para cima. */
+const ARM_OPEN: Arm = [-0.4, 0.05, 0.98, -0.91];
+/**
+ * Taça no alto: mãos a ~1,7 px uma da outra, por cima e um pouco atrás da
+ * testa. Com o braço curto do boneco é o único jeito de a taça ficar ACIMA da
+ * cabeça (e não na frente do rosto): o antebraço passa por trás das laterais
+ * da cabeça, escondido de quem vê de frente.
+ */
+const ARM_TROPHY_UP: Arm = [-2.54, -1.83, 0.6, -0.33];
+/** Taça no colo: palmas a ~6 px, uma de frente para a outra, na frente do peito. */
+const ARM_TROPHY_CRADLE: Arm = [-0.31, -0.41, 0.26, -1.55];
+/** Mão no peito esquerdo (coração/escudo): é sempre o braço DIREITO (este espelhado). */
+const ARM_ON_HEART: Arm = [-0.02, -1.82, 0.98, -1.23];
+/** Envelope seguro pelas pontas na frente do peito; "pull" é a mão que abre. */
+const ARM_ENVELOPE: Arm = [-0.45, -0.46, 0.18, -1.55];
+const ARM_ENVELOPE_PULL: Arm = [-0.75, -0.39, 0.22, -1.51];
+const ARM_ENVELOPE_LOW: Arm = [-0.07, -0.49, 0.17, -1.27];
+/** Braço estendido para o lado, apresentando o vencedor. */
+const ARM_PRESENT: Arm = [-0.09, -0.28, 1.35, -0.48];
 
 function putL(out: Pose, a: Arm, b: Arm = a, k = 0) {
   out.shLX = mix(a[0], b[0], k);
@@ -633,6 +894,44 @@ function putOff(out: Pose, side: number, x: number, y: number, z: number, e: num
   }
 }
 
+/** Braço da mão boa a partir de ângulos do lado ESQUERDO (no destro vira o direito, espelhado). */
+function armMain(out: Pose, side: number, a: Arm, b: Arm = a, k = 0) {
+  if (side > 0) putR(out, a, b, k);
+  else putL(out, a, b, k);
+}
+
+/** O outro braço, também com ângulos do lado esquerdo. */
+function armOff(out: Pose, side: number, a: Arm, b: Arm = a, k = 0) {
+  if (side > 0) putL(out, a, b, k);
+  else putR(out, a, b, k);
+}
+
+/**
+ * Entrada suave de um laço que já começa no meio (palmas, dancinha): puxa os
+ * dois braços para o descanso por `1 - k`, sem salto quando o laço assume.
+ */
+function armsFromRest(out: Pose, k: number) {
+  if (k >= 1) return;
+  out.shLX = mix(ARM_REST[0], out.shLX, k);
+  out.shLY = mix(ARM_REST[1], out.shLY, k);
+  out.shLZ = mix(ARM_REST[2], out.shLZ, k);
+  out.elL = mix(ARM_REST[3], out.elL, k);
+  out.shRX = mix(ARM_REST[0], out.shRX, k);
+  out.shRY = mix(-ARM_REST[1], out.shRY, k);
+  out.shRZ = mix(-ARM_REST[2], out.shRZ, k);
+  out.elR = mix(ARM_REST[3], out.elR, k);
+}
+
+/** Do quadril à sola da chuteira (px de boneco). */
+const LEG_LENGTH = 12.3;
+
+/** Leva o quadril para o lado sem arrastar os pés: as duas pernas inclinam ao contrário. */
+function shiftHips(out: Pose, x: number) {
+  out.bodyX = x;
+  out.hipLZ -= x / LEG_LENGTH;
+  out.hipRZ -= x / LEG_LENGTH;
+}
+
 /** De pé, relaxado, respirando. */
 function stand(out: Pose, t: number) {
   const breath = Math.sin(t * 2.3);
@@ -662,11 +961,29 @@ export type FigureAction =
   | "hug"
   | "highFive"
   | "clap"
+  | "heart"
+  | "shush"
+  | "armsCrossed"
+  | "cradle"
+  | "robot"
+  | "dance"
   | "handsOnHead"
   | "handsOnHips"
   | "kneelSad"
   | "kickGround"
-  | "sitDown";
+  | "sitDown"
+  // Cerimônia da Bola de Ouro (de pé, de terno, vistos de perto).
+  | "applaud"
+  | "wave"
+  | "nervous"
+  | "disbelief"
+  | "trophyLift"
+  | "trophyCradle"
+  | "handOnHeart"
+  | "bow"
+  | "presenterEnvelope"
+  | "presenterGesture"
+  | "sadClap";
 
 /** Tiques de quem está parado esperando a vez (internos). */
 type FidgetId = "lookAround" | "stretch" | "legSwing" | "fixSock" | "bounceToes" | "tapBoot" | "neckRoll";
@@ -838,6 +1155,38 @@ function hopCycle(t: number, rate: number, offset: number) {
   }
   return HOP;
 }
+
+// --- robô: poses fixas trocadas num estalo (nada de transição macia).
+const ROBOT_BEAT = 0.34;
+const ROBOT_SNAP = 0.07;
+/** [braço esquerdo, braço direito, giro da cabeça, giro do quadril, inclinação do tronco]. */
+type RobotKey = readonly [Arm, Arm, number, number, number];
+const ROBOT_START: RobotKey = [ARM_REST, ARM_REST, 0, 0, 0];
+const ROBOT_KEYS: readonly RobotKey[] = [
+  [ARM_ROBOT_UP, ARM_ROBOT_DOWN, 0.35, 0, 0],
+  [ARM_ROBOT_DOWN, ARM_ROBOT_UP, -0.35, 0, 0],
+  [ARM_ROBOT_UP, ARM_ROBOT_DOWN, 0.35, 0, 0],
+  [ARM_ROBOT_FRONT, ARM_ROBOT_FRONT, 0, 0.5, 0],
+  [ARM_ROBOT_REACH, ARM_ROBOT_FRONT, 0.3, 0.5, 0.08],
+  [ARM_ROBOT_FRONT, ARM_ROBOT_REACH, -0.3, 0.5, -0.08],
+  [ARM_ROBOT_FRONT, ARM_ROBOT_FRONT, 0, -0.5, 0],
+  [ARM_ROBOT_UP, ARM_ROBOT_UP, 0, 0, 0],
+];
+
+// --- reverência de agradecimento (mão no peito o tempo todo).
+const BOW_TORSO: Track = [0, 0, 0.3, 0, 0.68, 0.5, 0.95, 0.5, 1.4, 0];
+const BOW_NECK: Track = [0, 0, 0.3, 0.05, 0.68, 0.24, 0.95, 0.24, 1.4, 0.03];
+
+// --- nervoso no rufar dos tambores (laço de 4,4 s): olhadas para os lados e uma engolida.
+const NERVOUS_LOOP = 4.4;
+const NERVOUS_GLANCE: Track = [0, 0, 1, 0, 1.22, 0.4, 1.85, 0.4, 2.1, -0.32, 2.75, -0.32, 3, 0, 4.4, 0];
+const NERVOUS_SWALLOW: Track = [0, 0, 3.35, 0, 3.5, 0.17, 3.72, -0.04, 3.95, 0, 4.4, 0];
+
+// --- apresentador com o envelope (laço de 3,4 s): lê, abre, olha para a plateia.
+const ENVELOPE_LOOP = 3.4;
+const ENVELOPE_READ: Track = [0, 0.36, 0.95, 0.36, 1.6, 0.28, 1.9, -0.04, 2.9, -0.04, 3.2, 0.36, 3.4, 0.36];
+const ENVELOPE_GLANCE: Track = [0, 0, 1.75, 0, 2, 0.42, 2.6, 0.42, 2.85, 0, 3.4, 0];
+const ENVELOPE_OPEN: Track = [0, 0, 0.8, 0, 1.05, 1, 1.35, 1, 1.6, 0, 3.4, 0];
 
 const ACTIONS: Record<ActionId, ActionDef> = {
   // ----------------------------------------------------- comemorações
@@ -1110,6 +1459,411 @@ const ACTIONS: Record<ActionId, ActionDef> = {
       putR(o, ARM_CLAP_OPEN, ARM_CLAP, k);
       o.bodyY = 0.35 * k - 0.1;
       o.kneeL = o.kneeR = 0.1;
+    },
+  },
+  heart: {
+    duration: 0,
+    body: "full",
+    mood: "shout",
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      // Coração na frente do peito e, logo depois, erguido acima da cabeça.
+      const chest = smooth(t / 0.28);
+      const lift = smooth((t - 0.6) / 0.36);
+      putL(o, ARM_REST, ARM_HEART, chest);
+      putR(o, ARM_REST, ARM_HEART, chest);
+      if (lift > 0) {
+        putL(o, ARM_HEART, ARM_HEART_HIGH, lift);
+        putR(o, ARM_HEART, ARM_HEART_HIGH, lift);
+      }
+      // O coração "bate": os braços dão um tranco curto para a frente.
+      const beat = Math.pow(Math.max(0, Math.sin(TAU * 1.6 * t)), 6) * chest;
+      o.shLX -= 0.07 * beat;
+      o.shRX -= 0.07 * beat;
+      const sway = Math.sin(TAU * 0.8 * t + c.variant * 3) * chest;
+      o.torsoZ = -0.06 * sway;
+      o.hipLZ = 0.05;
+      o.hipRZ = -0.05;
+      shiftHips(o, 0.6 * sway);
+      o.kneeL = 0.08 + 0.12 * Math.max(0, sway);
+      o.kneeR = 0.08 + 0.12 * Math.max(0, -sway);
+      o.torsoX = -0.06 * lift;
+      // Com o coração no alto o queixo sobe um pouco: o rosto aparece por baixo dos braços.
+      o.neckX = mix(-0.12, -0.18, lift);
+      o.neckZ = 0.08 * sway * (1 - lift);
+    },
+  },
+  shush: {
+    duration: 0,
+    body: "full",
+    mood: null,
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      const k = smooth(t / 0.3);
+      armMain(o, c.side, ARM_REST, ARM_SHUSH, k);
+      armOff(o, c.side, ARM_REST, ARM_CALM, k);
+      if (t > 0.3) {
+        // A outra mão bate no ar devagar: "calma, calma".
+        const pat = 0.5 - 0.5 * Math.cos(TAU * 1.5 * (t - 0.3));
+        armOff(o, c.side, ARM_CALM, ARM_CALM_UP, pat);
+      }
+      // Varre a arquibancada com o tronco: o dedo vai junto, sempre nos lábios.
+      const pan = Math.sin(TAU * 0.28 * Math.max(0, t - 0.35)) * smooth((t - 0.35) / 0.6);
+      o.torsoY = 0.32 * pan;
+      o.neckY = 0.12 * pan;
+      o.neckX = -0.1 * k;
+      o.torsoX = -0.04 * k;
+      o.hipLZ = 0.07;
+      o.hipRZ = -0.07;
+      o.kneeL = o.kneeR = 0.05;
+    },
+  },
+  armsCrossed: {
+    duration: 0,
+    body: "full",
+    mood: null,
+    look: 0,
+    mirror: true,
+    sample(t, o) {
+      stand(o, t);
+      const k = smooth(t / 0.32);
+      putL(o, ARM_REST, ARM_CROSS_LOW, k);
+      putR(o, ARM_REST, ARM_CROSS_HIGH, k);
+      // Pés plantados e abertos, queixo para cima e um "sim" lento de quem sabe que é bom.
+      const plant = smooth(t / 0.2);
+      o.hipLZ = 0.15 * plant;
+      o.hipRZ = -0.15 * plant;
+      o.bodyY = 0.08 * Math.sin(t * 2.3) - 0.15 * plant;
+      o.torsoX = -0.07 * k;
+      const nod = t > 0.5 ? Math.pow(Math.max(0, Math.sin(TAU * 0.55 * (t - 0.5))), 2) : 0;
+      o.neckX = -0.28 * k + 0.16 * nod;
+      o.neckY = 0.05 * Math.sin(TAU * 0.2 * t);
+    },
+  },
+  cradle: {
+    duration: 0,
+    body: "full",
+    mood: "shout",
+    look: 0,
+    sample(t, o) {
+      stand(o, t);
+      const k = smooth(t / 0.3);
+      putL(o, ARM_REST, ARM_CRADLE_LOW, k);
+      putR(o, ARM_REST, ARM_CRADLE_HIGH, k);
+      // Embala o neném de um lado para o outro (Bebeto, 94): o tronco gira e o peso vai junto.
+      const rock = Math.sin(TAU * 1.15 * Math.max(0, t - 0.2)) * smooth((t - 0.15) / 0.3);
+      o.torsoY = 0.28 * rock;
+      o.torsoZ = -0.07 * rock;
+      o.hipsY = -0.06 * rock;
+      shiftHips(o, 0.5 * rock);
+      o.kneeL = 0.1 + 0.15 * Math.max(0, -rock);
+      o.kneeR = 0.1 + 0.15 * Math.max(0, rock);
+      o.neckX = -0.12 * k;
+      o.neckZ = 0.1 * rock;
+    },
+  },
+  robot: {
+    duration: 0,
+    body: "full",
+    mood: null,
+    look: 0,
+    sample(t, o) {
+      // Pose parada, estalo de 0,07 s para a próxima, parada de novo: nada de curva macia.
+      const step = Math.floor(t / ROBOT_BEAT);
+      const into = t - step * ROBOT_BEAT;
+      const key = ROBOT_KEYS[step % ROBOT_KEYS.length];
+      const from = step === 0 ? ROBOT_START : ROBOT_KEYS[(step - 1) % ROBOT_KEYS.length];
+      const snap = smooth(into / (step === 0 ? 0.14 : ROBOT_SNAP));
+      putL(o, from[0], key[0], snap);
+      putR(o, from[1], key[1], snap);
+      // A cabeça trava com um tremidinho de motor.
+      o.neckY = mix(from[2], key[2], snap) + 0.035 * Math.sin(into * 70) * Math.exp(-into * 22) * (step > 0 ? 1 : 0);
+      o.hipsY = mix(from[3], key[3], snap);
+      o.torsoZ = mix(from[4], key[4], snap);
+      // Cada estalo é um passinho duro: um joelho dobra e volta.
+      const pop = Math.sin(Math.PI * clamp01(into / 0.16));
+      if (step % 2) {
+        o.kneeL = 0.3 * pop;
+        o.hipLX = -0.15 * pop;
+      } else {
+        o.kneeR = 0.3 * pop;
+        o.hipRX = -0.15 * pop;
+      }
+      o.bodyY = -0.3 * pop;
+      o.neckX = -0.05;
+    },
+  },
+  dance: {
+    duration: 0,
+    body: "full",
+    mood: "shout",
+    look: 0,
+    sample(t, o, c) {
+      // Dancinha: o quadril vai de um lado ao outro a cada duas batidas (~130 bpm),
+      // o pé de fora pisa no tempo e os punhos sobem um de cada vez.
+      const b = TAU * 1.1 * t + c.variant * 2;
+      const sway = Math.sin(b);
+      const enter = smooth(t / 0.25);
+      // Desce no tempo forte (as pontas do balanço): a perna de apoio dobra na
+      // medida da descida (pé no chão) e a de fora dobra mais e pisa.
+      const bend = 0.2 + 0.3 * sway * sway;
+      o.bodyY = -LEG_LENGTH * (1 - Math.cos(bend / 2));
+      o.hipLX = -bend / 2 - 0.2 * Math.max(0, sway);
+      o.hipRX = -bend / 2 - 0.2 * Math.max(0, -sway);
+      o.kneeL = bend + 0.4 * Math.max(0, sway);
+      o.kneeR = bend + 0.4 * Math.max(0, -sway);
+      o.hipsY = 0.24 * sway * enter;
+      o.torsoY = -0.2 * sway * enter;
+      o.torsoZ = -0.07 * sway * enter;
+      o.hipLZ = 0.06;
+      o.hipRZ = -0.06;
+      shiftHips(o, 1.2 * sway * enter);
+      const pump = 0.5 + 0.5 * sway;
+      putL(o, ARM_DANCE_LOW, ARM_DANCE_HIGH, pump);
+      putR(o, ARM_DANCE_LOW, ARM_DANCE_HIGH, 1 - pump);
+      // Ombrinho: tremida rápida dos ombros por cima do balanço.
+      const shimmy = Math.sin(TAU * 5.5 * t) * enter;
+      o.torsoY += 0.06 * shimmy;
+      o.shLX += 0.06 * shimmy;
+      o.shRX -= 0.06 * shimmy;
+      armsFromRest(o, enter);
+      o.neckX = -0.1 + 0.08 * Math.sin(2 * b);
+      o.neckZ = -0.1 * sway;
+    },
+  },
+  // ------------------------------------------------- cerimônia (de terno)
+  applaud: {
+    duration: 0,
+    body: "full",
+    mood: null,
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      // Aplauso educado: palmas curtas na frente do peito, ~2,5 por segundo.
+      const cycle = (t * 2.5 + c.variant) % 1;
+      const k = cycle < 0.35 ? smooth(cycle / 0.35) : 1 - smooth((cycle - 0.35) / 0.65);
+      putL(o, ARM_APPLAUD_OPEN, ARM_APPLAUD, k);
+      putR(o, ARM_APPLAUD_OPEN, ARM_APPLAUD, k);
+      armsFromRest(o, smooth(t / 0.3));
+      o.neckX = 0.04 + 0.05 * Math.sin(TAU * 1.25 * t + c.variant * 6);
+      o.neckY = 0.08 * Math.sin(TAU * 0.17 * t + c.variant * 4);
+    },
+  },
+  wave: {
+    duration: 0,
+    body: "full",
+    mood: null,
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      const up = smooth(t / 0.35);
+      // O cotovelo fica parado no alto; o antebraço vai e volta (começa de dentro, sem salto).
+      const k = 0.5 - 0.5 * Math.cos(TAU * 1.6 * Math.max(0, t - 0.35));
+      if (c.side > 0) {
+        putR(o, ARM_REST, ARM_WAVE_IN, up);
+        if (up >= 1) putR(o, ARM_WAVE_IN, ARM_WAVE_OUT, k);
+      } else {
+        putL(o, ARM_REST, ARM_WAVE_IN, up);
+        if (up >= 1) putL(o, ARM_WAVE_IN, ARM_WAVE_OUT, k);
+      }
+      o.torsoZ = 0.04 * c.side * up;
+      o.neckZ = -0.06 * c.side * up;
+      o.neckX = -0.06;
+    },
+  },
+  nervous: {
+    duration: 0,
+    body: "full",
+    mood: null,
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      const k = smooth(t / 0.4);
+      putL(o, ARM_REST, ARM_CLASP, k);
+      putR(o, ARM_REST, ARM_CLASP, k);
+      // Mãos que não param quietas.
+      const rub = 0.05 * Math.sin(TAU * 1.9 * t) * k;
+      o.shLY += rub;
+      o.shRY += rub;
+      // O peso passa de uma perna para a outra.
+      const shift = Math.sin(TAU * 0.32 * t + c.variant * 4);
+      o.hipLZ = 0.04;
+      o.hipRZ = -0.04;
+      shiftHips(o, 0.45 * shift);
+      o.kneeL = 0.06 + 0.14 * Math.max(0, -shift);
+      o.kneeR = 0.06 + 0.14 * Math.max(0, shift);
+      // Olhadas para os lados e uma engolida seca.
+      const loop = (t + c.variant * NERVOUS_LOOP) % NERVOUS_LOOP;
+      o.neckY = sampleTrack(NERVOUS_GLANCE, loop) * (c.variant > 0.5 ? 1 : -1);
+      o.neckX = 0.06 + sampleTrack(NERVOUS_SWALLOW, loop);
+      o.torsoX = 0.04 * k;
+    },
+  },
+  disbelief: {
+    duration: 1.9,
+    body: "full",
+    mood: (t) => (t < 1.25 ? "surprised" : "shout"),
+    look: 0,
+    sample(t, o) {
+      stand(o, t);
+      // Mãos na cabeça de susto ("fui eu?!") e depois os braços se abrem.
+      const reach = smooth(t / 0.22);
+      const open = smooth((t - 1.2) / 0.45);
+      putL(o, ARM_REST, ARM_HEAD, reach);
+      putR(o, ARM_REST, ARM_HEAD, reach);
+      if (open > 0) {
+        putL(o, ARM_HEAD, ARM_OPEN, open);
+        putR(o, ARM_HEAD, ARM_OPEN, open);
+      }
+      o.neckY = 0.18 * Math.sin(TAU * 2.2 * t) * smooth(t / 0.3) * (1 - smooth((t - 0.8) / 0.4));
+      o.neckX = mix(-0.2, -0.12, open);
+      // O susto dá meio passo para trás; abrindo os braços, volta.
+      const back = reach * (1 - open);
+      o.torsoX = -0.12 * back - 0.06 * open;
+      o.hipRX = 0.2 * back;
+      o.kneeR = 0.14 * back;
+      o.bodyY = -0.1 * back;
+      if (t > 1.65) {
+        // Pulinhos de alegria contida.
+        const hop = Math.abs(Math.sin(TAU * 0.9 * (t - 1.65)));
+        o.bodyY += 0.35 * hop;
+        o.kneeL = o.kneeR = 0.12 * (1 - hop);
+        o.shLX -= 0.08 * hop;
+        o.shRX -= 0.08 * hop;
+      }
+    },
+  },
+  trophyLift: {
+    duration: 0,
+    body: "full",
+    mood: "shout",
+    look: 0,
+    sample(t, o) {
+      stand(o, t);
+      // Sai da taça no colo (a cena entrega antes) e sobe tudo de uma vez.
+      const up = smooth(t / 0.45);
+      putL(o, ARM_TROPHY_CRADLE, ARM_TROPHY_UP, up);
+      putR(o, ARM_TROPHY_CRADLE, ARM_TROPHY_UP, up);
+      // Sacode a taça: o corpo todo sobe e desce nos joelhos, os braços balançam de leve.
+      const pump = t > 0.45 ? 0.5 - 0.5 * Math.cos(TAU * 1.1 * (t - 0.45)) : 0;
+      o.shLX -= 0.06 * pump;
+      o.shRX -= 0.06 * pump;
+      // Queixo para cima, olhando a taça (pouco: a cabeça para trás bateria nas mãos).
+      o.neckX = -0.12 * up;
+      o.torsoX = -0.05 * up;
+      o.bodyY = 0.1 * Math.sin(t * 2.3) - 0.55 * pump;
+      // Agacha de verdade: o quanto o corpo desce bate com o dobrar das pernas (pé no chão).
+      o.kneeL = o.kneeR = 0.6 * pump;
+      o.hipLX = o.hipRX = -0.3 * pump;
+      o.hipLZ = 0.06;
+      o.hipRZ = -0.06;
+    },
+  },
+  trophyCradle: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t < 1.5 ? null : "shout"),
+    look: 0,
+    sample(t, o) {
+      stand(o, t);
+      const k = smooth(t / 0.35);
+      putL(o, ARM_REST, ARM_TROPHY_CRADLE, k);
+      putR(o, ARM_REST, ARM_TROPHY_CRADLE, k);
+      // Olha a taça nas mãos; depois levanta a cabeça para a plateia.
+      const down = smooth(t / 0.4) * (1 - smooth((t - 1.2) / 0.5));
+      o.neckX = 0.42 * down - 0.08 * smooth((t - 1.2) / 0.5);
+      o.neckY = 0.08 * Math.sin(TAU * 0.3 * t) * down;
+      o.torsoX = 0.06 * down;
+    },
+  },
+  handOnHeart: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t > 0.5 && t < 1.3 ? "blink" : null),
+    look: 0,
+    sample(t, o) {
+      stand(o, t);
+      // Sempre a mão direita: o coração (e o escudo) fica no peito esquerdo.
+      putR(o, ARM_REST, ARM_ON_HEART, smooth(t / 0.3));
+      o.neckX = 0.2 * smooth((t - 0.2) / 0.4);
+      o.torsoX += 0.03 * smooth(t / 0.3);
+    },
+  },
+  bow: {
+    duration: 1.5,
+    body: "full",
+    mood: (t) => (t > 0.55 && t < 1.1 ? "blink" : null),
+    look: 0,
+    sample(t, o) {
+      stand(o, t);
+      putR(o, ARM_REST, ARM_ON_HEART, smooth(t / 0.3));
+      const bow = sampleTrack(BOW_TORSO, t);
+      o.torsoX += bow;
+      o.neckX = sampleTrack(BOW_NECK, t);
+      // O quadril recua um pouco (equilíbrio, pés parados) e o braço solto continua pendurado.
+      o.bodyZ = -1.1 * bow;
+      o.hipLX = o.hipRX = o.bodyZ / LEG_LENGTH;
+      o.shLX = -0.9 * bow;
+    },
+  },
+  presenterEnvelope: {
+    duration: 0,
+    body: "full",
+    mood: null,
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      const k = smooth(t / 0.35);
+      putL(o, ARM_REST, ARM_ENVELOPE, k);
+      putR(o, ARM_REST, ARM_ENVELOPE, k);
+      // Lê, abre a aba com a mão boa, olha para a plateia (cada vez para um lado).
+      const run = Math.max(0, t - 0.35);
+      const loop = run % ENVELOPE_LOOP;
+      const lap = Math.floor(run / ENVELOPE_LOOP);
+      armMain(o, c.side, ARM_ENVELOPE, ARM_ENVELOPE_PULL, sampleTrack(ENVELOPE_OPEN, loop) * k);
+      const glance = sampleTrack(ENVELOPE_GLANCE, loop) * (lap % 2 ? -1 : 1);
+      o.neckX = mix(0.1, sampleTrack(ENVELOPE_READ, loop), k);
+      o.neckY = glance;
+      o.torsoY = 0.25 * glance;
+    },
+  },
+  presenterGesture: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t < 1.6 ? "shout" : null),
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      // "E o vencedor é...": braço bom aberto para o lado, o envelope desce na outra mão.
+      const k = smooth(t / 0.4);
+      armMain(o, c.side, ARM_ENVELOPE, ARM_PRESENT, k);
+      armOff(o, c.side, ARM_ENVELOPE, ARM_ENVELOPE_LOW, k);
+      const lift = 0.05 * Math.sin(TAU * 1.2 * t) * k;
+      if (c.side > 0) o.shRZ -= lift;
+      else o.shLZ += lift;
+      o.torsoY = -0.15 * c.side * k;
+      o.neckY = -0.35 * c.side * k;
+      o.neckX = -0.06;
+    },
+  },
+  sadClap: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t < 1.5 ? "sad" : null),
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      // Perdeu, mas aplaude: mais devagar, cabeça baixa no começo.
+      const cycle = (t * 1.5 + c.variant) % 1;
+      const k = cycle < 0.4 ? smooth(cycle / 0.4) : 1 - smooth((cycle - 0.4) / 0.6);
+      putL(o, ARM_SAD_CLAP_OPEN, ARM_SAD_CLAP, k);
+      putR(o, ARM_SAD_CLAP_OPEN, ARM_SAD_CLAP, k);
+      armsFromRest(o, smooth(t / 0.4));
+      const up = smooth((t - 1.2) / 0.6);
+      o.neckX = mix(0.38, 0.04, up);
+      o.torsoX = mix(0.08, 0.02, up);
     },
   },
   // ----------------------------------------------------------- lamentos
@@ -1407,7 +2161,18 @@ export type FigureOptions = {
   seed?: number;
   /** Modo desempenho: sem sombra projetada (a sombra de contato fica mais forte). */
   performance?: boolean;
+  /** Uniforme de jogo (padrão) ou terno da gala: mesmos ossos e proporções, todas as animações valem. */
+  outfit?: FigureOutfit;
 };
+
+/**
+ * Terno: paletó com lapelas e camisa no V, gravata (ou borboleta, ou nada),
+ * manga comprida com o punho da camisa, calça comprida e sapato social. Sem
+ * número nem braçadeira.
+ */
+export type FigureOutfit =
+  | { kind: "kit" }
+  | { kind: "suit"; jacket: string; shirt: string; tie: string; pants: string; tieStyle?: SuitTie };
 
 export type KickKind = "strike" | "block";
 
@@ -1419,8 +2184,31 @@ const SOLID_SHORTS = 3;
 const SOLID_GLOVES = 4;
 const SOLID_HAIR = 5;
 const SOLID_ARMBAND = 6;
+const SOLID_HAIR_SHADE = 7;
+const SOLID_BEARD = 8;
+const SOLID_ACCESSORY = 9;
+const SOLID_ACCESSORY_SHADE = 10;
+const SOLID_GOLD = 11;
+const SOLID_CUFF = 12;
 const STRIPE_SOCKS = 0;
 const STRIPE_BOOTS = 1;
+
+/** Retalho e acabamento (rugosidade, metal, brilho, sombra) de cada bloco da cabeça. */
+const HEAD_TONE_PAINT: Readonly<Record<HeadTone, readonly [number, Finish]>> = {
+  hair: [SOLID_HAIR, [0.92, 0, 0, 1]],
+  hairShade: [SOLID_HAIR_SHADE, [0.92, 0, 0, 1]],
+  beard: [SOLID_BEARD, [0.95, 0, 0, 1]],
+  accessory: [SOLID_ACCESSORY, [0.72, 0, 0, 1]],
+  accessoryShade: [SOLID_ACCESSORY_SHADE, [0.66, 0, 0, 1]],
+  // Metal pela metade e o brilho próprio dourado da braçadeira: sem mapa de
+  // ambiente, metal cheio sai quase preto; assim lê como ouro em campo.
+  gold: [SOLID_GOLD, [0.3, 0.45, 0.7, 0]],
+};
+/** Tecido do terno e sapato social engraxado. */
+const SUIT_FINISH: Finish = [0.8, 0, 0, 1];
+const DRESS_SHOE_FINISH: Finish = [0.22, 0.15, 0, 1];
+/** Palma da mão no osso do antebraço: dentro da caixa da mão (centro em -5,6), um pouco abaixo do meio. */
+const HAND_ANCHOR_Y = -6;
 
 /** Raio (unidades de campo) da esfera de recorte: cobre mortal, mergulho e braços para cima. */
 const CULL_RADIUS = FIGURE_HEIGHT * 1.6;
@@ -1595,6 +2383,9 @@ export class PlayerFigure {
   private readonly pose = zeroPose();
   private readonly layer = zeroPose();
 
+  /** Pontos da palma (criados só quando alguém pede). */
+  private readonly anchors: { left?: THREE.Object3D; right?: THREE.Object3D } = {};
+
   constructor(options: FigureOptions) {
     const seed = options.seed ?? options.number * 7919;
     this.offset = (seed % 997) / 97;
@@ -1611,22 +2402,40 @@ export class PlayerFigure {
     const shirtPrimary = options.keeper ? options.keeperColor ?? "#c6ff3d" : options.primary;
     const shirtSecondary = options.keeper ? shadeHex(shirtPrimary, -70) : options.secondary;
 
+    const suit = options.outfit?.kind === "suit" ? options.outfit : null;
+
     // -------------------------------------------------------------- texturas
     // Duas por boneco: o atlas da camisa (filtro linear, número legível) e o
     // atlas "pixel" (cabeça com os 6 humores, meião, chuteira e cores sólidas).
-    const kit = createKitTextures({ pattern: options.keeper ? 1 : pattern, primary: shirtPrimary, secondary: shirtSecondary, number: options.number });
+    // O terno troca só o que é pintado: o atlas do tronco vira paletó, os
+    // retalhos de manga/calção viram paletó/calça, o meião vira a calça e a
+    // chuteira vira sapato social.
+    const kit = suit
+      ? createSuitTextures({ jacket: suit.jacket, shirt: suit.shirt, tie: suit.tie, tieStyle: suit.tieStyle ?? "tie" })
+      : createKitTextures({ pattern: options.keeper ? 1 : pattern, primary: shirtPrimary, secondary: shirtSecondary, number: options.number });
     const shortsColor = options.keeper ? "#1d2228" : shirtSecondary === shirtPrimary ? shadeHex(shirtPrimary, -40) : shirtSecondary;
     const solids: string[] = [];
     solids[SOLID_SKIN] = look.skin;
     solids[SOLID_HAND] = shadeHex(look.skin, -10);
-    solids[SOLID_SLEEVE] = options.keeper ? shirtPrimary : sleeveColor(pattern, shirtPrimary, shirtSecondary);
-    solids[SOLID_SHORTS] = shortsColor;
+    solids[SOLID_SLEEVE] = suit ? suit.jacket : options.keeper ? shirtPrimary : sleeveColor(pattern, shirtPrimary, shirtSecondary);
+    solids[SOLID_SHORTS] = suit ? suit.pants : shortsColor;
     solids[SOLID_GLOVES] = mixHex(shirtPrimary, "#ffffff", 0.35);
     solids[SOLID_HAIR] = look.hairTop;
     solids[SOLID_ARMBAND] = "#ffc72c";
+    // Separa os elos da trança: no cabelo preto, mais claro (o escuro some).
+    solids[SOLID_HAIR_SHADE] = luminance(look.hairTop) < 0.1 ? shadeHex(look.hairTop, 30) : shadeHex(look.hairTop, -30);
+    solids[SOLID_BEARD] = beardColor(look);
+    solids[SOLID_ACCESSORY] = look.accessory;
+    solids[SOLID_ACCESSORY_SHADE] = accessoryShade(look.accessory);
+    solids[SOLID_GOLD] = EARRING_GOLD;
+    solids[SOLID_CUFF] = suit ? suit.shirt : "#ffffff";
     const stripes: Array<Array<[string, number]>> = [];
-    stripes[STRIPE_SOCKS] = [[options.keeper ? "#1d2228" : shirtSecondary, 0.22], [options.keeper ? shadeHex(shirtPrimary, -20) : shirtPrimary, 0.78]];
-    stripes[STRIPE_BOOTS] = [[BOOT_COLORS[seed % BOOT_COLORS.length], 0.74], ["#2b2b2b", 0.26]];
+    stripes[STRIPE_SOCKS] = suit
+      ? [[suit.pants, 0.86], [shadeHex(suit.pants, -18), 0.14]]
+      : [[options.keeper ? "#1d2228" : shirtSecondary, 0.22], [options.keeper ? shadeHex(shirtPrimary, -20) : shirtPrimary, 0.78]];
+    stripes[STRIPE_BOOTS] = suit
+      ? [["#121214", 0.76], ["#2a2320", 0.24]]
+      : [[look.bootColor ?? BOOT_COLORS[seed % BOOT_COLORS.length], 0.74], ["#2b2b2b", 0.26]];
     const atlas = createFigurePixelAtlas(look, { stripes, solids });
     this.textures.push(kit.torso, atlas.texture);
     this.rim.uPixelMap.value = atlas.texture;
@@ -1678,20 +2487,25 @@ export class PlayerFigure {
     piece(this.torso, atlasBoxGeometry(8, 12, 4), 0, 6, 0, { kind: "shirt" }, [0.86, 0, 0, 1]);
     piece(this.neck, box(8, 8, 8), 0, 4, 0, { kind: "head" }, [0.78, 0, 0, 1]);
     const hairIndex = bones.indexOf(this.neck);
-    buildHair(look, (geometry, matrix) => {
-      builder.add(geometry, world.multiplyMatrices(this.neck.matrixWorld, matrix), hairIndex, { kind: "solid", index: SOLID_HAIR }, [0.92, 0, 0, 1]);
+    buildHair(look, (geometry, matrix, tone) => {
+      const [solid, finish] = HEAD_TONE_PAINT[tone];
+      builder.add(geometry, world.multiplyMatrices(this.neck.matrixWorld, matrix), hairIndex, { kind: "solid", index: solid }, finish);
     });
     for (const [shoulder, elbow, side] of arms) {
-      piece(shoulder, box(4, 5.2, 4), 0, -2.4, 0, { kind: "solid", index: SOLID_SLEEVE }, [0.86, 0, 0, 1]);
-      if (options.captain && side === 1) piece(shoulder, box(4.3, 1.2, 4.3), 0, -3.6, 0, { kind: "solid", index: SOLID_ARMBAND }, [0.4, 0.3, 1, 0]);
-      piece(elbow, box(3.6, 5, 3.6), 0, -2.4, 0, { kind: "solid", index: SOLID_SKIN }, [0.75, 0, 0, 1]);
-      if (options.keeper) piece(elbow, box(4.6, 3, 4.6), 0, -5.6, 0, { kind: "solid", index: SOLID_GLOVES }, [0.6, 0, 0, 0]);
+      piece(shoulder, box(4, 5.2, 4), 0, -2.4, 0, { kind: "solid", index: SOLID_SLEEVE }, suit ? SUIT_FINISH : [0.86, 0, 0, 1]);
+      if (options.captain && side === 1 && !suit) piece(shoulder, box(4.3, 1.2, 4.3), 0, -3.6, 0, { kind: "solid", index: SOLID_ARMBAND }, [0.4, 0.3, 1, 0]);
+      if (suit) {
+        // Manga comprida com o punho da camisa aparecendo antes da mão.
+        piece(elbow, box(3.6, 5, 3.6), 0, -2.4, 0, { kind: "solid", index: SOLID_SLEEVE }, SUIT_FINISH);
+        piece(elbow, box(3.9, 0.5, 3.9), 0, -4.6, 0, { kind: "solid", index: SOLID_CUFF }, [0.7, 0, 0, 0]);
+      } else piece(elbow, box(3.6, 5, 3.6), 0, -2.4, 0, { kind: "solid", index: SOLID_SKIN }, [0.75, 0, 0, 1]);
+      if (options.keeper && !suit) piece(elbow, box(4.6, 3, 4.6), 0, -5.6, 0, { kind: "solid", index: SOLID_GLOVES }, [0.6, 0, 0, 0]);
       else piece(elbow, box(3.8, 2.2, 3.8), 0, -5.6, 0, { kind: "solid", index: SOLID_HAND }, [0.75, 0, 0, 0]);
     }
     for (const [hip, knee, ankle] of legs) {
-      piece(hip, box(4.25, 5.6, 4.3), 0, -2.5, 0, { kind: "solid", index: SOLID_SHORTS }, [0.88, 0, 0, 1]);
-      piece(knee, box(3.75, 4.9, 3.75), 0, -1.9, 0, { kind: "stripe", index: STRIPE_SOCKS }, [0.9, 0, 0, 1]);
-      piece(ankle, box(4.05, 2.6, 5.25), 0, -1.1, 0.55, { kind: "stripe", index: STRIPE_BOOTS }, [0.5, 0, 0, 1]);
+      piece(hip, box(4.25, 5.6, 4.3), 0, -2.5, 0, { kind: "solid", index: SOLID_SHORTS }, suit ? SUIT_FINISH : [0.88, 0, 0, 1]);
+      piece(knee, box(3.75, 4.9, 3.75), 0, -1.9, 0, { kind: "stripe", index: STRIPE_SOCKS }, suit ? SUIT_FINISH : [0.9, 0, 0, 1]);
+      piece(ankle, box(4.05, 2.6, 5.25), 0, -1.1, 0.55, { kind: "stripe", index: STRIPE_BOOTS }, suit ? DRESS_SHOE_FINISH : [0.5, 0, 0, 1]);
     }
 
     this.geometry = builder.build();
@@ -1791,6 +2605,28 @@ export class PlayerFigure {
   /** Todas as texturas do boneco (para subir para a GPU antes de precisar). */
   textureList(): THREE.Texture[] {
     return this.allTextures;
+  }
+
+  /**
+   * Ponto na palma da mão (dentro da caixa, um pouco abaixo do meio), filho do
+   * osso do antebraço: acompanha qualquer animação. "left" é a esquerda do
+   * próprio boneco (+x). Para segurar um objeto (troféu, microfone), prenda-o
+   * como filho do ponto: ele herda a escala do boneco (PX) e o renderer
+   * atualiza tudo ao desenhar. O `update()` não recalcula matrizes de mundo,
+   * mas `getWorldPosition`/`getWorldQuaternion` já sobem a cadeia sozinhos
+   * (`updateWorldMatrix(true, false)`); só quem ler `matrixWorld` direto, antes
+   * do render, precisa chamar `root.updateMatrixWorld()` depois do `update()`.
+   */
+  handAnchor(side: "left" | "right"): THREE.Object3D {
+    let anchor = this.anchors[side];
+    if (!anchor) {
+      anchor = new THREE.Object3D();
+      anchor.name = `hand-${side}`;
+      anchor.position.set(0, HAND_ANCHOR_Y, 0);
+      (side === "left" ? this.elbowL : this.elbowR).add(anchor);
+      this.anchors[side] = anchor;
+    }
+    return anchor;
   }
 
   private land(strength: number) {

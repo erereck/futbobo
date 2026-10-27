@@ -1333,7 +1333,9 @@ button:active:not(:disabled) { transform: scale(.98); }
   content: "";
 }
 
-.appearance-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* `dense`: a lista aberta ocupa a linha de baixo e o vizinho continua ao lado do controle. */
+.appearance-choice-grid { display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: row dense; align-items: start; gap: 10px; }
+.appearance-choice-grid.appearance-choice-solo { grid-template-columns: 1fr; }
 .appearance-choice { display: grid; gap: 7px; min-width: 0; }
 .appearance-choice > div {
   display: grid;
@@ -1367,6 +1369,141 @@ button:active:not(:disabled) { transform: scale(.98); }
 .appearance-random:active,
 .appearance-choice button:active,
 .appearance-palette button:active { transform: scale(.97); }
+
+/* Criador em abas: o painel não cresce a cada leva nova de opções. */
+.appearance-controls { container-type: inline-size; }
+.appearance-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #08130e;
+}
+.appearance-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.appearance-tabs button:hover { background: var(--surface-2); color: var(--text); }
+.appearance-tabs button[aria-selected="true"] { border-color: rgba(244,196,48,.42); background: rgba(244,196,48,.08); color: var(--gold); }
+.appearance-tabs button:focus-visible,
+.appearance-choice button:focus-visible,
+.appearance-option-list button:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.appearance-tab-panel { display: grid; align-content: start; gap: 16px; min-width: 0; }
+
+.appearance-badge-3d {
+  display: inline-block;
+  flex: 0 0 auto;
+  padding: 2px 4px 1px;
+  border-radius: 4px;
+  background: var(--gold);
+  color: #08130e;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: .04em;
+}
+
+.appearance-choice > span,
+.appearance-palette > span { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.appearance-choice > span > small {
+  margin-left: auto;
+  color: var(--muted-2);
+  font-size: 9px;
+  letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+}
+.appearance-choice .appearance-choice-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 0 4px;
+  color: var(--text);
+  font: inherit;
+}
+.appearance-choice-value strong { min-width: 0; }
+.appearance-choice-value b { flex: 0 0 auto; color: var(--gold); font-size: 9px; }
+.appearance-choice.open > div { border-color: rgba(244,196,48,.45); }
+.appearance-hint { color: var(--muted-2); font-size: 9px; line-height: 1.4; }
+.appearance-hint b { color: var(--muted); font-weight: 800; }
+
+/* Lista rápida: 34 cortes no ‹ › cansam; um toque no nome abre todos de uma vez. */
+.appearance-option-list {
+  position: relative;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 4px;
+  max-height: 212px;
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(244,196,48,.3);
+  border-radius: 10px;
+  background: #08130e;
+  scrollbar-width: thin;
+}
+.appearance-option-list button {
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.appearance-option-list button:hover { background: var(--surface-3); }
+.appearance-option-list button[aria-selected="true"] { border-color: var(--gold); background: rgba(244,196,48,.1); color: var(--gold); }
+
+/* Chuteira automática: o "A" sobre o degradê diz que ela segue a camisa. */
+.appearance-palette .appearance-swatch-auto::before {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  color: #fff;
+  content: "A";
+  font: 900 12px/1 var(--display);
+  text-shadow: 0 1px 2px rgba(0,0,0,.75);
+}
+
+/* Coluna estreita: o selo 3D vai pro canto da aba; na criação pelo celular (prévia ao lado), abas 2×2 e setas menores. */
+@container (max-width: 360px) {
+  .appearance-tabs button { position: relative; padding: 0 4px; font-size: 9px; letter-spacing: .03em; }
+  .appearance-tabs .appearance-badge-3d { position: absolute; top: 3px; right: 3px; padding: 1px 3px; font-size: 7px; }
+  .appearance-choice-grid { grid-template-columns: 1fr; }
+}
+@container (max-width: 240px) {
+  .appearance-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .appearance-choice > div { grid-template-columns: 32px minmax(0, 1fr) 32px; }
+}
 
 .story-random-button { min-height: 44px; margin-top: 16px; }
 
@@ -1546,7 +1683,7 @@ button:active:not(:disabled) { transform: scale(.98); }
   padding-inline: 20px;
 }
 
-.appearance-custom-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.appearance-custom-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,170px),1fr)); gap: 8px; }
 .appearance-custom-color {
   display: grid;
   align-content: space-between;

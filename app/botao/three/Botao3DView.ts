@@ -16,12 +16,12 @@ import {
   type BotaoEvent,
   type BotaoMatchState,
 } from "../engine";
-import { teamKitPattern, randomPlayerAppearance, type PlayerAppearance } from "../../player-appearance";
+import { celebrationIdOf, teamKitPattern, randomPlayerAppearance, type PlayerAppearance } from "../../player-appearance";
 import { bodyAppearance, type BotaoRenderView } from "../render";
 import type { BotaoMatchSetup, BotaoSide } from "../types";
 import { BallView } from "./ball";
 import { FIGURE_HEIGHT, PlayerFigure, angleDelta, idleIntent, type FigureAction, type FigureIntent } from "./character";
-import { Choreographer, type Actor, type CameraShot, type Directive } from "./choreography";
+import { Choreographer, goalCelebrationOf, type Actor, type CameraShot, type Directive } from "./choreography";
 import { Effects } from "./effects";
 import { GOAL_HEIGHT, HALF_H, HALF_W, Stadium } from "./stadium";
 import { fieldThemeForMatch } from "../field-themes";
@@ -1309,12 +1309,24 @@ export class Botao3DView {
       actors,
       cameraYaw: this.yaw,
       seed: hashString(`${this.setup.matchId}|${total}|${state.timeline.length}`),
+      signature: this.signatureCelebration(state),
     });
     this.goalShowStarted = true;
     this.showReleased = false;
     this.reactions.clear();
     // Câmera lenta só no instante em que a bola entra.
     if (!this.options.reducedMotion) this.slowMo = 0;
+  }
+
+  /**
+   * Comemoração que o usuário escolheu para o próprio jogador no criador. A
+   * coreografia só usa quando é ele quem marca; null (ou "Variada") mantém o sorteio.
+   */
+  private signatureCelebration(state: BotaoMatchState) {
+    const body = state.bodies.find((candidate) => candidate.kind === "disc" && candidate.isUserPlayer);
+    if (!body) return null;
+    // Com os personagens desligados o rosto some, mas a comemoração escolhida continua valendo.
+    return goalCelebrationOf(celebrationIdOf(bodyAppearance(this.setup, body) ?? this.setup.visuals?.player ?? null));
   }
 
   /** Quem está em campo agora, na posição que aparece na tela. */

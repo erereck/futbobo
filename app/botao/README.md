@@ -272,7 +272,47 @@ three/character-stage.ts palco do criador de personagem
   IndexedDB (`career/indexed-storage.ts`). Copa, X1 e `/botao` rodam fora da
   ponte, então quem grava as configurações também chama
   `rememberBotao3dPreference`, que guarda um espelho pequeno no `localStorage`.
+- **Convite do Modo 3D.** Na primeira abertura depois da atualização (ou numa
+  instalação nova), a home oferece ligar o 3D uma vez só
+  (`shouldOfferBotao3d`/`markBotao3dOfferSeen`); "Ativar" grava como o
+  interruptor das Configurações e avisa quem segura as configurações em
+  memória (`BOTAO3D_ENABLED_EVENT`).
+- **Comemoração do seu jogador.** `PlayerAppearance.celebration` (criador →
+  "Em campo") troca o sorteio quando quem marca é o seu jogador: as seis de
+  sempre ou coração, silêncio, braços cruzados, embala neném, robô e dancinha.
+  Gol contra continua aviãozinho. O criador mostra a escolhida em "Minha
+  comemoração".
 - **Replay do gol** continua em 2D (`GoalReplay.tsx`).
+
+## Personagem e cutscenes
+
+O visual do jogador (`player-appearance.ts`) vale nos dois modos: o busto 2D
+(`drawPlayerBust`) e o boneco 3D (`three/textures.ts` + `buildHair`) leem os
+mesmos índices. Além de pele, olhos, 34 cortes, 12 barbas, 11 expressões e 5
+sobrancelhas, há acessórios (faixa, tiara, bandana, boné; óculos, máscara;
+brincos; sardas, pinta, cicatriz, graxa, pintura) com cor própria e, só no 3D,
+a cor da chuteira e a comemoração. Nos rostos gerados por semente (elenco,
+rivais, seleções) o sorteio base usa as listas antigas, na mesma ordem: pele,
+cabelo e olhos não mudam com a atualização. A leva nova entra em sorteios à
+parte, no fim — de propósito, cerca de 30% troca o corte por um novo e alguns
+ganham acessório, para os visuais novos aparecerem em campo.
+
+As duas cutscenes seguem o mesmo molde — um roteiro em segundos, lido pela
+versão 3D e pela 2D, e o player React dono do relógio, das legendas e do som
+sintetizado:
+
+- **Bola de Ouro** (`app/ceremony/`, prévia em `/bola-de-ouro`): gala com o
+  top 3 no palco; sai o terceiro, sobram dois e o envelope decide. O jogador
+  ganha ou fica em 2º/3º. Os bonecos vestem terno (`FigureOptions.outfit`) e a
+  taça passa de mão em mão por `handAnchor`.
+- **Festa do título da Copa do Mundo** (`app/parade/`, prévia em
+  `/trio-eletrico`): a seleção campeã num trio elétrico por uma avenida lotada.
+  A cidade muda com o país e a temporada (marcos montados com primitivas), e a
+  hora do dia e o caminho da câmera também. Multidão, bandeiras e confete são
+  instanciados e animados no shader; sem mapa de sombra.
+
+Na carreira, as duas abrem por um cartão no resultado da temporada: 3D com o
+Modo 3D ligado (leve com o modo desempenho), 2D sem ele.
 
 ## Acessibilidade e celular
 

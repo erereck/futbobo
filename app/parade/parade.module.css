@@ -1,0 +1,541 @@
+/* Festa do título da Copa: a camada de TV por cima do palco (tarjas, "AO VIVO",
+   legendas, estrelas, letreiro e cartão final). As cores da seleção chegam em
+   --c1/--c2 e o pulso da batida em --pulse (0..1, escrito a cada quadro). */
+
+.root {
+  --gold: #ffd54a;
+  --gold-hi: #fff4c2;
+  --ink: #fffaf0;
+  --ink-muted: rgba(255, 250, 240, 0.74);
+  --c1: #08783e;
+  --c2: #f2b705;
+  --pulse: 0;
+  --bar: clamp(30px, 8vh, 78px);
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  overflow: hidden;
+  background: #05050a;
+  color: var(--ink);
+  font-family: var(--sans, "Segoe UI"), system-ui, sans-serif;
+  outline: none;
+  isolation: isolate;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-aspect-ratio: 3/4) {
+  .root { --bar: clamp(36px, 7vh, 60px); }
+}
+
+.stageLayer { position: absolute; inset: 0; }
+.stageCanvas { display: block; width: 100%; height: 100%; }
+
+.grade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 90% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.45) 100%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.18) 24%, transparent 40%);
+}
+
+/* ------------------------------------------------------------- tarjas */
+
+.barTop,
+.barBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: var(--bar);
+  background: #000;
+  pointer-events: none;
+  transition: transform 0.9s cubic-bezier(0.7, 0, 0.2, 1);
+}
+.barTop { top: 0; transform-origin: top; animation: barIn 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.barBottom { bottom: 0; transform-origin: bottom; animation: barIn 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.atEnd .barTop { transform: translateY(-100%); }
+.atEnd .barBottom { transform: translateY(100%); }
+
+@keyframes barIn {
+  from { transform: scaleY(2.6); }
+  to { transform: scaleY(1); }
+}
+
+/* ---------------------------------------------------- barra de cima */
+
+.topBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: var(--bar);
+  padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+}
+
+.bug {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+  animation: slideIn 0.7s 0.3s cubic-bezier(0.2, 0.9, 0.2, 1.2) both;
+}
+.bugFlag {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 20px;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 0 calc(6px + var(--pulse) * 14px) color-mix(in srgb, var(--c2) 70%, transparent);
+  transform: scale(calc(1 + var(--pulse) * 0.08));
+}
+.bugCity {
+  overflow: hidden;
+  font: 900 clamp(13px, 1.5vw, 17px)/1 var(--display, Impact), sans-serif;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px 4px 8px;
+  border-radius: 4px;
+  background: #e0262b;
+  color: #fff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+.live::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  animation: livePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  50% { opacity: 0.3; }
+}
+
+.controls { display: flex; align-items: center; gap: 8px; animation: fadeUp 0.8s 0.5s both; }
+
+.iconButton,
+.skipButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(10, 10, 16, 0.55);
+  color: var(--ink);
+  font: 900 12px/1 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+.iconButton { width: 38px; padding: 0; }
+.skipButton { padding: 0 14px 0 16px; }
+.iconButton svg,
+.skipButton svg { width: 16px; height: 16px; }
+.iconButton:hover,
+.skipButton:hover { border-color: var(--gold); background: rgba(40, 30, 10, 0.7); }
+.iconButton:active,
+.skipButton:active { transform: scale(0.95); }
+.iconButton:focus-visible,
+.skipButton:focus-visible,
+.primaryAction:focus-visible,
+.secondaryAction:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 3px; }
+
+/* ------------------------------------------------------------ legendas */
+
+.captionZone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--bar) + 2.4vh);
+  z-index: 3;
+  display: flex;
+  justify-content: flex-start;
+  padding: 0 max(16px, 4.5vw);
+  pointer-events: none;
+}
+
+.caption {
+  display: grid;
+  justify-items: start;
+  max-width: min(980px, 100%);
+}
+.captionKicker {
+  position: relative;
+  padding: 6px 14px 5px 12px;
+  background: var(--c2);
+  color: #111;
+  font: 900 clamp(11px, 1.25vw, 15px)/1.1 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  letter-spacing: 0.22em;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  animation: kickerIn 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+}
+.captionKicker::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--c1);
+}
+.captionTitle {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  color: #fff;
+  font: 900 italic clamp(32px, 6.4vw, 96px)/0.9 var(--display, Impact), sans-serif;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 30px rgba(0, 0, 0, 0.5);
+}
+.captionTitle span {
+  display: inline-block;
+  animation: letterDrop 0.62s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  animation-delay: calc(0.12s + var(--i) * 26ms);
+}
+.captionSub {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.62);
+  border-left: 4px solid var(--c1);
+  color: var(--ink);
+  font: 700 clamp(12px, 1.35vw, 17px)/1.3 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  letter-spacing: 0.03em;
+  animation: subIn 0.6s 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes kickerIn {
+  from { opacity: 0; transform: translateX(-40px) skewX(-12deg); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes letterDrop {
+  0% { opacity: 0; transform: translateY(-0.7em) scale(1.5) rotate(-6deg); }
+  60% { opacity: 1; transform: translateY(0.06em) scale(0.96); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes subIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ------------------------------------------------------------- estrelas */
+
+.starZone {
+  position: absolute;
+  top: calc(var(--bar) + 2vh);
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.stars { display: flex; gap: clamp(4px, 1vw, 10px); }
+.star {
+  width: clamp(26px, 4.2vw, 50px);
+  height: clamp(26px, 4.2vw, 50px);
+  color: var(--gold);
+  filter: drop-shadow(0 2px 0 rgba(90, 60, 0, 0.6)) drop-shadow(0 0 12px rgba(255, 213, 74, 0.55));
+  animation: starPop 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  animation-delay: calc(var(--i) * 160ms);
+}
+.starNew {
+  color: #fffbe2;
+  animation: starPop 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both, starShine 1.6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 160ms + 0.2s), calc(var(--i) * 160ms + 0.9s);
+}
+
+@keyframes starPop {
+  from { opacity: 0; transform: scale(0) rotate(-120deg); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes starShine {
+  50% { filter: drop-shadow(0 2px 0 rgba(90, 60, 0, 0.6)) drop-shadow(0 0 26px rgba(255, 240, 170, 1)); transform: scale(1.12); }
+}
+
+/* -------------------------------------------------------------- letreiro */
+
+.ticker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc((var(--bar) - 26px) / 2);
+  z-index: 4;
+  display: flex;
+  height: 26px;
+  align-items: stretch;
+  overflow: hidden;
+  pointer-events: none;
+  animation: fadeUp 0.7s 0.8s both;
+}
+.tickerTag {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 0 12px 0 max(14px, env(safe-area-inset-left));
+  background: var(--c1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+}
+.tickerTrack {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+}
+.tickerText {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: translate(0, -50%);
+  animation: tickerRun 38s linear infinite;
+}
+
+@keyframes tickerRun {
+  from { transform: translate(0, -50%); }
+  to { transform: translate(-50%, -50%); }
+}
+
+.progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+.progress i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--c1), var(--c2));
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.atEnd .progress { opacity: 0; }
+
+.fadeIn { position: absolute; inset: 0; z-index: 6; background: #000; pointer-events: none; }
+
+/* ---------------------------------------------------------- cartão final */
+
+.endCard {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 40%, color-mix(in srgb, var(--c1) 40%, transparent), transparent 70%),
+    rgba(4, 4, 10, 0.72);
+  animation: endIn 0.8s ease-out both;
+}
+.endInner {
+  display: flex;
+  width: min(520px, 100%);
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.endKicker {
+  padding: 6px 14px;
+  background: var(--c2);
+  color: #111;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  animation: kickerIn 0.6s 0.2s both;
+}
+.endTitle {
+  margin: 0;
+  background: linear-gradient(180deg, #fffbe6 0%, var(--gold) 60%, #c58a12 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font: 900 italic clamp(44px, 10vw, 92px)/0.9 var(--display, Impact), sans-serif;
+  text-transform: uppercase;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.4));
+  animation: titleIn 0.8s 0.35s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+.endPlayer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px 8px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  text-align: left;
+  animation: fadeUp 0.6s 0.6s both;
+}
+.endPlayer div { display: grid; gap: 3px; min-width: 0; }
+.endPlayer strong { overflow: hidden; font: 900 18px/1.05 var(--display, Impact), sans-serif; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.endPlayer small { color: var(--ink-muted); font-size: 12px; font-weight: 700; }
+.endBust {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px #0b0b10, 0 0 0 5px var(--gold), 0 0 22px rgba(255, 213, 74, 0.45);
+}
+.endBustCanvas { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.endSub { max-width: 420px; margin: 0; color: var(--ink-muted); font-size: 14px; line-height: 1.45; animation: fadeUp 0.6s 0.75s both; }
+.endActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 6px; animation: fadeUp 0.6s 0.9s both; }
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 28px;
+  border-radius: 999px;
+  font: 900 15px/1 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.primaryAction {
+  border: 0;
+  background: linear-gradient(180deg, #fff1b0 0%, #ffd54a 50%, #d99a12 100%);
+  color: #1a1204;
+  box-shadow: 0 12px 30px rgba(255, 213, 74, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.secondaryAction {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--ink);
+}
+.secondaryAction svg { width: 18px; height: 18px; }
+.primaryAction:hover,
+.secondaryAction:hover { transform: translateY(-1px); }
+
+@keyframes endIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes titleIn {
+  from { opacity: 0; transform: scale(1.6); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ------------------------------------------------------------ carregando */
+
+.loader {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 50%, color-mix(in srgb, var(--c1) 35%, transparent), transparent 70%),
+    #05050a;
+  text-align: center;
+}
+.loader strong { font: 900 italic clamp(22px, 4vw, 34px)/1 var(--display, Impact), sans-serif; text-transform: uppercase; }
+.loader small { color: var(--ink-muted); font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
+.loaderBars { display: flex; height: 44px; align-items: flex-end; gap: 6px; }
+.loaderBars i {
+  width: 9px;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--c2), var(--c1));
+  transform-origin: bottom;
+  animation: eq 0.47s ease-in-out infinite alternate;
+}
+.loaderBars i:nth-child(2) { animation-delay: -0.12s; }
+.loaderBars i:nth-child(3) { animation-delay: -0.3s; }
+.loaderBars i:nth-child(4) { animation-delay: -0.06s; }
+.loaderBars i:nth-child(5) { animation-delay: -0.22s; }
+
+@keyframes eq {
+  from { transform: scaleY(0.2); }
+  to { transform: scaleY(1); }
+}
+
+/* -------------------------------------------------------- celular em pé */
+
+@media (max-width: 560px) {
+  .bugCity { max-width: 34vw; }
+  .skipButton { padding: 0 12px; }
+  .iconButton { width: 36px; height: 36px; }
+  .skipButton { height: 36px; }
+  .captionZone { padding: 0 16px; }
+  .tickerTag { font-size: 10px; padding-right: 10px; }
+  .tickerText { font-size: 11px; }
+}
+
+@media (max-width: 420px) {
+  .skipLabel { display: none; }
+  .skipButton { width: 36px; padding: 0; }
+  .live { padding: 4px 7px; letter-spacing: 0.1em; }
+}
+
+/* --------------------------------------------------- menos movimento */
+
+.reduced .captionTitle span,
+.reduced .captionKicker,
+.reduced .captionSub,
+.reduced .star,
+.reduced .bug,
+.reduced .endTitle { animation: fadeIn 0.4s both; }
+.reduced .tickerText { animation-duration: 90s; }
+.reduced .bugFlag { transform: none; }
+.reduced .loaderBars i { animation: none; transform: scaleY(0.6); }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barTop,
+  .barBottom { animation: none; }
+}

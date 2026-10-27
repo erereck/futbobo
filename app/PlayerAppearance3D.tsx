@@ -12,6 +12,7 @@ const POSES: Array<{ id: StagePose; label: string }> = [
   { id: "run", label: "Correndo" },
   { id: "kick", label: "Chute" },
   { id: "celebrate", label: "Gol!" },
+  { id: "signature", label: "Minha comemoração" },
 ];
 
 export default function PlayerAppearance3D({
@@ -34,6 +35,13 @@ export default function PlayerAppearance3D({
   const stageRef = useRef<CharacterStage | null>(null);
   const [pose, setPose] = useState<StagePose>("idle");
   const [failed, setFailed] = useState(false);
+  // Escolheu outra comemoração no editor: a prévia já mostra ela.
+  const celebration = appearance.celebration ?? 0;
+  const [shownCelebration, setShownCelebration] = useState(celebration);
+  if (celebration !== shownCelebration) {
+    setShownCelebration(celebration);
+    setPose("signature");
+  }
   // O palco carrega depois do primeiro render; ele lê daqui as escolhas mais novas.
   const latest = useRef({ appearance, primary, secondary, number, pose });
   useEffect(() => {

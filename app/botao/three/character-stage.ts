@@ -3,29 +3,61 @@
 // mostram as animações que ele vai ter em campo.
 
 import * as THREE from "three";
-import type { PlayerAppearance } from "../../player-appearance";
+import { celebrationIdOf, type CelebrationId, type PlayerAppearance } from "../../player-appearance";
 import { FIGURE_HEIGHT, PlayerFigure, idleIntent, type FigureAction, type FigureIntent } from "./character";
 
-export type StagePose = "idle" | "run" | "kick" | "celebrate";
+export type StagePose = "idle" | "run" | "kick" | "celebrate" | "signature";
 
 /**
- * Vitrine de comemorações do "Gol!": cada uma por alguns segundos, em ciclo.
- * `face` é o lado para onde o boneco olha (0 = câmera; o siuuu sai de costas
- * e cai de frente). `speed` > 0 corre no lugar (aviãozinho).
+ * Um trecho da vitrine. `face` é o lado para onde o boneco olha (0 = câmera;
+ * o siuuu sai de costas e cai de frente). `speed` > 0 corre no lugar
+ * (aviãozinho). Sem ação, fica parado um instante: é o que faz uma
+ * comemoração de uma vez só recomeçar do zero no laço.
  */
-const SHOWCASE: ReadonlyArray<{ action: FigureAction; duration: number; face: number; speed?: number }> = [
+type ShowcaseItem = { action: FigureAction | null; duration: number; face: number; speed?: number };
+
+/** Vitrine de comemorações do "Gol!": cada uma por alguns segundos, em ciclo. */
+const SHOWCASE: readonly ShowcaseItem[] = [
   { action: "jumpCheer", duration: 2, face: 0 },
   { action: "clap", duration: 1.3, face: Math.PI },
   { action: "siuu", duration: 2.6, face: Math.PI },
   { action: "kneeSlide", duration: 0.75, face: 0 },
   { action: "kneelCheer", duration: 2.1, face: 0 },
+  { action: "heart", duration: 2.2, face: 0 },
   { action: "backflip", duration: 1.15, face: 0 },
   { action: "pointSky", duration: 1.7, face: 0 },
+  { action: "robot", duration: 2.75, face: 0 },
   { action: "airplane", duration: 2.8, face: 0, speed: 175 },
+  { action: "shush", duration: 2.6, face: 0 },
   { action: "flagDance", duration: 2.6, face: 0 },
+  { action: "cradle", duration: 2.4, face: 0 },
   { action: "crestKiss", duration: 2.6, face: 0 },
+  { action: "armsCrossed", duration: 2.4, face: 0 },
+  { action: "dance", duration: 2.75, face: 0 },
 ];
-const SHOWCASE_LENGTH = SHOWCASE.reduce((sum, item) => sum + item.duration, 0);
+
+const PAUSE: ShowcaseItem = { action: null, duration: 0.6, face: 0 };
+
+/** "Minha comemoração": a escolhida no criador, em laço (as de uma vez só recomeçam). */
+const SIGNATURES: Readonly<Record<Exclude<CelebrationId, "auto">, readonly ShowcaseItem[]>> = {
+  kneeSlide: [{ action: "kneeSlide", duration: 0.75, face: 0 }, { action: "kneelCheer", duration: 2.2, face: 0 }, PAUSE],
+  // De costas, mãos na cintura; o salto gira e ele cai de frente.
+  siuu: [{ action: "handsOnHips", duration: 0.7, face: Math.PI }, { action: "siuu", duration: 2.6, face: Math.PI }],
+  cornerFlag: [{ action: "flagDance", duration: 4, face: 0 }],
+  backflip: [{ action: "handsOnHips", duration: 0.45, face: 0 }, { action: "backflip", duration: 1.15, face: 0 }, { action: "pointSky", duration: 1.7, face: 0 }],
+  airplane: [{ action: "airplane", duration: 2.8, face: 0, speed: 175 }, { action: "pointSky", duration: 1.7, face: 0 }],
+  crest: [{ action: "crestKiss", duration: 2.8, face: 0 }, PAUSE],
+  heart: [{ action: "heart", duration: 3, face: 0 }, PAUSE],
+  shush: [{ action: "shush", duration: 4, face: 0 }],
+  armsCrossed: [{ action: "armsCrossed", duration: 4, face: 0 }],
+  cradle: [{ action: "cradle", duration: 4, face: 0 }],
+  robot: [{ action: "robot", duration: 4, face: 0 }],
+  dance: [{ action: "dance", duration: 4, face: 0 }],
+};
+
+function showcaseLength(list: readonly ShowcaseItem[]) {
+  return list.reduce((sum, item) => sum + item.duration, 0);
+}
 
 /** Correndo: trote → corrida → disparada e de volta, para mostrar as passadas. */
 function runSpeed(time: number) {
@@ -46,6 +78,7 @@ export class CharacterStage {
   private readonly rim: THREE.Mesh;
   private readonly ground: THREE.Mesh;
   private figure: PlayerFigure | null = null;
+  private signature: CelebrationId = "auto";
   private pose: StagePose = "idle";
   private poseTime = 0;
   private spin = -0.5;
@@ -69,7 +102,7 @@ export class CharacterStage {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.1;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     // Enquadra da cabeça até a borda da frente do pedestal.
     this.frameCamera();
@@ -152,6 +185,10 @@ export class CharacterStage {
     this.turntable.add(this.figure.root);
     this.pedestalMaterial.color.set(primary);
     this.rimMaterial.color.set(secondary === primary ? "#ffc72c" : secondary);
+    const signature = celebrationIdOf(appearance);
+    // Trocou a comemoração com a prévia nela: a nova começa do início.
+    if (signature !== this.signature && this.pose === "signature") this.poseTime = 0;
+    this.signature = signature;
   }
 
   setPose(pose: StagePose) {
@@ -172,8 +209,10 @@ export class CharacterStage {
         if (cycle < 1.1) return idleIntent({ state: "aim", faceYaw: 0, aimRatio: Math.min(1, cycle / 0.95) });
         return idleIntent({ state: "ready", faceYaw: 0, look });
       }
-      case "celebrate": {
+      case "celebrate":
+      case "signature": {
         const item = this.showcaseItem();
+        if (!item.action) return idleIntent({ state: "idle", faceYaw: item.face, look });
         return idleIntent({
           state: item.speed ? "run" : "celebrate",
           speed: item.speed ?? 0,
@@ -187,13 +226,15 @@ export class CharacterStage {
     }
   }
 
+  /** "Variada" (ou nenhuma escolhida) mostra a vitrine inteira do "Gol!". */
   private showcaseItem() {
-    let time = this.poseTime % SHOWCASE_LENGTH;
-    for (const item of SHOWCASE) {
+    const list = this.pose === "signature" && this.signature !== "auto" ? SIGNATURES[this.signature] : SHOWCASE;
+    let time = this.poseTime % showcaseLength(list);
+    for (const item of list) {
       if (time < item.duration) return item;
       time -= item.duration;
     }
-    return SHOWCASE[0];
+    return list[0];
   }
 
   private frameCamera() {
@@ -205,7 +246,7 @@ export class CharacterStage {
 
   private tick(dt: number) {
     this.resize();
-    const pull = this.pose === "celebrate" ? 1.22 : 1;
+    const pull = this.pose === "celebrate" || this.pose === "signature" ? 1.22 : 1;
     if (Math.abs(pull - this.pullBack) > 0.0005) {
       this.pullBack += (pull - this.pullBack) * (1 - Math.exp(-dt * 3));
       this.frameCamera();

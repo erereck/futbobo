@@ -11,12 +11,15 @@ import { ROLE_LABELS, calculateSquadRole, createContract, createSeasonObjective 
 import { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prestige";
 import { ACHIEVEMENTS, NEWS_TEMPLATES, fillNewsTemplate, findRivalry } from "../../mega-expansion";
 import BotaoMatch from "../../botao/BotaoMatch";
-import { BOTAO3D_PERFORMANCE_EVENT, rememberBotao3dPerformance, rememberBotao3dPreference, resolveBotao3dPerformance } from "../../botao/view-mode";
+import { BOTAO3D_ENABLED_EVENT, BOTAO3D_PERFORMANCE_EVENT, rememberBotao3dPerformance, rememberBotao3dPreference, resolveBotao3dPerformance, resolveBotao3dPreference } from "../../botao/view-mode";
 import GoalReplay from "../../botao/GoalReplay";
 import BotaoMatchStats from "../../botao/BotaoMatchStats";
 import { describeMatchTurningPoint } from "../../botao/result-story";
 import TeamCrest from "../../botao/TeamCrest";
 import AndroidInstallDialog from "../../AndroidInstallDialog";
+import BallonDorGalaCard from "../../ceremony/BallonDorGalaCard";
+import ParadeLaunchCard from "../../parade/ParadeLaunchCard";
+import { careerWorldCupTitles, paradeStars } from "../../parade/parade-stars";
 import PlayerAppearanceEditor, { PlayerAppearancePortrait } from "../../PlayerAppearanceEditor";
 import { teamKitPattern, visualRosterForMatch } from "../../player-appearance";
 import { checkForAndroidUpdate, isAndroidDevice, isNativeAndroid, openAndroidDownload } from "../../android-app";
@@ -182,7 +185,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         botaoExtraSeconds: [30, 45, 60].includes(storedSettings.botaoExtraSeconds ?? 45) ? storedSettings.botaoExtraSeconds ?? 45 : 45,
         botaoPenaltyRounds: storedSettings.botaoPenaltyRounds === 3 ? 3 : 5,
         characterButtonsEnabled: storedSettings.characterButtonsEnabled !== false,
-        botao3d: storedSettings.botao3d === true,
+        // Sem o campo salvo, vale o que o convite da home ligou (só no espelho).
+        botao3d: resolveBotao3dPreference(storedSettings),
         // O que uma partida fora do app ligou sozinha (só no espelho) também vale.
         botao3dPerformance: resolveBotao3dPerformance(storedSettings).enabled,
         botao3dPerformanceUserOff: resolveBotao3dPerformance(storedSettings).userOff,
@@ -210,8 +214,14 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   useEffect(() => {
     // Já ligado (ou desligado na mão): sem render novo da carreira no meio da partida.
     const onAutoPerformance = () => setAppSettings((current) => (current.botao3dPerformanceUserOff === true || current.botao3dPerformance === true ? current : { ...current, botao3dPerformance: true }));
+    // Mesmo motivo para o convite da home, que liga o 3D fora daqui.
+    const onBotao3dEnabled = () => setAppSettings((current) => (current.botao3d === true ? current : { ...current, botao3d: true }));
     window.addEventListener(BOTAO3D_PERFORMANCE_EVENT, onAutoPerformance);
-    return () => window.removeEventListener(BOTAO3D_PERFORMANCE_EVENT, onAutoPerformance);
+    window.addEventListener(BOTAO3D_ENABLED_EVENT, onBotao3dEnabled);
+    return () => {
+      window.removeEventListener(BOTAO3D_PERFORMANCE_EVENT, onAutoPerformance);
+      window.removeEventListener(BOTAO3D_ENABLED_EVENT, onBotao3dEnabled);
+    };
   }, []);
 
   useEffect(() => {
@@ -3409,15 +3419,48 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
                   )}
                 </section>
               )}
+              {seasonWorldCupRecord?.champion && (() => {
+                // Campeão do mundo: a festa do trio elétrico (só existe para a Copa do Mundo).
+                const paradeCountry = seasonWorldCupRecord.countryId ?? game.nationality;
+                const paradeSeason = game.lastResult.season;
+                return (
+                  <ParadeLaunchCard
+                    key={`parade-${paradeSeason}`}
+                    seed={game.seed}
+                    season={paradeSeason}
+                    countryId={paradeCountry}
+                    playerName={game.name}
+                    appearance={game.playerAppearance}
+                    number={game.number}
+                    stars={paradeStars(paradeCountry, careerWorldCupTitles(game.nationalHistory, paradeCountry, paradeSeason, game.nationality))}
+                  />
+                );
+              })()}
               {(game.lastResult.awards.length > 0 || game.lastResult.awardNominations.length > 0) && (
                 <section className={`season-awards-showcase ${game.lastResult.awardNominations.some((nomination) => nomination.award === "Bola de Ouro") ? "has-ballon-dor" : ""}`}>
                   <div className="season-awards-heading">
                     <span>NOITE DE PREMIAÇÃO</span>
-                    <strong>{game.lastResult.awards.length > 1 ? `${game.lastResult.awards.length} prêmios na mesma temporada` : seasonCeremonyNomination?.won ? "Seu nome foi chamado" : "Você está entre os finalistas"}</strong>
+                    <strong>{seasonCeremonyNomination?.award === "Bola de Ouro" ? "Você está entre os três melhores do mundo" : game.lastResult.awards.length > 1 ? `${game.lastResult.awards.length} prêmios na mesma temporada` : seasonCeremonyNomination?.won ? "Seu nome foi chamado" : "Você está entre os finalistas"}</strong>
                     <p>O resultado só aparece quando o envelope for aberto.</p>
                   </div>
                   <div className="season-awards-list">
-                    {seasonCeremonyNomination && (
+                    {seasonCeremonyNomination?.award === "Bola de Ouro" ? (
+                      // A Bola de Ouro tem gala própria (top 3 no palco); os outros prêmios seguem no envelope.
+                      <BallonDorGalaCard
+                        key={`ballon-dor-${game.lastResult.season}`}
+                        seed={game.seed}
+                        season={game.lastResult.season}
+                        playerName={game.name}
+                        appearance={game.playerAppearance}
+                        number={game.number}
+                        clubId={game.currentClubId}
+                        nationality={game.nationality}
+                        finalists={seasonCeremonyNomination.finalists ?? awardFinalists(game.name, "Bola de Ouro", game.seed, game.lastResult.season, game.rivals)}
+                        won={seasonCeremonyNomination.won}
+                        winner={seasonCeremonyNomination.winner}
+                        rivals={game.rivals}
+                      />
+                    ) : seasonCeremonyNomination && (
                       <AwardCeremony
                         key={`${seasonCeremonyNomination.award}-${game.lastResult.season}`}
                         award={seasonCeremonyNomination.award}

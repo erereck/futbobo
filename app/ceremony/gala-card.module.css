@@ -1,0 +1,164 @@
+/* Convite da gala na tela de fim de temporada: o cartão mais nobre da lista de prêmios. */
+
+.card {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid rgba(255, 199, 44, 0.5);
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% -10%, rgba(255, 199, 44, 0.2), transparent 60%),
+    linear-gradient(160deg, #1c160a 0%, #0c0a06 70%);
+  box-shadow: inset 0 1px 0 rgba(255, 241, 196, 0.08), 0 0 34px rgba(255, 199, 44, 0.08);
+  color: #f8f3e6;
+}
+.won { border-color: rgba(255, 220, 130, 0.75); box-shadow: inset 0 1px 0 rgba(255, 241, 196, 0.12), 0 0 44px rgba(255, 199, 44, 0.18); }
+.lost { border-color: rgba(233, 196, 106, 0.32); }
+
+.rays {
+  position: absolute;
+  top: -140px;
+  left: 50%;
+  width: 360px;
+  height: 360px;
+  margin-left: -180px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 226, 150, 0.07) 0deg 5deg, transparent 5deg 16deg);
+  -webkit-mask: radial-gradient(circle, #000, transparent 70%);
+  mask: radial-gradient(circle, #000, transparent 70%);
+  pointer-events: none;
+  animation: raysTurn 40s linear infinite;
+}
+
+@keyframes raysTurn {
+  to { transform: rotate(360deg); }
+}
+
+.header { position: relative; display: flex; align-items: center; gap: 12px; }
+.header div { display: grid; min-width: 0; gap: 2px; }
+.header small { color: #ffc72c; font-size: 10px; font-weight: 900; letter-spacing: 0.2em; }
+.header strong { overflow: hidden; font: 900 22px/1 var(--display, Impact), sans-serif; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.emblem {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fffbe6, #ffe08a 24%, #d9a03a 60%, #6d4510);
+  box-shadow: 0 0 0 3px #0b0907, 0 0 0 4px rgba(255, 199, 44, 0.5), 0 0 22px rgba(255, 199, 44, 0.4);
+}
+
+.label { position: relative; color: rgba(248, 243, 230, 0.6); font-size: 9px; font-weight: 900; letter-spacing: 0.2em; }
+
+.finalists { position: relative; display: grid; gap: 6px; margin: -4px 0 0; padding: 0; list-style: none; }
+.finalists li {
+  display: grid;
+  grid-template-columns: 6px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px 0 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.finalists i { align-self: stretch; background: linear-gradient(to bottom, var(--club-a) 0 60%, var(--club-b) 60%); }
+.finalists span { overflow: hidden; font: 800 16px/1 var(--display, Impact), sans-serif; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.finalists small { color: rgba(248, 243, 230, 0.6); font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; }
+.finalists .you { border-color: rgba(255, 199, 44, 0.45); background: rgba(255, 199, 44, 0.08); }
+.finalists .you small { color: #ffc72c; }
+
+.copy { position: relative; margin: 0; color: rgba(248, 243, 230, 0.66); font-size: 12px; line-height: 1.45; text-align: center; }
+
+.actions { position: relative; display: grid; gap: 8px; }
+.watch,
+.replay {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffeeb5 0%, #ffc72c 55%, #c58e12 100%);
+  color: #261c05;
+  font: 900 13px/1 var(--sans, "Segoe UI"), system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(255, 199, 44, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: transform 0.15s;
+}
+.watch svg,
+.replay svg { width: 18px; height: 18px; }
+.watch:hover,
+.replay:hover { transform: translateY(-1px); }
+.replay { border: 1px solid rgba(255, 199, 44, 0.4); background: rgba(255, 199, 44, 0.08); color: #fff1c4; box-shadow: none; }
+.quick {
+  justify-self: center;
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  color: rgba(248, 243, 230, 0.55);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.quick:hover { color: #fff1c4; }
+.watch:focus-visible,
+.replay:focus-visible,
+.quick:focus-visible { outline: 2px solid #fff1c4; outline-offset: 3px; }
+
+.result { position: relative; display: grid; gap: 4px; padding: 6px 0 2px; text-align: center; animation: resultIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.result small { color: #ffc72c; font-size: 10px; font-weight: 900; letter-spacing: 0.22em; }
+.result strong { font: 900 30px/1 var(--display, Impact), sans-serif; text-transform: uppercase; }
+.won .result strong {
+  background: linear-gradient(180deg, #fff8dc, #ffc72c 55%, #b8862b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.result p { margin: 0; color: rgba(248, 243, 230, 0.66); font-size: 12px; }
+
+.podium { position: relative; display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; animation: resultIn 0.6s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.podium li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.podium b { color: #ffc72c; font: 900 18px/1 var(--display, Impact), sans-serif; }
+.podium span { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.podium em {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #ffc72c;
+  color: #261c05;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.podium .you { background: rgba(255, 199, 44, 0.1); box-shadow: inset 0 0 0 1px rgba(255, 199, 44, 0.35); }
+
+@keyframes resultIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Enquanto a cerimônia baixa: o preto da tela de carregamento dela. */
+.veil { position: fixed; inset: 0; z-index: 20000; background: #030202; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rays,
+  .result,
+  .podium { animation: none; }
+}

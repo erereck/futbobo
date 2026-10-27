@@ -50,10 +50,21 @@ type Track = {
   slideFrom: Point | null;
 };
 
-export type GoalCelebration = "kneeSlide" | "cornerFlag" | "airplane" | "siuu" | "backflip" | "crest";
-const GOAL_CELEBRATIONS: GoalCelebration[] = ["kneeSlide", "siuu", "cornerFlag", "backflip", "airplane", "crest"];
+/** Os mesmos ids de CELEBRATION_OPTIONS (player-appearance.ts), menos o "auto". */
+export type GoalCelebration =
+  | "kneeSlide" | "cornerFlag" | "airplane" | "siuu" | "backflip" | "crest"
+  | "heart" | "shush" | "armsCrossed" | "cradle" | "robot" | "dance";
+const GOAL_CELEBRATIONS: GoalCelebration[] = [
+  "kneeSlide", "siuu", "cornerFlag", "backflip", "airplane", "crest",
+  "heart", "shush", "armsCrossed", "cradle", "robot", "dance",
+];
 
 const GOAL_SHOT_KINDS = new Set<string>(GOAL_CELEBRATIONS);
+
+/** Id do criador ("auto", "siuu"...) → comemoração da coreografia; null mantém o sorteio. */
+export function goalCelebrationOf(id: string | null | undefined): GoalCelebration | null {
+  return id && GOAL_SHOT_KINDS.has(id) ? (id as GoalCelebration) : null;
+}
 const NET_SHOT_SECONDS = 0.42;
 const MARGIN = 15;
 /** Raio da roda da comemoração: adversário dentro dele sai andando. */
@@ -148,7 +159,8 @@ export class Choreographer {
 
   /**
    * Gol: quem marcou dispara para a festa (carrinho de joelho, bandeirinha,
-   * aviãozinho, "siuuu", mortal ou beijo no escudo), os companheiros chegam
+   * aviãozinho, "siuuu", mortal, beijo no escudo, coração, silêncio, braços
+   * cruzados, embala neném, robô ou dancinha), os companheiros chegam
    * correndo por trás dele (longe da câmera, para não taparem) e o outro time
    * desaba aos poucos.
    */
@@ -160,6 +172,8 @@ export class Choreographer {
     actors: Actor[];
     cameraYaw: number;
     seed: number;
+    /** Comemoração escolhida no criador: vale só quando quem marcou é o jogador do usuário. */
+    signature?: GoalCelebration | null;
   }) {
     this.stop();
     const field = args.actors.filter((actor) => !actor.keeper && actor.side);
@@ -173,9 +187,10 @@ export class Choreographer {
     const goalZ = args.side === "user" ? -HALF_H : HALF_H;
     const inward = args.side === "user" ? 1 : -1;
     const sx = Math.abs(scorer.x) > 18 ? Math.sign(scorer.x) : hash(`${args.seed}|side`) % 2 ? 1 : -1;
+    const signature = !args.ownGoalId && scorer.isUser ? args.signature ?? null : null;
     const kind: GoalCelebration = args.ownGoalId
       ? "airplane"
-      : GOAL_CELEBRATIONS[hash(`${args.seed}|${scorer.id}`) % GOAL_CELEBRATIONS.length];
+      : signature ?? GOAL_CELEBRATIONS[hash(`${args.seed}|${scorer.id}`) % GOAL_CELEBRATIONS.length];
     this.kindValue = kind;
     this.sideValue = args.side;
 
@@ -245,6 +260,32 @@ export class Choreographer {
         steps.push({ kind: "hold", state: "celebrate", action: "pointSky", face: { yaw: args.cameraYaw } });
         break;
       }
+      case "heart":
+      case "cradle":
+      case "dance": {
+        // Vem na direção da câmera e para de frente para ela (o gesto é para o close).
+        finish = reach({ x: start.x + toward.x * 85 + sx * 14, z: start.z + toward.z * 85 }, 90);
+        steps.push({ kind: "run", to: finish, speed: SCORER_SPEED - 10, action: kind === "dance" ? "fistPump" : null });
+        steps.push({ kind: "hold", state: "celebrate", action: kind, face: { yaw: args.cameraYaw } });
+        break;
+      }
+      case "shush": {
+        // Vai para a arquibancada mais perto e cala a torcida. Vira para ela só até
+        // três quartos: de costas para a câmera o dedo nos lábios não aparece.
+        finish = reach({ x: sx * (HALF_W - 34), z: start.z + inward * 24 }, RUN_LIMIT);
+        steps.push({ kind: "run", to: finish, speed: SCORER_SPEED, action: null });
+        const crowdYaw = yawTo(finish, { x: sx * (HALF_W + 90), z: finish.z });
+        steps.push({ kind: "hold", state: "celebrate", action: "shush", face: { yaw: args.cameraYaw + angleDelta(args.cameraYaw, crowdYaw) * 0.45 } });
+        break;
+      }
+      case "armsCrossed":
+      case "robot": {
+        // Corrida curta e para seco, de frente para a câmera.
+        finish = reach({ x: start.x + toward.x * 55 + sx * 10, z: start.z + toward.z * 55 }, 60);
+        steps.push({ kind: "run", to: finish, speed: SCORER_SPEED - 40, action: null });
+        steps.push({ kind: "hold", state: "celebrate", action: kind, face: { yaw: args.cameraYaw } });
+        break;
+      }
       default: {
         // Beijo no escudo vindo na direção da câmera.
         finish = reach({ x: start.x + toward.x * 90 + sx * 10, z: start.z + toward.z * 90 }, 90);
@@ -261,7 +302,22 @@ export class Choreographer {
     const mates = team.filter((actor) => actor.id !== scorer.id)
       .sort((a, b) => Math.hypot(a.x - finish.x, a.z - finish.z) - Math.hypot(b.x - finish.x, b.z - finish.z));
     const huddleActions: FigureAction[] = ["jumpCheer", "hug", "highFive", "jumpCheer", "clap"];
+    // Embala neném: os dois mais perto entram ao lado dele, embalando junto (Brasil, 94).
+    const beside = { x: Math.cos(args.cameraYaw), z: -Math.sin(args.cameraYaw) };
     mates.forEach((mate, index) => {
+      if (kind === "cradle" && index < 2) {
+        const lateral = index === 0 ? 19 : -19;
+        const spot = clampToField({
+          x: finish.x + beside.x * lateral - toward.x * 5,
+          z: finish.z + beside.z * lateral - toward.z * 5,
+        });
+        this.add(mate, [
+          { kind: "wait", duration: 0.1 + index * 0.06, state: "celebrate", action: "fistPump", face: { actor: scorer.id } },
+          { kind: "run", to: spot, speed: TEAMMATE_SPEED + 15, action: null },
+          { kind: "hold", state: "celebrate", action: "cradle", face: { yaw: args.cameraYaw } },
+        ]);
+        return;
+      }
       const spread = (index - (mates.length - 1) / 2) * 0.62;
       const angle = away + spread;
       const radius = 22 + (index % 2) * 7;

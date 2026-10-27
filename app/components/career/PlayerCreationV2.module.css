@@ -326,3 +326,8 @@
 @media (max-width:480px) {
   .appearanceWrap :global(.appearance-3d canvas) { width:112px !important; }
 }
+
+/* Criador em abas: com a lista rápida aberta, o painel rola por dentro em vez de ser cortado pela tela sem rolagem. */
+@media (min-width:761px) {
+  .identityPage .appearanceWrap :global(.appearance-controls) { max-height:calc(100dvh - 86px); overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+}
