@@ -2743,3 +2743,5 @@ button:active:not(:disabled) { transform: scale(0.975); }
     width: auto;
   }
 }
+
+.market-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }

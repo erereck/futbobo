@@ -529,6 +529,7 @@ export type GameState = {
   corruptionGuaranteedSeason: number;
   lastCycleShopSeason: number;
   agentCountryFocus: string;
+  nextContractYearsAdjustment: -1 | 0 | 1;
   betrayedClubIds: string[];
   traits: SpecialTraitId[];
   rivals: CareerRival[];

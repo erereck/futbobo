@@ -35,7 +35,7 @@ import { applyEffect, applyStoryOrigin, createYouthJourney, selectNextEvent, sto
 import { buildFormerClubConference, buildPressConference, buildTransferPresentation } from "../../career/press-conferences";
 import { isCycleShopDue, purchaseCycleShopItem } from "../../career/cycle-shop";
 import type { CycleShopItemId } from "../../career/cycle-shop";
-import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, loanClubPermanentOffer, materializeTransferOffers, resolveTransferRequest, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";
+import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, loanClubPermanentOffer, materializeTransferOffers, requestPlayerLoan, resolveTransferRequest, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";
 import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../career/save-system";
 import { compactBotaoMatchResult, compactGameForPersistence } from "../../career/save-compaction";
 import { applyNationalBotaoProduction } from "../../career/botao-production";
@@ -1759,6 +1759,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
 
   function chooseTransfer(offer: TransferOffer | null) {
     setGame((current) => {
+      if (!offer && current.pendingTransferMode === "loan" && current.transferStatus?.headline === "Empréstimo autorizado") {
+        return { ...current, phase: "career", transferOffers: [], transferMarketOffers: [], transferRequested: false, transferStatus: null, pendingTransferMode: "permanent" };
+      }
       if (!offer && current.youthLoanDecision) {
         const stayed = stayAfterYouthLoanRecommendation(current);
         return {
@@ -1994,6 +1997,11 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     setGame((current) => ({ ...current, lastCycleShopSeason: current.season }));
     setCycleShopDismissedSeason(game.season);
     setCycleShopFeedback("");
+    vibrate();
+  }
+
+  function requestLoan() {
+    setGame(requestPlayerLoan);
     vibrate();
   }
 
@@ -3160,7 +3168,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
 
           {game.phase === "career" && activeTab === "event" && (
             <div className="event-stage">
-              <div className="market-strip"><span><small>MERCADO</small><strong>{game.transferCooldownSeason >= game.season ? "Pedido já feito nesta temporada" : "Quer mudar de camisa?"}</strong></span><button onClick={requestTransfer} disabled={game.transferCooldownSeason >= game.season}>⇄ Pedir transferência</button></div>
+              <div className="market-strip"><span><small>MERCADO</small><strong>{game.transferCooldownSeason >= game.season ? "Pedido já feito nesta temporada" : "Quer mudar de camisa?"}</strong></span><div className="market-actions"><button onClick={requestLoan} disabled={game.transferCooldownSeason >= game.season || game.isFreeAgent || game.contractYears <= 0 || Boolean(game.activeLoan || game.loanParentClubId)} title={game.squadRole === "titular" || game.squadRole === "estrela" ? "35% de chance" : "100% de chance"}>⇄ Empréstimo ({game.squadRole === "titular" || game.squadRole === "estrela" ? "35%" : "100%"})</button><button onClick={requestTransfer} disabled={game.transferCooldownSeason >= game.season}>⇄ Pedir transferência</button></div></div>
               {game.currentObjective && <div className="objective-card">
                 <span>META DO TREINADOR</span>
                 <strong>{game.currentObjective.label}</strong>
@@ -3395,11 +3403,11 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
 
           {game.phase === "transfer-denied" && game.transferStatus && (
             <div className="transfer-denied-stage screen-enter">
-              <span className="result-kicker">PEDIDO DE TRANSFERÊNCIA</span>
+              <span className="result-kicker">{game.transferStatus.headline === "O clube recusou o empréstimo" ? "PEDIDO DE EMPRÉSTIMO" : "PEDIDO DE TRANSFERÊNCIA"}</span>
               <div className="denied-symbol">×</div>
               <h1>{game.transferStatus.headline}</h1>
               <p>{game.transferStatus.text}</p>
-              <div className="fan-backlash"><span>REAÇÃO DA TORCIDA</span><strong>{supporterMood.label}</strong><div><i style={{ width: `${game.fanSupport}%` }} /></div><small>Torcida e comissão perderam confiança</small></div>
+              <div className="fan-backlash"><span>REAÇÃO DA TORCIDA</span><strong>{supporterMood.label}</strong><div><i style={{ width: `${game.fanSupport}%` }} /></div><small>{game.transferStatus.headline === "O clube recusou o empréstimo" ? "O clube quer manter você no elenco" : "Torcida e comissão perderam confiança"}</small></div>
               <div className="mobile-action-dock">
                 <button className="primary-button" onClick={continueAfterDeniedTransfer}>Encarar a temporada <span>→</span></button>
               </div>

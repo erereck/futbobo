@@ -1,3 +1,4 @@
+import { eliteSeasonProduction } from "./season-production";
 import { CLUBS, COUNTRIES, FIRST_MATCH_EVENT, FORMATIONS, POSITIONS, countryById, leagueById } from "../game-data";
 import type { ContinentalSlot, Effect, GameEvent } from "../game-data";
 import { calculateLegacyScore, calculateSquadRole, createContract, createSeasonObjective, evaluateObjective, roleAppearanceModifier } from "../career-systems";
@@ -136,7 +137,7 @@ export function simulateSeason(
     ? Math.max(0, Math.round(fullAppearances * clamp(1.8 + defensiveSkill / 40 + (affected.managerTrust - 50) / 120, 1.7, 4.8)))
     : position.zone === "meio"
       ? Math.max(0, Math.round(fullAppearances * clamp(0.8 + defensiveSkill / 75, 0.7, 2.6)))
-      : 0;
+      : position.zone === "ataque" ? Math.max(0, Math.round(fullAppearances * clamp(0.15 + defensiveSkill / 250, 0.15, 0.5))) : 0;
   const fullCleanSheets = isKeeper ? Math.round(fullAppearances * clamp(0.07 + club.reputation * 0.035 + keeperSkill / 270, 0.16, 0.57)) : 0;
   const fullGoalsConceded = isKeeper ? Math.max(4, Math.round(fullAppearances * clamp(1.7 - club.reputation * 0.09 - keeperSkill / 160, 0.45, 1.45))) : 0;
   const positionCardWeight = position.zone === "defesa" ? 1.35 : position.zone === "meio" ? 1 : 0.65;
@@ -144,10 +145,11 @@ export function simulateSeason(
   const fullRedCards = seeded(state.seed, state.season * 223) < Math.max(0.015, (72 - affected.discipline) / 270) ? 1 : 0;
   const reduceStat = (value: number) => reducedOpportunity ? Math.floor(value / 2) : value;
   const appearances = reducedOpportunity ? Math.max(1, Math.floor(fullAppearances / 2)) : fullAppearances;
-  const goals = reduceStat(fullGoals);
-  const assists = reduceStat(fullAssists);
-  const tackles = reduceStat(fullTackles);
-  const cleanSheets = reduceStat(fullCleanSheets);
+  const eliteProduction = (value: number) => eliteSeasonProduction(value, affected.overall);
+  const goals = eliteProduction(reduceStat(fullGoals));
+  const assists = eliteProduction(reduceStat(fullAssists));
+  const tackles = eliteProduction(reduceStat(fullTackles));
+  const cleanSheets = Math.min(appearances, eliteProduction(reduceStat(fullCleanSheets)));
   const goalsConceded = reduceStat(fullGoalsConceded);
   const yellowCards = reduceStat(fullYellowCards);
   const redCards = reduceStat(fullRedCards);
@@ -834,12 +836,12 @@ export function completeSimulationTransfer(state: GameState, clubId: string | nu
   const offerIndex = Math.max(0, state.transferOffers.indexOf(clubId ?? ""));
   const signingContract = Boolean(!isLoan && (newClub || state.contractYears === 0));
   const generatedContract = createContract(state.overall, state.age, targetClub, state.seed + state.season + offerIndex);
-  const contract = signingContract ? generatedContract : { years: state.contractYears, annualSalary: state.annualSalary };
+  const contract = signingContract ? { ...generatedContract, years: Math.max(1, generatedContract.years + state.nextContractYearsAdjustment) } : { years: state.contractYears, annualSalary: state.annualSalary };
   const changingCountry = Boolean(newClub && newClub.countryId !== oldClub.countryId);
   const managerTrust = newClub ? 50 : clamp(state.managerTrust + 5);
   const squadRole = calculateSquadRole(state.overall, targetClub, targetLeague.prestige, managerTrust, state.age);
   const transferred: GameState = { ...state, phase: "career", currentClubId: clubId ?? state.currentClubId, currentLeagueId: newClub ? newClub.leagueId : state.currentLeagueId, currentEventId: "", nextEventId: "", lastResult: null, lastConsequence: null, transferOffers: [], transferMarketOffers: [], morale: clamp(state.morale + (clubId ? 5 : 2)), fanSupport: clubId ? 52 : clamp(state.fanSupport + 3), continentalSlot: newClub ? initialContinentalSlot(newClub) : state.continentalSlot, adaptation: newClub ? (changingCountry ? initialAdaptation(oldClub.countryId, newClub.countryId) : state.adaptation) : state.adaptation, abroadSeasons: changingCountry ? 0 : state.abroadSeasons, transferStatus: null, transferRequested: false, renewalDenied: false, forcedAlternativeTransfer: false, pendingTransferMode: "permanent", loanParentClubId: isLoan ? oldClub.id : "", loanParentLeagueId: isLoan ? (state.currentLeagueId || oldClub.leagueId) : "", loanEndSeason: isLoan ? state.season + 1 : 0, isFreeAgent: false, freeAgentSinceSeason: 0, managerTrust, squadRole, contractYears: contract.years, annualSalary: contract.annualSalary, clubCaptain: newClub ? false : state.clubCaptain, currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed + state.season) };
-  return { ...transferred, currentEventId: state.nextEventId || selectNextEvent(transferred, state.season * 47) };
+  return { ...transferred, nextContractYearsAdjustment: signingContract ? 0 : state.nextContractYearsAdjustment, currentEventId: state.nextEventId || selectNextEvent(transferred, state.season * 47) };
 }
 
 export function simulateMonteCarloCareer(seed: number, careerIndex: number): MonteCarloCareerSummary {

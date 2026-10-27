@@ -178,9 +178,12 @@ function candidateEligible(state: GameState, club: Club, context: MarketContext,
   const role = candidateRole(state, club);
   const strengthGap = competitiveStrength(club) - competitiveStrength(context.sourceClub);
   if (context.mode === "loan") {
-    if (state.contractYears < 1 || state.age > 29 || role === "reserva") return false;
-    if (!context.needsMinutes && !context.requestedExit && context.trigger !== "youth-development") return false;
-    if (strengthGap > 4 || strengthGap < -18) return false;
+    if (state.contractYears < 1) return false;
+    if (context.trigger !== "requested") {
+      if (state.age > 29 || role === "reserva") return false;
+      if (!context.needsMinutes && !context.requestedExit && context.trigger !== "youth-development") return false;
+      if (strengthGap > 4 || strengthGap < -18) return false;
+    }
   }
   if (state.age >= 35 && isEuropeanClub(club) && strengthGap > 3) return false;
   if (state.overall < 67 && isEuropeanClub(club) && !isEuropeanClub(context.sourceClub)) return false;
@@ -236,7 +239,7 @@ function materializeOffer(state: GameState, club: Club, context: MarketContext, 
     reason: reason.reason, reasonLabel: reason.label, reasonText: reason.text,
     transferFee: actualTransferFee(state, club, context, role, salt),
     annualSalary: context.mode === "loan" ? state.annualSalary : contract.annualSalary,
-    contractYears: context.mode === "loan" ? state.contractYears : contract.years,
+    contractYears: context.mode === "loan" ? state.contractYears : Math.max(1, contract.years + state.nextContractYearsAdjustment),
     loanEndSeason: context.mode === "loan" ? state.season + (seeded(state.seed, state.season * 1301 + salt + CLUBS.indexOf(club) * 17) < 0.5 ? 2 : 1) : 0,
     parentSalaryShare: parentShare, destinationSalaryShare: context.mode === "loan" ? 100 - parentShare : 100,
     expiresSeason: state.season + 1,
@@ -420,7 +423,7 @@ export function buildRenewalOffer(state: GameState): TransferOffer {
   const context = buildMarketContext(state, { mode: "renewal" });
   const contract = createContract(state.overall, state.age, club, state.seed + state.season * 149);
   return { ...materializeOffer(state, club, context, 149), id: `${state.season}-${club.id}-renewal`, type: "renewal",
-    clubId: club.id, fromClubId: club.id, transferFee: 0, annualSalary: contract.annualSalary, contractYears: contract.years,
+    clubId: club.id, fromClubId: club.id, transferFee: 0, annualSalary: contract.annualSalary, contractYears: Math.max(1, contract.years + state.nextContractYearsAdjustment),
     reason: "rebuild", reasonLabel: "Renovação", reasonText: "O clube quer manter você no projeto." };
 }
 function transferRecord(state: GameState, offer: TransferOffer): TransferRecord {
@@ -484,6 +487,7 @@ export function applyAcceptedTransfer(state: GameState, offer: TransferOffer): G
     transferHistory: isRenewal ? state.transferHistory : [...state.transferHistory, transferRecord(state, offer)],
     betrayedClubIds,
     agentCountryFocus: agentCountryRouteConsumed ? "" : state.agentCountryFocus,
+    nextContractYearsAdjustment: isLoan ? state.nextContractYearsAdjustment : 0,
     worldPlayers,
     pendingPressConference: betrayalConference ?? state.pendingPressConference,
     socialSentiment: directRivalry ? clamp(state.socialSentiment - 7) : state.socialSentiment,
@@ -523,6 +527,16 @@ export function completeLoanReturn(state: GameState): GameState {
   const offers = generateTransferOffers(returned, state.season * 557 + 31, { includeForeign: true, mode: "permanent", trigger: state.transferRequested ? "requested" : "season-end", count: requestedCount });
   return { ...returned, transferOffers: offers.map((offer) => offer.clubId), transferMarketOffers: offers };
 }
+export function requestPlayerLoan(state: GameState): GameState {
+  if (state.transferCooldownSeason >= state.season || state.isFreeAgent || state.contractYears <= 0 || state.activeLoan || state.loanParentClubId) return state;
+  const chance = state.squadRole === "titular" || state.squadRole === "estrela" ? 35 : 100;
+  const accepted = chance === 100 || seeded(state.seed, state.season * 1217 + state.transferRequests * 13) * 100 < chance;
+  if (!accepted) return { ...state, phase: "transfer-denied", transferRequests: state.transferRequests + 1, transferCooldownSeason: state.season, transferStatus: { success: false, chance, headline: "O clube recusou o empréstimo", text: "A comissão quer manter você no elenco para esta temporada." } };
+  const prepared: GameState = { ...state, pendingTransferMode: "loan", transferRequested: true };
+  const offers = generateTransferOffers(prepared, state.season * 1223 + state.transferRequests * 13, { includeForeign: true, mode: "loan", trigger: "requested", count: 8 });
+  return { ...prepared, phase: "transfer", transferRequests: state.transferRequests + 1, transferCooldownSeason: state.season, transferOffers: offers.map((offer) => offer.clubId), transferMarketOffers: offers, transferStatus: { success: true, chance, headline: "Empréstimo autorizado", text: `O clube aceitou seu pedido. Há ${offers.length} projetos disponíveis.` } };
+}
+
 export function resolveTransferRequest(state: GameState, salt: number): TransferRequestDecision {
   const context = buildMarketContext(state, { trigger: "requested" });
   const chance = clamp(Math.round(48 + clamp((context.performanceScore - 55) * 0.55 + (state.reputation - 45) * 0.22, -12, 24)
