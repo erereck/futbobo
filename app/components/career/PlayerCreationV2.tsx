@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { CLUBS, COUNTRIES, FORMATIONS, LEAGUES, POSITIONS } from "../../game-data";
+import { CLUBS, COUNTRIES, FORMATIONS, POSITIONS, leagueById } from "../../game-data";
 import type { PositionKey } from "../../game-data";
 import type { GameState } from "../../career/model";
-import { defaultAcademyCountry, randomClubSelection } from "../../career/academy";
+import { academyClubOptions, defaultAcademyCountry } from "../../career/academy";
+import { clubPickerGroups } from "../../career/club-picker";
 import { createContract } from "../../career-systems";
 import { POSITION_FIELD_SPOTS } from "../../career/performance";
 import { clubById } from "../../career/shared";
@@ -81,42 +82,7 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
     ?? COUNTRIES.find((country) => country.id === defaultAcademyCountry(game.nationality))
     ?? COUNTRIES.find((country) => playableCountryIds.has(country.id))
     ?? COUNTRIES[0];
-  const academyClubs = useMemo(() => {
-    const limit = 6;
-    const countryClubs = CLUBS.filter((club) => club.countryId === academyCountry.id);
-    const divisions = LEAGUES
-      .filter((league) => league.countryId === academyCountry.id)
-      .sort((a, b) => b.prestige - a.prestige);
-    const countrySalt = [...academyCountry.id].reduce((total, char) => total + char.charCodeAt(0), 0);
-    const baseSalt = 3500 + countrySalt * 17;
-
-    if (divisions.length < 2) {
-      return randomClubSelection(countryClubs, limit, game.seed, baseSalt);
-    }
-
-    const perDivision = Math.floor(limit / 2);
-    const firstDivision = randomClubSelection(
-      countryClubs.filter((club) => club.leagueId === divisions[0].id),
-      perDivision,
-      game.seed,
-      baseSalt + 101,
-    );
-    const secondDivision = randomClubSelection(
-      countryClubs.filter((club) => club.leagueId === divisions[1].id),
-      perDivision,
-      game.seed,
-      baseSalt + 211,
-    );
-    const selected = [...firstDivision, ...secondDivision];
-
-    if (selected.length < limit) {
-      const selectedIds = new Set(selected.map((club) => club.id));
-      const fallbackPool = countryClubs.filter((club) => !selectedIds.has(club.id));
-      selected.push(...randomClubSelection(fallbackPool, limit - selected.length, game.seed, baseSalt + 307));
-    }
-
-    return selected.slice(0, limit);
-  }, [academyCountry.id, game.seed]);
+  const academyClubs = useMemo(() => academyClubOptions(academyCountry.id, game.seed), [academyCountry.id, game.seed]);
   const filteredCountries = useMemo(() => {
     const needle = countrySearch.trim().toLocaleLowerCase("pt-BR");
     return COUNTRIES
@@ -126,13 +92,7 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
   const filteredClubCountries = useMemo(() => COUNTRIES
     .filter((country) => playableCountryIds.has(country.id))
     .sort((a, b) => a.id === academyCountry.id ? -1 : b.id === academyCountry.id ? 1 : a.name.localeCompare(b.name, "pt-BR")), [academyCountry.id, playableCountryIds]);
-  const allClubResults = useMemo(() => {
-    const needle = clubSearch.trim().toLocaleLowerCase("pt-BR");
-    return CLUBS
-      .filter((club) => !needle || club.name.toLocaleLowerCase("pt-BR").includes(needle) || club.shortName.toLocaleLowerCase("pt-BR").includes(needle))
-      .sort((a, b) => b.reputation - a.reputation || b.strength - a.strength)
-      .slice(0, 80);
-  }, [clubSearch]);
+  const clubGroups = useMemo(() => clubPickerGroups(clubSearch, academyCountry.id), [clubSearch, academyCountry.id]);
 
   const updateShirtNumber = (raw: string | number) => {
     const number = Math.max(1, Math.min(99, Number(raw) || DEFAULT_NUMBER[game.position]));
@@ -302,12 +262,34 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
             <button type="button" className={styles.freeChoice} onClick={() => setAllClubsOpen(true)}>Escolher qualquer time</button>
           </header>
           <div className={styles.clubCards}>
-            {academyClubs.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id)}><ClubBadge club={club} size="md" /><span><strong>{club.shortName}</strong><small>{club.city}</small><small className={styles.contractTerm}>Base: 4–6 anos · até os 16–18</small></span><b>→</b></button>)}
+            {academyClubs.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id)}><ClubBadge club={club} size="md" /><span><strong>{club.shortName}</strong><small>{club.city} · {leagueById(club.leagueId).name}</small><small className={styles.contractTerm}>Base: 4–6 anos · até os 16–18</small></span><b>→</b></button>)}
           </div>
           <p className={styles.clubNote}>O vínculo de base dura até a revelação, entre 16 e 18 anos. A formação é sorteada ao escolher o clube.</p>
         </div>
         {clubCountryPickerOpen && <Picker title="País da base" onClose={() => setClubCountryPickerOpen(false)}><div className={styles.pickerGrid}>{filteredClubCountries.map((country) => <button type="button" key={country.id} onClick={() => { setGame((current) => ({ ...current, academyCountryId: country.id, academyClubId: "" })); setClubCountryPickerOpen(false); }}><NationBadge country={country} size="sm" /><strong>{country.name}</strong></button>)}</div></Picker>}
-        {allClubsOpen && <Picker title="Carreira personalizada" onClose={() => setAllClubsOpen(false)}><div className={styles.warning}><b>!</b><span><strong>Escolher qualquer clube desativa conquistas nesta carreira.</strong><small>A carreira continua normal; apenas achievements globais não serão concedidos.</small></span></div><input className={styles.search} autoFocus placeholder="Pesquisar clube" value={clubSearch} onChange={(event) => setClubSearch(event.target.value)} /><div className={styles.allClubs}>{allClubResults.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id, true)}><ClubBadge club={club} size="sm" /><span><strong>{club.shortName}</strong><small>{COUNTRIES.find((country) => country.id === club.countryId)?.name}</small><small className={styles.contractTerm}>Base: 4–6 anos · até os 16–18</small></span></button>)}</div></Picker>}
+        {allClubsOpen && (
+          <Picker title="Escolha qualquer time" onClose={() => setAllClubsOpen(false)}>
+            <div className={styles.warning}><b>!</b><span><strong>Escolher qualquer clube desativa conquistas nesta carreira.</strong><small>A carreira continua normal; apenas achievements globais não serão concedidos.</small></span></div>
+            <input className={styles.search} autoFocus aria-label="Pesquisar clube, liga ou país" placeholder="Pesquisar clube, liga ou país" value={clubSearch} onChange={(event) => setClubSearch(event.target.value)} />
+            <div className={styles.leagueDirectory}>
+              {clubGroups.length === 0 ? <p className={styles.emptyClubs}>Nenhum clube ou liga encontrado. Tente outra busca.</p> : clubGroups.map(({ country, leagues }) => (
+                <section className={styles.countrySection} key={country.id}>
+                  <div className={styles.countryHeading}><NationBadge country={country} size="sm" /><strong>{country.name}</strong><span>{leagues.length} {leagues.length === 1 ? "liga" : "ligas"}</span></div>
+                  <div className={styles.leagueList}>
+                    {leagues.map(({ league, division, clubs }) => (
+                      <details className={styles.leagueGroup} key={`${league.id}:${clubSearch}`} open={Boolean(clubSearch.trim()) || undefined}>
+                        <summary><span className={styles.divisionBadge}>{division}ª</span><span className={styles.leagueName}><strong>{league.name}</strong><small>{division}ª divisão · {clubs.length} {clubs.length === 1 ? "clube" : "clubes"}</small></span><b aria-hidden="true">⌄</b></summary>
+                        <div className={styles.allClubs}>
+                          {clubs.map((club) => <button type="button" key={club.id} onClick={() => chooseClub(club.id, true)}><ClubBadge club={club} size="sm" /><span><strong>{club.shortName}</strong><small>{club.city}</small></span><b aria-hidden="true">→</b></button>)}
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          </Picker>
+        )}
       </section>
     );
   }
@@ -316,7 +298,7 @@ export default function PlayerCreationV2({ game, setGame, shirtNumberInput, setS
 }
 
 function Picker({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return <div className={styles.pickerOverlay} role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><section className={styles.picker}><header><strong>{title}</strong><button type="button" onClick={onClose}>×</button></header>{children}</section></div>;
+  return <div className={styles.pickerOverlay} role="dialog" aria-modal="true" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}><section className={styles.picker}><header><strong>{title}</strong><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>{children}</section></div>;
 }
 
 export function FirstContractV2({ game, onBack, onSign }: { game: GameState; onBack: () => void; onSign: (clubId: string) => void }) {

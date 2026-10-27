@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { FUTBOBO_VERSION, FUTBOBO_VERSION_NAME } from "../../version";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
@@ -2860,7 +2861,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           {installHelp && <div className="install-help">Use o menu do navegador e toque em <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>.</div>}
           <footer className="welcome-meta-footer">
             <div className="welcome-features"><span><FutboboIcon name="career" /> {CLUBS.length} clubes</span><span><FutboboIcon name="player" /> 12 posições</span><span><FutboboIcon name="trophy" /> {LEAGUES.length} ligas</span><span><FutboboIcon name="globe" /> {COUNTRIES.length} seleções</span></div>
-            <div className="welcome-version"><span>FUTBOBO</span><b>v92 · DONO DA ÁREA</b></div>
+            <div className="welcome-version"><span>FUTBOBO</span><b>{FUTBOBO_VERSION} · {FUTBOBO_VERSION_NAME}</b></div>
           </footer>
         </section>
       )}

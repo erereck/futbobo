@@ -1,2 +1,2 @@
-export const FUTBOBO_VERSION = "v95";
-export const FUTBOBO_VERSION_NAME = "CARREIRA DE TÉCNICO";
+export const FUTBOBO_VERSION = "v96";
+export const FUTBOBO_VERSION_NAME = "NOVOS CAMINHOS";

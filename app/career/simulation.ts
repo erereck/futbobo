@@ -202,7 +202,9 @@ export function simulateSeason(
   const campeonesCupChampion = playsCampeonesCup && seeded(state.seed, state.season * 89) * 100 < superCupChance * 0.94;
   const leagueClubCount = Math.max(2, CLUBS.filter((candidate) => candidate.leagueId === league.id).length);
   const promotionRankBoost = starPromotionRankBoost(league.id, affected.overall, appearances);
-  const expectedPosition = (leagueClubCount + 1) / 2 - (strength - 74) * 0.45 - playerImpact * 0.08 - promotionRankBoost;
+  const expectedPosition = league.id === "brasileirao-d"
+    ? (leagueClubCount + 1) / 2 - (strength - 60) * 2 - playerImpact * 0.5 - promotionRankBoost * 1.4
+    : (leagueClubCount + 1) / 2 - (strength - 74) * 0.45 - playerImpact * 0.08 - promotionRankBoost;
   const leaguePosition = leagueChampion
     ? 1
     : clamp(Math.round(expectedPosition + seeded(state.seed, state.season * 59) * 8 - 4), 2, leagueClubCount);
@@ -220,6 +222,10 @@ export function simulateSeason(
   const promotedLeagueId =
     league.id === "brasileirao-b" && leaguePosition <= 4
       ? "brasileirao"
+      : league.id === "brasileirao-c" && leaguePosition <= 4
+        ? "brasileirao-b"
+        : league.id === "brasileirao-d" && leaguePosition <= 6
+          ? "brasileirao-c"
       : league.id === "championship" && (leaguePosition <= 2 || championshipPlayoffPromotion)
         ? "premier"
         : extraSecondDivisionPromotion?.topLeagueId ?? "";

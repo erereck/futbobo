@@ -182,6 +182,8 @@ type PromotionRule = {
 };
 
 const PROMOTION_RULES: Record<string, PromotionRule> = {
+  "league-one": { topLeagueId: "championship", automaticPlaces: 2, playoffFrom: 3, playoffTo: 6, playoffBaseChance: 0.34, playoffPositionBonus: 0.09 },
+  "league-two": { topLeagueId: "league-one", automaticPlaces: 3, playoffFrom: 4, playoffTo: 7, playoffBaseChance: 0.34, playoffPositionBonus: 0.09 },
   "segunda-division": { topLeagueId: "laliga", automaticPlaces: 2, playoffFrom: 3, playoffTo: 6, playoffBaseChance: 0.30, playoffPositionBonus: 0.08 },
   "serie-b-italia": { topLeagueId: "seriea", automaticPlaces: 2, playoffFrom: 3, playoffTo: 8, playoffBaseChance: 0.22, playoffPositionBonus: 0.055 },
   "2-bundesliga": { topLeagueId: "bundesliga", automaticPlaces: 2, playoffFrom: 3, playoffTo: 3, playoffBaseChance: 0.47, playoffPositionBonus: 0 },
