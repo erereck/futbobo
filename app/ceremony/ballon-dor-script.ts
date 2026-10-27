@@ -92,18 +92,21 @@ export type CeremonyTimeline = {
 
 // ------------------------------------------------------------ cronômetro
 
-const ESTABLISH = 4.5;
-const NOMINEE = 2.6;
-const PRESENTER = 3;
+// Os trechos de espera (abertura, apresentações, suspense) são curtos de
+// propósito. Da revelação até a entrega da taça o tempo fica como está: é o
+// que o vencedor e o apresentador levam andando até o meio do palco.
+const ESTABLISH = 3.6;
+const NOMINEE = 2.1;
+const PRESENTER = 2.4;
 /** "Em terceiro lugar..." fica sozinho na tela este tempo antes do nome. */
-const THIRD_SUSPENSE = 1.7;
-const THIRD = 5;
-const DUEL_CUT = 1.35;
+const THIRD_SUSPENSE = 1.4;
+const THIRD = 4.4;
+const DUEL_CUT = 1.15;
 const DUEL_CUTS = 5;
 const REVEAL_SUSPENSE = 1.6;
 const REVEAL = 4;
-const CELEBRATE = 7;
-const REACTION = 4.5;
+const CELEBRATE = 6.4;
+const REACTION = 3.8;
 
 function place(input: CeremonyInput, value: CeremonyPlace) {
   return input.finalists.find((finalist) => finalist.place === value) ?? input.finalists[0];
