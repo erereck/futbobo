@@ -42,7 +42,9 @@ export default function CycleShopDialog({ game, feedback, onBuy, onClose }: Prop
             {CYCLE_SHOP_ITEMS.map((item) => {
               const bought = game.economyPurchases.includes(cycleShopPurchaseKey(game, item.id));
               const atOverallLimit = item.id === "overall" && game.overall >= 99;
-              const disabled = !item.available || bought || atOverallLimit || game.spendableMoney < item.price;
+              const pendingContract = (item.id === "contract-shorter" || item.id === "contract-longer") && game.nextContractYearsAdjustment !== 0;
+              const releaseUnavailable = item.id === "release" && (game.isFreeAgent || game.contractYears <= 0);
+              const disabled = !item.available || bought || atOverallLimit || pendingContract || releaseUnavailable || game.spendableMoney < item.price;
               const openCountryPicker = item.id === "agent-country";
               return (
                 <article className={styles.shopItem} data-tone={item.tone} key={item.id}>
@@ -52,7 +54,7 @@ export default function CycleShopDialog({ game, feedback, onBuy, onClose }: Prop
                     <p className={styles.itemDescription}>{item.description}{openCountryPicker && focusedCountry ? ` Foco atual: ${focusedCountry.name}.` : ""}</p>
                   </div>
                   <button className={styles.buy} disabled={disabled} onClick={() => openCountryPicker ? setCountryPickerOpen(true) : onBuy(item.id)} type="button">
-                    {!item.available ? "Em breve" : bought ? "Adquirido" : atOverallLimit ? "No limite" : formatMoney(item.price)}
+                    {!item.available ? "Em breve" : bought ? "Adquirido" : atOverallLimit ? "No limite" : pendingContract ? "Ajuste pendente" : releaseUnavailable ? "Sem contrato" : formatMoney(item.price)}
                   </button>
                 </article>
               );

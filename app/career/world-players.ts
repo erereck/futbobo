@@ -1,3 +1,4 @@
+import { eliteSeasonProduction } from "./season-production";
 import { CLUBS, COUNTRIES, POSITIONS } from "../game-data";
 import type { Club, Confederation, PositionKey } from "../game-data";
 import { rankMarketDestinations } from "./transfer-market";
@@ -126,12 +127,13 @@ function seasonStats(player: WorldPlayer, season: number) {
   const availability = player.status === "free-agent" ? 0 : clamp(30 + (player.overall - 68) * 0.65 - Math.max(0, age - 32) * 1.5, 7, 51);
   const appearances = Math.round(availability * (0.82 + seeded(Number.parseInt(player.id.slice(-3), 36) || 1, season * 401) * 0.28));
   const quality = clamp((player.overall - 48) / 28, 0.35, 1.7);
+  const eliteProduction = (value: number) => eliteSeasonProduction(value, player.overall);
   return {
     appearances,
-    goals: player.position === "GOL" ? 0 : Math.round(appearances * position.goals * quality * (0.75 + seeded(player.birthSeason, season * 409) * 0.75)),
-    assists: player.position === "GOL" ? Math.round(seeded(player.birthSeason, season * 419) * 2) : Math.round(appearances * position.assists * quality * (0.75 + seeded(player.birthSeason, season * 421) * 0.75)),
-    tackles: position.zone === "defesa" || position.zone === "meio" ? Math.round(appearances * (1.15 + seeded(player.birthSeason, season * 431) * 1.8)) : 0,
-    cleanSheets: player.position === "GOL" ? Math.round(appearances * (0.18 + quality * 0.16)) : 0,
+    goals: eliteProduction(player.position === "GOL" ? 0 : Math.round(appearances * position.goals * quality * (0.75 + seeded(player.birthSeason, season * 409) * 0.75))),
+    assists: eliteProduction(player.position === "GOL" ? Math.round(seeded(player.birthSeason, season * 419) * 2) : Math.round(appearances * position.assists * quality * (0.75 + seeded(player.birthSeason, season * 421) * 0.75))),
+    tackles: eliteProduction(position.zone === "defesa" || position.zone === "meio" ? Math.round(appearances * (1.15 + seeded(player.birthSeason, season * 431) * 1.8)) : position.zone === "ataque" ? Math.round(appearances * (0.2 + seeded(player.birthSeason, season * 431) * 0.2)) : 0),
+    cleanSheets: Math.min(appearances, eliteProduction(player.position === "GOL" ? Math.round(appearances * (0.18 + quality * 0.16)) : 0)),
   };
 }
 

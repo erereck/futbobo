@@ -2,8 +2,9 @@ import { COUNTRIES, countryById } from "../game-data";
 import type { GameState, Phase } from "./model";
 import { shiftPlayerAttributes } from "./state";
 import { clamp, seeded } from "./shared";
+import { generateTransferOffers } from "./transfer-market";
 
-export type CycleShopItemId = "recovery" | "media" | "coach" | "overall" | "potential" | "corruption" | "agent-country" | "special-training";
+export type CycleShopItemId = "recovery" | "media" | "coach" | "overall" | "potential" | "corruption" | "agent-country" | "special-training" | "release" | "contract-shorter" | "contract-longer";
 
 export type CycleShopItem = {
   id: CycleShopItemId;
@@ -23,6 +24,9 @@ export const CYCLE_SHOP_ITEMS: CycleShopItem[] = [
   { id: "potential", name: "Recalibração confidencial", eyebrow: "RISCO OCULTO", description: "Pode elevar ou reduzir seu teto em 2 pontos.", price: 2_500_000, tone: "risk", available: true },
   { id: "corruption", name: "Comprar os árbitros", eyebrow: "50 / 50", description: "Garante o título nacional ou causa banimento de 5 anos.", price: 2_000_000, tone: "risk", available: true },
   { id: "agent-country", name: "Rota do empresário", eyebrow: "MERCADO", description: "Escolha um país. No fim do contrato, 75% das propostas virão de clubes aleatórios de lá.", price: 5_000_000, tone: "highlight", available: true },
+  { id: "release", name: "Rescindir contrato", eyebrow: "LIBERDADE", description: "Encerre o vínculo com seu clube e entre no mercado como agente livre.", price: 3_000_000, tone: "highlight", available: true },
+  { id: "contract-shorter", name: "Próximo contrato mais curto", eyebrow: "CONTRATO", description: "Reduz em 1 ano o próximo contrato assinado, com mínimo de 1 ano. Não altera o atual.", price: 1_000_000, tone: "standard", available: true },
+  { id: "contract-longer", name: "Próximo contrato mais longo", eyebrow: "CONTRATO", description: "Acrescenta 1 ano ao próximo contrato assinado. Não altera o atual.", price: 1_000_000, tone: "standard", available: true },
   { id: "special-training", name: "Treino especial", eyebrow: "EM BREVE", description: "Uma nova forma de transformar seu jogador.", price: 0, tone: "locked", available: false },
 ];
 
@@ -48,7 +52,9 @@ export function purchaseCycleShopItem(state: GameState, itemId: CycleShopItemId,
   const item = CYCLE_SHOP_ITEMS.find((candidate) => candidate.id === itemId);
   const purchaseKey = cycleShopPurchaseKey(state, itemId);
   const validCountryFocus = itemId !== "agent-country" || Boolean(countryId && COUNTRIES.some((country) => country.id === countryId));
-  if (!item || !item.available || !validCountryFocus || (itemId === "overall" && state.overall >= 99) || state.spendableMoney < item.price || state.economyPurchases.includes(purchaseKey)) {
+  const contractAdjustment = itemId === "contract-shorter" || itemId === "contract-longer";
+  const releaseUnavailable = itemId === "release" && (state.isFreeAgent || state.contractYears <= 0);
+  if (!item || !item.available || !validCountryFocus || releaseUnavailable || (contractAdjustment && state.nextContractYearsAdjustment !== 0) || (itemId === "overall" && state.overall >= 99) || state.spendableMoney < item.price || state.economyPurchases.includes(purchaseKey)) {
     return { state, feedback: "Esta compra não está disponível.", toast: "Compra indisponível", forcedClose: false };
   }
 
@@ -93,6 +99,16 @@ export function purchaseCycleShopItem(state: GameState, itemId: CycleShopItemId,
     next = { ...next, agentCountryFocus: country.id };
     feedback = `Seu empresário recebeu uma ordem clara: quando este contrato terminar, ${country.name} será a prioridade. 75% das propostas serão sorteadas entre clubes de lá.`;
     toast = `Empresário focado em ${country.name}`;
+  } else if (contractAdjustment) {
+    next = { ...next, nextContractYearsAdjustment: itemId === "contract-shorter" ? -1 : 1 };
+    feedback = `A alteração será aplicada ao próximo contrato assinado, inclusive uma renovação. O vínculo atual permanece igual.`;
+  } else if (itemId === "release") {
+    const prepared: GameState = { ...next, phase: "transfer", isFreeAgent: true, freeAgentSinceSeason: state.season, contractYears: 0, annualSalary: 0, activeLoan: null, loanParentClubId: "", loanParentLeagueId: "", loanEndSeason: 0, pendingTransferMode: "permanent", youthLoanDecision: false, forcedClubExit: false, transferRequested: true };
+    const offers = generateTransferOffers(prepared, state.season * 509, { includeForeign: true, mode: "free-agent", trigger: "contract-expired", count: 10 });
+    next = { ...prepared, transferOffers: offers.map((offer) => offer.clubId), transferMarketOffers: offers, transferStatus: { success: true, chance: 100, headline: "Contrato rescindido", text: `Você está livre para escolher entre ${offers.length} projetos.` }, newsFeed: [`${state.season}: ${state.name} rescindiu seu contrato e entrou no mercado como agente livre.`, ...state.newsFeed].slice(0, 16) };
+    feedback = "Contrato rescindido. Seu empresário abriu o mercado de agentes livres.";
+    toast = "Contrato rescindido";
+    forcedClose = true;
   } else if (itemId === "corruption") {
     const succeeded = seeded(state.seed, state.season * 1877 + state.economyPurchases.length * 31) < 0.5;
     if (succeeded) {

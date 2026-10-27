@@ -225,7 +225,7 @@ function TransferJourneyOverlay({ journey, origin, leaving }: { journey: Transfe
 
 export default function TransferMarketScreen({ state, currentClub, offers, renewalOffer, onChoose, onStay, onBecomeFreeAgent, onWait }: Props) {
   const copy = windowCopy(state, currentClub, offers.length);
-  const canStay = state.youthLoanDecision || (!state.transferRequested && !state.renewalDenied && !state.forcedClubExit && !state.forcedAlternativeTransfer && state.pendingTransferMode !== "loan");
+  const canStay = state.youthLoanDecision || (!state.transferRequested && !state.renewalDenied && !state.forcedClubExit && !state.forcedAlternativeTransfer && state.pendingTransferMode !== "loan") || (state.pendingTransferMode === "loan" && state.transferStatus?.headline === "Empréstimo autorizado");
   const [journey, setJourney] = useState<TransferJourney | null>(null);
   const [journeyLeaving, setJourneyLeaving] = useState(false);
   const onChooseRef = useRef(onChoose);

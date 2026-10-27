@@ -8,6 +8,7 @@ import { FUTBOBO_MOMENTS } from "../futbobo-moments";
 import { DEFAULT_PLAYER_APPEARANCE, normalizePlayerAppearance, randomPlayerAppearance } from "../player-appearance";
 import { GOALKEEPER_EVENTS } from "../goalkeeper-events";
 import { CLUB_SPECIFIC_EVENTS } from "./club-specific-events";
+import { NEW_CAREER_EVENTS } from "../new-career-events";
 import type { AttributeKey, AwardPresentation, CareerHallEntry, CareerRival, CompetitionId, CustomCharacter, CustomClubDefinition, GameState, MonteCarloReport, PendingBotaoMatch, PlayerAttributes, PlayerStats, SeasonRecord, SpecialTraitId, StoredBotaoResult } from "./model";
 import { positionByKey } from "./academy";
 import { competitiveStrength } from "./performance";
@@ -158,7 +159,7 @@ export const RANDOM_NAME_LAST_PART = [
   "Oliveirinha", "Puskás Filho", "Reis de Tóquio", "Santoro", "Torres do Norte", "Uribe", "van Helsing", "Wakabayashi", "Xavierson", "Yıldız", "Zé Europa", "Africano", "Baggio Filho", "Cruyff da Gama", "Drácula", "Eto'o Mineiro", "Futebolino", "Garrinchinha", "Honda Civic", "Inzaghi dos Santos",
 ];
 
-export const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS, ...GOALKEEPER_EVENTS, ...CLUB_SPECIFIC_EVENTS];
+export const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS, ...GOALKEEPER_EVENTS, ...CLUB_SPECIFIC_EVENTS, ...NEW_CAREER_EVENTS];
 
 function eventIdCompatibleWithClub(eventId: string, clubId: string, fallback: string) {
   const event = ALL_PRO_EVENTS.find((candidate) => candidate.id === eventId);
@@ -482,6 +483,7 @@ export function initialState(seedOverride?: number): GameState {
     corruptionGuaranteedSeason: 0,
     lastCycleShopSeason: 0,
     agentCountryFocus: "",
+    nextContractYearsAdjustment: 0,
     betrayedClubIds: [],
     traits: [],
     rivals: [],
@@ -615,6 +617,7 @@ export function normalizeSave(value: unknown): GameState {
     corruptionGuaranteedSeason: saved.corruptionGuaranteedSeason ?? 0,
     lastCycleShopSeason: saved.lastCycleShopSeason ?? 0,
     agentCountryFocus: typeof saved.agentCountryFocus === "string" ? saved.agentCountryFocus : "",
+    nextContractYearsAdjustment: saved.nextContractYearsAdjustment === -1 || saved.nextContractYearsAdjustment === 1 ? saved.nextContractYearsAdjustment : 0,
     betrayedClubIds: Array.isArray(saved.betrayedClubIds) ? saved.betrayedClubIds.filter((id): id is string => typeof id === "string") : [],
     spendableMoney: saved.spendableMoney ?? Math.min(saved.money ?? 0, Math.round((saved.money ?? 0) * 0.12)),
     traits: Array.isArray(saved.traits) && saved.traits.length
