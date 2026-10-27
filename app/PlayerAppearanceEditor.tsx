@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import PlayerAppearance3D from "./PlayerAppearance3D";
+import { readBotao3dPreference, webglAvailable } from "./botao/view-mode";
 import {
   BEARD_NAMES,
   EYE_COLORS,
@@ -118,15 +120,28 @@ export default function PlayerAppearanceEditor({
   compact?: boolean;
   previewExtras?: ReactNode;
 }) {
+  // Com o Modo 3D ligado nas Configurações, a prévia vira o boneco de campo.
+  const [preview3d, setPreview3d] = useState(false);
+  useEffect(() => {
+    if (!readBotao3dPreference() || !webglAvailable()) return;
+    queueMicrotask(() => setPreview3d(true));
+  }, []);
+
   function setIndex(key: AppearanceKey, length: number, direction: number) {
     onChange({ ...value, [key]: cycle(value[key], length, direction) });
   }
 
+  const previewAppearance = kitPattern === undefined ? value : { ...value, kitPattern };
+  const previewLabel = `Prévia do personagem de ${playerName || "seu jogador"}`;
+  const portrait = <PlayerAppearancePortrait appearance={previewAppearance} primary={primary} secondary={secondary} size={280} label={previewLabel} />;
+
   return (
     <section className={`appearance-editor ${compact ? "appearance-editor-compact" : ""}`}>
       <div className="appearance-preview">
-        <div className="appearance-preview-meta"><span>IDENTIDADE EM CAMPO</span><b>#{number || 10}</b></div>
-        <PlayerAppearancePortrait appearance={kitPattern === undefined ? value : { ...value, kitPattern }} primary={primary} secondary={secondary} size={280} label={`Prévia do personagem de ${playerName || "seu jogador"}`} />
+        <div className="appearance-preview-meta"><span>{preview3d ? "IDENTIDADE EM CAMPO · 3D" : "IDENTIDADE EM CAMPO"}</span><b>#{number || 10}</b></div>
+        {preview3d ? (
+          <PlayerAppearance3D appearance={previewAppearance} primary={primary} secondary={secondary} number={number || 10} label={previewLabel} fallback={portrait} />
+        ) : portrait}
         <strong>{playerName || "Seu jogador"}</strong>
         <small>O uniforme acompanha automaticamente o clube.</small>
         <button type="button" className="appearance-random" onClick={() => onChange(randomPlayerAppearance())}>⚄ Sortear visual</button>

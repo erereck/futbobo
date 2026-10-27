@@ -2584,3 +2584,51 @@
   .botao-root-player .botao-table-wrapper{box-shadow:0 0 0 6px var(--bg,#050b08),0 0 72px rgba(45,133,78,.16)}
   .botao-key-hint{display:block;color:#91a398;font:800 9px/1 ui-monospace,monospace;letter-spacing:.1em;text-align:center}
 }
+
+/* ------------------------------------------------------------------ Modo 3D */
+/* Mesmo lugar, mesma proporção da mesa: só o desenho muda. */
+.botao-canvas-3d {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms ease;
+  background: #0a1219;
+}
+.botao-canvas-3d-ready {
+  position: relative;
+  opacity: 1;
+  pointer-events: auto;
+}
+.botao-root-3d .botao-table-wrapper {
+  background: #0a1219;
+}
+.botao-3d-loading {
+  position: absolute;
+  inset: auto 0 18px;
+  display: flex;
+  justify-content: center;
+  color: #d8e6dc;
+  font: 800 11px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  pointer-events: none;
+  animation: botao-3d-loading 1.1s ease-in-out infinite alternate;
+}
+@keyframes botao-3d-loading {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+.botao-3d-hint {
+  display: block;
+  margin-top: 6px;
+  color: #91a398;
+  font: 800 9px/1.3 ui-monospace, monospace;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+}
+@media (prefers-reduced-motion: reduce) {
+  .botao-canvas-3d { transition: none; }
+  .botao-3d-loading { animation: none; }
+}

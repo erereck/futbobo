@@ -73,6 +73,8 @@ import type {
   BotaoReplayFrame,
   BotaoSide,
 } from "./types";
+import type { Botao3DView } from "./three/Botao3DView";
+import { readBotao3dPreference, webglAvailable } from "./view-mode";
 
 const PHYSICS_DT = 1 / 120;
 const MAX_SUBSTEPS = 12;
@@ -170,6 +172,9 @@ export default function BotaoMatch({
     })());
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Modo 3D: outro canvas, mesma partida. O motor nunca sabe qual está na tela.
+  const canvas3dRef = useRef<HTMLCanvasElement | null>(null);
+  const view3dRef = useRef<Botao3DView | null>(null);
   const aimRef = useRef<BotaoAimView | null>(null);
   const selectedRef = useRef<string | null>(null);
   const pointerRef = useRef<number | null>(null);
@@ -222,6 +227,10 @@ export default function BotaoMatch({
   const [announcement, setAnnouncement] = useState("");
   const [idleCountdown, setIdleCountdown] = useState<number | null>(null);
   const [desktopLandscape, setDesktopLandscape] = useState(false);
+  const desktopLandscapeRef = useRef(false);
+  desktopLandscapeRef.current = desktopLandscape;
+  const [view3d, setView3d] = useState(false);
+  const [view3dReady, setView3dReady] = useState(false);
   const [compactMobileTable, setCompactMobileTable] = useState(false);
   const [paused, setPaused] = useState(false);
   const [awaitingFirstTouch, setAwaitingFirstTouch] = useState(firstTouchReady);
@@ -354,6 +363,55 @@ export default function BotaoMatch({
     return () => desktop.removeEventListener("change", syncOrientation);
   }, []);
 
+  // A preferência vem das Configurações; sem WebGL o 2D continua valendo.
+  useEffect(() => {
+    if (!readBotao3dPreference() || !webglAvailable()) return;
+    queueMicrotask(() => setView3d(true));
+  }, []);
+
+  useEffect(() => {
+    if (!view3d) return;
+    let cancelled = false;
+    let instance: Botao3DView | null = null;
+    // Import tardio: quem joga no 2D nunca baixa o three.js.
+    import("./three/Botao3DView")
+      .then(({ Botao3DView }) => {
+        const canvas = canvas3dRef.current;
+        if (cancelled || !canvas) return;
+        try {
+          instance = new Botao3DView(canvas, setup, {
+            landscape: desktopLandscapeRef.current,
+            hideUserMarker: localMatch,
+            reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+            onGesture: () => {
+              // Dois dedos giram o campo: a mira que estava começando é descartada.
+              pointerRef.current = null;
+              aimRef.current = null;
+              selectedRef.current = null;
+            },
+          });
+          view3dRef.current = instance;
+          lastFrameRef.current = 0;
+          setView3dReady(true);
+        } catch {
+          setView3d(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setView3d(false);
+      });
+    return () => {
+      cancelled = true;
+      if (view3dRef.current === instance) view3dRef.current = null;
+      instance?.dispose();
+      setView3dReady(false);
+    };
+  }, [view3d, setup, localMatch]);
+
+  useEffect(() => {
+    view3dRef.current?.setLandscape(desktopLandscape);
+  }, [desktopLandscape]);
+
   useEffect(() => {
     if (setup.managerMode) return;
     try {
@@ -379,6 +437,9 @@ export default function BotaoMatch({
       } else if (key === "m") {
         event.preventDefault();
         toggleSound();
+      } else if (key === "c" && view3dRef.current) {
+        event.preventDefault();
+        view3dRef.current.resetCamera();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -399,6 +460,7 @@ export default function BotaoMatch({
   // ---------------------------------------------------------------- eventos
   const handleEvents = useCallback(
     (events: BotaoEvent[]) => {
+      if (events.length > 0) view3dRef.current?.handleEvents(events, machine);
       for (const event of events) {
         if (event.type === "hit") {
           const now = performance.now();
@@ -534,15 +596,16 @@ export default function BotaoMatch({
       frame = requestAnimationFrame(loop);
       const state = matchRef.current;
       const canvas = canvasRef.current;
-      if (!state || !canvas) return;
+      const view3dInstance = view3dRef.current;
+      if (!state || (!canvas && !view3dInstance)) return;
       // Uma aba em segundo plano pode receber rAF esporádicos. Ignorá-los
       // impede que o jogador volte com um pênalti por demora já cobrado.
       if (!setup.managerMode && document.hidden) {
         lastFrameRef.current = 0;
         return;
       }
-      const context = canvas.getContext("2d");
-      if (!context) return;
+      const context = view3dInstance ? null : canvas?.getContext("2d") ?? null;
+      if (!view3dInstance && !context) return;
 
       const previous = lastFrameRef.current || time;
       const elapsed = Math.min((time - previous) / 1000, 0.25);
@@ -739,6 +802,25 @@ export default function BotaoMatch({
         }
       }
 
+      const renderView = {
+        selectedId: selectedRef.current,
+        aim: aimRef.current,
+        highlight: state.phase === "aim" || state.phase === "kickoff",
+        penaltyMode: state.phase === "penalties",
+        trail: trailRef.current,
+        goalFlash: goalFlashRef.current,
+        goalFlashSide: goalFlashSideRef.current,
+        uprightLabels: desktopLandscape,
+        hideUserMarker: localMatch,
+        showcase,
+      };
+      if (view3dInstance) {
+        // Pausado, os bonecos congelam junto com o relógio.
+        view3dInstance.render(state, renderView, pausedRef.current ? 0 : elapsed);
+        return;
+      }
+      if (!canvas || !context) return;
+
       const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
       const rect = canvas.getBoundingClientRect();
       if (rect.width === 0) return;
@@ -780,23 +862,7 @@ export default function BotaoMatch({
           offsetY + VIEW_PAD_Y * scale,
         );
       }
-      drawMatch(
-        context,
-        state,
-        {
-          selectedId: selectedRef.current,
-          aim: aimRef.current,
-          highlight: state.phase === "aim" || state.phase === "kickoff",
-          penaltyMode: state.phase === "penalties",
-          trail: trailRef.current,
-          goalFlash: goalFlashRef.current,
-          goalFlashSide: goalFlashSideRef.current,
-          uprightLabels: desktopLandscape,
-          hideUserMarker: localMatch,
-          showcase,
-        },
-        time,
-      );
+      drawMatch(context, state, renderView, time);
     });
     return () => cancelAnimationFrame(frame);
   }, [handleEvents, bump, showFlash, desktopLandscape, localMatch, showcase, setup.managerMode]);
@@ -978,19 +1044,46 @@ export default function BotaoMatch({
     [localMatch],
   );
 
-  const onPointerDown = useCallback(
+  /** Ponto do campo sob o ponteiro, seja na mesa 2D ou no estádio 3D. */
+  const fieldPointFor = useCallback(
     (event: ReactPointerEvent<HTMLCanvasElement>) => {
-      if (pausedRef.current) return;
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      unlockAudio();
-      const point = toFieldPoint(
+      const view = view3dRef.current;
+      if (view) return view.fieldPoint(event.clientX, event.clientY);
+      const canvas = event.currentTarget;
+      return toFieldPoint(
         event.clientX,
         event.clientY,
         canvas.getBoundingClientRect(),
         desktopLandscape,
       );
-      const disc = shootableAt(point.x, point.y);
+    },
+    [desktopLandscape],
+  );
+
+  /** No 3D o clique vale no boneco inteiro (cabeça, tronco, pés), não só no chão. */
+  const pickedShootable = useCallback(
+    (event: ReactPointerEvent<HTMLCanvasElement>) => {
+      const view = view3dRef.current;
+      const state = matchRef.current;
+      if (!view || !state) return null;
+      const id = view.pickBodyId(event.clientX, event.clientY);
+      const body = id ? state.bodies.find((candidate) => candidate.id === id) : null;
+      if (!body) return null;
+      const shootable = shootableAt(body.x, body.y);
+      return shootable?.id === body.id ? shootable : null;
+    },
+    [shootableAt],
+  );
+
+  const onPointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLCanvasElement>) => {
+      if (pausedRef.current) return;
+      const view = view3dRef.current;
+      // Botão direito e dois dedos são da câmera.
+      if (view && (event.button !== 0 || view.isGesturing())) return;
+      unlockAudio();
+      const point = fieldPointFor(event);
+      const disc = pickedShootable(event) ?? shootableAt(point.x, point.y);
       if (!disc) return;
       event.currentTarget.setPointerCapture(event.pointerId);
       pointerRef.current = event.pointerId;
@@ -1002,38 +1095,11 @@ export default function BotaoMatch({
         ratio: 0,
         valid: false,
       };
+      view?.setHover(null);
       vibrate(8);
       bump();
     },
-    [bump, shootableAt, desktopLandscape],
-  );
-
-  const onPointerMove = useCallback(
-    (event: ReactPointerEvent<HTMLCanvasElement>) => {
-      if (pausedRef.current) return;
-      if (pointerRef.current !== event.pointerId) return;
-      const canvas = canvasRef.current;
-      const state = matchRef.current;
-      const aim = aimRef.current;
-      if (!canvas || !state || !aim) return;
-      const point = toFieldPoint(
-        event.clientX,
-        event.clientY,
-        canvas.getBoundingClientRect(),
-        desktopLandscape,
-      );
-      const disc = state.bodies.find((body) => body.id === aim.bodyId);
-      if (!disc) return;
-      const computed = aimFromDrag(disc, point.x, point.y);
-      aimRef.current = {
-        bodyId: aim.bodyId,
-        dragX: point.x,
-        dragY: point.y,
-        ratio: computed.ratio,
-        valid: computed.valid,
-      };
-    },
-    [desktopLandscape],
+    [bump, shootableAt, fieldPointFor, pickedShootable],
   );
 
   const onPointerUp = useCallback(
@@ -1077,6 +1143,44 @@ export default function BotaoMatch({
       bump();
     },
     [bump, handleEvents, showFlash],
+  );
+
+  const onPointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLCanvasElement>) => {
+      if (pausedRef.current) return;
+      const view = view3dRef.current;
+      if (view && pointerRef.current === null) {
+        // Passando o mouse: destaca o boneco que pode ser tacado.
+        if (event.pointerType === "mouse" && event.buttons === 0) {
+          const hovered = pickedShootable(event);
+          view.setHover(hovered?.id ?? null);
+          event.currentTarget.style.cursor = hovered ? "grab" : "";
+        }
+        return;
+      }
+      if (pointerRef.current !== event.pointerId) return;
+      if (view?.isGesturing()) return;
+      // Soltou o esquerdo segurando o direito (girando): o chute sai agora.
+      if (view && event.pointerType === "mouse" && (event.buttons & 1) === 0) {
+        onPointerUp(event);
+        return;
+      }
+      const state = matchRef.current;
+      const aim = aimRef.current;
+      if (!state || !aim) return;
+      const point = fieldPointFor(event);
+      const disc = state.bodies.find((body) => body.id === aim.bodyId);
+      if (!disc) return;
+      const computed = aimFromDrag(disc, point.x, point.y);
+      aimRef.current = {
+        bodyId: aim.bodyId,
+        dragX: point.x,
+        dragY: point.y,
+        ratio: computed.ratio,
+        valid: computed.valid,
+      };
+    },
+    [fieldPointFor, onPointerUp, pickedShootable],
   );
 
   const onPointerCancel = useCallback((event: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -1315,10 +1419,11 @@ export default function BotaoMatch({
     );
   };
 
+  const tableLabel = `Mesa de futebol de botão. ${setup.userTeam.shortName} ${state.score.user}, ${setup.cpuTeam.shortName} ${state.score.cpu}. ${localMatch ? `Vez de ${activeLocalName}.` : yourTurn ? setup.managerMode ? "Sua vez de tacar." : "Sua vez de chutar." : "Vez do adversário."}`;
   const RootElement = setup.managerMode ? "div" : "main";
   return (
     <RootElement
-      className={`botao-root ${!setup.managerMode ? "botao-root-player" : ""} ${showcase ? "botao-root-showcase" : ""} ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""}`}
+      className={`botao-root ${!setup.managerMode ? "botao-root-player" : ""} ${showcase ? "botao-root-showcase" : ""} ${localMatch ? "botao-root-local" : ""} ${desktopLandscape ? "botao-root-landscape" : ""} ${compactMobileTable ? "botao-root-mobile-compact" : ""} ${paused ? "botao-root-paused" : ""} ${view3dReady ? "botao-root-3d" : ""}`}
     >
       {!setup.managerMode && <h1 className="botao-sr-only">{setup.competitionName} · {setup.stageName}: {setup.userTeam.shortName} contra {setup.cpuTeam.shortName}</h1>}
       <header className="botao-hud">
@@ -1477,15 +1582,32 @@ export default function BotaoMatch({
             : `${VIEW_WIDTH} / ${VIEW_HEIGHT}`,
         }}
       >
-        <canvas
-          ref={canvasRef}
-          className="botao-canvas"
-          aria-label={`Mesa de futebol de botão. ${setup.userTeam.shortName} ${state.score.user}, ${setup.cpuTeam.shortName} ${state.score.cpu}. ${localMatch ? `Vez de ${activeLocalName}.` : yourTurn ? setup.managerMode ? "Sua vez de tacar." : "Sua vez de chutar." : "Vez do adversário."}`}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
-        />
+        {!view3dReady ? (
+          <canvas
+            ref={canvasRef}
+            className="botao-canvas"
+            aria-label={tableLabel}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
+          />
+        ) : null}
+        {view3d ? (
+          <canvas
+            ref={canvas3dRef}
+            className={`botao-canvas botao-canvas-3d ${view3dReady ? "botao-canvas-3d-ready" : ""}`}
+            aria-label={`${tableLabel} Visão 3D: botão direito ou dois dedos giram o campo.`}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
+            onPointerLeave={() => view3dRef.current?.setHover(null)}
+          />
+        ) : null}
+        {view3d && !view3dReady ? (
+          <div className="botao-3d-loading" aria-hidden="true">Montando o estádio…</div>
+        ) : null}
         {flash ? (
           <div className={`botao-flash botao-flash-${flash.tone}`}>
             {flash.text}
@@ -1788,6 +1910,16 @@ export default function BotaoMatch({
           >
             {desktopLandscape ? "Campo em pé" : "Virar campo"} ↻
           </button>
+          {view3dReady ? (
+            <button
+              type="button"
+              className="botao-ghost botao-camera-reset"
+              title={!setup.managerMode ? "Atalho: C" : undefined}
+              onClick={() => view3dRef.current?.resetCamera()}
+            >
+              Centralizar câmera
+            </button>
+          ) : null}
           <button
             type="button"
             className="botao-ghost botao-mobile-size-toggle"
@@ -1797,7 +1929,13 @@ export default function BotaoMatch({
             {compactMobileTable ? "Ampliar mesa" : "Encolher mesa"}
           </button>
         </div>
-        {!setup.managerMode && <span className="botao-key-hint">ATALHOS: P PAUSA · M SOM</span>}
+        {!setup.managerMode && <span className="botao-key-hint">ATALHOS: P PAUSA · M SOM{view3dReady ? " · C CÂMERA" : ""}</span>}
+        {view3dReady ? (
+          <span className="botao-3d-hint">
+            <span className="botao-pointer-desktop">Botão direito gira o campo · roda aproxima</span>
+            <span className="botao-pointer-touch">Dois dedos giram e aproximam o campo</span>
+          </span>
+        ) : null}
       </footer>
       <div className="botao-sr-only" role="status" aria-live="polite">
         {announcement}

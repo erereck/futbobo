@@ -3985,3 +3985,43 @@ p,
 @media (max-width: 540px) {
   .career-phase-career.career-tab-event .decision-button small { font-size: 9px; }
 }
+
+/* Prévia 3D do criador (Modo 3D nas Configurações). */
+.appearance-3d {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.appearance-preview .appearance-3d canvas {
+  width: min(280px, 100%);
+  margin: 0;
+  cursor: grab;
+  touch-action: pan-y;
+}
+.appearance-preview .appearance-3d canvas:active { cursor: grabbing; }
+.appearance-3d-poses {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.appearance-3d-poses button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.appearance-3d-poses button[aria-pressed="true"] {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+@media (max-width: 720px) {
+  .appearance-preview .appearance-3d canvas { width: min(240px, 78vw) !important; }
+}

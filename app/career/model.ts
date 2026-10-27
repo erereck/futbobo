@@ -364,6 +364,8 @@ export type AppSettings = {
   botaoExtraSeconds?: 30 | 45 | 60;
   botaoPenaltyRounds?: 3 | 5;
   characterButtonsEnabled?: boolean;
+  /** Partidas de botão com bonecos 3D no lugar dos discos. Só o desenho muda. */
+  botao3d?: boolean;
 };
 
 export type InstallPromptEvent = Event & {

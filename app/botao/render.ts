@@ -252,6 +252,11 @@ function drawField(ctx: CanvasRenderingContext2D, userColor: string, cpuColor: s
   ctx.restore();
 }
 
+/** Mesmo gramado e mesmas linhas da mesa 2D — vira a textura do campo no modo 3D. */
+export function drawFieldSurface(ctx: CanvasRenderingContext2D, setup: BotaoMatchSetup) {
+  drawField(ctx, setup.userTeam.primary, setup.cpuTeam.primary, fieldThemeForMatch(setup));
+}
+
 function colorWithAlpha(color: string, alpha: number) {
   if (/^#[0-9a-f]{6}$/i.test(color)) {
     const value = Number.parseInt(color.slice(1), 16);
@@ -480,7 +485,7 @@ function drawDisc(
   ctx.restore();
 }
 
-function bodyAppearance(setup: BotaoMatchSetup, body: BotaoBody): PlayerAppearance | null {
+export function bodyAppearance(setup: BotaoMatchSetup, body: BotaoBody): PlayerAppearance | null {
   if (body.playerId && setup.managerRosters) {
     const managerPlayer = [...setup.managerRosters.user.starters, ...setup.managerRosters.user.bench, ...setup.managerRosters.cpu.starters, ...setup.managerRosters.cpu.bench]
       .find((player) => player.id === body.playerId);

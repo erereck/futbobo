@@ -316,3 +316,13 @@
 .leagueGroup .allClubs button > b { color:#91a697; }
 .emptyClubs { margin:10px 0; padding:20px 12px; color:#aab8ac; text-align:center; font-size:13px; }
 @media (max-width:600px) { .leagueGroup .allClubs { grid-template-columns:1fr; } }
+
+/* Prévia 3D (Modo 3D): corpo inteiro pede um quadro mais alto que o retrato. */
+.appearanceWrap :global(.appearance-3d canvas) { width:min(220px, 100%) !important; height:auto !important; aspect-ratio:7 / 8 !important; }
+@media (max-width:760px) {
+  .appearanceWrap :global(.appearance-3d canvas) { width:138px !important; }
+  .appearanceWrap :global(.appearance-3d-poses button) { min-height:26px; padding:0 8px; font-size:9px; }
+}
+@media (max-width:480px) {
+  .appearanceWrap :global(.appearance-3d canvas) { width:112px !important; }
+}

@@ -186,6 +186,45 @@ perder um lance é melhor do que travar a final. Os candidatos de
 reposicionamento também são limitados à velocidade mínima de `beginShot`, senão
 uma "burrada" da CPU podia escolher um toque fraco demais para ser aceito.
 
+## Modo 3D
+
+Ligado em **Configurações → Partidas → Modo 3D** (`AppSettings.botao3d`). Troca
+só o desenho: a partida continua sendo o mesmo `BotaoMatchState`, com a mesma
+física, CPU, relógio, pênaltis e resultado. O 3D **lê** o estado a cada quadro e
+nunca escreve nele — por isso não existe "jogabilidade do 3D".
+
+```
+view-mode.ts            preferência (settings + espelho físico) e teste de WebGL
+three/Botao3DView.ts    cena: lê o estado, decide a intenção de cada boneco,
+                        mira no gramado, câmera, confete, rastro
+three/character.ts      boneco de blocos com esqueleto e animação procedural
+three/textures.ts       rosto 16×16 e camisa (as 12 estampas) pintados em canvas
+three/stadium.ts        gramado (pintado pelo render.ts), tabelas com LED, gols
+                        com rede que estufa, arquibancada instanciada
+three/ball.ts           bola de gomos (Voronoi) com raio-x quando fica escondida
+three/character-stage.ts palco do criador de personagem
+```
+
+- **Import tardio.** `BotaoMatch` só baixa o three.js quando o modo está ligado
+  e o WebGL existe; sem WebGL a mesa 2D continua.
+- **Entrada.** O clique vale no boneco inteiro (`pickBodyId`, raio contra um
+  segmento vertical) e o arraste é medido num plano na altura da cintura.
+  `aimFromDrag` recebe os mesmos números de campo do 2D.
+- **Câmera.** Botão direito gira (horizontal) e inclina (vertical), roda aproxima,
+  dois dedos giram e dão zoom no celular, `C` centraliza. Pênalti tem câmera de
+  transmissão atrás do batedor; gol aproxima do gol marcado.
+- **Animação.** Cada boneco mistura poses (parado, pronto, mira, corrida,
+  empurrado, comemoração, lamento, goleiro) por peso, com chute e arranque por
+  cima. O chute dispara quando a bola muda de velocidade perto do pé — vale
+  também no pênalti, que não emite `touch`.
+- **Teletransportes viram trote.** Troca de formação e fila dos pênaltis movem
+  os discos de uma vez no motor; no 3D os bonecos correm até o lugar novo.
+- **Configurações fora do app.** Dentro do shell as configurações vivem no
+  IndexedDB (`career/indexed-storage.ts`). Copa, X1 e `/botao` rodam fora da
+  ponte, então quem grava as configurações também chama
+  `rememberBotao3dPreference`, que guarda um espelho pequeno no `localStorage`.
+- **Replay do gol** continua em 2D (`GoalReplay.tsx`).
+
 ## Acessibilidade e celular
 
 - `touch-action: none` no canvas: arrastar não rola a página.

@@ -21,6 +21,7 @@ import { ClubBadge } from "../career/CareerPrimitives";
 import styles from "./ShellUtilityScreens.module.css";
 import { FUTBOBO_VERSION } from "../../version";
 import FutboboIcon from "../FutboboIcon";
+import { rememberBotao3dPreference } from "../../botao/view-mode";
 
 const DEFAULT_SETTINGS: AppSettings = {
   customCharacters: [],
@@ -31,6 +32,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   botaoExtraSeconds: 45,
   botaoPenaltyRounds: 5,
   characterButtonsEnabled: true,
+  botao3d: false,
 };
 
 function sanitizeSettings(value: Partial<AppSettings>): AppSettings {
@@ -67,6 +69,7 @@ function sanitizeSettings(value: Partial<AppSettings>): AppSettings {
       : 45,
     botaoPenaltyRounds: value.botaoPenaltyRounds === 3 ? 3 : 5,
     characterButtonsEnabled: value.characterButtonsEnabled !== false,
+    botao3d: value.botao3d === true,
   };
 }
 
@@ -145,6 +148,7 @@ export function SettingsScreen() {
 
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    rememberBotao3dPreference(settings.botao3d === true);
     applyCustomClubDefinitions(settings.customClubs ?? []);
   }, [settings]);
 
@@ -322,6 +326,26 @@ export function SettingsScreen() {
                 }))
               }
             />
+          </SettingRow>
+          <SettingRow
+            title="Modo 3D"
+            description="Troca os botões por jogadores 3D animados. Mesma partida, mesmas regras. Botão direito gira o campo."
+          >
+            <button
+              type="button"
+              className={styles.toggle}
+              data-active={settings.botao3d === true}
+              aria-pressed={settings.botao3d === true}
+              aria-label="Modo 3D"
+              onClick={() =>
+                setSettings((current) => ({
+                  ...current,
+                  botao3d: current.botao3d !== true,
+                }))
+              }
+            >
+              <span />
+            </button>
           </SettingRow>
         </article>
 

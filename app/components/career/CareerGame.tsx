@@ -11,6 +11,7 @@ import { ROLE_LABELS, calculateSquadRole, createContract, createSeasonObjective 
 import { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prestige";
 import { ACHIEVEMENTS, NEWS_TEMPLATES, fillNewsTemplate, findRivalry } from "../../mega-expansion";
 import BotaoMatch from "../../botao/BotaoMatch";
+import { rememberBotao3dPreference } from "../../botao/view-mode";
 import GoalReplay from "../../botao/GoalReplay";
 import BotaoMatchStats from "../../botao/BotaoMatchStats";
 import { describeMatchTurningPoint } from "../../botao/result-story";
@@ -99,6 +100,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     botaoExtraSeconds: 45,
     botaoPenaltyRounds: 5,
     characterButtonsEnabled: true,
+    botao3d: false,
   });
   const [characterName, setCharacterName] = useState("");
   const [characterPosition, setCharacterPosition] = useState<PositionKey>("MEI");
@@ -127,6 +129,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   const [summaryClubId, setSummaryClubId] = useState("");
   const [shareBusy, setShareBusy] = useState(false);
   const saveImportRef = useRef<HTMLInputElement>(null);
+  // Sem esta trava o primeiro render gravava os padrões por cima das
+  // configurações salvas, e quem lesse o storage nesse intervalo via o padrão.
+  const settingsLoadedRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -175,16 +180,23 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         botaoExtraSeconds: [30, 45, 60].includes(storedSettings.botaoExtraSeconds ?? 45) ? storedSettings.botaoExtraSeconds ?? 45 : 45,
         botaoPenaltyRounds: storedSettings.botaoPenaltyRounds === 3 ? 3 : 5,
         characterButtonsEnabled: storedSettings.characterButtonsEnabled !== false,
+        botao3d: storedSettings.botao3d === true,
       };
       applyCustomClubDefinitions(sanitizedSettings.customClubs ?? []);
       queueMicrotask(() => setAppSettings(sanitizedSettings));
     } catch {
       localStorage.removeItem(SAVE_KEY);
     }
+    // Liberado depois do setAppSettings acima (mesma fila de microtasks).
+    queueMicrotask(() => {
+      settingsLoadedRef.current = true;
+    });
   }, []);
 
   useEffect(() => {
+    if (!settingsLoadedRef.current) return;
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
+    rememberBotao3dPreference(appSettings.botao3d === true);
   }, [appSettings]);
 
   useEffect(() => {
@@ -877,6 +889,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         botaoExtraSeconds: payload.settings?.botaoExtraSeconds ?? 45,
         botaoPenaltyRounds: payload.settings?.botaoPenaltyRounds ?? 5,
         characterButtonsEnabled: payload.settings?.characterButtonsEnabled !== false,
+        botao3d: payload.settings?.botao3d === true,
       };
       const importedHall = Array.isArray(payload.hallOfFame)
         ? (payload.hallOfFame as CareerHallEntry[])
@@ -2638,6 +2651,18 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               >
                 <b>{appSettings.characterButtonsEnabled !== false ? "●" : "10"}</b>
                 <span><strong>{appSettings.characterButtonsEnabled !== false ? "Personagens ativados" : "Números clássicos"}</strong><small>{appSettings.characterButtonsEnabled !== false ? "Ativa o criador e coloca os elencos dentro dos botões." : "Remove o criador e restaura integralmente a visualização antiga."}</small></span>
+              </button>
+            </section>
+            <section className="character-button-settings">
+              <div className="settings-section-heading"><span>MODO 3D</span><strong>Bonecos 3D no lugar dos botões</strong></div>
+              <button
+                type="button"
+                className={appSettings.botao3d ? "selected" : ""}
+                aria-pressed={appSettings.botao3d === true}
+                onClick={() => setAppSettings((current) => ({ ...current, botao3d: current.botao3d !== true }))}
+              >
+                <b>{appSettings.botao3d ? "3D" : "2D"}</b>
+                <span><strong>{appSettings.botao3d ? "Modo 3D ativado" : "Mesa clássica"}</strong><small>{appSettings.botao3d ? "Mesma partida e mesmas regras, com jogadores 3D animados. Botão direito gira o campo." : "Ative para trocar a mesa de botões por um estádio 3D com bonecos animados."}</small></span>
               </button>
             </section>
             <div className="settings-section-heading"><span>PERSONAGENS</span><strong>Rivais e nomes do seu universo</strong></div>
