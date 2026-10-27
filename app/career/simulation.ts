@@ -1,3 +1,4 @@
+import { canOfferNationalEvent, canReceiveSeniorCallUp } from "./national-callups";
 import { eliteSeasonProduction } from "./season-production";
 import { CLUBS, COUNTRIES, FIRST_MATCH_EVENT, FORMATIONS, POSITIONS, countryById, leagueById } from "../game-data";
 import type { ContinentalSlot, Effect, GameEvent } from "../game-data";
@@ -404,11 +405,12 @@ export function simulateSeason(
   const ageTier: NationalTier = affected.age <= 14 ? "none" : affected.age <= 17 ? "sub17" : affected.age <= 20 ? "sub20" : affected.age <= 23 ? "olympic" : "main";
   const seniorThreshold = 78 + Math.max(0, nation.strength - 3) * 2 - Math.min(7, Math.floor(affected.reputation / 14));
   const seniorEligible = affected.age >= 17 && affected.overall >= seniorThreshold;
-  const nationalTier: NationalTier = ageTier !== "none" && ageTier !== "main" && seniorEligible ? "main" : ageTier;
+  const seniorDivisionEligible = canReceiveSeniorCallUp(affected);
+  const nationalTier: NationalTier = ageTier !== "none" && ageTier !== "main" && seniorEligible && seniorDivisionEligible ? "main" : ageTier;
   let nationalCaps = affected.nationalCaps;
   let nationalGoals = affected.nationalGoals;
   let nationalAssists = affected.nationalAssists;
-  let nationalCaptain = Boolean(affected.nationalCaptain || effect.nationalCaptain);
+  let nationalCaptain = affected.nationalCaptain;
   let nationalTrophiesCount = affected.nationalTrophies;
   let nationalHistoryAdd: NationalRecord | null = null;
   let qualifiedNextMajor = affected.qualifiedNextMajor;
@@ -436,9 +438,11 @@ export function simulateSeason(
       establishedSenior ? 99 : 94,
     );
     const automaticSeniorCall = establishedSenior && affected.fitness >= 42 && affected.overall >= tierRequirement - 3;
-    const called = Boolean(effect.nationalCall || effect.nationalCaptain) || automaticSeniorCall || seeded(state.seed, state.season * 131 + 7) * 100 < callChance;
+    const wouldBeCalled = Boolean(effect.nationalCall || effect.nationalCaptain) || automaticSeniorCall || seeded(state.seed, state.season * 131 + 7) * 100 < callChance;
+    const called = (nationalTier !== "main" || seniorDivisionEligible) && wouldBeCalled;
     nationalCalled = called;
     if (called) {
+      if (nationalTier === "main" && effect.nationalCaptain) nationalCaptain = true;
       const baseCaps = nationalTier === "main" ? 8 : nationalTier === "olympic" ? 5 : 4;
       const capRange = nationalTier === "main" ? 6 : 4;
       const capsGain = Math.round(baseCaps + seeded(state.seed, state.season * 137) * capRange);
@@ -509,6 +513,9 @@ export function simulateSeason(
       nationalNote = `Fora da lista, você viu ${nation.name} ${qualifiedNextMajor ? "garantir vaga no Mundial" : "cair nas Eliminatórias"}.`;
     } else if (affected.nationalCaps > 0 && nationalTier === "main" && seeded(state.seed, state.season * 163) > 0.7) {
       nationalNote = "Corte doloroso: seu nome ficou de fora da lista da Seleção pela primeira vez em um bom tempo.";
+    }
+    if (nationalTier === "main" && !seniorDivisionEligible && wouldBeCalled) {
+      nationalNote = "A primeira convocação para a Seleção principal exige atuar na primeira divisão.";
     }
   }
   if (nationalitySwitchRecord) nationalNote = `${nationalitySwitchRecord.stage}. Não há volta.`;
@@ -736,6 +743,7 @@ export function simulateSeason(
     adaptation: awayFromAcademyHome ? clamp(affected.adaptation + 10, 0, 100) : 100,
     abroadSeasons: awayFromAcademyHome ? affected.abroadSeasons + 1 : 0,
     nationalCategory: nextNationalCategory,
+    seniorNationalCallUp: affected.seniorNationalCallUp || (nationalCalled && nationalTier === "main"),
     nationalCaps,
     nationalGoals,
     nationalAssists,
@@ -807,6 +815,9 @@ export function simulateSeason(
 }
 
 export function eventForState(state: GameState) {
+  if (!canOfferNationalEvent(state, state.currentEventId)) {
+    return ALL_PRO_EVENTS.find((event) => event.id === "extra-training") ?? ALL_PRO_EVENTS[0];
+  }
   if (state.currentEventId === FIRST_MATCH_EVENT.id) return FIRST_MATCH_EVENT;
   if (state.currentEventId === DYNAMIC_SPONSOR_EVENT_ID) return buildSponsorEvent(state);
   if (state.currentEventId === DYNAMIC_SPONSOR_DUTY_EVENT_ID) return buildSponsorDutyEvent(state);
