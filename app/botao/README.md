@@ -314,6 +314,27 @@ sintetizado:
 Na carreira, as duas abrem por um cartão no resultado da temporada: 3D com o
 Modo 3D ligado (leve com o modo desempenho), 2D sem ele.
 
+## Scorebobo (demo em `/scorebobo`)
+
+Modo de treino só 3D, no espírito de Score! Hero: o tempo congela, o jogador
+desenha a jogada a partir da bola (até um companheiro, no espaço ou no gol) e
+solta; a bola sai perto do traço, não igual. Vai virar o "Treino especial" da
+loja QUADRA (`special-training` em `app/career/cycle-shop.ts`, ainda
+`available: false`). Tudo fica em `app/scorebobo/`, em três camadas:
+
+- `types.ts`: o contrato entre as camadas (metros, ataque rumo a +z, linha do
+  gol em z = 52,5).
+- `sim/`: TypeScript puro e determinístico por semente. Lê o traço e monta o
+  `KickPlan` (passe, lançamento, cruzamento, chute, cabeceio, voleio, com a
+  imprecisão aplicada no toque), voa a bola desenhada e entrega à física (trave,
+  rede, quique), e roda goleiro, zagueiros, barreira, replay e estrelas. As 6
+  fases ficam em `sim/levels.ts`.
+- `three/`: só lê o estado. Estádio, torcida instanciada, rede que estufa, traço
+  neon, câmeras de lance e replay.
+- `LevelPlayer.tsx` e o resto da UI: dono do relógio, da entrada (dedo ou mouse),
+  do HUD, dos resultados e do som sintetizado. O visual do herói vem do save da
+  carreira (só leitura); o progresso fica em `futbobo:scorebobo:v1`.
+
 ## Acessibilidade e celular
 
 - `touch-action: none` no canvas: arrastar não rola a página.
