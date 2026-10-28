@@ -1,11 +1,29 @@
 // Gramado: um plano só, com listras de corte, ruído de grama, desgaste na
 // pequena área e TODAS as marcações pintadas no fragment shader por distância
 // (linhas de 12 cm nítidas em qualquer zoom, sem textura). Recebe a sombra da
-// luz principal como qualquer MeshStandardMaterial.
+// luz principal como qualquer MeshStandardMaterial (Lambert no modo desempenho).
 
 import * as THREE from "three";
 import { PITCH } from "../types";
-import type { SkyLook } from "./util";
+import { seeded, type SkyLook } from "./util";
+
+const NOISE_SIZE = 256;
+let noiseData: Uint8Array | null = null;
+
+/** Nós do ruído de valor do gramado (um canal por escala), sorteados uma vez por sessão. */
+function grassNoiseData() {
+  if (noiseData) return noiseData;
+  const random = seeded(20261028);
+  const data = new Uint8Array(NOISE_SIZE * NOISE_SIZE * 4);
+  for (let index = 0; index < data.length; index += 4) {
+    data[index] = Math.floor(random() * 256);
+    data[index + 1] = Math.floor(random() * 256);
+    data[index + 2] = Math.floor(random() * 256);
+    data[index + 3] = 255;
+  }
+  noiseData = data;
+  return data;
+}
 
 const GRASS_PARS_VERTEX = /* glsl */ `
 varying vec3 vGround;
@@ -24,6 +42,20 @@ uniform vec3 uApron;
 uniform vec3 uLineColor;
 uniform vec4 uStandShadow;
 
+#ifdef GRASS_NOISE_TEX
+uniform sampler2D uNoise;
+// Modo desempenho: ruído de valor com os nós numa textura (um canal por
+// escala): o filtro bilinear faz a mistura e o smoothstep vai na coordenada.
+// Uma leitura no lugar de quatro hashes com sin().
+vec4 gNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return texture2D(uNoise, (i + f + 0.5) / ${NOISE_SIZE.toFixed(1)});
+}
+#else
+// Modo normal: o ruído calculado de sempre (o desgaste da boca do gol e o tom
+// do gramado dependem do padrão exato dele).
 float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float gNoise(vec2 p) {
   vec2 i = floor(p);
@@ -31,6 +63,7 @@ float gNoise(vec2 p) {
   f = f * f * (3.0 - 2.0 * f);
   return mix(mix(gHash(i), gHash(i + vec2(1.0, 0.0)), f.x), mix(gHash(i + vec2(0.0, 1.0)), gHash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
+#endif
 float gSeg(vec2 p, vec2 a, vec2 b) {
   vec2 pa = p - a;
   vec2 ba = b - a;
@@ -73,9 +106,15 @@ float sheen = gView.z * (stripe * 2.0 - 1.0);
 vec3 grass = mix(uGrassDark, uGrassLight, clamp(stripe * 0.7 + 0.15 + sheen * 0.2, 0.0, 1.0));
 // Ruído em três escalas; o fino some quando o pixel cobre mais que alguns centímetros.
 float footprint = length(fwidth(gp));
+#ifdef GRASS_NOISE_TEX
+float n1 = gNoise(gp * 0.07).r;
+float n2 = gNoise(gp * 0.55 + 7.0).g;
+float n3 = gNoise(gp * 7.0 + 3.0).b;
+#else
 float n1 = gNoise(gp * 0.07);
 float n2 = gNoise(gp * 0.55 + 7.0);
 float n3 = gNoise(gp * 7.0 + 3.0);
+#endif
 float fine = 1.0 - smoothstep(0.03, 0.12, footprint);
 grass *= 0.88 + 0.2 * n1 + 0.09 * (n2 - 0.5) + 0.16 * (n3 - 0.5) * fine;
 // Desgaste: boca do gol, pequena área e marca do pênalti (onde o goleiro pisa).
@@ -101,7 +140,9 @@ diffuseColor.rgb = grass;
 
 export class Pitch {
   readonly mesh: THREE.Mesh;
-  private readonly material: THREE.MeshStandardMaterial;
+  private readonly material: THREE.MeshStandardMaterial | THREE.MeshLambertMaterial;
+  /** Só no modo desempenho (o normal calcula o ruído no pixel). */
+  private readonly noise: THREE.DataTexture | null = null;
   private readonly uniforms = {
     uGrassLight: { value: new THREE.Color("#4f9a3d") },
     uGrassDark: { value: new THREE.Color("#3a7d2f") },
@@ -109,10 +150,29 @@ export class Pitch {
     uApron: { value: new THREE.Color("#2c4a2c") },
     uLineColor: { value: new THREE.Color("#f2f4ec") },
     uStandShadow: { value: new THREE.Vector4(0, 0, 1, 0) },
+    uNoise: { value: null as THREE.DataTexture | null },
   };
 
-  constructor(look: SkyLook) {
-    this.material = new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.92, metalness: 0 });
+  constructor(look: SkyLook, performance = false) {
+    // Modo desempenho: Lambert (sem o brilho GGX, um tom mais escuro, bem mais barato).
+    this.material = performance
+      ? new THREE.MeshLambertMaterial({ color: "#ffffff" })
+      : new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.92, metalness: 0 });
+    if (performance) {
+      // Ruído da textura só aqui (o modo desempenho já troca o gramado); cada
+      // modo compila um programa só. Sem mipmap: de longe a leitura pontual se
+      // comporta como o ruído calculado no pixel.
+      const noise = new THREE.DataTexture(grassNoiseData(), NOISE_SIZE, NOISE_SIZE, THREE.RGBAFormat, THREE.UnsignedByteType);
+      noise.wrapS = THREE.RepeatWrapping;
+      noise.wrapT = THREE.RepeatWrapping;
+      noise.magFilter = THREE.LinearFilter;
+      noise.minFilter = THREE.LinearFilter;
+      noise.generateMipmaps = false;
+      noise.needsUpdate = true;
+      this.noise = noise;
+      this.uniforms.uNoise.value = noise;
+      this.material.defines = { GRASS_NOISE_TEX: "" };
+    }
     this.setLook(look);
     this.material.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, this.uniforms);
@@ -123,11 +183,15 @@ export class Pitch {
         .replace("#include <common>", `#include <common>\n${GRASS_PARS_FRAGMENT}`)
         .replace("#include <map_fragment>", GRASS_COLOR_FRAGMENT);
     };
+    // O plano passa por baixo da arquibancada, mas desenhado depois dela o teste
+    // de profundidade já descarta essa parte (encolher o plano não ganhava nada).
     const geometry = new THREE.PlaneGeometry(140, 180);
     geometry.rotateX(-Math.PI / 2);
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.receiveShadow = true;
-    this.mesh.renderOrder = -5;
+    // Depois dos outros opacos (bonecos, gol, tigela e torcida já ocupam a
+    // profundidade) e antes do céu: o shader caro só roda onde o gramado aparece.
+    this.mesh.renderOrder = 10;
   }
 
   setLook(look: SkyLook) {
@@ -141,5 +205,6 @@ export class Pitch {
   dispose() {
     this.mesh.geometry.dispose();
     this.material.dispose();
+    this.noise?.dispose();
   }
 }

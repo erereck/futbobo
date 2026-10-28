@@ -22,6 +22,11 @@
   font-family: var(--body-font);
 }
 .pageCovered { visibility: hidden; }
+/* Escondida, a abertura ainda animava (holofotes, brilhos, pulsos): param onde estão e voltam do mesmo ponto. */
+.pageCovered,
+.pageCovered *,
+.pageCovered *::before,
+.pageCovered *::after { animation-play-state: paused !important; }
 
 /* ------------------------------------------------------------ fundo */
 

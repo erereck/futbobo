@@ -105,7 +105,9 @@ export class SkyDome {
     });
     this.mesh = new THREE.Mesh(new THREE.SphereGeometry(500, 32, 16), this.material);
     this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = -10;
+    // Último dos opacos (antes de todo transparente): o teste de profundidade
+    // descarta o céu atrás do estádio e só sobra o pedaço que aparece.
+    this.mesh.renderOrder = 50;
   }
 
   follow(camera: THREE.Camera) {

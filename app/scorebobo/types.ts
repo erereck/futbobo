@@ -280,4 +280,12 @@ export interface ScoreboboViewApi {
   /** Desenha um quadro. `events` = eventos novos desde o último quadro. */
   render(state: GameState, dt: number, events: SimEvent[]): void;
   dispose(): void;
+  /** Mira parada: câmera assentada e nenhum fade em andamento (o laço pode desenhar menos quadros). Opcional. */
+  readonly calm?: boolean;
+  /** Números do último quadro (draw calls, triângulos, ms de CPU, resolução). Opcional. */
+  stats?(): { calls: number; triangles: number; points: number; cpuMs: number; pixelRatio: number; width: number; height: number };
+  /** Resolução adaptável: recebe o tempo real entre quadros desenhados (s). Opcional. */
+  adaptResolution?(frameDt: number): void;
+  /** A resolução adaptável já está no piso (não há mais o que baixar). Opcional. */
+  readonly atResolutionFloor?: boolean;
 }

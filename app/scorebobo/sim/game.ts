@@ -19,14 +19,14 @@ import {
   type Vec2,
   type Vec3,
 } from "../types";
-import { HEAD_Y, SPRINT_SPEED, moveToward, settlePose, updateDefender, updateMate, type DefenderBrain, type MateBrain } from "./ai";
-import { designFlight, flightAt, type Flight, type FlightSpec } from "./flight";
+import { HEAD_Y, SPRINT_SPEED, lookAt, moveToward, settlePose, updateDefender, updateMate, type DefenderBrain, type MateBrain } from "./ai";
+import { designFlight, flightAt, flightPos, type Flight, type FlightSpec } from "./flight";
 import { KeeperBrain } from "./keeper";
-import { clamp, closestOnSegment3, dist2, easeOut, gaussian, hashParts, lerp, norm2, right2, rngFrom, yawOf } from "./math";
+import { clamp, closestOnSegment3, dist2, easeOut, gaussian, hashParts, lerp, norm2, right2, rngFrom, yawOf, hypot } from "./math";
 import { R, collideFrame, collideNet, freeStep, isRolling } from "./physics";
 import { Recorder, ReplayPlayer, type ReplaySegment } from "./replay";
 import { goalOutcome, type GoalFacts } from "./stars";
-import { interpretStroke, specFromPlan } from "./stroke";
+import { interpretStroke, specFromPlan, type DefenderSight } from "./stroke";
 
 export type ScoreboboGameOptions = {
   /** Semente das imprecisões e do goleiro (mesma semente + mesmos traços = mesma jogada). */
@@ -157,6 +157,8 @@ export class ScoreboboGame implements ScoreboboGameApi {
   private liveSnapshot: { actors: Actor[]; ball: GameState["ball"] } | null = null;
   private goalTime = 0;
   private crossPoint: Vec3 | null = null;
+  /** Adversários como o plano do traço os vê (montado ao entrar na mira). */
+  private sights: DefenderSight[] = [];
   private out: SimEvent[] = [];
 
   constructor(level: ScoreLevel, teams: ScoreTeams, options: ScoreboboGameOptions) {
@@ -306,7 +308,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
     const ball = this.state.ball.pos;
     let dir = norm2({ x: -ball.x, z: GOAL_Z - ball.z });
     if (plan) {
-      const first = plan.preview.find((p) => Math.hypot(p.x - ball.x, p.z - ball.z) > 0.6) ?? plan.target;
+      const first = plan.preview.find((p) => hypot(p.x - ball.x, p.z - ball.z) > 0.6) ?? plan.target;
       dir = norm2({ x: first.x - ball.x, z: first.z - ball.z });
     }
     // A câmera da mira fica atrás da BOLA, na linha bola→gol. O herói fica de
@@ -334,7 +336,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
       hero.facing = yawOf({ x: ball.x + dir.x * 3 - hero.pos.x, z: ball.z + dir.z * 3 - hero.pos.z });
     }
     hero.vel = { x: 0, z: 0 };
-    hero.look = { ...ball };
+    lookAt(hero, ball.x, ball.y, ball.z);
     if (!this.aerial) {
       hero.pose = "aim";
       hero.poseT = 0;
@@ -350,10 +352,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
       heroId: this.state.heroId,
       aerial: this.aerial,
       mates: this.home,
-      defenders: [
-        ...this.defenders.map((d) => ({ id: d.actor.id, pos: d.actor.pos, vel: d.actor.vel, behavior: d.behavior, mark: d.mark, home: d.home })),
-        { id: KEEPER_ID, pos: this.keeper.actor.pos, vel: { x: 0, z: 0 }, behavior: "keeper" as const },
-      ],
+      defenders: this.sights,
       keeper: { pos: this.keeper.actor.pos },
       windup: this.windup().contact,
     });
@@ -372,7 +371,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
     this.poseHeroForAim(plan);
     const w = this.windup();
     const ball = s.ball.pos;
-    const first = plan.preview.find((p) => Math.hypot(p.x - ball.x, p.z - ball.z) > 0.6) ?? plan.target;
+    const first = plan.preview.find((p) => hypot(p.x - ball.x, p.z - ball.z) > 0.6) ?? plan.target;
     const launchDir = norm2({ x: first.x - ball.x, z: first.z - ball.z });
     const right = right2(launchDir);
     const stand = this.aerial ? { ...hero.pos } : { x: ball.x - launchDir.x * 0.5 - right.x * 0.14 * this.aimSide, z: ball.z - launchDir.z * 0.5 - right.z * 0.14 * this.aimSide };
@@ -473,6 +472,11 @@ export class ScoreboboGame implements ScoreboboGameApi {
       if (m.runIdx === m.run.length - 1 && m.run.length > 1 && dist2(m.actor.pos, m.run[m.runIdx]) < 1.5) m.runIdx += 1;
       m.actor.run = m.actor.id === s.heroId || m.runIdx >= m.run.length ? null : m.run.slice(m.runIdx).map((p) => ({ ...p }));
     }
+    // Na mira o tempo para: o que o plano sabe dos adversários vale para todos os traços até o toque.
+    this.sights = [
+      ...this.defenders.map((d) => ({ id: d.actor.id, pos: d.actor.pos, vel: d.actor.vel, behavior: d.behavior, mark: d.mark, home: d.home })),
+      { id: KEEPER_ID, pos: this.keeper.actor.pos, vel: { x: 0, z: 0 }, behavior: "keeper" as const },
+    ];
     if (fromIntro) this.emit({ t: this.simTime, type: "whistle" });
   }
 
@@ -493,7 +497,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
     const e4 = gaussian(rand);
     const sigma = 1 - clamp(plan.accuracy, 0, 1);
     const from = plan.from;
-    const D = Math.max(1, Math.hypot(plan.target.x - from.x, plan.target.z - from.z));
+    const D = Math.max(1, hypot(plan.target.x - from.x, plan.target.z - from.z));
     const dir = norm2({ x: plan.target.x - from.x, z: plan.target.z - from.z });
     const side = right2(dir);
     const curve = plan.curve + e3 * sigma * (0.2 + 0.3 * Math.abs(plan.curve));
@@ -560,8 +564,10 @@ export class ScoreboboGame implements ScoreboboGameApi {
     if (this.pending) this.updatePending(h);
     this.updateActors(h);
     if (!this.pending) this.advanceBall(h);
+    // Gol valendo: o replay só usa até ~1,15 s depois dele (replaySegments); a festa não precisa ser gravada.
+    if (this.recording && this.decided?.won && this.simTime > this.goalTime + 1.25) this.recording = false;
     // Teto de ~45 s de gravação: um lance nunca chega perto disso.
-    if (this.recording && this.recorder.snaps.length < 5400 && (s.phase === "flight" || s.phase === "outcome")) this.recorder.record(this.simTime, s.ball, s.actors);
+    if (this.recording && this.recorder.length < 5400 && (s.phase === "flight" || s.phase === "outcome")) this.recorder.record(this.simTime, s.ball, s.actors);
   }
 
   private updatePending(h: number) {
@@ -571,7 +577,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
     const a = this.actorById(p.kicker);
     if (!a) return;
     const ball = this.state.ball.pos;
-    a.look = { ...ball };
+    lookAt(a, ball.x, ball.y, ball.z);
     if (p.runFrom && p.elapsed < p.runup) {
       const k = easeOut(p.elapsed / p.runup);
       const prev = { ...a.pos };
@@ -579,7 +585,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
       a.vel = { x: (a.pos.x - prev.x) / h, z: (a.pos.z - prev.z) / h };
       a.facing = yawOf({ x: ball.x - a.pos.x, z: ball.z - a.pos.z });
       a.pose = "run";
-      a.poseT = clamp(Math.hypot(a.vel.x, a.vel.z) / SPRINT_SPEED, 0, 1);
+      a.poseT = clamp(hypot(a.vel.x, a.vel.z) / SPRINT_SPEED, 0, 1);
     } else {
       const span = Math.max(0.01, p.contactAt - p.runup);
       const k = clamp((p.elapsed - p.runup) / span, 0, 1);
@@ -615,7 +621,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
       from: { ...s.ball.pos },
       time,
       firstTime: this.receivedPass.has(p.kicker),
-      dir: Math.hypot(st.vel.x, st.vel.z) > 0.5 ? norm2({ x: st.vel.x, z: st.vel.z }) : null,
+      dir: hypot(st.vel.x, st.vel.z) > 0.5 ? norm2({ x: st.vel.x, z: st.vel.z }) : null,
     };
     const pose = this.aerial ?? "kick";
     this.follow = { id: p.kicker, pose, start: time, from: 0.5, jump: kicker?.jump ?? 0 };
@@ -704,16 +710,29 @@ export class ScoreboboGame implements ScoreboboGameApi {
       // Cruzamento vindo na cabeça: salta na hora certa.
       if (m.receive && this.live && this.live.receiver === a.id && m.jumpStart === null) {
         const arrive = m.receive.at - time;
-        const endY = flightAt(this.live.flight, this.live.flight.T).pos.y;
+        const endY = this.live.endY;
         if (endY > 1.5 && arrive < 0.32 && arrive > 0) m.jumpStart = time;
       }
       updateMate(m, h, time, ball, true);
     }
-    const forecast = !ball.owner && !this.decided ? (ahead: number) => this.forecast(ahead) : null;
+    // A previsão é a mesma para todos os zagueiros neste passo: calcula cada instante uma vez.
+    let forecast: ((ahead: number) => Vec3) | null = null;
+    if (!ball.owner && !this.decided) {
+      const seen: number[] = [];
+      const at: Vec3[] = [];
+      forecast = (ahead: number) => {
+        const i = seen.indexOf(ahead);
+        if (i >= 0) return at[i];
+        const p = this.forecast(ahead);
+        seen.push(ahead);
+        at.push(p);
+        return p;
+      };
+    }
     for (const d of this.defenders) {
       // Bola alta chegando: sobe para cabecear.
       if (d.jumpStart === null && d.behavior !== "wall" && !ball.owner) {
-        const near = Math.hypot(ball.pos.x - d.actor.pos.x, ball.pos.z - d.actor.pos.z);
+        const near = hypot(ball.pos.x - d.actor.pos.x, ball.pos.z - d.actor.pos.z);
         if (near < 2.2 && ball.pos.y > 1.7 && ball.pos.y < 3.1 && time >= d.reactAt) d.jumpStart = time;
       }
       updateDefender(d, h, time, ball, this.home, forecast, true);
@@ -739,14 +758,14 @@ export class ScoreboboGame implements ScoreboboGameApi {
     a.pos = { x: a.pos.x + a.vel.x * h, z: a.pos.z + a.vel.z * h };
     // Cabeceio: desce do salto.
     a.jump = f.jump > 0 ? Math.max(0, f.jump * (1 - u * u * 1.4)) : 0;
-    a.look = { ...this.state.ball.pos };
+    lookAt(a, this.state.ball.pos.x, this.state.ball.pos.y, this.state.ball.pos.z);
     return true;
   }
 
   /** Onde a bola estará daqui a `ahead` s (voo desenhado ou balística simples). */
   private forecast(ahead: number): Vec3 {
     const live = this.live;
-    if (live) return flightAt(live.flight, Math.min(live.flight.T, live.t + ahead)).pos;
+    if (live) return flightPos(live.flight, Math.min(live.flight.T, live.t + ahead));
     const b = this.state.ball;
     return { x: b.pos.x + b.vel.x * ahead, y: Math.max(R, b.pos.y + b.vel.y * ahead - 4.9 * ahead * ahead), z: b.pos.z + b.vel.z * ahead };
   }
@@ -764,7 +783,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
       }
       return;
     }
-    const speed = Math.hypot(ball.vel.x, ball.vel.y, ball.vel.z);
+    const speed = hypot(ball.vel.x, ball.vel.y, ball.vel.z);
     const n = clamp(Math.ceil((speed * h) / 0.06), 1, 10);
     const sub = h / n;
     for (let i = 0; i < n; i += 1) {
@@ -775,7 +794,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
         const st = flightAt(live.flight, live.t);
         ball.pos = st.pos;
         ball.vel = st.vel;
-        if (live.flight.spec.grounded) ball.spin.x = Math.hypot(st.vel.x, st.vel.z) / R;
+        if (live.flight.spec.grounded) ball.spin.x = hypot(st.vel.x, st.vel.z) / R;
         if (live.t >= live.flight.T) this.endFlight();
       } else {
         freeStep(ball, sub);
@@ -841,18 +860,18 @@ export class ScoreboboGame implements ScoreboboGameApi {
       const y = ball.pos.y;
       const top = HEAD_Y + jump + 0.14;
       if (y - R > top || y + R < jump) continue;
-      const hd = Math.hypot(ball.pos.x - a.pos.x, ball.pos.z - a.pos.z);
+      const hd = hypot(ball.pos.x - a.pos.x, ball.pos.z - a.pos.z);
       // Colado em quem chutou, mas do lado ou atrás: a bola já saiu dele.
       const lk = this.lastKick;
       if (lk && lk.dir) {
-        const fromKick = Math.hypot(ball.pos.x - lk.from.x, ball.pos.z - lk.from.z);
+        const fromKick = hypot(ball.pos.x - lk.from.x, ball.pos.z - lk.from.z);
         const ahead = (a.pos.x - lk.from.x) * lk.dir.x + (a.pos.z - lk.from.z) * lk.dir.z;
         if (fromKick < 1.2 && ahead < 0.35) continue;
       }
       let reach = 0.3;
       const aware = time >= d.reactAt;
       if (d.behavior !== "wall" && aware) {
-        const sp = Math.hypot(ball.vel.x, ball.vel.z);
+        const sp = hypot(ball.vel.x, ball.vel.z);
         if (y < 0.6) reach = sp > 20 ? 0.5 : 0.78;
         else if (y > HEAD_Y - 0.35) reach = 0.42;
       }
@@ -876,7 +895,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
     for (const m of this.home) {
       const a = m.actor;
       if (a.id === lk.actor && time - lk.time < 0.45) continue;
-      const hd = Math.hypot(ball.pos.x - a.pos.x, ball.pos.z - a.pos.z);
+      const hd = hypot(ball.pos.x - a.pos.x, ball.pos.z - a.pos.z);
       const y = ball.pos.y;
       const isReceiver = live?.receiver === a.id || m.receive !== null;
       if (y <= 0.62) {
@@ -904,10 +923,10 @@ export class ScoreboboGame implements ScoreboboGameApi {
     const a = m.actor;
     const time = this.simTime;
     // Dividida: zagueiro mais perto da bola (e alcançando) ganha antes do domínio.
-    const mine = Math.hypot(ball.pos.x - a.pos.x, ball.pos.z - a.pos.z);
+    const mine = hypot(ball.pos.x - a.pos.x, ball.pos.z - a.pos.z);
     for (const d of this.defenders) {
       if (d.behavior === "wall" || time < d.reactAt) continue;
-      const dd = Math.hypot(ball.pos.x - d.actor.pos.x, ball.pos.z - d.actor.pos.z);
+      const dd = hypot(ball.pos.x - d.actor.pos.x, ball.pos.z - d.actor.pos.z);
       const canHead = ball.pos.y <= HEAD_Y + 0.55 + R;
       if (dd < 0.6 && dd < mine && canHead) {
         this.intercept(d, dd);
@@ -961,7 +980,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
     const time = this.simTime;
     const k = this.keeper;
     this.keeperTouched = true;
-    const speed = Math.hypot(ball.vel.x, ball.vel.y, ball.vel.z);
+    const speed = hypot(ball.vel.x, ball.vel.y, ball.vel.z);
     const shot = !!this.lastKick?.shot;
     // Bola no corpo dele segura até forte; esticado, só as fracas.
     const central = Math.abs(point.x - k.actor.pos.x) < 0.6 && ball.pos.y < 2.0 && k.stretch() < 0.35;
@@ -1006,7 +1025,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
     this.live = null;
     this.emit({ t: time, type: "intercept", actor: a.id });
     const rand = rngFrom(hashParts(this.options.seed, s.attempt, this.kickIndex, "block", a.id));
-    const speed = Math.hypot(ball.vel.x, ball.vel.y, ball.vel.z);
+    const speed = hypot(ball.vel.x, ball.vel.y, ball.vel.z);
     if (d.behavior === "wall" || (shot && hd < 0.45)) {
       // Bate no corpo e espirra.
       ball.vel = { x: -ball.vel.x * 0.25 + (rand() - 0.5) * 5, y: 2 + rand() * 3, z: -Math.abs(ball.vel.z) * 0.3 - 1 };
@@ -1057,7 +1076,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
       return;
     }
     // Parou?
-    const sp = Math.hypot(ball.vel.x, ball.vel.z);
+    const sp = hypot(ball.vel.x, ball.vel.z);
     if (!this.live && isRolling(ball) && sp < 0.35) this.stopT += sub;
     else this.stopT = 0;
     const lk = this.lastKick;
@@ -1097,7 +1116,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
       header: lk.kind === "header",
       volley: lk.kind === "volley",
       curve: Math.round(lk.curve * 10) / 10,
-      distance: Math.round(Math.hypot(cross.x - lk.from.x, cross.z - lk.from.z) * 10) / 10,
+      distance: Math.round(hypot(cross.x - lk.from.x, cross.z - lk.from.z) * 10) / 10,
       topCorner: Math.abs(cross.x) >= HW - 1.25 && cross.y >= GH - 0.85,
       firstTime: lk.firstTime,
       passes: s.passes,
@@ -1210,7 +1229,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
           a.poseT = clamp(t / 3, 0, 1);
           a.facing = yawOf({ x: scorer.pos.x - a.pos.x, z: scorer.pos.z - a.pos.z });
         }
-        a.look = { x: scorer.pos.x, y: 1.6, z: scorer.pos.z };
+        lookAt(a, scorer.pos.x, 1.6, scorer.pos.z);
         return;
       }
       // Não deu: freia e lamenta (quem chutou primeiro, os outros depois).
@@ -1221,7 +1240,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
         a.celebration = this.celebrations.get(a.id);
         a.poseT = clamp((t - delay) / 1.2, 0, 1);
       } else settlePose(a, speed);
-      a.look = { ...ball.pos };
+      lookAt(a, ball.pos.x, ball.pos.y, ball.pos.z);
     });
     // O abraço não atravessa ninguém: quem chega colado é empurrado para fora (cabeças não se fundem no close).
     if (d.won) this.separate(this.home.map((m) => m.actor), 0.78);
@@ -1236,7 +1255,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
         a.poseT = clamp((t - delay) / 1.2, 0, 1);
       } else if (a.pose !== "kick" && a.pose !== "header") settlePose(a, speed);
       else a.poseT = Math.min(1, a.poseT + h * 2.5);
-      a.look = { ...ball.pos };
+      lookAt(a, ball.pos.x, ball.pos.y, ball.pos.z);
     });
     // Goleiro: termina o mergulho; depois comemora a defesa ou lamenta o gol.
     const k = this.keeper;
@@ -1268,7 +1287,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
         const b = actors[j].pos;
         const dx = b.x - a.x;
         const dz = b.z - a.z;
-        const d = Math.hypot(dx, dz);
+        const d = hypot(dx, dz);
         if (d >= gap) continue;
         const nx = d > 1e-4 ? dx / d : 1;
         const nz = d > 1e-4 ? dz / d : 0;
@@ -1330,7 +1349,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
       ball: { ...s.ball, pos: { ...s.ball.pos }, vel: { ...s.ball.vel }, spin: { ...s.ball.spin } },
     };
     const segments = this.replaySegments();
-    if (!segments.length || this.recorder.snaps.length < 4) {
+    if (!segments.length || this.recorder.length < 4) {
       this.finish();
       return;
     }

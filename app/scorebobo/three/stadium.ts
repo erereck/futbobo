@@ -395,16 +395,72 @@ function buildBowl(performance: boolean) {
   return { geometry: builder.build(), towers, strip };
 }
 
+/**
+ * A tigela não muda de uma fase para outra: montada uma vez por modo. O
+ * dispose do estádio só solta os buffers da GPU; o próximo renderer reenvia.
+ */
+const bowls = new Map<boolean, ReturnType<typeof buildBowl>>();
+
+function cachedBowl(performance: boolean) {
+  let bowl = bowls.get(performance);
+  if (!bowl) {
+    bowl = buildBowl(performance);
+    bowls.set(performance, bowl);
+  }
+  // Cópias dos pontos: quem recebe pode mexer sem estragar o guardado.
+  return { geometry: bowl.geometry, towers: bowl.towers.map((point) => point.clone()), strip: bowl.strip.map((point) => point.clone()) };
+}
+
 // ------------------------------------------------------------ shader da tigela
 
 const BOWL_PARS_VERTEX = /* glsl */ `
 attribute vec3 aSeat;
 varying vec3 vSeat;
 varying float vDepth;
+varying vec3 vBowlDirect;
+varying vec3 vBowlIndirect;
+#include <lights_pars_begin>
 `;
 
 const BOWL_VERTEX = /* glsl */ `
 vSeat = aSeat;
+`;
+
+/**
+ * Luz por vértice: cada quadrilátero tem uma normal só e a tigela não recebe
+ * sombra, então a irradiância é a mesma na face inteira — as mesmas contas do
+ * Lambert do three (direcionais em direct, ambiente e hemisfério em indirect).
+ */
+const BOWL_LIGHT_VERTEX = /* glsl */ `
+vec3 bowlNormal = normalize( transformedNormal );
+vBowlDirect = vec3( 0.0 );
+#if ( NUM_DIR_LIGHTS > 0 )
+	#pragma unroll_loop_start
+	for ( int i = 0; i < NUM_DIR_LIGHTS; i ++ ) {
+		vBowlDirect += saturate( dot( bowlNormal, directionalLights[ i ].direction ) ) * directionalLights[ i ].color;
+	}
+	#pragma unroll_loop_end
+#endif
+vBowlIndirect = getAmbientLightIrradiance( ambientLightColor );
+#if ( NUM_HEMI_LIGHTS > 0 )
+	#pragma unroll_loop_start
+	for ( int i = 0; i < NUM_HEMI_LIGHTS; i ++ ) {
+		vBowlIndirect += getHemisphereLightIrradiance( hemisphereLights[ i ], bowlNormal );
+	}
+	#pragma unroll_loop_end
+#endif
+`;
+
+/** Sem outro tipo de luz na cena, troca o laço de luzes por pixel pela irradiância do vértice. */
+const BOWL_LIGHT_FRAGMENT = /* glsl */ `
+#if NUM_POINT_LIGHTS > 0 || NUM_SPOT_LIGHTS > 0 || NUM_SUN_LIGHTS > 0 || NUM_RECT_AREA_LIGHTS > 0 || defined( USE_LIGHT_PROBES ) || defined( USE_LIGHT_PROBES_GRID ) || defined( USE_ENVMAP ) || defined( USE_LIGHTMAP )
+#include <lights_fragment_begin>
+#include <lights_fragment_maps>
+#include <lights_fragment_end>
+#else
+reflectedLight.directDiffuse += vBowlDirect * BRDF_Lambert( material.diffuseColor );
+reflectedLight.indirectDiffuse += vBowlIndirect * BRDF_Lambert( material.diffuseColor );
+#endif
 `;
 
 const BOWL_DEPTH_VERTEX = /* glsl */ `
@@ -425,6 +481,8 @@ uniform vec3 uHomeA;
 uniform vec3 uHomeB;
 uniform vec3 uAwayA;
 uniform vec3 uAwayB;
+varying vec3 vBowlDirect;
+varying vec3 vBowlIndirect;
 float bHash(vec2 p) { return fract(sin(dot(p, vec2(41.37, 289.13))) * 23421.631); }
 `;
 
@@ -821,7 +879,7 @@ export class Stadium {
     colors: StadiumColors,
     private readonly performance: boolean,
   ) {
-    const { geometry, towers, strip } = buildBowl(performance);
+    const { geometry, towers, strip } = cachedBowl(performance);
     this.towerHeads = towers;
     this.bowlUniforms = {
       uTime: env.uTime,
@@ -842,12 +900,16 @@ export class Stadium {
       // A tigela não recebe a sombra projetada (o mapa cobre só o campo).
       shader.vertexShader = `#undef USE_SHADOWMAP\n${shader.vertexShader}`
         .replace("#include <common>", `#include <common>\n${BOWL_PARS_VERTEX}`)
+        .replace("#include <normal_vertex>", `#include <normal_vertex>\n${BOWL_LIGHT_VERTEX}`)
         .replace("#include <begin_vertex>", `#include <begin_vertex>\n${BOWL_VERTEX}`)
         .replace("#include <project_vertex>", `#include <project_vertex>\n${BOWL_DEPTH_VERTEX}`);
       shader.fragmentShader = `#undef USE_SHADOWMAP\n${shader.fragmentShader}`
         .replace("#include <common>", `#include <common>\n${BOWL_PARS_FRAGMENT}`)
         .replace("#include <color_fragment>", `#include <color_fragment>\n${BOWL_COLOR_FRAGMENT}`)
-        .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>\n${BOWL_EMISSIVE_FRAGMENT}`);
+        .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>\n${BOWL_EMISSIVE_FRAGMENT}`)
+        .replace("#include <lights_fragment_maps>", "")
+        .replace("#include <lights_fragment_end>", "")
+        .replace("#include <lights_fragment_begin>", BOWL_LIGHT_FRAGMENT);
     };
     this.bowl = new THREE.Mesh(geometry, material);
     this.group.add(this.bowl);
@@ -971,6 +1033,7 @@ export class Stadium {
   }
 
   dispose() {
+    // A tigela é guardada entre fases: o dispose só solta os buffers deste renderer.
     this.bowl.geometry.dispose();
     (this.bowl.material as THREE.Material).dispose();
     this.led.geometry.dispose();

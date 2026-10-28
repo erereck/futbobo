@@ -221,6 +221,8 @@ export class Goal {
   readonly group = new THREE.Group();
   private readonly frame: THREE.Mesh;
   private readonly net: THREE.Mesh;
+  /** Verso da rede (desenhado logo antes da frente). */
+  private readonly netBack: THREE.Mesh;
   private readonly flags: THREE.Mesh;
   private readonly poles: THREE.Mesh;
   private readonly netUniforms = {
@@ -243,8 +245,8 @@ export class Goal {
 
     const netGeo = mergeGeometries([buildNetGeometry(false), buildNetGeometry(true)], false)!;
     // Brilho próprio: o fio branco não fica preto na contraluz dos refletores.
-    const netMaterial = new THREE.MeshLambertMaterial({ color: "#f4f6f8", emissive: "#5d636b", transparent: true, side: THREE.DoubleSide, depthWrite: false });
-    netMaterial.onBeforeCompile = (shader) => {
+    const netMaterial = new THREE.MeshLambertMaterial({ color: "#f4f6f8", emissive: "#5d636b", transparent: true, side: THREE.FrontSide, depthWrite: false });
+    const netShader = (shader: THREE.WebGLProgramParametersWithUniforms) => {
       Object.assign(shader.uniforms, this.netUniforms);
       shader.vertexShader = shader.vertexShader
         .replace("#include <common>", `#include <common>\n${NET_PARS_VERTEX}`)
@@ -253,8 +255,19 @@ export class Goal {
         .replace("#include <common>", `#include <common>\n${NET_PARS_FRAGMENT}`)
         .replace("#include <color_fragment>", `#include <color_fragment>\n${NET_FRAGMENT}`);
     };
+    netMaterial.onBeforeCompile = netShader;
+    // Rede vista dos dois lados: verso e frente em duas malhas, nesta ordem, o
+    // mesmo que o DoubleSide transparente do three faz sozinho, mas sem trocar o
+    // lado do material (e refazer os parâmetros do programa) duas vezes por
+    // quadro. A mesma função de compilação nas duas dá os mesmos dois programas.
+    const netBackMaterial = netMaterial.clone();
+    netBackMaterial.side = THREE.BackSide;
+    netBackMaterial.onBeforeCompile = netShader;
+    this.netBack = new THREE.Mesh(netGeo, netBackMaterial);
+    this.netBack.renderOrder = 2;
+    this.group.add(this.netBack);
     this.net = new THREE.Mesh(netGeo, netMaterial);
-    this.net.renderOrder = 2;
+    this.net.renderOrder = 2.001;
     this.group.add(this.net);
 
     // Bandeirinhas: mastros listrados e panos que tremulam (um draw call cada).
@@ -325,5 +338,7 @@ export class Goal {
       mesh.geometry.dispose();
       (mesh.material as THREE.Material).dispose();
     }
+    // O verso divide a geometria com a frente (já liberada acima).
+    (this.netBack.material as THREE.Material).dispose();
   }
 }

@@ -2,7 +2,7 @@
 // e zagueiros (segurar a linha, pressionar, marcar, barreira, cortar o passe).
 
 import { PITCH, type Actor, type BallState, type Vec2, type Vec3 } from "../types";
-import { clamp, dist2, yawOf, turnToward } from "./math";
+import { clamp, dist2, yawOf, turnToward, hypot } from "./math";
 
 export const RUN_SPEED = 7.2;
 export const SPRINT_SPEED = 8.2;
@@ -39,7 +39,7 @@ export type DefenderBrain = {
 export function moveToward(a: Actor, target: Vec2, maxSpeed: number, dt: number, face: Vec2 | null, accel = 11) {
   const dx = target.x - a.pos.x;
   const dz = target.z - a.pos.z;
-  const d = Math.hypot(dx, dz);
+  const d = hypot(dx, dz);
   // Chega freando, sem passar do ponto.
   const want = d < 0.05 ? 0 : Math.min(maxSpeed, Math.sqrt(2 * accel * 0.8 * d), d / dt);
   const wx = d > 1e-6 ? (dx / d) * want : 0;
@@ -49,10 +49,20 @@ export function moveToward(a: Actor, target: Vec2, maxSpeed: number, dt: number,
   a.vel.z += clamp(wz - a.vel.z, -maxDv, maxDv);
   a.pos.x += a.vel.x * dt;
   a.pos.z += a.vel.z * dt;
-  const speed = Math.hypot(a.vel.x, a.vel.z);
+  const speed = hypot(a.vel.x, a.vel.z);
   const yaw = speed > 2.2 || !face ? (speed > 0.3 ? yawOf(a.vel) : a.facing) : yawOf({ x: face.x - a.pos.x, z: face.z - a.pos.z });
   a.facing = turnToward(a.facing, yaw, dt * 9);
   return speed;
+}
+
+/** Olha para (x, y, z) reaproveitando o objeto do olhar (a gravação e o replay copiam os valores). */
+export function lookAt(a: Actor, x: number, y: number, z: number) {
+  const look = a.look;
+  if (look) {
+    look.x = x;
+    look.y = y;
+    look.z = z;
+  } else a.look = { x, y, z };
 }
 
 export function settlePose(a: Actor, speed: number) {
@@ -75,33 +85,38 @@ export function jumpHeight(start: number | null, time: number, max = JUMP_MAX) {
 
 /** Quanto um companheiro corre em `t` s (quem sai parado perde um pouco até embalar, ~9 m/s²). */
 export function runDistanceAfter(m: MateBrain, t: number, speed = RUN_SPEED) {
-  const v0 = Math.hypot(m.actor.vel.x, m.actor.vel.z);
+  const v0 = hypot(m.actor.vel.x, m.actor.vel.z);
   const startup = Math.max(0, speed - v0) ** 2 / (2 * 9);
   return Math.max(0, Math.max(0, t) * speed - startup);
 }
 
-/** Ponto da corrida de um companheiro `t` segundos à frente (andando na velocidade de corrida). */
-export function runPositionAfter(m: MateBrain, t: number, speed = RUN_SPEED): Vec2 {
-  let pos = { ...m.actor.pos };
+/** Ponto da corrida de um companheiro `t` segundos à frente (andando na velocidade de corrida); `out` evita alocar. */
+export function runPositionAfter(m: MateBrain, t: number, speed = RUN_SPEED, out: Vec2 = { x: 0, z: 0 }): Vec2 {
+  let x = m.actor.pos.x;
+  let z = m.actor.pos.z;
   let left = runDistanceAfter(m, t, speed);
   for (let i = m.runIdx; i < m.run.length && left > 0; i += 1) {
     const wp = m.run[i];
-    const d = dist2(pos, wp);
+    const d = hypot(x - wp.x, z - wp.z);
     if (d <= left) {
       left -= d;
-      pos = { ...wp };
+      x = wp.x;
+      z = wp.z;
     } else {
-      pos = { x: pos.x + ((wp.x - pos.x) * left) / d, z: pos.z + ((wp.z - pos.z) * left) / d };
+      x = x + ((wp.x - x) * left) / d;
+      z = z + ((wp.z - z) * left) / d;
       left = 0;
     }
   }
-  return pos;
+  out.x = x;
+  out.z = z;
+  return out;
 }
 
 export function updateMate(m: MateBrain, dt: number, time: number, ball: BallState, playing: boolean) {
   const a = m.actor;
   const ballXZ = { x: ball.pos.x, z: ball.pos.z };
-  a.look = { ...ball.pos };
+  lookAt(a, ball.pos.x, ball.pos.y, ball.pos.z);
   a.jump = jumpHeight(m.jumpStart, time, 0.55);
   if (m.jumpStart !== null && time - m.jumpStart > JUMP_TIME) m.jumpStart = null;
   if (!playing) {
@@ -134,7 +149,7 @@ export function updateMate(m: MateBrain, dt: number, time: number, ball: BallSta
     a.poseT = clamp((time - (m.jumpStart ?? time)) / JUMP_TIME, 0, 0.45);
   } else if (m.receive && ball.pos.y < 0.7) {
     // Bola rasteira chegando: ajeita o corpo para dominar.
-    const near = Math.hypot(ball.pos.x - a.pos.x, ball.pos.z - a.pos.z);
+    const near = hypot(ball.pos.x - a.pos.x, ball.pos.z - a.pos.z);
     if (near < 3.5) {
       a.pose = "receive";
       a.poseT = clamp(1 - near / 3.5, 0, 0.5);
@@ -156,7 +171,7 @@ export function updateDefender(
 ) {
   const a = d.actor;
   const ballXZ = { x: ball.pos.x, z: ball.pos.z };
-  a.look = { ...ball.pos };
+  lookAt(a, ball.pos.x, ball.pos.y, ball.pos.z);
   a.jump = jumpHeight(d.jumpStart, time, d.behavior === "wall" ? 0.42 : JUMP_MAX);
   if (d.jumpStart !== null && time - d.jumpStart > JUMP_TIME) d.jumpStart = null;
   if (d.behavior === "wall") {
@@ -180,7 +195,7 @@ export function updateDefender(
     target = { x: d.home.x + shift, z: Math.min(PITCH.goalLineZ - 3, d.home.z + drop) };
   } else if (d.behavior === "press") {
     const toGoal = { x: goal.x - ballXZ.x, z: goal.z - ballXZ.z };
-    const l = Math.hypot(toGoal.x, toGoal.z) || 1;
+    const l = hypot(toGoal.x, toGoal.z) || 1;
     target = { x: ballXZ.x + (toGoal.x / l) * 1.3, z: ballXZ.z + (toGoal.z / l) * 1.3 };
     maxSpeed = DEFENDER_SPEED * 0.9;
   } else if (d.behavior === "markNearest") {
@@ -190,9 +205,9 @@ export function updateDefender(
       // colado; numa corrida em diagonal, o atacante abre espaço — é a graça da corrida.
       const seen = { x: mark.pos.x - mark.vel.x * 0.4, z: mark.pos.z - mark.vel.z * 0.4 };
       const toGoal = { x: goal.x - seen.x, z: goal.z - seen.z };
-      const l = Math.hypot(toGoal.x, toGoal.z) || 1;
+      const l = hypot(toGoal.x, toGoal.z) || 1;
       const toBall = { x: ballXZ.x - seen.x, z: ballXZ.z - seen.z };
-      const lb = Math.hypot(toBall.x, toBall.z) || 1;
+      const lb = hypot(toBall.x, toBall.z) || 1;
       target = {
         x: seen.x + (toGoal.x / l) * 1.0 + (toBall.x / lb) * 0.5,
         z: seen.z + (toGoal.z / l) * 1.0 + (toBall.z / lb) * 0.5,
@@ -207,7 +222,7 @@ export function updateDefender(
       const ahead = k * 0.06;
       const p = forecast(ahead);
       if (p.y > HEAD_Y + JUMP_MAX + 0.1) continue;
-      const gap = Math.hypot(p.x - a.pos.x, p.z - a.pos.z) - 0.7;
+      const gap = hypot(p.x - a.pos.x, p.z - a.pos.z) - 0.7;
       if (gap <= DEFENDER_SPEED * 0.92 * ahead && gap < 2.6) {
         d.chase = { x: p.x, z: p.z };
         target = d.chase;

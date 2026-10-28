@@ -6,12 +6,13 @@
 // `hero.pos` é onde o herói pisa: a bola fica meio metro à frente, rumo ao gol.
 
 import type { ScoreLevel, Vec2 } from "../types";
+import { hypot } from "./math";
 
 /** Onde o herói fica para a bola estar em `ball` (meio metro atrás, olhando o gol). */
 function behind(ball: Vec2): Vec2 {
   const dx = -ball.x;
   const dz = 52.5 - ball.z;
-  const l = Math.hypot(dx, dz) || 1;
+  const l = hypot(dx, dz) || 1;
   return { x: ball.x - (dx / l) * 0.5, z: ball.z - (dz / l) * 0.5 };
 }
 
@@ -19,7 +20,7 @@ function behind(ball: Vec2): Vec2 {
 function wall(ball: Vec2, aimX: number, count: number, firstNumber: number): ScoreLevel["defenders"] {
   const dx = aimX - ball.x;
   const dz = 52.5 - ball.z;
-  const l = Math.hypot(dx, dz) || 1;
+  const l = hypot(dx, dz) || 1;
   const dir = { x: dx / l, z: dz / l };
   const side = { x: dir.z, z: -dir.x };
   const center = { x: ball.x + dir.x * 9.15, z: ball.z + dir.z * 9.15 };

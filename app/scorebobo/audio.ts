@@ -148,16 +148,26 @@ function bandpass(frequency: number, q: number, rate: number) {
 }
 
 const CROWD_RATE = 22050;
+const BED_SECONDS = 7;
+const BED_SEED = 20261;
+const BED_LENGTH = Math.ceil(BED_SECONDS * CROWD_RATE);
+/** Amostras por pedaço da cama (~0,7 ms no desktop): a fatia ociosa para entre um e outro. */
+const BED_CHUNK = 16384;
+/** Os dois canais da cama, prontos para `copyToChannel`. */
+type BedChannels = [Float32Array<ArrayBuffer>, Float32Array<ArrayBuffer>];
 
 /**
  * A cama da torcida: dezenas de "vozes" (ruído num formante, picotado em
  * sílabas) mais o rumor grave do estádio. Gerada uma vez, em loop sem emenda.
+ *
+ * Gerador: devolve a vez a cada pedaço, para caber no tempo ocioso do menu. Os
+ * laços, o estado dos filtros e a ordem dos sorteios são os do cálculo de uma
+ * vez só, então as amostras saem idênticas.
  */
-function crowdBed(context: BaseAudioContext, seconds: number, seed: number) {
-  const length = Math.ceil(seconds * CROWD_RATE);
+function* crowdBedSteps(out: BedChannels, seed: number): Generator<void, void, void> {
+  const length = BED_LENGTH;
   const fade = Math.ceil(0.6 * CROWD_RATE);
   const total = length + fade;
-  const buffer = context.createBuffer(2, length, CROWD_RATE);
   const random = seededRandom(seed);
   for (let channel = 0; channel < 2; channel += 1) {
     const mix = new Float32Array(total);
@@ -171,46 +181,112 @@ function crowdBed(context: BaseAudioContext, seconds: number, seed: number) {
       let envelope = 0;
       let target = 0;
       let left = 0;
-      for (let index = 0; index < total; index += 1) {
-        if (left <= 0) {
-          // Sílaba: 0,1–0,4 s, às vezes silêncio (a voz respira).
-          left = Math.ceil((0.1 + random() * 0.3) * CROWD_RATE);
-          target = random() < 0.3 ? 0 : 0.3 + random() * 0.7;
+      for (let chunk = 0; chunk < total; chunk += BED_CHUNK) {
+        const end = Math.min(total, chunk + BED_CHUNK);
+        for (let index = chunk; index < end; index += 1) {
+          if (left <= 0) {
+            // Sílaba: 0,1–0,4 s, às vezes silêncio (a voz respira).
+            left = Math.ceil((0.1 + random() * 0.3) * CROWD_RATE);
+            target = random() < 0.3 ? 0 : 0.3 + random() * 0.7;
+          }
+          left -= 1;
+          envelope += (target - envelope) * 0.0035;
+          const x0 = random() * 2 - 1;
+          const y0 = b0 * x0 + b2 * x2 - a1 * y1 - a2 * y2;
+          x2 = x1;
+          x1 = x0;
+          y2 = y1;
+          y1 = y0;
+          mix[index] += y0 * envelope * level;
         }
-        left -= 1;
-        envelope += (target - envelope) * 0.0035;
-        const x0 = random() * 2 - 1;
-        const y0 = b0 * x0 + b2 * x2 - a1 * y1 - a2 * y2;
-        x2 = x1;
-        x1 = x0;
-        y2 = y1;
-        y1 = y0;
-        mix[index] += y0 * envelope * level;
+        yield;
       }
     }
     // Rumor grave: muita gente longe, sem sílaba nenhuma.
     let low = 0;
     let lower = 0;
-    for (let index = 0; index < total; index += 1) {
-      low += (random() * 2 - 1 - low) * 0.09;
-      lower += (low - lower) * 0.2;
-      mix[index] += lower * 1.6;
-    }
-    const data = buffer.getChannelData(channel);
-    let peak = 0;
-    for (let index = 0; index < length; index += 1) {
-      let value = mix[index];
-      if (index < fade) {
-        const k = index / fade;
-        value = value * k + mix[length + index] * (1 - k);
+    for (let chunk = 0; chunk < total; chunk += BED_CHUNK) {
+      const end = Math.min(total, chunk + BED_CHUNK);
+      for (let index = chunk; index < end; index += 1) {
+        low += (random() * 2 - 1 - low) * 0.09;
+        lower += (low - lower) * 0.2;
+        mix[index] += lower * 1.6;
       }
-      data[index] = value;
-      peak = Math.max(peak, Math.abs(value));
+      yield;
+    }
+    const data = out[channel];
+    let peak = 0;
+    for (let chunk = 0; chunk < length; chunk += BED_CHUNK) {
+      const end = Math.min(length, chunk + BED_CHUNK);
+      for (let index = chunk; index < end; index += 1) {
+        let value = mix[index];
+        if (index < fade) {
+          const k = index / fade;
+          value = value * k + mix[length + index] * (1 - k);
+        }
+        data[index] = value;
+        peak = Math.max(peak, Math.abs(value));
+      }
+      yield;
     }
     const gain = peak > 0 ? 0.8 / peak : 1;
     for (let index = 0; index < length; index += 1) data[index] *= gain;
+    yield;
   }
+}
+
+/** As amostras prontas da cama (valem para qualquer contexto) e o cálculo em andamento. */
+let bedSamples: BedChannels | null = null;
+let bedJob: { out: BedChannels; steps: Generator<void, void, void> } | null = null;
+let bedWarming = false;
+
+/** Avança a cama até `deadline` (relógio do `performance.now`). true quando ficou pronta. */
+function advanceBed(deadline: number): boolean {
+  if (bedSamples) return true;
+  if (!bedJob) {
+    const out: BedChannels = [new Float32Array(BED_LENGTH), new Float32Array(BED_LENGTH)];
+    bedJob = { out, steps: crowdBedSteps(out, BED_SEED) };
+  }
+  do {
+    if (bedJob.steps.next().done) {
+      bedSamples = bedJob.out;
+      bedJob = null;
+      return true;
+    }
+  } while (performance.now() < deadline);
+  return false;
+}
+
+/** O buffer da cama neste contexto: termina na hora o que o tempo ocioso não fez e só copia. */
+function crowdBedBuffer(context: BaseAudioContext) {
+  advanceBed(Infinity);
+  const samples = bedSamples!;
+  const buffer = context.createBuffer(2, BED_LENGTH, CROWD_RATE);
+  buffer.copyToChannel(samples[0], 0);
+  buffer.copyToChannel(samples[1], 1);
   return buffer;
+}
+
+/**
+ * Gera a cama da torcida em fatias de ~8 ms no tempo ocioso (chame com o menu
+ * aberto): a primeira fase abre sem os ~200 ms de cálculo no meio da montagem.
+ */
+export function warmScoreboboAudio() {
+  if (typeof window === "undefined" || bedSamples || bedWarming) return;
+  if (!(window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)) return;
+  bedWarming = true;
+  const idle = typeof window.requestIdleCallback === "function";
+  const slice = (deadline?: IdleDeadline) => {
+    const budget = deadline ? Math.max(4, Math.min(10, deadline.timeRemaining())) : 8;
+    if (advanceBed(performance.now() + budget)) {
+      bedWarming = false;
+      return;
+    }
+    if (idle) window.requestIdleCallback(slice, { timeout: 1000 });
+    else window.setTimeout(slice, 30);
+  };
+  if (idle) window.requestIdleCallback(slice, { timeout: 1000 });
+  else window.setTimeout(slice, 30);
 }
 
 // ------------------------------------------------------------ átomos
@@ -297,11 +373,7 @@ function wet(audio: Graph, amount: number): AudioNode {
   return split;
 }
 
-/**
- * Muitas vozes num vogal: um "oooh", um lamento, um "uuuh" do canto. Serras
- * desafinadas entre si passando por dois formantes, mais um pouco de sopro.
- */
-function crowdVowel(audio: Graph, options: {
+type VowelOptions = {
   voices: number;
   pitch: number;
   /** Curva de afinação relativa: [início, pico, fim]. */
@@ -314,9 +386,21 @@ function crowdVowel(audio: Graph, options: {
   duration: number;
   gain: number;
   delay?: number;
-}) {
+  /** Início já marcado no relógio do contexto (sílaba de canto montada perto da hora); vale mais que `delay`. */
+  at?: number;
+};
+
+/** Sorteios de uma `crowdVowel`: três por voz (afinação, atraso, desafinação) e um do sopro. */
+const vowelDraws = (voices: number) => voices * 3 + 1;
+
+/**
+ * Muitas vozes num vogal: um "oooh", um lamento, um "uuuh" do canto. Serras
+ * desafinadas entre si passando por dois formantes, mais um pouco de sopro.
+ * `random` troca o `Math.random` por sorteios feitos antes (mesma ordem).
+ */
+function crowdVowel(audio: Graph, options: VowelOptions, random: () => number = Math.random) {
   const { context } = audio;
-  const start = context.currentTime + (options.delay ?? 0);
+  const start = options.at ?? context.currentTime + (options.delay ?? 0);
   const end = start + options.duration;
   const bus = context.createGain();
   bus.gain.setValueAtTime(0.0001, start);
@@ -351,12 +435,12 @@ function crowdVowel(audio: Graph, options: {
     const spread = options.spread ?? 0.45;
     // No canto, um terço canta uma oitava acima (a arquibancada não é só de barítonos).
     const octave = spread < 0.1 && index % 3 === 2 ? 2 : 1;
-    const base = options.pitch * octave * (1 + (Math.random() - 0.5) * spread);
-    const lag = Math.random() * 0.12;
+    const base = options.pitch * octave * (1 + (random() - 0.5) * spread);
+    const lag = random() * 0.12;
     oscillator.frequency.setValueAtTime(base * options.contour[0], start + lag);
     oscillator.frequency.exponentialRampToValueAtTime(base * options.contour[1], start + options.peakAt + lag);
     oscillator.frequency.exponentialRampToValueAtTime(base * options.contour[2], end);
-    oscillator.detune.value = (Math.random() - 0.5) * 40;
+    oscillator.detune.value = (random() - 0.5) * 40;
     oscillator.connect(voiceMix);
     oscillator.start(start + lag);
     oscillator.stop(end + 0.05);
@@ -370,7 +454,7 @@ function crowdVowel(audio: Graph, options: {
   breath.connect(breathGain);
   breathGain.connect(formantA);
   breathGain.connect(formantB);
-  breath.start(start, Math.random());
+  breath.start(start, random());
   breath.stop(end + 0.05);
 }
 
@@ -436,6 +520,19 @@ const CHANTS: Array<Array<[number, number]>> = [
 
 const midi = (note: number) => 440 * Math.pow(2, (note - 69) / 12);
 
+/**
+ * Uma sílaba de canto monta uns ~15 nós de áudio: o canto inteiro de uma vez
+ * pesava um quadro. Cada sílaba nasce só este tanto (s) antes da hora dela:
+ * folga maior que um engasgo de quadro (gol com shader compilando no celular),
+ * para nenhuma entrar atrasada e sem o ataque; uma sílaba dura 0,28 a 1 s, então
+ * o canto ainda se espalha por vários quadros.
+ */
+const CHANT_LOOKAHEAD = 1;
+/** Drone calado (ganho já em 1e-4) por este tempo (s): solta os osciladores. */
+const DRONE_RELEASE = 1;
+
+type Syllable = { options: VowelOptions; draws: number[] };
+
 let bedCache: { context: BaseAudioContext; buffer: AudioBuffer } | null = null;
 
 export class ScoreboboAudio {
@@ -444,6 +541,10 @@ export class ScoreboboAudio {
   private bedTone: BiquadFilterNode | null = null;
   private drone: { gain: GainNode; filter: BiquadFilterNode; oscillators: OscillatorNode[] } | null = null;
   private droneLevel = 0;
+  /** Desde quando (relógio do contexto) o drone está calado; -1 tocando. */
+  private droneQuietSince = -1;
+  /** Sílabas do canto em andamento que ainda não montaram (em ordem de início). */
+  private syllables: Syllable[] = [];
   private phase: Phase | null = null;
   /** 0..1: a torcida esquenta com chute, área e gol e esfria sozinha. */
   private excitement = 0.25;
@@ -465,8 +566,8 @@ export class ScoreboboAudio {
     gain.gain.setValueAtTime(0.0001, context.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.32, context.currentTime + 1.6);
     const source = context.createBufferSource();
-    // Gerado uma vez por contexto (dezenas de ms, enquanto a fase ainda monta); as outras fases reaproveitam.
-    if (!bedCache || bedCache.context !== context) bedCache = { context, buffer: crowdBed(context, 7, 20261) };
+    // Um buffer por contexto, das amostras que o menu já gerou no tempo ocioso; as outras fases reaproveitam.
+    if (!bedCache || bedCache.context !== context) bedCache = { context, buffer: crowdBedBuffer(context) };
     source.buffer = bedCache.buffer;
     source.loop = true;
     source.connect(tone);
@@ -484,6 +585,7 @@ export class ScoreboboAudio {
     if (!audio || this.disposed || !this.bedGain || !this.bedTone || !this.bed) return;
     const { context } = audio;
     const now = context.currentTime;
+    this.mountSyllables(now + CHANT_LOOKAHEAD);
     if (state.phase !== this.phase) this.onPhase(state.phase);
 
     // A bola chegando na área levanta a torcida.
@@ -516,6 +618,39 @@ export class ScoreboboAudio {
       this.glide(this.drone.filter.frequency, 160 + target * 1500, now, 0.06);
       this.glide(this.drone.oscillators[0].frequency, 55 * (1 + target * 0.12), now, 0.1);
       this.glide(this.drone.oscillators[1].frequency, 55.6 * (1 + target * 0.12), now, 0.1);
+      // Calado há 1 s (8 constantes de tempo: inaudível): solta tudo; o próximo traço monta de novo.
+      if (target > 0) this.droneQuietSince = -1;
+      else if (this.droneQuietSince < 0) this.droneQuietSince = now;
+      else if (now - this.droneQuietSince > DRONE_RELEASE) this.releaseDrone(now);
+    }
+  }
+
+  /** Para e desliga o drone (e esquece os alvos dele no `glide`). */
+  private releaseDrone(now: number) {
+    const drone = this.drone;
+    if (!drone) return;
+    this.drone = null;
+    this.droneQuietSince = -1;
+    for (const oscillator of drone.oscillators) {
+      oscillator.stop(now);
+      this.targets.delete(oscillator.frequency);
+    }
+    this.targets.delete(drone.gain.gain);
+    this.targets.delete(drone.filter.frequency);
+    drone.gain.disconnect();
+  }
+
+  /** Monta as sílabas do canto que começam até `until` (relógio do contexto). */
+  private mountSyllables(until: number) {
+    const audio = graph;
+    if (!audio || !this.syllables.length) return;
+    const now = audio.context.currentTime;
+    while (this.syllables.length && (this.syllables[0].options.at ?? 0) <= until) {
+      const { options, draws } = this.syllables.shift()!;
+      // Laço parado sem pausa (fase que falhou): sílaba que já teria acabado não toca atrasada.
+      if ((options.at ?? 0) + options.duration <= now) continue;
+      let next = 0;
+      crowdVowel(audio, options, () => draws[next++]);
     }
   }
 
@@ -645,6 +780,8 @@ export class ScoreboboAudio {
     if (!audio || this.disposed) return;
     window.clearTimeout(this.suspendTimer);
     if (paused) {
+      // Sem quadros na pausa: o resto do canto monta já, como antes (o contexto dorme e volta do mesmo ponto).
+      this.mountSyllables(Infinity);
       // Um respiro antes de dormir: o clique do botão de pausa ainda toca.
       this.suspendTimer = window.setTimeout(() => {
         if (audio.context.state === "running") void audio.context.suspend().catch(() => undefined);
@@ -656,6 +793,8 @@ export class ScoreboboAudio {
 
   dispose() {
     if (this.disposed) return;
+    // Quem sai no meio de um canto ainda ouve o fim dele, como antes.
+    this.mountSyllables(Infinity);
     this.disposed = true;
     window.clearTimeout(this.suspendTimer);
     const audio = graph;
@@ -800,10 +939,11 @@ export class ScoreboboAudio {
     if (!audio) return;
     const melody = CHANTS[this.chantIndex % CHANTS.length];
     this.chantIndex += 1;
+    const now = audio.context.currentTime;
     let at = 0.1;
     for (const [note, length] of melody) {
       // Cada sílaba é uma onda de vozes; a torcida sempre arrasta um pouco.
-      crowdVowel(audio, {
+      const options: VowelOptions = {
         voices: 6,
         pitch: midi(note),
         contour: [0.99, 1, 0.985],
@@ -813,9 +953,13 @@ export class ScoreboboAudio {
         peakAt: length * 0.5,
         duration: length * 1.15,
         gain: 0.14 * strength,
-        delay: at,
-      });
+        at: now + at,
+      };
+      // Os sorteios saem agora, na ordem de sempre; os nós só nascem perto da hora (no `update`).
+      const draws = Array.from({ length: vowelDraws(options.voices) }, () => Math.random());
+      this.syllables.push({ options, draws });
       at += length;
     }
+    this.mountSyllables(now + CHANT_LOOKAHEAD);
   }
 }

@@ -6,10 +6,15 @@
 // O laço é daqui: a cada quadro a simulação avança, a cena desenha o estado e
 // os eventos novos viram som, flash e faixa. O React só re-renderiza quando
 // algo do HUD muda de verdade (fase, bolas, passes, relógio, resultado) — o
-// anel da bola, a mão do tutorial e o rastro do dedo andam por fora dele.
+// anel da bola, a mão do tutorial e o rastro do dedo andam por fora dele, e o
+// chip da prévia lê o plano sozinho.
+//
+// O 3D desenha no máximo 60 vezes por segundo (telas de 90/120 Hz não pagam
+// em dobro), menos na mira parada e atrás do resultado, e nenhuma na pausa.
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import { FrameWatch } from "../botao/perf-watch";
 import { ScoreboboGame } from "./sim/game";
 import { PITCH } from "./types";
 import type { GameState, KickPlan, Outcome, Phase, ScoreboboGameApi, ScoreboboViewApi, ScoreLevel, ScoreTeams, SimEvent, StrokeSample, Vec3 } from "./types";
@@ -71,6 +76,10 @@ export type LevelPlayerProps = {
   onNext: () => void;
   onLevels: () => void;
   engine?: ScoreboboEngine;
+  /** O aparelho não deu conta nem com a resolução no piso (a próxima montagem pode vir no modo desempenho). */
+  onSlowDevice?: () => void;
+  /** Monta a fase de novo do zero (canvas e WebGL novos): o 3D caiu, ou o modo desempenho mudou. */
+  onRemount?: () => void;
 };
 
 /** Se a cena não ficar pronta nesse tempo, avisa em vez de deixar a tela preta. */
@@ -80,6 +89,10 @@ const OUTCOME_HOLD_MS = 3000;
 /** Toque para seguir só depois disso (ninguém pula o gol sem querer). */
 const OUTCOME_MIN_MS = 800;
 const AIM_HINT = "Desenhe a partir da bola: até um companheiro ou até o gol";
+/** Mira sem ninguém mexer por este tempo (ms) e com a câmera assentada: o 3D desenha mais devagar. */
+const IDLE_AFTER_MS = 600;
+/** Anel ou seta apagados por este tempo (ms; o fade é de 0,25 s): as animações deles param. */
+const MARKER_IDLE_MS = 300;
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 function subscribeReducedMotion(onChange: () => void) {
@@ -122,6 +135,84 @@ type Stroke = {
 };
 
 type TrailPoint = { x: number; y: number; t: number };
+
+/**
+ * Cores do rastro por nível de alfa (o 8 bits que o canvas guarda): o quadro
+ * não monta uma string `rgba()` nova a cada pedaço do traço.
+ */
+const TRAIL_LEVELS = 255;
+const TRAIL_GLOW = Array.from({ length: TRAIL_LEVELS + 1 }, (_, level) => `rgba(214, 255, 92, ${level / TRAIL_LEVELS})`);
+const TRAIL_CORE = Array.from({ length: TRAIL_LEVELS + 1 }, (_, level) => `rgba(255, 255, 255, ${level / TRAIL_LEVELS})`);
+const trailColor = (table: string[], alpha: number) => table[Math.round(Math.max(0, Math.min(1, alpha)) * TRAIL_LEVELS)];
+
+/**
+ * Anel da bola e setas da borda: guarda o último valor escrito em cada estilo
+ * e só toca o DOM quando ele muda. Apagado há 300 ms (o fade já acabou), as
+ * animações de CSS dele param (`idleAnim`) até ele acender de novo.
+ */
+class Marker {
+  private readonly written = new Map<string, string>();
+  private hiddenAt = -1;
+  private idle = false;
+
+  constructor(readonly element: HTMLElement) {}
+
+  set(name: string, value: string) {
+    if (this.written.get(name) === value) return;
+    this.written.set(name, value);
+    this.element.style.setProperty(name, value);
+  }
+
+  show(visible: boolean, now: number) {
+    this.set("opacity", visible ? "1" : "0");
+    if (visible) {
+      this.hiddenAt = -1;
+      if (this.idle) {
+        this.idle = false;
+        this.element.classList.remove(styles.idleAnim);
+      }
+    } else if (this.hiddenAt < 0) {
+      this.hiddenAt = now;
+    } else if (!this.idle && now - this.hiddenAt >= MARKER_IDLE_MS) {
+      this.idle = true;
+      this.element.classList.add(styles.idleAnim);
+    }
+  }
+}
+
+/** O plano do traço fora do estado da fase: só o chip re-renderiza quando ele muda. */
+type PlanStore = {
+  current: PlanSummary | null;
+  set(plan: PlanSummary | null): void;
+  subscribe(listener: () => void): () => void;
+  read(): PlanSummary | null;
+};
+
+function createPlanStore(): PlanStore {
+  const listeners = new Set<() => void>();
+  const store: PlanStore = {
+    current: null,
+    set(plan) {
+      if (store.current === plan) return;
+      store.current = plan;
+      for (const listener of listeners) listener();
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    read: () => store.current,
+  };
+  return store;
+}
+
+/** Chip da prévia assinando o plano direto (o resto da tela não re-renderiza a cada mudança). */
+function LivePlanChip({ store }: { store: PlanStore }) {
+  const plan = useSyncExternalStore(store.subscribe, store.read, store.read);
+  return <PlanChip plan={plan} />;
+}
 
 /** Vibração curta no celular (chute, trave, gol, traço recusado). Sem suporte, nada. */
 function buzz(enabled: boolean, pattern: number | number[]) {
@@ -196,16 +287,18 @@ function confettiFor(home: TeamInfo): ConfettiPiece[] {
   }));
 }
 
-export default function LevelPlayer({ level, levelIndex, teams, home, away, performance: performanceMode, muted, onToggleMute, hasNext, nextUnlocked, onNext, onLevels, engine = DEFAULT_ENGINE }: LevelPlayerProps) {
+export default function LevelPlayer({ level, levelIndex, teams, home, away, performance: performanceMode, muted, onToggleMute, hasNext, nextUnlocked, onNext, onLevels, engine = DEFAULT_ENGINE, onSlowDevice, onRemount }: LevelPlayerProps) {
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, readReducedMotion, serverReducedMotion);
 
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   const [hud, setHud] = useState<HudSnapshot | null>(null);
   const [drawing, setDrawing] = useState(false);
-  const [plan, setPlan] = useState<PlanSummary | null>(null);
+  const [planStore] = useState(createPlanStore);
   const [hint, setHint] = useState<Hint>({ text: AIM_HINT, tone: "info", key: 0 });
   const [toast, setToast] = useState<{ text: string; sub?: string; key: number } | null>(null);
-  const [goalFx, setGoalFx] = useState<{ key: number; pieces: ConfettiPiece[] } | null>(null);
+  // Flash do gol (sai da árvore quando a animação termina) e confete de DOM (dura mais), separados.
+  const [goalFlash, setGoalFlash] = useState<number | null>(null);
+  const [confetti, setConfetti] = useState<{ key: number; pieces: ConfettiPiece[] } | null>(null);
   const [paused, setPaused] = useState(false);
   const [results, setResults] = useState<{ stars: StarCount; record: boolean; notes: string[]; met?: [boolean, boolean, boolean] } | null>(null);
   // O modo desempenho vale a partir da montagem: trocar em outra aba não recomeça a fase no meio.
@@ -214,23 +307,29 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const [replayStats, setReplayStats] = useState<string | null>(null);
   const [tutorialDone, setTutorialDone] = useState(!level.tutorial);
   const [bump, setBump] = useState(0);
-  const [freezeKey, setFreezeKey] = useState(0);
+  const [freezeFlash, setFreezeFlash] = useState<number | null>(null);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const trailCanvasRef = useRef<HTMLCanvasElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
+  const ringMarkerRef = useRef<Marker | null>(null);
   const tapRef = useRef<HTMLDivElement>(null);
   const tutorialRef = useRef<TutorialHandle>(null);
   /** Setas na borda para companheiros fora do quadro (o traço que termina nelas passa para ele). */
-  const arrowRefs = useRef(new Map<string, HTMLDivElement>());
+  const arrowRefs = useRef(new Map<string, Marker>());
   const edgeRef = useRef(new Map<string, { x: number; y: number; target: { x: number; y: number } }>());
+  /** Tamanho da área de jogo e do canvas do rastro (px CSS), lidos só quando mudam (ResizeObserver). */
+  const hostSizeRef = useRef({ width: 0, height: 0 });
+  const trailSizeRef = useRef({ width: 0, height: 0 });
+  /** O canvas do rastro está na composição (escondido quando não há rastro). */
+  const trailShownRef = useRef(false);
   /** Quem chutou, em ordem (a tabela: recebe de volta quem tocou dois lances antes). */
   const kickersRef = useRef<string[]>([]);
   /** Último plano válido do traço (soltar fora da tela não perde a jogada que a prévia mostrou). */
   const lastPlanRef = useRef<KickPlan | null>(null);
   const goalFactsRef = useRef<{ distance: number; curve: number } | null>(null);
-  const frameRef = useRef(0);
+  const freezeSeqRef = useRef(0);
 
   const gameRef = useRef<ScoreboboGameApi | null>(null);
   const viewRef = useRef<ScoreboboViewApi | null>(null);
@@ -241,8 +340,16 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const pausedRef = useRef(false);
   const resultsRef = useRef(false);
   const tutorialDoneRef = useRef(!level.tutorial);
-  const planRef = useRef<PlanSummary | null>(null);
+  const toastOnRef = useRef(false);
   const hudKeyRef = useRef("");
+  /** Último toque, tecla, troca de fase ou evento: a mira só desacelera depois de um tempo sem nada. */
+  const wakeAtRef = useRef(0);
+  /** Toque, tecla ou volta da pausa: o próximo quadro desenha sem esperar a cadência lenta. */
+  const wakeRef = useRef(false);
+  /** Religa o laço parado (pausa, aba escondida). */
+  const resumeLoopRef = useRef<(() => void) | null>(null);
+  const onSlowDeviceRef = useRef(onSlowDevice);
+  const onRemountRef = useRef(onRemount);
   // `active`: segundos de jogo rodando nesta fase (pausa, aba escondida e engasgos não contam: quem volta não perde o replay).
   const phaseRef = useRef<{ phase: Phase | null; since: number; active: number; retryAt: number; forceAt: number }>({ phase: null, since: 0, active: 0, retryAt: 0, forceAt: 0 });
   /** Melhor resultado desta visita (para as notas do resultado e se a simulação não fechar a fase sozinha). */
@@ -257,6 +364,15 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   useEffect(() => {
     reducedRef.current = reducedMotion;
   }, [reducedMotion]);
+
+  useEffect(() => {
+    onSlowDeviceRef.current = onSlowDevice;
+    onRemountRef.current = onRemount;
+  }, [onSlowDevice, onRemount]);
+
+  useEffect(() => {
+    toastOnRef.current = toast !== null;
+  }, [toast]);
 
   // ------------------------------------------------------------ montagem
 
@@ -282,12 +398,19 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     bestOutcomeRef.current = null;
     lastOutcomeRef.current = null;
     phaseRef.current = { phase: null, since: performance.now(), active: 0, retryAt: 0, forceAt: 0 };
+    const timer = window.setTimeout(fail, PREPARE_TIMEOUT_MS);
+    // A cena primeiro: o pedido do three.js sai antes do estádio de som montar.
+    const viewReady = engine.createView(canvas, {
+      performance: performanceAtMount,
+      reducedMotion: reducedRef.current,
+      onContextLost: fail,
+      // O WebGL voltou (Android de volta do fundo): remonta a fase com um contexto novo, sem recarregar o app.
+      onContextRestored: () => onRemountRef.current?.(),
+    });
     const audio = new ScoreboboAudio();
     audioRef.current = audio;
     audio.enter();
-    const timer = window.setTimeout(fail, PREPARE_TIMEOUT_MS);
-    engine
-      .createView(canvas, { performance: performanceAtMount, reducedMotion: reducedRef.current, onContextLost: fail })
+    viewReady
       .then(async (created) => {
         view = created;
         if (cancelled) return;
@@ -376,9 +499,14 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         }
         buzz(touchRef.current, [35, 50, 70, 40, 110]);
         setBump((value) => value + 1);
-        setGoalFx({ key: performance.now(), pieces: reducedRef.current ? [] : confettiFor(home) });
+        const key = performance.now();
+        setGoalFlash(key);
+        // Modo desempenho: sem o confete de DOM (o 3D já solta o dele).
+        const pieces = reducedRef.current || performanceAtMount ? [] : confettiFor(home);
+        setConfetti(pieces.length ? { key, pieces } : null);
       } else if (event.type === "control") {
-        setFreezeKey((value) => value + 1);
+        freezeSeqRef.current += 1;
+        setFreezeFlash(freezeSeqRef.current);
         const actor = state.actors.find((item) => item.id === event.actor);
         const name = actor ? actor.name : "ele";
         const kickers = kickersRef.current;
@@ -402,7 +530,15 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         setToast({ text: toastText, sub, key: performance.now() });
       }
     }
-  }, [home]);
+  }, [home, performanceAtMount]);
+
+  /** Liga/desliga o canvas do rastro na composição (só escreve quando muda). */
+  const showTrail = useCallback((visible: boolean) => {
+    const canvas = trailCanvasRef.current;
+    if (!canvas || trailShownRef.current === visible) return;
+    trailShownRef.current = visible;
+    canvas.style.visibility = visible ? "visible" : "hidden";
+  }, []);
 
   const drawTrail = useCallback((now: number) => {
     const canvas = trailCanvasRef.current;
@@ -417,58 +553,73 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         context.clearRect(0, 0, canvas.width, canvas.height);
         trailRef.current = [];
       }
+      // Rastro limpo e ninguém desenhando: a camada de tela cheia sai da composição.
+      showTrail(false);
       return;
     }
-    const ratio = canvas.width / Math.max(1, canvas.clientWidth);
+    const { width, height } = trailSizeRef.current;
+    const ratio = canvas.width / Math.max(1, width);
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    context.clearRect(0, 0, width, height);
     // Cometa na ponta do dedo: só os últimos ~0,22 s, afinando para trás.
     const span = 220;
     const head = stroke ? now : trailFadeRef.current - 260;
     const fade = stroke ? 1 : Math.max(0, (trailFadeRef.current - now) / 260);
-    const recent = points.filter((point) => head - point.t < span);
-    if (recent.length < 2) return;
     context.lineCap = "round";
     context.lineJoin = "round";
-    for (let index = 1; index < recent.length; index += 1) {
-      const a = recent[index - 1];
-      const b = recent[index];
-      const age = Math.max(0, Math.min(1, (head - b.t) / span));
-      const k = (1 - age) * fade;
-      context.strokeStyle = `rgba(214, 255, 92, ${0.16 * k})`;
-      context.lineWidth = 22 * k + 2;
-      context.beginPath();
-      context.moveTo(a.x, a.y);
-      context.lineTo(b.x, b.y);
-      context.stroke();
-      context.strokeStyle = `rgba(255, 255, 255, ${0.85 * k})`;
-      context.lineWidth = 4 * k + 1;
-      context.beginPath();
-      context.moveTo(a.x, a.y);
-      context.lineTo(b.x, b.y);
-      context.stroke();
+    // Pares seguidos dos pontos recentes, na ordem (o mesmo que filtrar a lista, sem lista nova a cada quadro).
+    let a: TrailPoint | null = null;
+    for (const b of points) {
+      if (head - b.t >= span) continue;
+      if (a) {
+        const age = Math.max(0, Math.min(1, (head - b.t) / span));
+        const k = (1 - age) * fade;
+        context.strokeStyle = trailColor(TRAIL_GLOW, 0.16 * k);
+        context.lineWidth = 22 * k + 2;
+        context.beginPath();
+        context.moveTo(a.x, a.y);
+        context.lineTo(b.x, b.y);
+        context.stroke();
+        context.strokeStyle = trailColor(TRAIL_CORE, 0.85 * k);
+        context.lineWidth = 4 * k + 1;
+        context.beginPath();
+        context.moveTo(a.x, a.y);
+        context.lineTo(b.x, b.y);
+        context.stroke();
+      }
+      a = b;
     }
-  }, []);
+  }, [showTrail]);
 
   useEffect(() => {
     if (status !== "ready") return;
     let frame = 0;
     let last = performance.now();
+    // Orçamento de quadro (como na partida 3D): tempo acumulado desde o último desenho.
+    let budget = 0;
+    let elapsed = 0;
+    let lastFrameTime = 0;
+    let lastRenderAt = 0;
+    let arrowsShown = true;
+    let slowReported = false;
+    const watch = new FrameWatch();
     const tick = (now: number) => {
-      frame = requestAnimationFrame(tick);
-      const delta = (now - last) / 1000;
-      last = now;
+      frame = 0;
+      // Pausa e aba escondida não pedem quadro nenhum: quem tira da pausa religa o laço.
       if (document.hidden || pausedRef.current) return;
-      // Atrás da tela de resultado a cena só respira (bateria do celular): um quadro em quatro.
-      frameRef.current += 1;
-      if (resultsRef.current && frameRef.current % 4 !== 0) return;
-      // Um engasgo longo atrasa a jogada em vez de teleportar a bola.
-      const dt = Math.min(resultsRef.current ? 0.1 : 0.05, Math.max(0, delta));
+      frame = requestAnimationFrame(tick);
+      const delta = Math.max(0, (now - last) / 1000);
+      last = now;
+      budget += delta;
+      elapsed += delta;
       const game = gameRef.current;
       const view = viewRef.current;
       if (!game || !view) return;
 
-      // Traço em andamento: um plano por quadro, não um por evento do ponteiro.
+      // Traço em andamento: um plano por quadro de tela, não um por evento do
+      // ponteiro. Fica antes do teto de 60: em 90/120 Hz o plano de reserva do
+      // chute (`lastPlanRef`) acompanha todos os quadros, como sempre foi; só o
+      // desenho espera o orçamento (o próximo render mostra o traço).
       const stroke = strokeRef.current;
       if (stroke?.dirty && game.state.phase === "aim") {
         stroke.dirty = false;
@@ -477,19 +628,42 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         if (planned) lastPlanRef.current = planned;
         view.setStroke(strokePoints(samples, stroke.airY), planned);
         const summary = planned ? summarize(planned, game.state) : null;
-        if (!samePlan(summary, planRef.current)) {
+        const shown = planStore.current;
+        if (!samePlan(summary, shown)) {
           // Tique no dedo quando o traço "pega" um companheiro.
-          if (summary?.receiver && summary.receiver !== planRef.current?.receiver) buzz(touchRef.current, 8);
-          planRef.current = summary;
-          setPlan(summary);
+          if (summary?.receiver && summary.receiver !== shown?.receiver) buzz(touchRef.current, 8);
+          planStore.set(summary);
         }
         audioRef.current?.setDrawing(Math.min(1, stroke.length / (stroke.short * 0.9)) * (planned ? 1 : 0.5));
       }
 
+      const showingResults = resultsRef.current;
+      // Mira parada (câmera assentada, ninguém mexendo): o 3D quase não muda e o anel, as setas e a dica são DOM.
+      const idleAim =
+        !showingResults &&
+        game.state.phase === "aim" &&
+        !strokeRef.current &&
+        (view.calm ?? false) &&
+        now - wakeAtRef.current > IDLE_AFTER_MS &&
+        (tutorialDoneRef.current || !level.tutorial) &&
+        !toastOnRef.current;
+      // Teto de 60 por segundo (telas de 90/120 Hz); atrás do resultado e na mira parada, bem menos.
+      const frameTime = showingResults ? (performanceAtMount ? 1 / 10 : 1 / 15) : idleAim ? (performanceAtMount ? 1 / 20 : 1 / 30) : 1 / 60;
+      const woken = wakeRef.current;
+      if (!woken && budget < frameTime - 1 / 960) return;
+      budget = Math.min(frameTime, Math.max(0, budget - frameTime));
+      const real = elapsed;
+      elapsed = 0;
+      wakeRef.current = false;
+      // Um engasgo longo atrasa a jogada em vez de teleportar a bola.
+      const dt = Math.min(showingResults ? 0.1 : 0.05, real);
+      // Atrás da tela de resultado a cena só respira (bateria do celular): um quarto da velocidade, como sempre.
+      const sceneDt = showingResults ? dt / 4 : dt;
+
       let events: SimEvent[];
       try {
-        events = game.step(dt);
-        view.render(game.state, dt, events);
+        events = game.step(sceneDt);
+        view.render(game.state, sceneDt, events);
       } catch (error) {
         console.error("[scorebobo] quadro falhou", error);
         viewRef.current = null;
@@ -498,12 +672,26 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       }
       const state = game.state;
       audioRef.current?.handleEvents(events);
-      audioRef.current?.update(state, dt);
+      audioRef.current?.update(state, sceneDt);
       if (events.length) handleEvents(events, state);
+
+      // Vigia do aparelho: só entre dois quadros a 60 (mira parada, resultado e o quadro de acordar não contam).
+      const phaseChanged = state.phase !== phaseRef.current.phase;
+      if (phaseChanged || events.length) wakeAtRef.current = now;
+      if (phaseChanged) watch.hold(now, 250);
+      for (const event of events) if (event.type === "goal") watch.hold(now, 600);
+      const paced = !woken && frameTime === 1 / 60 && lastFrameTime === 1 / 60;
+      lastFrameTime = frameTime;
+      if (paced) view.adaptResolution?.(real);
+      if (!performanceAtMount && !slowReported && watch.sample(now, lastRenderAt ? now - lastRenderAt : 0, view.stats?.().cpuMs ?? 0, paced) && view.atResolutionFloor) {
+        slowReported = true;
+        onSlowDeviceRef.current?.();
+      }
+      lastRenderAt = now;
 
       // Mudança de fase: limpa o traço, marca o relógio do resultado.
       const marker = phaseRef.current;
-      if (state.phase !== marker.phase) {
+      if (phaseChanged) {
         const previous = marker.phase;
         phaseRef.current = { phase: state.phase, since: now, active: 0, retryAt: 0, forceAt: 0 };
         if (previous === "flight" || state.phase === "aim" || state.phase === "intro") {
@@ -514,10 +702,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
           view.setStroke(null, null);
           audioRef.current?.setDrawing(null);
         }
-        if (state.phase !== "aim") {
-          planRef.current = null;
-          setPlan(null);
-        }
+        if (state.phase !== "aim") planStore.set(null);
         if (state.phase === "intro") kickersRef.current = [];
         if (state.phase === "replay") {
           // Ficha do lance na tarja do replay: velocidade, curva e distância.
@@ -538,7 +723,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
 
       // Resultado sem vitória: segura a reação e vai para a próxima bola.
       const current = phaseRef.current;
-      current.active += dt;
+      current.active += sceneDt;
       if (state.phase === "outcome") {
         const won = (state.outcome?.stars ?? 0) > 0;
         const held = current.active * 1000;
@@ -558,87 +743,139 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         finish((best ? best.stars : state.bestStars) as StarCount, best?.notes ?? [], best?.met);
       }
 
-      // Anel na bola (onde o traço começa) e mão do tutorial.
-      const ring = ringRef.current;
+      // Anel na bola (onde o traço começa), setas e mão do tutorial: primeiro as
+      // contas, depois as escritas (nada de ler layout no meio do quadro).
+      const { width, height } = hostSizeRef.current;
       const aiming = state.phase === "aim" && !strokeRef.current && !resultsRef.current;
       const ball = aiming ? view.screenOf(state.ball.pos) : null;
-      if (ring) {
-        if (ball) {
-          const host = hostRef.current;
-          const short = host ? Math.min(host.clientWidth, host.clientHeight) : 600;
-          const radius = Math.max(48, short * 0.07);
-          ring.style.opacity = "1";
-          ring.style.transform = `translate3d(${ball.x}px, ${ball.y}px, 0)`;
-          ring.style.setProperty("--size", `${Math.round(radius * 1.25)}px`);
-        } else {
-          ring.style.opacity = "0";
-        }
-      }
       // Setas na borda: companheiro fora do quadro (no celular em pé, quem abre no lado não cabe).
       const edges = edgeRef.current;
-      edges.clear();
       const showArrows = state.phase === "aim" && !resultsRef.current;
-      const host = hostRef.current;
-      const width = host?.clientWidth ?? 0;
-      const height = host?.clientHeight ?? 0;
-      for (const [id, element] of arrowRefs.current) {
-        const actor = showArrows ? state.actors.find((item) => item.id === id) : null;
-        const point = actor && actor.role === "mate" ? view.screenOf({ x: actor.pos.x, y: 0, z: actor.pos.z }) : null;
-        const outside = point && (point.x < 10 || point.x > width - 10 || point.y < 10 || point.y > height - 10);
-        if (!point || !outside) {
-          element.style.opacity = "0";
-          continue;
-        }
-        const x = Math.min(width - 40, Math.max(40, point.x));
-        const y = Math.min(height - 92, Math.max(92, point.y));
-        element.style.opacity = "1";
-        element.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-        element.style.setProperty("--angle", `${Math.atan2(point.y - y, point.x - x)}rad`);
-        edges.set(id, { x, y, target: point });
-      }
-
-      const tutorial = level.tutorial;
-      if (tutorial && !tutorialDoneRef.current && tutorialRef.current) {
-        let points: ScreenPoint[] | null = null;
-        if (aiming) {
-          points = [];
-          for (const point of tutorial.demo) {
-            // Ponto na linha do gol: a mão termina dentro do gol, não no gramado atrás.
-            const lifted = point.z >= PITCH.goalLineZ - 0.01;
-            const screen = view.screenOf({ x: point.x, y: lifted ? 0.9 : 0, z: Math.min(point.z, PITCH.goalLineZ) });
-            if (screen) points.push(screen);
+      // Fora da mira as setas já apagaram no primeiro quadro: nem refaz a conta.
+      const arrows = showArrows || arrowsShown;
+      arrowsShown = showArrows;
+      if (arrows) {
+        edges.clear();
+        if (showArrows) {
+          for (const id of arrowRefs.current.keys()) {
+            const actor = state.actors.find((item) => item.id === id);
+            const point = actor && actor.role === "mate" ? view.screenOf({ x: actor.pos.x, y: 0, z: actor.pos.z }) : null;
+            const outside = point && (point.x < 10 || point.x > width - 10 || point.y < 10 || point.y > height - 10);
+            if (!point || !outside) continue;
+            const x = Math.min(width - 40, Math.max(40, point.x));
+            const y = Math.min(height - 92, Math.max(92, point.y));
+            edges.set(id, { x, y, target: point });
           }
         }
-        tutorialRef.current.update(points, now);
       }
+      const tutorial = level.tutorial;
+      const tutorialOn = tutorial && !tutorialDoneRef.current && tutorialRef.current;
+      let demo: ScreenPoint[] | null = null;
+      if (tutorialOn && aiming) {
+        demo = [];
+        for (const point of tutorial.demo) {
+          // Ponto na linha do gol: a mão termina dentro do gol, não no gramado atrás.
+          const lifted = point.z >= PITCH.goalLineZ - 0.01;
+          const screen = view.screenOf({ x: point.x, y: lifted ? 0.9 : 0, z: Math.min(point.z, PITCH.goalLineZ) });
+          if (screen) demo.push(screen);
+        }
+      }
+
+      const ring = ringMarkerRef.current;
+      if (ring) {
+        if (ball) {
+          const radius = Math.max(48, Math.min(width, height) * 0.07);
+          ring.show(true, now);
+          ring.set("transform", `translate3d(${ball.x}px, ${ball.y}px, 0)`);
+          ring.set("--size", `${Math.round(radius * 1.25)}px`);
+        } else {
+          ring.show(false, now);
+        }
+      }
+      if (arrows) {
+        for (const [id, arrow] of arrowRefs.current) {
+          const edge = edges.get(id);
+          if (!edge) {
+            arrow.show(false, now);
+            continue;
+          }
+          arrow.show(true, now);
+          arrow.set("transform", `translate3d(${edge.x}px, ${edge.y}px, 0)`);
+          arrow.set("--angle", `${Math.atan2(edge.target.y - edge.y, edge.target.x - edge.x)}rad`);
+        }
+      } else {
+        // Apagadas: só conta o tempo até as animações delas pararem.
+        for (const arrow of arrowRefs.current.values()) arrow.show(false, now);
+      }
+      if (tutorialOn) tutorialRef.current?.update(demo, now);
       drawTrail(now);
       publishHud(state);
     };
+    const resume = () => {
+      wakeRef.current = true;
+      if (frame || document.hidden || pausedRef.current) return;
+      last = performance.now();
+      budget = 0;
+      elapsed = 0;
+      frame = requestAnimationFrame(tick);
+    };
+    resumeLoopRef.current = resume;
     frame = requestAnimationFrame(tick);
     const onVisibility = () => {
-      last = performance.now();
       audioRef.current?.setPaused(document.hidden || pausedRef.current);
+      if (document.hidden) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      } else {
+        resume();
+      }
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelAnimationFrame(frame);
+      frame = 0;
+      if (resumeLoopRef.current === resume) resumeLoopRef.current = null;
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [status, level.tutorial, advance, finish, handleEvents, drawTrail, publishHud]);
+  }, [status, level.tutorial, performanceAtMount, planStore, advance, finish, handleEvents, drawTrail, publishHud]);
 
-  // O rastro do dedo acompanha o tamanho da tela (nitidez de retina).
+  // O rastro do dedo acompanha o tamanho da tela (nitidez de retina); a área de
+  // jogo guarda o tamanho dela (o quadro e o toque não leem layout).
   useEffect(() => {
     const canvas = trailCanvasRef.current;
-    if (!canvas) return;
+    const host = hostRef.current;
+    if (!canvas || !host) return;
     const resize = () => {
       const ratio = Math.min(2, window.devicePixelRatio || 1);
-      canvas.width = Math.round(canvas.clientWidth * ratio);
-      canvas.height = Math.round(canvas.clientHeight * ratio);
+      trailSizeRef.current = { width: canvas.clientWidth, height: canvas.clientHeight };
+      canvas.width = Math.round(trailSizeRef.current.width * ratio);
+      canvas.height = Math.round(trailSizeRef.current.height * ratio);
+    };
+    const measureHost = () => {
+      hostSizeRef.current = { width: host.clientWidth, height: host.clientHeight };
     };
     resize();
-    const observer = new ResizeObserver(resize);
+    measureHost();
+    // Tamanho novo: o próximo quadro desenha já, mesmo na cadência lenta (mira
+    // parada, resultado), para o quadro esticado não ficar na tela. A janela
+    // avisa antes do rAF do mesmo quadro; o observer pega o resto.
+    const onViewport = () => {
+      wakeRef.current = true;
+    };
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === canvas) resize();
+        else measureHost();
+      }
+      onViewport();
+    });
     observer.observe(canvas);
-    return () => observer.disconnect();
+    observer.observe(host);
+    window.addEventListener("resize", onViewport);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", onViewport);
+    };
   }, []);
 
   // Dica de erro some sozinha.
@@ -654,11 +891,28 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  // Flashes de tela cheia saem da árvore quando a animação deles acaba (já em
+  // opacidade 0, no `onAnimationEnd`): o do gol (0,75 s) isolava uma camada com
+  // `screen`, e o do domínio (0,7 s) ficava montado para sempre. Na pausa a
+  // animação espera, e o flash junto. O relógio é só a reserva, no tempo que o
+  // do gol sempre teve (3,6 s).
   useEffect(() => {
-    if (!goalFx) return;
-    const timer = window.setTimeout(() => setGoalFx((current) => (current?.key === goalFx.key ? null : current)), 3600);
+    if (goalFlash === null) return;
+    const timer = window.setTimeout(() => setGoalFlash((current) => (current === goalFlash ? null : current)), 3600);
     return () => window.clearTimeout(timer);
-  }, [goalFx]);
+  }, [goalFlash]);
+
+  useEffect(() => {
+    if (freezeFlash === null) return;
+    const timer = window.setTimeout(() => setFreezeFlash((current) => (current === freezeFlash ? null : current)), 3600);
+    return () => window.clearTimeout(timer);
+  }, [freezeFlash]);
+
+  useEffect(() => {
+    if (!confetti) return;
+    const timer = window.setTimeout(() => setConfetti((current) => (current?.key === confetti.key ? null : current)), 3600);
+    return () => window.clearTimeout(timer);
+  }, [confetti]);
 
   // Tela cheia de verdade: sem rolar a página por trás.
   useEffect(() => {
@@ -676,6 +930,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     pausedRef.current = value;
     setPaused(value);
     audioRef.current?.setPaused(value);
+    // Na pausa o laço para de pedir quadros; ao voltar, religa e desenha já no próximo.
+    if (!value) resumeLoopRef.current?.();
   }, []);
 
   const pause = useCallback(() => {
@@ -698,6 +954,12 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   }, [setPausedBoth]);
 
   const restart = useCallback(() => {
+    // O modo desempenho mudou desde a montagem (o aparelho pediu, ou outra aba):
+    // a nova tentativa já nasce com ele, numa montagem nova (nunca no meio da jogada).
+    if (performanceMode !== performanceAtMount && onRemount) {
+      onRemount();
+      return;
+    }
     const game = gameRef.current;
     if (!game) return;
     primeScoreboboAudio();
@@ -709,19 +971,19 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     resultsRef.current = false;
     bestOutcomeRef.current = null;
     lastOutcomeRef.current = null;
-    planRef.current = null;
+    planStore.set(null);
     phaseRef.current = { phase: null, since: performance.now(), active: 0, retryAt: 0, forceAt: 0 };
     kickersRef.current = [];
     lastPlanRef.current = null;
     goalFactsRef.current = null;
     setReplayStats(null);
     setDrawing(false);
-    setPlan(null);
     setResults(null);
-    setGoalFx(null);
+    setGoalFlash(null);
+    setConfetti(null);
     setToast(null);
     setPausedBoth(false);
-  }, [setPausedBoth]);
+  }, [setPausedBoth, performanceMode, performanceAtMount, onRemount, planStore]);
 
   const skip = useCallback(() => {
     const game = gameRef.current;
@@ -771,13 +1033,19 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
 
   // ------------------------------------------------------------ ponteiro
 
-  const pointFrom = (event: { clientX: number; clientY: number }) => {
-    const rect = hostRef.current?.getBoundingClientRect();
+  const pointFrom = (event: { clientX: number; clientY: number }, rect = hostRef.current?.getBoundingClientRect()) => {
     return { x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0) };
+  };
+
+  /** Mexeu: a mira volta a 60 por segundo (com `now`, o próximo quadro sai sem esperar). */
+  const wake = (now: boolean) => {
+    wakeAtRef.current = performance.now();
+    if (now) wakeRef.current = true;
   };
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 && event.pointerType === "mouse") return;
+    wake(true);
     touchRef.current = event.pointerType === "touch";
     if (touchRef.current !== touchUi) setTouchUi(touchRef.current);
     primeScoreboboAudio();
@@ -797,7 +1065,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     const host = hostRef.current;
     if (!host) return;
     const { x, y } = pointFrom(event);
-    const short = Math.min(host.clientWidth, host.clientHeight);
+    const size = hostSizeRef.current;
+    const short = Math.min(size.width, size.height);
     const radius = Math.max(48, short * 0.07);
     const state = game.state;
     // Bola no ar (cabeceio/voleio): o traço é lido na altura dela.
@@ -820,13 +1089,14 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     }
     // O traço nasce NA bola (o dedo encostou perto dela): a linha sai do pé, não de onde o dedo caiu.
     const now = performance.now();
-    const viewport = { width: host.clientWidth, height: host.clientHeight };
+    const viewport = { width: size.width, height: size.height };
     const samples: StrokeSample[] = [{ screen: { x: ball.x, y: ball.y }, t: now, ...view.project(ball.x, ball.y, airY ?? undefined), viewport }];
     const offset = Math.hypot(ball.x - x, ball.y - y);
     if (offset > 8 && near(ball)) samples.push({ screen: { x, y }, t: now, ...here, viewport });
     lastPlanRef.current = null;
     strokeRef.current = { pointerId: event.pointerId, samples, down: { x, y }, moved: false, airY, length: offset > 8 && near(ball) ? offset : 0, dirty: true, short, viewport };
     trailRef.current = [{ x: ball.x, y: ball.y, t: now }, { x, y, t: now }];
+    showTrail(true);
     if (!tutorialDoneRef.current) {
       tutorialDoneRef.current = true;
       setTutorialDone(true);
@@ -839,13 +1109,16 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     const stroke = strokeRef.current;
     const view = viewRef.current;
     if (!stroke || !view || event.pointerId !== stroke.pointerId) return;
+    wake(false);
     const native = event.nativeEvent;
     // Eventos agrupados: em 120 Hz o traço não vira um polígono.
     const list = typeof native.getCoalescedEvents === "function" ? native.getCoalescedEvents() : [];
     const moves = list.length ? list : [native];
     const now = performance.now();
+    // Um retângulo por evento (nada muda o layout entre os agrupados).
+    const rect = hostRef.current?.getBoundingClientRect();
     for (const move of moves) {
-      const { x, y } = pointFrom(move);
+      const { x, y } = pointFrom(move, rect);
       const lastSample = stroke.samples[stroke.samples.length - 1];
       const step = Math.hypot(x - lastSample.screen.x, y - lastSample.screen.y);
       trailRef.current.push({ x, y, t: now });
@@ -866,11 +1139,11 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const endStroke = (event: ReactPointerEvent<HTMLDivElement>, cancelled: boolean) => {
     const stroke = strokeRef.current;
     if (!stroke || event.pointerId !== stroke.pointerId) return;
+    wake(false);
     strokeRef.current = null;
     trailFadeRef.current = performance.now() + 260;
     setDrawing(false);
-    planRef.current = null;
-    setPlan(null);
+    planStore.set(null);
     audioRef.current?.setDrawing(null);
     const game = gameRef.current;
     const view = viewRef.current;
@@ -900,6 +1173,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+      wakeAtRef.current = performance.now();
+      wakeRef.current = true;
       const key = event.key.toLowerCase();
       if (key === "escape" || key === "p") {
         event.preventDefault();
@@ -922,6 +1197,22 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
 
   // ------------------------------------------------------------ desenho
 
+  // Refs estáveis: o React não solta e prende o anel e as setas a cada render.
+  const setRing = useCallback((element: HTMLDivElement | null) => {
+    ringRef.current = element;
+    ringMarkerRef.current = element ? new Marker(element) : null;
+  }, []);
+  const setArrow = useCallback((element: HTMLDivElement | null) => {
+    const id = element?.dataset.mate;
+    if (!element || !id) return;
+    const arrows = arrowRefs.current;
+    arrows.set(id, new Marker(element));
+    return () => {
+      arrows.delete(id);
+    };
+  }, []);
+  const stageStyle = useMemo(() => ({ "--home": home.primary, "--home2": home.secondary, "--away": away.primary }) as CSSProperties, [home.primary, home.secondary, away.primary]);
+
   const phase = hud?.phase ?? "intro";
   const outcome = hud?.outcome ?? null;
   const showAim = status === "ready" && phase === "aim" && !paused && !results;
@@ -933,7 +1224,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       ref={rootRef}
       className={`${styles.stage} ${hud?.slow ? styles.stageSlow : ""} ${showAim ? styles.stageFrozen : ""} ${drawing ? styles.stageDrawing : ""} ${paused ? styles.stagePaused : ""}`}
       tabIndex={-1}
-      style={{ "--home": home.primary, "--home2": home.secondary, "--away": away.primary } as CSSProperties}
+      style={stageStyle}
     >
       <StarDefs />
       <div
@@ -946,16 +1237,14 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         onLostPointerCapture={(event) => endStroke(event, false)}
         onContextMenu={(event) => event.preventDefault()}
       >
-        <canvas ref={trailCanvasRef} className={styles.trail} aria-hidden="true" />
-        <div ref={ringRef} className={styles.ballRing} style={{ opacity: 0 }} aria-hidden="true"><i /><b /></div>
+        <canvas ref={trailCanvasRef} className={styles.trail} style={{ visibility: "hidden" }} aria-hidden="true" />
+        <div ref={setRing} className={styles.ballRing} style={{ opacity: 0 }} aria-hidden="true"><i /><b /></div>
         <div ref={tapRef} className={styles.tap} aria-hidden="true" />
         {[level.hero, ...level.mates].map((mate) => (
           <div
             key={mate.id}
-            ref={(element) => {
-              if (element) arrowRefs.current.set(mate.id, element);
-              else arrowRefs.current.delete(mate.id);
-            }}
+            ref={setArrow}
+            data-mate={mate.id}
             className={styles.edgeArrow}
             style={{ opacity: 0 }}
             aria-hidden="true"
@@ -968,13 +1257,23 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
 
       <div className={`${styles.letterbox} ${letterbox ? styles.letterboxOn : ""}`} aria-hidden="true"><i /><i /></div>
       <div className={styles.vignette} aria-hidden="true" />
-      {freezeKey > 0 && <div key={freezeKey} className={styles.freezeFlash} aria-hidden="true" />}
-      {goalFx && (
-        <>
-          <div key={`f${goalFx.key}`} className={styles.goalFlash} aria-hidden="true" />
-          {goalFx.pieces.length > 0 && <Confetti key={`c${goalFx.key}`} pieces={goalFx.pieces} />}
-        </>
+      {freezeFlash !== null && (
+        <div
+          key={freezeFlash}
+          className={styles.freezeFlash}
+          onAnimationEnd={() => setFreezeFlash((current) => (current === freezeFlash ? null : current))}
+          aria-hidden="true"
+        />
       )}
+      {goalFlash !== null && (
+        <div
+          key={`f${goalFlash}`}
+          className={styles.goalFlash}
+          onAnimationEnd={() => setGoalFlash((current) => (current === goalFlash ? null : current))}
+          aria-hidden="true"
+        />
+      )}
+      {confetti && <Confetti key={`c${confetti.key}`} pieces={confetti.pieces} />}
 
       {level.tutorial && !tutorialDone && <TutorialOverlay ref={tutorialRef} />}
 
@@ -1019,7 +1318,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
           {showAim && (
             <div className={styles.bottom}>
               {drawing
-                ? <PlanChip plan={plan} />
+                ? <LivePlanChip store={planStore} />
                 : <AimHint key={hint.key} text={hint.tone === "error" ? hint.text : infoHint} tone={hint.tone} tag={level.tutorial && !tutorialDone ? "TUTORIAL" : undefined} />}
             </div>
           )}
@@ -1042,7 +1341,9 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
             <h2 id="sb-fail-title">O 3D parou de responder</h2>
             <p>O Scorebobo só existe no Modo 3D. Recarregue a página ou feche outros apps pesados e tente de novo.</p>
             <div className={styles.menuActions}>
-              <button type="button" className={styles.primaryButton} onClick={() => window.location.reload()}>Recarregar</button>
+              {/* Monta a fase de novo com um WebGL novo, sem recarregar o app (a carreira em memória fica). */}
+              {onRemount && <button type="button" className={styles.primaryButton} onClick={() => onRemount()}>Tentar de novo</button>}
+              <button type="button" className={onRemount ? styles.secondaryButton : styles.primaryButton} onClick={() => window.location.reload()}>Recarregar</button>
               <button type="button" className={styles.secondaryButton} onClick={leave}>Fases</button>
             </div>
           </div>

@@ -159,6 +159,31 @@ class FigureGeometryBuilder {
 let blobTexture: THREE.Texture | null = null;
 let blobGeometry: THREE.PlaneGeometry | null = null;
 
+let sharedFigureUsers = 0;
+
+/**
+ * Quem cria e descarta renderers com bonecos (o Scorebobo, a cada fase)
+ * segura os recursos compartilhados dos bonecos enquanto vive.
+ */
+export function retainSharedFigureResources() {
+  sharedFigureUsers += 1;
+}
+
+/**
+ * O último a soltar dá dispose() na sombra de contato e no material de sombra
+ * dos bonecos. Isso só avisa os renderers: cada um solta os buffers/programa e
+ * o ouvinte que prendia um renderer morto (com o canvas) na memória. Os objetos
+ * continuam valendo e sobem de novo no próximo uso.
+ */
+export function releaseSharedFigureResources() {
+  if (sharedFigureUsers === 0) return;
+  sharedFigureUsers -= 1;
+  if (sharedFigureUsers > 0) return;
+  blobGeometry?.dispose();
+  blobTexture?.dispose();
+  figureDepthMaterial?.dispose();
+}
+
 function contactShadow() {
   blobTexture ??= radialTexture("rgba(0,0,0,0.55)", "rgba(0,0,0,0)");
   blobGeometry ??= new THREE.PlaneGeometry(1, 1);

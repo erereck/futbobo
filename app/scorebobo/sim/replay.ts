@@ -2,27 +2,14 @@
 // jogo) desde o primeiro toque da tentativa; o replay toca trechos em câmera
 // lenta com ângulos de câmera sugeridos.
 
-import type { Actor, ActorPose, BallState, SimEvent, Vec2, Vec3 } from "../types";
+import type { Actor, ActorPose, BallState, SimEvent, Vec3 } from "../types";
 import { angleDelta, lerp } from "./math";
 
-type ActorShot = {
-  pos: Vec2;
-  vel: Vec2;
-  facing: number;
-  pose: ActorPose;
-  poseT: number;
-  role: Actor["role"];
-  dive?: { side: number; height: number };
-  jump?: number;
-  celebration?: string;
-  look?: Vec3 | null;
-};
-
-type Snapshot = {
-  t: number;
-  ball: { pos: Vec3; vel: Vec3; spin: Vec3; owner: string | null; inNet: boolean };
-  actors: ActorShot[];
-};
+// Cada foto é uma linha de números num Float64Array só (os doubles voltam exatos):
+// t, bola (pos, vel, spin) e, por ator, pos x/z, vel x/z, facing, poseT, jump e look x/y/z.
+// O que não é número fica em listas paralelas (por foto, e por foto × ator).
+const HEAD = 10;
+const PER_ACTOR = 10;
 
 /** Um trecho do replay: de `from` a `to` (tempo de jogo), na velocidade `rate`, com câmera `angle`. */
 export type ReplaySegment = { from: number; to: number; rate: number; angle: number; slow?: { at: number; rate: number; span: number } };
@@ -31,31 +18,85 @@ export type ReplaySegment = { from: number; to: number; rate: number; angle: num
 const REPLAY_EVENTS = new Set<SimEvent["type"]>(["kick", "post", "net", "save", "receive"]);
 
 export class Recorder {
-  snaps: Snapshot[] = [];
   events: SimEvent[] = [];
+  /** Fotos gravadas (o buffer cresce dobrando e é reaproveitado entre tentativas). */
+  private count = 0;
+  private data = new Float64Array(0);
+  private stride = HEAD;
+  /** Atores por foto: a lista do lance não muda depois do primeiro toque. */
+  private actorCount = 0;
+  private owners: Array<string | null> = [];
+  private inNet: boolean[] = [];
+  private poses: ActorPose[] = [];
+  private roles: Array<Actor["role"]> = [];
+  private dives: Array<{ side: number; height: number } | undefined> = [];
+  private celebrations: Array<string | undefined> = [];
+  private looks: boolean[] = [];
 
   clear() {
-    this.snaps = [];
+    this.count = 0;
     this.events = [];
+    this.owners.length = 0;
+    this.inNet.length = 0;
+    this.poses.length = 0;
+    this.roles.length = 0;
+    this.dives.length = 0;
+    this.celebrations.length = 0;
+    this.looks.length = 0;
+  }
+
+  get length() {
+    return this.count;
   }
 
   record(t: number, ball: BallState, actors: Actor[]) {
-    this.snaps.push({
-      t,
-      ball: { pos: { ...ball.pos }, vel: { ...ball.vel }, spin: { ...ball.spin }, owner: ball.owner, inNet: ball.inNet },
-      actors: actors.map((a) => ({
-        pos: { ...a.pos },
-        vel: { ...a.vel },
-        facing: a.facing,
-        pose: a.pose,
-        poseT: a.poseT,
-        role: a.role,
-        dive: a.dive ? { ...a.dive } : undefined,
-        jump: a.jump,
-        celebration: a.celebration,
-        look: a.look ? { ...a.look } : null,
-      })),
-    });
+    if (this.count === 0) {
+      this.actorCount = actors.length;
+      this.stride = HEAD + PER_ACTOR * actors.length;
+    }
+    const stride = this.stride;
+    if ((this.count + 1) * stride > this.data.length) {
+      const grown = new Float64Array(Math.max(stride * 256, this.data.length * 2, (this.count + 1) * stride));
+      grown.set(this.data.subarray(0, this.count * stride));
+      this.data = grown;
+    }
+    const d = this.data;
+    let o = this.count * stride;
+    d[o] = t;
+    d[o + 1] = ball.pos.x;
+    d[o + 2] = ball.pos.y;
+    d[o + 3] = ball.pos.z;
+    d[o + 4] = ball.vel.x;
+    d[o + 5] = ball.vel.y;
+    d[o + 6] = ball.vel.z;
+    d[o + 7] = ball.spin.x;
+    d[o + 8] = ball.spin.y;
+    d[o + 9] = ball.spin.z;
+    this.owners.push(ball.owner);
+    this.inNet.push(ball.inNet);
+    o += HEAD;
+    for (let i = 0; i < this.actorCount; i += 1) {
+      const a = actors[i];
+      const look = a.look;
+      d[o] = a.pos.x;
+      d[o + 1] = a.pos.z;
+      d[o + 2] = a.vel.x;
+      d[o + 3] = a.vel.z;
+      d[o + 4] = a.facing;
+      d[o + 5] = a.poseT;
+      // Sem salto = 0 (o replay sempre leu `jump ?? 0`).
+      d[o + 6] = a.jump ?? 0;
+      d[o + 7] = look ? look.x : 0;
+      d[o + 8] = look ? look.y : 0;
+      d[o + 9] = look ? look.z : 0;
+      this.looks.push(!!look);
+      this.poses.push(a.pose);
+      this.roles.push(a.role);
+      this.dives.push(a.dive ? { ...a.dive } : undefined);
+      this.celebrations.push(a.celebration);
+      o += PER_ACTOR;
+    }
+    this.count += 1;
   }
 
   event(e: SimEvent) {
@@ -63,52 +104,59 @@ export class Recorder {
   }
 
   get start() {
-    return this.snaps[0]?.t ?? 0;
+    return this.count ? this.data[0] : 0;
   }
 
   get end() {
-    return this.snaps[this.snaps.length - 1]?.t ?? 0;
+    return this.count ? this.data[(this.count - 1) * this.stride] : 0;
   }
 
   /** Aplica o instante `t` (interpolado) sobre os atores e a bola. */
   apply(t: number, actors: Actor[], ball: BallState) {
-    const snaps = this.snaps;
-    if (!snaps.length) return;
+    const n = this.count;
+    if (!n) return;
+    const d = this.data;
+    const stride = this.stride;
     let lo = 0;
-    let hi = snaps.length - 1;
-    if (t <= snaps[0].t) hi = 0;
-    else if (t >= snaps[hi].t) lo = hi;
+    let hi = n - 1;
+    if (t <= d[0]) hi = 0;
+    else if (t >= d[hi * stride]) lo = hi;
     else {
       while (hi - lo > 1) {
         const mid = (lo + hi) >> 1;
-        if (snaps[mid].t <= t) lo = mid;
+        if (d[mid * stride] <= t) lo = mid;
         else hi = mid;
       }
     }
-    const a = snaps[lo];
-    const b = snaps[hi];
-    const k = b.t > a.t ? (t - a.t) / (b.t - a.t) : 0;
-    const near = k < 0.5 ? a : b;
-    ball.pos = mix3(a.ball.pos, b.ball.pos, k);
-    ball.vel = mix3(a.ball.vel, b.ball.vel, k);
-    ball.spin = mix3(a.ball.spin, b.ball.spin, k);
-    ball.owner = near.ball.owner;
-    ball.inNet = near.ball.inNet;
+    const a = lo * stride;
+    const b = hi * stride;
+    const k = d[b] > d[a] ? (t - d[a]) / (d[b] - d[a]) : 0;
+    const near = k < 0.5 ? lo : hi;
+    ball.pos = mix3(d, a + 1, b + 1, k);
+    ball.vel = mix3(d, a + 4, b + 4, k);
+    ball.spin = mix3(d, a + 7, b + 7, k);
+    ball.owner = this.owners[near];
+    ball.inNet = this.inNet[near];
+    const count = this.actorCount;
     actors.forEach((actor, i) => {
-      const sa = a.actors[i];
-      const sb = b.actors[i];
-      if (!sa || !sb) return;
-      const sn = k < 0.5 ? sa : sb;
-      actor.pos = { x: lerp(sa.pos.x, sb.pos.x, k), z: lerp(sa.pos.z, sb.pos.z, k) };
-      actor.vel = { x: lerp(sa.vel.x, sb.vel.x, k), z: lerp(sa.vel.z, sb.vel.z, k) };
-      actor.facing = sa.facing + angleDelta(sa.facing, sb.facing) * k;
-      actor.pose = sn.pose;
-      actor.role = sn.role;
-      actor.poseT = sa.pose === sb.pose ? lerp(sa.poseT, sb.poseT, k) : sn.poseT;
-      actor.dive = sn.dive ? { ...sn.dive } : undefined;
-      actor.jump = lerp(sa.jump ?? 0, sb.jump ?? 0, k);
-      actor.celebration = sn.celebration;
-      actor.look = sn.look ? { ...sn.look } : null;
+      if (i >= count) return;
+      const oa = a + HEAD + i * PER_ACTOR;
+      const ob = b + HEAD + i * PER_ACTOR;
+      const on = k < 0.5 ? oa : ob;
+      const ia = lo * count + i;
+      const ib = hi * count + i;
+      const sn = k < 0.5 ? ia : ib;
+      actor.pos = { x: lerp(d[oa], d[ob], k), z: lerp(d[oa + 1], d[ob + 1], k) };
+      actor.vel = { x: lerp(d[oa + 2], d[ob + 2], k), z: lerp(d[oa + 3], d[ob + 3], k) };
+      actor.facing = d[oa + 4] + angleDelta(d[oa + 4], d[ob + 4]) * k;
+      actor.pose = this.poses[sn];
+      actor.role = this.roles[sn];
+      actor.poseT = this.poses[ia] === this.poses[ib] ? lerp(d[oa + 5], d[ob + 5], k) : d[on + 5];
+      const dive = this.dives[sn];
+      actor.dive = dive ? { ...dive } : undefined;
+      actor.jump = lerp(d[oa + 6], d[ob + 6], k);
+      actor.celebration = this.celebrations[sn];
+      actor.look = this.looks[sn] ? { x: d[on + 7], y: d[on + 8], z: d[on + 9] } : null;
     });
   }
 
@@ -118,8 +166,9 @@ export class Recorder {
   }
 }
 
-function mix3(a: Vec3, b: Vec3, k: number): Vec3 {
-  return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), z: lerp(a.z, b.z, k) };
+/** Mistura os Vec3 que começam em `a` e `b` no buffer. */
+function mix3(d: Float64Array, a: number, b: number, k: number): Vec3 {
+  return { x: lerp(d[a], d[b], k), y: lerp(d[a + 1], d[b + 1], k), z: lerp(d[a + 2], d[b + 2], k) };
 }
 
 /** Toca uma lista de trechos; `advance` devolve o tempo de jogo a mostrar (ou null no fim). */

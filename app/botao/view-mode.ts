@@ -197,7 +197,10 @@ export function webglAvailable(): boolean {
   if (typeof document === "undefined") return false;
   try {
     const canvas = document.createElement("canvas");
-    return Boolean(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
+    const gl = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
+    // Só queria saber se existe: devolve o contexto na hora (o navegador tem poucos).
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
+    return Boolean(gl);
   } catch {
     return false;
   }

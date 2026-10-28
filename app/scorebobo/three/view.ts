@@ -4,7 +4,8 @@
 // Orçamento: ~45 draw calls no quadro (céu, gramado, tigela, LED, torcida em
 // 3 malhas, gol, rede, bandeirinhas, bonecos, bola, traço, efeitos), sombra
 // só da luz principal sobre o campo (nenhuma no modo desempenho), pixel ratio
-// até 1,75 (1 no desempenho, com orçamento de pixels).
+// até 1,75 (1 no desempenho, com orçamento de pixels), que a resolução
+// adaptável pode baixar até 1,3 (0,7 no desempenho) em aparelho fraco.
 
 import * as THREE from "three";
 import { PITCH, type GameState, type KickPlan, type ScoreboboViewApi, type ScoreLevel, type ScoreTeams, type SimEvent, type Vec2, type Vec3 } from "../types";
@@ -27,7 +28,15 @@ export type ScoreboboViewOptions = {
   reducedMotion: boolean;
   /** O WebGL caiu (o Scorebobo é só 3D: quem usa mostra o aviso e oferece recarregar). */
   onContextLost?: () => void;
+  /** O navegador devolveu o contexto: a cena não volta sozinha, quem usa remonta a visão. */
+  onContextRestored?: () => void;
 };
+
+/** Devolve a vez ao navegador entre as partes da montagem (a bola do "carregando" segue girando). */
+function yieldNow(): Promise<void> {
+  const scheduler = (globalThis as { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+  return scheduler?.yield ? scheduler.yield() : new Promise((resolve) => setTimeout(resolve, 0));
+}
 
 /**
  * Sombra PCF do three r186 com uma leitura só (o filtro de comparação já faz
@@ -39,6 +48,9 @@ function applySingleTapShadows() {
   if (!taps.test(chunk)) return;
   THREE.ShaderChunk.shadowmap_pars_fragment = chunk.replace(taps, "shadow = texture( shadowMap, vec3( shadowCoord.xy, shadowCoord.z ) );");
 }
+
+/** Lado que o WebGLShadowMap usa no material de profundidade (o avesso do material). */
+const SHADOW_SIDE: Record<THREE.Side, THREE.Side> = { [THREE.FrontSide]: THREE.BackSide, [THREE.BackSide]: THREE.FrontSide, [THREE.DoubleSide]: THREE.DoubleSide };
 
 export type ScoreboboViewStats = { calls: number; triangles: number; points: number; cpuMs: number; pixelRatio: number; width: number; height: number };
 
@@ -77,6 +89,21 @@ export class ScoreboboView implements ScoreboboViewApi {
   private width = 0;
   private height = 0;
   private pixelRatio = 1;
+  /** O canvas mudou de tamanho (ResizeObserver): só então o quadro lê clientWidth. */
+  private sizeDirty = true;
+  private alwaysMeasure = false;
+  // Resolução adaptável: `basePixelRatio` é o teto de sempre; a escala só desce
+  // em aparelho que não segura 48 quadros por segundo, até `minPixelRatio`.
+  private basePixelRatio = 1;
+  private minPixelRatio = 1;
+  private resolutionScale = 1;
+  /** Escala nova esperando um quadro calmo (ou um corte) para trocar o buffer. */
+  private resolutionPending = false;
+  private frameAverage = 1 / 60;
+  private resolutionClock = 0;
+  private averageBeforeDrop: number | null = null;
+  private scaleBeforeDrop = 1;
+  private resolutionMisses = 0;
   private worldTime = 0;
   private lastHit: Vec3 = { x: 0, y: 1.2, z: PITCH.goalLineZ + 1.5 };
   private lastPhase: GameState["phase"] | null = null;
@@ -87,6 +114,10 @@ export class ScoreboboView implements ScoreboboViewApi {
   private frameIndex = 0;
   private scorerId: string | null = null;
   private lastStats: ScoreboboViewStats = { calls: 0, triangles: 0, points: 0, cpuMs: 0, pixelRatio: 1, width: 0, height: 0 };
+  /** Mapa de sombra R8 criado aqui (null no modo desempenho). */
+  private shadowTarget: THREE.WebGLRenderTarget | null = null;
+  /** Materiais de profundidade que só servem para compilar o passe de sombra na montagem. */
+  private readonly depthStandIns: THREE.Material[] = [];
   private readonly cleanup: Array<() => void> = [];
 
   constructor(
@@ -110,6 +141,22 @@ export class ScoreboboView implements ScoreboboViewApi {
     this.key.castShadow = !performance;
     const shadowSize = this.coarse ? 1024 : 2048;
     this.key.shadow.mapSize.set(shadowSize, shadowSize);
+    if (!performance) {
+      // Mapa de sombra com cor R8 no lugar do RGBA8 padrão: a sombra PCF só lê a
+      // textura de profundidade, e limpar a cor de 4 canais era quase todo o custo
+      // do passe. Preso ao three 0.186 (WebGLShadowMap só recria o mapa quando ele é
+      // null ou o tipo de sombra muda; WebGLLights lê depthTexture fora do VSM): ao
+      // atualizar o three, conferir o aviso de desenvolvimento no prepare().
+      const target = new THREE.WebGLRenderTarget(shadowSize, shadowSize, { format: THREE.RedFormat, type: THREE.UnsignedByteType, generateMipmaps: false });
+      const depth = new THREE.DepthTexture(shadowSize, shadowSize, THREE.UnsignedIntType);
+      depth.format = THREE.DepthFormat;
+      depth.compareFunction = this.renderer.state.buffers.depth.getReversed() ? THREE.GreaterEqualCompare : THREE.LessEqualCompare;
+      depth.minFilter = THREE.LinearFilter;
+      depth.magFilter = THREE.LinearFilter;
+      target.depthTexture = depth;
+      this.key.shadow.map = target;
+      this.shadowTarget = target;
+    }
     this.key.shadow.bias = -0.0005;
     // Refeita sob demanda: com o tempo congelado, um quadro em três basta.
     this.key.shadow.autoUpdate = false;
@@ -124,6 +171,32 @@ export class ScoreboboView implements ScoreboboViewApi {
     };
     canvas.addEventListener("webglcontextlost", onLost);
     this.cleanup.push(() => canvas.removeEventListener("webglcontextlost", onLost));
+    const onRestored = () => this.options.onContextRestored?.();
+    canvas.addEventListener("webglcontextrestored", onRestored);
+    this.cleanup.push(() => canvas.removeEventListener("webglcontextrestored", onRestored));
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(() => {
+        this.sizeDirty = true;
+      });
+      observer.observe(canvas);
+      this.cleanup.push(() => observer.disconnect());
+    } else {
+      // Sem ResizeObserver, mede todo quadro como antes.
+      this.alwaysMeasure = true;
+    }
+    // Giro do Android ou janela mudando: o evento chega antes dos callbacks de
+    // rAF do mesmo quadro (o ResizeObserver só depois deles), então o render
+    // desse quadro já mede e sai no tamanho novo, como quando media sempre.
+    const onViewport = () => {
+      this.sizeDirty = true;
+    };
+    window.addEventListener("resize", onViewport);
+    window.addEventListener("orientationchange", onViewport);
+    this.cleanup.push(() => {
+      window.removeEventListener("resize", onViewport);
+      window.removeEventListener("orientationchange", onViewport);
+    });
   }
 
   // ---------------------------------------------------------------- montagem
@@ -149,24 +222,36 @@ export class ScoreboboView implements ScoreboboViewApi {
     this.fill.position.set(-look.keyDir.x * 100, look.keyDir.y * 70 + 20, -look.keyDir.z * 100 + 30);
     this.fitShadow(look);
 
+    // A montagem vai em pedaços, devolvendo a vez ao navegador entre eles: no
+    // celular era um travamento só de meio segundo (nada aparece antes do `ready`).
     this.sky = new SkyDome(look, this.env.uTime);
     this.scene.add(this.sky.mesh);
-    this.pitch = new Pitch(look);
+    this.pitch = new Pitch(look, performance);
     this.scene.add(this.pitch.mesh);
+    await yieldNow();
+    if (this.disposed || this.contextLost) return;
     this.goal = new Goal({ flagColor: "#ffd23f" });
     this.scene.add(this.goal.group);
+    await yieldNow();
+    if (this.disposed || this.contextLost) return;
     const colors = { homeA: teams.home.primary, homeB: teams.home.secondary, awayA: teams.away.primary, awayB: teams.away.secondary };
     this.stadium = new Stadium(this.env, colors, performance);
     this.stadium.setLook(look.lights);
     this.scene.add(this.stadium.group);
+    await yieldNow();
+    if (this.disposed || this.contextLost) return;
     this.crowd = new Crowd(stadiumSeats(performance, seed), colors, this.env, { calm: this.options.reducedMotion, seed });
     this.scene.add(this.crowd.group);
+    await yieldNow();
+    if (this.disposed || this.contextLost) return;
     this.squad = new Squad(state, teams, performance, seed);
     this.scene.add(this.squad.group);
     const squad = this.squad;
     this.director.focusOf = (id, out) => squad.centerOf(id, out);
     // Fase de chute direto (falta sem passe): a mira é de chute, com o gol grande.
     this.director.shootOnly = (level.require ?? []).some((rule) => rule.kind === "maxPasses" && rule.max === 0);
+    await yieldNow();
+    if (this.disposed || this.contextLost) return;
     this.ball = new BallActor(performance);
     this.scene.add(this.ball.group);
     this.stroke = new StrokeView(this.camera, this.env.uTime);
@@ -175,19 +260,78 @@ export class ScoreboboView implements ScoreboboViewApi {
     this.scene.add(this.runs.mesh);
     this.effects = new Effects({ reducedMotion: this.options.reducedMotion, performance, colors: [teams.home.primary, teams.home.secondary] });
     this.scene.add(this.effects.group);
+    await yieldNow();
+    if (this.disposed || this.contextLost) return;
 
     // Pose inicial da câmera (o primeiro quadro já sai enquadrado) e texturas na GPU.
     this.resize(true);
     this.director.update(state, [], 0, this.lastHit);
     for (const texture of [...this.squad.textures(), ...this.ball.textures()]) this.renderer.initTexture(texture);
     try {
-      await this.renderer.compileAsync(this.scene, this.camera);
+      // A sombra antes: ela troca o alvo para o mapa de sombra e o devolve antes da cena compilar.
+      const shadow = this.compileShadowDepth();
+      await Promise.all([this.renderer.compileAsync(this.scene, this.camera), shadow]);
     } catch {
       // Sem compilação paralela: compila no primeiro quadro.
     }
     if (this.disposed || this.contextLost) return;
     this.ready = true;
     this.renderer.render(this.scene, this.camera);
+    if (process.env.NODE_ENV !== "production" && this.key.castShadow && this.key.shadow.map?.texture.format !== THREE.RedFormat) {
+      console.warn("[scorebobo] o three trocou o mapa de sombra R8 pelo dele: revisar o atalho no construtor da ScoreboboView.");
+    }
+  }
+
+  /**
+   * Os dois programas do passe de sombra (bonecos e o resto dos casters)
+   * compilavam travando o primeiro quadro. Compilam junto com os outros: uma
+   * cena de mentira com as mesmas variantes de material que o WebGLShadowMap
+   * vai pedir (regra do getDepthMaterial do three 0.186) e o mapa de sombra
+   * como alvo (sem tone mapping, como no passe de verdade). O material de
+   * profundidade padrão é um só e fica com o programa do primeiro caster que
+   * passa (trocar mapa ou lado não recompila), por isso vale o primeiro.
+   */
+  private compileShadowDepth(): Promise<unknown> | null {
+    const target = this.shadowTarget;
+    if (!this.key.castShadow || !target || this.key.shadow.map !== target) return null;
+    const proxies = new THREE.Scene();
+    const seen = new Set<string>();
+    this.scene.traverseVisible((object) => {
+      const mesh = object as THREE.Mesh;
+      if (!mesh.isMesh || !mesh.castShadow || Array.isArray(mesh.material)) return;
+      const source = mesh.material as THREE.MeshStandardMaterial;
+      const skinned = (mesh as THREE.SkinnedMesh).isSkinnedMesh === true;
+      const side = source.shadowSide ?? SHADOW_SIDE[source.side];
+      const alphaTest = source.alphaToCoverage ? 0.5 : source.alphaTest;
+      const custom = mesh.customDepthMaterial;
+      const key = `${custom ? custom.uuid : "depth"}:${skinned}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      let depth = custom as THREE.MeshDepthMaterial | undefined;
+      if (!depth) {
+        depth = new THREE.MeshDepthMaterial();
+        this.depthStandIns.push(depth);
+      }
+      depth.side = side;
+      depth.map = source.map ?? null;
+      depth.alphaMap = source.alphaMap ?? null;
+      depth.alphaTest = alphaTest;
+      depth.displacementMap = source.displacementMap ?? null;
+      depth.displacementScale = source.displacementScale ?? 1;
+      depth.displacementBias = source.displacementBias ?? 0;
+      proxies.add(skinned ? new THREE.SkinnedMesh(mesh.geometry, depth) : new THREE.Mesh(mesh.geometry, depth));
+    });
+    // Luzes da cena de verdade, mas sem a neblina: o passe de sombra desenha numa cena vazia.
+    const previous = this.renderer.getRenderTarget();
+    const fog = this.scene.fog;
+    this.scene.fog = null;
+    this.renderer.setRenderTarget(target);
+    try {
+      return this.renderer.compileAsync(proxies, this.key.shadow.camera, this.scene);
+    } finally {
+      this.renderer.setRenderTarget(previous);
+      this.scene.fog = fog;
+    }
   }
 
   /** Caixa da sombra justa na metade de ataque (texels de ~3 cm). */
@@ -220,9 +364,12 @@ export class ScoreboboView implements ScoreboboViewApi {
   }
 
   private resize(force = false) {
+    // Ler clientWidth logo depois do React mexer no HUD força layout: só lê quando o tamanho mudou.
+    if (!force && !this.sizeDirty) return;
     const width = this.canvas.clientWidth;
     const height = this.canvas.clientHeight;
     if (width === 0 || height === 0) return;
+    this.sizeDirty = false;
     if (!force && width === this.width && height === this.height) return;
     this.width = width;
     this.height = height;
@@ -230,19 +377,86 @@ export class ScoreboboView implements ScoreboboViewApi {
     // Modo desempenho: no máximo 1 e um orçamento de pixels (~0,45 MP no celular, ~1 MP no desktop).
     const budget = this.options.performance ? (this.coarse ? 4.5e5 : 1e6) : 4.2e6;
     const cap = this.options.performance ? 1 : 1.75;
-    this.pixelRatio = Math.max(0.6, Math.min(dpr, cap, Math.sqrt(budget / (width * height))));
-    this.renderer.setPixelRatio(this.pixelRatio);
-    this.renderer.setSize(width, height, false);
+    this.basePixelRatio = Math.max(0.6, Math.min(dpr, cap, Math.sqrt(budget / (width * height))));
+    // Piso da resolução adaptável (nunca acima do teto: em tela de dpr 1 ela nem mexe).
+    this.minPixelRatio = Math.min(this.basePixelRatio, this.options.performance ? 0.7 : Math.min(dpr, 1.3));
+    this.applyPixelRatio();
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.director.setAspect(width / height);
   }
 
+  /** Um buffer novo só (setPixelRatio + setSize alocavam o backbuffer com MSAA duas vezes). */
+  private applyPixelRatio() {
+    this.pixelRatio = Math.max(this.minPixelRatio, this.basePixelRatio * this.resolutionScale);
+    this.resolutionPending = false;
+    this.resolutionClock = 0;
+    this.renderer.setDrawingBufferSize(this.width, this.height, this.pixelRatio);
+  }
+
+  /**
+   * Resolução adaptável (mesma regra da partida 3D): quadro pesado (abaixo de
+   * ~48 por segundo) desce um degrau; com folga por alguns segundos, sobe. Se
+   * descer não melhorou nada, o gargalo é a CPU: volta o degrau e, na segunda
+   * vez, para de descer (imagem borrada sem ganho não serve). No máximo uma
+   * troca a cada 1,5 s, e o buffer só troca num quadro calmo ou num corte.
+   * `frameDt` = tempo real entre quadros desenhados (s).
+   */
+  adaptResolution(frameDt: number): void {
+    if (!this.ready || frameDt <= 0 || frameDt > 0.25) return;
+    this.frameAverage += (frameDt - this.frameAverage) * 0.06;
+    // Troca esperando a vez: o efeito dela só é medido depois que entrar.
+    if (this.resolutionPending) return;
+    this.resolutionClock += frameDt;
+    if (this.resolutionClock < 1.5) return;
+    // Tela presa em 30 Hz (economia de energia) com o render folgado: não é peso.
+    const powerSaver = Math.abs(this.frameAverage - 1 / 30) < 0.0015 && this.lastStats.cpuMs < 6;
+    const lowest = this.minPixelRatio / this.basePixelRatio;
+    let next = this.resolutionScale;
+    if (this.averageBeforeDrop !== null) {
+      const helped = this.frameAverage < this.averageBeforeDrop * 0.95;
+      this.averageBeforeDrop = null;
+      if (!helped) {
+        // Descer não ajudou: o gargalo não é pixel. Volta o degrau.
+        this.resolutionMisses += 1;
+        next = this.scaleBeforeDrop;
+      }
+    } else if (this.frameAverage > 1 / 48 && !powerSaver && this.resolutionMisses < 2 && this.resolutionScale > lowest + 0.001) {
+      next = Math.max(lowest, this.resolutionScale - 0.1);
+      this.averageBeforeDrop = this.frameAverage;
+      this.scaleBeforeDrop = this.resolutionScale;
+    } else if (this.frameAverage < 1 / 57 && this.resolutionClock > 4 && this.resolutionScale < 1 - 0.001) {
+      next = Math.min(1, this.resolutionScale + 0.05);
+    } else {
+      return;
+    }
+    this.resolutionClock = 0;
+    if (Math.abs(next - this.resolutionScale) < 0.001) return;
+    this.resolutionScale = next;
+    this.resolutionPending = true;
+  }
+
+  /** A resolução adaptável chegou no piso: não há mais o que baixar. */
+  get atResolutionFloor(): boolean {
+    return this.pixelRatio <= this.minPixelRatio + 1e-3;
+  }
+
+  /**
+   * Mira parada: câmera assentada, nenhum fade do traço, das setas ou dos
+   * efeitos em andamento e nada de festa. O laço pode desenhar menos quadros.
+   */
+  get calm(): boolean {
+    const { stroke, effects, runs } = this;
+    if (!this.ready || !stroke || !effects || !runs) return false;
+    return this.lastPhase === "aim" && this.goalClock < 0 && !this.sizeDirty && this.director.settled && stroke.settled && effects.settled && runs.settled;
+  }
+
   // ---------------------------------------------------------------- entrada
 
   private ray(x: number, y: number) {
-    const width = this.canvas.clientWidth || this.width || 1;
-    const height = this.canvas.clientHeight || this.height || 1;
+    // Tamanho guardado no último resize (ler clientWidth aqui forçava layout no meio do quadro).
+    const width = this.width || 1;
+    const height = this.height || 1;
     this.ndc.set((x / width) * 2 - 1, -(y / height) * 2 + 1);
     this.raycaster.setFromCamera(this.ndc, this.camera);
     return this.raycaster.ray;
@@ -283,9 +497,7 @@ export class ScoreboboView implements ScoreboboViewApi {
     const view = this.hitPoint.copy(p).applyMatrix4(this.camera.matrixWorldInverse);
     if (view.z > -this.camera.near) return null;
     p.project(this.camera);
-    const width = this.canvas.clientWidth || this.width;
-    const height = this.canvas.clientHeight || this.height;
-    return { x: (p.x * 0.5 + 0.5) * width, y: (-p.y * 0.5 + 0.5) * height };
+    return { x: (p.x * 0.5 + 0.5) * this.width, y: (-p.y * 0.5 + 0.5) * this.height };
   }
 
   setStroke(points: Vec3[] | null, plan: KickPlan | null): void {
@@ -298,6 +510,7 @@ export class ScoreboboView implements ScoreboboViewApi {
   render(state: GameState, dt: number, events: SimEvent[]): void {
     if (!this.ready || this.disposed || this.contextLost) return;
     const started = performance.now();
+    if (this.alwaysMeasure) this.sizeDirty = true;
     this.resize();
     const realDt = clamp(dt, 0, 0.1);
     const phase = state.phase;
@@ -376,6 +589,8 @@ export class ScoreboboView implements ScoreboboViewApi {
       }
       this.lastReplayAngle = state.replay?.angle ?? -1;
     }
+    // Resolução adaptável: o buffer novo entra com a mira parada ou escondido no corte.
+    if (this.resolutionPending && (this.director.cutRequested || this.calm)) this.applyPixelRatio();
     this.sky!.follow(this.camera);
 
     // Escala dos pontos (px por metro a 1 m de distância).
@@ -509,6 +724,8 @@ export class ScoreboboView implements ScoreboboViewApi {
     this.stroke?.dispose();
     this.runs?.dispose();
     this.effects?.dispose();
+    for (const material of this.depthStandIns) material.dispose();
+    this.key.shadow.map?.depthTexture?.dispose();
     this.key.shadow.map?.dispose();
     this.renderer.dispose();
     this.renderer.forceContextLoss();

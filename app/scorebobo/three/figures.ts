@@ -10,6 +10,8 @@ import {
   FIGURE_HEIGHT,
   PlayerFigure,
   idleIntent,
+  releaseSharedFigureResources,
+  retainSharedFigureResources,
   type FigureAction,
   type FigureIntent,
 } from "../../botao/three/character";
@@ -76,6 +78,7 @@ export class Squad {
   private heroId = "";
   private receiverId: string | null = null;
   private readonly look = { x: 0, z: 0 };
+  private released = false;
 
   constructor(
     state: GameState,
@@ -83,6 +86,9 @@ export class Squad {
     private readonly performance: boolean,
     seed: number,
   ) {
+    // Cada fase tem renderer próprio: ao sair, a sombra de contato e o material
+    // de sombra compartilhados soltam esse renderer (senão ele fica preso na memória).
+    retainSharedFigureResources();
     const homePattern = teamKitPattern(seed, teams.home.name);
     const awayPattern = teamKitPattern(seed, teams.away.name);
     const keeperColor = contrastKeeper(teams, seed);
@@ -373,5 +379,8 @@ export class Squad {
   dispose() {
     for (const entry of this.entries.values()) entry.figure.dispose();
     this.entries.clear();
+    if (this.released) return;
+    this.released = true;
+    releaseSharedFigureResources();
   }
 }

@@ -5,9 +5,10 @@
 // que é da fase (herói, cores dos times) antes de criar a simulação.
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import type { ComponentType } from "react";
 import { readBotao3dPerformance, webglAvailable } from "../botao/view-mode";
 import { playUiSound, primeScoreboboAudio, setScoreboboMuted } from "./audio";
-import LevelPlayer from "./LevelPlayer";
+import type { LevelPlayerProps } from "./LevelPlayer";
 import { SCORE_LEVELS } from "./sim/levels";
 import {
   CLASSIC_HOME,
@@ -62,6 +63,15 @@ type Session = {
 let profilePromise: Promise<ScoreboboProfile> | null = null;
 const profileOnce = () => (profilePromise ??= loadScoreboboProfile());
 
+// A fase (simulação, HUD, resultado) vem num pedaço à parte: o menu abre mais
+// leve e a abertura já pede esse pedaço no tempo ocioso.
+let playerPromise: Promise<typeof import("./LevelPlayer")> | null = null;
+const loadLevelPlayer = () =>
+  (playerPromise ??= import("./LevelPlayer").catch((error: unknown) => {
+    playerPromise = null;
+    throw error;
+  }));
+
 export default function Scorebobo() {
   // Sem WebGL o servidor e o primeiro quadro assumem que tem: o aviso só aparece se faltar mesmo.
   const hasWebgl = useSyncExternalStore(noopSubscribe, readWebgl, serverTrue);
@@ -69,12 +79,18 @@ export default function Scorebobo() {
   const muted = useSyncExternalStore(subscribeMuted, readMuted, serverMuted);
   const performanceDefault = useSyncExternalStore(noopSubscribe, readPerformanceDefault, serverFalse);
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, readReducedMotion, serverFalse);
-  const performanceMode = progress.performance ?? performanceDefault;
+  // Aparelho que não deu conta nem com a resolução no piso: só na memória, e só
+  // enquanto o jogador não escolheu (a escolha dele sempre vale).
+  const [slowDevice, setSlowDevice] = useState(false);
+  const performanceMode = progress.performance ?? (performanceDefault || slowDevice);
 
   const [profile, setProfile] = useState<ScoreboboProfile | null>(null);
   const [menuAway, setMenuAway] = useState<TeamInfo>(PLACEHOLDER_AWAY);
   const [session, setSession] = useState<Session | null>(null);
   const [starting, setStarting] = useState(false);
+  const [LevelPlayer, setLevelPlayer] = useState<ComponentType<LevelPlayerProps> | null>(null);
+  // A fase não abriu (o pedaço dela não chegou): um aviso curto na abertura, e o toque vale de novo.
+  const [loadFailed, setLoadFailed] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -110,7 +126,7 @@ export default function Scorebobo() {
     try {
       const loaded = await profileOnce();
       const home = loaded.club ?? CLASSIC_HOME;
-      const away = await pickAwayTeam(home, base.id);
+      const [away, player] = await Promise.all([pickAwayTeam(home, base.id), loadLevelPlayer()]);
       const level = levelWithHero(base, loaded);
       if (!replace) {
         try {
@@ -119,13 +135,36 @@ export default function Scorebobo() {
           // Sem histórico: o botão "Fases" continua voltando.
         }
       }
+      setLevelPlayer(() => player.default);
       setSession((current) => ({ key: (current?.key ?? 0) + 1, index, level, teams: teamsFor(home, away), home, away }));
+    } catch (error) {
+      // Sem a fase (um deploy novo apagou o pedaço antigo, a rede caiu): avisa em vez de engolir o toque.
+      console.error("[scorebobo] fase não abriu", error);
+      playUiSound("error");
+      setLoadFailed((value) => value + 1);
     } finally {
       setStarting(false);
     }
   }, []);
 
+  useEffect(() => {
+    if (!loadFailed) return;
+    const timer = window.setTimeout(() => setLoadFailed((current) => (current === loadFailed ? 0 : current)), 2600);
+    return () => window.clearTimeout(timer);
+  }, [loadFailed]);
+
   const play = useCallback((index: number) => void start(index, false), [start]);
+
+  // A mesma fase do zero, num canvas e WebGL novos (o 3D caiu, ou o modo desempenho mudou para a nova tentativa).
+  const remount = useCallback(() => {
+    if (session && !starting) void start(session.index, true);
+  }, [session, starting, start]);
+
+  // Também respeita o "Modo desempenho 3D" do app desligado na mão (`userOff`):
+  // como na partida, nunca religa o que o jogador desligou.
+  const onSlowDevice = useCallback(() => {
+    if (readProgress().performance === null && !readBotao3dPerformance().userOff) setSlowDevice(true);
+  }, []);
 
   const backToLevels = useCallback(() => {
     const state = window.history.state as { scorebobo?: string } | null;
@@ -169,13 +208,14 @@ export default function Scorebobo() {
         muted={muted}
         reducedMotion={reducedMotion || Boolean(session)}
         starting={starting}
+        loadFailed={loadFailed > 0}
         covered={Boolean(session)}
         onPlay={play}
         onTogglePerformance={togglePerformance}
         onToggleMute={toggleMute}
         onToggleUnlockAll={toggleUnlockAll}
       />
-      {session && (
+      {session && LevelPlayer && (
         <LevelPlayer
           key={session.key}
           level={session.level}
@@ -190,6 +230,8 @@ export default function Scorebobo() {
           nextUnlocked={nextUnlocked}
           onNext={nextLevel}
           onLevels={backToLevels}
+          onSlowDevice={onSlowDevice}
+          onRemount={remount}
         />
       )}
     </>

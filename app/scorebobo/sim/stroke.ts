@@ -15,9 +15,9 @@
 //   (`danger`); o passe sobe por cima deles quando dá.
 
 import { PITCH, type KickKind, type KickPlan, type StrokeSample, type Vec2, type Vec3 } from "../types";
-import { clamp, closestOnSegment2, dist2, lerp, norm2, right2 } from "./math";
+import { clamp, closestOnSegment2, dist2, lerp, norm2, norm2To, right2, hypot } from "./math";
 import { DEFENDER_SPEED, HEAD_Y, JUMP_MAX, RUN_SPEED, SPRINT_SPEED, runPositionAfter, type MateBrain } from "./ai";
-import { apexOf, designFlight, flightAt, groundSpeedFor, previewOf, type Flight, type FlightSpec } from "./flight";
+import { apexOf, designFlight, flightGeometry, flightPos, groundSpeedFor, previewOf, type Flight, type FlightSpec } from "./flight";
 import { R } from "./physics";
 
 /** O que o plano sabe de cada adversário (posição, embalo e o que ele vai fazer). */
@@ -145,7 +145,7 @@ export function interpretStroke(samples: StrokeSample[], ctx: StrokeContext): Ki
 }
 
 function screenDist(a: StrokeSample, b: StrokeSample) {
-  return Math.hypot(a.screen.x - b.screen.x, a.screen.y - b.screen.y);
+  return hypot(a.screen.x - b.screen.x, a.screen.y - b.screen.y);
 }
 
 function viewportHeight(pts: StrokeSample[]) {
@@ -233,7 +233,7 @@ function smoothPath(path: Vec2[], step: number) {
 /** Desvio lateral máximo (com sinal: + à direita de quem chuta) do caminho em relação à corda. */
 export function measureCurve(path: Vec2[], from: Vec2, to: Vec2) {
   const chord = { x: to.x - from.x, z: to.z - from.z };
-  const D = Math.hypot(chord.x, chord.z);
+  const D = hypot(chord.x, chord.z);
   if (D < 1 || path.length < 3) return 0;
   const smooth = smoothPath(path, clamp(D / 40, 0.25, 0.8));
   const dir = norm2(chord);
@@ -271,53 +271,62 @@ export function specFromPlan(plan: Pick<KickPlan, "kind" | "shot" | "from" | "ta
 /** A jogada prevista: quem recebe corre até o ponto de chegada; a bola segue o voo. */
 type Motion = { receiver: string | null; end: Vec2; arrive: number; shot: boolean; ballAt: (tau: number) => Vec2 };
 
-function matePosAt(m: MateBrain, t: number, motion: Motion): Vec2 {
+/** Onde o companheiro vai estar em `t` (escrito em `out`; pode devolver a própria posição dele, só para ler). */
+function matePosAt(m: MateBrain, t: number, motion: Motion, out: Vec2): Vec2 {
   // Quem recebe corre para o ponto de chegada no máximo no pique: bola longe demais, ele não chega a tempo.
-  if (motion.receiver === m.actor.id) return travel(m.actor.pos, m.actor.vel, motion.end, SPRINT_SPEED, t);
-  return runPositionAfter(m, t);
+  if (motion.receiver === m.actor.id) return travel(m.actor.pos, m.actor.vel, motion.end.x, motion.end.z, SPRINT_SPEED, t, out);
+  return runPositionAfter(m, t, RUN_SPEED, out);
 }
 
-/** Anda até `to` saindo com o embalo atual, aceleração de ~11 m/s² e teto de velocidade. */
-function travel(from: Vec2, vel: Vec2, to: Vec2, vmax: number, tau: number): Vec2 {
-  const d0 = dist2(from, to);
+/** Anda até (toX, toZ) saindo com o embalo atual, aceleração de ~11 m/s² e teto de velocidade; `out` evita alocar. */
+function travel(from: Vec2, vel: Vec2, toX: number, toZ: number, vmax: number, tau: number, out?: Vec2): Vec2 {
+  const d0 = hypot(from.x - toX, from.z - toZ);
   if (d0 < 1e-3) return from;
-  const dir = { x: (to.x - from.x) / d0, z: (to.z - from.z) / d0 };
-  const v0 = clamp(vel.x * dir.x + vel.z * dir.z, 0, vmax);
+  const dirX = (toX - from.x) / d0;
+  const dirZ = (toZ - from.z) / d0;
+  const v0 = clamp(vel.x * dirX + vel.z * dirZ, 0, vmax);
   const tAcc = (vmax - v0) / 11;
   const d = tau <= tAcc ? v0 * tau + 5.5 * tau * tau : v0 * tAcc + 5.5 * tAcc * tAcc + vmax * (tau - tAcc);
   const k = Math.min(1, d / d0);
-  return { x: from.x + (to.x - from.x) * k, z: from.z + (to.z - from.z) * k };
+  const x = from.x + (toX - from.x) * k;
+  const z = from.z + (toZ - from.z) * k;
+  if (!out) return { x, z };
+  out.x = x;
+  out.z = z;
+  return out;
 }
+
+// Rascunhos das contas do meio de sightAt (não é reentrante): só o ponto final vira objeto novo, porque fica guardado.
+const SEEN: Vec2 = { x: 0, z: 0 };
+const TO_GOAL: Vec2 = { x: 0, z: 0 };
+const TO_BALL: Vec2 = { x: 0, z: 0 };
 
 /**
  * Onde o adversário vai estar `tau` s depois de o traço ser solto, seguindo o
  * papel dele (as mesmas contas de ai.updateDefender, sem ir na bola).
  */
-function sightAt(d: DefenderSight, ctx: StrokeContext, tau: number, motion: Motion): Vec2 {
+function sightAt(d: DefenderSight, tau: number, motion: Motion, ball: Vec2, mark: MateBrain | null | undefined): Vec2 {
   if (d.behavior === "keeper" || (d.behavior === "wall" && motion.shot)) return d.pos;
-  const ball = motion.ballAt(tau);
   if (d.behavior === "press") {
     // A pressão vai na bola (para a ~1,3 m dela, do lado do gol), acelerando do lugar.
-    const toGoal = norm2({ x: -ball.x, z: GOAL_Z - ball.z });
-    const spot = { x: ball.x + toGoal.x * 1.3, z: ball.z + toGoal.z * 1.3 };
-    return travel(d.pos, d.vel, spot, DEFENDER_SPEED * 0.9, tau);
+    const toGoal = norm2To(-ball.x, GOAL_Z - ball.z, TO_GOAL);
+    return travel(d.pos, d.vel, ball.x + toGoal.x * 1.3, ball.z + toGoal.z * 1.3, DEFENDER_SPEED * 0.9, tau);
   }
   if (d.behavior === "markNearest" && d.mark) {
     // A marcação fica entre o atacante (onde ele estava ~0,4 s antes) e o gol, puxada para a bola.
-    const m = ctx.mates.find((x) => x.actor.id === d.mark);
+    const m = mark;
     if (m) {
-      const seen = matePosAt(m, Math.max(0, tau - 0.4), motion);
-      const toGoal = norm2({ x: -seen.x, z: GOAL_Z - seen.z });
-      const toBall = norm2({ x: ball.x - seen.x, z: ball.z - seen.z });
-      const want = { x: seen.x + toGoal.x + toBall.x * 0.5, z: seen.z + toGoal.z + toBall.z * 0.5 };
-      return travel(d.pos, d.vel, want, DEFENDER_SPEED * 0.94, tau);
+      const seen = matePosAt(m, Math.max(0, tau - 0.4), motion, SEEN);
+      const toGoal = norm2To(-seen.x, GOAL_Z - seen.z, TO_GOAL);
+      const toBall = norm2To(ball.x - seen.x, ball.z - seen.z, TO_BALL);
+      return travel(d.pos, d.vel, seen.x + toGoal.x + toBall.x * 0.5, seen.z + toGoal.z + toBall.z * 0.5, DEFENDER_SPEED * 0.94, tau);
     }
   }
   // Linha (e a barreira que se desfaz num passe): acompanha a bola de lado e recua quando ela avança.
   const home = d.home ?? d.pos;
   const shift = clamp((ball.x - home.x) * 0.2, -3.5, 3.5);
   const drop = clamp((ball.z - (home.z - 14)) * 0.22, 0, 4);
-  return travel(d.pos, d.vel, { x: home.x + shift, z: Math.min(GOAL_Z - 3, home.z + drop) }, DEFENDER_SPEED * 0.75, tau);
+  return travel(d.pos, d.vel, home.x + shift, Math.min(GOAL_Z - 3, home.z + drop), DEFENDER_SPEED * 0.75, tau);
 }
 
 /**
@@ -329,7 +338,12 @@ function sightAt(d: DefenderSight, ctx: StrokeContext, tau: number, motion: Moti
 function dangerOf(ctx: StrokeContext, f: Flight, shot: boolean, end: Vec2, receiver: string | null, skipEnd: boolean): Span[] {
   const from = { x: ctx.ball.x, z: ctx.ball.z };
   const react = ctx.windup + (shot ? REACT_SHOT : REACT_PASS);
-  const people = shot ? ctx.defenders.filter((d) => d.behavior !== "keeper") : ctx.defenders;
+  const cast = castOf(ctx);
+  const { people, marks } = shot ? cast.shot : cast.pass;
+  const st = { x: 0, y: 0, z: 0 };
+  const p = { x: 0, z: 0 };
+  const q = { x: 0, y: 0, z: 0 };
+  const recAt = { x: 0, z: 0 };
   const motion: Motion = {
     receiver,
     end,
@@ -337,14 +351,35 @@ function dangerOf(ctx: StrokeContext, f: Flight, shot: boolean, end: Vec2, recei
     shot,
     ballAt: (tau) => {
       if (tau <= ctx.windup) return from;
-      const q = flightAt(f, Math.min(f.T, tau - ctx.windup)).pos;
+      flightPos(f, Math.min(f.T, tau - ctx.windup), q);
       return { x: q.x, z: q.z };
     },
   };
+  // Bola e adversários por instante (passo × recuo): a bola é a mesma para todos; cada um é calculado uma vez.
+  const gen = (slotGen += 1);
+  const n = people.length;
+  if (sightGen.length < SLOTS * n) {
+    sightGen = new Float64Array(SLOTS * n);
+    sightAtSlot = new Array<Vec2>(SLOTS * n).fill(NO_SLOT);
+  }
+  const balls = ballAtSlot;
+  const sights = sightAtSlot;
+  const sight = (di: number, slot: number, tau: number) => {
+    const k = slot * n + di;
+    if (sightGen[k] === gen) return sights[k];
+    let ball = balls[slot];
+    if (ballGen[slot] !== gen) {
+      ball = balls[slot] = motion.ballAt(tau);
+      ballGen[slot] = gen;
+    }
+    const hit = (sights[k] = sightAt(people[di], tau, motion, ball, marks[di]));
+    sightGen[k] = gen;
+    return hit;
+  };
   const nearBox = Math.abs(end.x) <= PITCH.boxHalfWidth + 2 && end.z >= GOAL_Z - PITCH.boxDepth - 3;
-  const rec = skipEnd && receiver ? ctx.mates.find((m) => m.actor.id === receiver) ?? null : null;
+  const rec = skipEnd && receiver ? cast.mates.get(receiver) ?? null : null;
   const controlTop = nearBox && f.spec.target.y >= 1.4 ? 2.75 : 1.9;
-  const steps = 36;
+  const steps = DANGER_STEPS;
   const spans: Span[] = [];
   // 0 livre, 1 disputada na chegada (quem recebe também chega), 2 cortada no caminho.
   let openKind = 0;
@@ -356,19 +391,21 @@ function dangerOf(ctx: StrokeContext, f: Flight, shot: boolean, end: Vec2, recei
   for (let i = 0; i <= steps; i += 1) {
     const u = i / steps;
     const t = f.T * u;
-    const st = flightAt(f, t);
-    const p = { x: st.pos.x, z: st.pos.z };
-    const y = st.pos.y;
+    flightPos(f, t, st);
+    p.x = st.x;
+    p.z = st.z;
+    const y = st.y;
     const tau = ctx.windup + t;
-    const dRec = rec ? dist2(p, matePosAt(rec, tau, motion)) : Infinity;
+    const dRec = rec ? dist2(p, matePosAt(rec, tau, motion, recAt)) : Infinity;
     let kind = 0;
     if (skipEnd && dist2(p, end) < 1.15 && y < controlTop) {
       // Chegou em quem recebe numa altura que ele domina (ou cabeceia, no cruzamento):
       // o resto do caminho não conta. Só a dividida: zagueiro colado na bola e mais perto que ele.
       if (tau >= react) {
-        for (const d of people) {
+        for (let di = 0; di < people.length; di += 1) {
+          const d = people[di];
           if (d.behavior === "keeper" || (d.behavior === "wall" && shot)) continue;
-          const gap = dist2(p, sightAt(d, ctx, tau, motion));
+          const gap = dist2(p, sight(di, i * 4 + 3, tau));
           if (gap < 0.7 && gap < dRec) kind = 1;
         }
       }
@@ -382,21 +419,23 @@ function dangerOf(ctx: StrokeContext, f: Flight, shot: boolean, end: Vec2, recei
     }
     // Colado em quem chuta, a bola já saiu dele.
     if (dist2(p, from) > 1.2) {
-      for (const d of people) {
+      for (let di = 0; di < people.length; di += 1) {
+        const d = people[di];
         let hit = 0;
         if (d.behavior === "keeper") {
           if (dist2(p, d.pos) <= 0.85 + CLEAR_MARGIN && y <= 2.35) hit = 2;
         } else if ((d.behavior === "wall" && shot) || tau < react) {
-          if (dist2(p, sightAt(d, ctx, tau, motion)) <= 0.45 + CLEAR_MARGIN && y <= CUT_TOP_FLAT + CLEAR_MARGIN) hit = 2;
+          if (dist2(p, sight(di, i * 4 + 3, tau)) <= 0.45 + CLEAR_MARGIN && y <= CUT_TOP_FLAT + CLEAR_MARGIN) hit = 2;
         } else if (y <= CUT_TOP + CLEAR_MARGIN) {
           // Instantes em que ele pode ter decidido ir na bola (até ~1 s antes de ela passar).
           // Ele já vem andando (marcação, linha): sai a ~4,5 m/s de média no começo e acelera.
-          for (const back of [0.96, 0.6, 0.3, 0]) {
+          for (let bi = 0; bi < 4; bi += 1) {
+            const back = BACKS[bi];
             const c = Math.max(react, tau - back);
             const dt = tau - c;
             const run = Math.max(4.5 * dt, Math.min(5.5 * dt * dt, 1.98 + DEFENDER_SPEED * Math.max(0, dt - 0.6)));
             const reach = Math.min(CUT_REACH, 0.78 + run);
-            const gap = dist2(p, sightAt(d, ctx, c, motion));
+            const gap = dist2(p, sight(di, i * 4 + bi, c));
             if (gap > reach + CLEAR_MARGIN) continue;
             // Quem recebe já está chegando: perto da chegada é disputa (a previsão das
             // corridas ali é fina demais para cravar o corte); antes, só se ele chega claramente antes.
@@ -418,6 +457,39 @@ function dangerOf(ctx: StrokeContext, f: Flight, shot: boolean, end: Vec2, recei
   }
   close(1);
   return spans;
+}
+
+const BACKS = [0.96, 0.6, 0.3, 0];
+
+// Caches por instante do dangerOf, reaproveitados entre chamadas (não é reentrante): a entrada
+// só vale se o carimbo for o da chamada atual, então nada precisa ser limpo nem alocado de novo.
+const DANGER_STEPS = 36;
+const SLOTS = (DANGER_STEPS + 1) * BACKS.length;
+const NO_SLOT: Vec2 = { x: 0, z: 0 };
+let slotGen = 0;
+const ballGen = new Float64Array(SLOTS);
+const ballAtSlot = new Array<Vec2>(SLOTS).fill(NO_SLOT);
+let sightGen = new Float64Array(0);
+let sightAtSlot: Vec2[] = [];
+
+/** Quem pode cortar (no chute, sem o goleiro) e quem cada marcador marca. */
+type Roster = { people: DefenderSight[]; marks: Array<MateBrain | null | undefined> };
+type Cast = { shot: Roster; pass: Roster; mates: Map<string, MateBrain> };
+const casts = new WeakMap<StrokeContext, Cast>();
+
+/** O elenco é o mesmo em todas as contas de um plano: monta uma vez por ctx (o primeiro com o id vale, como no find). */
+function castOf(ctx: StrokeContext): Cast {
+  let cast = casts.get(ctx);
+  if (cast) return cast;
+  const mates = new Map<string, MateBrain>();
+  for (const m of ctx.mates) if (!mates.has(m.actor.id)) mates.set(m.actor.id, m);
+  const roster = (people: DefenderSight[]): Roster => ({
+    people,
+    marks: people.map((d) => (d.behavior === "markNearest" && d.mark ? mates.get(d.mark) : null)),
+  });
+  cast = { shot: roster(ctx.defenders.filter((d) => d.behavior !== "keeper")), pass: roster(ctx.defenders), mates };
+  casts.set(ctx, cast);
+  return cast;
 }
 
 /** Chance (calibrada na simulação) de o passe ser cortado: no caminho, cedo, quase certo; na chegada, metade. */
@@ -542,7 +614,7 @@ function planPass(ctx: StrokeContext, endG: Vec2, rawCurve: number, power: numbe
     }
     if (!receiver || bestT > 2.6) return null;
     // A bola chega quando ele chega (e quase parada): não rola 30 m para o nada.
-    const v0 = Math.hypot(receiver.actor.vel.x, receiver.actor.vel.z);
+    const v0 = hypot(receiver.actor.vel.x, receiver.actor.vel.z);
     const startup = Math.max(0, RUN_SPEED - v0) ** 2 / (2 * 9 * RUN_SPEED);
     spaceTiming = Math.max(0.35, bestT + startup - ctx.windup);
   }
@@ -587,7 +659,8 @@ function planPass(ctx: StrokeContext, endG: Vec2, rawCurve: number, power: numbe
       } else if (timing !== undefined) {
         // Na medida: a força que faz a bola chegar junto com ele. O traço ainda
         // conta: forte demais adianta, fraco demais atrasa (20% do desvio).
-        const groundT = (va: number) => designFlight({ kind: "ground", from, target: t3, curve, speed: groundSpeedFor(L, va), apex: 0, grounded: true, lofted: false }).T;
+        const geoG = flightGeometry({ from, target: t3, curve });
+        const groundT = (va: number) => designFlight({ kind: "ground", from, target: t3, curve, speed: groundSpeedFor(L, va), apex: 0, grounded: true, lofted: false }, geoG).T;
         let lo = space ? 0.6 : 3.5;
         let hi = 20;
         for (let i = 0; i < 18; i += 1) {
@@ -618,6 +691,7 @@ function planPass(ctx: StrokeContext, endG: Vec2, rawCurve: number, power: numbe
       const cap = cross ? CROSS_CAP : LOFT_CAP;
       const t3 = { x: target.x, y: arrive, z: target.z };
       const spec = (h: number) => specFromPlan({ kind: "lofted", shot: false, from, target: t3, curve, speed: 10, apex: h });
+      const geoL = flightGeometry(spec(0));
       let apex = natural;
       let timingErr: number | undefined;
       let a = acc - (cross ? 0.03 : 0.04);
@@ -627,7 +701,7 @@ function planPass(ctx: StrokeContext, endG: Vec2, rawCurve: number, power: numbe
         let hi = cap;
         for (let i = 0; i < 18; i += 1) {
           const mid = (lo + hi) / 2;
-          if (designFlight(spec(mid)).T < timing) lo = mid;
+          if (designFlight(spec(mid), geoL).T < timing) lo = mid;
           else hi = mid;
         }
         const ideal = (lo + hi) / 2;
@@ -645,7 +719,7 @@ function planPass(ctx: StrokeContext, endG: Vec2, rawCurve: number, power: numbe
       let bestSize = Infinity;
       for (let h = apex; h <= cap + 1e-6; h += 0.4) {
         if (quick) break;
-        const size = spanSize(dangerOf(ctx, designFlight(spec(h)), false, target, recId, !space));
+        const size = spanSize(dangerOf(ctx, designFlight(spec(h), geoL), false, target, recId, !space));
         if (size < bestSize - 1e-6) {
           bestSize = size;
           best = h;
@@ -675,7 +749,7 @@ function planPass(ctx: StrokeContext, endG: Vec2, rawCurve: number, power: numbe
     if (snap.kind === "run" && snap.along > 1.5) {
       // Bola em profundidade: vai no ponto desenhado, com a força medida para
       // chegar junto com ele (passe "na medida").
-      const v0 = Math.hypot(m.actor.vel.x, m.actor.vel.z);
+      const v0 = hypot(m.actor.vel.x, m.actor.vel.z);
       const startup = Math.max(0, RUN_SPEED - v0) ** 2 / (2 * 9);
       const tRunner = (snap.along + startup) / RUN_SPEED;
       return build(clampPitch(snap.point), Math.max(0.35, tRunner - ctx.windup - 0.1));

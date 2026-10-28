@@ -80,6 +80,13 @@ void main() {
 }
 `;
 
+/** Sobe para a GPU só as `count` primeiras partículas (o resto do buffer não é desenhado). */
+function uploadHead(attribute: THREE.BufferAttribute, count: number) {
+  attribute.clearUpdateRanges();
+  attribute.addUpdateRange(0, count * attribute.itemSize);
+  attribute.needsUpdate = true;
+}
+
 class Pool {
   readonly points: THREE.Points;
   private readonly list: Particle[] = [];
@@ -88,6 +95,12 @@ class Pool {
   private readonly colors: Float32Array;
   private readonly kinds: Float32Array;
   private readonly geometry: THREE.BufferGeometry;
+  private readonly positionAttribute: THREE.BufferAttribute;
+  private readonly miscAttribute: THREE.BufferAttribute;
+  private readonly colorAttribute: THREE.BufferAttribute;
+  private readonly kindAttribute: THREE.BufferAttribute;
+  /** Alguém nasceu ou morreu (a fila anda): cor e forma mudam de lugar no buffer. */
+  private layoutDirty = false;
   readonly material: THREE.ShaderMaterial;
 
   constructor(private readonly max: number, glow: boolean) {
@@ -95,11 +108,15 @@ class Pool {
     this.misc = new Float32Array(max * 4);
     this.colors = new Float32Array(max * 3);
     this.kinds = new Float32Array(max);
+    this.positionAttribute = new THREE.BufferAttribute(this.positions, 3).setUsage(THREE.DynamicDrawUsage);
+    this.miscAttribute = new THREE.BufferAttribute(this.misc, 4).setUsage(THREE.DynamicDrawUsage);
+    this.colorAttribute = new THREE.BufferAttribute(this.colors, 3).setUsage(THREE.DynamicDrawUsage);
+    this.kindAttribute = new THREE.BufferAttribute(this.kinds, 1).setUsage(THREE.DynamicDrawUsage);
     this.geometry = new THREE.BufferGeometry();
-    this.geometry.setAttribute("position", new THREE.BufferAttribute(this.positions, 3).setUsage(THREE.DynamicDrawUsage));
-    this.geometry.setAttribute("aMisc", new THREE.BufferAttribute(this.misc, 4).setUsage(THREE.DynamicDrawUsage));
-    this.geometry.setAttribute("aColor", new THREE.BufferAttribute(this.colors, 3).setUsage(THREE.DynamicDrawUsage));
-    this.geometry.setAttribute("aKind", new THREE.BufferAttribute(this.kinds, 1).setUsage(THREE.DynamicDrawUsage));
+    this.geometry.setAttribute("position", this.positionAttribute);
+    this.geometry.setAttribute("aMisc", this.miscAttribute);
+    this.geometry.setAttribute("aColor", this.colorAttribute);
+    this.geometry.setAttribute("aKind", this.kindAttribute);
     this.geometry.setDrawRange(0, 0);
     this.material = new THREE.ShaderMaterial({
       vertexShader: POINTS_VERTEX,
@@ -122,6 +139,7 @@ class Pool {
   add(particle: Particle) {
     if (this.list.length >= this.max) return;
     this.list.push(particle);
+    this.layoutDirty = true;
   }
 
   clear() {
@@ -160,7 +178,12 @@ class Pool {
       list[write] = p;
       write += 1;
     }
+    // Alguém morreu: os de trás andaram na fila.
+    if (write !== list.length) this.layoutDirty = true;
     list.length = write;
+    // Cor e forma não mudam com a idade: só reescreve (e sobe) quando a fila mexe.
+    const layout = this.layoutDirty;
+    this.layoutDirty = false;
     for (let index = 0; index < write; index += 1) {
       const p = list[index];
       const t = p.age / p.life;
@@ -172,6 +195,7 @@ class Pool {
       this.misc[index * 4 + 1] = p.alpha * fade;
       this.misc[index * 4 + 2] = p.angle;
       this.misc[index * 4 + 3] = p.flip;
+      if (!layout) continue;
       this.colors[index * 3] = p.r;
       this.colors[index * 3 + 1] = p.g;
       this.colors[index * 3 + 2] = p.b;
@@ -180,10 +204,13 @@ class Pool {
     this.geometry.setDrawRange(0, write);
     this.points.visible = write > 0;
     if (write > 0) {
-      this.geometry.attributes.position.needsUpdate = true;
-      this.geometry.attributes.aMisc.needsUpdate = true;
-      this.geometry.attributes.aColor.needsUpdate = true;
-      this.geometry.attributes.aKind.needsUpdate = true;
+      // Só o trecho vivo do buffer (sem isso o three sobe a capacidade inteira).
+      uploadHead(this.positionAttribute, write);
+      uploadHead(this.miscAttribute, write);
+      if (layout) {
+        uploadHead(this.colorAttribute, write);
+        uploadHead(this.kindAttribute, write);
+      }
     }
   }
 
@@ -421,6 +448,19 @@ export class Effects {
     this.solid.clear();
     this.glow.clear();
     this.cannons.length = 0;
+  }
+
+  /** Nenhuma partícula no ar, canhão atirando nem filtro de tela andando. */
+  get settled(): boolean {
+    if (this.solid.count > 0 || this.glow.count > 0) return false;
+    for (const cannon of this.cannons) if (cannon.left > 0) return false;
+    return (
+      this.flash <= 0.002 &&
+      this.dip <= 0.002 &&
+      Math.abs(this.vignette - this.vignetteTarget) < 0.003 &&
+      Math.abs(this.freeze - this.freezeTarget) < 0.003 &&
+      Math.abs(this.bars - this.barsTarget) < 0.003
+    );
   }
 
   /** `gameDt` move partículas (câmera lenta); `realDt` move o filtro de tela. */

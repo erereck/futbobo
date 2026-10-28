@@ -4,8 +4,8 @@
 // alcance de verdade. O corpo vira cápsulas para a colisão com a bola.
 
 import { PITCH, type Actor, type BallState, type Vec2, type Vec3 } from "../types";
-import { moveToward } from "./ai";
-import { clamp, easeOut, lerp, yawOf } from "./math";
+import { lookAt, moveToward } from "./ai";
+import { clamp, easeOut, lerp, yawOf, hypot } from "./math";
 import { G } from "./physics";
 
 export type Capsule = { a: Vec3; b: Vec3; r: number; part: "hands" | "body" | "legs" };
@@ -20,6 +20,14 @@ const PERCEPTION_LAG = 0.1;
 /** Quanto de história ele guarda (para sentir a bola virando). */
 const HISTORY = 0.22;
 const SHUFFLE_SPEED = 3.4;
+const NO_CAPSULES: Capsule[] = [];
+
+const capsule = (r: number, part: Capsule["part"]): Capsule => ({ a: { x: 0, y: 0, z: 0 }, b: { x: 0, y: 0, z: 0 }, r, part });
+const set3 = (v: Vec3, x: number, y: number, z: number) => {
+  v.x = x;
+  v.y = y;
+  v.z = z;
+};
 
 export class KeeperBrain {
   mode: Mode = "set";
@@ -61,10 +69,10 @@ export class KeeperBrain {
   static basePosition(ball: Vec2, skill: number, rushing = false): Vec2 {
     const toL = { x: LEFT_POST.x - ball.x, z: LEFT_POST.z - ball.z };
     const toR = { x: RIGHT_POST.x - ball.x, z: RIGHT_POST.z - ball.z };
-    const lL = Math.hypot(toL.x, toL.z) || 1;
-    const lR = Math.hypot(toR.x, toR.z) || 1;
+    const lL = hypot(toL.x, toL.z) || 1;
+    const lR = hypot(toR.x, toR.z) || 1;
     const bis = { x: toL.x / lL + toR.x / lR, z: toL.z / lL + toR.z / lR };
-    const dist = Math.hypot(ball.x, GOAL_Z - ball.z);
+    const dist = hypot(ball.x, GOAL_Z - ball.z);
     let depth = clamp(0.6 + 0.07 * (28 - dist), 0.6, 2.2) + 0.15 * skill;
     if (rushing && dist < 14) depth = clamp(dist * 0.42, depth, 5);
     const z = GOAL_Z - depth;
@@ -110,7 +118,7 @@ export class KeeperBrain {
   update(dt: number, time: number, ball: BallState, ballFree: boolean, shotLive: boolean) {
     const a = this.actor;
     const ballXZ = { x: ball.pos.x, z: ball.pos.z };
-    a.look = { ...ball.pos };
+    lookAt(a, ball.pos.x, ball.pos.y, ball.pos.z);
     if (this.mode === "hold") {
       this.holdT += dt;
       a.vel = { x: 0, z: 0 };
@@ -174,7 +182,7 @@ export class KeeperBrain {
           const onTarget = Math.abs(p.x) < PITCH.goalHalfWidth + 0.45 && p.y < PITCH.goalHeight + 0.35 && p.y > -0.5;
           const reachX = p.x - a.pos.x;
           const reachY = p.y - 1.15;
-          const need = Math.hypot(reachX, reachY);
+          const need = hypot(reachX, reachY);
           if (onTarget) {
             const tNeed = need < 0.75 ? 0.12 : this.diveTime(need) * 0.8;
             if (p.tc <= tNeed + 0.04) {
@@ -205,7 +213,7 @@ export class KeeperBrain {
     a.pos.z = Math.min(a.pos.z, GOAL_Z - 0.15);
     a.facing = yawOf({ x: ball.pos.x - a.pos.x, z: ball.pos.z - a.pos.z });
     a.pose = "keeperReady";
-    a.poseT = clamp(Math.hypot(a.vel.x, a.vel.z) / 4, 0, 1);
+    a.poseT = clamp(hypot(a.vel.x, a.vel.z) / 4, 0, 1);
   }
 
   /**
@@ -223,7 +231,7 @@ export class KeeperBrain {
     const straight = (planeZ - seen.pos.z) / vz;
     if (straight < -0.05) return null;
     const vx = seen.vel.x;
-    const sp = Math.hypot(vx, vz);
+    const sp = hypot(vx, vz);
     let omega = 0;
     const older = this.history[0];
     if (older && seen.t - older.t > 0.03) {
@@ -266,7 +274,7 @@ export class KeeperBrain {
     const cy = 1.15;
     const dx = this.diveHands.x - cx;
     const dy = this.diveHands.y - cy;
-    const l = Math.hypot(dx, dy);
+    const l = hypot(dx, dy);
     if (l > this.reach) {
       this.diveHands.x = cx + (dx / l) * this.reach;
       this.diveHands.y = cy + (dy / l) * this.reach;
@@ -281,7 +289,7 @@ export class KeeperBrain {
     this.diveFrom = { x: a.pos.x, z: a.pos.z };
     this.diveHands = { x, y };
     this.clampHands();
-    this.diveDur = this.diveTime(Math.hypot(this.diveHands.x - a.pos.x, this.diveHands.y - 1.15));
+    this.diveDur = this.diveTime(hypot(this.diveHands.x - a.pos.x, this.diveHands.y - 1.15));
     a.pose = "dive";
     a.poseT = 0;
   }
@@ -292,7 +300,11 @@ export class KeeperBrain {
     this.diveHands = { x: clamp(x, a.pos.x - 0.75, a.pos.x + 0.75), y: clamp(y, 0.15, 2.45) };
   }
 
-  /** Corpo para a colisão com a bola agora. */
+  // Cápsulas reaproveitadas: capsules() reescreve os valores a cada chamada (quem usa só lê na hora).
+  private readonly diveCaps: Capsule[] = [capsule(0.15, "hands"), capsule(0.22, "body")];
+  private readonly standCaps: Capsule[] = [capsule(0.27, "body"), capsule(0.12, "hands"), capsule(0.13, "hands")];
+
+  /** Corpo para a colisão com a bola agora (válido até a próxima chamada). */
   capsules(time: number): Capsule[] {
     const a = this.actor;
     const z = a.pos.z;
@@ -306,25 +318,35 @@ export class KeeperBrain {
       const hipY = lerp(0.95, Math.max(0.32, this.diveHands.y * 0.62), e);
       const footX = lerp(fx, fx + (this.diveHands.x - fx) * 0.08, e);
       const footY = lerp(0.12, 0.28, e);
-      return [
-        { a: { x: hipX, y: hipY, z }, b: { x: hx, y: hy, z: z - 0.05 }, r: 0.15, part: "hands" },
-        { a: { x: footX, y: footY, z }, b: { x: hipX, y: hipY, z }, r: 0.22, part: "body" },
-      ];
+      const arms = this.diveCaps[0];
+      const body = this.diveCaps[1];
+      set3(arms.a, hipX, hipY, z);
+      set3(arms.b, hx, hy, z - 0.05);
+      set3(body.a, footX, footY, z);
+      set3(body.b, hipX, hipY, z);
+      return this.diveCaps;
     }
-    if (this.mode === "hold") return [];
-    const hands = this.predicted && this.reactAt !== null ? this.diveHands : { x: a.pos.x, y: 1.2 };
-    const handX = clamp(hands.x, a.pos.x - 0.75, a.pos.x + 0.75);
-    return [
-      { a: { x: a.pos.x, y: 0.15, z }, b: { x: a.pos.x, y: 1.7, z }, r: 0.27, part: "body" },
-      { a: { x: a.pos.x - 0.55, y: 1.12, z: z - 0.12 }, b: { x: a.pos.x + 0.55, y: 1.12, z: z - 0.12 }, r: 0.12, part: "hands" },
-      { a: { x: a.pos.x, y: 1.45, z: z - 0.08 }, b: { x: handX, y: clamp(hands.y, 0.2, 2.45), z: z - 0.12 }, r: 0.13, part: "hands" },
-    ];
+    if (this.mode === "hold") return NO_CAPSULES;
+    const aimed = this.predicted && this.reactAt !== null;
+    const handsX = aimed ? this.diveHands.x : a.pos.x;
+    const handsY = aimed ? this.diveHands.y : 1.2;
+    const handX = clamp(handsX, a.pos.x - 0.75, a.pos.x + 0.75);
+    const body = this.standCaps[0];
+    const bar = this.standCaps[1];
+    const reach = this.standCaps[2];
+    set3(body.a, a.pos.x, 0.15, z);
+    set3(body.b, a.pos.x, 1.7, z);
+    set3(bar.a, a.pos.x - 0.55, 1.12, z - 0.12);
+    set3(bar.b, a.pos.x + 0.55, 1.12, z - 0.12);
+    set3(reach.a, a.pos.x, 1.45, z - 0.08);
+    set3(reach.b, handX, clamp(handsY, 0.2, 2.45), z - 0.12);
+    return this.standCaps;
   }
 
   /** O quanto ele está esticado (0 parado .. 1 mergulho no limite). */
   stretch() {
     if (this.mode !== "dive" && this.mode !== "down") return 0;
-    return clamp(Math.hypot(this.diveHands.x - this.diveFrom.x, this.diveHands.y - 1.15) / this.reach, 0, 1);
+    return clamp(hypot(this.diveHands.x - this.diveFrom.x, this.diveHands.y - 1.15) / this.reach, 0, 1);
   }
 
   /** Mãos (para a bola presa nelas). */

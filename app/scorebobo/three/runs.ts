@@ -68,6 +68,7 @@ export class RunMarks {
   private readonly ring = new Float32Array(MAX_VERTS * 2);
   private key = "";
   private fade = 0;
+  private want = 0;
 
   constructor(time: { value: number }) {
     this.geometry.setAttribute("position", new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
@@ -104,9 +105,15 @@ export class RunMarks {
     if (key && key !== this.key) this.build(mates);
     this.key = key;
     const want = aim ? (drawing ? 0.45 : 1) : 0;
+    this.want = want;
     this.fade = THREE.MathUtils.damp(this.fade, want, want > this.fade ? 5 : 12, dt);
     this.material.uniforms.uFade.value = this.fade;
     this.mesh.visible = this.fade > 0.01;
+  }
+
+  /** As setas já chegaram onde deviam (acesas, baixas ou apagadas). */
+  get settled(): boolean {
+    return Math.abs(this.fade - this.want) < 0.01;
   }
 
   private build(mates: Actor[]) {

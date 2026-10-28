@@ -6,7 +6,7 @@
 // livre (physics.ts) assume com a mesma velocidade.
 
 import type { KickKind, Vec2, Vec3 } from "../types";
-import { clamp, norm2, right2 } from "./math";
+import { clamp, norm2, right2, hypot } from "./math";
 import { DRAG_K, G, MAGNUS, R, ROLL_DECEL } from "./physics";
 
 export type FlightSpec = {
@@ -46,7 +46,11 @@ export type Flight = {
   stopsShort: boolean;
   /** Efeito para o desenho da bola e para a física que assume depois. */
   spin: { x: number; y: number };
+  phi0: number;
+  cosPhi0: number;
 };
+
+export type FlightGeometry = { p0: Vec2; p1: Vec2; p2: Vec2; p3: Vec2; arcS: Float64Array; arcLen: Float64Array; total: number };
 
 // Controles da Bézier: o primeiro desvia menos que o segundo, então a bola sai
 // quase reta e fecha a curva no fim. O fator normaliza o desvio máximo para 1.
@@ -64,6 +68,12 @@ const SIDE_NORM = (() => {
   return 1 / max;
 })();
 const ARC_SAMPLES = 48;
+/** Parâmetro da Bézier em cada amostra da tabela (i/48): igual em todo voo e só lido, então é um só. */
+const ARC_S = (() => {
+  const s = new Float64Array(ARC_SAMPLES + 1);
+  for (let i = 0; i <= ARC_SAMPLES; i += 1) s[i] = i / ARC_SAMPLES;
+  return s;
+})();
 
 function bezier(f: Pick<Flight, "p0" | "p1" | "p2" | "p3">, s: number): Vec2 {
   const u = 1 - s;
@@ -93,16 +103,25 @@ function bezierD2(f: Pick<Flight, "p0" | "p1" | "p2" | "p3">, s: number): Vec2 {
   };
 }
 
+const PW = Math.sqrt(ROLL_DECEL * DRAG_K);
+const PK = Math.sqrt(DRAG_K / ROLL_DECEL);
+const PV = Math.sqrt(ROLL_DECEL / DRAG_K);
 /** Distância percorrida e velocidade no instante t (ar: arrasto; chão: arrasto + grama). */
 function progress(grounded: boolean, v0: number, t: number) {
   if (!grounded) {
     const q = 1 + DRAG_K * v0 * t;
     return { d: Math.log(q) / DRAG_K, v: v0 / q };
   }
-  const w = Math.sqrt(ROLL_DECEL * DRAG_K);
-  const phi0 = Math.atan(v0 * Math.sqrt(DRAG_K / ROLL_DECEL));
+  const w = PW;
+  const phi0 = Math.atan(v0 * PK);
   const phi = Math.max(0, phi0 - w * t);
-  return { d: Math.log(Math.cos(phi) / Math.cos(phi0)) / DRAG_K, v: Math.sqrt(ROLL_DECEL / DRAG_K) * Math.tan(phi) };
+  return { d: Math.log(Math.cos(phi) / Math.cos(phi0)) / DRAG_K, v: PV * Math.tan(phi) };
+}
+/** Só a distância (a posição não precisa da velocidade); phi0/cosPhi0 do voo já calculados. */
+function progressD(f: Flight, t: number) {
+  if (!f.spec.grounded) return Math.log(1 + DRAG_K * f.v0 * t) / DRAG_K;
+  const phi = Math.max(0, f.phi0 - PW * t);
+  return Math.log(Math.cos(phi) / f.cosPhi0) / DRAG_K;
 }
 
 /** Velocidade inicial de uma rasteira que chega a `L` metros com `arrive` m/s. */
@@ -122,32 +141,45 @@ export function airTime(L: number, v0: number) {
   return (Math.exp(DRAG_K * L) - 1) / (DRAG_K * v0);
 }
 
-export function designFlight(spec: FlightSpec): Flight {
+/** Bézier e tabela de comprimento: só dependem de from/target/curve (a busca por velocidade/altura reaproveita). */
+export function flightGeometry(spec: Pick<FlightSpec, "from" | "target" | "curve">): FlightGeometry {
   const p0 = { x: spec.from.x, z: spec.from.z };
   const p3 = { x: spec.target.x, z: spec.target.z };
   const chord = { x: p3.x - p0.x, z: p3.z - p0.z };
-  const D = Math.max(0.05, Math.hypot(chord.x, chord.z));
+  const D = Math.max(0.05, hypot(chord.x, chord.z));
   const dir = norm2(chord);
   const side = right2(dir);
   const o1 = spec.curve * SIDE_NORM * C1_SIDE;
   const o2 = spec.curve * SIDE_NORM * C2_SIDE;
   const p1 = { x: p0.x + chord.x * C1_ALONG + side.x * o1, z: p0.z + chord.z * C1_ALONG + side.z * o1 };
   const p2 = { x: p0.x + chord.x * C2_ALONG + side.x * o2, z: p0.z + chord.z * C2_ALONG + side.z * o2 };
-  const geo = { p0, p1, p2, p3 };
-  const arcS = new Float64Array(ARC_SAMPLES + 1);
   const arcLen = new Float64Array(ARC_SAMPLES + 1);
-  let prev = p0;
+  let prevX = p0.x;
+  let prevZ = p0.z;
   let total = 0;
   for (let i = 0; i <= ARC_SAMPLES; i += 1) {
-    const s = i / ARC_SAMPLES;
-    const pt = bezier(geo, s);
-    total += Math.hypot(pt.x - prev.x, pt.z - prev.z);
-    arcS[i] = s;
+    // A mesma conta de bezier(), sem um objeto por amostra.
+    const s = ARC_S[i];
+    const u = 1 - s;
+    const a = u * u * u;
+    const b = 3 * u * u * s;
+    const c = 3 * u * s * s;
+    const d = s * s * s;
+    const x = a * p0.x + b * p1.x + c * p2.x + d * p3.x;
+    const z = a * p0.z + b * p1.z + c * p2.z + d * p3.z;
+    total += hypot(x - prevX, z - prevZ);
     arcLen[i] = total;
-    prev = pt;
+    prevX = x;
+    prevZ = z;
   }
-  const pathLen = Math.max(0.05, total);
   void D;
+  return { p0, p1, p2, p3, arcS: ARC_S, arcLen, total };
+}
+
+export function designFlight(spec: FlightSpec, g: FlightGeometry = flightGeometry(spec)): Flight {
+  const { p0, p1, p2, p3, arcS, arcLen } = g;
+  const geo = g;
+  const pathLen = Math.max(0.05, g.total);
 
   const y0 = spec.from.y;
   let v0 = Math.max(0.5, spec.speed);
@@ -176,12 +208,13 @@ export function designFlight(spec: FlightSpec): Flight {
     vy0 = (spec.target.y - y0 + (G * T * T) / 2) / T;
   }
 
-  const flight: Flight = { spec, T: Math.max(0.05, T), L, v0, vy0, y0, p0, p1, p2, p3, arcS, arcLen, stopsShort, spin: { x: 0, y: 0 } };
+  const phi0 = Math.atan(v0 * PK);
+  const flight: Flight = { spec, T: Math.max(0.05, T), L, v0, vy0, y0, p0, p1, p2, p3, arcS, arcLen, stopsShort, spin: { x: 0, y: 0 }, phi0, cosPhi0: Math.cos(phi0) };
   // Efeito: o giro lateral que, pela física livre, mantém a curva do fim do voo.
   const sEnd = paramAt(flight, L * 0.88);
   const d1 = bezierD1(geo, sEnd);
   const d2 = bezierD2(geo, sEnd);
-  const sp = Math.hypot(d1.x, d1.z);
+  const sp = hypot(d1.x, d1.z);
   const kappaRight = sp > 1e-6 ? (d2.x * d1.z - d2.z * d1.x) / (sp * sp * sp) : 0;
   const vEnd = progress(spec.grounded, v0, flight.T * 0.88).v;
   const aRight = kappaRight * vEnd * vEnd;
@@ -227,6 +260,23 @@ export function flightAt(f: Flight, t: number): { pos: Vec3; vel: Vec3 } {
   };
 }
 
+/** Só a posição do voo em t (sem velocidade nem objetos intermediários); igual a flightAt(f, t).pos. */
+export function flightPos(f: Flight, t: number, out: Vec3 = { x: 0, y: 0, z: 0 }): Vec3 {
+  const tt = clamp(t, 0, f.T);
+  const d = Math.min(progressD(f, tt), f.L);
+  const s = paramAt(f, d);
+  const u = 1 - s;
+  const a = u * u * u;
+  const b = 3 * u * u * s;
+  const c = 3 * u * s * s;
+  const e = s * s * s;
+  const y = f.spec.grounded ? R : f.y0 + f.vy0 * tt - (G * tt * tt) / 2;
+  out.x = a * f.p0.x + b * f.p1.x + c * f.p2.x + e * f.p3.x;
+  out.y = Math.max(R, y);
+  out.z = a * f.p0.z + b * f.p1.z + c * f.p2.z + e * f.p3.z;
+  return out;
+}
+
 /** Altura da bola quando o caminho passa mais perto de `p` (para limpar zagueiros). */
 export function heightNear(f: Flight, p: Vec2) {
   let best = { dist: Infinity, t: 0, along: 0, point: { x: 0, z: 0 } as Vec2 };
@@ -234,7 +284,7 @@ export function heightNear(f: Flight, p: Vec2) {
   for (let i = 0; i <= steps; i += 1) {
     const t = (f.T * i) / steps;
     const st = flightAt(f, t);
-    const dd = Math.hypot(st.pos.x - p.x, st.pos.z - p.z);
+    const dd = hypot(st.pos.x - p.x, st.pos.z - p.z);
     if (dd < best.dist) best = { dist: dd, t, along: i / steps, point: { x: st.pos.x, z: st.pos.z } };
   }
   const st = flightAt(f, best.t);
@@ -245,7 +295,7 @@ export function heightNear(f: Flight, p: Vec2) {
 export function previewOf(f: Flight, points = 30): Vec3[] {
   const out: Vec3[] = [];
   for (let i = 0; i <= points; i += 1) {
-    out.push(flightAt(f, (f.T * i) / points).pos);
+    out.push(flightPos(f, (f.T * i) / points));
   }
   return out;
 }

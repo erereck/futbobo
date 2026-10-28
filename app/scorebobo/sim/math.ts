@@ -2,14 +2,50 @@
 
 import type { Vec2, Vec3 } from "../types";
 
+/** Réplica exata do Math.hypot do V8 (normaliza pelo maior, soma de Kahan): mesmos bits, sem alocar. */
+export function hypot(a: number, b: number, c?: number): number {
+  if (c === undefined) {
+    const x = Math.abs(a), y = Math.abs(b);
+    if (x === Infinity || y === Infinity) return Infinity;
+    if (x !== x || y !== y) return NaN;
+    const max = x > y ? x : y;
+    if (max === 0) return 0;
+    let n = x / max;
+    const sum = n * n;
+    const comp = sum - n * n;
+    n = y / max;
+    return Math.sqrt(sum + (n * n - comp)) * max;
+  }
+  const x = Math.abs(a), y = Math.abs(b), z = Math.abs(c);
+  if (x === Infinity || y === Infinity || z === Infinity) return Infinity;
+  if (x !== x || y !== y || z !== z) return NaN;
+  let max = 0;
+  if (x > max) max = x;
+  if (y > max) max = y;
+  if (z > max) max = z;
+  if (max === 0) return 0;
+  let sum = 0, comp = 0, n = x / max, s = n * n - comp, p = sum + s;
+  comp = (p - sum) - s; sum = p;
+  n = y / max; s = n * n - comp; p = sum + s; comp = (p - sum) - s; sum = p;
+  n = z / max; s = n * n - comp; p = sum + s;
+  return Math.sqrt(p) * max;
+}
+
 export const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const easeOut = (t: number) => 1 - (1 - clamp(t, 0, 1)) ** 2;
 
-export const dist2 = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.z - b.z);
+export const dist2 = (a: Vec2, b: Vec2) => hypot(a.x - b.x, a.z - b.z);
 export const norm2 = (a: Vec2): Vec2 => {
-  const l = Math.hypot(a.x, a.z);
+  const l = hypot(a.x, a.z);
   return l > 1e-9 ? { x: a.x / l, z: a.z / l } : { x: 0, z: 1 };
+};
+/** norm2 de (x, z) escrito em `out`: a mesma conta, sem alocar. */
+export const norm2To = (x: number, z: number, out: Vec2): Vec2 => {
+  const l = hypot(x, z);
+  out.x = l > 1e-9 ? x / l : 0;
+  out.z = l > 1e-9 ? z / l : 1;
+  return out;
 };
 /** Direita de quem anda em `d` (para +z, a direita é +x — a convenção do contrato). */
 export const right2 = (d: Vec2): Vec2 => ({ x: d.z, z: -d.x });
@@ -32,7 +68,7 @@ export function closestOnSegment2(p: Vec2, a: Vec2, b: Vec2) {
   const t = l2 > 1e-9 ? clamp(((p.x - a.x) * abx + (p.z - a.z) * abz) / l2, 0, 1) : 0;
   const x = a.x + abx * t;
   const z = a.z + abz * t;
-  return { t, point: { x, z }, dist: Math.hypot(p.x - x, p.z - z) };
+  return { t, point: { x, z }, dist: hypot(p.x - x, p.z - z) };
 }
 
 /** Distância de um ponto a um segmento em 3D (corpo do goleiro, cápsulas). */
@@ -43,7 +79,7 @@ export function closestOnSegment3(p: Vec3, a: Vec3, b: Vec3) {
   const l2 = abx * abx + aby * aby + abz * abz;
   const t = l2 > 1e-9 ? clamp(((p.x - a.x) * abx + (p.y - a.y) * aby + (p.z - a.z) * abz) / l2, 0, 1) : 0;
   const point = { x: a.x + abx * t, y: a.y + aby * t, z: a.z + abz * t };
-  return { t, point, dist: Math.hypot(p.x - point.x, p.y - point.y, p.z - point.z) };
+  return { t, point, dist: hypot(p.x - point.x, p.y - point.y, p.z - point.z) };
 }
 
 // ------------------------------------------------------------------ sorteio

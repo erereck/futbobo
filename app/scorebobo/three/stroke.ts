@@ -9,6 +9,31 @@ import { clamp, clamp01 } from "./util";
 
 const MAX_POINTS = 220;
 const ARC_MAX = 120;
+/** Primeiro vértice da flecha (fica no fim do buffer da fita). */
+const ARROW = MAX_POINTS * 2;
+
+// Cores fixas da fita e da mira: copiar é bem mais barato que ler "#hex" (ou
+// criar uma Color) a cada quadro do desenho.
+const NEUTRAL_START = new THREE.Color("#ffffff");
+const NEUTRAL_END = new THREE.Color("#c9d3dc");
+const SHOT_START = new THREE.Color("#fff3c4");
+const SHOT_END = new THREE.Color("#ffb02e");
+const SHOT_RISK = new THREE.Color("#ff3b2f");
+const PASS_START = new THREE.Color("#e8fdff");
+const PASS_END = new THREE.Color("#4fe8ff");
+const PASS_RISK = new THREE.Color("#ff8a3d");
+const RETICLE_COLOR = new THREE.Color("#ffd23f");
+
+/** Sobe para a GPU só os `count` primeiros vértices (o resto não é desenhado). */
+function uploadHead(attribute: THREE.BufferAttribute, count: number) {
+  attribute.clearUpdateRanges();
+  attribute.addUpdateRange(0, count * attribute.itemSize);
+  attribute.needsUpdate = true;
+}
+
+function fadeOf(mesh: THREE.Mesh) {
+  return (mesh.material as THREE.ShaderMaterial).uniforms.uFade.value as number;
+}
 
 const RIBBON_VERTEX = /* glsl */ `
 attribute float aU;
@@ -191,6 +216,17 @@ export class StrokeView {
   private readonly tmpB = new THREE.Vector3();
   private readonly tmpC = new THREE.Vector3();
   private readonly tmpD = new THREE.Vector3();
+  // Vetores reaproveitados: a fita é refeita a cada quadro do desenho.
+  private readonly raw: THREE.Vector3[] = [];
+  private readonly samples: THREE.Vector3[] = Array.from({ length: MAX_POINTS }, () => new THREE.Vector3());
+  private readonly facing = new THREE.Vector3();
+  private readonly endSide = new THREE.Vector3();
+  private readonly endDir = new THREE.Vector3();
+  private readonly arcPrev = new THREE.Vector3();
+  private readonly ribbonAttributes: THREE.BufferAttribute[];
+  private readonly arcAttributes: THREE.BufferAttribute[];
+  /** Quantos pontos a fita tinha quando a flecha entrou no índice (começa no fim do buffer). */
+  private arrowAt = MAX_POINTS;
 
   constructor(
     private readonly camera: THREE.Camera,
@@ -204,19 +240,32 @@ export class StrokeView {
     this.rV = new Float32Array(vertexCount);
     this.rT = new Float32Array(vertexCount);
     this.rArrow = new Float32Array(vertexCount);
+    // Lado da fita (-1/1) e a marca da flecha não mudam: sobem uma vez só.
+    for (let index = 0; index < MAX_POINTS; index += 1) {
+      this.rV[index * 2] = -1;
+      this.rV[index * 2 + 1] = 1;
+    }
+    // Flecha cheia: o brilho vem do ramo "vArrow" do shader (miolo na ponta).
+    this.rV[ARROW] = -0.2;
+    this.rV[ARROW + 1] = 0.2;
+    this.rV[ARROW + 2] = 0;
+    this.rArrow.fill(1, ARROW);
+    const position = new THREE.BufferAttribute(this.rPos, 3).setUsage(THREE.DynamicDrawUsage);
+    const u = new THREE.BufferAttribute(this.rU, 1).setUsage(THREE.DynamicDrawUsage);
+    const t = new THREE.BufferAttribute(this.rT, 1).setUsage(THREE.DynamicDrawUsage);
+    this.ribbonAttributes = [position, u, t];
     this.ribbonGeometry = new THREE.BufferGeometry();
-    this.ribbonGeometry.setAttribute("position", new THREE.BufferAttribute(this.rPos, 3).setUsage(THREE.DynamicDrawUsage));
-    this.ribbonGeometry.setAttribute("aU", new THREE.BufferAttribute(this.rU, 1).setUsage(THREE.DynamicDrawUsage));
-    this.ribbonGeometry.setAttribute("aV", new THREE.BufferAttribute(this.rV, 1).setUsage(THREE.DynamicDrawUsage));
-    this.ribbonGeometry.setAttribute("aT", new THREE.BufferAttribute(this.rT, 1).setUsage(THREE.DynamicDrawUsage));
-    this.ribbonGeometry.setAttribute("aArrow", new THREE.BufferAttribute(this.rArrow, 1).setUsage(THREE.DynamicDrawUsage));
+    this.ribbonGeometry.setAttribute("position", position);
+    this.ribbonGeometry.setAttribute("aU", u);
+    this.ribbonGeometry.setAttribute("aV", new THREE.BufferAttribute(this.rV, 1));
+    this.ribbonGeometry.setAttribute("aT", t);
+    this.ribbonGeometry.setAttribute("aArrow", new THREE.BufferAttribute(this.rArrow, 1));
     const indices: number[] = [];
     for (let index = 0; index < MAX_POINTS - 1; index += 1) {
       const a = index * 2;
       indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
     }
-    const arrow = MAX_POINTS * 2;
-    indices.push(arrow, arrow + 1, arrow + 2);
+    indices.push(ARROW, ARROW + 1, ARROW + 2);
     this.ribbonGeometry.setIndex(indices);
     this.ribbonMaterial = new THREE.ShaderMaterial({
       vertexShader: RIBBON_VERTEX,
@@ -259,11 +308,15 @@ export class StrokeView {
       const a = index * 2;
       arcIndices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
     }
+    const arcPosition = new THREE.BufferAttribute(this.aPos, 3).setUsage(THREE.DynamicDrawUsage);
+    const arcU = new THREE.BufferAttribute(this.aU, 1).setUsage(THREE.DynamicDrawUsage);
+    const arcDanger = new THREE.BufferAttribute(this.aDanger, 1).setUsage(THREE.DynamicDrawUsage);
+    this.arcAttributes = [arcPosition, arcU, arcDanger];
     this.arcGeometry = new THREE.BufferGeometry();
-    this.arcGeometry.setAttribute("position", new THREE.BufferAttribute(this.aPos, 3).setUsage(THREE.DynamicDrawUsage));
-    this.arcGeometry.setAttribute("aU", new THREE.BufferAttribute(this.aU, 1).setUsage(THREE.DynamicDrawUsage));
+    this.arcGeometry.setAttribute("position", arcPosition);
+    this.arcGeometry.setAttribute("aU", arcU);
     this.arcGeometry.setAttribute("aV", new THREE.BufferAttribute(aV, 1));
-    this.arcGeometry.setAttribute("aDanger", new THREE.BufferAttribute(this.aDanger, 1).setUsage(THREE.DynamicDrawUsage));
+    this.arcGeometry.setAttribute("aDanger", arcDanger);
     this.arcGeometry.setIndex(arcIndices);
     this.arcMaterial = new THREE.ShaderMaterial({
       vertexShader: ARC_VERTEX,
@@ -310,37 +363,48 @@ export class StrokeView {
 
   private buildRibbon(points: Vec3[], plan: KickPlan | null) {
     // Reamostra a cada ~0,2 m e alisa (o dedo treme).
-    const raw = points.map((p) => new THREE.Vector3(p.x, Math.max(0, p.y), p.z));
+    const rawCount = points.length;
+    const raw = this.raw;
+    while (raw.length < rawCount) raw.push(new THREE.Vector3());
+    for (let index = 0; index < rawCount; index += 1) {
+      const p = points[index];
+      raw[index].set(p.x, Math.max(0, p.y), p.z);
+    }
     let total = 0;
-    for (let index = 1; index < raw.length; index += 1) total += raw[index].distanceTo(raw[index - 1]);
+    for (let index = 1; index < rawCount; index += 1) total += raw[index].distanceTo(raw[index - 1]);
     if (total < 0.05) return;
     const step = Math.max(0.2, total / (MAX_POINTS - 1));
-    const samples: THREE.Vector3[] = [raw[0].clone()];
+    const samples = this.samples;
+    samples[0].copy(raw[0]);
+    let count = 1;
     let carry = 0;
-    for (let index = 1; index < raw.length; index += 1) {
+    for (let index = 1; index < rawCount; index += 1) {
       const a = raw[index - 1];
       const b = raw[index];
       const length = a.distanceTo(b);
       let t = step - carry;
-      while (t <= length && samples.length < MAX_POINTS - 1) {
-        samples.push(a.clone().lerp(b, t / length));
+      while (t <= length && count < MAX_POINTS - 1) {
+        samples[count].copy(a).lerp(b, t / length);
+        count += 1;
         t += step;
       }
       carry = length - (t - step);
     }
-    const last = raw[raw.length - 1];
-    if (samples[samples.length - 1].distanceTo(last) > 0.02) samples.push(last.clone());
+    const last = raw[rawCount - 1];
+    if (samples[count - 1].distanceTo(last) > 0.02) {
+      samples[count].copy(last);
+      count += 1;
+    }
     for (let pass = 0; pass < 2; pass += 1) {
-      for (let index = 1; index < samples.length - 1; index += 1) {
+      for (let index = 1; index < count - 1; index += 1) {
         samples[index].lerpVectors(samples[index - 1], samples[index + 1], 0.5).lerp(samples[index], 0.5);
       }
     }
-    const count = Math.min(samples.length, MAX_POINTS);
     const cam = this.camera.position;
     const up = this.tmpD.set(0, 1, 0);
     let along = 0;
-    let endSide = new THREE.Vector3(1, 0, 0);
-    let endDir = new THREE.Vector3(0, 0, 1);
+    const endSide = this.endSide.set(1, 0, 0);
+    const endDir = this.endDir.set(0, 0, 1);
     let endWidth = 0.3;
     for (let index = 0; index < count; index += 1) {
       const p = samples[index];
@@ -353,7 +417,7 @@ export class StrokeView {
       // No chão a fita deita; no ar (plano do gol) vira de frente para a câmera.
       const ground = this.tmpB.crossVectors(tangent, up);
       const view = this.tmpC.subVectors(cam, p).normalize();
-      const facing = new THREE.Vector3().crossVectors(tangent, view);
+      const facing = this.facing.crossVectors(tangent, view);
       const air = clamp01((p.y - 0.08) / 0.4);
       const side = ground.lengthSq() > 1e-6 ? ground.normalize().lerp(facing.normalize(), air).normalize() : facing.normalize();
       const distance = cam.distanceTo(p);
@@ -368,13 +432,9 @@ export class StrokeView {
       this.rPos[o + 5] = p.z + side.z * width;
       this.rU[index * 2] = along;
       this.rU[index * 2 + 1] = along;
-      this.rV[index * 2] = -1;
-      this.rV[index * 2 + 1] = 1;
-      this.rArrow[index * 2] = 0;
-      this.rArrow[index * 2 + 1] = 0;
       if (index === count - 1) {
-        endSide = side.clone();
-        endDir = tangent.clone();
+        endSide.copy(side);
+        endDir.copy(tangent);
         endWidth = width;
       }
     }
@@ -385,60 +445,88 @@ export class StrokeView {
     }
     // Flecha: base um pouco mais larga que a fita, ponta à frente do último ponto.
     const tip = samples[count - 1];
-    const a = MAX_POINTS * 2;
     const arrowWidth = endWidth * 2.3;
     const arrowLength = endWidth * 3.2;
-    const set = (vertex: number, x: number, y: number, z: number, v: number) => {
-      this.rPos[vertex * 3] = x;
-      this.rPos[vertex * 3 + 1] = y + 0.035;
-      this.rPos[vertex * 3 + 2] = z;
-      this.rU[vertex] = along;
-      this.rV[vertex] = v;
-      this.rT[vertex] = 1;
-      this.rArrow[vertex] = 1;
-    };
-    set(a, tip.x - endSide.x * arrowWidth, tip.y - endSide.y * arrowWidth, tip.z - endSide.z * arrowWidth, -1);
-    set(a + 1, tip.x + endSide.x * arrowWidth, tip.y + endSide.y * arrowWidth, tip.z + endSide.z * arrowWidth, -1);
-    set(a + 2, tip.x + endDir.x * arrowLength, tip.y + endDir.y * arrowLength, tip.z + endDir.z * arrowLength, -1);
-    // Flecha cheia: o brilho vem do ramo "vArrow" do shader (miolo na ponta).
-    this.rV[a + 2] = 0;
-    this.rV[a] = -0.2;
-    this.rV[a + 1] = 0.2;
+    this.arrowVertex(ARROW, tip.x - endSide.x * arrowWidth, tip.y - endSide.y * arrowWidth, tip.z - endSide.z * arrowWidth, along);
+    this.arrowVertex(ARROW + 1, tip.x + endSide.x * arrowWidth, tip.y + endSide.y * arrowWidth, tip.z + endSide.z * arrowWidth, along);
+    this.arrowVertex(ARROW + 2, tip.x + endDir.x * arrowLength, tip.y + endDir.y * arrowLength, tip.z + endDir.z * arrowLength, along);
 
-    const g = this.ribbonGeometry;
-    // Índices: a fita usa (count-1) quads; a flecha fica no fim do buffer de índices.
-    // Para desenhar só o que existe, os pontos que sobram colapsam no último.
-    for (let index = count; index < MAX_POINTS; index += 1) {
-      const o = index * 6;
+    // A esfera envolvente da fita sai das posições no primeiro quadro em que ela
+    // aparece (e nunca mais) e é ela que ordena fita e prévia (as duas com
+    // renderOrder 5). Até lá, as sobras do buffer colapsam no último ponto como
+    // antes, para a ordem ser a de sempre; elas não sobem nem são desenhadas.
+    if (this.ribbonGeometry.boundingSphere === null) {
       const s = (count - 1) * 6;
-      for (let k = 0; k < 6; k += 1) this.rPos[o + k] = this.rPos[s + k];
-      this.rT[index * 2] = 2;
-      this.rT[index * 2 + 1] = 2;
+      for (let index = count; index < MAX_POINTS; index += 1) {
+        const o = index * 6;
+        for (let k = 0; k < 6; k += 1) this.rPos[o + k] = this.rPos[s + k];
+      }
     }
-    g.attributes.position.needsUpdate = true;
-    g.attributes.aU.needsUpdate = true;
-    g.attributes.aV.needsUpdate = true;
-    g.attributes.aT.needsUpdate = true;
-    g.attributes.aArrow.needsUpdate = true;
+
+    // Índices: a fita usa (count-1) quads e a flecha vem logo depois deles (a
+    // mesma ordem de desenho de antes, sem os quads vazios do fim do buffer).
+    // Sobe só o que é desenhado: os vértices da fita e os três da flecha.
+    this.placeArrow(count);
+    for (const attribute of this.ribbonAttributes) {
+      uploadHead(attribute, count * 2);
+      attribute.addUpdateRange(ARROW * attribute.itemSize, 3 * attribute.itemSize);
+    }
     this.ribbonMaterial.uniforms.uLength.value = along;
 
     // Cor: passe azul gelo, chute dourado→laranja; imprecisão puxa para o vermelho.
     const accuracy = plan ? clamp01(plan.accuracy) : 1;
-    const cutRisk = plan?.danger?.some((span) => !span.contest) ? 0.55 : 0;
+    let cutRisk = 0;
+    for (const span of plan?.danger ?? []) if (!span.contest) cutRisk = 0.55;
     const risk = Math.max(1 - accuracy, cutRisk);
     const start = this.ribbonMaterial.uniforms.uStart.value as THREE.Color;
     const end = this.ribbonMaterial.uniforms.uEnd.value as THREE.Color;
     if (!plan) {
-      start.set("#ffffff");
-      end.set("#c9d3dc");
+      start.copy(NEUTRAL_START);
+      end.copy(NEUTRAL_END);
     } else if (plan.shot) {
-      start.set("#fff3c4");
-      end.set("#ffb02e").lerp(new THREE.Color("#ff3b2f"), clamp01(risk * 1.4));
+      start.copy(SHOT_START);
+      end.copy(SHOT_END).lerp(SHOT_RISK, clamp01(risk * 1.4));
     } else {
-      start.set("#e8fdff");
-      end.set("#4fe8ff").lerp(new THREE.Color("#ff8a3d"), clamp01(risk * 1.4));
+      start.copy(PASS_START);
+      end.copy(PASS_END).lerp(PASS_RISK, clamp01(risk * 1.4));
     }
     this.ribbon.visible = true;
+  }
+
+  private arrowVertex(vertex: number, x: number, y: number, z: number, along: number) {
+    this.rPos[vertex * 3] = x;
+    this.rPos[vertex * 3 + 1] = y + 0.035;
+    this.rPos[vertex * 3 + 2] = z;
+    this.rU[vertex] = along;
+    this.rT[vertex] = 1;
+  }
+
+  /**
+   * Leva o triângulo da flecha para logo depois do último quad da fita (o
+   * primeiro triângulo do quad seguinte, que só desenhava pontos colapsados) e
+   * devolve o quad de onde ela saiu. Os trechos mudados se acumulam até o
+   * próximo upload (um quadro sem render não perde nenhum).
+   */
+  private placeArrow(count: number) {
+    if (count === this.arrowAt) return;
+    const index = this.ribbonGeometry.index!;
+    const array = index.array;
+    if (this.arrowAt < MAX_POINTS) {
+      const slot = (this.arrowAt - 1) * 6;
+      const a = (this.arrowAt - 1) * 2;
+      array[slot] = a;
+      array[slot + 1] = a + 1;
+      array[slot + 2] = a + 2;
+      index.addUpdateRange(slot, 3);
+    }
+    const slot = (count - 1) * 6;
+    array[slot] = ARROW;
+    array[slot + 1] = ARROW + 1;
+    array[slot + 2] = ARROW + 2;
+    index.addUpdateRange(slot, 3);
+    index.needsUpdate = true;
+    this.arrowAt = count;
+    this.ribbonGeometry.setDrawRange(0, slot + 3);
   }
 
   private buildArc(plan: KickPlan | null) {
@@ -452,6 +540,7 @@ export class StrokeView {
     const stride = path.length / count;
     let along = 0;
     let prev: THREE.Vector3 | null = null;
+    const prevPoint = this.arcPrev;
     const p = this.tmpA;
     const n = this.tmpB;
     const spans = plan?.danger ?? [];
@@ -483,12 +572,10 @@ export class StrokeView {
       this.aPos[o + 5] = p.z + side.z * width;
       this.aU[index * 2] = along;
       this.aU[index * 2 + 1] = along;
-      prev = prev ? prev.copy(p) : p.clone();
+      prev = prevPoint.copy(p);
     }
     this.arcGeometry.setDrawRange(0, (count - 1) * 6);
-    this.arcGeometry.attributes.position.needsUpdate = true;
-    this.arcGeometry.attributes.aU.needsUpdate = true;
-    this.arcGeometry.attributes.aDanger.needsUpdate = true;
+    for (const attribute of this.arcAttributes) uploadHead(attribute, count * 2);
     this.arc.visible = true;
   }
 
@@ -517,7 +604,7 @@ export class StrokeView {
       const tz = PITCH.goalLineZ - 0.05;
       this.reticle.position.set(plan.target.x, clamp(plan.target.y, spread * 0.4, PITCH.goalHeight + 1.5), tz);
       this.reticle.scale.setScalar(spread * 2);
-      (retMat.uniforms.uColor.value as THREE.Color).set("#ffd23f").lerp(new THREE.Color("#ff3b2f"), clamp01((1 - plan.accuracy) * 1.3));
+      (retMat.uniforms.uColor.value as THREE.Color).copy(RETICLE_COLOR).lerp(SHOT_RISK, clamp01((1 - plan.accuracy) * 1.3));
       this.reticle.visible = true;
     }
     retMat.uniforms.uFade.value = THREE.MathUtils.damp(retMat.uniforms.uFade.value, plan && plan.shot && this.fadeTarget > 0 && aiming ? 1 : 0, 10, dt);
@@ -550,6 +637,22 @@ export class StrokeView {
     this.heroRing.scale.setScalar(1.9);
     heroMat.uniforms.uFade.value = this.heroFade * 0.85;
     this.heroRing.visible = this.heroFade > 0.01;
+  }
+
+  /**
+   * Nada do traço mudando na tela: sem traço nem prévia, mira e anéis apagados
+   * e o anel do herói parado (aceso ou apagado). A mira parada pode desenhar
+   * mais devagar sem cortar nenhum esmaecer.
+   */
+  get settled(): boolean {
+    return (
+      this.fadeTarget === 0 &&
+      this.fade < 0.01 &&
+      fadeOf(this.reticle) < 0.01 &&
+      fadeOf(this.landing) < 0.01 &&
+      fadeOf(this.receiverRing) < 0.01 &&
+      (this.heroFade > 0.99 || this.heroFade < 0.01)
+    );
   }
 
   /** Há um traço na tela agora. */

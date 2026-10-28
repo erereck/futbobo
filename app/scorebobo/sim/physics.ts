@@ -3,7 +3,7 @@
 // Tudo em metros/segundos, passo fixo pequeno (ver FIXED_DT em game.ts).
 
 import { PITCH, type BallState, type Vec3 } from "../types";
-import { clamp } from "./math";
+import { clamp, hypot } from "./math";
 
 export const G = 9.81;
 /** Arrasto quadrático por metro (½ρCdA/m de uma bola oficial, ~0,0125). */
@@ -49,7 +49,7 @@ export function freeStep(ball: BallState, dt: number) {
   if (isRolling(ball)) {
     p.y = R;
     v.y = 0;
-    const speed = Math.hypot(v.x, v.z);
+    const speed = hypot(v.x, v.z);
     if (speed > 1e-4) {
       const next = Math.max(0, speed - (ROLL_DECEL + DRAG_K * speed * speed) * dt);
       const f = next / speed;
@@ -63,9 +63,9 @@ export function freeStep(ball: BallState, dt: number) {
     p.z += v.z * dt;
     // Rolando, o efeito vira giro de rolagem: o desenho da bola acompanha a velocidade.
     ball.spin.y *= Math.exp(-3 * dt);
-    ball.spin.x = Math.hypot(v.x, v.z) / R;
+    ball.spin.x = hypot(v.x, v.z) / R;
   } else {
-    const speed = Math.hypot(v.x, v.y, v.z);
+    const speed = hypot(v.x, v.y, v.z);
     const wy = ball.spin.y;
     // ω = (0, wy, 0): ω × v = (wy·vz, 0, −wy·vx).
     const ax = -DRAG_K * speed * v.x + MAGNUS * wy * v.z;
@@ -88,7 +88,7 @@ export function freeStep(ball: BallState, dt: number) {
         v.x *= 0.84;
         v.z *= 0.84;
         ball.spin.y *= 0.55;
-        ball.spin.x = Math.hypot(v.x, v.z) / R * 0.6;
+        ball.spin.x = hypot(v.x, v.z) / R * 0.6;
       }
     }
   }
@@ -120,7 +120,7 @@ function collideCylinder(ball: BallState, a: Vec3, b: Vec3, rc: number, restitut
   let nx = p.x - cx;
   let ny = p.y - cy;
   let nz = p.z - cz;
-  const d = Math.hypot(nx, ny, nz);
+  const d = hypot(nx, ny, nz);
   const minD = rc + R;
   if (d >= minD || d < 1e-6) return null;
   nx /= d;

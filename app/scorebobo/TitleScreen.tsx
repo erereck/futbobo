@@ -1,14 +1,14 @@
 "use client";
 
 // Abertura do Scorebobo: logotipo, a prancheta com a jogada em loop, as fases
-// (com estrelas e cadeados), o seu jogador e os ajustes. Nada de 3D aqui —
-// o three.js só baixa quando uma fase começa.
+// (com estrelas e cadeados), o seu jogador e os ajustes. Nada de 3D aqui — o
+// three.js, a fase e a cama da torcida só chegam no tempo ocioso do menu.
 
 import Link from "next/link";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { drawPlayerBust } from "../player-appearance";
-import { playUiSound, primeScoreboboAudio } from "./audio";
+import { playUiSound, primeScoreboboAudio, warmScoreboboAudio } from "./audio";
 import { StarDefs, StarIcon } from "./Hud";
 import { LevelMap, TitleBackdrop } from "./TitleArt";
 import { levelUnlocked, type ScoreboboProfile, type ScoreboboProgress, type TeamInfo } from "./storage";
@@ -123,6 +123,8 @@ export type TitleScreenProps = {
   muted: boolean;
   reducedMotion: boolean;
   starting: boolean;
+  /** A última fase pedida não abriu (o pedaço dela não chegou). */
+  loadFailed: boolean;
   /** Uma fase está por cima: a abertura para de pintar, mas guarda a rolagem. */
   covered: boolean;
   onPlay: (index: number) => void;
@@ -131,7 +133,7 @@ export type TitleScreenProps = {
   onToggleUnlockAll: () => void;
 };
 
-export function TitleScreen({ levels, progress, profile, away, hasWebgl, performance: performanceMode, muted, reducedMotion, starting, covered, onPlay, onTogglePerformance, onToggleMute, onToggleUnlockAll }: TitleScreenProps) {
+export function TitleScreen({ levels, progress, profile, away, hasWebgl, performance: performanceMode, muted, reducedMotion, starting, loadFailed, covered, onPlay, onTogglePerformance, onToggleMute, onToggleUnlockAll }: TitleScreenProps) {
   const [lockedNote, setLockedNote] = useState<{ index: number; key: number } | null>(null);
   const totalStars = levels.reduce((sum, level) => sum + (progress.stars[level.id] ?? 0), 0);
   const home = profile?.club ?? null;
@@ -142,6 +144,24 @@ export function TitleScreen({ levels, progress, profile, away, hasWebgl, perform
     const timer = window.setTimeout(() => setLockedNote((current) => (current?.key === lockedNote.key ? null : current)), 2200);
     return () => window.clearTimeout(timer);
   }, [lockedNote]);
+
+  // Menu parado: o 3D e a fase já vão baixando e a cama da torcida já vai sendo
+  // gerada (em fatias), para o toque na fase não esperar nada disso. No celular
+  // o "passou o dedo" chega junto com o toque, tarde demais.
+  useEffect(() => {
+    if (!hasWebgl) return;
+    const warm = () => {
+      void import("./three/view").catch(() => undefined);
+      void import("./LevelPlayer").catch(() => undefined);
+      warmScoreboboAudio();
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const handle = window.requestIdleCallback(warm, { timeout: 1500 });
+      return () => window.cancelIdleCallback(handle);
+    }
+    const timer = window.setTimeout(warm, 1500);
+    return () => window.clearTimeout(timer);
+  }, [hasWebgl]);
 
   const onLocked = useCallback((index: number) => setLockedNote((current) => ({ index, key: (current?.key ?? 0) + 1 })), []);
 
@@ -211,7 +231,7 @@ export function TitleScreen({ levels, progress, profile, away, hasWebgl, perform
           ))}
         </div>
         <p className={styles.lockedNote} aria-live="polite">
-          {lockedNote ? `Ganhe ao menos 1 estrela na fase ${lockedNote.index} para liberar esta.` : " "}
+          {lockedNote ? `Ganhe ao menos 1 estrela na fase ${lockedNote.index} para liberar esta.` : loadFailed ? "A fase não abriu. Confira a conexão e toque de novo." : " "}
         </p>
       </section>
 

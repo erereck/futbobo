@@ -156,7 +156,13 @@
 /* Pausa: as animações de CSS (faixa, confete) param junto com o jogo (o menu da pausa não). */
 .stagePaused .hud *,
 .stagePaused .confetti i,
-.stagePaused .goalFlash { animation-play-state: paused !important; }
+.stagePaused .goalFlash,
+.stagePaused .ballRing *,
+.stagePaused .edgeArrow *,
+.stagePaused .tutorial * { animation-play-state: paused !important; }
+/* Anel e setas apagados (o fade já acabou): o giro e o pulso param até acenderem
+   de novo (o !important vence o `animation` de `.ballRing i`, que religaria). */
+.idleAnim * { animation-play-state: paused !important; }
 
 /* Toque fora da bola: um "x" vermelho que pisca no lugar. */
 .tap {

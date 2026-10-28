@@ -60,6 +60,8 @@ export class BallActor {
   private readonly side = new THREE.Vector3();
   private readonly view = new THREE.Vector3();
   private readonly tangent = new THREE.Vector3();
+  /** Tabela DFG do three (textura de módulo de todo material PBR), lida no primeiro quadro. */
+  private dfgLUT: THREE.Texture | null = null;
   private trailLevel = 0;
   private haloLevel = 0;
   private lastX = 0;
@@ -75,6 +77,16 @@ export class BallActor {
       new THREE.MeshStandardMaterial({ map: this.texture, roughness: 0.38, metalness: 0, emissive: "#ffffff", emissiveMap: this.texture, emissiveIntensity: 0.16 }),
     );
     this.mesh.castShadow = !performance;
+    // A tabela DFG é uma só para todos os renderers e cada um pendura nela um
+    // ouvinte de dispose (que prende o renderer morto): guarda a referência no
+    // primeiro quadro para soltá-la no dispose.
+    this.mesh.onAfterRender = (renderer, _scene, _camera, _geometry, material) => {
+      const properties = renderer.properties.get(material) as { uniforms?: Record<string, THREE.IUniform> } | undefined;
+      const lut = properties?.uniforms?.dfgLUT?.value as THREE.Texture | null | undefined;
+      if (!lut) return;
+      this.dfgLUT = lut;
+      this.mesh.onAfterRender = THREE.Object3D.prototype.onAfterRender;
+    };
     this.group.add(this.mesh);
     // Raio-x: só desenha onde algo está NA FRENTE da bola (o herói na mira tapa a bola).
     this.ghost = new THREE.Mesh(
@@ -284,6 +296,12 @@ export class BallActor {
     (this.shadow.material as THREE.Material).dispose();
     this.shadowTexture.dispose();
     (this.halo.material as THREE.Material).dispose();
+    // Geometria de módulo do three (a mesma de todo Sprite): dispose() só avisa
+    // os renderers, que soltam os buffers e o ouvinte que prendia este renderer
+    // morto na memória. Ela continua valendo e sobe de novo se for usada.
+    this.halo.geometry.dispose();
+    // Idem para a tabela DFG (16×16): quem ainda estiver vivo sobe de novo.
+    this.dfgLUT?.dispose();
     this.haloTexture.dispose();
     this.trailGeometry.dispose();
     this.trailMaterial.dispose();
