@@ -31,6 +31,235 @@ const MATE_RIM = "#d8fbff";
 const TEAM_CHEERS: FigureAction[] = ["jumpCheer", "fistPump", "clap", "pointSky", "jumpCheer", "fistPump"];
 const SADNESS: FigureAction[] = ["handsOnHead", "kneelSad", "handsOnHips", "handsOnHead", "disbelief"];
 
+/** O skinIndex do boneco é Uint8: um esqueleto só para o time cabe até 255 ossos (21 bonecos). */
+const MAX_SHARED_BONES = 255;
+/** Sombras de contato instanciadas a partir desse tanto de bonecos (com dois, os dois draws não economizam nada). */
+const MIN_BLOB_DRAW = 3;
+/**
+ * ...e até esse tanto: cada uma leva uma matriz e uma opacidade em uniform (5
+ * vetores; 24 dão 120, mais uns 30 do material, bem abaixo dos 256 que o
+ * WebGL2 garante no vertex shader de qualquer celular).
+ */
+const MAX_BLOB_DRAW = 24;
+const BLOB_PROGRAM_KEY = "scorebobo-squad-blobs-v1";
+/**
+ * Modo desempenho: no voo os bonecos longe do lance animam em quadro sim,
+ * quadro não (desfecho e replay já desenham a 30 no LevelPlayer).
+ */
+const THIN_PHASES: ReadonlySet<GameState["phase"]> = new Set(["flight"]);
+/** Só alterna com o jogo acima de ~40 quadros por segundo (abaixo, eles já animam a ~30 Hz ou menos). */
+const THIN_MAX_DT = 1 / 40;
+/** Quem está a menos disso da bola (m, no chão) anima todo quadro. */
+const THIN_NEAR_BALL = 6;
+/** Teto do passo acumulado de quem pulou quadros (o mesmo do `update` do boneco). */
+const THIN_MAX_STEP = 0.1;
+
+const BLOB_VERTEX_HEAD = [
+  "#include <common>",
+  "uniform mat4 uBlobView[ BLOB_COUNT ];",
+  "uniform float uBlobOpacity[ BLOB_COUNT ];",
+  "flat varying float vBlobOpacity;",
+].join("\n");
+// As contas do project_vertex, com a modelView de cada sombra no lugar da do objeto.
+const BLOB_PROJECT_VERTEX = [
+  "vec4 mvPosition = vec4( transformed, 1.0 );",
+  "mvPosition = uBlobView[ gl_InstanceID ] * mvPosition;",
+  "gl_Position = projectionMatrix * mvPosition;",
+  "vBlobOpacity = uBlobOpacity[ gl_InstanceID ];",
+].join("\n");
+const BLOB_FRAGMENT_HEAD = ["#include <common>", "flat varying float vBlobOpacity;"].join("\n");
+
+/**
+ * Um esqueleto só para o time inteiro: o three atualiza cada Skeleton uma vez
+ * por quadro (e o passe de sombra reaproveita), então em vez de 9 texturas de
+ * ossos 8x8 sobe uma 24x24 por quadro. Cada boneco tem a própria geometria
+ * (builder.build()), então o skinIndex de cada um ganha o deslocamento dos
+ * ossos dele sem mexer em nada compartilhado; a bindMatrix é a identidade e as
+ * inversas são as do boneco, então a conta de cada osso sai a mesma. Esfera de
+ * recorte e âncoras das mãos não dependem do esqueleto. null: passou do limite
+ * do Uint8 (cada boneco fica com o seu, como antes).
+ */
+function shareSkeleton(figures: PlayerFigure[]): THREE.Skeleton | null {
+  const meshes = figures.map((figure) => figure.skinnedMesh);
+  const total = meshes.reduce((sum, mesh) => sum + mesh.skeleton.bones.length, 0);
+  if (meshes.length < 2 || total > MAX_SHARED_BONES) return null;
+  const bones: THREE.Bone[] = [];
+  const inverses: THREE.Matrix4[] = [];
+  for (const mesh of meshes) {
+    const base = bones.length;
+    const own = mesh.skeleton;
+    for (let index = 0; index < own.bones.length; index += 1) {
+      bones.push(own.bones[index]);
+      inverses.push(own.boneInverses[index].clone());
+    }
+    // Um osso por vértice (peso 1 no x): só o x conta.
+    const skinIndex = mesh.geometry.getAttribute("skinIndex") as THREE.BufferAttribute;
+    const indices = skinIndex.array;
+    for (let index = 0; index < indices.length; index += 4) indices[index] += base;
+    skinIndex.needsUpdate = true;
+  }
+  const skeleton = new THREE.Skeleton(bones, inverses);
+  for (const mesh of meshes) mesh.bind(skeleton, mesh.bindMatrix);
+  return skeleton;
+}
+
+/** Um draw instanciado de sombras: a matriz modelView e a opacidade de cada uma em uniforms. */
+type BlobDraw = {
+  mesh: THREE.Mesh<THREE.InstancedBufferGeometry, THREE.MeshBasicMaterial>;
+  views: Float32Array;
+  opacities: Float32Array;
+};
+
+function blobDraw(source: THREE.Mesh, count: number, renderOrder: number): BlobDraw {
+  const views = new Float32Array(count * 16);
+  const opacities = new Float32Array(count);
+  const plane = source.geometry;
+  const geometry = new THREE.InstancedBufferGeometry();
+  if (plane.index) geometry.setIndex(plane.index.clone());
+  geometry.setAttribute("position", plane.getAttribute("position").clone());
+  geometry.setAttribute("uv", plane.getAttribute("uv").clone());
+  geometry.instanceCount = 0;
+  // Mesmo mapa, transparência, neblina e depthWrite da sombra do boneco; o programa é um só para os dois draws.
+  const material = (source.material as THREE.MeshBasicMaterial).clone();
+  material.defines = { BLOB_COUNT: count };
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uBlobView = { value: views };
+    shader.uniforms.uBlobOpacity = { value: opacities };
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", BLOB_VERTEX_HEAD)
+      .replace("#include <project_vertex>", BLOB_PROJECT_VERTEX);
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", BLOB_FRAGMENT_HEAD)
+      .replace("vec4 diffuseColor = vec4( diffuse, opacity );", "vec4 diffuseColor = vec4( diffuse, vBlobOpacity );");
+  };
+  material.customProgramCacheKey = () => BLOB_PROGRAM_KEY;
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.renderOrder = renderOrder;
+  mesh.frustumCulled = false;
+  return { mesh, views, opacities };
+}
+
+/**
+ * As sombras de contato do time em dois draws instanciados (era um por
+ * boneco). As de cada boneco continuam na cena, escondidas: o three segue
+ * calculando a matriz de mundo delas e o boneco segue mexendo em escala,
+ * posição e opacidade (modo desempenho incluído). Na hora do draw (câmera e
+ * matrizes do quadro já prontas), cada sombra que o three desenharia vira uma
+ * instância, com a modelView feita com a mesma conta dele e na mesma ordem de
+ * trás para frente (z do recorte do centro, depois id). A sombra da bola tem o
+ * mesmo renderOrder e o three a põe no meio das dos bonecos pela distância: as
+ * que ficam atrás dela vão no draw `back` (renderOrder meio ponto abaixo: sai
+ * logo antes dela) e as outras no `front` (logo depois). Nenhum outro objeto da
+ * cena tem renderOrder entre esses dois, então o quadro sai igual ao de antes.
+ */
+class SquadBlobs {
+  readonly back: BlobDraw;
+  readonly front: BlobDraw;
+  private readonly order: number[];
+  private readonly depth: Float64Array;
+  private readonly projScreen = new THREE.Matrix4();
+  private readonly frustum = new THREE.Frustum();
+  private readonly modelView = new THREE.Matrix4();
+  private readonly point = new THREE.Vector4();
+  /** O outro transparente da cena com o renderOrder das sombras (hoje só a sombra da bola), achado no primeiro draw. */
+  private peer: THREE.Mesh | null | undefined;
+
+  constructor(
+    private readonly blobs: THREE.Mesh[],
+    private readonly owner: THREE.Object3D,
+  ) {
+    const count = blobs.length;
+    const source = blobs[0];
+    this.order = new Array<number>(count).fill(0);
+    this.depth = new Float64Array(count);
+    this.back = blobDraw(source, count, source.renderOrder - 0.5);
+    this.front = blobDraw(source, count, source.renderOrder + 0.5);
+    // O de trás desenha primeiro: monta os dois.
+    this.back.mesh.onBeforeRender = (_renderer, scene, camera) => this.sync(scene, camera);
+    for (const blob of blobs) blob.visible = false;
+  }
+
+  /** O que o three faria com cada sombra (visível? em que ordem? com que matriz?), refeito para a câmera do draw. */
+  private sync(scene: THREE.Object3D, camera: THREE.Camera) {
+    if (this.peer === undefined) this.peer = this.findPeer(scene);
+    const projScreen = this.projScreen.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    this.frustum.setFromProjectionMatrix(projScreen, THREE.WebGLCoordinateSystem, camera.reversedDepth);
+    const order = this.order;
+    const depth = this.depth;
+    let count = 0;
+    for (let index = 0; index < this.blobs.length; index += 1) {
+      const blob = this.blobs[index];
+      if (!this.shows(blob, camera)) continue;
+      // z do recorte do centro (regra de ordem do three): o de trás primeiro; empate, o id menor.
+      const z = this.point.set(0, 0, 0, 1).applyMatrix4(blob.matrixWorld).applyMatrix4(projScreen).z;
+      let at = count;
+      while (at > 0) {
+        const previous = order[at - 1];
+        if (depth[previous] > z || (depth[previous] === z && this.blobs[previous].id < blob.id)) break;
+        order[at] = previous;
+        at -= 1;
+      }
+      order[at] = index;
+      depth[index] = z;
+      count += 1;
+    }
+    // Corte na sombra da bola, pela mesma regra (fora do quadro ela não desenha e qualquer corte serve).
+    let split = count;
+    const peer = this.peer;
+    if (peer) {
+      const center = peer.geometry.boundingSphere?.center;
+      const z = this.point.set(center?.x ?? 0, center?.y ?? 0, center?.z ?? 0, 1).applyMatrix4(peer.matrixWorld).applyMatrix4(projScreen).z;
+      split = 0;
+      while (split < count && (depth[order[split]] > z || (depth[order[split]] === z && this.blobs[order[split]].id < peer.id))) split += 1;
+    }
+    this.fill(this.back, 0, split, camera);
+    this.fill(this.front, split, count, camera);
+  }
+
+  private fill(draw: BlobDraw, from: number, to: number, camera: THREE.Camera) {
+    for (let slot = 0; slot < to - from; slot += 1) {
+      const blob = this.blobs[this.order[from + slot]];
+      this.modelView.multiplyMatrices(camera.matrixWorldInverse, blob.matrixWorld).toArray(draw.views, slot * 16);
+      draw.opacities[slot] = (blob.material as THREE.MeshBasicMaterial).opacity;
+    }
+    draw.mesh.geometry.instanceCount = to - from;
+  }
+
+  private findPeer(scene: THREE.Object3D): THREE.Mesh | null {
+    const renderOrder = this.blobs[0].renderOrder;
+    const own = new Set<THREE.Object3D>(this.blobs);
+    let peer: THREE.Mesh | null = null;
+    scene.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (peer || !mesh.isMesh || mesh.renderOrder !== renderOrder || own.has(mesh) || Array.isArray(mesh.material)) return;
+      if (mesh.material.transparent) peer = mesh;
+    });
+    return peer;
+  }
+
+  /**
+   * A sombra própria está escondida: vale a visibilidade dos pais dela (o
+   * boneco) até o time e o mesmo recorte pelo frustum do three (fora do quadro
+   * ela não vira instância: um lado só com sombras fora da tela daria um draw a mais).
+   */
+  private shows(blob: THREE.Mesh, camera: THREE.Camera) {
+    if (!blob.layers.test(camera.layers) || !(blob.material as THREE.Material).visible) return false;
+    for (let node = blob.parent; node && node !== this.owner; node = node.parent) {
+      if (!node.visible) return false;
+    }
+    return !blob.frustumCulled || blob.intersectsFrustum(this.frustum);
+  }
+
+  dispose() {
+    for (const draw of [this.back, this.front]) {
+      draw.mesh.removeFromParent();
+      draw.mesh.geometry.dispose();
+      draw.mesh.material.dispose();
+    }
+    this.peer = null;
+  }
+}
+
 function isAction(id: string): id is FigureAction {
   return Object.prototype.hasOwnProperty.call(FIGURE_ACTION_INFO, id);
 }
@@ -70,6 +299,8 @@ type Entry = {
   /** Onde o boneco está desenhado (o herói na mira anda até o ponto dele em vez de pular). */
   drawX: number;
   drawZ: number;
+  /** Modo desempenho: tempo de jogo dos quadros em que ele não animou (entra no próximo). */
+  pendingDt: number;
 };
 
 export class Squad {
@@ -79,6 +310,9 @@ export class Squad {
   private receiverId: string | null = null;
   private readonly look = { x: 0, z: 0 };
   private released = false;
+  private skeleton: THREE.Skeleton | null;
+  private blobs: SquadBlobs | null;
+  private frame = 0;
 
   constructor(
     state: GameState,
@@ -92,6 +326,7 @@ export class Squad {
     const homePattern = teamKitPattern(seed, teams.home.name);
     const awayPattern = teamKitPattern(seed, teams.away.name);
     const keeperColor = contrastKeeper(teams, seed);
+    const figures: PlayerFigure[] = [];
     for (const actor of state.actors) {
       const team = actor.team === "home" ? teams.home : teams.away;
       const keeper = actor.role === "keeper";
@@ -113,6 +348,7 @@ export class Squad {
       figure.root.position.set(actor.pos.x, 0, actor.pos.z);
       figure.snapYaw(actor.facing);
       this.group.add(figure.root);
+      figures.push(figure);
       this.entries.set(actor.id, {
         actor,
         figure,
@@ -126,8 +362,13 @@ export class Squad {
         receiving: false,
         drawX: actor.pos.x,
         drawZ: actor.pos.z,
+        pendingDt: 0,
       });
     }
+    this.skeleton = shareSkeleton(figures);
+    // Os dois draws das sombras já na cena antes do prepare() compilar: o programa deles sai pronto.
+    this.blobs = figures.length >= MIN_BLOB_DRAW && figures.length <= MAX_BLOB_DRAW ? new SquadBlobs(figures.map((figure) => figure.contactShadowMesh), this.group) : null;
+    if (this.blobs) this.group.add(this.blobs.back.mesh, this.blobs.front.mesh);
   }
 
   textures(): THREE.Texture[] {
@@ -174,6 +415,7 @@ export class Squad {
       entry.lastZ = actor.pos.z;
       entry.drawX = actor.pos.x;
       entry.drawZ = actor.pos.z;
+      entry.pendingDt = 0;
       const figure = entry.figure;
       figure.root.rotation.x = 0;
       figure.root.position.set(actor.pos.x, 0, actor.pos.z);
@@ -210,12 +452,35 @@ export class Squad {
   update(state: GameState, animDt: number, heroDt: number, aimRatio: number) {
     this.heroId = state.heroId;
     const ball = state.ball.pos;
-    for (const actor of state.actors) {
+    // Modo desempenho, com a bola rolando: quem está longe do lance anima em
+    // quadro sim, quadro não (metade de cada vez, pela paridade); o lugar dele
+    // anda todo quadro e o tempo pulado entra no quadro seguinte.
+    this.frame += 1;
+    const thin = this.performance && heroDt < THIN_MAX_DT && THIN_PHASES.has(state.phase);
+    const receiver = state.plan?.receiver ?? null;
+    for (let index = 0; index < state.actors.length; index += 1) {
+      const actor = state.actors[index];
       const entry = this.entries.get(actor.id);
       if (!entry) continue;
       entry.actor = actor;
       const hero = actor.id === state.heroId;
-      const dt = hero && state.phase === "aim" ? heroDt : animDt;
+      let dt = hero && state.phase === "aim" ? heroDt : animDt;
+      if (thin && ((this.frame + index) & 1) === 1 && !hero && actor.role !== "keeper" && actor.id !== state.ball.owner && actor.id !== receiver) {
+        const dx = actor.pos.x - ball.x;
+        const dz = actor.pos.z - ball.z;
+        if (dx * dx + dz * dz > THIN_NEAR_BALL * THIN_NEAR_BALL) {
+          entry.pendingDt += dt;
+          entry.drawX = actor.pos.x;
+          entry.drawZ = actor.pos.z;
+          entry.figure.root.position.x = actor.pos.x;
+          entry.figure.root.position.z = actor.pos.z;
+          continue;
+        }
+      }
+      if (entry.pendingDt > 0) {
+        dt = Math.min(THIN_MAX_STEP, dt + entry.pendingDt);
+        entry.pendingDt = 0;
+      }
       this.drive(entry, actor, state, dt, hero ? aimRatio : 0, ball);
     }
   }
@@ -379,6 +644,10 @@ export class Squad {
   dispose() {
     for (const entry of this.entries.values()) entry.figure.dispose();
     this.entries.clear();
+    this.skeleton?.dispose();
+    this.skeleton = null;
+    this.blobs?.dispose();
+    this.blobs = null;
     if (this.released) return;
     this.released = true;
     releaseSharedFigureResources();

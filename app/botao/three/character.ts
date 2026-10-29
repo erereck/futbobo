@@ -2632,6 +2632,16 @@ export class PlayerFigure {
     return this.allTextures;
   }
 
+  /** A malha do boneco (só leitura; a partida não usa): o Scorebobo junta os esqueletos do time num só. */
+  get skinnedMesh(): THREE.SkinnedMesh {
+    return this.mesh;
+  }
+
+  /** A sombra de contato, filha do `root` (só leitura; a partida não usa): o Scorebobo desenha as do time num draw só. */
+  get contactShadowMesh(): THREE.Mesh {
+    return this.blob;
+  }
+
   /**
    * Ponto na palma da mão (dentro da caixa, um pouco abaixo do meio), filho do
    * osso do antebraço: acompanha qualquer animação. "left" é a esquerda do

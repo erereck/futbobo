@@ -442,6 +442,14 @@ export class ScoreboboView implements ScoreboboViewApi {
   }
 
   /**
+   * Baixar a resolução já não resolve: chegou no piso, ou desceu duas vezes sem
+   * melhorar (o gargalo é a CPU e baixar mais não adianta).
+   */
+  get resolutionExhausted(): boolean {
+    return this.atResolutionFloor || this.resolutionMisses >= 2;
+  }
+
+  /**
    * Mira parada: câmera assentada, nenhum fade do traço, das setas ou dos
    * efeitos em andamento e nada de festa. O laço pode desenhar menos quadros.
    */

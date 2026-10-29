@@ -288,4 +288,6 @@ export interface ScoreboboViewApi {
   adaptResolution?(frameDt: number): void;
   /** A resolução adaptável já está no piso (não há mais o que baixar). Opcional. */
   readonly atResolutionFloor?: boolean;
+  /** Baixar a resolução já não ajuda (no piso, ou desceu e não melhorou: gargalo de CPU). Opcional. */
+  readonly resolutionExhausted?: boolean;
 }

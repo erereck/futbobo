@@ -10,7 +10,8 @@
 // chip da prévia lê o plano sozinho.
 //
 // O 3D desenha no máximo 60 vezes por segundo (telas de 90/120 Hz não pagam
-// em dobro), menos na mira parada e atrás do resultado, e nenhuma na pausa.
+// em dobro), menos na mira parada e atrás do resultado, e nenhuma na pausa. No
+// modo desempenho, abertura, reação e replay (só se assiste) ficam em 30.
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
@@ -560,6 +561,9 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     const { width, height } = trailSizeRef.current;
     const ratio = canvas.width / Math.max(1, width);
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    // A limpeza é sempre do canvas inteiro: assim o Chrome descarta o quadro
+    // anterior em vez de preservá-lo (limpar só o retângulo sujo custou uma
+    // cópia a mais por quadro na GPU, medido).
     context.clearRect(0, 0, width, height);
     // Cometa na ponta do dedo: só os últimos ~0,22 s, afinando para trás.
     const span = 220;
@@ -638,17 +642,22 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       }
 
       const showingResults = resultsRef.current;
+      const phaseBefore = game.state.phase;
       // Mira parada (câmera assentada, ninguém mexendo): o 3D quase não muda e o anel, as setas e a dica são DOM.
       const idleAim =
         !showingResults &&
-        game.state.phase === "aim" &&
+        phaseBefore === "aim" &&
         !strokeRef.current &&
         (view.calm ?? false) &&
         now - wakeAtRef.current > IDLE_AFTER_MS &&
         (tutorialDoneRef.current || !level.tutorial) &&
         !toastOnRef.current;
       // Teto de 60 por segundo (telas de 90/120 Hz); atrás do resultado e na mira parada, bem menos.
-      const frameTime = showingResults ? (performanceAtMount ? 1 / 10 : 1 / 15) : idleAim ? (performanceAtMount ? 1 / 20 : 1 / 30) : 1 / 60;
+      // Modo desempenho: abertura, reação e replay a 30 (ninguém joga; o tempo
+      // segue certo porque o passo leva o tempo real acumulado). Voo, mira e
+      // traço seguem a 60, e o toque que pula ou segue desenha já (`wakeRef`).
+      const watching = performanceAtMount && (phaseBefore === "intro" || phaseBefore === "outcome" || phaseBefore === "replay");
+      const frameTime = showingResults ? (performanceAtMount ? 1 / 10 : 1 / 15) : idleAim ? (performanceAtMount ? 1 / 20 : 1 / 30) : watching ? 1 / 30 : 1 / 60;
       const woken = wakeRef.current;
       if (!woken && budget < frameTime - 1 / 960) return;
       budget = Math.min(frameTime, Math.max(0, budget - frameTime));
@@ -683,7 +692,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       const paced = !woken && frameTime === 1 / 60 && lastFrameTime === 1 / 60;
       lastFrameTime = frameTime;
       if (paced) view.adaptResolution?.(real);
-      if (!performanceAtMount && !slowReported && watch.sample(now, lastRenderAt ? now - lastRenderAt : 0, view.stats?.().cpuMs ?? 0, paced) && view.atResolutionFloor) {
+      if (!performanceAtMount && !slowReported && watch.sample(now, lastRenderAt ? now - lastRenderAt : 0, view.stats?.().cpuMs ?? 0, paced) && (view.resolutionExhausted ?? view.atResolutionFloor)) {
         slowReported = true;
         onSlowDeviceRef.current?.();
       }
