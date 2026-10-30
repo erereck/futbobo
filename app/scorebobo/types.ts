@@ -79,8 +79,15 @@ export type Actor = {
   pose: ActorPose;
   /** Progresso 0..1 das poses com tempo (kick, header, volley, dive, receive). */
   poseT: number;
-  /** Goleiro: lado (-1 esquerda dele .. 1 direita) e altura 0..1 do mergulho. */
-  dive?: { side: number; height: number };
+  /**
+   * Goleiro: lado (-1 esquerda dele .. 1 direita) e altura 0..1 do mergulho.
+   * O resto só descreve o mergulho para a cena (a simulação não lê): de onde
+   * ele saiu (`fromX`, x do mundo), onde as mãos vão chegar no plano dele
+   * (`handX` x do mundo, `handY` altura em m; mudam com o ajuste no ar) e quanto
+   * dura (`dur`, s: o poseT vai de 0 a 1 nesse tempo). As mãos vão de
+   * (fromX, 1,25 m) até lá pela curva `1 - (1 - poseT)²`.
+   */
+  dive?: { side: number; height: number; fromX?: number; handX?: number; handY?: number; dur?: number };
   /** Altura do salto agora (m), para cabeceio/barreira. */
   jump?: number;
   /** Comemoração da coreografia 3D (ids de CELEBRATION_OPTIONS / FigureAction). */
@@ -262,6 +269,12 @@ export interface ScoreboboGameApi {
   nextAttempt(): void;
   /** Recomeça a fase do zero. */
   restart(): void;
+  /** Fase ganha e encerrada ("done") com o replay do gol ainda guardado: dá para ver de novo. Opcional. */
+  readonly canReplay?: boolean;
+  /** Passa o replay do gol de novo (do "done" para o "replay" e de volta ao "done"). Devolve se começou. Opcional. */
+  replayAgain?(): boolean;
+  /** Solta a gravação do replay e o resto da memória da fase (quem sai dela chama). Opcional. */
+  dispose?(): void;
 }
 
 /** Implementado em `three/view.ts`. */
@@ -290,4 +303,10 @@ export interface ScoreboboViewApi {
   readonly atResolutionFloor?: boolean;
   /** Baixar a resolução já não ajuda (no piso, ou desceu e não melhorou: gargalo de CPU). Opcional. */
   readonly resolutionExhausted?: boolean;
+  /** Mira: o jogador gira a câmera para os lados em volta da bola (rad, soma ao giro atual; o limite fica com a cena). Opcional. */
+  turnAim?(radians: number): void;
+  /** Mira: volta a câmera ao enquadramento automático. Opcional. */
+  resetAimTurn?(): void;
+  /** Mira: quanto o jogador girou a câmera agora (rad; 0 = enquadramento automático). Opcional. */
+  readonly aimTurn?: number;
 }

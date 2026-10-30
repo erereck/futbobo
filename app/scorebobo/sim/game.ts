@@ -155,6 +155,8 @@ export class ScoreboboGame implements ScoreboboGameApi {
   private recording = false;
   private replayPlayer: ReplayPlayer | null = null;
   private liveSnapshot: { actors: Actor[]; ball: GameState["ball"] } | null = null;
+  /** Trechos do replay do gol: ficam para o "Ver replay" do resultado (null sem gol, ou já solto). */
+  private replaySegs: ReplaySegment[] | null = null;
   private goalTime = 0;
   private crossPoint: Vec3 | null = null;
   /** Adversários como o plano do traço os vê (montado ao entrar na mira). */
@@ -288,6 +290,7 @@ export class ScoreboboGame implements ScoreboboGameApi {
     this.recording = false;
     this.replayPlayer = null;
     this.liveSnapshot = null;
+    this.replaySegs = null;
     this.goalTime = 0;
     this.crossPoint = null;
     this.poseHeroForAim(null);
@@ -454,7 +457,32 @@ export class ScoreboboGame implements ScoreboboGameApi {
   restart(): void {
     this.state.attempt = 1;
     this.state.attemptsLeft = this.level.attempts;
+    // A gravação velha some (o buffer fica para a próxima, sem nada legível: a contagem volta a zero).
     this.setupAttempt();
+  }
+
+  /** Fase ganha e encerrada, com o replay do gol ainda guardado. */
+  get canReplay() {
+    return this.state.phase === "done" && this.replaySegs !== null && this.recorder.length >= 4;
+  }
+
+  /** "Ver replay" no resultado: os mesmos trechos do começo; no fim volta ao "done" com o estado ao vivo. */
+  replayAgain(): boolean {
+    const segments = this.replaySegs;
+    if (!segments || !this.canReplay) return false;
+    this.playReplay(segments);
+    return true;
+  }
+
+  /** Quem sai da fase: solta a gravação, a foto do estado ao vivo e o tocador. */
+  dispose(): void {
+    // No meio do replay, o estado ao vivo volta antes (um quadro a mais mostra a festa, não um pedaço do lance).
+    if (this.state.phase === "replay") this.endReplay();
+    this.recorder.dispose();
+    this.recording = false;
+    this.replayPlayer = null;
+    this.replaySegs = null;
+    this.liveSnapshot = null;
   }
 
   // ------------------------------------------------------------ fases
@@ -1339,20 +1367,26 @@ export class ScoreboboGame implements ScoreboboGameApi {
   // ------------------------------------------------------------ replay
 
   private startReplay() {
-    const s = this.state;
     if (!this.decided?.won || !this.lastKick) {
       this.finish();
       return;
     }
-    this.liveSnapshot = {
-      actors: s.actors.map((a) => ({ ...a, pos: { ...a.pos }, vel: { ...a.vel }, dive: a.dive ? { ...a.dive } : undefined, look: a.look ? { ...a.look } : null })),
-      ball: { ...s.ball, pos: { ...s.ball.pos }, vel: { ...s.ball.vel }, spin: { ...s.ball.spin } },
-    };
     const segments = this.replaySegments();
     if (!segments.length || this.recorder.length < 4) {
       this.finish();
       return;
     }
+    this.replaySegs = segments;
+    this.playReplay(segments);
+  }
+
+  /** Toca o replay do começo. O estado ao vivo vai para a foto (cópia: o replay escreve nos vetores do gravador) e volta no fim. */
+  private playReplay(segments: ReplaySegment[]) {
+    const s = this.state;
+    this.liveSnapshot = {
+      actors: s.actors.map((a) => ({ ...a, pos: { ...a.pos }, vel: { ...a.vel }, dive: a.dive ? { ...a.dive } : undefined, look: a.look ? { ...a.look } : null })),
+      ball: { ...s.ball, pos: { ...s.ball.pos }, vel: { ...s.ball.vel }, spin: { ...s.ball.spin } },
+    };
     this.replayPlayer = new ReplayPlayer(segments);
     s.phase = "replay";
     s.replay = { progress: 0, angle: segments[0].angle };
@@ -1401,9 +1435,18 @@ export class ScoreboboGame implements ScoreboboGameApi {
     const now = player.time;
     this.recorder.apply(now, s.actors, s.ball);
     // Sons e rede tocam de novo no replay (eventos de placar, não).
-    if (!cut && now > before) for (const e of this.recorder.eventsBetween(before, now)) this.out.push(e);
-    s.replay = { progress: player.progress, angle: player.angle };
-    const seg = player.segments[Math.min(player.segments.length - 1, Math.max(0, player.segments.findIndex((x) => x.angle === player.angle)))];
+    if (!cut && now > before) this.recorder.eventsBetween(before, now, this.out);
+    // Quadro a quadro sem objeto novo: o avanço e o ângulo são reescritos no mesmo.
+    const angle = player.angle;
+    if (s.replay) {
+      s.replay.progress = player.progress;
+      s.replay.angle = angle;
+    } else s.replay = { progress: player.progress, angle };
+    // Velocidade do primeiro trecho com esse ângulo (como sempre foi).
+    const segments = player.segments;
+    let index = 0;
+    while (index < segments.length && segments[index].angle !== angle) index += 1;
+    const seg = segments[index < segments.length ? index : 0];
     s.timeScale = seg ? seg.rate : 0.5;
   }
 

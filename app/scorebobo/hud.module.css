@@ -837,6 +837,19 @@
   animation: slideInLeft 0.4s ease 0.25s both;
 }
 .replayTag i { width: 10px; height: 10px; border-radius: 50%; background: var(--red); box-shadow: 0 0 10px var(--red); animation: blink 1s steps(2) infinite; }
+/* Tela estreita (celular em pé): a ficha do lance com curva passa de 200 px e empurrava o "Pular"
+   para fora da tela. Ela sobe para a linha de cima; a tarja e o "Pular" ficam embaixo, como sempre. */
+@media (max-width: 560px) {
+  .replay:has(.replayStats) {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    row-gap: 8px;
+  }
+  .replay:has(.replayStats) .replayStats { grid-area: 1 / 1 / 2 / -1; justify-self: start; margin: 0; }
+  .replay:has(.replayStats) .replayTag { grid-area: 2 / 1; justify-self: start; }
+  .replay:has(.replayStats) .skipButton { grid-area: 2 / 3; }
+}
 
 .skipButton {
   display: inline-flex;
@@ -966,6 +979,9 @@
 /* ------------------------------------------------------------ resultado da fase */
 
 .results { background: radial-gradient(ellipse at 50% 35%, rgba(10, 18, 28, 0.55), rgba(2, 4, 8, 0.88)); }
+/* "Ver replay": o cartão sai da frente sem desmontar (sem o desfoque por trás). Ao voltar, só o fundo
+   entra de novo (0,25 s); estrelas e linhas não repetem a animação. */
+.resultsAway { visibility: hidden; animation: none; }
 .resultsCard {
   position: relative;
   width: min(460px, 100%);
@@ -1081,6 +1097,12 @@
 .resultsRules li.ruleDone { background: rgba(255, 210, 63, 0.08); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 210, 63, 0.25); }
 .resultsNotes { margin: 12px 0 0; color: var(--ink-muted); font-size: 12.5px; line-height: 1.5; }
 .resultsActions { display: grid; gap: 10px; margin-top: 20px; }
+/* Com o "Ver replay" são quatro botões: em tela baixa e larga o bastante, dois por linha (como no celular deitado). */
+@media (max-height: 760px) {
+  .resultsActions:has(> :nth-child(4)) { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  /* "Tentar de novo" cabe numa linha só na coluna do desktop (203 px). */
+  .resultsActions:has(> :nth-child(4)) > button { padding: 0 12px; }
+}
 
 /* ------------------------------------------------------------ tutorial */
 
@@ -1188,4 +1210,74 @@
 @media (prefers-reduced-motion: reduce) {
   .ballRing i, .ballRing b, .loadingBall, .bugClockRunning::before, .replayTag i, .tapToContinue { animation: none; }
   .bannerTitle span, .resultsStarGold, .bannerStar { animation-duration: 0.01s; }
+}
+
+/* Câmera girável na mira */
+
+/* Segunda linha da dica do traço: como girar a câmera (some depois do primeiro giro). */
+.aimHintLines {
+  display: grid;
+  gap: 4px;
+}
+.aimHintLines small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 800;
+}
+.aimHintLines small svg { flex: 0 0 auto; width: 16px; height: 16px; }
+
+/* Câmera girada: volta ao automático. Na linha da dica (a faixa de baixo nunca tem seta de
+   companheiro nem a bola), num canto fixo à direita: a dica muda de tamanho (aviso, dica
+   normal) e o botão não sai do lugar. No celular, só o ícone. */
+.bottom:has(.recenter) {
+  --recenter-w: 44px;
+  padding-right: calc(var(--recenter-w) + 8px);
+}
+.recenter {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: var(--recenter-w, 44px);
+  height: 44px;
+  margin-top: -22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--glass);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3), inset 0 0 0 1.5px rgba(92, 232, 255, 0.55);
+  color: var(--ink);
+  cursor: pointer;
+  font: 900 14px/1 var(--display-font);
+  letter-spacing: 0.1em;
+  pointer-events: auto;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* backwards: depois da entrada o transform fica livre para o :active. */
+  animation: pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+  transition: transform 0.12s ease;
+}
+.recenter svg { flex: 0 0 auto; width: 20px; height: 20px; color: var(--cyan); }
+.recenter:hover { background: rgba(30, 42, 56, 0.85); }
+.recenter:active { transform: scale(0.94); }
+.recenter:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.recenter span { display: none; }
+/* Tela larga: com o rótulo, e a linha de baixo alarga para a dica não quebrar. */
+@media (min-width: 900px) {
+  .bottom:has(.recenter) {
+    --recenter-w: 158px;
+    width: min(780px, calc(100% - 32px));
+  }
+  .recenter span { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recenter { animation: none; }
 }

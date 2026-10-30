@@ -35,6 +35,7 @@ import {
   PassCounter,
   PauseGlyph,
   PlanChip,
+  RecenterButton,
   ReplayTag,
   ScoreBug,
   SoundGlyph,
@@ -90,6 +91,53 @@ const OUTCOME_HOLD_MS = 3000;
 /** Toque para seguir só depois disso (ninguém pula o gol sem querer). */
 const OUTCOME_MIN_MS = 800;
 const AIM_HINT = "Desenhe a partir da bola: até um companheiro ou até o gol";
+/** Fase sem passe (pênalti, falta direta): a dica não convida a rolar para o lado. */
+const AIM_HINT_DIRECT = "Desenhe a partir da bola até o gol";
+/** Segunda linha da dica até o jogador girar a câmera a primeira vez (depois some de vez). */
+const TURN_HINT_TOUCH = "Arraste fora da bola para girar a câmera";
+const TURN_HINT_KEYS = "Arraste fora da bola ou use ← → para girar a câmera";
+/** Giro da câmera por largura da tela arrastada (rad) e com a seta segurada (rad/s). */
+const TURN_PER_WIDTH = 1.5;
+const KEY_TURN_SPEED = 1.3;
+/** Daqui (rad) a câmera conta como girada: aparece o botão de centralizar. */
+const TURNED_MIN = 0.035;
+/** Toque duplo fora da bola (centraliza): o segundo começa até 300 ms depois do primeiro, a até 48 px. */
+const DOUBLE_TAP_MS = 300;
+const DOUBLE_TAP_PX = 48;
+/**
+ * Dedo que encostou fora da bola, mas a menos de 2,5 raios dela (~120 px no celular): o traço
+ * que errou o começo por pouco (o passe para o lado) ganha o aviso, não gira o mundo.
+ */
+const NEAR_MISS_RADII = 2.5;
+const TURN_LEARNED_KEY = "futbobo:scorebobo:camera-turn";
+
+function readTurnLearned() {
+  try {
+    return typeof window !== "undefined" && window.localStorage.getItem(TURN_LEARNED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Primeiro giro da câmera: a dica de como girar some de vez (neste aparelho). */
+function learnTurn(ref: { current: boolean }, set: (value: boolean) => void) {
+  if (ref.current) return;
+  ref.current = true;
+  set(true);
+  try {
+    window.localStorage.setItem(TURN_LEARNED_KEY, "1");
+  } catch {
+    // Sem armazenamento: a dica volta na próxima visita.
+  }
+}
+
+/** Lê o giro da câmera e só avisa o React quando ele cruza o limiar (o botão de centralizar). */
+function syncTurned(view: ScoreboboViewApi, ref: { current: boolean }, set: (value: boolean) => void) {
+  const turned = Math.abs(view.aimTurn ?? 0) > TURNED_MIN;
+  if (turned === ref.current) return;
+  ref.current = turned;
+  set(turned);
+}
 /** Mira sem ninguém mexer por este tempo (ms) e com a câmera assentada: o 3D desenha mais devagar. */
 const IDLE_AFTER_MS = 600;
 /** Anel ou seta apagados por este tempo (ms; o fade é de 0,25 s): as animações deles param. */
@@ -136,6 +184,14 @@ type Stroke = {
 };
 
 type TrailPoint = { x: number; y: number; t: number };
+
+/**
+ * Dedo (ou mouse) que encostou fora da bola na mira: até andar 10 px é um
+ * toque; mais para o lado que para cima, gira a câmera; para cima ou para
+ * baixo, é um traço que começou longe da bola (ao soltar, o aviso de sempre).
+ * Encostou quase na bola (`nearBall`): é um traço que errou o começo, nunca giro.
+ */
+type TurnDrag = { pointerId: number; x: number; y: number; t: number; lastX: number; mode: "tap" | "turn" | "miss"; nearBall: boolean };
 
 /**
  * Cores do rastro por nível de alfa (o 8 bits que o canvas guarda): o quadro
@@ -210,9 +266,9 @@ function createPlanStore(): PlanStore {
 }
 
 /** Chip da prévia assinando o plano direto (o resto da tela não re-renderiza a cada mudança). */
-function LivePlanChip({ store }: { store: PlanStore }) {
+function LivePlanChip({ store, directOnly }: { store: PlanStore; directOnly: boolean }) {
   const plan = useSyncExternalStore(store.subscribe, store.read, store.read);
-  return <PlanChip plan={plan} />;
+  return <PlanChip plan={plan} directOnly={directOnly} />;
 }
 
 /** Vibração curta no celular (chute, trave, gol, traço recusado). Sem suporte, nada. */
@@ -290,6 +346,10 @@ function confettiFor(home: TeamInfo): ConfettiPiece[] {
 
 export default function LevelPlayer({ level, levelIndex, teams, home, away, performance: performanceMode, muted, onToggleMute, hasNext, nextUnlocked, onNext, onLevels, engine = DEFAULT_ENGINE, onSlowDevice, onRemount }: LevelPlayerProps) {
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, readReducedMotion, serverReducedMotion);
+  // Fase em que passe não vale (o gol depois dele fica sem estrela): dica e prévia falam só do gol.
+  const directOnly = level.require?.some((rule) => rule.kind === "maxPasses" && rule.max === 0) ?? false;
+  // Sem companheiro em campo (cara a cara) também não há passe para oferecer.
+  const goalOnly = directOnly || level.mates.length === 0;
 
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   const [hud, setHud] = useState<HudSnapshot | null>(null);
@@ -302,6 +362,9 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const [confetti, setConfetti] = useState<{ key: number; pieces: ConfettiPiece[] } | null>(null);
   const [paused, setPaused] = useState(false);
   const [results, setResults] = useState<{ stars: StarCount; record: boolean; notes: string[]; met?: [boolean, boolean, boolean] } | null>(null);
+  // "Ver replay": o gol ainda está guardado (o botão aparece) e se o replay está passando de novo (o cartão sai da frente).
+  const [replayable, setReplayable] = useState(false);
+  const [rewatch, setRewatch] = useState(false);
   // O modo desempenho vale a partir da montagem: trocar em outra aba não recomeça a fase no meio.
   const [performanceAtMount] = useState(performanceMode);
   const [touchUi, setTouchUi] = useState(() => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches);
@@ -309,6 +372,9 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const [tutorialDone, setTutorialDone] = useState(!level.tutorial);
   const [bump, setBump] = useState(0);
   const [freezeFlash, setFreezeFlash] = useState<number | null>(null);
+  // Câmera girada na mira (o botão de centralizar) e se o jogador já aprendeu a girar (a dica some).
+  const [turned, setTurned] = useState(false);
+  const [turnLearned, setTurnLearned] = useState(readTurnLearned);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -339,7 +405,9 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const trailRef = useRef<TrailPoint[]>([]);
   const trailFadeRef = useRef(0);
   const pausedRef = useRef(false);
+  /** O cartão do resultado está na tela (no "Ver replay" ele sai e o resultado continua guardado). */
   const resultsRef = useRef(false);
+  const rewatchRef = useRef(false);
   const tutorialDoneRef = useRef(!level.tutorial);
   const toastOnRef = useRef(false);
   const hudKeyRef = useRef("");
@@ -361,6 +429,14 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const touchRef = useRef(false);
   const nudgeTimerRef = useRef(0);
   useEffect(() => () => window.clearTimeout(nudgeTimerRef.current), []);
+  /** Arrasto fora da bola (gira a câmera), o último toque fora dela (o segundo centraliza) e as setas seguradas. */
+  const turnDragRef = useRef<TurnDrag | null>(null);
+  const lastTapRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const tapTimerRef = useRef(0);
+  useEffect(() => () => window.clearTimeout(tapTimerRef.current), []);
+  const keyTurnRef = useRef({ left: false, right: false });
+  const turnedRef = useRef(false);
+  const turnLearnedRef = useRef(turnLearned);
 
   useEffect(() => {
     reducedRef.current = reducedMotion;
@@ -386,6 +462,9 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       if (cancelled) return;
       cancelled = true;
       viewRef.current = null;
+      // A fase não segue nesta montagem (só remontar, recarregar ou sair): o replay guardado já pode ir.
+      gameRef.current?.dispose?.();
+      setReplayable(false);
       setStatus("failed");
     };
     // Um canvas novo por cena: o WebGL de um canvas descartado (dispose,
@@ -428,6 +507,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       window.clearTimeout(timer);
       viewRef.current = null;
       gameRef.current = null;
+      // Saiu da fase (próxima, fases, outra rota, remontagem): a gravação do replay sai da memória junto.
+      game.dispose?.();
       try {
         view?.dispose();
       } catch {
@@ -458,8 +539,15 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const finish = useCallback((stars: StarCount, notes: string[], met?: [boolean, boolean, boolean]) => {
     if (resultsRef.current) return;
     resultsRef.current = true;
+    // Fim do "Ver replay": o cartão volta como estava (sem apito, sino nem estrelas gravadas de novo).
+    if (rewatchRef.current) {
+      rewatchRef.current = false;
+      setRewatch(false);
+      return;
+    }
     const record = recordStars(level.id, stars);
     if (stars > 0) audioRef.current?.finalWhistle();
+    setReplayable(gameRef.current?.canReplay ?? false);
     setResults({ stars, record, notes, met });
   }, [level.id]);
 
@@ -620,6 +708,15 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       const view = viewRef.current;
       if (!game || !view) return;
 
+      // Setas (ou A/D) seguradas na mira: a câmera gira enquanto a tecla estiver apertada.
+      const keys = keyTurnRef.current;
+      if (keys.left !== keys.right && game.state.phase === "aim" && !strokeRef.current && !resultsRef.current && view.turnAim) {
+        view.turnAim((keys.left ? 1 : -1) * KEY_TURN_SPEED * Math.min(delta, 0.05));
+        wakeAtRef.current = now;
+        learnTurn(turnLearnedRef, setTurnLearned);
+        syncTurned(view, turnedRef, setTurned);
+      }
+
       // Traço em andamento: um plano por quadro de tela, não um por evento do
       // ponteiro. Fica antes do teto de 60: em 90/120 Hz o plano de reserva do
       // chute (`lastPlanRef`) acompanha todos os quadros, como sempre foi; só o
@@ -712,6 +809,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
           audioRef.current?.setDrawing(null);
         }
         if (state.phase !== "aim") planStore.set(null);
+        // Mira nova começa no enquadramento automático (a cena zera o giro): some o botão de centralizar.
+        syncTurned(view, turnedRef, setTurned);
         if (state.phase === "intro") kickersRef.current = [];
         if (state.phase === "replay") {
           // Ficha do lance na tarja do replay: velocidade, curva e distância.
@@ -772,7 +871,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
             const outside = point && (point.x < 10 || point.x > width - 10 || point.y < 10 || point.y > height - 10);
             if (!point || !outside) continue;
             const x = Math.min(width - 40, Math.max(40, point.x));
-            const y = Math.min(height - 92, Math.max(92, point.y));
+            // Câmera girada: o botão de centralizar ocupa o canto de baixo; a seta para um pouco acima dele.
+            const y = Math.min(height - (turnedRef.current ? 106 : 92), Math.max(92, point.y));
             edges.set(id, { x, y, target: point });
           }
         }
@@ -952,9 +1052,15 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       viewRef.current?.setStroke(null, null);
       audioRef.current?.setDrawing(null);
     }
+    // O rastro do dedo sai junto (com o laço parado, ele ficava pintado embaixo do menu).
+    trailRef.current = [];
+    trailFadeRef.current = 0;
+    const trail = trailCanvasRef.current;
+    trail?.getContext("2d")?.clearRect(0, 0, trail.width, trail.height);
+    showTrail(false);
     playUiSound("pause");
     setPausedBoth(true);
-  }, [setPausedBoth]);
+  }, [setPausedBoth, showTrail]);
 
   const resume = useCallback(() => {
     primeScoreboboAudio();
@@ -966,6 +1072,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     // O modo desempenho mudou desde a montagem (o aparelho pediu, ou outra aba):
     // a nova tentativa já nasce com ele, numa montagem nova (nunca no meio da jogada).
     if (performanceMode !== performanceAtMount && onRemount) {
+      gameRef.current?.dispose?.();
       onRemount();
       return;
     }
@@ -973,11 +1080,15 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     if (!game) return;
     primeScoreboboAudio();
     playUiSound("select");
+    // Recomeçar também zera a gravação (o buffer fica para a nova tentativa, sem nada legível do gol antigo).
     game.restart();
     strokeRef.current = null;
     viewRef.current?.setStroke(null, null);
     audioRef.current?.setDrawing(null);
     resultsRef.current = false;
+    rewatchRef.current = false;
+    setRewatch(false);
+    setReplayable(false);
     bestOutcomeRef.current = null;
     lastOutcomeRef.current = null;
     planStore.set(null);
@@ -1002,15 +1113,36 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     else game.skip();
   }, [advance]);
 
+  // Sair da fase solta a gravação do replay já no toque (a próxima fase ainda está carregando).
   const leave = useCallback(() => {
     playUiSound("back");
+    gameRef.current?.dispose?.();
     onLevels();
   }, [onLevels]);
 
   const next = useCallback(() => {
     playUiSound("select");
+    gameRef.current?.dispose?.();
     onNext();
   }, [onNext]);
+
+  /** "Ver replay" no resultado: o cartão sai da frente, o gol passa de novo e o cartão volta como estava. */
+  const watchReplay = useCallback(() => {
+    const game = gameRef.current;
+    if (!game?.replayAgain?.()) {
+      // A gravação já foi (saindo da fase): o botão some.
+      setReplayable(false);
+      return;
+    }
+    playUiSound("select");
+    resultsRef.current = false;
+    rewatchRef.current = true;
+    setRewatch(true);
+    // O foco sai do botão: Espaço e Enter pulam o replay, não apertam o botão escondido.
+    rootRef.current?.focus({ preventScroll: true });
+    wakeAtRef.current = performance.now();
+    wakeRef.current = true;
+  }, []);
 
   const toggleMute = useCallback(() => {
     primeScoreboboAudio();
@@ -1038,6 +1170,17 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       window.clearTimeout(nudgeTimerRef.current);
       nudgeTimerRef.current = window.setTimeout(() => ring.classList.remove(styles.ballRingNudge), 900);
     }
+  }, []);
+
+  /** Câmera de volta ao enquadramento automático da mira (botão ou toque duplo fora da bola). */
+  const recenter = useCallback(() => {
+    const view = viewRef.current;
+    if (!view?.resetAimTurn) return;
+    view.resetAimTurn();
+    playUiSound("click");
+    wakeAtRef.current = performance.now();
+    wakeRef.current = true;
+    syncTurned(view, turnedRef, setTurned);
   }, []);
 
   // ------------------------------------------------------------ ponteiro
@@ -1070,7 +1213,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       if (performance.now() - phaseRef.current.since > OUTCOME_MIN_MS) advance();
       return;
     }
-    if (phase !== "aim" || strokeRef.current) return;
+    // Um gesto por vez: o segundo dedo não conta (nem no traço, nem girando a câmera).
+    if (phase !== "aim" || strokeRef.current || turnDragRef.current) return;
     const host = hostRef.current;
     if (!host) return;
     const { x, y } = pointFrom(event);
@@ -1087,7 +1231,24 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     const ball = view.screenOf(state.ball.pos);
     const near = (p: { x: number; y: number } | null) => !!p && Math.hypot(p.x - x, p.y - y) <= radius;
     if (!ball || !(near(ball) || near(shown))) {
-      rejectStroke("Comece o traço na bola", x, y);
+      if (!ball || !view.turnAim) {
+        rejectStroke("Comece o traço na bola", x, y);
+        return;
+      }
+      // Fora da bola: arrastar para os lados (longe dela) gira a câmera; o toque (ou o
+      // traço que começou fora da bola) ganha o aviso de sempre ao soltar.
+      event.preventDefault();
+      try {
+        host.setPointerCapture(event.pointerId);
+      } catch {
+        // Ponteiro sintético ou já solto: segue sem captura.
+      }
+      const downAt = performance.now();
+      const last = lastTapRef.current;
+      // Segundo toque logo depois do primeiro: o aviso que esperava por ele já não sai.
+      if (last && downAt - last.t < DOUBLE_TAP_MS && Math.hypot(x - last.x, y - last.y) < DOUBLE_TAP_PX) window.clearTimeout(tapTimerRef.current);
+      const gap = Math.min(Math.hypot(ball.x - x, ball.y - y), shown ? Math.hypot(shown.x - x, shown.y - y) : Infinity);
+      turnDragRef.current = { pointerId: event.pointerId, x, y, t: downAt, lastX: x, mode: "tap", nearBall: gap < radius * NEAR_MISS_RADII };
       return;
     }
     event.preventDefault();
@@ -1096,6 +1257,9 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     } catch {
       // Ponteiro sintético ou já solto: segue sem captura.
     }
+    // Traço na bola: o aviso de um toque fora dela logo antes já não vale.
+    window.clearTimeout(tapTimerRef.current);
+    lastTapRef.current = null;
     // O traço nasce NA bola (o dedo encostou perto dela): a linha sai do pé, não de onde o dedo caiu.
     const now = performance.now();
     const viewport = { width: size.width, height: size.height };
@@ -1114,7 +1278,68 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     audioRef.current?.setDrawing(0.05);
   };
 
+  /** Arrasto fora da bola: o lado do dedo gira a câmera (o mundo vai junto com o dedo). */
+  const moveTurnDrag = (drag: TurnDrag, event: ReactPointerEvent<HTMLDivElement>) => {
+    const view = viewRef.current;
+    if (!view?.turnAim || pausedRef.current || resultsRef.current) return;
+    const { x, y } = pointFrom(event);
+    if (drag.mode === "tap") {
+      const dx = x - drag.x;
+      const dy = y - drag.y;
+      if (Math.hypot(dx, dy) < 10) return;
+      // Perto da bola, mesmo para o lado, é traço errado (o aviso ao soltar), não giro.
+      drag.mode = !drag.nearBall && Math.abs(dx) > Math.abs(dy) ? "turn" : "miss";
+      if (drag.mode === "miss") return;
+      learnTurn(turnLearnedRef, setTurnLearned);
+    }
+    if (drag.mode !== "turn") return;
+    const width = hostSizeRef.current.width || 1;
+    view.turnAim(((x - drag.lastX) / width) * TURN_PER_WIDTH);
+    drag.lastX = x;
+    wake(false);
+    syncTurned(view, turnedRef, setTurned);
+  };
+
+  /** Soltou o dedo que encostou fora da bola: girou, ou foi um toque (aviso, ou o segundo do toque duplo, que centraliza). */
+  const endTurnDrag = (event: ReactPointerEvent<HTMLDivElement>, cancelled: boolean) => {
+    const drag = turnDragRef.current;
+    if (!drag || event.pointerId !== drag.pointerId) return false;
+    turnDragRef.current = null;
+    // Captura perdida sem soltar o dedo não vale como toque.
+    if (cancelled || event.type === "lostpointercapture" || drag.mode === "turn") return true;
+    if (pausedRef.current || resultsRef.current || gameRef.current?.state.phase !== "aim") return true;
+    const last = lastTapRef.current;
+    lastTapRef.current = null;
+    if (drag.mode === "miss") {
+      rejectStroke("Comece o traço na bola", drag.x, drag.y);
+      return true;
+    }
+    const turnedNow = Math.abs(viewRef.current?.aimTurn ?? 0) > TURNED_MIN;
+    if (turnedNow && last && drag.t - last.t < DOUBLE_TAP_MS && Math.hypot(drag.x - last.x, drag.y - last.y) < DOUBLE_TAP_PX) {
+      window.clearTimeout(tapTimerRef.current);
+      recenter();
+      return true;
+    }
+    lastTapRef.current = { x: drag.x, y: drag.y, t: performance.now() };
+    window.clearTimeout(tapTimerRef.current);
+    if (!turnedNow) {
+      rejectStroke("Comece o traço na bola", drag.x, drag.y);
+      return true;
+    }
+    // Câmera girada: espera um instante pelo segundo toque (que centraliza) antes de avisar
+    // (um pouco mais que a janela: o segundo toque cancela o aviso já ao encostar).
+    tapTimerRef.current = window.setTimeout(() => {
+      if (gameRef.current?.state.phase === "aim" && !pausedRef.current && !resultsRef.current && !strokeRef.current) rejectStroke("Comece o traço na bola", drag.x, drag.y);
+    }, DOUBLE_TAP_MS + 60);
+    return true;
+  };
+
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = turnDragRef.current;
+    if (drag && event.pointerId === drag.pointerId) {
+      moveTurnDrag(drag, event);
+      return;
+    }
     const stroke = strokeRef.current;
     const view = viewRef.current;
     if (!stroke || !view || event.pointerId !== stroke.pointerId) return;
@@ -1146,6 +1371,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   };
 
   const endStroke = (event: ReactPointerEvent<HTMLDivElement>, cancelled: boolean) => {
+    if (endTurnDrag(event, cancelled)) return;
     const stroke = strokeRef.current;
     if (!stroke || event.pointerId !== stroke.pointerId) return;
     wake(false);
@@ -1169,7 +1395,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     if (!finalPlan) {
       view.setStroke(null, null);
       const { x, y } = pointFrom(event);
-      rejectStroke(stroke.length < minimum ? "Traço curto" : "Leve o traço até um companheiro ou até o gol", x, y);
+      rejectStroke(stroke.length < minimum ? "Traço curto" : goalOnly ? "Leve o traço até o gol" : "Leve o traço até um companheiro ou até o gol", x, y);
       return;
     }
     // O traço fica no gramado durante o voo; some quando a jogada termina.
@@ -1192,6 +1418,11 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         else pause();
       } else if (key === "m") {
         toggleMute();
+      } else if (key === "arrowleft" || key === "arrowright" || key === "a" || key === "d") {
+        // Setas (ou A/D) seguradas giram a câmera na mira (o laço gira enquanto a tecla estiver apertada).
+        if (key.startsWith("arrow")) event.preventDefault();
+        if (pausedRef.current || resultsRef.current) return;
+        keyTurnRef.current[key === "arrowleft" || key === "a" ? "left" : "right"] = true;
       } else if ((key === " " || key === "enter") && !pausedRef.current && !resultsRef.current) {
         const phase = gameRef.current?.state.phase;
         if (phase === "intro" || phase === "replay" || phase === "outcome") {
@@ -1200,8 +1431,25 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         }
       }
     };
+    const keys = keyTurnRef.current;
+    const onKeyUp = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      if (key === "arrowleft" || key === "a") keys.left = false;
+      else if (key === "arrowright" || key === "d") keys.right = false;
+    };
+    // Janela perdeu o foco com a tecla apertada: o keyup nunca chega.
+    const releaseKeys = () => {
+      keys.left = false;
+      keys.right = false;
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", releaseKeys);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", releaseKeys);
+    };
   }, [pause, resume, skip, toggleMute]);
 
   // ------------------------------------------------------------ desenho
@@ -1226,7 +1474,9 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const outcome = hud?.outcome ?? null;
   const showAim = status === "ready" && phase === "aim" && !paused && !results;
   const letterbox = status === "ready" && (phase === "intro" || phase === "replay");
-  const infoHint = level.tutorial && !tutorialDone ? level.tutorial.hint : AIM_HINT;
+  const infoHint = level.tutorial && !tutorialDone ? level.tutorial.hint : goalOnly ? AIM_HINT_DIRECT : AIM_HINT;
+  // Como girar a câmera: depois do tutorial, até o primeiro giro.
+  const turnHint = !turnLearned && !(level.tutorial && !tutorialDone) ? (touchUi ? TURN_HINT_TOUCH : TURN_HINT_KEYS) : undefined;
 
   return (
     <div
@@ -1327,8 +1577,9 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
           {showAim && (
             <div className={styles.bottom}>
               {drawing
-                ? <LivePlanChip store={planStore} />
-                : <AimHint key={hint.key} text={hint.tone === "error" ? hint.text : infoHint} tone={hint.tone} tag={level.tutorial && !tutorialDone ? "TUTORIAL" : undefined} />}
+                ? <LivePlanChip store={planStore} directOnly={goalOnly} />
+                : <AimHint key={hint.key} text={hint.tone === "error" ? hint.text : infoHint} tone={hint.tone} tag={level.tutorial && !tutorialDone ? "TUTORIAL" : undefined} extra={turnHint} />}
+              {turned && !drawing && <RecenterButton onClick={recenter} />}
             </div>
           )}
         </div>
@@ -1359,7 +1610,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         </div>
       )}
 
-      {paused && !results && (
+      {paused && (!results || rewatch) && (
         <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="sb-pause-title">
           <div className={styles.menuCard}>
             <span className={styles.menuKicker}>PAUSA</span>
@@ -1388,8 +1639,10 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
           met={results.met}
           hasNext={hasNext}
           nextUnlocked={nextUnlocked}
+          away={rewatch}
           onNext={next}
           onRetry={restart}
+          onReplay={replayable ? watchReplay : undefined}
           onLevels={leave}
         />
       )}

@@ -154,7 +154,15 @@ export class KeeperBrain {
       a.pos.z = this.diveFrom.z + 0.25 * e;
       a.vel = { x: ((this.diveHands.x - this.diveFrom.x) * 0.5) / this.diveDur, z: 0 };
       const dx = this.diveHands.x - this.diveFrom.x;
-      a.dive = { side: -clamp(dx / 2.6, -1, 1), height: clamp(this.diveHands.y / PITCH.goalHeight, 0, 1) };
+      // fromX/handX/handY/dur só descrevem o mergulho para a cena (as mãos das cápsulas): nada aqui lê.
+      a.dive = {
+        side: -clamp(dx / 2.6, -1, 1),
+        height: clamp(this.diveHands.y / PITCH.goalHeight, 0, 1),
+        fromX: this.diveFrom.x,
+        handX: this.diveHands.x,
+        handY: this.diveHands.y,
+        dur: this.diveDur,
+      };
       if (u >= 1) {
         this.mode = "down";
         a.vel = { x: 0, z: 0 };

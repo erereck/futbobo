@@ -1,10 +1,12 @@
 "use client";
 
 // Fim de fase: as estrelas acendem uma a uma (com o sino subindo), o que valeu
-// cada uma, e os caminhos: próxima fase, tentar de novo ou voltar às fases.
+// cada uma, e os caminhos: próxima fase, tentar de novo, ver o gol de novo ou
+// voltar às fases. No "Ver replay" o cartão só sai da frente (não desmonta): ao
+// voltar, as estrelas já estão acesas e o sino não toca de novo.
 
-import { useEffect, useRef } from "react";
-import type { CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import { playStarSound } from "./audio";
 import { describeRule, StarIcon } from "./Hud";
 import type { ScoreLevel } from "./types";
@@ -13,8 +15,10 @@ import styles from "./hud.module.css";
 
 const STAR_DELAY_MS = 520;
 const STAR_START_MS = 650;
+/** Botões desarmados logo que o cartão aparece (o "click" atrasado do toque que pulou o replay). */
+const ARM_MS = 400;
 
-export function Results({ level, levelIndex, stars, record, notes, met, hasNext, nextUnlocked, onNext, onRetry, onLevels }: {
+export function Results({ level, levelIndex, stars, record, notes, met, hasNext, nextUnlocked, away = false, onNext, onRetry, onReplay, onLevels }: {
   level: ScoreLevel;
   levelIndex: number;
   stars: StarCount;
@@ -25,11 +29,49 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
   met?: [boolean, boolean, boolean];
   hasNext: boolean;
   nextUnlocked: boolean;
+  /** O replay está passando de novo: o cartão fica escondido, montado. */
+  away?: boolean;
   onNext: () => void;
   onRetry: () => void;
+  /** Fase ganha com o gol ainda guardado: o botão "Ver replay". */
+  onReplay?: () => void;
   onLevels: () => void;
 }) {
   const primaryRef = useRef<HTMLButtonElement>(null);
+  const replayRef = useRef<HTMLButtonElement>(null);
+  const wasAway = useRef(false);
+  /** Quando o cartão apareceu (ou voltou do replay). */
+  const shownAt = useRef(0);
+  /** Algum dedo/mouse encostou no cartão depois que ele apareceu. */
+  const pressedHere = useRef(false);
+
+  useLayoutEffect(() => {
+    shownAt.current = performance.now();
+    pressedHere.current = false;
+  }, []);
+
+  // De volta do replay: o foco volta para o botão que o pediu (Enter vê de novo).
+  useLayoutEffect(() => {
+    if (away) wasAway.current = true;
+    else if (wasAway.current) {
+      wasAway.current = false;
+      shownAt.current = performance.now();
+      pressedHere.current = false;
+      replayRef.current?.focus({ preventScroll: true });
+    }
+  }, [away]);
+
+  /**
+   * O toque que pulou o replay solta o dedo já com o cartão na tela, e o
+   * celular manda o "click" dele para o botão que ficou embaixo do dedo
+   * (passava de fase sozinho). Só vale o clique de um toque que COMEÇOU no
+   * cartão (o dedo segurado um pouco mais passava dos 400 ms), ou o do
+   * teclado (`detail` 0); e nos primeiros 400 ms, nenhum.
+   */
+  const armed = (action: () => void) => (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (!pressedHere.current && event.detail !== 0) return;
+    if (performance.now() - shownAt.current >= ARM_MS) action();
+  };
 
   useEffect(() => {
     const timers = Array.from({ length: stars }, (_, index) => window.setTimeout(() => playStarSound(index), STAR_START_MS + index * STAR_DELAY_MS));
@@ -48,7 +90,15 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
   const verdict = champion ? (stars === 3 ? "Perfeito: o gol do título é seu" : "O gol do título é seu") : stars === 3 ? "Perfeito!" : stars === 2 ? "Jogada de craque" : stars === 1 ? "Objetivo cumprido" : "As bolas acabaram";
 
   return (
-    <div className={styles.results} role="dialog" aria-modal="true" aria-labelledby="sb-results-title">
+    <div
+      className={`${styles.results} ${away ? styles.resultsAway : ""}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sb-results-title"
+      onPointerDownCapture={() => {
+        pressedHere.current = true;
+      }}
+    >
       <div className={`${styles.resultsCard} ${won ? styles.resultsWon : styles.resultsLost}`}>
         <span className={styles.resultsKicker}>FASE {String(levelIndex + 1).padStart(2, "0")} · {level.name.toUpperCase()}</span>
         <h2 id="sb-results-title" className={styles.resultsTitle}>{champion ? "É CAMPEÃO!" : won ? "FASE CONCLUÍDA" : "NÃO FOI DESSA VEZ"}</h2>
@@ -86,16 +136,22 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
 
         <div className={styles.resultsActions}>
           {hasNext && (won || nextUnlocked) ? (
-            <button ref={won ? primaryRef : undefined} type="button" className={won ? styles.primaryButton : styles.secondaryButton} onClick={onNext} disabled={!nextUnlocked}>
+            <button ref={won ? primaryRef : undefined} type="button" className={won ? styles.primaryButton : styles.secondaryButton} onClick={armed(onNext)} disabled={!nextUnlocked}>
               Próxima fase
               <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           ) : null}
-          <button ref={won && hasNext ? undefined : primaryRef} type="button" className={won && hasNext ? styles.secondaryButton : styles.primaryButton} onClick={onRetry}>
+          <button ref={won && hasNext ? undefined : primaryRef} type="button" className={won && hasNext ? styles.secondaryButton : styles.primaryButton} onClick={armed(onRetry)}>
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10a5.5 5.5 0 1 0 1.8-4.1M4 3.5v3.6h3.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             Tentar de novo
           </button>
-          <button type="button" className={styles.secondaryButton} onClick={onLevels}>
+          {won && onReplay && (
+            <button ref={replayRef} type="button" className={styles.secondaryButton} onClick={armed(onReplay)}>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8.4 7.3v5.4l4.5-2.7z" fill="currentColor" /></svg>
+              Ver replay
+            </button>
+          )}
+          <button type="button" className={styles.secondaryButton} onClick={armed(onLevels)}>
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 3.5h5v5h-5zM11.5 3.5h5v5h-5zM3.5 11.5h5v5h-5zM11.5 11.5h5v5h-5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
             Fases
           </button>

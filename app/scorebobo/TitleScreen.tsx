@@ -5,18 +5,23 @@
 // three.js, a fase e a cama da torcida só chegam no tempo ocioso do menu.
 
 import Link from "next/link";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties } from "react";
 import { drawPlayerBust } from "../player-appearance";
 import { playUiSound, primeScoreboboAudio, warmScoreboboAudio } from "./audio";
 import { StarDefs, StarIcon } from "./Hud";
 import { LevelMap, TitleBackdrop } from "./TitleArt";
-import { levelUnlocked, type ScoreboboProfile, type ScoreboboProgress, type TeamInfo } from "./storage";
+import { levelUnlocked, readProgress, type ScoreboboProfile, type ScoreboboProgress, type TeamInfo } from "./storage";
 import type { ScoreLevel } from "./types";
 import styles from "./scorebobo.module.css";
 
 const LOGO = "SCOREBOBO";
 const SKY_LABEL: Record<ScoreLevel["sky"], string> = { day: "Tarde", sunset: "Pôr do sol", night: "Noite" };
+
+// O progresso mora no localStorage: o servidor (e o hidrato) desenham sem ele.
+const noopSubscribe = () => () => undefined;
+const clientTrue = () => true;
+const serverFalse = () => false;
 
 function HeroBust({ profile, size }: { profile: ScoreboboProfile; size: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -47,27 +52,24 @@ function Toggle({ label, note, on, onChange, disabled }: { label: string; note?:
   );
 }
 
-const LevelCard = memo(function LevelCard({ level, index, stars, locked, home, away, onPlay, onLocked, disabled }: {
+const LevelCard = memo(function LevelCard({ level, index, stars, locked, home, away, onPick, disabled }: {
   level: ScoreLevel;
   index: number;
   stars: number;
-  locked: boolean;
+  /** null: o progresso do aparelho ainda não chegou (servidor e hidrato): nem cadeado, nem "jogar". */
+  locked: boolean | null;
   home: string;
   away: string;
-  onPlay: (index: number) => void;
-  onLocked: (index: number) => void;
+  /** Abre a fase se ela estiver liberada agora; devolve se abriu. */
+  onPick: (index: number) => boolean;
   disabled: boolean;
 }) {
   const [nudge, setNudge] = useState(0);
   const click = () => {
     primeScoreboboAudio();
-    if (locked) {
-      playUiSound("error");
-      setNudge((value) => value + 1);
-      onLocked(index);
-      return;
-    }
-    onPlay(index);
+    if (onPick(index)) return;
+    playUiSound("error");
+    setNudge((value) => value + 1);
   };
   // Passou o mouse/dedo numa fase aberta: a cena 3D já começa a baixar.
   const warm = () => {
@@ -82,10 +84,10 @@ const LevelCard = memo(function LevelCard({ level, index, stars, locked, home, a
       onPointerEnter={warm}
       onFocus={warm}
       disabled={disabled}
-      aria-label={`Fase ${index + 1}: ${level.name}. ${level.situation}. ${locked ? "Bloqueada" : `${stars} de 3 estrelas`}`}
+      aria-label={`Fase ${index + 1}: ${level.name}. ${level.situation}.${locked === null ? "" : locked ? " Bloqueada" : ` ${stars} de 3 estrelas`}`}
     >
       <span className={styles.cardArt}>
-        <LevelMap level={level} home={home} away={away} locked={locked} />
+        <LevelMap level={level} home={home} away={away} locked={locked !== false} />
         <span className={styles.cardIndex}>{String(index + 1).padStart(2, "0")}</span>
         <span className={styles.cardSky} data-sky={level.sky}>{SKY_LABEL[level.sky]} · {level.clock}</span>
         {locked && (
@@ -104,7 +106,7 @@ const LevelCard = memo(function LevelCard({ level, index, stars, locked, home, a
           <span className={styles.cardBalls}>{level.attempts} {level.attempts === 1 ? "bola" : "bolas"}</span>
         </span>
       </span>
-      {!locked && (
+      {locked === false && (
         <span className={styles.cardPlay} aria-hidden="true">
           <svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z" fill="currentColor" /></svg>
         </span>
@@ -135,6 +137,8 @@ export type TitleScreenProps = {
 
 export function TitleScreen({ levels, progress, profile, away, hasWebgl, performance: performanceMode, muted, reducedMotion, starting, loadFailed, covered, onPlay, onTogglePerformance, onToggleMute, onToggleUnlockAll }: TitleScreenProps) {
   const [lockedNote, setLockedNote] = useState<{ index: number; key: number } | null>(null);
+  // Até o progresso do aparelho chegar (logo depois do hidrato), os cartões não mostram cadeado.
+  const known = useSyncExternalStore(noopSubscribe, clientTrue, serverFalse);
   const totalStars = levels.reduce((sum, level) => sum + (progress.stars[level.id] ?? 0), 0);
   const home = profile?.club ?? null;
   const homeColor = home?.primary ?? "#f7d117";
@@ -163,7 +167,29 @@ export function TitleScreen({ levels, progress, profile, away, hasWebgl, perform
     return () => window.clearTimeout(timer);
   }, [hasWebgl]);
 
-  const onLocked = useCallback((index: number) => setLockedNote((current) => ({ index, key: (current?.key ?? 0) + 1 })), []);
+  // O anel que pulsa em cada cartão liberado custa estilo e layout a cada quadro: com o
+  // save cheio são 12 pulsando, quase todos fora da tela. Fora dela, o anel para.
+  const gridRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || typeof IntersectionObserver !== "function") return;
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) entry.target.toggleAttribute("data-off", !entry.isIntersecting);
+    });
+    for (const card of Array.from(grid.children)) observer.observe(card);
+    return () => observer.disconnect();
+  }, [levels]);
+
+  // Quem decide é o progresso de agora, não o do desenho: logo depois do hidrato o
+  // cartão ainda pode estar com o do servidor (tudo trancado), e o toque não se perde.
+  const pick = useCallback((index: number) => {
+    if (levelUnlocked(levels, index, readProgress())) {
+      onPlay(index);
+      return true;
+    }
+    setLockedNote((current) => ({ index, key: (current?.key ?? 0) + 1 }));
+    return false;
+  }, [levels, onPlay]);
 
   const click = (action: () => void, sound: "toggle" | "click" = "toggle") => () => {
     primeScoreboboAudio();
@@ -214,18 +240,17 @@ export function TitleScreen({ levels, progress, profile, away, hasWebgl, perform
             {totalStars}<small>/{levels.length * 3}</small>
           </span>
         </div>
-        <div className={styles.grid}>
+        <div ref={gridRef} className={styles.grid}>
           {levels.map((level, index) => (
             <LevelCard
               key={level.id}
               level={level}
               index={index}
               stars={progress.stars[level.id] ?? 0}
-              locked={!levelUnlocked(levels, index, progress)}
+              locked={known ? !levelUnlocked(levels, index, progress) : null}
               home={homeColor}
               away={away.primary}
-              onPlay={onPlay}
-              onLocked={onLocked}
+              onPick={pick}
               disabled={!hasWebgl || starting}
             />
           ))}

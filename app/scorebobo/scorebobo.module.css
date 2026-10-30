@@ -439,6 +439,8 @@
   transform-origin: center;
   animation: mapPulse 1.8s ease-in-out infinite;
 }
+/* Cartão fora da tela (TitleScreen marca `data-off`): o pulso para até ele voltar. */
+.card[data-off] .mapHeroRing { animation-play-state: paused; }
 .mapHeroRingLocked { fill: none; stroke: rgba(255, 255, 255, 0.4); stroke-width: 0.4; }
 @keyframes mapPulse { 50% { transform: scale(1.35); opacity: 0.4; } }
 
@@ -485,8 +487,12 @@
   backdrop-filter: blur(2px) grayscale(0.6);
   -webkit-backdrop-filter: blur(2px) grayscale(0.6);
   color: rgba(255, 255, 255, 0.85);
+  /* O cadeado só aparece quando o progresso do aparelho chega (depois do hidrato): entra suave. */
+  animation: lockIn 0.3s ease both;
 }
+@keyframes lockIn { from { opacity: 0; } }
 .cardLock svg { width: 34px; height: 34px; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6)); }
+.cardLockNudge { animation: none; }
 .cardLockNudge svg { animation: lockNudge 0.5s ease; }
 @keyframes lockNudge {
   0%, 100% { rotate: 0deg; }

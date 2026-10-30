@@ -2,7 +2,7 @@
 // jogo) desde o primeiro toque da tentativa; o replay toca trechos em câmera
 // lenta com ângulos de câmera sugeridos.
 
-import type { Actor, ActorPose, BallState, SimEvent, Vec3 } from "../types";
+import type { Actor, ActorPose, BallState, SimEvent, Vec2, Vec3 } from "../types";
 import { angleDelta, lerp } from "./math";
 
 // Cada foto é uma linha de números num Float64Array só (os doubles voltam exatos):
@@ -17,6 +17,14 @@ export type ReplaySegment = { from: number; to: number; rate: number; angle: num
 /** Eventos que voltam a tocar no replay (som, rede): os de placar não. */
 const REPLAY_EVENTS = new Set<SimEvent["type"]>(["kick", "post", "net", "save", "receive"]);
 
+/**
+ * O que o replay põe no lugar dos vetores de um ator: objetos do gravador,
+ * reescritos a cada quadro (nada novo por quadro). Nunca são a gravação nem a
+ * foto do estado ao vivo: no fim do replay o estado volta a apontar para a foto.
+ */
+type Dive = NonNullable<Actor["dive"]>;
+type ActorScratch = { pos: Vec2; vel: Vec2; look: Vec3; dive: Dive | null };
+
 export class Recorder {
   events: SimEvent[] = [];
   /** Fotos gravadas (o buffer cresce dobrando e é reaproveitado entre tentativas). */
@@ -29,9 +37,14 @@ export class Recorder {
   private inNet: boolean[] = [];
   private poses: ActorPose[] = [];
   private roles: Array<Actor["role"]> = [];
-  private dives: Array<{ side: number; height: number } | undefined> = [];
+  private dives: Array<Dive | undefined> = [];
   private celebrations: Array<string | undefined> = [];
   private looks: boolean[] = [];
+  /** Vetores que o `apply` escreve (bola e um conjunto por ator). */
+  private ballPos: Vec3 = { x: 0, y: 0, z: 0 };
+  private ballVel: Vec3 = { x: 0, y: 0, z: 0 };
+  private ballSpin: Vec3 = { x: 0, y: 0, z: 0 };
+  private scratch: ActorScratch[] = [];
 
   clear() {
     this.count = 0;
@@ -43,6 +56,22 @@ export class Recorder {
     this.dives.length = 0;
     this.celebrations.length = 0;
     this.looks.length = 0;
+  }
+
+  /** Solta a gravação inteira, até o buffer (a fase acabou: nada disso volta). */
+  dispose() {
+    this.clear();
+    this.data = new Float64Array(0);
+    this.stride = HEAD;
+    this.actorCount = 0;
+    this.owners = [];
+    this.inNet = [];
+    this.poses = [];
+    this.roles = [];
+    this.dives = [];
+    this.celebrations = [];
+    this.looks = [];
+    this.scratch = [];
   }
 
   get length() {
@@ -111,7 +140,11 @@ export class Recorder {
     return this.count ? this.data[(this.count - 1) * this.stride] : 0;
   }
 
-  /** Aplica o instante `t` (interpolado) sobre os atores e a bola. */
+  /**
+   * Aplica o instante `t` (interpolado) sobre os atores e a bola. Os vetores
+   * são os do gravador, reescritos (os mesmos números de sempre, sem objeto
+   * novo por quadro): quem precisa do estado ao vivo guarda uma cópia antes.
+   */
   apply(t: number, actors: Actor[], ball: BallState) {
     const n = this.count;
     if (!n) return;
@@ -132,43 +165,78 @@ export class Recorder {
     const b = hi * stride;
     const k = d[b] > d[a] ? (t - d[a]) / (d[b] - d[a]) : 0;
     const near = k < 0.5 ? lo : hi;
-    ball.pos = mix3(d, a + 1, b + 1, k);
-    ball.vel = mix3(d, a + 4, b + 4, k);
-    ball.spin = mix3(d, a + 7, b + 7, k);
+    ball.pos = mix3(d, a + 1, b + 1, k, this.ballPos);
+    ball.vel = mix3(d, a + 4, b + 4, k, this.ballVel);
+    ball.spin = mix3(d, a + 7, b + 7, k, this.ballSpin);
     ball.owner = this.owners[near];
     ball.inNet = this.inNet[near];
     const count = this.actorCount;
-    actors.forEach((actor, i) => {
-      if (i >= count) return;
+    const shown = Math.min(count, actors.length);
+    // Mesma ordem de escrita de sempre (as chaves que faltam no ator entram na mesma ordem).
+    for (let i = 0; i < shown; i += 1) {
+      const actor = actors[i];
+      const own = this.scratch[i] ?? (this.scratch[i] = { pos: { x: 0, z: 0 }, vel: { x: 0, z: 0 }, look: { x: 0, y: 0, z: 0 }, dive: null });
       const oa = a + HEAD + i * PER_ACTOR;
       const ob = b + HEAD + i * PER_ACTOR;
       const on = k < 0.5 ? oa : ob;
       const ia = lo * count + i;
       const ib = hi * count + i;
       const sn = k < 0.5 ? ia : ib;
-      actor.pos = { x: lerp(d[oa], d[ob], k), z: lerp(d[oa + 1], d[ob + 1], k) };
-      actor.vel = { x: lerp(d[oa + 2], d[ob + 2], k), z: lerp(d[oa + 3], d[ob + 3], k) };
+      const pos = own.pos;
+      pos.x = lerp(d[oa], d[ob], k);
+      pos.z = lerp(d[oa + 1], d[ob + 1], k);
+      actor.pos = pos;
+      const vel = own.vel;
+      vel.x = lerp(d[oa + 2], d[ob + 2], k);
+      vel.z = lerp(d[oa + 3], d[ob + 3], k);
+      actor.vel = vel;
       actor.facing = d[oa + 4] + angleDelta(d[oa + 4], d[ob + 4]) * k;
       actor.pose = this.poses[sn];
       actor.role = this.roles[sn];
       actor.poseT = this.poses[ia] === this.poses[ib] ? lerp(d[oa + 5], d[ob + 5], k) : d[on + 5];
       const dive = this.dives[sn];
-      actor.dive = dive ? { ...dive } : undefined;
+      if (dive) {
+        // Copia todos os campos do mergulho gravado; um campo que ele não tem ficaria velho no rascunho: aí, cópia nova.
+        let target = own.dive;
+        if (target) {
+          for (const key in target) {
+            if (!(key in dive)) {
+              target = null;
+              break;
+            }
+          }
+        }
+        own.dive = target ? Object.assign(target, dive) : { ...dive };
+        actor.dive = own.dive;
+      } else actor.dive = undefined;
       actor.jump = lerp(d[oa + 6], d[ob + 6], k);
       actor.celebration = this.celebrations[sn];
-      actor.look = this.looks[sn] ? { x: d[on + 7], y: d[on + 8], z: d[on + 9] } : null;
-    });
+      if (this.looks[sn]) {
+        const look = own.look;
+        look.x = d[on + 7];
+        look.y = d[on + 8];
+        look.z = d[on + 9];
+        actor.look = look;
+      } else actor.look = null;
+    }
   }
 
-  /** Eventos gravados em (from, to]. */
-  eventsBetween(from: number, to: number) {
-    return this.events.filter((e) => e.t > from && e.t <= to);
+  /** Eventos gravados em (from, to], na lista `out` (sem lista nova por quadro). */
+  eventsBetween(from: number, to: number, out: SimEvent[]) {
+    const events = this.events;
+    for (let i = 0; i < events.length; i += 1) {
+      const e = events[i];
+      if (e.t > from && e.t <= to) out.push(e);
+    }
   }
 }
 
-/** Mistura os Vec3 que começam em `a` e `b` no buffer. */
-function mix3(d: Float64Array, a: number, b: number, k: number): Vec3 {
-  return { x: lerp(d[a], d[b], k), y: lerp(d[a + 1], d[b + 1], k), z: lerp(d[a + 2], d[b + 2], k) };
+/** Mistura os Vec3 que começam em `a` e `b` no buffer, em `out`. */
+function mix3(d: Float64Array, a: number, b: number, k: number, out: Vec3): Vec3 {
+  out.x = lerp(d[a], d[b], k);
+  out.y = lerp(d[a + 1], d[b + 1], k);
+  out.z = lerp(d[a + 2], d[b + 2], k);
+  return out;
 }
 
 /** Toca uma lista de trechos; `advance` devolve o tempo de jogo a mostrar (ou null no fim). */

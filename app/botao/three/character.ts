@@ -2173,7 +2173,53 @@ export type FigureIntent = {
   shuffle: number;
   /** Ação por cima do estado; trocar o valor recomeça do zero. */
   action?: FigureAction | null;
+  /**
+   * Pose montada de fora, por cima de tudo (corpo inteiro, menos a meia-volta),
+   * com o peso `layerWeight` (0..1). O Scorebobo guia o goleiro assim; a
+   * partida não usa (sem ela, nada muda).
+   */
+  layer?: FigurePose | null;
+  layerWeight?: number;
+  /** Palmas em pontos do mundo (cinemática inversa dos braços, depois da pose). Sem ela, nada muda. */
+  reach?: FigureReach | null;
+  /** Rosto forçado (null/ausente = o de sempre). */
+  mood?: FaceMood | null;
 };
+
+/** Pose do boneco: ângulos (rad) e deslocamentos (px de boneco), o mesmo formato das camadas internas. */
+export type FigurePose = Pose;
+
+/** Pose zerada (de pé, braços para baixo) para montar uma camada de fora. */
+export function figurePose(): FigurePose {
+  return zeroPose();
+}
+
+/**
+ * Mãos guiadas: a palma esquerda (+x do boneco) e a direita vão para esses
+ * pontos do mundo (null = o braço fica na pose), com peso 0..1.
+ */
+export type FigureReach = { left: THREE.Vector3 | null; right: THREE.Vector3 | null; weight: number };
+
+/** Medidas do esqueleto (px de boneco) para quem monta pose de fora. */
+export const FIGURE_RIG = {
+  /** Altura do pivô do corpo (quadril) com o boneco de pé. */
+  pivot: PIVOT_H,
+  /** Quadril (origem das pernas e do tronco) acima da origem do corpo. */
+  hips: 12,
+  /** Ombro no tronco: ±x e altura. */
+  shoulderX: 6,
+  shoulderY: 11.5,
+  upperArm: 4.9,
+  /** Cotovelo até a palma. */
+  forearm: 6,
+  /** Junta do quadril de cada perna: ±x e altura no quadril. */
+  hipX: 2.05,
+  hipY: 0.4,
+  thigh: 5.6,
+  shin: 4.3,
+  /** Tornozelo até a sola da chuteira. */
+  foot: 2.4,
+} as const;
 
 export type FigureOptions = {
   appearance: PlayerAppearance;
@@ -2234,6 +2280,51 @@ const SUIT_FINISH: Finish = [0.8, 0, 0, 1];
 const DRESS_SHOE_FINISH: Finish = [0.22, 0.15, 0, 1];
 /** Palma da mão no osso do antebraço: dentro da caixa da mão (centro em -5,6), um pouco abaixo do meio. */
 const HAND_ANCHOR_Y = -6;
+/** Ombro até o cotovelo (px), o mesmo do esqueleto. */
+const UPPER_ARM = 4.9;
+
+/** Distância ombro-palma pedida, macia nos últimos 5% antes de esticar (`longest`): o cotovelo não estala. */
+function softReach(distance: number, longest: number) {
+  const soft = longest * 0.95;
+  return distance > soft ? soft + (longest - soft) * (1 - Math.exp((soft - distance) / (longest - soft))) : distance;
+}
+
+/** Contas reaproveitadas da cinemática inversa dos braços (só existem em quem usa `reach`). */
+type ReachKit = {
+  inverse: THREE.Matrix4;
+  basis: THREE.Matrix4;
+  euler: THREE.Euler;
+  dir: THREE.Vector3;
+  hand: THREE.Vector3;
+  elbowRest: THREE.Vector3;
+  restSide: THREE.Vector3;
+  pole: THREE.Vector3;
+  poleSide: THREE.Vector3;
+  /** Mão e cotovelo da pose (peso parcial: o alvo sai deles). */
+  posedHand: THREE.Vector3;
+  posedElbow: THREE.Vector3;
+  /** Braço de referência (à frente, um pouco para fora) e o giro dele até o alvo (polo do cotovelo). */
+  front: THREE.Vector3;
+  swing: THREE.Quaternion;
+};
+
+function newReachKit(): ReachKit {
+  return {
+    inverse: new THREE.Matrix4(),
+    basis: new THREE.Matrix4(),
+    euler: new THREE.Euler(),
+    dir: new THREE.Vector3(),
+    hand: new THREE.Vector3(),
+    elbowRest: new THREE.Vector3(),
+    restSide: new THREE.Vector3(),
+    pole: new THREE.Vector3(),
+    poleSide: new THREE.Vector3(),
+    posedHand: new THREE.Vector3(),
+    posedElbow: new THREE.Vector3(),
+    front: new THREE.Vector3(),
+    swing: new THREE.Quaternion(),
+  };
+}
 
 /** Raio (unidades de campo) da esfera de recorte: cobre mortal, mergulho e braços para cima. */
 const CULL_RADIUS = FIGURE_HEIGHT * 1.6;
@@ -2410,6 +2501,9 @@ export class PlayerFigure {
 
   /** Pontos da palma (criados só quando alguém pede). */
   private readonly anchors: { left?: THREE.Object3D; right?: THREE.Object3D } = {};
+  /** Rosto pedido de fora no último `update` (null = o de sempre). */
+  private forcedMood: FaceMood | null = null;
+  private reachKit: ReachKit | null = null;
 
   constructor(options: FigureOptions) {
     const seed = options.seed ?? options.number * 7919;
@@ -2811,12 +2905,19 @@ export class PlayerFigure {
     this.applyLunge(dt, pose, layer);
     this.applyKick(dt, pose, layer);
     this.applyDive(dt, pose, layer, intent);
+    // Pose de fora por cima de tudo (a cabeça ainda acompanha a bola logo abaixo).
+    const outside = intent.layer;
+    const outsideWeight = intent.layerWeight ?? 0;
+    if (outside && outsideWeight > 0.0001) blendKeys(pose, outside, outsideWeight, BODY_KEYS);
 
     pose.neckY += this.headYaw;
     pose.neckX += -this.headPitch * 0.8;
 
     this.lastState = state;
     this.applyPose(dt, pose);
+    const reach = intent.reach;
+    if (reach && reach.weight > 0.0001) this.applyReach(reach);
+    this.forcedMood = intent.mood ?? null;
     this.updateFace(dt);
 
     // Contorno de luz suavizado: só uniform, nada recompila.
@@ -3472,6 +3573,97 @@ export class PlayerFigure {
     blendKeys(pose, s, weight, BODY_KEYS);
   }
 
+  /** Pancada no chão pedida de fora (quem guia o corpo por `layer`): achata de leve, como uma aterrissagem. */
+  bump(strength: number) {
+    this.land(strength);
+  }
+
+  /**
+   * Mãos nos pontos pedidos: cinemática inversa de dois ossos no espaço do
+   * tronco já posado. Ombro e cotovelo giram para a palma chegar ao alvo (ou
+   * apontar para ele, se não alcança), com o cotovelo para fora, para baixo e
+   * um pouco para trás.
+   */
+  private applyReach(reach: FigureReach) {
+    const kit = (this.reachKit ??= newReachKit());
+    this.torso.updateWorldMatrix(true, false);
+    kit.inverse.copy(this.torso.matrixWorld).invert();
+    const weight = Math.min(1, reach.weight);
+    if (reach.left) this.solveArm(kit, reach.left, 1, this.shoulderL, this.elbowL, weight);
+    if (reach.right) this.solveArm(kit, reach.right, -1, this.shoulderR, this.elbowR, weight);
+  }
+
+  private solveArm(kit: ReachKit, target: THREE.Vector3, side: number, shoulder: THREE.Bone, elbow: THREE.Bone, weight: number) {
+    const upper = UPPER_ARM;
+    const fore = -HAND_ANCHOR_Y;
+    // Alvo no espaço do tronco (px), a partir do ombro.
+    const dir = kit.dir.copy(target).applyMatrix4(kit.inverse).sub(shoulder.position);
+    const raw = dir.length();
+    if (raw < 1e-4) return;
+    dir.multiplyScalar(1 / raw);
+    // Perto de esticar, o cotovelo pela lei dos cossenos gira muito por pouca distância (estala ao
+    // esticar e ao dobrar): nos últimos 5% a distância entra macia (a palma fica um pouco aquém).
+    const longest = upper + fore - 0.001;
+    let reach = softReach(raw, longest);
+    // Polo do cotovelo: com o braço à frente (e um pouco para fora) o cotovelo aponta para baixo e
+    // para fora; para outro alvo, o mesmo giro que leva o braço até ele leva o cotovelo junto. Só
+    // vira de repente com o alvo para trás, dentro das costas (um polo fixo vira com a mão
+    // cruzando o corpo para o alto, comum nas defesas).
+    const front = kit.front.set(side * 0.3, 0, 1).normalize();
+    const pole = kit.pole.set(side * 0.5, -1, 0);
+    pole.addScaledVector(front, -pole.dot(front)).normalize().applyQuaternion(kit.swing.setFromUnitVectors(front, dir));
+    if (weight < 1) {
+      // Peso parcial: o braço é sempre uma solução inteira, com o alvo e o polo saindo da mão e do
+      // cotovelo da própria pose (peso 0 = a pose). Misturar os ângulos do ombro pula quando a
+      // pose e o pedido estão longe (a mistura dá a volta pelo outro lado num quadro).
+      const bent = elbow.rotation.x;
+      const posedHand = kit.posedHand.set(0, -upper - fore * Math.cos(bent), -fore * Math.sin(bent)).applyEuler(shoulder.rotation);
+      const posedElbow = kit.posedElbow.set(0, -1, 0).applyEuler(shoulder.rotation);
+      const posedRaw = posedHand.length();
+      if (posedRaw > 1e-4) {
+        dir.multiplyScalar(weight).addScaledVector(posedHand, (1 - weight) / posedRaw);
+        const length = dir.length();
+        if (length < 1e-4) return;
+        dir.multiplyScalar(1 / length);
+        // O comprimento vai do da pose até o que o braço alcança de fato (longe demais = esticado):
+        // sem o teto, um pouco de peso já esticaria o cotovelo de uma vez.
+        reach = posedRaw + (reach - posedRaw) * weight;
+      }
+      pole.multiplyScalar(weight).addScaledVector(posedElbow, 1 - weight);
+    }
+    reach = clamp(reach, Math.abs(upper - fore) + 0.05, longest);
+    // Cotovelo pela lei dos cossenos (negativo: o antebraço dobra para a frente).
+    const inner = Math.acos(clamp((upper * upper + fore * fore - reach * reach) / (2 * upper * fore), -1, 1));
+    const bend = inner - Math.PI;
+    // Base do braço sem giro: palma (com o cotovelo dobrado) e o lado do cotovelo (para baixo).
+    const hand = kit.hand.set(0, -upper - fore * Math.cos(bend), -fore * Math.sin(bend)).normalize();
+    const rest = kit.elbowRest.set(0, -1, 0).addScaledVector(hand, hand.y).normalize();
+    const restSide = kit.restSide.crossVectors(hand, rest);
+    // Base pedida: palma no alvo, cotovelo para o polo.
+    pole.addScaledVector(dir, -pole.dot(dir));
+    if (pole.lengthSq() < 1e-6) pole.set(0, 0, -1).addScaledVector(dir, dir.z);
+    pole.normalize();
+    const poleSide = kit.poleSide.crossVectors(dir, pole);
+    // Giro do ombro = base pedida × base sem giro (transposta).
+    kit.basis.set(
+      dir.x * hand.x + pole.x * rest.x + poleSide.x * restSide.x,
+      dir.x * hand.y + pole.x * rest.y + poleSide.x * restSide.y,
+      dir.x * hand.z + pole.x * rest.z + poleSide.x * restSide.z,
+      0,
+      dir.y * hand.x + pole.y * rest.x + poleSide.y * restSide.x,
+      dir.y * hand.y + pole.y * rest.y + poleSide.y * restSide.y,
+      dir.y * hand.z + pole.y * rest.z + poleSide.y * restSide.z,
+      0,
+      dir.z * hand.x + pole.z * rest.x + poleSide.z * restSide.x,
+      dir.z * hand.y + pole.z * rest.y + poleSide.z * restSide.y,
+      dir.z * hand.z + pole.z * rest.z + poleSide.z * restSide.z,
+      0,
+      0, 0, 0, 1,
+    );
+    shoulder.rotation.copy(kit.euler.setFromRotationMatrix(kit.basis, "XYZ"));
+    elbow.rotation.x = bend;
+  }
+
   // ------------------------------------------------------------ aplica
 
   private applyPose(dt: number, pose: Pose) {
@@ -3538,9 +3730,9 @@ export class PlayerFigure {
 
   private updateFace(dt: number) {
     const w = this.weights;
-    let mood: FaceMood | null = null;
+    let mood: FaceMood | null = this.forcedMood;
     const current = this.current;
-    if (current.id && current.w > 0.5) {
+    if (!mood && current.id && current.w > 0.5) {
       const def = ACTIONS[current.id];
       this.context.sad = current.sad;
       mood = typeof def.mood === "function" ? def.mood(current.t, this.context) : def.mood;

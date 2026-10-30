@@ -13,7 +13,7 @@
 
 import * as THREE from "three";
 import { PITCH, type GameState, type SimEvent, type Vec3 } from "../types";
-import { clamp, clamp01, dampVec, mix, smoother, wobble } from "./util";
+import { clamp, clamp01, damp, dampVec, mix, smoother, wobble } from "./util";
 
 export type ShotKind =
   | "intro"
@@ -34,6 +34,14 @@ const GOAL = new THREE.Vector3(0, 1.1, PITCH.goalLineZ);
 const UP = new THREE.Vector3(0, 1, 0);
 /** Duração do voo de apresentação (a simulação dá ~1,4 s de intro; o resto mistura com a mira). */
 const INTRO_SWEEP = 1.9;
+/** Mira girada pelo jogador: até 70° para cada lado, testados de 2,5° em 2,5°. */
+const TURN_MAX = THREE.MathUtils.degToRad(70);
+const TURN_STEP = THREE.MathUtils.degToRad(2.5);
+/** Amortecimento do giro: o arrasto acompanha o dedo; a volta ao automático desliza. */
+const TURN_RATE_DRAG = 26;
+const TURN_RATE_RESET = 7;
+/** Perto das placas a câmera girada chega mais perto da bola, até a metade da distância. */
+const TURN_DOLLY_MIN = 0.5;
 
 function pose(): Pose {
   return { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 50 };
@@ -67,6 +75,17 @@ export class CameraDirector {
   private readonly aimPose = pose();
   private aimKey = "";
   private aimSettled = false;
+  // Giro do jogador na mira (rad, em volta da bola): o pedido, o mostrado (amortecido) e os limites desta bola.
+  private turn = 0;
+  private turnShown = 0;
+  private turnRate = TURN_RATE_DRAG;
+  private turnMin = 0;
+  private turnMax = 0;
+  private turnBoundX = 0;
+  private turnBoundZ = 0;
+  private readonly turnPivot = new THREE.Vector3();
+  private readonly turnBall = new THREE.Vector3();
+  private readonly turnTemp = new THREE.Vector3();
   private readonly fitCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
   private readonly probe = new THREE.Vector3();
   // Rigs suavizados.
@@ -110,7 +129,30 @@ export class CameraDirector {
 
   /** Pose atual da câmera de mira (para o traço e para quem quiser comparar). */
   get settled() {
-    return this.shot === "aim" && this.blendT >= this.blendDur && this.aimSettled;
+    return this.shot === "aim" && this.blendT >= this.blendDur && this.aimSettled && this.turnShown === this.turn;
+  }
+
+  /** Quanto o jogador girou a mira (rad; 0 = enquadramento automático). Fora da mira, 0. */
+  get aimTurn() {
+    return this.shot === "aim" ? this.turn : 0;
+  }
+
+  /**
+   * O jogador gira a mira para os lados (rad, soma ao pedido): a câmera anda
+   * em volta da bola, que fica no mesmo lugar da tela. O limite é o desta bola.
+   */
+  turnAim(radians: number) {
+    if (this.shot !== "aim") return;
+    this.turn = clamp(this.turn + radians, this.turnMin, this.turnMax);
+    this.turnRate = TURN_RATE_DRAG;
+    if (this.reducedMotion) this.turnShown = this.turn;
+  }
+
+  /** Volta ao enquadramento automático (deslizando; com movimento reduzido, na hora). */
+  resetAimTurn() {
+    this.turn = 0;
+    this.turnRate = TURN_RATE_RESET;
+    if (this.reducedMotion) this.turnShown = 0;
   }
 
   /**
@@ -123,6 +165,9 @@ export class CameraDirector {
     this.blendT = this.blendDur;
     this.aimSettled = true;
     copyPose(this.actual, this.aimPose);
+    // Giro ainda deslizando: chega também (o traço é lido com a câmera parada).
+    this.turnShown = this.turn;
+    if (this.turnShown !== 0) this.applyTurn(this.actual);
     this.velPos.set(0, 0, 0);
     this.velTarget.set(0, 0, 0);
     this.lastPos.copy(this.actual.pos);
@@ -329,6 +374,75 @@ export class CameraDirector {
     out.fov = fov;
   }
 
+  /**
+   * Até onde o jogador gira esta mira para cada lado (de 2,5° em 2,5°, até
+   * 70°). O giro é em volta da bola na altura de sempre (nunca desce para o
+   * gramado); perto das placas da lateral ou da linha do gol (rede, arquibancada
+   * de trás) a câmera chega mais perto da bola em vez de passar delas
+   * (`turnDolly`). Para quando ela teria de chegar perto demais (metade da
+   * distância, ou abaixo de 2,6 m) ou, baixa, parar em cima de um boneco. Na
+   * bola da ponta a mira automática já fica nas placas: dali ela não sai.
+   */
+  private computeTurnLimits(state: GameState) {
+    const pivot = this.turnPivot;
+    const ball = this.turnBall.copy(state.ball.pos);
+    const base = this.aimPose.pos;
+    this.turnBoundX = Math.max(PITCH.halfWidth + 3, Math.abs(base.x));
+    this.turnBoundZ = Math.max(PITCH.goalLineZ - 1, base.z, ball.z + 0.5);
+    const baseX = base.x - pivot.x;
+    const baseZ = base.z - pivot.z;
+    const crowded = (x: number, y: number, z: number) => {
+      if (y >= 3.5) return 0;
+      let bad = 0;
+      for (const actor of state.actors) bad += Math.max(0, 1.5 - Math.hypot(actor.pos.x - x, actor.pos.z - z));
+      return bad;
+    };
+    const start = crowded(base.x, base.y, base.z) + 1e-3;
+    const at = this.turnTemp;
+    for (let side = -1; side <= 1; side += 2) {
+      let limit = 0;
+      for (let angle = TURN_STEP; angle <= TURN_MAX + 1e-6; angle += TURN_STEP) {
+        const cos = Math.cos(angle * side);
+        const sin = Math.sin(angle * side);
+        at.set(pivot.x + baseX * cos + baseZ * sin, base.y, pivot.z - baseX * sin + baseZ * cos);
+        const dolly = this.turnDolly(at);
+        if (dolly < TURN_DOLLY_MIN) break;
+        at.sub(ball).multiplyScalar(dolly).add(ball);
+        if (at.y < 2.6 || crowded(at.x, at.y, at.z) > start) break;
+        limit = angle;
+      }
+      if (side < 0) this.turnMin = -limit;
+      else this.turnMax = limit;
+    }
+    this.turn = clamp(this.turn, this.turnMin, this.turnMax);
+    this.turnShown = clamp(this.turnShown, this.turnMin, this.turnMax);
+  }
+
+  /** Quanto da distância até a bola a câmera girada mantém para não passar das placas nem da linha do gol (1 = toda). */
+  private turnDolly(pos: THREE.Vector3) {
+    const ball = this.turnBall;
+    let keep = 1;
+    if (Math.abs(pos.x) > this.turnBoundX) keep = Math.min(keep, (Math.sign(pos.x) * this.turnBoundX - ball.x) / (pos.x - ball.x));
+    if (pos.z > this.turnBoundZ) keep = Math.min(keep, (this.turnBoundZ - ball.z) / (pos.z - ball.z));
+    return keep;
+  }
+
+  /**
+   * Gira uma pose da mira em volta da bola pelo giro mostrado; se passar das
+   * placas, anda para a bola pela própria linha de visão. Nos dois casos a
+   * bola fica no mesmo ponto da tela (o traço começa onde sempre começou).
+   */
+  private applyTurn(out: Pose) {
+    const pivot = this.turnPivot;
+    out.pos.sub(pivot).applyAxisAngle(UP, this.turnShown).add(pivot);
+    out.target.sub(pivot).applyAxisAngle(UP, this.turnShown).add(pivot);
+    const dolly = this.turnDolly(out.pos);
+    if (dolly >= 1) return;
+    const from = this.turnTemp.copy(out.pos);
+    out.pos.sub(this.turnBall).multiplyScalar(dolly).add(this.turnBall);
+    out.target.add(from.subVectors(out.pos, from));
+  }
+
   // ---------------------------------------------------------------- voo
 
   private computeFollow(state: GameState, dt: number, out: Pose, snap: boolean) {
@@ -526,10 +640,19 @@ export class CameraDirector {
       // acompanhando o traço, e a câmera não pode mexer com o dedo na tela.
       const ballPos = state.ball.pos;
       const key = `${state.heroId}:${ballPos.x.toFixed(2)}:${ballPos.y.toFixed(2)}:${ballPos.z.toFixed(2)}:${this.aspect.toFixed(2)}:${state.attempt}`;
+      if (this.shot !== "aim") {
+        // Giro do jogador vale só nesta mira: bola nova (tentativa nova, domínio
+        // depois do passe) começa no enquadramento automático, feito para ela.
+        this.turn = 0;
+        this.turnShown = 0;
+      }
       if (key !== this.aimKey) {
         this.aimKey = key;
         this.computeAim(state, this.aimPose);
         this.aimSettled = false;
+        // Limites do giro desta bola (celular girado no meio da mira: o giro fica, dentro dos novos).
+        this.turnPivot.set(ballPos.x, 0, ballPos.z);
+        this.computeTurnLimits(state);
       }
       if (this.shot !== "aim") {
         // Da apresentação: termina o arco; do voo: muda de herói voando suave.
@@ -663,6 +786,11 @@ export class CameraDirector {
       }
       case "aim":
         copyPose(d, this.aimPose);
+        if (this.turnShown !== this.turn) {
+          this.turnShown = damp(this.turnShown, this.turn, this.turnRate, dt);
+          if (Math.abs(this.turn - this.turnShown) < 2e-4) this.turnShown = this.turn;
+        }
+        if (this.turnShown !== 0) this.applyTurn(d);
         break;
       case "follow":
         this.computeFollow(state, dt, d, false);

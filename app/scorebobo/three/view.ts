@@ -513,6 +513,20 @@ export class ScoreboboView implements ScoreboboViewApi {
     this.squad?.setReceiver(points ? plan?.receiver ?? null : null);
   }
 
+  /** Mira: o jogador gira a câmera em volta da bola (a bola fica no mesmo ponto da tela). */
+  turnAim(radians: number): void {
+    if (this.lastPhase !== "aim" || !Number.isFinite(radians)) return;
+    this.director.turnAim(radians);
+  }
+
+  resetAimTurn(): void {
+    this.director.resetAimTurn();
+  }
+
+  get aimTurn(): number {
+    return this.director.aimTurn;
+  }
+
   // ---------------------------------------------------------------- quadro
 
   render(state: GameState, dt: number, events: SimEvent[]): void {
@@ -628,6 +642,8 @@ export class ScoreboboView implements ScoreboboViewApi {
     if (state.phase === "replay" || previous === "replay") {
       this.ball?.reset();
       if (state.phase === "replay") this.effects?.clear();
+      // Todo replay assenta os bonecos no primeiro corte (o "Ver replay" começa no ângulo em que o anterior pode ter sido pulado).
+      if (state.phase === "replay") this.lastReplayAngle = -1;
       // Saindo do replay (volta ao estado ao vivo). A entrada assenta no corte de câmera.
       if (previous === "replay") this.squad?.settle(state);
     }

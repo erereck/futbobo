@@ -241,22 +241,28 @@ export const PassCounter = memo(function PassCounter({ passes }: { passes: numbe
 
 // ------------------------------------------------------------ traço
 
-export const PlanChip = memo(function PlanChip({ plan }: { plan: PlanSummary | null }) {
+export const PlanChip = memo(function PlanChip({ plan, directOnly = false }: {
+  plan: PlanSummary | null;
+  /** Fase em que passe não vale (pênalti, falta direta): o passe aparece como aviso. */
+  directOnly?: boolean;
+}) {
   if (!plan) {
     return (
       <div className={`${styles.planChip} ${styles.planChipEmpty}`}>
-        <span>Continue o traço até um companheiro ou o gol</span>
+        <span>{directOnly ? "Continue o traço até o gol" : "Continue o traço até um companheiro ou o gol"}</span>
       </div>
     );
   }
+  // Passe onde só o chute vale: gasta a bola e o gol depois dele não dá estrela.
+  const voided = directOnly && !plan.shot;
   // Zagueiro no caminho manda mais que a precisão: "Preciso" para um passe que vai ser cortado mentia.
-  const grade = plan.danger === "cut" ? (plan.shot ? "Bloqueável" : "Cortável") : plan.accuracy >= 0.78 ? "Preciso" : plan.accuracy >= 0.55 ? "Arriscado" : "Difícil";
-  const tone = plan.danger === "cut" ? styles.gradeBad : plan.accuracy >= 0.78 ? styles.gradeGood : plan.accuracy >= 0.55 ? styles.gradeMid : styles.gradeBad;
+  const grade = voided ? "Não vale" : plan.danger === "cut" ? (plan.shot ? "Bloqueável" : "Cortável") : plan.accuracy >= 0.78 ? "Preciso" : plan.accuracy >= 0.55 ? "Arriscado" : "Difícil";
+  const tone = voided || plan.danger === "cut" ? styles.gradeBad : plan.accuracy >= 0.78 ? styles.gradeGood : plan.accuracy >= 0.55 ? styles.gradeMid : styles.gradeBad;
   return (
-    <div className={`${styles.planChip} ${plan.shot ? styles.planShot : ""} ${plan.danger === "cut" ? styles.planDanger : ""}`}>
+    <div className={`${styles.planChip} ${plan.shot ? styles.planShot : ""} ${voided || plan.danger === "cut" ? styles.planDanger : ""}`}>
       <span className={styles.planKind}>{plan.shot ? "CHUTE" : "PASSE"}</span>
       <strong>{planTitle(plan)}</strong>
-      <span className={`${styles.planMeter} ${tone}`} aria-label={`Precisão: ${grade}`}>
+      <span className={`${styles.planMeter} ${tone}`} aria-label={voided ? "Passe não vale nesta fase" : `Precisão: ${grade}`}>
         <i style={{ transform: `scaleX(${Math.max(0.06, plan.accuracy)})` }} />
       </span>
       <small className={tone}>{grade}</small>
@@ -264,7 +270,16 @@ export const PlanChip = memo(function PlanChip({ plan }: { plan: PlanSummary | n
   );
 });
 
-export function AimHint({ text, tone, tag }: { text: string; tone: "info" | "error"; tag?: string }) {
+const TurnGlyph = () => (
+  <svg viewBox="0 0 20 20" aria-hidden="true">
+    <path d="M3 9.5c1.6-2.4 4.2-3.8 7-3.8s5.4 1.4 7 3.8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M2.6 5.8l.4 3.8 3.7-.9M17.4 5.8l-.4 3.8-3.7-.9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="10" cy="14" r="2.4" fill="currentColor" />
+  </svg>
+);
+
+/** `extra`: segunda linha da dica (como girar a câmera, até o jogador girar a primeira vez). */
+export function AimHint({ text, tone, tag, extra }: { text: string; tone: "info" | "error"; tag?: string; extra?: string }) {
   return (
     <div className={`${styles.aimHint} ${tone === "error" ? styles.aimHintError : ""}`} role={tone === "error" ? "alert" : undefined}>
       {tag && tone === "info" && <b className={styles.aimHintTag}>{tag}</b>}
@@ -274,8 +289,29 @@ export function AimHint({ text, tone, tag }: { text: string; tone: "info" | "err
           <circle cx="5" cy="19" r="2.6" fill="currentColor" />
         </svg>
       )}
-      <span>{text}</span>
+      {extra && tone === "info" ? (
+        <span className={styles.aimHintLines}>
+          <span>{text}</span>
+          <small><TurnGlyph />{extra}</small>
+        </span>
+      ) : (
+        <span>{text}</span>
+      )}
     </div>
+  );
+}
+
+/** Câmera girada na mira: volta ao enquadramento automático (o toque duplo fora da bola faz o mesmo). */
+export function RecenterButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" className={styles.recenter} onClick={onClick} aria-label="Centralizar a câmera" title="Centralizar a câmera">
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <circle cx="10" cy="10" r="5.6" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M10 1.6v3M10 15.4v3M1.6 10h3M15.4 10h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="10" cy="10" r="2" fill="currentColor" />
+      </svg>
+      <span>Centralizar</span>
+    </button>
   );
 }
 

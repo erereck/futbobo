@@ -16,17 +16,31 @@ export type StarCount = 0 | 1 | 2 | 3;
 export type ScoreboboProgress = {
   /** Melhor resultado de cada fase (id → estrelas). */
   stars: Record<string, StarCount>;
+  /** Fases que a ordem antiga já tinha aberto (save de antes das fases novas entrarem no meio): seguem abertas. */
+  opened: string[];
   /** "Liberar todas (demo)": para apresentar sem jogar fase por fase. */
   unlockAll: boolean;
   /** Modo desempenho escolhido aqui; null = segue o do Modo 3D. */
   performance: boolean | null;
 };
 
-const EMPTY_PROGRESS: ScoreboboProgress = { stars: {}, unlockAll: false, performance: null };
+const EMPTY_PROGRESS: ScoreboboProgress = { stars: {}, opened: [], unlockAll: false, performance: null };
 
 function clampStars(value: unknown): StarCount {
   const number = Math.round(Number(value) || 0);
   return (number <= 0 ? 0 : number >= 3 ? 3 : number) as StarCount;
+}
+
+/** As 6 fases da primeira leva, na ordem em que eram liberadas (as novas entraram entre elas). */
+const FIRST_ORDER = ["primeiro-toque", "curva-no-angulo", "tabela-na-area", "pela-ponta", "contra-ataque", "final-da-copa"];
+
+/**
+ * Save sem `opened` é de antes das fases novas: o que a anterior de então
+ * liberava continua aberto (quem chegou na final não volta a ver cadeado
+ * nela). A lista vai junto na próxima gravação, e saves novos nascem com ela vazia.
+ */
+function openedByFirstOrder(stars: Record<string, StarCount>) {
+  return FIRST_ORDER.filter((_, index) => index > 0 && (stars[FIRST_ORDER[index - 1]] ?? 0) >= 1);
 }
 
 function readProgressNow(): ScoreboboProgress {
@@ -39,8 +53,10 @@ function readProgressNow(): ScoreboboProgress {
     if (parsed?.stars && typeof parsed.stars === "object") {
       for (const [id, value] of Object.entries(parsed.stars)) stars[id] = clampStars(value);
     }
+    const opened: unknown = parsed?.opened;
     return {
       stars,
+      opened: Array.isArray(opened) ? opened.filter((id): id is string => typeof id === "string") : openedByFirstOrder(stars),
       unlockAll: parsed?.unlockAll === true,
       performance: typeof parsed?.performance === "boolean" ? parsed.performance : null,
     };
@@ -100,10 +116,11 @@ export function setPerformancePreference(value: boolean | null) {
   writeProgress({ ...readProgress(), performance: value });
 }
 
-/** Desbloqueio em sequência: cada fase abre com ao menos 1 estrela na anterior (ou se já tem estrelas nela). */
+/** Desbloqueio em sequência: cada fase abre com ao menos 1 estrela na anterior (ou se já tem estrelas nela, ou se a ordem antiga já a abria). */
 export function levelUnlocked(levels: ReadonlyArray<ScoreLevel>, index: number, progress: ScoreboboProgress): boolean {
   if (index <= 0 || progress.unlockAll) return true;
-  if ((progress.stars[levels[index]?.id ?? ""] ?? 0) >= 1) return true;
+  const id = levels[index]?.id ?? "";
+  if ((progress.stars[id] ?? 0) >= 1 || progress.opened.includes(id)) return true;
   const previous = levels[index - 1];
   return Boolean(previous && (progress.stars[previous.id] ?? 0) >= 1);
 }
