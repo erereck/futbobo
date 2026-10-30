@@ -53,6 +53,12 @@ const SIGNATURES: Readonly<Record<Exclude<CelebrationId, "auto">, readonly Showc
   cradle: [{ action: "cradle", duration: 4, face: 0 }],
   robot: [{ action: "robot", duration: 4, face: 0 }],
   dance: [{ action: "dance", duration: 4, face: 0 }],
+  // Provisórias (T0): ações que já existem; o L2 troca pelas animações de verdade.
+  kamehameha: [{ action: "handsOnHips", duration: 0.7, face: 0 }, { action: "pointSky", duration: 1.7, face: 0 }, PAUSE],
+  superSaiyan: [{ action: "kneelCheer", duration: 2.2, face: 0 }, { action: "jumpCheer", duration: 2, face: 0 }],
+  meditate: [{ action: "kneelCheer", duration: 3, face: 0 }, PAUSE],
+  cupEar: [{ action: "shush", duration: 4, face: 0 }],
+  fingerGuns: [{ action: "pointSky", duration: 1.7, face: 0 }, { action: "clap", duration: 1.3, face: 0 }],
 };
 
 function showcaseLength(list: readonly ShowcaseItem[]) {

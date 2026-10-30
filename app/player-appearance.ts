@@ -102,6 +102,12 @@ export const CELEBRATION_OPTIONS = [
   { id: "cradle", name: "Embala neném" },
   { id: "robot", name: "Robô" },
   { id: "dance", name: "Dancinha" },
+  // Só se acrescenta no fim: o save guarda o índice.
+  { id: "kamehameha", name: "Kamehameha" },      // 13
+  { id: "superSaiyan", name: "Super Saiyajin" }, // 14
+  { id: "meditate", name: "Meditação" },         // 15
+  { id: "cupEar", name: "Não tô ouvindo" },      // 16
+  { id: "fingerGuns", name: "Pistoleiro" },      // 17
 ] as const;
 export type CelebrationId = (typeof CELEBRATION_OPTIONS)[number]["id"];
 

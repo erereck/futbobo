@@ -144,7 +144,12 @@ export type BotaoMatchSetup = {
   /** Formações escolhidas na prancheta; ausente mantém o rodízio clássico. */
   userFormationId?: string;
   cpuFormationId?: string;
+  /** Bobonline: os cinco botões de cada lado com nome, número e atributos próprios, sem protagonista. Ignorado no modo técnico. */
+  squads?: BotaoSquads;
 };
+
+/** Elencos completos por lado (sempre 5). Ids precisam ser únicos nos DOIS lados. */
+export type BotaoSquads = Record<BotaoSide, BotaoPlayer[]>;
 
 export type BotaoDecision = "goal-limit" | "regulation" | "extra-time" | "penalties";
 

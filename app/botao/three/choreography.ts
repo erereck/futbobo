@@ -53,7 +53,9 @@ type Track = {
 /** Os mesmos ids de CELEBRATION_OPTIONS (player-appearance.ts), menos o "auto". */
 export type GoalCelebration =
   | "kneeSlide" | "cornerFlag" | "airplane" | "siuu" | "backflip" | "crest"
-  | "heart" | "shush" | "armsCrossed" | "cradle" | "robot" | "dance";
+  | "heart" | "shush" | "armsCrossed" | "cradle" | "robot" | "dance"
+  // Bobonline. Ficam FORA de GOAL_CELEBRATIONS (o sorteio "Variada" de sempre não muda).
+  | "kamehameha" | "superSaiyan" | "meditate" | "cupEar" | "fingerGuns";
 const GOAL_CELEBRATIONS: GoalCelebration[] = [
   "kneeSlide", "siuu", "cornerFlag", "backflip", "airplane", "crest",
   "heart", "shush", "armsCrossed", "cradle", "robot", "dance",

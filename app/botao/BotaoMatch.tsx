@@ -74,6 +74,8 @@ import type {
   BotaoSide,
 } from "./types";
 import type { Botao3DView } from "./three/Botao3DView";
+import type { BotaoCpuBrain, BotaoMatchLink, BotaoMatchRestore, BotaoSideControl } from "./match-link";
+import type { OnlineDriverFactory } from "./online-driver";
 import { enableBotao3dPerformanceAuto, readBotao3dPerformance, readBotao3dPreference, webglAvailable } from "./view-mode";
 import { FrameWatch } from "./perf-watch";
 
@@ -166,6 +168,27 @@ export default function BotaoMatch({
   localPlayerNames?: Record<BotaoSide, string>;
   /** Direção visual isolada para laboratórios; não altera física nem regras. */
   presentation?: "standard" | "showcase";
+  // Bobonline (contrato T0): só tipos por enquanto; nenhuma destas props é lida ainda.
+  /** Bobonline: quem controla cada lado neste aparelho. Ausente = comportamento atual. */
+  controls?: Record<BotaoSide, BotaoSideControl>;
+  /** Lado que fica embaixo nesta tela (o convidado vê o próprio time subindo). "neutral" = espectador. */
+  perspective?: BotaoSide | "neutral";
+  /** Rede da partida online; presente = tempos fixos online e o driver online. */
+  link?: BotaoMatchLink;
+  /** Fábrica do driver online (import() feito pela rota Bobonline). Obrigatória quando `link` existe. */
+  createDriver?: OnlineDriverFactory;
+  /** Apelidos por lado, para os textos online. */
+  names?: Record<BotaoSide, string>;
+  /** Recomeça de um estado salvo (recarregar no meio da partida). */
+  restore?: BotaoMatchRestore;
+  /** CPU com rng própria (nunca a da partida) e nível explícito. */
+  cpuBrain?: BotaoCpuBrain;
+  /** Visual escolhido por quem monta a partida. Presente = ignora readBotao3dPreference(). */
+  view?: "2d" | "3d";
+  /** Mostra "Desistir" no rodapé. */
+  onForfeit?: () => void;
+  /** Espectador: mostra "Sair da transmissão". */
+  onLeave?: () => void;
 }) {
   const localMatch = controlMode === "local";
   const showcase = presentation === "showcase";

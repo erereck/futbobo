@@ -431,6 +431,11 @@ function persistentSquadNumbers(
   return available.slice(0, count);
 }
 
+/** Elenco nomeado sem modo técnico (Bobonline). */
+export function usesSquads(setup: BotaoMatchSetup): boolean {
+  return !(setup.managerMode && setup.managerRosters) && Boolean(setup.squads);
+}
+
 export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
   const rng = createRng(hashSeed(setup.seed, setup.matchId));
   const userPower =
@@ -1590,6 +1595,39 @@ export function confirmPenaltyOrder(
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// Bobonline (contrato T0): assinaturas reais, corpos no L1 (B1)
+// ---------------------------------------------------------------------------
+
+/** T0: o contrato existe para os outros módulos compilarem; nenhum modo atual chama isto. */
+function pendingT0(name: string, ...args: unknown[]): never {
+  void args;
+  throw new Error(`${name}: não implementado (T0)`);
+}
+
+/**
+ * Bobonline: cada lado entrega a fila inteira (ids dos seus cinco botões).
+ * Fila inválida ou ausente mantém a ordem padrão daquele lado.
+ */
+export function confirmPenaltyOrders(
+  state: BotaoMatchState,
+  orders: Partial<Record<BotaoSide, readonly string[]>>,
+): boolean {
+  return pendingT0("confirmPenaltyOrders", state, orders);
+}
+
+/**
+ * Bobonline: aplica o relógio que o dono do lance mediu no aparelho dele.
+ * Só vale em aim/kickoff com o relógio correndo; 0 sem graça encerra o tempo.
+ */
+export function applyRemoteClock(
+  state: BotaoMatchState,
+  clock: number,
+  finalShotGrace: boolean,
+): BotaoEvent[] {
+  return pendingT0("applyRemoteClock", state, clock, finalShotGrace);
+}
+
 /** Vai direto para a decisão por pênaltis. Serve ao modo de teste da antessala. */
 export function jumpToPenalties(state: BotaoMatchState) {
   if (state.phase === "finished" || state.penalties) return;
@@ -1598,7 +1636,12 @@ export function jumpToPenalties(state: BotaoMatchState) {
 }
 
 /** Pune sete segundos sem ação do jogador com uma cobrança real para a CPU. */
-export function awardInactivityPenalty(state: BotaoMatchState): BotaoEvent[] {
+export function awardInactivityPenalty(
+  state: BotaoMatchState,
+  idleSide: BotaoSide = "user",
+): BotaoEvent[] {
+  // T0: o lado "cpu" (Bobonline) só ganha corpo no L1; o padrão "user" segue idêntico.
+  if (idleSide !== "user") return pendingT0("awardInactivityPenalty(cpu)", state, idleSide);
   const events: BotaoEvent[] = [];
   if (state.finalShotGrace) return events;
   if (
@@ -1757,6 +1800,18 @@ export function stepPenaltyKeeper(state: BotaoMatchState, dt: number) {
   );
   keeper.vx = (keeper.x - previousX) / dt;
   keeper.vy = 0;
+}
+
+/**
+ * Bobonline: põe o goleiro onde o batedor o viu na hora do toque. Só com
+ * pênaltis e sem bola no ar; x fica entre as traves; não usa a rng.
+ */
+export function placePenaltyKeeper(
+  state: BotaoMatchState,
+  x: number,
+  direction: 1 | -1,
+): void {
+  pendingT0("placePenaltyKeeper", state, x, direction);
 }
 
 /** Passo de física do pênalti; devolve `null` enquanto a cobrança não terminou. */
