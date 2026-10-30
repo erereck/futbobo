@@ -16,15 +16,24 @@ export type StarCount = 0 | 1 | 2 | 3;
 export type ScoreboboProgress = {
   /** Melhor resultado de cada fase (id → estrelas). */
   stars: Record<string, StarCount>;
-  /** Fases que a ordem antiga já tinha aberto (save de antes das fases novas entrarem no meio): seguem abertas. */
+  /** Fases que uma ordem antiga já tinha aberto (save de antes da trilha atual): seguem abertas. */
   opened: string[];
+  /** Versão da trilha que este save conhece (`TRACK_VERSION`); sem ela, o save é de antes da reordenação. */
+  track: number;
   /** "Liberar todas (demo)": para apresentar sem jogar fase por fase. */
   unlockAll: boolean;
   /** Modo desempenho escolhido aqui; null = segue o do Modo 3D. */
   performance: boolean | null;
 };
 
-const EMPTY_PROGRESS: ScoreboboProgress = { stars: {}, opened: [], unlockAll: false, performance: null };
+/**
+ * Versão da trilha (a ordem do SCORE_LEVELS, que é a ordem de desbloqueio).
+ * 2 = a reordenação por dificuldade. Mudou a ordem de novo: sobe a versão e a
+ * ordem que sai entra na migração de `openedBefore`.
+ */
+const TRACK_VERSION = 2;
+
+const EMPTY_PROGRESS: ScoreboboProgress = { stars: {}, opened: [], track: TRACK_VERSION, unlockAll: false, performance: null };
 
 function clampStars(value: unknown): StarCount {
   const number = Math.round(Number(value) || 0);
@@ -34,13 +43,37 @@ function clampStars(value: unknown): StarCount {
 /** As 6 fases da primeira leva, na ordem em que eram liberadas (as novas entraram entre elas). */
 const FIRST_ORDER = ["primeiro-toque", "curva-no-angulo", "tabela-na-area", "pela-ponta", "contra-ataque", "final-da-copa"];
 
+/** As 12 fases antes da trilha 2: as 6 novas no meio da primeira leva. */
+const SECOND_ORDER = [
+  "primeiro-toque",
+  "na-marca-da-cal",
+  "curva-no-angulo",
+  "cara-a-cara",
+  "tabela-na-area",
+  "pela-ponta",
+  "de-voleio",
+  "triangulacao",
+  "falta-frontal",
+  "contra-ataque",
+  "area-lotada",
+  "final-da-copa",
+];
+
+/** O que "ao menos 1 estrela na anterior" abria em `order`. */
+function openedByOrder(order: readonly string[], stars: Record<string, StarCount>) {
+  return order.filter((_, index) => index > 0 && (stars[order[index - 1]] ?? 0) >= 1);
+}
+
 /**
- * Save sem `opened` é de antes das fases novas: o que a anterior de então
- * liberava continua aberto (quem chegou na final não volta a ver cadeado
- * nela). A lista vai junto na próxima gravação, e saves novos nascem com ela vazia.
+ * Save sem `track` é de antes da trilha 2: tudo o que a ordem de 12 mostrava
+ * aberto continua aberto (quem chegou na final não volta a ver cadeado nela).
+ * É a lista `opened` dele (ou, se ele nunca gravou, o que a primeira leva
+ * abria) mais a anterior com estrela na ordem de 12, contada com as estrelas
+ * de agora (as que vierem depois já abrem só pela ordem nova). A versão e a
+ * lista vão juntas na próxima gravação; saves novos nascem com ela vazia.
  */
-function openedByFirstOrder(stars: Record<string, StarCount>) {
-  return FIRST_ORDER.filter((_, index) => index > 0 && (stars[FIRST_ORDER[index - 1]] ?? 0) >= 1);
+function openedBefore(opened: string[] | null, stars: Record<string, StarCount>) {
+  return [...new Set([...(opened ?? openedByOrder(FIRST_ORDER, stars)), ...openedByOrder(SECOND_ORDER, stars)])];
 }
 
 function readProgressNow(): ScoreboboProgress {
@@ -53,10 +86,13 @@ function readProgressNow(): ScoreboboProgress {
     if (parsed?.stars && typeof parsed.stars === "object") {
       for (const [id, value] of Object.entries(parsed.stars)) stars[id] = clampStars(value);
     }
-    const opened: unknown = parsed?.opened;
+    const rawOpened: unknown = parsed?.opened;
+    const opened = Array.isArray(rawOpened) ? rawOpened.filter((id): id is string => typeof id === "string") : null;
+    const current = typeof parsed?.track === "number" && parsed.track >= TRACK_VERSION;
     return {
       stars,
-      opened: Array.isArray(opened) ? opened.filter((id): id is string => typeof id === "string") : openedByFirstOrder(stars),
+      opened: current ? opened ?? [] : openedBefore(opened, stars),
+      track: TRACK_VERSION,
       unlockAll: parsed?.unlockAll === true,
       performance: typeof parsed?.performance === "boolean" ? parsed.performance : null,
     };
@@ -72,7 +108,8 @@ const listeners = new Set<() => void>();
 export function subscribeProgress(listener: () => void) {
   listeners.add(listener);
   const onStorage = (event: StorageEvent) => {
-    if (event.key !== SCOREBOBO_STORAGE_KEY) return;
+    // key null = `localStorage.clear()` em outra aba: o progresso daqui também já era.
+    if (event.key !== null && event.key !== SCOREBOBO_STORAGE_KEY) return;
     progressCache = null;
     listener();
   };

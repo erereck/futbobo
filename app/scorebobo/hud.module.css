@@ -1200,11 +1200,15 @@
   .banner { top: 9%; }
   .bannerTitle { font-size: clamp(54px, 12vh, 110px); }
   .menuCard, .resultsCard { padding: 16px; }
-  .resultsStars { margin: 8px 0 4px; }
+  /* Cartão de resultado inteiro em 375 px de altura (rolava uns 30 px e o "Fases" saía da tela). */
+  .resultsCard { padding-block: 12px; }
+  .resultsTitle { margin: 4px 0 0; }
+  .resultsStars { margin: 4px 0 0; }
   .resultsStar { width: 54px; height: 54px; }
   .resultsStar:nth-child(2) { width: 66px; height: 66px; }
   .resultsRules { display: none; }
-  .resultsActions { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+  .resultsNotes { margin-top: 6px; }
+  .resultsActions { margin-top: 12px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce) {

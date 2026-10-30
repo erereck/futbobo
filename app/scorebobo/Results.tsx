@@ -87,7 +87,7 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
   const lit = (index: number) => (met ? won && met[index] : index < stars);
   // A última fase é a final: quem marca levanta a taça.
   const champion = won && !hasNext;
-  const verdict = champion ? (stars === 3 ? "Perfeito: o gol do título é seu" : "O gol do título é seu") : stars === 3 ? "Perfeito!" : stars === 2 ? "Jogada de craque" : stars === 1 ? "Objetivo cumprido" : "As bolas acabaram";
+  const verdict = champion ? (stars === 3 ? "Perfeito: o gol do título é seu" : "O gol do título é seu") : stars === 3 ? "Perfeito!" : stars === 2 ? "Jogada de craque" : stars === 1 ? "Objetivo cumprido" : level.attempts === 1 ? "Era uma bola só" : "As bolas acabaram";
 
   return (
     <div

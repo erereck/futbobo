@@ -350,6 +350,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const directOnly = level.require?.some((rule) => rule.kind === "maxPasses" && rule.max === 0) ?? false;
   // Sem companheiro em campo (cara a cara) também não há passe para oferecer.
   const goalOnly = directOnly || level.mates.length === 0;
+  // Bola única sem passe (o pênalti): traço que acaba num companheiro perderia a fase inteira. Sem setas, e só o chute vale.
+  const shotOnly = directOnly && level.attempts === 1;
 
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   const [hud, setHud] = useState<HudSnapshot | null>(null);
@@ -1392,7 +1394,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     // Se o último pedaço (dedo saindo da tela) não dá leitura, vale o que a prévia mostrava.
     const finalPlan = stroke.length >= minimum ? game.planKick(samples) ?? lastPlanRef.current : null;
     lastPlanRef.current = null;
-    if (!finalPlan) {
+    if (!finalPlan || (shotOnly && !finalPlan.shot)) {
       view.setStroke(null, null);
       const { x, y } = pointFrom(event);
       rejectStroke(stroke.length < minimum ? "Traço curto" : goalOnly ? "Leve o traço até o gol" : "Leve o traço até um companheiro ou até o gol", x, y);
@@ -1499,7 +1501,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         <canvas ref={trailCanvasRef} className={styles.trail} style={{ visibility: "hidden" }} aria-hidden="true" />
         <div ref={setRing} className={styles.ballRing} style={{ opacity: 0 }} aria-hidden="true"><i /><b /></div>
         <div ref={tapRef} className={styles.tap} aria-hidden="true" />
-        {[level.hero, ...level.mates].map((mate) => (
+        {(shotOnly ? [] : [level.hero, ...level.mates]).map((mate) => (
           <div
             key={mate.id}
             ref={setArrow}

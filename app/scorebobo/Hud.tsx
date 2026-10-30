@@ -219,7 +219,7 @@ export const ObjectiveChip = memo(function ObjectiveChip({ index, name, objectiv
 
 export const AttemptBalls = memo(function AttemptBalls({ total, left }: { total: number; left: number }) {
   return (
-    <div className={styles.attempts} aria-label={`${left} de ${total} bolas restantes`}>
+    <div className={styles.attempts} aria-label={total === 1 ? (left > 0 ? "Uma bola só" : "Sem bolas") : `${left} de ${total} bolas restantes`}>
       {Array.from({ length: total }, (_, index) => (
         <span key={index} className={index < left ? styles.attemptLive : styles.attemptSpent}>
           <BallIcon />

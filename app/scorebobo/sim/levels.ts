@@ -1,6 +1,6 @@
 // Fases da demo do Scorebobo: curva de dificuldade (goleiro, defesa, passes) e
-// variedade (chute, pênalti, falta, cavadinha, tabela, ponta, voleio,
-// triangulação, chute de fora, contra-ataque, final).
+// variedade (chute, pênalti, tabela, cavadinha, triangulação, voleio, ponta,
+// falta, contra-ataque, chute de fora, falta de longe, final).
 //
 // Coordenadas em metros: x atravessa o campo, z vai do meio-campo (0) à linha
 // do gol (52,5); a marca do pênalti fica em z = 41,5 e a área começa em z = 36.
@@ -41,6 +41,10 @@ const FREE_KICK_BALL = { x: -7, z: 28.5 };
 const PENALTY_SPOT = { x: 0, z: 41.5 };
 const FRONT_FREE_KICK = { x: -1.2, z: 31.4 };
 
+// A ordem é a trilha de desbloqueio: cada fase um pouco mais difícil que a
+// anterior (medida com jogadas sintéticas), as bolas paradas espalhadas e a
+// final por último. Mudar a ordem pede migração em storage.ts (TRACK_VERSION).
+
 export const SCORE_LEVELS: ScoreLevel[] = [
   {
     id: "primeiro-toque",
@@ -75,8 +79,10 @@ export const SCORE_LEVELS: ScoreLevel[] = [
     objective: "Converta o pênalti",
     // Pênalti é chute direto: rolar para quem está na meia-lua não vale.
     require: [{ kind: "maxPasses", max: 0 }],
-    stars: [{ kind: "firstAttempt" }, { kind: "topCorner" }],
-    attempts: 3,
+    // Uma cobrança só: de 11 m o goleiro quase não alcança o canto, e com três
+    // bolas a fase saía de graça. As estrelas pedem o ângulo, com efeito.
+    stars: [{ kind: "topCorner" }, { kind: "curve", min: 1 }],
+    attempts: 1,
     sky: "night",
     clock: "88'",
     score: { home: 1, away: 1 },
@@ -92,47 +98,6 @@ export const SCORE_LEVELS: ScoreLevel[] = [
     ],
     // Na linha até a bola sair.
     keeper: { name: "Brandão", number: 1, skill: 0.9, pos: { x: 0, z: 52.2 } },
-  },
-  {
-    id: "curva-no-angulo",
-    name: "Curva no ângulo",
-    situation: "Falta a 25 m, barreira de quatro",
-    objective: "Marque de falta, direto",
-    // Rolar para o lado e chutar de perto não é cobrança de falta.
-    require: [{ kind: "maxPasses", max: 0 }],
-    stars: [{ kind: "curve", min: 2 }, { kind: "topCorner" }],
-    attempts: 3,
-    sky: "sunset",
-    clock: "78'",
-    score: { home: 1, away: 1 },
-    hero: { id: "hero", name: "Você", number: 10, pos: behind(FREE_KICK_BALL) },
-    mates: [
-      { id: "m9", name: "Tavares", number: 9, pos: { x: 4, z: 35.5 } },
-      { id: "m11", name: "Cunha", number: 11, pos: { x: -14, z: 36 } },
-    ],
-    defenders: [
-      ...wall(FREE_KICK_BALL, -1.4, 4, 4),
-      { id: "d5", name: "Prado", number: 3, pos: { x: 5, z: 37 }, behavior: "markNearest" },
-    ],
-    keeper: { name: "Moura", number: 1, skill: 0.62, pos: { x: 1, z: 51.6 } },
-  },
-  {
-    id: "cara-a-cara",
-    name: "Cara a cara",
-    situation: "Saiu sozinho, e o goleiro vem fechando o ângulo",
-    objective: "Vença o goleiro",
-    // Rasteiro no canto ele ainda pega muitos: a cavadinha por cima dele (ou a bola colocada, com curva) é o caminho.
-    stars: [{ kind: "curve", min: 1 }, { kind: "topCorner" }],
-    attempts: 3,
-    sky: "day",
-    clock: "64'",
-    score: { home: 1, away: 1 },
-    hero: { id: "hero", name: "Você", number: 10, pos: behind({ x: -1.4, z: 32.2 }) },
-    mates: [],
-    // Vem na cobertura, atrasado (fora do quadro da mira): só pressão.
-    defenders: [{ id: "d2", name: "Rocha", number: 2, pos: { x: -7, z: 30 }, behavior: "press" }],
-    // Saindo do gol para abafar: fica ali até a bola sair.
-    keeper: { name: "Sampaio", number: 1, skill: 0.95, pos: { x: -0.5, z: 48 } },
   },
   {
     id: "tabela-na-area",
@@ -156,6 +121,77 @@ export const SCORE_LEVELS: ScoreLevel[] = [
       { id: "d2", name: "Rocha", number: 2, pos: { x: 5.5, z: 40.5 }, behavior: "hold" },
     ],
     keeper: { name: "Moura", number: 1, skill: 0.72 },
+  },
+  {
+    id: "cara-a-cara",
+    name: "Cara a cara",
+    situation: "Saiu sozinho, e o goleiro vem fechando o ângulo",
+    objective: "Vença o goleiro",
+    // Rasteiro no canto ele ainda pega muitos: a cavadinha por cima dele (ou a bola colocada, com curva) é o caminho.
+    stars: [{ kind: "curve", min: 1 }, { kind: "topCorner" }],
+    attempts: 3,
+    sky: "day",
+    clock: "64'",
+    score: { home: 1, away: 1 },
+    // Arranca de uns 22 m: dá tempo de o goleiro se arrumar.
+    hero: { id: "hero", name: "Você", number: 10, pos: behind({ x: -1.4, z: 29.7 }) },
+    mates: [],
+    // Vem na cobertura, atrasado (no celular em pé, fora do quadro da mira): só pressão.
+    defenders: [{ id: "d2", name: "Rocha", number: 2, pos: { x: -7, z: 30 }, behavior: "press" }],
+    // Saindo do gol para abafar: fica ali até a bola sair.
+    keeper: { name: "Sampaio", number: 1, skill: 0.95, pos: { x: -0.5, z: 48 } },
+  },
+  {
+    id: "triangulacao",
+    name: "Triangulação",
+    situation: "Três no toque contra a defesa armada",
+    objective: "Troque dois passes e marque",
+    require: [{ kind: "minPasses", min: 2 }],
+    stars: [{ kind: "minPasses", min: 3 }, { kind: "curve", min: 1.2 }],
+    attempts: 3,
+    sky: "sunset",
+    clock: "52'",
+    score: { home: 1, away: 0 },
+    hero: { id: "hero", name: "Você", number: 10, pos: behind({ x: -1, z: 27 }) },
+    mates: [
+      { id: "m9", name: "Tavares", number: 9, pos: { x: -8, z: 32.5 }, run: [{ x: -7, z: 38 }, { x: -4.5, z: 42 }] },
+      { id: "m7", name: "Lima", number: 7, pos: { x: 7, z: 31.5 }, run: [{ x: 6, z: 37.5 }, { x: 3.5, z: 42.5 }] },
+    ],
+    defenders: [
+      { id: "d6", name: "Neves", number: 6, pos: { x: -0.6, z: 30.6 }, behavior: "press" },
+      { id: "d2", name: "Rocha", number: 2, pos: { x: -10.5, z: 36.5 }, behavior: "markNearest" },
+      // Marcação por fora e o zagueiro da área mais atrás: a terceira troca (a estrela) passa.
+      { id: "d4", name: "Vidal", number: 4, pos: { x: 8, z: 36 }, behavior: "markNearest" },
+      { id: "d3", name: "Prado", number: 3, pos: { x: -1.5, z: 43 }, behavior: "hold" },
+    ],
+    keeper: { name: "Moura", number: 1, skill: 0.6 },
+  },
+  {
+    id: "de-voleio",
+    name: "De voleio",
+    situation: "Lançamento de trás para quem entra na área",
+    objective: "Gol de voleio",
+    require: [{ kind: "volley" }],
+    stars: [{ kind: "firstAttempt" }, { kind: "topCorner" }],
+    attempts: 3,
+    sky: "night",
+    clock: "70'",
+    score: { home: 0, away: 0 },
+    // Longe o bastante para o passe sair por cima (lançamento) e cair no pé de quem chega.
+    hero: { id: "hero", name: "Você", number: 8, pos: behind({ x: -11, z: 10.5 }) },
+    mates: [
+      { id: "m9", name: "Tavares", number: 9, pos: { x: 6, z: 33 }, run: [{ x: 7, z: 38.5 }, { x: 5.5, z: 42.5 }] },
+      // Fundo o bastante para o passe até ele também sair por cima (de perto saía rasteiro, sem voleio).
+      { id: "m11", name: "Cunha", number: 11, pos: { x: -14, z: 35 }, run: [{ x: -12, z: 42.5 }] },
+    ],
+    defenders: [
+      { id: "d4", name: "Vidal", number: 4, pos: { x: 2, z: 37 }, behavior: "hold" },
+      { id: "d3", name: "Prado", number: 3, pos: { x: -4.5, z: 37.5 }, behavior: "hold" },
+      // Fica por fora, na sobra: marcando o Cunha, cortava quase todo lançamento para ele.
+      { id: "d2", name: "Rocha", number: 2, pos: { x: -17, z: 40 }, behavior: "hold" },
+      { id: "d8", name: "Duarte", number: 8, pos: { x: -6, z: 18 }, behavior: "press" },
+    ],
+    keeper: { name: "Galvão", number: 1, skill: 0.6 },
   },
   {
     id: "pela-ponta",
@@ -182,63 +218,14 @@ export const SCORE_LEVELS: ScoreLevel[] = [
     keeper: { name: "Galvão", number: 1, skill: 0.76 },
   },
   {
-    id: "de-voleio",
-    name: "De voleio",
-    situation: "Lançamento de trás para quem entra na área",
-    objective: "Gol de voleio",
-    require: [{ kind: "volley" }],
-    stars: [{ kind: "firstAttempt" }, { kind: "topCorner" }],
-    attempts: 3,
-    sky: "night",
-    clock: "70'",
-    score: { home: 0, away: 0 },
-    // Longe o bastante para o passe sair por cima (lançamento) e cair no pé de quem chega.
-    hero: { id: "hero", name: "Você", number: 8, pos: behind({ x: -11, z: 10.5 }) },
-    mates: [
-      { id: "m9", name: "Tavares", number: 9, pos: { x: 6, z: 33 }, run: [{ x: 7, z: 38.5 }, { x: 5.5, z: 42.5 }] },
-      { id: "m11", name: "Cunha", number: 11, pos: { x: -14, z: 32 }, run: [{ x: -12, z: 40.5 }] },
-    ],
-    defenders: [
-      { id: "d4", name: "Vidal", number: 4, pos: { x: 2, z: 37 }, behavior: "hold" },
-      { id: "d3", name: "Prado", number: 3, pos: { x: -4.5, z: 37.5 }, behavior: "hold" },
-      { id: "d2", name: "Rocha", number: 2, pos: { x: -13, z: 34.5 }, behavior: "markNearest" },
-      { id: "d8", name: "Duarte", number: 8, pos: { x: -6, z: 18 }, behavior: "press" },
-    ],
-    keeper: { name: "Galvão", number: 1, skill: 0.6 },
-  },
-  {
-    id: "triangulacao",
-    name: "Triangulação",
-    situation: "Três no toque contra a defesa armada",
-    objective: "Troque dois passes e marque",
-    require: [{ kind: "minPasses", min: 2 }],
-    stars: [{ kind: "minPasses", min: 3 }, { kind: "curve", min: 1.2 }],
-    attempts: 3,
-    sky: "sunset",
-    clock: "52'",
-    score: { home: 1, away: 0 },
-    hero: { id: "hero", name: "Você", number: 10, pos: behind({ x: -1, z: 27 }) },
-    mates: [
-      { id: "m9", name: "Tavares", number: 9, pos: { x: -8, z: 32.5 }, run: [{ x: -7, z: 38 }, { x: -4.5, z: 42 }] },
-      { id: "m7", name: "Lima", number: 7, pos: { x: 7, z: 31.5 }, run: [{ x: 6, z: 37.5 }, { x: 3.5, z: 42.5 }] },
-    ],
-    defenders: [
-      { id: "d6", name: "Neves", number: 6, pos: { x: -0.6, z: 30.6 }, behavior: "press" },
-      { id: "d2", name: "Rocha", number: 2, pos: { x: -10.5, z: 36.5 }, behavior: "markNearest" },
-      { id: "d4", name: "Vidal", number: 4, pos: { x: 6.4, z: 34.6 }, behavior: "markNearest" },
-      { id: "d3", name: "Prado", number: 3, pos: { x: 0.5, z: 40 }, behavior: "hold" },
-    ],
-    keeper: { name: "Moura", number: 1, skill: 0.7 },
-  },
-  {
     id: "falta-frontal",
     name: "Falta frontal",
-    situation: "Na meia-lua, com cinco na barreira",
+    situation: "Na meia-lua, com três na barreira",
     objective: "Marque de falta, direto",
     require: [{ kind: "maxPasses", max: 0 }],
     stars: [{ kind: "firstAttempt" }, { kind: "topCorner" }],
     attempts: 3,
-    sky: "sunset",
+    sky: "day",
     clock: "86'",
     score: { home: 0, away: 1 },
     hero: { id: "hero", name: "Você", number: 10, pos: behind(FRONT_FREE_KICK) },
@@ -246,11 +233,12 @@ export const SCORE_LEVELS: ScoreLevel[] = [
       { id: "m9", name: "Tavares", number: 9, pos: { x: 5.5, z: 37.4 } },
       { id: "m11", name: "Cunha", number: 11, pos: { x: -8, z: 37.8 } },
     ],
+    // Barreira de três e goleiro mais fraco: com mais gente nela a falta virava muro no meio da trilha.
     defenders: [
-      ...wall(FRONT_FREE_KICK, -1.6, 5, 4),
+      ...wall(FRONT_FREE_KICK, -1.6, 3, 4),
       { id: "d3", name: "Prado", number: 3, pos: { x: 6.5, z: 38.8 }, behavior: "markNearest" },
     ],
-    keeper: { name: "Teixeira", number: 1, skill: 0.75, pos: { x: 1.3, z: 51.7 } },
+    keeper: { name: "Teixeira", number: 1, skill: 0.5, pos: { x: 1.3, z: 51.7 } },
   },
   {
     id: "contra-ataque",
@@ -294,12 +282,36 @@ export const SCORE_LEVELS: ScoreLevel[] = [
     ],
     defenders: [
       { id: "d6", name: "Neves", number: 6, pos: { x: -8, z: 30.5 }, behavior: "press" },
-      { id: "d5", name: "Lopes", number: 5, pos: { x: -1, z: 38.5 }, behavior: "hold" },
+      // Recuado na área: o chute de fora tem por onde passar.
+      { id: "d5", name: "Lopes", number: 5, pos: { x: -1, z: 40.5 }, behavior: "hold" },
       { id: "d3", name: "Prado", number: 3, pos: { x: -6, z: 40.5 }, behavior: "hold" },
       { id: "d2", name: "Rocha", number: 2, pos: { x: 5, z: 40 }, behavior: "hold" },
       { id: "d4", name: "Vidal", number: 4, pos: { x: 1.6, z: 43.6 }, behavior: "markNearest" },
     ],
-    keeper: { name: "Rezende", number: 1, skill: 0.5 },
+    keeper: { name: "Rezende", number: 1, skill: 0.4 },
+  },
+  {
+    id: "curva-no-angulo",
+    name: "Curva no ângulo",
+    situation: "Falta a 25 m, barreira de quatro",
+    objective: "Marque de falta, direto",
+    // Rolar para o lado e chutar de perto não é cobrança de falta.
+    require: [{ kind: "maxPasses", max: 0 }],
+    stars: [{ kind: "curve", min: 2 }, { kind: "topCorner" }],
+    attempts: 3,
+    sky: "sunset",
+    clock: "78'",
+    score: { home: 1, away: 1 },
+    hero: { id: "hero", name: "Você", number: 10, pos: behind(FREE_KICK_BALL) },
+    mates: [
+      { id: "m9", name: "Tavares", number: 9, pos: { x: 4, z: 35.5 } },
+      { id: "m11", name: "Cunha", number: 11, pos: { x: -14, z: 36 } },
+    ],
+    defenders: [
+      ...wall(FREE_KICK_BALL, -1.4, 4, 4),
+      { id: "d5", name: "Prado", number: 3, pos: { x: 5, z: 37 }, behavior: "markNearest" },
+    ],
+    keeper: { name: "Moura", number: 1, skill: 0.62, pos: { x: 1, z: 51.6 } },
   },
   {
     id: "final-da-copa",
