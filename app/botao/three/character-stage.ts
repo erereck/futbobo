@@ -4,7 +4,9 @@
 
 import * as THREE from "three";
 import { celebrationIdOf, type CelebrationId, type PlayerAppearance } from "../../player-appearance";
-import { FIGURE_HEIGHT, PlayerFigure, idleIntent, type FigureAction, type FigureIntent } from "./character";
+import { CelebrationFx } from "./celebration-fx";
+import { FIGURE_HEIGHT, PlayerFigure, angleDelta, idleIntent, type FigureAction, type FigureIntent } from "./character";
+import { Effects } from "./effects";
 
 export type StagePose = "idle" | "run" | "kick" | "celebrate" | "signature";
 
@@ -37,6 +39,8 @@ const SHOWCASE: readonly ShowcaseItem[] = [
 ];
 
 const PAUSE: ShowcaseItem = { action: null, duration: 0.6, face: 0 };
+/** Kamehameha no palco: virado ~55° para o lado, o raio passa na diagonal pela frente. */
+const KAME_FACE = 0.95;
 
 /** "Minha comemoração": a escolhida no criador, em laço (as de uma vez só recomeçam). */
 const SIGNATURES: Readonly<Record<Exclude<CelebrationId, "auto">, readonly ShowcaseItem[]>> = {
@@ -53,13 +57,16 @@ const SIGNATURES: Readonly<Record<Exclude<CelebrationId, "auto">, readonly Showc
   cradle: [{ action: "cradle", duration: 4, face: 0 }],
   robot: [{ action: "robot", duration: 4, face: 0 }],
   dance: [{ action: "dance", duration: 4, face: 0 }],
-  // Provisórias (T0): ações que já existem; o L2 troca pelas animações de verdade.
-  kamehameha: [{ action: "handsOnHips", duration: 0.7, face: 0 }, { action: "pointSky", duration: 1.7, face: 0 }, PAUSE],
-  superSaiyan: [{ action: "kneelCheer", duration: 2.2, face: 0 }, { action: "jumpCheer", duration: 2, face: 0 }],
-  meditate: [{ action: "kneelCheer", duration: 3, face: 0 }, PAUSE],
-  cupEar: [{ action: "shush", duration: 4, face: 0 }],
-  fingerGuns: [{ action: "pointSky", duration: 1.7, face: 0 }, { action: "clap", duration: 1.3, face: 0 }],
+  // De três quartos: o raio atravessa o quadro na diagonal, vindo para a frente.
+  kamehameha: [{ action: "kamehameha", duration: 3, face: KAME_FACE }, PAUSE],
+  superSaiyan: [{ action: "superSaiyan", duration: 3.6, face: 0 }, PAUSE],
+  meditate: [{ action: "meditate", duration: 5, face: 0 }, PAUSE],
+  cupEar: [{ action: "cupEar", duration: 4, face: 0 }],
+  fingerGuns: [{ action: "fingerGuns", duration: 2.8, face: 0 }, PAUSE],
 };
+
+/** Assinaturas com efeito (esfera, raio, aura, brilhos): só elas criam os efeitos do palco. */
+const FX_SIGNATURES: ReadonlySet<CelebrationId> = new Set<CelebrationId>(["kamehameha", "superSaiyan", "meditate", "fingerGuns"]);
 
 function showcaseLength(list: readonly ShowcaseItem[]) {
   return list.reduce((sum, item) => sum + item.duration, 0);
@@ -72,6 +79,8 @@ function runSpeed(time: number) {
 
 /** Destaque leve do criador: o mesmo contorno que o time do jogador tem em campo. */
 const STAGE_HIGHLIGHT = 0.25;
+const STAGE_SKY = "#e4f1ff";
+const STAGE_SKY_INTENSITY = 1.15;
 
 export class CharacterStage {
   private readonly renderer: THREE.WebGLRenderer;
@@ -99,6 +108,13 @@ export class CharacterStage {
   private readonly upAxis = new THREE.Vector3(0, 1, 0);
   /** 1 = retrato; maior abre o quadro para caber o siuuu e o mortal. */
   private pullBack = 1;
+  private readonly hemisphere: THREE.HemisphereLight;
+  /** Efeitos das assinaturas novas (criados na primeira vez que uma delas aparece). */
+  private fx: { effects: Effects; celebration: CelebrationFx } | null = null;
+  private shake = 0;
+  private glow = 0;
+  private readonly glowColor = new THREE.Color();
+  private readonly skyColor = new THREE.Color(STAGE_SKY);
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -113,7 +129,8 @@ export class CharacterStage {
     // Enquadra da cabeça até a borda da frente do pedestal.
     this.frameCamera();
 
-    this.scene.add(new THREE.HemisphereLight("#e4f1ff", "#2c3a2e", 1.15));
+    this.hemisphere = new THREE.HemisphereLight(STAGE_SKY, "#2c3a2e", STAGE_SKY_INTENSITY);
+    this.scene.add(this.hemisphere);
     const key = new THREE.DirectionalLight("#fff3df", 2.4);
     key.position.set(-40, 90, 70);
     key.castShadow = true;
@@ -262,7 +279,12 @@ export class CharacterStage {
     if (!this.drag) {
       // Gira sozinho devagar; depois de arrastar, a inércia some aos poucos.
       this.spinVelocity *= Math.exp(-dt * 3);
-      this.spin += (this.spinVelocity + (Math.abs(this.spinVelocity) < 0.4 ? 0.32 : 0)) * dt;
+      if (this.pose === "signature" && this.signature === "kamehameha") {
+        // Kamehameha: o palco volta de frente e para (o raio cruza o quadro na diagonal); arrastar ainda gira.
+        this.spin += this.spinVelocity * dt + angleDelta(this.spin, 0) * (1 - Math.exp(-dt * 2.5));
+      } else {
+        this.spin += (this.spinVelocity + (Math.abs(this.spinVelocity) < 0.4 ? 0.32 : 0)) * dt;
+      }
     }
     this.turntable.rotation.y = this.spin;
     if (this.figure) {
@@ -271,8 +293,51 @@ export class CharacterStage {
         this.figure.triggerKick(1, "strike");
       }
       this.figure.update(dt, this.intent());
+      this.updateFx(dt, this.figure);
     }
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Esfera, raio, aura e brilhos das assinaturas novas, com o tremor e a luz que eles pedem. */
+  private updateFx(dt: number, figure: PlayerFigure) {
+    const kind = this.pose === "signature" && FX_SIGNATURES.has(this.signature) ? this.signature : null;
+    if (!kind && !this.fx) return;
+    const fx = this.ensureFx();
+    const result = fx.celebration.update(dt, {
+      kind,
+      focus: { figure, x: 0, z: 0, yaw: this.spin + figure.yaw },
+      side: null,
+      teamColor: STAGE_SKY,
+      stadium: null,
+      aspect: this.camera.aspect,
+    });
+    fx.effects.update(dt, this.camera);
+    this.shake = Math.max(Math.max(0, this.shake - dt * 1.6), result.shake);
+    this.glow = Math.max(this.glow * Math.exp(-dt * 1.6), result.glow);
+    if (result.glowColor) this.glowColor.set(result.glowColor);
+    this.hemisphere.intensity = STAGE_SKY_INTENSITY + 0.5 * this.glow;
+    this.hemisphere.color.copy(this.skyColor).lerp(this.glowColor, 0.32 * this.glow);
+    this.frameCamera();
+    if (this.shake > 0.001) {
+      const amount = this.shake * this.shake * 1.4;
+      this.camera.position.x += (Math.random() * 2 - 1) * amount;
+      this.camera.position.y += (Math.random() * 2 - 1) * amount;
+    }
+  }
+
+  private ensureFx() {
+    if (this.fx) return this.fx;
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+    const effects = new Effects({ surface: "grass", reducedMotion, lowPower: Math.min(window.innerWidth, window.innerHeight) < 600, overTransparent: true });
+    this.scene.add(effects.group);
+    const celebration = new CelebrationFx(effects, { lite: false, reducedMotion, stage: true });
+    // Programas, atlas e buffers antes do primeiro quadro com efeito (quadro descartável).
+    effects.prepare(this.renderer);
+    celebration.prepare();
+    this.renderer.compile(this.scene, this.camera);
+    this.renderer.render(this.scene, this.camera);
+    this.fx = { effects, celebration };
+    return this.fx;
   }
 
   private resize() {
@@ -289,6 +354,8 @@ export class CharacterStage {
   dispose() {
     cancelAnimationFrame(this.frame);
     for (const release of this.cleanup) release();
+    this.fx?.celebration.dispose();
+    this.fx?.effects.dispose();
     this.figure?.dispose();
     this.pedestal.geometry.dispose();
     this.pedestalMaterial.dispose();

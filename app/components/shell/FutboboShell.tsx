@@ -217,6 +217,7 @@ export default function FutboboShell() {
   const [accessDialog, setAccessDialog] = useState<"new" | CareerSaveMeta | null>(null);
   const [botao3dOfferOpen, setBotao3dOfferOpen] = useState(false);
   const [botao3dEnabledToast, setBotao3dEnabledToast] = useState(false);
+  const [bobonlineRoom, setBobonlineRoom] = useState<{ code: string } | null>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const launchedCareerRef = useRef(false);
   const toolClickedRef = useRef(false);
@@ -327,6 +328,13 @@ export default function FutboboShell() {
     return () => window.clearTimeout(timer);
   }, [botao3dOfferReady]);
 
+  // Sala do Bobonline ainda válida (fechou o app no meio): um toque leva de volta (§1.10).
+  useEffect(() => {
+    if (screen !== "home") return;
+    // A espiada vem num pedaço próprio: a home não paga o storage do Bobonline no pacote de cara.
+    void import("../../bobonline/net/session-peek").then((peek) => setBobonlineRoom(peek.peekBobonlineSession()), () => undefined);
+  }, [screen]);
+
   useEffect(() => {
     if (!botao3dEnabledToast) return;
     const timer = window.setTimeout(() => setBotao3dEnabledToast(false), 3800);
@@ -426,6 +434,7 @@ export default function FutboboShell() {
           <div className={styles.heroLogo}><BrandMark size="hero" /><h1>FUTBOBO</h1><span>FAÇA SUA HISTÓRIA</span></div>
           <nav className={styles.mainActions} aria-label="Menu principal">
             <button type="button" className={styles.playButton} onClick={() => setScreen("modes")}><span><FutboboIcon name="play" /></span><strong>JOGAR</strong><b><FutboboIcon name="arrow-right" /></b></button>
+            {bobonlineRoom && <Link className={styles.resumeRoom} href="/bobonline/?voltar=1"><span><FutboboIcon name="play" /></span><strong>Voltar para a sala {bobonlineRoom.code.slice(0, 3)}·{bobonlineRoom.code.slice(3)}</strong><b><FutboboIcon name="arrow-right" /></b></Link>}
             <button type="button" onClick={() => setScreen("settings")}><span><FutboboIcon name="settings" /></span>Configurações</button>
             <button type="button" onClick={() => setScreen("hall")}><span><FutboboIcon name="hall" /></span>Hall da Fama</button>
             <button type="button" onClick={() => setScreen("achievements")}><span><FutboboIcon name="medal" /></span>Conquistas</button>
@@ -459,7 +468,7 @@ export default function FutboboShell() {
 
       {screen === "modes" && (
         <section className={styles.panelScreen}>
-          <header className={styles.panelHeading}><span>JOGAR</span><h2>Escolher seu futbobo.</h2><p>Carreira longa, copa rápida ou o sofá contra alguém.</p></header>
+          <header className={styles.panelHeading}><span>JOGAR</span><h2>Escolher seu futbobo.</h2><p>Carreira longa, copa rápida, o sofá ou online com a galera.</p></header>
           <div className={styles.modeList}>
             <button type="button" className={styles.modeCard} onClick={() => setScreen("saves")}>
               <span className={styles.modeIndex}>01</span><div><small>MODO PRINCIPAL</small><strong>Rumo ao Estrelato</strong><p>Crie seu jogador do zero, ganhe títulos e prêmios individuais.</p></div><b><FutboboIcon name="arrow-right" /></b>
@@ -469,6 +478,7 @@ export default function FutboboShell() {
             </button>
             <Link className={styles.modeCard} href="/copa"><span className={styles.modeIndex}>03</span><div><small>PARTIDA RÁPIDA</small><strong>Copa do Mundo</strong><p>Jogue uma Copa do Mundo rápida com qualquer seleção.</p></div><b><FutboboIcon name="arrow-right" /></b></Link>
             <Link className={styles.modeCard} href="/x1"><span className={styles.modeIndex}>04</span><div><small>DOIS JOGADORES</small><strong>1x1 Local</strong><p>Jogue uma partida de futebol de botão contra o seu amigo.</p></div><b><FutboboIcon name="arrow-right" /></b></Link>
+            <Link className={styles.modeCard} href="/bobonline"><span className={styles.modeIndex}>05</span><div><small>ONLINE</small><strong>Bobonline</strong><p>Monte seu time e jogue online com os amigos.</p></div><b><FutboboIcon name="arrow-right" /></b></Link>
           </div>
         </section>
       )}

@@ -26,6 +26,12 @@ function ensureContext(): AudioContext | null {
   return context;
 }
 
+/** Saída do som (contexto e volume geral), ou null sem suporte ou no mudo: os sons longos (signature-audio.ts) tocam por aqui. */
+export function botaoAudioOutput(): { audio: AudioContext; master: GainNode } | null {
+  const audio = ensureContext();
+  return audio && master && !muted ? { audio, master } : null;
+}
+
 /** Chame no primeiro gesto do usuário para destravar o áudio. */
 export function unlockAudio() {
   const audio = ensureContext();
@@ -41,7 +47,7 @@ export function isBotaoMuted() {
   return muted;
 }
 
-function tone(options: {
+export function tone(options: {
   frequency: number;
   endFrequency?: number;
   duration: number;

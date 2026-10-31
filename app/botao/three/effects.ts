@@ -5,6 +5,9 @@
 // partículas instanciadas (um com mistura normal, outro aditivo), um conjunto
 // de anéis no chão e o holofote. No pior caso são 4 draw calls; parado, zero:
 // malha sem nada vivo fica invisível e o three nem troca de programa por ela.
+// A quinta, o raio do Kamehameha, só desenha nos quadros em que alguém pede
+// (fora do modo desempenho). Esfera, aura e brilho de carga são pedidos por
+// quadro que viram quads e partículas dos mesmos pools.
 // Nada projeta sombra e nada aqui lê ou escreve o motor: é só desenho.
 //
 // Os programas continuam compilando antes do primeiro chute: o compile do
@@ -26,7 +29,24 @@ export type EffectsOptions = {
    * Estrela, anéis no chão e poeira continuam: são o retorno do lance.
    */
   performance?: boolean;
+  /**
+   * Canvas transparente por cima da página (palco do criador): o que é aditivo
+   * soma só na cor e não mexe no alfa. Sem isso o alfa acumulado tapa a página
+   * atrás do brilho (uma faixa escura em volta do raio). A partida desenha
+   * opaco e não usa.
+   */
+  overTransparent?: boolean;
 };
+
+/** Aditivo que não escreve alfa (ver `overTransparent`). Mistura não entra na chave do programa: nada recompila. */
+function keepCanvasAlpha(material: THREE.Material) {
+  material.blending = THREE.CustomBlending;
+  material.blendEquation = THREE.AddEquation;
+  material.blendSrc = THREE.SrcAlphaFactor;
+  material.blendDst = THREE.OneFactor;
+  material.blendSrcAlpha = THREE.ZeroFactor;
+  material.blendDstAlpha = THREE.OneFactor;
+}
 
 // ------------------------------------------------------------- atlas
 
@@ -293,6 +313,67 @@ const SPOT_FRAGMENT = /* glsl */ `
       alpha = uBeam * lowView * pow(facing, 1.6) * pow(1.0 - vT, 1.6) * smoothstep(0.0, 0.05, vT);
     }
     gl_FragColor = vec4(uColor, alpha);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    ${ADDITIVE_FOG}
+  }
+`;
+
+// aBeam.x = de lado (-1..1), aBeam.y = ao longo (0 na mao, 1 na ponta).
+// Fita virada para a camera em volta do eixo do raio: a largura aparente e a
+// mesma de qualquer angulo (so afina olhando exatamente ao longo dele). A
+// largura ondula correndo para a frente e a ponta engorda (a cabeca do golpe).
+const BEAM_VERTEX = /* glsl */ `
+  attribute vec2 aBeam;
+  uniform vec3 uStart;
+  uniform vec3 uDir;
+  uniform float uLength;
+  uniform float uWidth;
+  uniform float uTime;
+  varying vec2 vBeam;
+  varying float vDist;
+  #include <fog_pars_vertex>
+  void main() {
+    float along = aBeam.y * uLength;
+    vec4 center = modelMatrix * vec4(uStart + uDir * along, 1.0);
+    vec3 axis = normalize(mat3(modelMatrix) * uDir);
+    vec3 side = cross(axis, cameraPosition - center.xyz);
+    float sideLength = length(side);
+    side = sideLength > 0.0001 ? side / sideLength : vec3(0.0, 1.0, 0.0);
+    float head = smoothstep(0.8, 1.0, aBeam.y);
+    float wave = 1.0 + 0.08 * sin(along * 0.3 - uTime * 32.0);
+    float root = 0.55 + 0.45 * smoothstep(0.0, 0.12, aBeam.y);
+    float halfWidth = 1.35 * uWidth * wave * root * (1.0 + 0.5 * head);
+    vec4 mvPosition = viewMatrix * vec4(center.xyz + side * aBeam.x * halfWidth, 1.0);
+    vBeam = aBeam;
+    vDist = along;
+    gl_Position = projectionMatrix * mvPosition;
+    #include <fog_vertex>
+  }
+`;
+
+// Miolo branco, corpo na cor do golpe e um halo azul fundo ate a borda da fita.
+// A queda fica toda na cor (a borda soma zero); o alfa leva so a intensidade e
+// a nevoa. Faixas de energia correm para a frente; as pontas acendem macio.
+const BEAM_FRAGMENT = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uIntensity;
+  uniform float uTime;
+  varying vec2 vBeam;
+  varying float vDist;
+  #include <fog_pars_fragment>
+  void main() {
+    float u = abs(vBeam.x);
+    float flow = 0.82 + 0.18 * sin(vDist * 0.5 - uTime * 45.0 + u * 4.0);
+    float swirl = 0.6 + 0.4 * sin(vDist * 0.22 - uTime * 20.0 + vBeam.x * 6.0);
+    float core = exp(-u * u * 30.0);
+    float body = exp(-u * u * 6.0) * flow;
+    float halo = exp(-u * u * 1.8) * (1.0 - u) * swirl;
+    vec3 deep = uColor * vec3(0.35, 0.65, 1.0);
+    vec3 rgb = vec3(1.8) * core + uColor * (1.3 * body) + deep * (0.8 * halo);
+    float ends = smoothstep(0.0, 0.05, vBeam.y) * (1.0 - smoothstep(0.93, 1.0, vBeam.y));
+    float k = ends * uIntensity;
+    gl_FragColor = vec4(rgb * max(1.0, k), clamp(k, 0.0, 1.0));
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
     ${ADDITIVE_FOG}
@@ -989,6 +1070,85 @@ class Spotlight {
   }
 }
 
+// ---------------------------------------------------------------- raio
+
+const BEAM_SEGMENTS = 24;
+
+/**
+ * O raio do Kamehameha: uma fita (um draw call, um programa) que só existe no
+ * quadro em que é pedida. Criada no construtor dos efeitos, dentro do grupo:
+ * o compile da cena já leva o programa antes do primeiro gol.
+ */
+class Beam {
+  readonly mesh: THREE.Mesh;
+  private readonly geometry: THREE.BufferGeometry;
+  private readonly material: THREE.ShaderMaterial;
+
+  constructor() {
+    const rows = BEAM_SEGMENTS + 1;
+    const beam = new Float32Array(rows * 2 * 2);
+    const indices: number[] = [];
+    for (let row = 0; row < rows; row += 1) {
+      const along = row / BEAM_SEGMENTS;
+      beam.set([-1, along, 1, along], row * 4);
+      if (row < BEAM_SEGMENTS) {
+        const a = row * 2;
+        indices.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);
+      }
+    }
+    this.geometry = new THREE.BufferGeometry();
+    this.geometry.setIndex(indices);
+    // A posição é toda do shader; o atributo existe só porque o three conta vértices por ele.
+    this.geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(rows * 2 * 3), 3));
+    this.geometry.setAttribute("aBeam", new THREE.BufferAttribute(beam, 2));
+    const uniforms = fogUniforms();
+    uniforms.uStart = { value: new THREE.Vector3() };
+    uniforms.uDir = { value: new THREE.Vector3(0, 0, 1) };
+    uniforms.uLength = { value: 0 };
+    uniforms.uWidth = { value: 1 };
+    uniforms.uTime = { value: 0 };
+    uniforms.uColor = { value: new THREE.Color() };
+    uniforms.uIntensity = { value: 0 };
+    this.material = new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: BEAM_VERTEX,
+      fragmentShader: BEAM_FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      fog: true,
+      side: THREE.DoubleSide,
+      forceSinglePass: true,
+    });
+    this.mesh = new THREE.Mesh(this.geometry, this.material);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 9;
+    this.mesh.matrixAutoUpdate = false;
+    this.mesh.visible = false;
+  }
+
+  show(x: number, y: number, z: number, dx: number, dy: number, dz: number, length: number, width: number, r: number, g: number, b: number, intensity: number, time: number) {
+    const u = this.material.uniforms;
+    (u.uStart.value as THREE.Vector3).set(x, y, z);
+    (u.uDir.value as THREE.Vector3).set(dx, dy, dz);
+    u.uLength.value = length;
+    u.uWidth.value = width;
+    u.uTime.value = time;
+    (u.uColor.value as THREE.Color).setRGB(r, g, b);
+    u.uIntensity.value = intensity;
+    this.mesh.visible = length > 0.5 && intensity > 0.002;
+  }
+
+  hide() {
+    this.mesh.visible = false;
+  }
+
+  dispose() {
+    this.geometry.dispose();
+    this.material.dispose();
+  }
+}
+
 // ------------------------------------------------------------- efeitos
 
 const MAX_MARKS = 6;
@@ -1011,6 +1171,25 @@ const FLASH_GAP = 0.4;
 /** Modo desempenho: a festa chama sparkle a cada ~0,32 s; aceita uma leva a cada ~0,6 s. */
 const SPARKLE_GAP_LITE = 0.55;
 const WHITE = new THREE.Color(1, 1, 1);
+
+// Pedidos por quadro (esfera, aura, brilho de carga): valem só até o próximo update.
+const MAX_ORBS = 4;
+/** x, y, z, tamanho, r, g, b, intensidade. */
+const ORB_STRIDE = 8;
+const MAX_AURAS = 2;
+/** x, z, altura, r, g, b, força. */
+const AURA_STRIDE = 7;
+const MAX_CHARGES = 2;
+/** x, y, z, raio, r, g, b, por segundo. */
+const CHARGE_STRIDE = 8;
+/** Quads avulsos dos pedidos no pool aditivo: 3 por esfera, luz do raio no gramado, corpo do raio leve, aura. */
+const REQUEST_QUADS = 28;
+/** Teto de partículas por segundo da aura (antes do "metade" do celular fraco). */
+const AURA_RATE = 60;
+/** Raio leve (modo desempenho): riscos correndo pela linha no lugar da fita. */
+const BEAM_STREAM_RATE = 120;
+const BEAM_SPARK_RATE = 36;
+const BEAM_TIP_RATE = 30;
 
 export class Effects {
   readonly group = new THREE.Group();
@@ -1056,6 +1235,27 @@ export class Effects {
   private readonly tintA = new THREE.Color();
   private readonly tintB = new THREE.Color();
 
+  // Pedidos do quadro (Bobonline: Kamehameha, Super Saiyajin, meditação).
+  /** A fita do raio; null no modo desempenho (riscos no pool aditivo no lugar). */
+  private readonly beamMesh: Beam | null;
+  private readonly maxQuad: number;
+  private readonly orbs = new Float32Array(MAX_ORBS * ORB_STRIDE);
+  private orbCount = 0;
+  private readonly auras = new Float32Array(MAX_AURAS * AURA_STRIDE);
+  private auraCount = 0;
+  private readonly charges = new Float32Array(MAX_CHARGES * CHARGE_STRIDE);
+  private chargeCount = 0;
+  private beamWanted = false;
+  /** Início, direção (unitária), comprimento, largura, cor e intensidade do raio pedido. */
+  private readonly beamReq = new Float32Array(12);
+  private auraDebt = 0;
+  private chargeDebt = 0;
+  private streamDebt = 0;
+  private sparkDebt = 0;
+  private tipDebt = 0;
+  private readonly flame = new THREE.Color();
+  private readonly ember = new THREE.Color();
+
   constructor(options: EffectsOptions) {
     this.futsal = options.surface === "futsal";
     this.reduced = Boolean(options.reducedMotion);
@@ -1076,11 +1276,22 @@ export class Effects {
     const maxBillboard = this.lite ? MAX_BILLBOARD_LITE : MAX_BILLBOARD;
     // Normal por baixo (poeira, grama, marcas), aditivo por cima (estrelas, brilhos).
     this.soft = new FxPool(this.low ? 128 : 256, MAX_MARKS, this.atlas, false, 4, maxBillboard);
-    this.glow = new FxPool(this.low ? 192 : 384, 0, this.atlas, true, 8, maxBillboard);
+    // Folga no fim do buffer para os quads dos pedidos do quadro (esfera, aura): nunca tomam a vaga de uma partícula.
+    this.glow = new FxPool(this.low ? 192 : 384, REQUEST_QUADS, this.atlas, true, 8, maxBillboard);
+    this.maxQuad = maxBillboard;
     this.rings = new RingSet(this.low ? 8 : 16, this.low ? 48 : 64);
     // Cone só na tela grande e fora do modo desempenho: a poça no gramado fica sempre.
     this.spot = new Spotlight(!this.low);
     this.group.add(this.rings.mesh, this.soft.mesh, this.spot.mesh, this.glow.mesh);
+    // O raio entra no grupo já no construtor: o compile da cena leva o programa junto.
+    this.beamMesh = this.lite ? null : new Beam();
+    if (this.beamMesh) this.group.add(this.beamMesh.mesh);
+    if (options.overTransparent) {
+      for (const child of this.group.children) {
+        const material = (child as THREE.Mesh).material;
+        if (material && !Array.isArray(material) && material.blending === THREE.AdditiveBlending) keepCanvasAlpha(material);
+      }
+    }
   }
 
   // ------------------------------------------------------------ util
@@ -1619,6 +1830,413 @@ export class Effects {
     this.spot.set(point);
   }
 
+  // ------------------------------------------- pedidos por quadro (Bobonline)
+
+  /**
+   * Esfera de energia parada em (x,y,z) neste quadro (no máximo 4 por quadro):
+   * halo aditivo + miolo claro + estrela girando. Peça de novo a cada quadro.
+   */
+  orb(x: number, y: number, z: number, size: number, color: string, intensity: number) {
+    if (this.orbCount >= MAX_ORBS || !(size > 0) || !Number.isFinite(x + y + z + size + intensity)) return;
+    const tint = this.tint(color, 0, this.tintA);
+    const o = this.orbCount * ORB_STRIDE;
+    const d = this.orbs;
+    d[o] = x;
+    d[o + 1] = y;
+    d[o + 2] = z;
+    d[o + 3] = Math.min(size, 40);
+    d[o + 4] = tint.r;
+    d[o + 5] = tint.g;
+    d[o + 6] = tint.b;
+    d[o + 7] = Math.max(0, Math.min(3, intensity));
+    this.orbCount += 1;
+  }
+
+  /**
+   * Raio de (x,y,z) na direção (dirX,dirY,dirZ) neste quadro (um por quadro):
+   * fita com miolo branco, luz no gramado embaixo dele, faíscas pelo caminho e
+   * respingo na ponta. No modo desempenho a fita vira riscos correndo pela linha.
+   */
+  beam(x: number, y: number, z: number, dirX: number, dirY: number, dirZ: number, length: number, width: number, color: string, intensity: number) {
+    const size = Math.hypot(dirX, dirY, dirZ);
+    if (!(size > 1e-4) || !Number.isFinite(x + y + z + size + length + width + intensity)) return;
+    if (!(length > 0.5) || !(width > 0) || !(intensity > 0)) return;
+    const tint = this.tint(color, 0, this.tintA);
+    const r = this.beamReq;
+    r[0] = x;
+    r[1] = y;
+    r[2] = z;
+    r[3] = dirX / size;
+    r[4] = dirY / size;
+    r[5] = dirZ / size;
+    r[6] = Math.min(length, 400);
+    r[7] = Math.min(width, 40);
+    r[8] = tint.r;
+    r[9] = tint.g;
+    r[10] = tint.b;
+    r[11] = Math.min(3, intensity);
+    this.beamWanted = true;
+  }
+
+  /**
+   * Aura de quem está em (x,z) neste quadro: labaredas subindo até ~height
+   * (no máximo ~60 por segundo), faíscas e um brilho em volta do corpo.
+   * strength 0..1. Movimento reduzido: só o brilho parado e um pouco de poeira.
+   */
+  aura(x: number, z: number, height: number, color: string, strength: number) {
+    const s = clamp01(strength);
+    if (this.auraCount >= MAX_AURAS || s <= 0 || !Number.isFinite(x + z + height)) return;
+    const tint = this.tint(color, 0, this.tintA);
+    const o = this.auraCount * AURA_STRIDE;
+    const d = this.auras;
+    d[o] = x;
+    d[o + 1] = z;
+    d[o + 2] = Math.max(10, Math.min(80, height));
+    d[o + 3] = tint.r;
+    d[o + 4] = tint.g;
+    d[o + 5] = tint.b;
+    d[o + 6] = s;
+    this.auraCount += 1;
+  }
+
+  /**
+   * Brilhos convergindo para (x,y,z) de até `radius` de distância neste quadro
+   * (carga de energia), `rate` por segundo. Nada com movimento reduzido.
+   */
+  converge(x: number, y: number, z: number, radius: number, color: string, rate: number) {
+    if (this.reduced || this.chargeCount >= MAX_CHARGES || !(rate > 0) || !Number.isFinite(x + y + z + radius + rate)) return;
+    const tint = this.tint(color, 0.3, this.tintA);
+    const o = this.chargeCount * CHARGE_STRIDE;
+    const d = this.charges;
+    d[o] = x;
+    d[o + 1] = y;
+    d[o + 2] = z;
+    d[o + 3] = Math.max(2, Math.min(80, radius));
+    d[o + 4] = tint.r;
+    d[o + 5] = tint.g;
+    d[o + 6] = tint.b;
+    d[o + 7] = Math.min(120, rate);
+    this.chargeCount += 1;
+  }
+
+  /** Partículas dos pedidos do quadro (antes do passo da física, como qualquer disparo). */
+  private spawnRequests(step: number) {
+    if (step <= 0) return;
+    this.spawnCharges(step);
+    this.spawnAuras(step);
+    if (this.beamWanted) this.spawnBeam(step);
+    else this.streamDebt = this.sparkDebt = this.tipDebt = 0;
+  }
+
+  private spawnCharges(step: number) {
+    if (this.chargeCount === 0) {
+      this.chargeDebt = 0;
+      return;
+    }
+    const d = this.charges;
+    for (let c = 0; c < this.chargeCount; c += 1) {
+      const o = c * CHARGE_STRIDE;
+      this.chargeDebt += d[o + 7] * this.amount * step;
+      const n = this.take(Math.floor(this.chargeDebt));
+      this.chargeDebt -= Math.floor(this.chargeDebt);
+      const radius = d[o + 3];
+      for (let index = 0; index < n; index += 1) {
+        // Direção sorteada (achatada: a carga vem mais dos lados que de cima).
+        const angle = Math.random() * Math.PI * 2;
+        const lift = this.random(-0.6, 0.6);
+        const flat = Math.sqrt(1 - lift * lift);
+        const ux = Math.cos(angle) * flat;
+        const uy = lift;
+        const uz = Math.sin(angle) * flat;
+        const distance = radius * this.random(0.8, 1.15);
+        const life = this.random(0.26, 0.36);
+        const speed = distance / life;
+        const p = this.spec.reset();
+        p.x = d[o] + ux * distance;
+        p.y = d[o + 1] + uy * distance;
+        p.z = d[o + 2] + uz * distance;
+        // Para dentro, com um tico de giro (tangente horizontal): espiralando para a esfera.
+        p.vx = -ux * speed - uz * speed * 0.25;
+        p.vy = -uy * speed;
+        p.vz = -uz * speed + ux * speed * 0.25;
+        p.life = life;
+        p.streak = 0.6;
+        if (index % 2 === 0) {
+          p.cell = CELL_GLINT;
+          p.size0 = 2.6;
+          p.size1 = 0.8;
+        } else {
+          p.cell = CELL_CHIP;
+          p.size0 = p.size1 = 1.1;
+          p.aspect = 3;
+        }
+        this.tintB.setRGB(d[o + 4], d[o + 5], d[o + 6]);
+        p.color(WHITE, 1.6).fadeTo(this.tintB, 1.8);
+        p.alpha = 0.9;
+        p.fadeIn = 0.25;
+        p.fadeOut = 2;
+        this.glow.spawn(p);
+      }
+    }
+  }
+
+  private spawnAuras(step: number) {
+    if (this.auraCount === 0) {
+      this.auraDebt = 0;
+      return;
+    }
+    const d = this.auras;
+    for (let a = 0; a < this.auraCount; a += 1) {
+      const o = a * AURA_STRIDE;
+      const x = d[o];
+      const z = d[o + 1];
+      const height = d[o + 2];
+      const strength = d[o + 6];
+      if (this.reduced) {
+        // Movimento reduzido: nada de labareda, só uma poeirinha no pé de vez em quando.
+        this.auraDebt += 3 * strength * step;
+        if (this.auraDebt >= 1) {
+          this.auraDebt -= 1;
+          this.dust(x, z, 1, 0.4, 0, 0);
+        }
+        continue;
+      }
+      this.auraDebt += AURA_RATE * strength * this.amount * step;
+      const n = this.take(Math.floor(this.auraDebt));
+      this.auraDebt -= Math.floor(this.auraDebt);
+      // Chama puxada para o laranja e a brasa mais ainda: somado ao verde do gramado, o dourado
+      // continua dourado (na cor pura vira limão).
+      this.flame.setRGB(d[o + 3], d[o + 4] * 0.85, d[o + 5] * 0.4).lerp(WHITE, 0.08);
+      this.ember.setRGB(d[o + 3], d[o + 4] * 0.5, d[o + 5] * 0.1);
+      for (let index = 0; index < n; index += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        // Fora da silhueta (dentro do corpo o teste de profundidade esconderia), puxando para dentro ao subir.
+        const ring = this.random(6, 12);
+        const p = this.spec.reset();
+        p.x = x + Math.cos(angle) * ring;
+        p.z = z + Math.sin(angle) * ring;
+        p.y = this.random(0, height * 0.4);
+        p.vx = -Math.cos(angle) * this.random(2, 6);
+        p.vz = -Math.sin(angle) * this.random(2, 6);
+        if (index % 5 === 4) {
+          // Estalo elétrico: risco curto e muito claro.
+          const tilt = this.random(-0.8, 0.8);
+          p.cell = CELL_CHIP;
+          p.streak = 1;
+          p.y = this.random(height * 0.3, height);
+          p.vx = Math.sin(tilt) * 150;
+          p.vy = Math.cos(tilt) * 150;
+          p.vz = this.random(-40, 40);
+          p.life = 0.12;
+          p.size0 = p.size1 = 1;
+          p.aspect = 4;
+          p.color(WHITE, 2.2).fadeTo(this.flame, 1.4);
+        } else if (index % 3 === 2) {
+          // Faísca subindo rápido.
+          p.cell = CELL_GLINT;
+          p.pop = true;
+          p.vy = this.random(90, 140);
+          p.life = this.random(0.35, 0.6);
+          p.size0 = 0.6;
+          p.size1 = this.random(3, 4.5);
+          p.spin = this.random(-3, 3);
+          p.color(WHITE, 1.8).fadeTo(this.flame, 1.5);
+          p.fadeOut = 2;
+        } else {
+          // Labareda: sobe acelerando e estica na vertical, envolvendo o corpo.
+          p.cell = CELL_PUFF;
+          p.streak = 0.5;
+          p.vy = this.random(55, 95);
+          p.gravity = -30;
+          p.drag = 0.4;
+          p.life = this.random(0.5, 0.85);
+          p.size0 = 4.5;
+          p.size1 = this.random(9, 11.5);
+          p.aspect = 1.5;
+          p.color(this.flame, 1.3).fadeTo(this.ember, 1);
+          p.alpha = 0.62;
+          p.fadeIn = 0.12;
+          p.fadeOut = 1.4;
+        }
+        this.glow.spawn(p);
+      }
+    }
+  }
+
+  private spawnBeam(step: number) {
+    const r = this.beamReq;
+    const length = r[6];
+    const width = r[7];
+    this.tintB.setRGB(r[8], r[9], r[10]);
+    const intensity = Math.min(1, r[11]);
+    // Um vetor de lado qualquer, perpendicular ao raio (as faíscas saem em roda).
+    let sideX = -r[5];
+    let sideZ = r[3];
+    const sideLength = Math.hypot(sideX, sideZ) || 1;
+    sideX /= sideLength;
+    sideZ /= sideLength;
+    if (!this.beamMesh) {
+      // Modo desempenho: riscos compridos correndo pela linha fazem o corpo do raio.
+      this.streamDebt += BEAM_STREAM_RATE * this.amount * step;
+      const n = this.take(Math.floor(this.streamDebt));
+      this.streamDebt -= Math.floor(this.streamDebt);
+      const speed = length / 0.2;
+      for (let index = 0; index < n; index += 1) {
+        const offset = this.random(0, 0.3) * length;
+        const p = this.spec.reset();
+        const jitter = this.random(-0.25, 0.25) * width;
+        p.x = r[0] + r[3] * offset + sideX * jitter;
+        p.y = r[1] + r[4] * offset + this.random(-0.2, 0.2) * width;
+        p.z = r[2] + r[5] * offset + sideZ * jitter;
+        p.vx = r[3] * speed;
+        p.vy = r[4] * speed;
+        p.vz = r[5] * speed;
+        p.life = (length - offset) / speed;
+        p.cell = CELL_DISC;
+        p.streak = 1;
+        p.size0 = p.size1 = width * 1.2;
+        p.color(this.tintB, 1.6 * intensity).fadeTo(WHITE, 1.4 * intensity);
+        p.alpha = 0.8 * intensity;
+        p.fadeIn = 0.05;
+        p.fadeOut = 3;
+        this.glow.spawn(p);
+      }
+    }
+    if (this.reduced) return;
+    // Faíscas soltando do corpo do raio, para a frente e para fora.
+    this.sparkDebt += BEAM_SPARK_RATE * this.amount * step;
+    const sparks = this.take(Math.floor(this.sparkDebt));
+    this.sparkDebt -= Math.floor(this.sparkDebt);
+    for (let index = 0; index < sparks; index += 1) {
+      const along = this.random(0.05, 0.95) * length;
+      const angle = Math.random() * Math.PI * 2;
+      const outX = sideX * Math.cos(angle);
+      const outY = Math.sin(angle);
+      const outZ = sideZ * Math.cos(angle);
+      const forward = this.random(60, 180);
+      const out = this.random(30, 80);
+      const p = this.spec.reset();
+      p.x = r[0] + r[3] * along + outX * width * 0.3;
+      p.y = r[1] + r[4] * along + outY * width * 0.3;
+      p.z = r[2] + r[5] * along + outZ * width * 0.3;
+      p.vx = r[3] * forward + outX * out;
+      p.vy = r[4] * forward + outY * out;
+      p.vz = r[5] * forward + outZ * out;
+      p.gravity = 60;
+      p.life = this.random(0.25, 0.45);
+      p.cell = CELL_CHIP;
+      p.streak = 1;
+      p.size0 = p.size1 = 1.2;
+      p.aspect = 3;
+      p.color(WHITE, 1.8).fadeTo(this.tintB, 1.4);
+      p.fadeOut = 1.5;
+      this.glow.spawn(p);
+    }
+    // Respingo de energia (e poeira, se encostar no chão) na ponta.
+    const tipX = r[0] + r[3] * length;
+    const tipY = r[1] + r[4] * length;
+    const tipZ = r[2] + r[5] * length;
+    this.tipDebt += BEAM_TIP_RATE * this.amount * step;
+    const splash = this.take(Math.floor(this.tipDebt));
+    this.tipDebt -= Math.floor(this.tipDebt);
+    for (let index = 0; index < splash; index += 1) {
+      const angle = Math.random() * Math.PI * 2;
+      const lift = this.random(0.1, 0.9);
+      const flat = Math.sqrt(1 - lift * lift);
+      const speed = this.random(50, 130);
+      const p = this.spec.reset();
+      p.x = tipX;
+      p.y = Math.max(1, tipY);
+      p.z = tipZ;
+      p.vx = Math.cos(angle) * flat * speed + r[3] * 40;
+      p.vy = lift * speed;
+      p.vz = Math.sin(angle) * flat * speed + r[5] * 40;
+      p.gravity = 140;
+      p.drag = 1;
+      p.life = this.random(0.25, 0.5);
+      if (index % 2 === 0) {
+        p.cell = CELL_GLINT;
+        p.pop = true;
+        p.size0 = 1;
+        p.size1 = this.random(4, 7);
+        p.color(WHITE, 1.8).fadeTo(this.tintB, 1.5);
+      } else {
+        p.cell = CELL_CHIP;
+        p.streak = 1;
+        p.size0 = p.size1 = 1.3;
+        p.aspect = 3;
+        p.color(WHITE, 1.7).fadeTo(this.tintB, 1.3);
+      }
+      p.fadeOut = 1.6;
+      this.glow.spawn(p);
+    }
+    if (tipY < 10 && splash > 0 && Math.random() < 0.5) this.dust(tipX, tipZ, 1, 0.7, 0, 0);
+  }
+
+  /** Quads avulsos dos pedidos (esfera, luz do raio, corpo do raio leve, aura): por baixo das partículas. */
+  private writeRequestQuads(rx: number, ry: number, rz: number, ux: number, uy: number, uz: number) {
+    const glow = this.glow;
+    const cap = this.maxQuad;
+    const flicker = this.reduced ? 0 : 1;
+    const d = this.orbs;
+    for (let index = 0; index < this.orbCount; index += 1) {
+      const o = index * ORB_STRIDE;
+      const s = d[o + 3];
+      const i = d[o + 7];
+      const pulse = 1 + flicker * (0.08 * Math.sin(this.clock * 37 + index * 1.7) + 0.05 * Math.sin(this.clock * 61 + index));
+      const halo = Math.min(cap, s * 3.6 * pulse);
+      const body = Math.min(cap, s * 1.5 * pulse);
+      const star = Math.min(cap, s * 2.6);
+      const a = Math.min(1, i);
+      // Halo largo, mais fundo que a cor e sem estourar (é ele que diz "azul" de longe), miolo
+      // quase branco e a estrela girando, só tingida.
+      glow.quad(d[o], d[o + 1], d[o + 2], 0, halo, halo, CELL_DISC, 0, d[o + 4] * 0.6 * i * 1.1, d[o + 5] * 0.9 * i * 1.1, d[o + 6] * i * 1.1, 0.65 * a);
+      glow.quad(d[o], d[o + 1], d[o + 2], 0, body, body, CELL_DISC, 0, (0.3 + d[o + 4] * 0.7) * i * 2, (0.3 + d[o + 5] * 0.7) * i * 2, (0.3 + d[o + 6] * 0.7) * i * 2, 0.95 * a);
+      glow.quad(d[o], d[o + 1], d[o + 2], this.clock * 2.2 * flicker + index, star, star, CELL_GLINT, 0, (0.6 + 0.4 * d[o + 4]) * i * 1.6, (0.6 + 0.4 * d[o + 5]) * i * 1.6, (0.6 + 0.4 * d[o + 6]) * i * 1.6, 0.7 * a);
+    }
+    if (this.beamWanted) {
+      const r = this.beamReq;
+      const length = r[6];
+      const intensity = Math.min(1, r[11]);
+      const flatLength = Math.hypot(r[3], r[5]) || 1;
+      const rot = Math.atan2(-r[3] / flatLength, -r[5] / flatLength);
+      // Luz do raio no gramado: mais forte onde ele passa baixo.
+      for (let k = 0; k < 3; k += 1) {
+        const along = length * (0.3 + 0.3 * k);
+        const height = r[1] + r[4] * along;
+        const light = intensity * 0.55 * clamp01(1 - height / 45);
+        if (light <= 0.01) continue;
+        glow.quad(r[0] + r[3] * along, 0.6, r[2] + r[5] * along, rot, r[7] * 4, length * 0.42 * flatLength, CELL_DISC, 1, r[8] * 1.2, r[9] * 1.2, r[10] * 1.2, light);
+      }
+      if (!this.beamMesh) {
+        // Modo desempenho: discos esticados na direção do raio na tela costuram os riscos.
+        const screenX = r[3] * rx + r[4] * ry + r[5] * rz;
+        const screenY = r[3] * ux + r[4] * uy + r[5] * uz;
+        const screen = Math.hypot(screenX, screenY);
+        const angle = Math.atan2(-screenX, screenY);
+        const segment = length / 6;
+        for (let k = 0; k < 6; k += 1) {
+          const along = segment * (k + 0.5);
+          glow.quad(
+            r[0] + r[3] * along, r[1] + r[4] * along, r[2] + r[5] * along, angle,
+            Math.min(cap, r[7] * 1.6), Math.min(cap, Math.max(r[7], segment * screen * 1.5)), CELL_DISC, 0,
+            r[8] * 1.5 * intensity, r[9] * 1.5 * intensity, r[10] * 1.5 * intensity, 0.7 * intensity,
+          );
+        }
+      }
+    }
+    const a = this.auras;
+    for (let index = 0; index < this.auraCount; index += 1) {
+      const o = index * AURA_STRIDE;
+      const strength = a[o + 6];
+      const height = a[o + 2];
+      const wobble = 1 + flicker * 0.1 * Math.sin(this.clock * 23 + index);
+      // Chão aceso em volta dos pés e um brilho alto envolvendo o corpo.
+      glow.quad(a[o], 0.7, a[o + 1], 0, 34 * strength, 34 * strength, CELL_DISC, 1, a[o + 3] * 1.3, a[o + 4] * 1.0, a[o + 5] * 0.6, 0.55 * strength);
+      glow.quad(a[o], height * 0.5, a[o + 1], 0, Math.min(cap, 28 * wobble), Math.min(cap, height * 1.35 * wobble), CELL_DISC, 0, a[o + 3] * 1.5, a[o + 4] * 1.15, a[o + 5] * 0.7, 0.36 * strength * wobble);
+    }
+  }
+
   /**
    * Primeiro uso na GPU antes da partida: sobe o atlas (com mipmaps) e deixa as
    * quatro malhas visíveis só para o quadro descartável do prepare da visão.
@@ -1633,6 +2251,8 @@ export class Effects {
     this.glow.mesh.visible = true;
     this.rings.mesh.visible = true;
     this.spot.mesh.visible = true;
+    // Raio com comprimento e intensidade zero: o three já monta buffers e uniforms dele.
+    if (this.beamMesh) this.beamMesh.mesh.visible = true;
   }
 
   /** dt já vem escalado (câmera lenta). camera para billboard. */
@@ -1641,10 +2261,11 @@ export class Effects {
     const step = Number.isFinite(dt) && dt > 0 ? Math.min(dt, 0.1) : 0;
     this.clock += step;
     this.tokens = Math.min(this.burst, this.tokens + this.rate * step);
+    this.spawnRequests(step);
 
     this.soft.step(step);
     this.glow.step(step);
-    const particles = this.soft.live > 0 || this.glow.live > 0;
+    const particles = this.soft.live > 0 || this.glow.live > 0 || this.beamWanted;
     let rx = 1;
     let ry = 0;
     let rz = 0;
@@ -1695,11 +2316,23 @@ export class Effects {
     this.soft.end();
 
     this.glow.begin();
+    this.writeRequestQuads(rx, ry, rz, ux, uy, uz);
     this.glow.writeParticles(rx, ry, rz, ux, uy, uz);
     this.glow.end();
 
     this.rings.update(step);
     this.spot.update(step);
+
+    if (this.beamMesh) {
+      const r = this.beamReq;
+      if (this.beamWanted) this.beamMesh.show(r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], r[10], r[11], this.clock);
+      else this.beamMesh.hide();
+    }
+    // Pedidos valem um quadro: quem quiser de novo pede de novo.
+    this.orbCount = 0;
+    this.auraCount = 0;
+    this.chargeCount = 0;
+    this.beamWanted = false;
   }
 
   dispose() {
@@ -1707,6 +2340,7 @@ export class Effects {
     this.glow.dispose();
     this.rings.dispose();
     this.spot.dispose();
+    this.beamMesh?.dispose();
     this.atlas.dispose();
     this.group.removeFromParent();
     this.group.clear();

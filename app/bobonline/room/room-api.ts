@@ -1,8 +1,9 @@
 // API do cliente da sala que as telas (B6) consomem (§3.7). Só tipos.
 //
-// T0: o contrato. A classe `BobRoomClient` mora em room/room-controller.ts (B2,
-// L5) e implementa `BobRoomClientApi`; `DuelLaunch` (§5.1) fica aqui até
-// match/duel-controller.ts existir, que pode reexportá-lo.
+// A classe `BobRoomClient` mora em room/room-controller.ts e implementa `BobRoomClientApi`
+// (mais `close()` e, só com perfil de teste, `simulateBackground(ms)`). As fábricas estáticas
+// aceitam um segundo argumento opcional de dependências (testes). `DuelLaunch` (§5.1) mora aqui
+// para as telas não importarem o controlador; match/duel-controller.ts o reexporta.
 
 import type { BotaoCpuBrain, BotaoMatchLink, BotaoMatchRestore, BotaoSideControl } from "../../botao/match-link";
 import type { BotaoMatchSetup, BotaoSide } from "../../botao/types";
@@ -45,7 +46,8 @@ export type DuelLaunch = {
  * acrescenta `transportFactory?: TransportFactory` (só testes), que mora em net/transport.ts.
  */
 export type CreateRoomArgs = { team: BobTeam; nickname: string; settings: RoomSettings; password?: string };
-export type JoinRoomArgs = { code: string; team: BobTeam; nickname: string; password?: string; asSpectator?: boolean };
+/** `hostId`: o anfitrião que veio no link (&h=); procurando a sala, só a resposta dele vale no começo (§3.7). */
+export type JoinRoomArgs = { code: string; team: BobTeam; nickname: string; password?: string; asSpectator?: boolean; hostId?: string };
 /** Segundo argumento de `BobRoomClient.resume(saved: SavedSession, args)`. */
 export type ResumeRoomArgs = { team: BobTeam; nickname: string };
 

@@ -886,6 +886,35 @@ const ARM_ENVELOPE_PULL: Arm = [-0.75, -0.39, 0.22, -1.51];
 const ARM_ENVELOPE_LOW: Arm = [-0.07, -0.49, 0.17, -1.27];
 /** Braço estendido para o lado, apresentando o vencedor. */
 const ARM_PRESENT: Arm = [-0.09, -0.28, 1.35, -0.48];
+// Bobonline (mesmo cálculo: palma no alvo, braço fora do corpo e da cabeça).
+/** Kamehameha: palmas em concha na frente da barriga; o giro do tronco leva as mãos para o lado do quadril. */
+const ARM_KAME_CUP: Arm = [-0.84, -1.9, 0, -1.08];
+/** Carregando: palmas a ~4 px uma da outra, o espaço da esfera de energia. */
+const ARM_KAME_CHARGE: Arm = [-1.49, -1.93, -0.56, -1.23];
+/** Disparo: palmas empurradas para a frente, na altura do peito. */
+const ARM_KAME_PUSH: Arm = [-1.94, -1.57, -0.5, -0.83];
+/** Super Saiyajin: punhos fechados rente à cintura, cotovelos para trás. */
+const ARM_SSJ_FIST: Arm = [0.33, -0.55, 0.33, -1.21];
+/** Gritando: os punhos descem e abrem, braços tensos. */
+const ARM_SSJ_POWER: Arm = [0.47, -0.66, 0.64, -0.96];
+/** A explosão: braços jogados para fora e para baixo. */
+const ARM_SSJ_BURST: Arm = [-0.15, 0.51, 0.6, -0.6];
+/** Bíceps duplo: braço na horizontal para fora, antebraço para cima. */
+const ARM_SSJ_FLEX: Arm = [-1.37, -0.06, 1.56, -1.91];
+/** Meditação: mãos apoiadas nas coxas, perto dos joelhos (o braço curto não chega mais longe). */
+const ARM_MEDITATE: Arm = [0.26, -0.94, 0.39, -0.54];
+/** "Não tô ouvindo": mão em concha atrás da orelha, cotovelo no alto. */
+const ARM_CUP_EAR: Arm = [-1.74, -0.45, 1.41, -2.21];
+/** A outra mão aberta para a torcida, chamando ("mais alto!"). */
+const ARM_CUP_CALL: Arm = [-0.18, 0.13, 0.64, -1.76];
+/** Pistoleiro: braço apontado para a frente, um pouco para cima. */
+const ARM_GUN_AIM: Arm = [-1.95, -0.28, -0.12, -0.22];
+/** Assopra a ponta do dedo: a mão na frente da boca. */
+const ARM_GUN_BLOW: Arm = [-1.6, -1.04, 0, -1.3];
+/** Sacudindo as mãos antes da cobrança: braços quase soltos ao lado do corpo. */
+const ARM_SHAKE: Arm = [0.04, -0.38, 0.21, -0.4];
+/** Inclinado encarando o goleiro: braços soltos, um pouco à frente. */
+const ARM_FOCUS_READY: Arm = [-0.25, 0, 0.18, -0.35];
 
 function putL(out: Pose, a: Arm, b: Arm = a, k = 0) {
   out.shLX = mix(a[0], b[0], k);
@@ -931,6 +960,22 @@ function armOff(out: Pose, side: number, a: Arm, b: Arm = a, k = 0) {
   else putR(out, a, b, k);
 }
 
+/** Puxa o braço esquerdo, da pose em que está, em direção a `a` (convenção do lado esquerdo) por `k`. */
+function towardL(out: Pose, a: Arm, k: number) {
+  out.shLX = mix(out.shLX, a[0], k);
+  out.shLY = mix(out.shLY, a[1], k);
+  out.shLZ = mix(out.shLZ, a[2], k);
+  out.elL = mix(out.elL, a[3], k);
+}
+
+/** O mesmo no braço direito (espelho: y e z trocam de sinal). */
+function towardR(out: Pose, a: Arm, k: number) {
+  out.shRX = mix(out.shRX, a[0], k);
+  out.shRY = mix(out.shRY, -a[1], k);
+  out.shRZ = mix(out.shRZ, -a[2], k);
+  out.elR = mix(out.elR, a[3], k);
+}
+
 /**
  * Entrada suave de um laço que já começa no meio (palmas, dancinha): puxa os
  * dois braços para o descanso por `1 - k`, sem salto quando o laço assume.
@@ -955,6 +1000,17 @@ function shiftHips(out: Pose, x: number) {
   out.bodyX = x;
   out.hipLZ -= x / LEG_LENGTH;
   out.hipRZ -= x / LEG_LENGTH;
+}
+
+/**
+ * Quanto o quadril desce (px) com as duas pernas nesses ângulos e a chuteira
+ * plana no chão: base larga e agachamentos sem pé afundando nem flutuando.
+ * Coxa 5,6 e canela 4,3 (o pé fica igual); hipX < 0 coxa à frente, knee > 0 dobra.
+ */
+function legDrop(hipX: number, hipZ: number, knee: number) {
+  const cz = Math.cos(hipZ);
+  const cx = Math.cos(hipX);
+  return 9.9 - (5.6 * cz * cx + 4.3 * (Math.cos(knee) * cz * cx - Math.sin(knee) * Math.sin(hipX)));
 }
 
 /** De pé, relaxado, respirando. */
@@ -1008,7 +1064,15 @@ export type FigureAction =
   | "bow"
   | "presenterEnvelope"
   | "presenterGesture"
-  | "sadClap";
+  | "sadClap"
+  // Bobonline: comemorações de assinatura (mesmos ids do criador) e o drama do pênalti no 3D.
+  | "kamehameha"
+  | "superSaiyan"
+  | "meditate"
+  | "cupEar"
+  | "fingerGuns"
+  | "penaltyFocus"
+  | "keeperTaunt";
 
 /** Tiques de quem está parado esperando a vez (internos). */
 type FidgetId = "lookAround" | "stretch" | "legSwing" | "fixSock" | "bounceToes" | "tapBoot" | "neckRoll";
@@ -1046,6 +1110,8 @@ type ActionDef = {
   mirror?: boolean;
   /** Pancadas no chão (instante, força 0..1) para o takeLanding. */
   impacts?: ReadonlyArray<readonly [number, number]>;
+  /** Marcas de tempo (instante, nome) que os efeitos leem no takeCues (esfera, raio, aura...). */
+  cues?: ReadonlyArray<readonly [number, string]>;
   sample: (t: number, out: Pose, ctx: ActionContext) => void;
 };
 
@@ -1212,6 +1278,22 @@ const ENVELOPE_LOOP = 3.4;
 const ENVELOPE_READ: Track = [0, 0.36, 0.95, 0.36, 1.6, 0.28, 1.9, -0.04, 2.9, -0.04, 3.2, 0.36, 3.4, 0.36];
 const ENVELOPE_GLANCE: Track = [0, 0, 1.75, 0, 2, 0.42, 2.6, 0.42, 2.85, 0, 3.4, 0];
 const ENVELOPE_OPEN: Track = [0, 0, 0.8, 0, 1.05, 1, 1.35, 1, 1.6, 0, 3.4, 0];
+
+/**
+ * Tempos do Kamehameha (s desde o começo da ação): base, carga (a esfera
+ * cresce), disparo (o raio sai), fim do raio e fim do apagar. Os efeitos e a
+ * câmera da festa usam os mesmos números.
+ */
+export const KAME = { CHARGE: 0.25, FIRE: 1.05, BEAM_END: 1.8, FADE_END: 2.1 } as const;
+
+/** Liga em `a` (rampa de 0,08 s) e desliga até `b` (rampa de 0,1 s). */
+const window01 = (t: number, a: number, b: number) => smooth((t - a) / 0.08) * (1 - smooth((t - (b - 0.1)) / 0.1));
+
+// --- pistoleiro: o segundo tiro sai 0,43 s depois do primeiro (o clarão do impacto aceita um a cada 0,4 s).
+const GUN_SECOND = 0.78;
+
+// --- Super Saiyajin: agacha, treme gritando, explode num pulinho e fica no bíceps duplo.
+const SSJ_BURST = 0.9;
 
 const ACTIONS: Record<ActionId, ActionDef> = {
   // ----------------------------------------------------- comemorações
@@ -1658,6 +1740,233 @@ const ACTIONS: Record<ActionId, ActionDef> = {
       o.neckZ = -0.1 * sway;
     },
   },
+  // ------------------------------------------- Bobonline (assinaturas)
+  kamehameha: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t < 0.95 ? "grit" : "shout"),
+    look: 0,
+    // O destro carrega do lado direito; o canhoto, espelhado, do esquerdo.
+    mirror: true,
+    impacts: [[0.12, 0.3], [KAME.FIRE + 0.03, 0.55]],
+    cues: [[KAME.CHARGE, "kame-charge"], [KAME.FIRE, "kame-fire"], [KAME.BEAM_END, "kame-end"]],
+    sample(t, o) {
+      // Base larga e baixa; na carga afunda mais; no disparo o tronco desfaz o giro e empurra.
+      const settle = smooth(t / 0.22);
+      const charge = smooth(seg(t, KAME.CHARGE, KAME.FIRE - 0.08));
+      const thrust = smooth(seg(t, KAME.FIRE - 0.04, KAME.FIRE + 0.08));
+      const firing = window01(t, KAME.FIRE, KAME.BEAM_END + 0.2);
+      const relax = smooth(seg(t, KAME.FADE_END, KAME.FADE_END + 0.6));
+      let hipX = mix(-0.55, -0.72, charge);
+      let knee = mix(1.1, 1.42, charge);
+      hipX = mix(hipX, -0.6, thrust);
+      knee = mix(knee, 1.15, thrust);
+      hipX = mix(hipX, -0.3, relax) * settle;
+      knee = mix(knee, 0.6, relax) * settle;
+      const hipZ = 0.04 + 0.22 * settle;
+      // O tranco do disparo empurra o corpo para trás (os pés ficam).
+      o.bodyZ = -1.1 * thrust * (1 - smooth(seg(t, KAME.FIRE + 0.08, KAME.FIRE + 0.5)));
+      o.hipLX = o.hipRX = hipX + o.bodyZ / LEG_LENGTH;
+      o.hipLZ = hipZ;
+      o.hipRZ = -hipZ;
+      o.kneeL = o.kneeR = knee;
+      const tremble = charge * (1 - thrust);
+      o.bodyY = -legDrop(hipX, hipZ, knee) + 0.12 * Math.sin(t * 43) * tremble;
+      o.bodyX = 0.14 * Math.sin(t * 37) * tremble;
+      // Mãos em concha na frente da barriga; o giro do tronco leva tudo para o lado do quadril.
+      o.hipsY = settle * mix(-0.25, 0.05, thrust);
+      o.torsoY = settle * mix(-0.55, 0.1, thrust) * (1 - 0.6 * relax);
+      o.torsoX = settle * (0.06 + 0.06 * charge) * (1 - thrust) + 0.12 * thrust * (1 - relax);
+      o.torsoZ = 0.08 * settle * (1 - thrust);
+      putL(o, ARM_REST, ARM_KAME_CUP, smooth(t / 0.2));
+      putR(o, ARM_REST, ARM_KAME_CUP, smooth(t / 0.2));
+      const open = smooth(seg(t, KAME.CHARGE, KAME.CHARGE + 0.3));
+      if (open > 0) {
+        putL(o, ARM_KAME_CUP, ARM_KAME_CHARGE, open);
+        putR(o, ARM_KAME_CUP, ARM_KAME_CHARGE, open);
+      }
+      if (thrust > 0) {
+        putL(o, ARM_KAME_CHARGE, ARM_KAME_PUSH, thrust);
+        putR(o, ARM_KAME_CHARGE, ARM_KAME_PUSH, thrust);
+      }
+      if (relax > 0) {
+        putL(o, ARM_KAME_PUSH, ARM_REST, relax * 0.85);
+        putR(o, ARM_KAME_PUSH, ARM_REST, relax * 0.85);
+      }
+      // Carregando, os braços tremem; segurando o raio, sacodem.
+      const strain = 0.025 * Math.sin(t * 40) * tremble + 0.035 * Math.sin(t * 53) * firing;
+      o.shLX += strain;
+      o.shRX -= strain;
+      o.shLZ += 0.6 * strain;
+      o.shRZ += 0.6 * strain;
+      o.elL += 0.04 * Math.sin(t * 61) * firing;
+      o.elR -= 0.04 * Math.sin(t * 59) * firing;
+      // Olha para onde o raio vai, mesmo com o tronco torcido.
+      o.neckY = -(o.hipsY + o.torsoY) * 0.85;
+      o.neckX = 0.12 * settle * (1 - thrust) - 0.06 * thrust;
+    },
+  },
+  superSaiyan: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t < 0.3 ? "grit" : "shout"),
+    look: 0,
+    impacts: [[0.1, 0.25]],
+    cues: [[0.3, "ssj-start"], [SSJ_BURST, "ssj-burst"]],
+    sample(t, o) {
+      const crouch = smooth(t / 0.25);
+      const power = smooth(seg(t, 0.3, 0.62));
+      const burst = smooth(seg(t, SSJ_BURST - 0.02, SSJ_BURST + 0.08));
+      const flex = smooth(seg(t, 1.12, 1.42));
+      // Base larga; na explosão um pulinho (as pernas esticam no ar) e volta mais alto.
+      const hop = t > SSJ_BURST && t < SSJ_BURST + 0.2 ? (t - SSJ_BURST) / 0.2 : -1;
+      const air = hop >= 0 ? Math.sin(Math.PI * hop) : 0;
+      let hipX = mix(-0.48, -0.22, burst) * crouch;
+      let knee = mix(1, 0.42, burst) * crouch;
+      hipX = mix(hipX, -0.08, air);
+      knee = mix(knee, 0.15, air);
+      const hipZ = 0.04 + 0.26 * crouch;
+      o.hipLX = o.hipRX = hipX;
+      o.hipLZ = hipZ;
+      o.hipRZ = -hipZ;
+      o.kneeL = o.kneeR = knee;
+      o.bodyY = -legDrop(hipX, hipZ, knee) + (hop >= 0 ? 20 * hop * (1 - hop) : 0);
+      putL(o, ARM_REST, ARM_SSJ_FIST, crouch);
+      putR(o, ARM_REST, ARM_SSJ_FIST, crouch);
+      if (power > 0) {
+        putL(o, ARM_SSJ_FIST, ARM_SSJ_POWER, power);
+        putR(o, ARM_SSJ_FIST, ARM_SSJ_POWER, power);
+      }
+      if (burst > 0) {
+        putL(o, ARM_SSJ_POWER, ARM_SSJ_BURST, burst);
+        putR(o, ARM_SSJ_POWER, ARM_SSJ_BURST, burst);
+      }
+      if (flex > 0) {
+        putL(o, ARM_SSJ_BURST, ARM_SSJ_FLEX, flex);
+        putR(o, ARM_SSJ_BURST, ARM_SSJ_FLEX, flex);
+      }
+      // Grito: o corpo inteiro treme cada vez mais até explodir; depois fica um zumbido.
+      const strain = power * (1 - burst);
+      const shake = (0.02 + 0.05 * strain) * strain + 0.008 * burst;
+      o.shLZ += shake * Math.sin(t * 47);
+      o.shRZ -= shake * Math.sin(t * 43);
+      o.elL += shake * Math.sin(t * 51);
+      o.elR += shake * Math.sin(t * 49);
+      o.bodyX = 0.25 * strain * Math.sin(t * 39);
+      // Bíceps duplo pulsando.
+      const squeeze = Math.pow(Math.max(0, Math.sin(TAU * 1.2 * (t - 1.42))), 2) * flex;
+      o.elL -= 0.2 * squeeze;
+      o.elR -= 0.2 * squeeze;
+      o.torsoX = 0.28 * crouch * (1 - power) - 0.14 * strain - 0.06 * burst;
+      o.torsoY = 0.08 * Math.sin(TAU * 0.5 * t) * flex;
+      o.neckX = 0.3 * crouch * (1 - power) - 0.55 * strain - 0.12 * burst;
+      o.neckY = -0.5 * o.torsoY;
+    },
+  },
+  meditate: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t < 0.35 ? null : "blink"),
+    look: 0,
+    cues: [[0.8, "zen"]],
+    sample(t, o) {
+      // Senta de pernas cruzadas (joelhos para fora, pés juntos na frente) e flutua.
+      const legs = smooth(t / 0.38);
+      const down = smooth((t - 0.06) / 0.4);
+      const hands = smooth((t - 0.12) / 0.4);
+      const hipX = -1.2 * legs;
+      const hipZ = 1 * legs;
+      const knee = 2.5 * legs;
+      o.hipLX = o.hipRX = hipX;
+      o.hipLZ = hipZ;
+      o.hipRZ = -hipZ;
+      o.kneeL = o.kneeR = knee;
+      // Agacha com os pés no chão e senta (o mesmo -9,8 do sentar no gramado, um tico acima).
+      const zen = smooth((t - 0.8) / 0.5);
+      const breath = Math.sin(TAU * 0.4 * (t - 0.8)) * zen;
+      const float = smooth((t - 0.9) / 1.2);
+      o.bodyY = -Math.max(legDrop(hipX, hipZ, knee), 9.6 * down) + 3 * float + 0.35 * breath * float;
+      putL(o, ARM_REST, ARM_MEDITATE, hands);
+      putR(o, ARM_REST, ARM_MEDITATE, hands);
+      // Respiração lenta: o peito sobe, os ombros acompanham.
+      o.torsoX = 0.1 * hands - 0.025 * breath;
+      o.shLZ += 0.02 * breath;
+      o.shRZ -= 0.02 * breath;
+      o.neckX = 0.1 * hands + 0.03 * breath;
+    },
+  },
+  cupEar: {
+    duration: 0,
+    body: "upper",
+    mood: (t) => (t < 0.45 ? "surprised" : "shout"),
+    look: 0,
+    mirror: true,
+    cues: [[0.1, "ear"], [1.7, "ear"]],
+    sample(t, o) {
+      // Mão boa em concha atrás da orelha; a outra chama a torcida.
+      const k = smooth(t / 0.3);
+      putR(o, ARM_REST, ARM_CUP_EAR, k);
+      putL(o, ARM_REST, ARM_CUP_CALL, k);
+      // A cada 0,8 s inclina para a arquibancada ("mais alto!") e a outra mão chama de novo.
+      const lean = Math.pow(Math.max(0, Math.sin(TAU * 1.25 * Math.max(0, t - 0.3))), 2) * smooth((t - 0.25) / 0.3);
+      o.elL -= 0.45 * lean;
+      o.shLX -= 0.15 * lean;
+      o.torsoZ = 0.1 * k + 0.1 * lean;
+      o.torsoX = -0.04 * k + 0.05 * lean;
+      o.torsoY = -0.12 * k;
+      // O rosto vira um pouco: a orelha da mão em concha aponta para a frente.
+      o.neckY = 0.3 * k;
+      o.neckZ = -0.08 * k - 0.06 * lean;
+      o.neckX = -0.08 * k;
+      o.hipLZ = 0.06;
+      o.hipRZ = -0.06;
+      o.kneeL = o.kneeR = 0.08 + 0.1 * lean;
+      o.bodyY -= 0.25 * lean;
+    },
+  },
+  fingerGuns: {
+    duration: 0,
+    body: "upper",
+    mood: (t) => ((t > 0.33 && t < 0.55) || (t > GUN_SECOND - 0.02 && t < GUN_SECOND + 0.2) ? "shout" : t > 1.02 && t < 1.38 ? "blink" : "normal"),
+    look: 0,
+    mirror: true,
+    cues: [[0.35, "bang"], [GUN_SECOND, "bang"]],
+    sample(t, o) {
+      const aim = smooth(t / 0.26);
+      const blow = smooth(seg(t, 0.98, 1.16));
+      const holster = smooth(seg(t, 1.4, 1.68));
+      // A mão boa (direita; o espelho cuida do canhoto) atira primeiro, a outra depois.
+      const kick1 = (t >= 0.35 ? Math.exp(-(t - 0.35) * 11) : 0) * (1 - blow);
+      const kick2 = (t >= GUN_SECOND ? Math.exp(-(t - GUN_SECOND) * 11) : 0) * (1 - blow);
+      if (holster > 0) {
+        putR(o, ARM_GUN_BLOW, ARM_HIPS, holster);
+        putL(o, ARM_HIPS);
+      } else if (blow > 0) {
+        putR(o, ARM_GUN_AIM, ARM_GUN_BLOW, blow);
+        putL(o, ARM_GUN_AIM, ARM_HIPS, blow);
+      } else {
+        putR(o, ARM_REST, ARM_GUN_AIM, aim);
+        putL(o, ARM_REST, ARM_GUN_AIM, aim);
+      }
+      // Coice: o antebraço pula para cima e o tronco gira um tico.
+      o.shRX -= 0.3 * kick1;
+      o.elR -= 0.3 * kick1;
+      o.shLX -= 0.3 * kick2;
+      o.elL -= 0.3 * kick2;
+      o.torsoY = 0.1 * (kick2 - kick1);
+      o.torsoX = -0.06 * (kick1 + kick2) - 0.04 * holster;
+      // Assopra a ponta do dedo olhando para ela; guardou as armas: queixo para cima, gingado.
+      const sway = Math.sin(TAU * 0.8 * t) * holster;
+      o.hipsY = 0.06 * sway;
+      o.torsoZ = 0.04 * sway;
+      o.neckY = -0.22 * blow * (1 - holster) - 0.04 * sway;
+      o.neckX = 0.15 * blow * (1 - holster) - 0.12 * holster;
+      o.hipLZ = 0.1 * aim;
+      o.hipRZ = -0.1 * aim;
+      o.kneeL = o.kneeR = 0.1 + 0.12 * (kick1 + kick2);
+      o.bodyY -= 0.12 + 0.3 * (kick1 + kick2);
+    },
+  },
   // ------------------------------------------------- cerimônia (de terno)
   applaud: {
     duration: 0,
@@ -1980,6 +2289,75 @@ const ACTIONS: Record<ActionId, ActionDef> = {
         o.torsoX += 0.05 * Math.sin(TAU * 0.2 * t);
         o.neckY = 0.15 * Math.sin(TAU * 0.13 * t);
       }
+    },
+  },
+  // ------------------------------------------- pênalti (drama do 3D)
+  penaltyFocus: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t < 1.3 ? "normal" : "grit"),
+    // A cabeça segue o goleiro (quem chama passa `look`).
+    look: 0.85,
+    sample(t, o) {
+      stand(o, t);
+      // Mãos na cintura, respira fundo, sacode as mãos e se inclina encarando o goleiro.
+      const shake = window01(t, 0.95, 1.35);
+      const lean = smooth(seg(t, 1.3, 1.62));
+      putL(o, ARM_REST, ARM_HIPS, smooth(t / 0.4));
+      putR(o, ARM_REST, ARM_HIPS, smooth(t / 0.4));
+      if (shake > 0) {
+        putL(o, ARM_HIPS, ARM_SHAKE, shake);
+        putR(o, ARM_HIPS, ARM_SHAKE, shake);
+        const flap = Math.sin(TAU * 9 * t) * shake;
+        o.elL += 0.25 * flap;
+        o.elR -= 0.25 * flap;
+        o.shLZ += 0.08 * flap;
+        o.shRZ += 0.08 * flap;
+        o.bodyY += 0.3 * Math.abs(Math.sin(TAU * 4 * t)) * shake;
+      }
+      if (lean > 0) {
+        towardL(o, ARM_FOCUS_READY, lean);
+        towardR(o, ARM_FOCUS_READY, lean);
+      }
+      // Respiração funda (0,45 Hz): o peito e os ombros sobem; inclinado, fica mais curta.
+      const breath = Math.sin(TAU * 0.45 * t) * (1 - 0.6 * lean);
+      o.torsoX += -0.04 * breath + 0.2 * lean;
+      o.bodyY += 0.12 * breath;
+      o.shLZ += 0.04 * breath;
+      o.shRZ -= 0.04 * breath;
+      const hipX = -0.14 * lean;
+      const knee = 0.3 * lean;
+      o.hipLX = o.hipRX = hipX;
+      o.hipLZ = 0.06;
+      o.hipRZ = -0.06;
+      o.kneeL = o.kneeR = knee;
+      o.bodyY -= legDrop(hipX, 0.06, knee);
+      // Inclinado para a frente, o queixo sobe: os olhos ficam no goleiro.
+      o.neckX = 0.04 * breath - 0.22 * lean;
+    },
+  },
+  keeperTaunt: {
+    duration: 0,
+    // Por cima da base do goleiro: o passinho de lado (pernas) continua.
+    body: "overlay",
+    mood: "grit",
+    look: 0.6,
+    sample(t, o, c) {
+      const k = smooth(t / 0.3);
+      const wave = Math.sin(TAU * 1.6 * t);
+      const b = c.base;
+      // Braços bem abertos, sacudindo: "bate aqui se tiver coragem".
+      o.shLX = mix(b.shLX, -0.55 - 0.3 * wave, k);
+      o.shLY = mix(b.shLY, 0, k);
+      o.shLZ = mix(b.shLZ, 1.4 + 0.18 * wave, k);
+      o.elL = mix(b.elL, -0.5 - 0.35 * wave, k);
+      o.shRX = mix(b.shRX, -0.55 + 0.3 * wave, k);
+      o.shRY = mix(b.shRY, 0, k);
+      o.shRZ = mix(b.shRZ, -1.4 + 0.18 * wave, k);
+      o.elR = mix(b.elR, -0.5 + 0.35 * wave, k);
+      o.bodyY = b.bodyY + 0.55 * Math.abs(wave) * k;
+      o.torsoX = b.torsoX - 0.12 * k;
+      o.neckX = b.neckX + 0.06 * k;
     },
   },
   // -------------------------------------------------------------- tiques
@@ -2339,6 +2717,8 @@ type WeightKey = "idle" | "ready" | "aim" | "run" | "pushed" | "celebrate" | "sc
 
 const ACTION_IN = 0.12;
 const ACTION_OUT = 0.18;
+/** Marcas de tempo guardadas para quem ainda não leu (takeCues). */
+const CUE_LIMIT = 8;
 const KICK_STRIKE = 0.5;
 const KICK_BLOCK = 0.32;
 const BRAKE_TIME = 0.4;
@@ -2504,6 +2884,11 @@ export class PlayerFigure {
   /** Rosto pedido de fora no último `update` (null = o de sempre). */
   private forcedMood: FaceMood | null = null;
   private reachKit: ReachKit | null = null;
+  /** Marcas de tempo das ações que passaram desde o último takeCues (no máximo CUE_LIMIT). */
+  private readonly cueQueue: string[] = [];
+  private readonly cueOut: string[] = [];
+  /** Ponto no centro da cabeça (criado no primeiro headAnchor). */
+  private headPoint: THREE.Object3D | null = null;
 
   constructor(options: FigureOptions) {
     const seed = options.seed ?? options.number * 7919;
@@ -2721,6 +3106,24 @@ export class PlayerFigure {
     return value;
   }
 
+  /**
+   * Marcas de tempo (`cues` da ação) que passaram desde a última leitura, na
+   * ordem. Devolve sempre a mesma lista, esvaziada e reescrita a cada chamada
+   * (como o takeLanding: quem lê consome).
+   */
+  takeCues(): readonly string[] {
+    const out = this.cueOut;
+    out.length = 0;
+    for (let index = 0; index < this.cueQueue.length; index += 1) out.push(this.cueQueue[index]);
+    this.cueQueue.length = 0;
+    return out;
+  }
+
+  /** 1 destro, -1 canhoto: qual mão é a "boa" (as ações espelhadas trocam o lado). */
+  get handedness(): number {
+    return this.side;
+  }
+
   /** Todas as texturas do boneco (para subir para a GPU antes de precisar). */
   textureList(): THREE.Texture[] {
     return this.allTextures;
@@ -2754,6 +3157,22 @@ export class PlayerFigure {
       anchor.position.set(0, HAND_ANCHOR_Y, 0);
       (side === "left" ? this.elbowL : this.elbowR).add(anchor);
       this.anchors[side] = anchor;
+    }
+    return anchor;
+  }
+
+  /**
+   * Centro da cabeça, filho do osso do pescoço (como o handAnchor): para um
+   * brilho que acompanha a cabeça em qualquer pose (a aura do Super Saiyajin).
+   */
+  headAnchor(): THREE.Object3D {
+    let anchor = this.headPoint;
+    if (!anchor) {
+      anchor = new THREE.Object3D();
+      anchor.name = "head";
+      anchor.position.set(0, 4, 0);
+      this.neck.add(anchor);
+      this.headPoint = anchor;
     }
     return anchor;
   }
@@ -3322,6 +3741,17 @@ export class PlayerFigure {
         for (let index = 0; index < impacts.length; index += 1) {
           const impact = impacts[index];
           if (before < impact[0] && current.t >= impact[0]) this.land(impact[1]);
+        }
+      }
+      const cues = def.cues;
+      if (cues) {
+        for (let index = 0; index < cues.length; index += 1) {
+          const cue = cues[index];
+          if (before < cue[0] && current.t >= cue[0]) {
+            // Ninguém lendo (boneco fora da festa): guarda só as últimas.
+            if (this.cueQueue.length >= CUE_LIMIT) this.cueQueue.shift();
+            this.cueQueue.push(cue[1]);
+          }
         }
       }
     }

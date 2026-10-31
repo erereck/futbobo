@@ -456,7 +456,8 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
   const selectedCpuFormation = managerMode
     ? formationByIndex(rng.int(0, 5))
     : formation;
-  const userSlot = managerMode
+  const squads = usesSquads(setup) ? (setup.squads ?? null) : null;
+  const userSlot = managerMode || squads
     ? -1
     : slotIndexForPosition(selectedUserFormation, setup.player.position);
 
@@ -505,6 +506,29 @@ export function createMatch(setup: BotaoMatchSetup): BotaoMatchState {
           slot,
         }),
       );
+    }
+  } else if (squads) {
+    // Bobonline: os cinco botões de cada lado vêm do time salvo, com nome,
+    // número e atributos próprios. Nenhuma chamada nova à rng.
+    for (const side of ["user", "cpu"] as const) {
+      const list = squads[side] ?? [];
+      for (let slot = 0; slot < formation.slots.length; slot += 1) {
+        const player = list[slot] ?? list[0] ?? setup.player;
+        bodies.push(
+          createDisc({
+            id: `${side}-${slot}`,
+            side,
+            number: player.number,
+            label: player.name,
+            power: player.power ?? (side === "user" ? matePower : cpuPower),
+            control:
+              player.control ?? (side === "user" ? mateControl : cpuControl),
+            isUserPlayer: false,
+            playerId: player.id,
+            slot,
+          }),
+        );
+      }
     }
   } else {
     const teammateNumbers = persistentSquadNumbers(
@@ -802,7 +826,7 @@ export function placeTeams(state: BotaoMatchState) {
   const cpuFormation = formationByIndex(state.formationIndex.cpu);
   state.formationId.user = userFormation.id;
   state.formationId.cpu = cpuFormation.id;
-  state.userSlot = state.setup.managerMode
+  state.userSlot = state.setup.managerMode || usesSquads(state.setup)
     ? -1
     : slotIndexForPosition(userFormation, state.setup.player.position);
   placeSide(state, "user", userFormation, state.userSlot);
@@ -1165,7 +1189,7 @@ function registerGoal(
   // Sem nome inventado: quem não é você é identificado pela camisa e pelo time.
   const nameOf = (body: BotaoBody | null) => {
     if (!body) return "bate-rebate";
-    if (body.isUserPlayer) return body.label;
+    if (body.isUserPlayer || usesSquads(state.setup)) return body.label;
     const team =
       body.side === "user" ? state.setup.userTeam : state.setup.cpuTeam;
     return `${team.shortName} ${body.label}`;
@@ -1596,14 +1620,9 @@ export function confirmPenaltyOrder(
 }
 
 // ---------------------------------------------------------------------------
-// Bobonline (contrato T0): assinaturas reais, corpos no L1 (B1)
+// Bobonline: ações que chegam pela rede (o mesmo caminho em todo aparelho).
+// Nenhum modo atual chama estas funções.
 // ---------------------------------------------------------------------------
-
-/** T0: o contrato existe para os outros módulos compilarem; nenhum modo atual chama isto. */
-function pendingT0(name: string, ...args: unknown[]): never {
-  void args;
-  throw new Error(`${name}: não implementado (T0)`);
-}
 
 /**
  * Bobonline: cada lado entrega a fila inteira (ids dos seus cinco botões).
@@ -1613,7 +1632,22 @@ export function confirmPenaltyOrders(
   state: BotaoMatchState,
   orders: Partial<Record<BotaoSide, readonly string[]>>,
 ): boolean {
-  return pendingT0("confirmPenaltyOrders", state, orders);
+  const penalties = state.penalties;
+  if (!penalties || state.phase !== "penalty-setup") return false;
+  for (const side of ["user", "cpu"] as const) {
+    const wanted = orders[side];
+    if (!Array.isArray(wanted)) continue;
+    const ids = discsOf(state, side).map((disc) => disc.id);
+    const valid =
+      wanted.length === ids.length &&
+      new Set(wanted).size === ids.length &&
+      wanted.every((id) => ids.includes(id));
+    if (valid) penalties.order[side] = wanted.slice();
+  }
+  state.phase = "penalties";
+  setupPenaltyShot(state);
+  state.version += 1;
+  return true;
 }
 
 /**
@@ -1625,7 +1659,18 @@ export function applyRemoteClock(
   clock: number,
   finalShotGrace: boolean,
 ): BotaoEvent[] {
-  return pendingT0("applyRemoteClock", state, clock, finalShotGrace);
+  const events: BotaoEvent[] = [];
+  if (state.phase !== "aim" && state.phase !== "kickoff") return events;
+  if (state.phase === "kickoff" && state.clockPausedForKickoff) return events;
+  if (!Number.isFinite(clock)) return events;
+  // Nunca devolve tempo: o dono só gasta relógio, então vale o menor.
+  state.clock = Math.max(0, Math.min(state.clock, clock));
+  if (state.clock <= 0) {
+    if (finalShotGrace) state.finalShotGrace = true;
+    else endPeriod(state, events);
+  }
+  state.version += 1;
+  return events;
 }
 
 /** Vai direto para a decisão por pênaltis. Serve ao modo de teste da antessala. */
@@ -1635,25 +1680,26 @@ export function jumpToPenalties(state: BotaoMatchState) {
   startPenalties(state);
 }
 
-/** Pune sete segundos sem ação do jogador com uma cobrança real para a CPU. */
+/**
+ * Pune sete segundos sem ação de `idleSide` (padrão: o jogador) com uma
+ * cobrança real para o outro lado.
+ */
 export function awardInactivityPenalty(
   state: BotaoMatchState,
   idleSide: BotaoSide = "user",
 ): BotaoEvent[] {
-  // T0: o lado "cpu" (Bobonline) só ganha corpo no L1; o padrão "user" segue idêntico.
-  if (idleSide !== "user") return pendingT0("awardInactivityPenalty(cpu)", state, idleSide);
   const events: BotaoEvent[] = [];
   if (state.finalShotGrace) return events;
   if (
     (state.phase !== "aim" && state.phase !== "kickoff") ||
-    state.turn !== "user" ||
+    state.turn !== idleSide ||
     state.penalties
   )
     return events;
   const defaultRound = Math.min(5, discsOf(state, "user").length);
   state.penalties = {
     round: 1,
-    turn: "cpu",
+    turn: otherSide(idleSide),
     score: { user: 0, cpu: 0 },
     results: { user: [], cpu: [] },
     order: {
@@ -1811,7 +1857,18 @@ export function placePenaltyKeeper(
   x: number,
   direction: 1 | -1,
 ): void {
-  pendingT0("placePenaltyKeeper", state, x, direction);
+  const penalties = state.penalties;
+  if (!penalties || penalties.shotInFlight || state.phase !== "penalties")
+    return;
+  if (!Number.isFinite(x)) return;
+  const keeper = penaltyKeeper(state);
+  keeper.x = clamp(
+    x,
+    GOAL_LEFT + keeper.radius + 2,
+    GOAL_RIGHT - keeper.radius - 2,
+  );
+  keeper.vx = 0;
+  penalties.keeperDirection = direction < 0 ? -1 : 1;
 }
 
 /** Passo de física do pênalti; devolve `null` enquanto a cobrança não terminou. */
@@ -1943,11 +2000,12 @@ export function commitPenalty(
     if (keeperIndex >= 0) state.bodies.splice(keeperIndex, 1);
     state.penalties = null;
     state.penaltyReason = null;
-    state.turn = "user";
+    // Quem demorou volta a ter a vez; quem bateu é o lado da cobrança.
+    state.turn = otherSide(side);
     if (scored) {
-      state.score.cpu += 1;
+      state.score[side] += 1;
       state.lastGoal = {
-        side: "cpu",
+        side,
         scorer: "Pênalti por demora",
         byUser: false,
         ownGoal: false,
@@ -1956,7 +2014,7 @@ export function commitPenalty(
       state.clockPausedForKickoff = false;
       const limit = state.setup.rules.goalLimit;
       const inRegulation = state.period <= state.setup.rules.halves;
-      if (limit > 0 && inRegulation && state.score.cpu >= limit)
+      if (limit > 0 && inRegulation && state.score[side] >= limit)
         finishMatch(state, "goal-limit", events);
     } else {
       state.formationIndex.user += 1;

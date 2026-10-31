@@ -2805,3 +2805,390 @@
 .botao-root-3d .botao-pause-mark {
   display: none;
 }
+
+/* ------------------------------------------------------------------ Bobonline
+   Partida online: faixa da rede, avisos, limite do pênalti, ordem dos batedores
+   e o "Desistir". Só aparece com a prop `link` (nenhum modo atual usa). */
+
+/* Faixa da rede (caiu, reconectando, contagem): logo abaixo do placar, por cima da mesa. */
+.botao-online-banner {
+  position: absolute;
+  z-index: 14;
+  top: 10px;
+  left: 50%;
+  /* Sem isto o "left: 50%" encolhe a caixa e o texto quebra palavra por palavra. */
+  width: max-content;
+  max-width: calc(100% - 20px);
+  padding: 9px 14px;
+  border: 1px solid rgba(168, 211, 181, 0.22);
+  border-radius: 12px;
+  background: rgba(6, 17, 13, 0.86);
+  color: var(--text, #f5f7f2);
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  text-align: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-variant-numeric: tabular-nums;
+}
+
+.botao-online-banner-unstable {
+  padding: 5px 11px;
+  border-color: rgba(255, 199, 44, 0.35);
+  color: var(--gold, #ffc72c);
+  font-size: 11px;
+}
+
+.botao-online-banner-waiting,
+.botao-online-banner-reconnecting,
+.botao-online-banner-route {
+  border-color: rgba(255, 90, 78, 0.42);
+}
+
+.botao-online-banner-countdown {
+  top: 50%;
+  padding: 14px 22px;
+  border-color: rgba(255, 199, 44, 0.45);
+  color: var(--gold, #ffc72c);
+  font-family: var(--display, "Arial Black", Impact, sans-serif);
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  transform: translate(-50%, -50%);
+}
+
+.botao-online-notice {
+  position: absolute;
+  z-index: 13;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  /* Centrado sem transform: a animação de entrada mexe só na opacidade. */
+  width: fit-content;
+  margin-inline: auto;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 199, 44, 0.35);
+  border-radius: 999px;
+  background: rgba(16, 39, 29, 0.9);
+  color: var(--text, #f5f7f2);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  pointer-events: none;
+  animation: botao-notice-in 170ms ease-out both;
+}
+
+@keyframes botao-notice-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Limite de 10 s da cobrança: a mesma faixa do "SEU TEMPO", em dourado. */
+.botao-kick-limit {
+  border-block-color: rgba(255, 199, 44, 0.45);
+}
+
+.botao-kick-limit strong {
+  color: var(--gold, #ffc72c);
+}
+
+.botao-chip-spectator {
+  border-color: rgba(168, 211, 181, 0.35);
+  color: var(--text, #f5f7f2);
+}
+
+.botao-chip-opponent-idle {
+  border-color: rgba(255, 90, 78, 0.45);
+  color: var(--red, #ff5a4e);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ordem dos batedores: folha que cabe na tela inteira (rola por dentro, nunca a página). */
+.botao-order-overlay {
+  position: fixed;
+  z-index: 110;
+  inset: 0;
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: rgba(3, 10, 7, 0.82);
+}
+
+.botao-order-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(100%, 420px);
+  max-height: calc(100dvh - 24px);
+  padding: 18px 16px 16px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 199, 44, 0.3);
+  border-radius: 20px;
+  background: var(--surface, #10271d);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  text-align: left;
+  overscroll-behavior: contain;
+}
+
+.botao-order-sheet > strong {
+  font-family: var(--display, "Arial Black", Impact, sans-serif);
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.botao-order-timer,
+.botao-order-wait {
+  margin: 0;
+  color: var(--muted, #9fb3a6);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.botao-order-wait {
+  color: var(--gold, #ffc72c);
+}
+
+.botao-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.botao-order-row {
+  display: grid;
+  grid-template-columns: 40px 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 6px 8px;
+  border: 1px solid var(--line, rgba(168, 211, 181, 0.15));
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.botao-order-portrait {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.botao-order-number {
+  color: var(--gold, #ffc72c);
+  font-family: var(--display, "Arial Black", Impact, sans-serif);
+  font-size: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.botao-order-name {
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.botao-order-up {
+  min-height: 36px;
+  padding-inline: 10px;
+}
+
+.botao-order-up:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.botao-order-divider {
+  padding: 2px 0;
+  color: var(--gold, #ffc72c);
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.botao-order-divider::before,
+.botao-order-divider::after {
+  display: inline-block;
+  width: 28px;
+  height: 1px;
+  margin: 0 8px;
+  background: rgba(255, 199, 44, 0.4);
+  vertical-align: middle;
+  content: "";
+}
+
+/* Os botões ficam sempre à vista, presos no pé da folha (mesmo com a lista rolando). */
+.botao-order-actions {
+  position: sticky;
+  bottom: -16px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0 -16px -16px;
+  padding: 10px 16px 16px;
+  background: var(--surface, #10271d);
+}
+
+.botao-order-actions button {
+  min-height: 44px;
+}
+
+.botao-order-default {
+  padding-inline: 16px;
+  color: var(--text, #f5f7f2);
+  font-size: 12px;
+}
+
+/* Desistir: confirmação por cima de tudo. */
+.botao-forfeit-toggle {
+  border-color: rgba(255, 90, 78, 0.35);
+  color: var(--red, #ff5a4e);
+}
+
+.botao-forfeit {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(3, 10, 7, 0.76);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.botao-forfeit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(100%, 380px);
+  padding: 20px;
+  border: 1px solid rgba(255, 90, 78, 0.35);
+  border-radius: 22px;
+  background: var(--surface, #10271d);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+
+.botao-forfeit-card strong {
+  font-family: var(--display, "Arial Black", Impact, sans-serif);
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.botao-forfeit-card p {
+  margin: 0;
+  color: var(--muted, #9fb3a6);
+  font-size: 13.5px;
+}
+
+.botao-forfeit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.botao-forfeit-actions button {
+  min-height: 44px;
+}
+
+.botao-forfeit-confirm {
+  padding: 12px 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--red, #ff5a4e);
+  color: #1a0a08;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* Celular deitado: faixa em até duas linhas (a mesa é estreita e a contagem não pode sumir) e linhas de 44 px (a folha continua inteira na tela). */
+@media (max-height: 480px) {
+  .botao-online-banner {
+    top: 6px;
+    display: -webkit-box;
+    padding: 5px 12px;
+    overflow: hidden;
+    font-size: 11px;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .botao-online-banner-countdown {
+    top: 50%;
+    font-size: 18px;
+  }
+
+  .botao-order-sheet {
+    width: min(100%, 720px);
+    gap: 6px;
+    padding: 12px;
+  }
+
+  /* Deitado: duas colunas de batedores, a divisória ocupa a linha inteira. */
+  .botao-order-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .botao-order-divider {
+    grid-column: 1 / -1;
+  }
+
+  .botao-order-actions {
+    bottom: -12px;
+    margin: 0 -12px -12px;
+    padding: 8px 12px 12px;
+  }
+
+  .botao-order-sheet > strong {
+    font-size: 18px;
+  }
+
+  .botao-order-row {
+    grid-template-columns: 32px 24px minmax(0, 1fr) auto;
+    min-height: 44px;
+    padding: 3px 8px;
+  }
+
+  .botao-order-portrait {
+    width: 32px;
+    height: 32px;
+  }
+
+  .botao-order-up {
+    min-height: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .botao-online-notice {
+    animation: none;
+  }
+}
+
+.botao-root-3d-lite .botao-online-banner,
+.botao-root-3d-lite .botao-forfeit {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

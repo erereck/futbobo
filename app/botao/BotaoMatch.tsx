@@ -64,6 +64,7 @@ import {
   drawMatch,
   toFieldPoint,
   type BotaoAimView,
+  type BotaoRenderView,
 } from "./render";
 import type {
   BotaoGoalReplay,
@@ -73,9 +74,9 @@ import type {
   BotaoReplayFrame,
   BotaoSide,
 } from "./types";
-import type { Botao3DView } from "./three/Botao3DView";
+import type { Botao3DView, CpuPenaltyWindup } from "./three/Botao3DView";
 import type { BotaoCpuBrain, BotaoMatchLink, BotaoMatchRestore, BotaoSideControl } from "./match-link";
-import type { OnlineDriverFactory } from "./online-driver";
+import type { OnlineDriverFactory, OnlineDriverMount, OnlineMatchDriver, OnlineMatchUiModule } from "./online-driver";
 import { enableBotao3dPerformanceAuto, readBotao3dPerformance, readBotao3dPreference, webglAvailable } from "./view-mode";
 import { FrameWatch } from "./perf-watch";
 
@@ -158,6 +159,16 @@ export default function BotaoMatch({
   controlMode = "cpu",
   localPlayerNames,
   presentation = "standard",
+  controls,
+  perspective,
+  link,
+  createDriver,
+  names,
+  restore,
+  cpuBrain,
+  view,
+  onForfeit,
+  onLeave,
 }: {
   setup: BotaoMatchSetup;
   onFinish: (result: BotaoMatchResult) => void;
@@ -168,7 +179,7 @@ export default function BotaoMatch({
   localPlayerNames?: Record<BotaoSide, string>;
   /** Direção visual isolada para laboratórios; não altera física nem regras. */
   presentation?: "standard" | "showcase";
-  // Bobonline (contrato T0): só tipos por enquanto; nenhuma destas props é lida ainda.
+  // Bobonline: todas opcionais. Sem link/controls/perspective/view, tudo segue como sempre.
   /** Bobonline: quem controla cada lado neste aparelho. Ausente = comportamento atual. */
   controls?: Record<BotaoSide, BotaoSideControl>;
   /** Lado que fica embaixo nesta tela (o convidado vê o próprio time subindo). "neutral" = espectador. */
@@ -193,10 +204,15 @@ export default function BotaoMatch({
   const localMatch = controlMode === "local";
   const showcase = presentation === "showcase";
   const playerNames = localPlayerNames ?? DEFAULT_LOCAL_PLAYER_NAMES;
+  // Bobonline: perspectiva de quem está nesta tela. O convidado ("cpu") vê a mesa girada.
+  const online = Boolean(link);
+  const persp = perspective ?? "user";
+  const mirrored = persp === "cpu";
   const matchRef = useRef<BotaoMatchState | null>(null);
   const machine =
     matchRef.current ??
-    (matchRef.current = (() => {
+    // O recomeço vem pela fábrica do driver: o codec fica no import() do online.
+    (matchRef.current = restore && createDriver ? createDriver.restore(setup, restore.match) : (() => {
       const created = createMatch(setup);
       if (startInPenalties) jumpToPenalties(created);
       return created;
@@ -230,8 +246,19 @@ export default function BotaoMatch({
   const pausedAtRef = useRef<number | null>(null);
   // A primeira jogada começa no primeiro chute válido, dando tempo de ler a
   // mesa sem perder o relógio ou receber pênalti antes de jogar.
-  const firstTouchReady = !setup.managerMode && !startInPenalties && machine.turn === "user";
+  const firstTouchReady = !online && !setup.managerMode && !startInPenalties && machine.turn === "user";
   const awaitingFirstTouchRef = useRef(firstTouchReady);
+  /** Bobonline: o driver online, criado uma vez (a fábrica chega pela prop, num import() da rota). */
+  const driverRef = useRef<OnlineMatchDriver | null>(null);
+  /** O que o driver chama de volta; trocado a cada render para nunca usar callback velho. */
+  const driverHooksRef = useRef<OnlineDriverMount["hooks"]["current"]>(null);
+  if (link && createDriver && !driverRef.current) {
+    // As opções do driver (controles, nomes, CPU, ganchos) se montam do lado do driver, fora do pacote offline.
+    driverRef.current = createDriver.mount({ state: machine, link, restore, controls, perspective: persp, names, cpuBrain, localMatch, view: view3dRef, hooks: driverHooksRef, vibrate });
+  }
+  /** Drama do pênalti da CPU no 3D (caminho local): progresso contado em tempo de jogo, parado na pausa. */
+  const cpuPenaltyWindupRef = useRef<CpuPenaltyWindup | null>(null);
+  const finishReportedRef = useRef(false);
   // Timers guardados em ref: efeitos sem lista de dependências rodam a cada
   // render, e limpar no cleanup cancelaria a transição no meio do caminho.
   const timersRef = useRef<{
@@ -291,6 +318,8 @@ export default function BotaoMatch({
     scorer: string;
     ownGoal: boolean;
     minute: string;
+    /** Bobonline: nome da comemoração longa do autor (Kamehameha, Super Saiyajin). */
+    signature?: string | null;
   } | null>(null);
   const [compactMobileTable, setCompactMobileTable] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -323,8 +352,9 @@ export default function BotaoMatch({
   const bumpHud = useCallback((force = false) => {
     const current = matchRef.current;
     const now = performance.now();
+    const driver = driverRef.current;
     const key = current
-      ? `${Math.ceil(current.clock)}|${current.period}|${current.phase}|${current.turn}|${current.turns}|${current.score.user}-${current.score.cpu}|${current.finalShotGrace ? 1 : 0}|${current.penalties ? `${current.penalties.round}${current.penalties.turn}${current.penalties.results.user.length}${current.penalties.results.cpu.length}${current.penalties.shotInFlight ? 1 : 0}` : "-"}|${current.playerGoals}|${current.playerAssists}|${current.timeline.length}|${current.result ? 1 : 0}`
+      ? `${Math.ceil(driver ? driver.displayClock() : current.clock)}|${current.period}|${current.phase}|${current.turn}|${current.turns}|${current.score.user}-${current.score.cpu}|${current.finalShotGrace ? 1 : 0}|${current.penalties ? `${current.penalties.round}${current.penalties.turn}${current.penalties.results.user.length}${current.penalties.results.cpu.length}${current.penalties.shotInFlight ? 1 : 0}` : "-"}|${current.playerGoals}|${current.playerAssists}|${current.timeline.length}|${current.result ? 1 : 0}${driver ? driver.hudKey() : ""}`
       : "";
     if (!force && key === hudKeyRef.current && now - hudBumpedAtRef.current < 1000) return;
     hudKeyRef.current = key;
@@ -337,7 +367,8 @@ export default function BotaoMatch({
   const paintTimeBar = useCallback((current: BotaoMatchState) => {
     const bar = timeBarRef.current;
     if (!bar) return;
-    const progress = Math.max(0, Math.min(1, 1 - current.clock / Math.max(1, current.periodSeconds)));
+    const clock = driverRef.current ? driverRef.current.displayClock() : current.clock;
+    const progress = Math.max(0, Math.min(1, 1 - clock / Math.max(1, current.periodSeconds)));
     if (Math.abs(progress - timeBarValueRef.current) < 0.0005) return;
     timeBarValueRef.current = progress;
     bar.style.transform = `scaleX(${progress.toFixed(4)})`;
@@ -434,6 +465,7 @@ export default function BotaoMatch({
     machine.penalties?.turn ?? "-",
     machine.penalties?.round ?? "-",
     machine.penalties?.shotInFlight ?? "-",
+    driverRef.current?.n ?? 0,
   ].join("|");
 
   useEffect(
@@ -463,10 +495,15 @@ export default function BotaoMatch({
   }, []);
 
   // A preferência vem das Configurações; sem WebGL o 2D continua valendo.
+  // Bobonline: quem monta a partida escolhe o visual (`view`) e a preferência não vale.
   useEffect(() => {
+    if (view !== undefined) {
+      if (view === "3d" && webglAvailable()) queueMicrotask(() => setView3d(true));
+      return;
+    }
     if (!readBotao3dPreference() || !webglAvailable()) return;
     queueMicrotask(() => setView3d(true));
-  }, []);
+  }, [view]);
 
   useEffect(() => {
     if (!view3d) return;
@@ -483,7 +520,8 @@ export default function BotaoMatch({
           performance3dRef.current ??= readBotao3dPerformance();
           instance = new Botao3DView(canvas, setupRef.current, {
             landscape: desktopLandscapeRef.current,
-            hideUserMarker: localMatch,
+            hideUserMarker: localMatch || online,
+            flip: mirrored,
             reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
             performance: performance3dRef.current.enabled,
             // Reconstruindo (contexto perdido, modo desempenho ligado agora): sem repetir a entrada.
@@ -540,7 +578,7 @@ export default function BotaoMatch({
     };
     // matchId e não o objeto: a carreira monta um setup novo a cada render, e recriar
     // aqui reaproveitaria um canvas com o contexto já derrubado pelo dispose.
-  }, [view3d, view3dEpoch, setup.matchId, localMatch]);
+  }, [view3d, view3dEpoch, setup.matchId, localMatch, online, mirrored]);
 
   useEffect(() => {
     view3dRef.current?.setLandscape(desktopLandscape);
@@ -577,7 +615,7 @@ export default function BotaoMatch({
       if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
       if ((event.target as HTMLElement | null)?.closest("input, textarea, select, [contenteditable='true']")) return;
       const key = event.key.toLocaleLowerCase("pt-BR");
-      if (key === "p" && matchRef.current?.phase !== "finished" && !substitutionOpen && !formerClubGoalPrompt) {
+      if (key === "p" && !online && matchRef.current?.phase !== "finished" && !substitutionOpen && !formerClubGoalPrompt) {
         event.preventDefault();
         togglePause();
       } else if (key === "m") {
@@ -590,7 +628,7 @@ export default function BotaoMatch({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [setup.managerMode, substitutionOpen, formerClubGoalPrompt, togglePause, toggleSound]);
+  }, [setup.managerMode, substitutionOpen, formerClubGoalPrompt, togglePause, toggleSound, online]);
 
   // Voltando de segundo plano o rAF ficou parado: zera o relógio de frame para
   // não descontar de uma vez o tempo em que o app esteve fora da tela. A regra
@@ -606,6 +644,7 @@ export default function BotaoMatch({
   // ---------------------------------------------------------------- eventos
   const handleEvents = useCallback(
     (events: BotaoEvent[]) => {
+      traceRef.current?.events(events, machine);
       if (events.length > 0) view3dRef.current?.handleEvents(events, machine);
       for (const event of events) {
         if (event.type === "hit") {
@@ -627,13 +666,22 @@ export default function BotaoMatch({
         }
         if (event.type === "idle-reset")
           showFlash("Bola ao centro", "info", 1100);
+        // Online a saída de bola depois do gol vem do driver (o efeito do gol não roda): a tarja sai aqui.
+        if (online && event.type === "formation") {
+          setGoalCaption(null);
+          driverRef.current?.announceFormation(event);
+        }
         if (event.type === "inactivity-penalty") {
-          showFlash("PÊNALTI POR DEMORA!", "bad", 1700);
-          setAnnouncement(
-            localMatch
-              ? "O tempo da jogada terminou."
-              : `Você demorou para jogar. Pênalti para ${machine.setup.cpuTeam.shortName}.`,
-          );
+          // Online os textos (pela perspectiva) vêm do driver.
+          if (driverRef.current) driverRef.current.announceInactivity();
+          else {
+            showFlash("PÊNALTI POR DEMORA!", "bad", 1700);
+            setAnnouncement(
+              localMatch
+                ? "O tempo da jogada terminou."
+                : `Você demorou para jogar. Pênalti para ${machine.setup.cpuTeam.shortName}.`,
+            );
+          }
         }
         if (event.type === "period-end") {
           playBotaoSound("whistle");
@@ -699,9 +747,9 @@ export default function BotaoMatch({
               frames,
             });
           }
-          const mine = event.side === "user";
+          const mine = event.side === persp;
           vibrate([0, 60, 40, 120]);
-          playBotaoSound(mine ? "goal" : "concede");
+          playBotaoSound(mine || persp === "neutral" ? "goal" : "concede");
           goalFlashRef.current = 1;
           goalFlashSideRef.current = event.side;
           // No 3D quem treme é a câmera; sacudir a moldura junto pareceria defeito.
@@ -709,19 +757,23 @@ export default function BotaoMatch({
             setShaking(true);
             window.setTimeout(() => setShaking(false), 560);
           }
-          const text = event.ownGoal
-            ? "GOL CONTRA"
-            : localMatch
-              ? `GOL · ${playerNames[event.side].toLocaleUpperCase("pt-BR")}`
-              : mine
-                ? event.byUser
-                  ? "SEU GOL!"
-                  : "GOL!"
-                : "TOMOU GOL";
+          // Bobonline: texto, tom e pausa pela perspectiva vêm do driver (a comemoração longa do autor estica a pausa).
+          const call = driverRef.current?.goalCall(event) ?? null;
+          const text = call
+            ? call.text
+            : event.ownGoal
+              ? "GOL CONTRA"
+              : localMatch
+                ? `GOL · ${playerNames[event.side].toLocaleUpperCase("pt-BR")}`
+                : mine
+                  ? event.byUser
+                    ? "SEU GOL!"
+                    : "GOL!"
+                  : "TOMOU GOL";
           showFlash(
             text,
-            localMatch || mine ? "goal" : "bad",
-            (view3dRef.current ? GOAL_PAUSE_3D_MS : GOAL_PAUSE_MS) - 200,
+            call ? call.tone : localMatch || mine ? "goal" : "bad",
+            call ? call.ms : (view3dRef.current ? GOAL_PAUSE_3D_MS : GOAL_PAUSE_MS) - 200,
           );
           if (view3dRef.current) {
             // Tarja de transmissão: no 3D a câmera está em cima de quem marcou.
@@ -731,10 +783,12 @@ export default function BotaoMatch({
               scorer: event.ownGoal ? event.scorer.replace(/\s*\(contra\)$/, "") : event.scorer,
               ownGoal: event.ownGoal,
               minute: formatClock(elapsedSeconds),
+              signature: call?.caption ?? null,
             });
           }
+          // O placar falado começa pelo time de quem está na tela (o convidado vê a mesa girada).
           setAnnouncement(
-            `${text} ${event.scorer}. Placar ${machine.score.user} a ${machine.score.cpu}.`,
+            `${text} ${event.scorer}. Placar ${machine.score[mirrored ? "cpu" : "user"]} a ${machine.score[mirrored ? "user" : "cpu"]}.`,
           );
           if (!localMatch && mine && event.byUser && setup.formerClub) {
             formerClubPromptRef.current = true;
@@ -747,9 +801,19 @@ export default function BotaoMatch({
       // Colisão e toque não mudam o HUD; o resto (gol, trave, apito, pênalti…) redesenha já.
       bumpHud(events.some((event) => event.type !== "hit" && event.type !== "touch"));
     },
-    [bumpHud, localMatch, machine, playerNames, setup.cpuTeam.shortName, setup.formerClub, setup.managerMode, setup.userTeam.shortName, showFlash],
+    [bumpHud, localMatch, machine, playerNames, setup.cpuTeam.shortName, setup.formerClub, setup.managerMode, setup.userTeam.shortName, showFlash, online, persp, mirrored],
   );
+  driverHooksRef.current = { events: handleEvents, flash: showFlash, announce: setAnnouncement };
 
+  /** O soltar do dedo, para o gancho de desenvolvimento (dev-trace) tocar pelo mesmo caminho. */
+  const onPointerUpRef = useRef<((event: ReactPointerEvent<HTMLCanvasElement>) => void) | null>(null);
+  // Gancho de desenvolvimento (?botaotrace=1; o dev-trace só liga em loopback com porta): baixado sob demanda.
+  const traceRef = useRef<typeof import("./dev-trace").botaoTrace | null>(null);
+  useEffect(() => {
+    if (window.location.search.includes("botaotrace=1")) void import("./dev-trace").then((trace) => {
+      if (trace.botaoTraceEnabled()) traceRef.current = trace.botaoTrace;
+    });
+  }, []);
   // ------------------------------------------------------------- loop de jogo
   useEffect(() => {
     /**
@@ -796,7 +860,8 @@ export default function BotaoMatch({
     const switchToPerformance3d = (state: BotaoMatchState) => {
       if (!performanceSwitchRef.current || pausedRef.current || pointerRef.current !== null) return;
       if (state.phase !== "aim" && state.phase !== "kickoff") return;
-      if (!localMatch && state.turn !== "user") return;
+      // Online: só com ninguém deste aparelho jogando, sem pausa e sem fila adiante. O driver segue rodando na troca.
+      if (driverRef.current ? !driverRef.current.idle() : !localMatch && state.turn !== "user") return;
       performanceSwitchRef.current = false;
       skipIntroRef.current = true;
       view3dRef.current = null;
@@ -810,7 +875,9 @@ export default function BotaoMatch({
       const state = matchRef.current;
       const canvas = canvasRef.current;
       const view3dInstance = view3dRef.current;
-      if (!state || (!canvas && !view3dInstance)) return;
+      // Online o driver anda mesmo sem mesa na tela (3D refazendo, contexto perdido): relógio, fila e descansos não param pelo visual.
+      const driver = driverRef.current;
+      if (!state || (!driver && !canvas && !view3dInstance)) return;
       // Uma aba em segundo plano pode receber rAF esporádicos. Ignorá-los
       // impede que o jogador volte com um pênalti por demora já cobrado.
       if (!setup.managerMode && document.hidden) {
@@ -818,12 +885,22 @@ export default function BotaoMatch({
         return;
       }
       const context = view3dInstance ? null : canvas?.getContext("2d") ?? null;
-      if (!view3dInstance && !context) return;
+      if (!driver && !view3dInstance && !context) return;
 
       const previous = lastFrameRef.current || time;
       const elapsed = Math.min((time - previous) / 1000, 0.25);
       lastFrameRef.current = time;
       frameCountRef.current += 1;
+      traceRef.current?.frame(state, (aim) => { pointerRef.current = -7; selectedRef.current = aim.bodyId; aimRef.current = { ...aim, ratio: 0, valid: false }; onPointerUpRef.current?.({ pointerId: -7 } as ReactPointerEvent<HTMLCanvasElement>); });
+      if (driver) {
+        // Online: o driver faz relógio, 7 s, CPU, física em passo fixo, pausas e descansos; daqui só o desenho.
+        driver.frame(elapsed, { holding: pointerRef.current !== null });
+        bumpHud();
+        if (finishedRef.current && !finishReportedRef.current && state.result && driver.finished()) {
+          finishReportedRef.current = true;
+          onFinishRef.current(state.result);
+        }
+      }
 
       const pausedNow = pausedRef.current || awaitingFirstTouchRef.current;
 
@@ -831,7 +908,7 @@ export default function BotaoMatch({
       // partida estiver pausada, nenhum dos dois avança.
       // Primeiro resolvemos a regra do último chute: se o tempo acabou enquanto
       // existe um botão fisicamente selecionado, 00:00 fica armado até a bola parar.
-      if (!pausedNow && (state.phase === "aim" || state.phase === "kickoff")) {
+      if (!driver && !pausedNow && (state.phase === "aim" || state.phase === "kickoff")) {
         const clockEvents = advanceClock(
           state,
           elapsed,
@@ -842,7 +919,7 @@ export default function BotaoMatch({
       }
       paintTimeBar(state);
 
-      if (state.finalShotGrace && !finalShotAnnouncedRef.current) {
+      if (!driver && state.finalShotGrace && !finalShotAnnouncedRef.current) {
         finalShotAnnouncedRef.current = true;
         showFlash("ÚLTIMO LANCE!", "info", 1500);
         setAnnouncement(
@@ -857,6 +934,7 @@ export default function BotaoMatch({
       // efetivamente rodando. Pausa e segundo plano congelam o valor exato;
       // selecionar/segurar um botão não reinicia a contagem.
       const waitingForUser =
+        !driver &&
         !localMatch &&
         (state.phase === "aim" || state.phase === "kickoff") &&
         state.turn === "user";
@@ -950,8 +1028,12 @@ export default function BotaoMatch({
             goalFlashRef.current - elapsed * 1.6,
           );
         }
+        // Drama do pênalti da CPU (3D): o tempo dele só anda com o jogo andando.
+        if (cpuPenaltyWindupRef.current) cpuPenaltyWindupRef.current.elapsedMs += elapsed * 1000;
 
-        if (state.phase === "resolving") {
+        if (driver) {
+          // A física online é do driver.
+        } else if (state.phase === "resolving") {
           let steps = 0;
           let budget = elapsed;
           const events: BotaoEvent[] = [];
@@ -1016,7 +1098,7 @@ export default function BotaoMatch({
         }
       }
 
-      const renderView = {
+      const renderView: BotaoRenderView = {
         selectedId: selectedRef.current,
         aim: aimRef.current,
         highlight: state.phase === "aim" || state.phase === "kickoff",
@@ -1027,7 +1109,11 @@ export default function BotaoMatch({
         uprightLabels: desktopLandscape,
         hideUserMarker: localMatch,
         showcase,
+        // Drama do pênalti da CPU: o tempo dele, cru (só o 3D encena).
+        penaltyWindup: cpuPenaltyWindupRef.current,
       };
+      // Bobonline: mira do adversário, mesa girada, clarão pela perspectiva, drama e pistas vêm do driver.
+      driver?.decorate(renderView);
       if (view3dInstance) {
         // Celular de 90/120 Hz não precisa desenhar o 3D duas vezes por quadro de 60.
         // Com intervalo, escolha de pênaltis, trocas ou o aviso do ex-clube cobrindo
@@ -1046,9 +1132,11 @@ export default function BotaoMatch({
           state,
           {
             ...renderView,
-            goalEndsIn: state.phase === "goal" && goalResumeAtRef.current !== null
-              ? (goalResumeAtRef.current - time) / 1000
-              : null,
+            goalEndsIn: driver
+              ? driver.goalEndsIn()
+              : state.phase === "goal" && goalResumeAtRef.current !== null
+                ? (goalResumeAtRef.current - time) / 1000
+                : null,
           },
           pausedRef.current ? 0 : dt3d,
           dt3d,
@@ -1102,14 +1190,17 @@ export default function BotaoMatch({
           offsetY + VIEW_PAD_Y * scale,
         );
       }
+      // Convidado do Bobonline: o drawMatch gira a mesa 180° (view.mirrored), em pé ou deitada.
       drawMatch(context, state, renderView, time);
     });
     return () => cancelAnimationFrame(frame);
-  }, [handleEvents, bumpHud, paintTimeBar, showFlash, desktopLandscape, localMatch, showcase, setup.managerMode]);
+  }, [handleEvents, bumpHud, paintTimeBar, showFlash, desktopLandscape, localMatch, showcase, setup.managerMode, online, persp, mirrored]);
 
   // -------------------------------------------------------- gol e intervalo
   useEffect(() => {
     const state = matchRef.current;
+    // Online a pausa do gol é do driver (tempo de jogo, igual no 2D e no 3D).
+    if (driverRef.current) return;
     if (!state || state.phase !== "goal" || timersRef.current.goal !== null)
       return;
     const resumeGoal = () => {
@@ -1133,7 +1224,9 @@ export default function BotaoMatch({
         );
       }
     };
-    const goalPause = view3dRef.current ? GOAL_PAUSE_3D_MS : GOAL_PAUSE_MS;
+    // No 3D a comemoração longa escolhida (Kamehameha, Super Saiyajin) ganha a extensão dela; o 2D segue igual.
+    const goalView = view3dRef.current;
+    const goalPause = goalView ? GOAL_PAUSE_3D_MS + goalView.celebrationExtensionMs(state) : GOAL_PAUSE_MS;
     goalResumeAtRef.current = performance.now() + goalPause;
     timersRef.current.goal = window.setTimeout(resumeGoal, goalPause);
   }, [signature, handleEvents, showFlash, paused, setup.managerMode]);
@@ -1142,6 +1235,8 @@ export default function BotaoMatch({
   useEffect(() => {
     const state = matchRef.current;
     if (localMatch) return;
+    // Online quem joga pela CPU é o driver (rng própria, nunca a da partida).
+    if (driverRef.current) return;
     if (!state || timersRef.current.cpu !== null) return;
     const openPlay =
       (state.phase === "aim" || state.phase === "kickoff") &&
@@ -1162,6 +1257,18 @@ export default function BotaoMatch({
       if (pausedRef.current || (!setup.managerMode && document.hidden)) {
         timersRef.current.cpu = window.setTimeout(playCpuTurn, 120);
         return;
+      }
+      // Drama do 3D: o tempo dele conta com o jogo andando (pausa congela) e espera a câmera chegar atrás do batedor.
+      const windup = cpuPenaltyWindupRef.current;
+      if (windup) {
+        const wait = windup.elapsedMs < windup.totalMs
+          ? Math.max(16, windup.totalMs - windup.elapsedMs)
+          : view3dRef.current?.windupSettleWait(windup) ?? 0;
+        if (wait > 0) {
+          timersRef.current.cpu = window.setTimeout(playCpuTurn, wait);
+          return;
+        }
+        cpuPenaltyWindupRef.current = null;
       }
       timersRef.current.cpu = null;
       const current = matchRef.current;
@@ -1211,7 +1318,11 @@ export default function BotaoMatch({
     // No 3D, depois de um gol, o time ainda está trotando para a formação nova:
     // a CPU espera o trote. O relógio está parado nessa saída, então nada muda no jogo.
     const kickoffWait = view3dRef.current && state.phase === "kickoff" && state.clockPausedForKickoff ? 450 : 0;
-    timersRef.current.cpu = window.setTimeout(playCpuTurn, CPU_THINK_MS + kickoffWait);
+    // Pênalti da CPU no 3D: a vista põe o suspense (1,3 a 2,3 s, Math.random e nunca a rng da partida).
+    const thinkMs = CPU_THINK_MS + kickoffWait;
+    const windup = penalty && view3dRef.current ? view3dRef.current.cpuPenaltyWindup(penaltyShooter(state).id, thinkMs) : null;
+    cpuPenaltyWindupRef.current = windup;
+    timersRef.current.cpu = window.setTimeout(playCpuTurn, windup ? windup.totalMs : thinkMs);
   }, [signature, bump, paused, localMatch, setup.managerMode]);
 
   // ------------------------------------------------------------------- fim
@@ -1240,6 +1351,11 @@ export default function BotaoMatch({
       })),
     };
     state.result = result;
+    if (driverRef.current) {
+      // Online: texto, tom e vibração de quem está nesta tela; o onFinish sai do laço depois da pausa fixa do driver.
+      driverRef.current.announceFinish(result);
+      return;
+    }
     const won = result.outcome === "win";
     const victoryLabel =
       state.setup.stageName === "Final" ? "CAMPEÃO!" : "CLASSIFICADO!";
@@ -1255,9 +1371,14 @@ export default function BotaoMatch({
         return;
       }
       timersRef.current.finish = null;
+      traceRef.current?.finish(state);
       onFinishRef.current(result);
     };
-    timersRef.current.finish = window.setTimeout(finishWhenVisible, view3dRef.current ? FINISH_DELAY_3D_MS : FINISH_DELAY_MS);
+    // No 3D um jogo que acaba num gol com comemoração longa espera a extensão dela.
+    const finishExtension = view3dRef.current && result.decision === "goal-limit"
+      ? view3dRef.current.celebrationExtensionMs(state)
+      : 0;
+    timersRef.current.finish = window.setTimeout(finishWhenVisible, (view3dRef.current ? FINISH_DELAY_3D_MS : FINISH_DELAY_MS) + finishExtension);
   }, [signature, showFlash, localMatch, formerClubGoalPrompt, setup.managerMode]);
 
   // -------------------------------------------------------------- interação
@@ -1265,6 +1386,9 @@ export default function BotaoMatch({
     (x: number, y: number) => {
       const state = matchRef.current;
       if (!state) return null;
+      // Online: só o lado deste aparelho com a vez aberta (nunca na pausa, nunca congelado).
+      const driver = driverRef.current;
+      if (driver) return driver.shootableAt(x, y);
       if (state.phase === "penalties") {
         if (
           !state.penalties ||
@@ -1298,14 +1422,10 @@ export default function BotaoMatch({
       const view = view3dRef.current;
       if (view) return view.fieldPoint(event.clientX, event.clientY);
       const canvas = event.currentTarget;
-      return toFieldPoint(
-        event.clientX,
-        event.clientY,
-        canvas.getBoundingClientRect(),
-        desktopLandscape,
-      );
+      // Mesa girada (convidado do Bobonline): o ponto volta para as coordenadas do campo. O 3D já devolve campo.
+      return toFieldPoint(event.clientX, event.clientY, canvas.getBoundingClientRect(), desktopLandscape, mirrored);
     },
-    [desktopLandscape],
+    [desktopLandscape, mirrored],
   );
 
   /** No 3D o clique vale no boneco inteiro (cabeça, tronco, pés), não só no chão. */
@@ -1326,6 +1446,7 @@ export default function BotaoMatch({
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLCanvasElement>) => {
       if (pausedRef.current) return;
+      if (driverRef.current?.canTouch() === false) return;
       const view = view3dRef.current;
       // Botão direito e dois dedos são da câmera.
       if (view && (event.button !== 0 || view.isGesturing())) return;
@@ -1345,6 +1466,7 @@ export default function BotaoMatch({
       };
       view?.setHover(null);
       vibrate(8);
+      driverRef.current?.hold(true);
       bump();
     },
     [bump, shootableAt, fieldPointFor, pickedShootable],
@@ -1355,6 +1477,8 @@ export default function BotaoMatch({
       if (pausedRef.current) return;
       if (pointerRef.current !== event.pointerId) return;
       pointerRef.current = null;
+      const driver = driverRef.current;
+      driver?.hold(false);
       const state = matchRef.current;
       const aim = aimRef.current;
       aimRef.current = null;
@@ -1365,17 +1489,24 @@ export default function BotaoMatch({
       const computed = aimFromDrag(disc, aim.dragX, aim.dragY);
       if (!computed.valid) {
         showFlash("Puxada curta demais", "info", 900);
-        const endEvents = cancelFinalShotGrace(state);
-        if (endEvents.length > 0) handleEvents(endEvents);
+        if (driver) {
+          // Na graça, soltar curto encerra o tempo pela ação de todos ("expire").
+          driver.releaseInvalid();
+        } else {
+          const endEvents = cancelFinalShotGrace(state);
+          if (endEvents.length > 0) handleEvents(endEvents);
+        }
         bump();
         return;
       }
       const shot = { bodyId: disc.id, vx: computed.vx, vy: computed.vy };
-      const fired =
-        state.phase === "penalties"
+      // Online o driver captura relógio, graça e goleiro, aplica e manda pela rede.
+      const fired = driver
+        ? driver.shoot(disc.id, computed)
+        : state.phase === "penalties"
           ? beginPenaltyShot(state, shot)
           : beginShot(state, shot);
-      if (!fired && state.finalShotGrace) {
+      if (!driver && !fired && state.finalShotGrace) {
         const endEvents = cancelFinalShotGrace(state);
         if (endEvents.length > 0) handleEvents(endEvents);
       }
@@ -1393,6 +1524,7 @@ export default function BotaoMatch({
     [bump, handleEvents, showFlash],
   );
 
+  onPointerUpRef.current = onPointerUp;
   const onPointerMove = useCallback(
     (event: ReactPointerEvent<HTMLCanvasElement>) => {
       if (pausedRef.current) {
@@ -1432,6 +1564,8 @@ export default function BotaoMatch({
         ratio: computed.ratio,
         valid: computed.valid,
       };
+      // Bobonline: prévia da mira para o outro lado (no pênalti, junto com o goleiro que eu vejo).
+      driverRef.current?.previewAim(aim.bodyId, point.x, point.y);
     },
     [fieldPointFor, onPointerUp, pickedShootable],
   );
@@ -1445,19 +1579,39 @@ export default function BotaoMatch({
     pointerRef.current = null;
     aimRef.current = null;
     selectedRef.current = null;
+    driverRef.current?.hold(false);
     bump();
   }, [bump, onPointerUp, setup.managerMode]);
 
+  // Bobonline: a rede avisa quando congelou, a faixa ou o aviso mudaram, ou a mira remota apareceu/sumiu.
+  useEffect(() => {
+    if (!link) return;
+    return link.subscribe(() => bump());
+  }, [link, bump]);
+
   // ------------------------------------------------------------------- HUD
   const state = machine;
+  const driver = driverRef.current;
+  /** Uma parte da UI online (faixas, ordem, Desistir…): pedaço próprio que chega pelo driver (null até chegar). */
+  const onlinePart = (name: keyof OnlineMatchUiModule) => {
+    const Part = driver?.ui?.[name];
+    return Part && driver ? <Part d={driver} onChange={bump} onForfeit={onForfeit} onLeave={onLeave} /> : null;
+  };
+  const shownClock = driver ? driver.displayClock() : state.clock;
+  /** Lado que fica à esquerda no placar (o meu, online). */
+  const leftSide: BotaoSide = mirrored ? "cpu" : "user";
+  const rightSide: BotaoSide = mirrored ? "user" : "cpu";
+  const teamOf = (side: BotaoSide) => (side === "user" ? setup.userTeam : setup.cpuTeam);
+  const shownIdleCountdown = driver ? driver.idleCountdown() : idleCountdown;
   const player = userPlayerDisc(state);
   const userFormation = formationById(state.formationId.user);
   const roleLabel = player
     ? slotRoleLabel(userFormation.slots[player.slot] ?? userFormation.slots[0])
     : "";
-  const yourTurn =
-    (state.phase === "aim" || state.phase === "kickoff") &&
-    state.turn === "user";
+  const yourTurn = driver
+    ? driver.localTurn() !== null
+    : (state.phase === "aim" || state.phase === "kickoff") &&
+      state.turn === "user";
   const activeLocalSide = state.penalties?.turn ?? state.turn;
   const activeLocalName = playerNames[activeLocalSide];
   const penalties = state.penalties;
@@ -1672,7 +1826,7 @@ export default function BotaoMatch({
     );
   };
 
-  const tableLabel = `Mesa de futebol de botão. ${setup.userTeam.shortName} ${state.score.user}, ${setup.cpuTeam.shortName} ${state.score.cpu}. ${localMatch ? `Vez de ${activeLocalName}.` : yourTurn ? setup.managerMode ? "Sua vez de tacar." : "Sua vez de chutar." : "Vez do adversário."}`;
+  const tableLabel = driver ? driver.tableLabel() : `Mesa de futebol de botão. ${setup.userTeam.shortName} ${state.score.user}, ${setup.cpuTeam.shortName} ${state.score.cpu}. ${localMatch ? `Vez de ${activeLocalName}.` : yourTurn ? setup.managerMode ? "Sua vez de tacar." : "Sua vez de chutar." : "Vez do adversário."}`;
   const RootElement = setup.managerMode ? "div" : "main";
   return (
     <RootElement
@@ -1690,7 +1844,7 @@ export default function BotaoMatch({
             {setup.competitionName} · {setup.stageName}
           </span>
           <span
-            className={`botao-period ${!penalties && state.clock <= 15 && state.phase !== "finished" ? "botao-period-urgent" : ""} ${state.finalShotGrace ? "botao-period-final-shot" : ""}`}
+            className={`botao-period ${!penalties && shownClock <= 15 && state.phase !== "finished" ? "botao-period-urgent" : ""} ${state.finalShotGrace ? "botao-period-final-shot" : ""}`}
           >
             {penalties
               ? state.penaltyReason === "inactivity"
@@ -1698,32 +1852,33 @@ export default function BotaoMatch({
                 : "Pênaltis"
               : state.finalShotGrace
                 ? "ÚLTIMO LANCE · 00:00"
-                : `${paused ? "Pausado" : periodName(state)} · ${formatClock(state.clock)}`}
+                : `${paused ? "Pausado" : periodName(state)} · ${formatClock(shownClock)}`}
           </span>
         </div>
-        {!setup.managerMode && !penalties && <div className="botao-time-progress" role="progressbar" aria-label="Andamento do tempo" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.max(0, Math.min(100, 100 * (1 - state.clock / Math.max(1, state.periodSeconds)))))}><span ref={attachTimeBar} /></div>}
+        {!setup.managerMode && !penalties && <div className="botao-time-progress" role="progressbar" aria-label="Andamento do tempo" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.max(0, Math.min(100, 100 * (1 - shownClock / Math.max(1, state.periodSeconds)))))}><span ref={attachTimeBar} /></div>}
+        {/* Online o placar é de quem está na tela: o meu time à esquerda (sem espelho, o de sempre). */}
         <div className="botao-scoreboard">
           <div className="botao-team">
-            <TeamCrest team={setup.userTeam} />
-            <strong>{setup.userTeam.shortName}</strong>
+            <TeamCrest team={teamOf(leftSide)} />
+            <strong>{teamOf(leftSide).shortName}</strong>
           </div>
           <div key={!setup.managerMode ? `${state.score.user}-${state.score.cpu}` : undefined} className={`botao-score ${!setup.managerMode ? "botao-score-animated" : ""}`}>
-            <b>{state.score.user}</b>
+            <b>{state.score[leftSide]}</b>
             <span>×</span>
-            <b>{state.score.cpu}</b>
+            <b>{state.score[rightSide]}</b>
           </div>
           <div className="botao-team botao-team-cpu">
-            <strong>{setup.cpuTeam.shortName}</strong>
-            <TeamCrest team={setup.cpuTeam} />
+            <strong>{teamOf(rightSide).shortName}</strong>
+            <TeamCrest team={teamOf(rightSide)} />
           </div>
         </div>
         {penalties && state.penaltyReason === "inactivity" ? (
           <div className="botao-inactivity-penalty-strip">
-            PÊNALTI PARA {setup.cpuTeam.shortName}
+            PÊNALTI PARA {online ? teamOf(penalties.turn).shortName : setup.cpuTeam.shortName}
           </div>
         ) : penalties ? (
           <div className="botao-penalty-track">
-            {SIDES.map((side) => (
+            {(mirrored ? [...SIDES].reverse() : SIDES).map((side) => (
               <div key={side} className="botao-penalty-row">
                 <span>
                   {side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr}
@@ -1754,6 +1909,9 @@ export default function BotaoMatch({
               </div>
             ))}
           </div>
+        ) : online ? (
+          // A linha vazia segura a altura até a UI online chegar.
+          onlinePart("FormationRow") ?? <div className="botao-formation-row" />
         ) : (
           <div className="botao-formation-row">
             <span
@@ -1862,6 +2020,7 @@ export default function BotaoMatch({
         {view3d && !view3dReady ? (
           <div className="botao-3d-loading" aria-hidden="true">Montando o estádio…</div>
         ) : null}
+        {onlinePart("NetStatus")}
         {performanceNotice && view3dReady ? (
           <div className="botao-3d-notice" role="status">
             <b>Modo desempenho 3D ligado</b>
@@ -1877,10 +2036,10 @@ export default function BotaoMatch({
           >
             <TeamCrest team={goalCaption.side === "user" ? setup.userTeam : setup.cpuTeam} size={30} />
             <span>
-              <small>{goalCaption.ownGoal ? "GOL CONTRA" : "GOL"} · {goalCaption.minute}</small>
+              <small>{goalCaption.ownGoal ? "GOL CONTRA" : "GOL"} · {goalCaption.minute}{goalCaption.signature ? ` · ${goalCaption.signature}` : null}</small>
               <strong>{goalCaption.scorer}</strong>
             </span>
-            <b>{state.score.user}<i>×</i>{state.score.cpu}</b>
+            <b>{state.score[leftSide]}<i>×</i>{state.score[rightSide]}</b>
           </div>
         ) : null}
         {flash ? (
@@ -1888,7 +2047,7 @@ export default function BotaoMatch({
             {flash.text}
           </div>
         ) : null}
-        {!localMatch && !paused && idleCountdown !== null ? (
+        {!localMatch && !paused && shownIdleCountdown !== null ? (
           <div
             className="botao-inactivity-countdown"
             role="alert"
@@ -1898,9 +2057,10 @@ export default function BotaoMatch({
               <small>{setup.managerMode ? "SEM ENROLAR" : "SEU TEMPO"}</small>
               <span>{setup.managerMode ? "chute antes do zero ou é pênalti para o adversário" : "Chute antes do zero para evitar pênalti ao adversário"}</span>
             </div>
-            <strong>{idleCountdown}</strong>
+            <strong>{shownIdleCountdown}</strong>
           </div>
         ) : null}
+        {onlinePart("KickLimit")}
         {paused ? (
           <div className="botao-pause-overlay" role="status" aria-live="polite">
             <span className="botao-pause-mark" aria-hidden="true">
@@ -1929,26 +2089,35 @@ export default function BotaoMatch({
                 ? "Empate no tempo normal"
                 : `Fim do ${state.period}º tempo`}
             </strong>
-            <p>
-              {state.score.user} × {state.score.cpu} ·{" "}
-              {state.period >= setup.rules.halves
-                ? `prorrogação de ${setup.rules.extraSeconds}s, e os dois times mudam de formação.`
-                : "os dois times mudam de formação."}
-            </p>
-            <button
-              type="button"
-              className="botao-primary"
-              onClick={() => {
-                const current = matchRef.current;
-                if (!current) return;
-                handleEvents(startNextPeriod(current));
-              }}
-            >
-              Continuar
-            </button>
+            {online ? (
+              // Online o intervalo é automático (5 s, iguais nos dois aparelhos).
+              onlinePart("IntervalText")
+            ) : (
+              <>
+                <p>
+                  {state.score.user} × {state.score.cpu} ·{" "}
+                  {state.period >= setup.rules.halves
+                    ? `prorrogação de ${setup.rules.extraSeconds}s, e os dois times mudam de formação.`
+                    : "os dois times mudam de formação."}
+                </p>
+                <button
+                  type="button"
+                  className="botao-primary"
+                  onClick={() => {
+                    const current = matchRef.current;
+                    if (!current) return;
+                    handleEvents(startNextPeriod(current));
+                  }}
+                >
+                  Continuar
+                </button>
+              </>
+            )}
           </div>
         ) : null}
-        {!paused && state.phase === "penalty-setup" && penalties ? (
+        {!paused && state.phase === "penalty-setup" && penalties && driver ? (
+          onlinePart("OrderPicker")
+        ) : !paused && state.phase === "penalty-setup" && penalties ? (
           <div className="botao-overlay">
             <strong>Disputa de pênaltis</strong>
             {localMatch ? (
@@ -2079,7 +2248,9 @@ export default function BotaoMatch({
       </div>
 
       <footer className="botao-controls">
-        {paused ? (
+        {online ? (
+          onlinePart("TurnText") ?? <p className="botao-turn" />
+        ) : paused ? (
           <p className="botao-turn botao-turn-paused">
             Jogo congelado · retome quando estiver pronto
           </p>
@@ -2145,7 +2316,8 @@ export default function BotaoMatch({
               Trocas {3 - substitutionCount(state, "user")}
             </button>
           ) : null}
-          {state.phase !== "finished" ? (
+          {onlinePart("FooterButtons")}
+          {state.phase !== "finished" && !online ? (
             <button
               type="button"
               className="botao-ghost botao-pause-toggle"
@@ -2204,7 +2376,8 @@ export default function BotaoMatch({
             {compactMobileTable ? "Ampliar mesa" : "Encolher mesa"}
           </button>
         </div>
-        {!setup.managerMode && <span className="botao-key-hint">ATALHOS: P PAUSA · M SOM{view3dReady ? " · C CÂMERA" : ""}</span>}
+        {/* Online não tem pausa. */}
+        {!setup.managerMode && <span className="botao-key-hint">{online ? "ATALHOS: M SOM" : "ATALHOS: P PAUSA · M SOM"}{view3dReady ? " · C CÂMERA" : ""}</span>}
         {view3dReady ? (
           <span className="botao-3d-hint">
             <span className="botao-pointer-desktop">Botão direito gira o campo · roda aproxima</span>
@@ -2212,6 +2385,7 @@ export default function BotaoMatch({
           </span>
         ) : null}
       </footer>
+      {onlinePart("ForfeitDialog")}
       <div className="botao-sr-only" role="status" aria-live="polite">
         {announcement}
       </div>

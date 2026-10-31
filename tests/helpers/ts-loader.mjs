@@ -9,9 +9,15 @@ import ts from "typescript";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const require = createRequire(join(ROOT, "package.json"));
 
+// `import.meta` não existe no CommonJS: `new Worker(new URL("./x.worker.ts", import.meta.url))` (o padrão que o
+// bundler entende, ex.: room/cpu-sim.ts) nem compilaria. Vira a URL do próprio arquivo antes do transpile.
+const IMPORT_META_URL = /\bimport\.meta\.url\b/g;
+const FILE_URL = 'require("node:url").pathToFileURL(__filename).href';
+
 if (!require.extensions[".ts"]) {
   const compile = (module, filename) => {
-    const { outputText } = ts.transpileModule(readFileSync(filename, "utf8"), {
+    const source = readFileSync(filename, "utf8");
+    const { outputText } = ts.transpileModule(source.includes("import.meta") ? source.replace(IMPORT_META_URL, FILE_URL) : source, {
       compilerOptions: {
         module: ts.ModuleKind.CommonJS,
         target: ts.ScriptTarget.ES2022,
@@ -22,6 +28,8 @@ if (!require.extensions[".ts"]) {
     });
     module._compile(outputText, filename);
   };
+  // A mesma marca do allowImportMeta() de duel-follower-worker.mjs: com ela ele não empilha outra troca.
+  compile.importMetaPatched = true;
   require.extensions[".ts"] = compile;
   require.extensions[".tsx"] = compile;
 

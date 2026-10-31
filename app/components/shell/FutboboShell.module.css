@@ -41,6 +41,13 @@
 .mainActions .playButton { grid-column: 1 / -1; min-height: 70px; background: var(--gold); color: #11150f; border-color: var(--gold); font-size: 20px; padding: 0 22px; box-shadow: 0 16px 50px rgba(244,196,48,.17); }
 .playButton strong { flex: 1; text-align: left; letter-spacing: .08em; }
 .playButton b { font-size: 24px; }
+/* Sala do Bobonline em aberto: atalho de volta logo abaixo do JOGAR (azul de transmissão, não ouro). */
+.resumeRoom { grid-column: 1 / -1; min-height: 48px; border: 1px solid rgba(88,169,232,.55); background: rgba(10,26,38,.82); color: #e9eee9; border-radius: 10px; padding: 0 15px; display: flex; align-items: center; gap: 10px; font-weight: 800; text-decoration: none; backdrop-filter: blur(12px); transition: transform .15s ease, border-color .15s ease; }
+.resumeRoom > span { display:grid; place-items:center; width:24px; font-size:20px; color: #58a9e8; }
+.resumeRoom strong { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resumeRoom b { font-size: 20px; }
+.resumeRoom:hover { transform: translateY(-2px); border-color: #58a9e8; }
+.shell[data-screen="home"] .mainActions .resumeRoom { min-height:clamp(40px,5.8dvh,48px); }
 
 .panelScreen { width: min(970px, calc(100% - 36px)); margin: 0 auto; padding: clamp(34px, 6vh, 70px) 0 54px; }
 .panelHeading { max-width: 720px; margin-bottom: 30px; }
@@ -192,7 +199,7 @@
 .shell[data-screen="modes"] .panelScreen { min-height:0; height:100%; padding:clamp(10px,2.2dvh,24px) 0; display:grid; grid-template-rows:auto minmax(0,1fr); overflow:hidden; }
 .shell[data-screen="modes"] .panelHeading { margin-bottom:clamp(8px,1.6dvh,16px); }
 .shell[data-screen="modes"] .panelHeading h2 { font-size:clamp(31px,min(5vw,7dvh),58px); }
-.shell[data-screen="modes"] .modeList { min-height:0; grid-template-rows:repeat(4,minmax(0,1fr)); gap:clamp(5px,.8dvh,8px); }
+.shell[data-screen="modes"] .modeList { min-height:0; grid-template-rows:repeat(5,minmax(0,1fr)); gap:clamp(5px,.8dvh,8px); }
 .shell[data-screen="modes"] .modeCard { min-height:0; height:100%; padding-block:clamp(7px,1.25dvh,13px); }
 
 @media (min-width:761px) {
@@ -334,4 +341,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   .offerDialog[open], .offerDialog[open]::backdrop, .offerToast, .offerPitch, .offerFace, .offerBob, .offerKickPass, .offerKickReturn, .offerBallPath, .offerBall { animation: none; }
+}
+
+/* Celular deitado com cinco modos: só o nome de cada um, para as cinco linhas caberem sem cortar. */
+@media (max-height:480px) {
+  .shell[data-screen="modes"] .panelHeading { margin-bottom:6px; }
+  .shell[data-screen="modes"] .panelHeading p, .shell[data-screen="modes"] .modeCard small, .shell[data-screen="modes"] .modeCard p { display:none; }
+  .shell[data-screen="modes"] .panelHeading h2 { font-size:26px; margin-block:4px 0; }
+  .shell[data-screen="modes"] .modeList { gap:4px; }
+  .shell[data-screen="modes"] .modeCard { padding-block:2px; }
+  .shell[data-screen="modes"] .modeCard strong { font-size:16px; }
+  .shell[data-screen="modes"] .modeIndex { font-size:13px; }
 }

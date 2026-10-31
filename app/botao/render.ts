@@ -63,6 +63,16 @@ export type BotaoRenderView = {
   showcase?: boolean;
   /** Segundos até a saída de bola depois do gol (o 3D devolve a câmera antes). O 2D ignora. */
   goalEndsIn?: number | null;
+  /** Bobonline: mesa girada 180° (o convidado vê o próprio time subindo); o drawMatch gira. Números e rostos continuam de pé. */
+  mirrored?: boolean;
+  /** Drama do pênalti da CPU: o tempo dele, cru (o 3D tira progresso e segundos restantes daqui; o 2D ignora). */
+  penaltyWindup?: { shooterId: string; totalMs: number; elapsedMs: number } | null;
+  /** A mira desenhada é a do adversário (prévia pela rede): seta a 70%. */
+  remoteAim?: boolean;
+  /** Pênalti online: o batedor do outro aparelho, concentrado até a primeira prévia de mira chegar (só o 3D encena). */
+  penaltyFocusId?: string | null;
+  /** Bobonline 2D: desenho por baixo dos botões, logo depois do clarão do gol (a pista da comemoração longa vem do driver online). */
+  underlay?: ((ctx: CanvasRenderingContext2D) => void) | null;
 };
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
@@ -374,7 +384,7 @@ function drawDisc(
   ctx: CanvasRenderingContext2D,
   body: BotaoBody,
   colors: { primary: string; secondary: string },
-  options: { selected: boolean; ready: boolean; pulse: number; uprightLabel?: boolean; appearance?: PlayerAppearance | null; hideUserMarker?: boolean; showcase?: boolean; showcaseAngle?: number },
+  options: { selected: boolean; ready: boolean; pulse: number; uprightLabel?: boolean; mirrored?: boolean; appearance?: PlayerAppearance | null; hideUserMarker?: boolean; showcase?: boolean; showcaseAngle?: number },
 ) {
   ctx.save();
   ctx.translate(body.x, body.y);
@@ -425,6 +435,7 @@ function drawDisc(
   if (options.appearance) {
     ctx.save();
     if (options.uprightLabel) ctx.rotate(-Math.PI / 2);
+    if (options.mirrored) ctx.rotate(Math.PI);
     drawPlayerBust(ctx, options.appearance, colors.primary, colors.secondary, body.radius);
     ctx.restore();
   }
@@ -469,6 +480,7 @@ function drawDisc(
   // tipografia preserva a orientação física dos discos e deixa a camisa legível.
   ctx.save();
   if (options.uprightLabel) ctx.rotate(-Math.PI / 2);
+  if (options.mirrored) ctx.rotate(Math.PI);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   if (!options.appearance) {
@@ -587,7 +599,7 @@ function replayBallSpin(replay: BotaoGoalReplay, bodyIndex: number, frameIndex: 
   return travel / Math.max(1, radius) * 0.72;
 }
 
-function drawAim(ctx: CanvasRenderingContext2D, disc: BotaoBody, aim: BotaoAimView, showcase = false) {
+function drawAim(ctx: CanvasRenderingContext2D, disc: BotaoBody, aim: BotaoAimView, showcase = false, remote = false) {
   const dx = disc.x - aim.dragX;
   const dy = disc.y - aim.dragY;
   const length = Math.hypot(dx, dy);
@@ -600,6 +612,8 @@ function drawAim(ctx: CanvasRenderingContext2D, disc: BotaoBody, aim: BotaoAimVi
   const color = aim.valid ? (aim.ratio > 0.82 ? "#ff7a45" : "#ffc72c") : "rgba(245, 247, 242, 0.35)";
 
   ctx.save();
+  // Mira do adversário (prévia da rede, Bobonline): mais apagada que a sua.
+  if (remote) ctx.globalAlpha = 0.7;
   // Prévia de onde o botão para. É o alcance exato do atrito, sem contar
   // colisões — informação justa: é o SEU toque, você tem direito de saber a força.
   if (aim.valid) {
@@ -739,6 +753,7 @@ export function drawMatch(
   view: BotaoRenderView,
   time: number,
 ) {
+  mirrorTable(ctx, view.mirrored);
   const userColors = { primary: state.setup.userTeam.primary, secondary: state.setup.userTeam.secondary };
   const cpuColors = { primary: state.setup.cpuTeam.primary, secondary: state.setup.cpuTeam.secondary };
   const pulse = (Math.sin(time / 320) + 1) / 2;
@@ -750,6 +765,7 @@ export function drawMatch(
   if (ball) drawBallFocusLight(ctx, ball);
   if (view.showcase) drawShowcaseAtmosphere(ctx, time, userColors.primary, cpuColors.primary);
   drawGoalFlash(ctx, view.goalFlash, view.goalFlashSide, view.showcase);
+  view.underlay?.(ctx);
 
   const visible = view.penaltyMode ? penaltyVisibleBodies(state) : state.bodies;
   if (view.penaltyMode) {
@@ -769,6 +785,7 @@ export function drawMatch(
       ready: view.highlight && body.side === state.turn,
       pulse,
       uprightLabel: view.uprightLabels,
+      mirrored: view.mirrored,
       appearance: bodyAppearance(state.setup, body),
       hideUserMarker: view.hideUserMarker,
       showcase: view.showcase,
@@ -781,18 +798,23 @@ export function drawMatch(
 
   if (view.aim) {
     const disc = state.bodies.find((body) => body.id === view.aim?.bodyId);
-    if (disc) drawAim(ctx, disc, view.aim, view.showcase);
+    if (disc) drawAim(ctx, disc, view.aim, view.showcase, view.remoteAim);
   }
 }
 
-/** Desenha um quadro vetorial gravado, sem reexecutar física, IA ou relógio. */
+/**
+ * Desenha um quadro vetorial gravado, sem reexecutar física, IA ou relógio.
+ * `mirrored`: mesa girada 180° (convidado do Bobonline); os números ficam de pé.
+ */
 export function drawReplayFrame(
   ctx: CanvasRenderingContext2D,
   setup: BotaoMatchSetup,
   replay: BotaoGoalReplay,
   frameIndex: number,
   blend = 0,
+  mirrored = false,
 ) {
+  mirrorTable(ctx, mirrored);
   const frame = replay.frames[Math.max(0, Math.min(replay.frames.length - 1, frameIndex))];
   if (!frame) return;
   const nextFrame = replay.frames[Math.min(replay.frames.length - 1, frameIndex + 1)] ?? frame;
@@ -823,7 +845,7 @@ export function drawReplayFrame(
     const colors = rendered.side === "user"
       ? { primary: setup.userTeam.primary, secondary: setup.userTeam.secondary }
       : { primary: setup.cpuTeam.primary, secondary: setup.cpuTeam.secondary };
-    drawDisc(ctx, rendered, colors, { selected: false, ready: false, pulse: 0, appearance: bodyAppearance(setup, rendered), hideUserMarker: setup.localControl });
+    drawDisc(ctx, rendered, colors, { selected: false, ready: false, pulse: 0, mirrored, appearance: bodyAppearance(setup, rendered), hideUserMarker: setup.localControl });
   });
   const ball = renderedBodies.find((body) => body.kind === "ball");
   if (ball) {
@@ -840,18 +862,27 @@ function penaltyVisibleBodies(state: BotaoMatchState): BotaoBody[] {
   return state.bodies.filter((body) => body.kind === "ball" || body.id === shooter.id || body.id === keeper.id);
 }
 
-/** Converte um ponto do canvas (px) para unidades de campo, inclusive com a mesa deitada no desktop. */
-export function toFieldPoint(clientX: number, clientY: number, rect: DOMRect, rotated = false): { x: number; y: number } {
+/**
+ * Converte um ponto do canvas (px) para unidades de campo, inclusive com a mesa deitada no desktop
+ * e com a mesa girada 180° (`mirrored`, convidado do Bobonline).
+ */
+export function toFieldPoint(clientX: number, clientY: number, rect: DOMRect, rotated = false, mirrored = false): { x: number; y: number } {
+  let x: number;
+  let y: number;
   if (rotated) {
     const scale = rect.height / VIEW_WIDTH;
-    return {
-      x: (clientY - rect.top) / scale - VIEW_PAD_X,
-      y: VIEW_HEIGHT - VIEW_PAD_Y - (clientX - rect.left) / scale,
-    };
+    x = (clientY - rect.top) / scale - VIEW_PAD_X;
+    y = VIEW_HEIGHT - VIEW_PAD_Y - (clientX - rect.left) / scale;
+  } else {
+    const scale = rect.width / VIEW_WIDTH;
+    x = (clientX - rect.left) / scale - VIEW_PAD_X;
+    y = (clientY - rect.top) / scale - VIEW_PAD_Y;
   }
-  const scale = rect.width / VIEW_WIDTH;
-  return {
-    x: (clientX - rect.left) / scale - VIEW_PAD_X,
-    y: (clientY - rect.top) / scale - VIEW_PAD_Y,
-  };
+  // Mesa girada: o ponto volta para as coordenadas do campo (a mesma conta nos dois sentidos).
+  return mirrored ? { x: FIELD.width - x, y: FIELD.height - y } : { x, y };
+}
+
+/** Mesa girada 180° em volta do centro do campo (convidado do Bobonline), antes de desenhar qualquer coisa. */
+function mirrorTable(ctx: CanvasRenderingContext2D, mirrored?: boolean) {
+  if (mirrored) ctx.transform(-1, 0, 0, -1, FIELD.width, FIELD.height);
 }

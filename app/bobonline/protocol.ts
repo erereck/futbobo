@@ -1,7 +1,8 @@
 // Protocolo do Bobonline (B2): constantes do fio e o catálogo de mensagens.
 //
-// T0: constantes do §3.2 e os tipos das mensagens do §3.6. A lógica (sessão,
-// sala, partida) entra no L5. Só imports de tipo: este arquivo não puxa o motor.
+// Constantes do §3.2 e os tipos das mensagens do §3.6. A sessão (net/session.ts)
+// usa os tipos de sessão; sala e partida usam os seus. Só imports de tipo: este
+// arquivo não puxa o motor.
 
 import type { DuelAction, DuelPresentation } from "../botao/match-link";
 import type { SerializedMatch } from "../botao/match-codec";
@@ -39,14 +40,23 @@ export const T = {
 /** Um servidor TURN, no formato de `NetConfig.turn` (§3.5): anexado ao STUN padrão. */
 export type TurnServer = { urls: string | string[]; username?: string; credential?: string };
 /**
- * TURN: só o encaixe. Vazio de propósito no T0; o B2 liga as credenciais depois
- * (via net.json / NetConfig.turn), e até lá o Trystero usa só o STUN padrão.
+ * TURN embutido, anexado ao STUN padrão do Trystero. `DEFAULT_NET_CONFIG.turn` copia daqui e o
+ * net.json publicado leva a MESMA lista (o teste confere os dois). Vazio = sem chave `turn` nos
+ * dois. Ligar ou trocar a credencial: mude aqui E em public/bobonline/net.json no mesmo release
+ * (formato: `{ urls: ["turn:host:3478?transport=udp", "turn:host:3478?transport=tcp"], username, credential }`).
  */
 export const TURN_SERVERS: readonly TurnServer[] = [];
 
+/** Versão do envelope do fio (`Wire.p`). Diferente de BOB_PROTOCOL, que vai no hello. */
+export const WIRE_VERSION = 1;
+/** Tipos da camada de sessão: o app nunca manda mensagens com esses nomes. */
+export const SESSION_KINDS = ["hello", "hb", "away", "back", "bye", "ack", "chunk", "fwd", "rst"] as const;
+/** Tipos que viajam sem confiabilidade (s = 0). O app manda os seus com `sendLossy`. */
+export const LOSSY_KINDS = ["hb", "away", "back", "hello", "bye", "ack", "rst", "live", "m:aim", "m:hold"] as const;
+
 // ---------------------------------------------------------------------------
-// Tipos do fio que a sala também usa (§3.3). No T0 moram aqui; net/session.ts
-// (B2) pode trazê-los para lá e reexportar daqui.
+// Tipos do fio que a sala também usa (§3.3). Moram aqui (room-api.ts precisa
+// deles sem puxar a sessão); net/session.ts reexporta.
 // ---------------------------------------------------------------------------
 
 export type PeerHealth = "ok" | "unstable" | "away" | "lost";
@@ -87,11 +97,24 @@ export type SessionBodies = {
   away: EmptyBody;
   /** L (enviado duas vezes, 150 ms de intervalo). */
   back: EmptyBody;
-  /** L. */
-  bye: { reason: "outra-aba" };
-  /** R. Pedaço de uma mensagem confiável maior que MAX_FRAME_BYTES. */
-  chunk: { id: string; i: number; n: number; part: string };
-  /** Repasse: o corpo é o quadro interno inteiro (string assinada); o `to` vai no quadro externo. */
+  /**
+   * L, só direto. Um terceiro responde ao hello de incarnation menor (aba/aparelho mais velho com a
+   * mesma identidade). `playerId`/`inc`: de quem é a aba velha e a incarnation mais nova conhecida.
+   * Prova: `tp` (id de transporte da aba nova) e `sig` (a assinatura do hello que ela mandou a quem
+   * repassa); a aba velha confere com a própria chave o texto do hello `inc`, quem repassa → `tp`.
+   */
+  bye: { reason: "outra-aba"; playerId: string; inc: number; tp: string; sig: string };
+  /** L. Só o ack (`a`) do envelope, quando nada mais vai para esse par logo. */
+  ack: EmptyBody;
+  /**
+   * R. Pedaço de uma mensagem confiável grande demais para um quadro: `kind` é o tipo da
+   * mensagem original; as partes juntas são o JSON do corpo.
+   */
+  chunk: { id: string; i: number; n: number; kind: string; part: string };
+  /**
+   * Repasse por um terceiro (s = 0, sem ack do repassador). O corpo é o quadro interno inteiro
+   * (string, assinado, com `to`); o quadro externo também leva `to`.
+   */
   fwd: string;
   /** L. Próximo seq depois de um estouro de outbox. */
   rst: { s: number };
@@ -99,8 +122,11 @@ export type SessionBodies = {
 
 /** Sala e torneio. */
 export type RoomBodies = {
-  /** R, convidado→anfitrião. A identidade vem do hello vinculado. */
-  "room:join": { nickname: string; team: BobTeam; passwordProof?: string; asSpectator?: boolean; resume?: boolean };
+  /**
+   * R, convidado→anfitrião. A identidade vem do hello vinculado. `pub`: a chave do convidado, para o
+   * anfitrião que não a tem do hello (só vale se playerIdFor(pub) for o remetente).
+   */
+  "room:join": { nickname: string; team: BobTeam; passwordProof?: string; asSpectator?: boolean; resume?: boolean; pub?: string };
   /** R, anfitrião→convidado. */
   "room:welcome": { snapshot: RoomSnapshot; teams: RoomTeams };
   /** R, anfitrião→convidado. */
@@ -129,8 +155,11 @@ export type RoomBodies = {
   "match:ready": { bracketId: string };
   /** R, jogador→anfitrião: saiu da tela de resultado (bracketId da partida anterior). */
   "match:free": { bracketId: string };
-  /** R, autoridade (e seguidor)→anfitrião. */
-  "match:report": { bracketId: string; matchId: string; result: BracketResult; replay?: true };
+  /**
+   * R, autoridade (e seguidor)→anfitrião. `replay` + `sides` (entrantIds [mandante, visitante]): fato de
+   * outra linhagem reenviado ao anfitrião novo (§4.7), que só o aceita com os mesmos lados.
+   */
+  "match:report": { bracketId: string; matchId: string; result: BracketResult; replay?: true; sides?: [string, string] };
   /** R, jogador presente→anfitrião. */
   "match:wo": { bracketId: string; matchId: string; absent: string; kind: "timeout" | "stall" };
   /** R, jogador→anfitrião e adversário. */
@@ -149,16 +178,23 @@ export type MatchBodies = {
   "m:ready": { matchId: string; h0: string; restoredN?: number };
   /** R, autoridade→seguidor. */
   "m:go": { matchId: string };
-  /** R, quem escreve→par(es) (§5.2). */
-  "m:act": DuelAction;
+  /** R, quem escreve→par(es) (§5.2). `matchId` vai junto para descartar ação de outra partida. */
+  "m:act": DuelAction & { matchId?: string };
   /** R, autoridade→seguidor e espectadores. */
   "m:rest": { matchId: string; n: number; h: string; match: SerializedMatch; pres: DuelPresentation | null };
   /** R, os dois, ao (re)vincular durante a partida. `log` = últimas ≤ 8. */
   "m:hello": { matchId: string; n: number; h: string; restN: number; se: number; log: DuelAction[]; orders: Partial<Record<BotaoSide, string[]>> };
   /** R, qualquer um→o outro. */
   "m:sync-req": { matchId: string; reason: "fork" | "gap" | "stuck" | "hash" | "lost" };
-  /** R, autoridade→seguidor/espectador. `log` = ações depois de n. */
-  "m:sync": { matchId: string; n: number; se: number; match: SerializedMatch; pres: DuelPresentation | null; log: DuelAction[] };
+  /**
+   * R, autoridade→seguidor/espectador. `log` = ações depois de n; `why` = o motivo (vira o da diretiva).
+   * `full`: transmissão cheia (§4.8), o espectador fica de fora; nesse caso só `matchId` acompanha.
+   */
+  "m:sync": {
+    matchId: string; n: number; se: number; match: SerializedMatch; pres: DuelPresentation | null; log: DuelAction[];
+    why?: "hash" | "fork" | "gap" | "stuck" | "lost" | "spectate";
+    full?: true;
+  };
   /** R, seguidor→autoridade. `match` = lastAuthRest. */
   "m:sync-up": { matchId: string; n: number; match: SerializedMatch; log: DuelAction[] };
   /** R, autoridade→seguidor (os dois começam a contagem de 3 s). */

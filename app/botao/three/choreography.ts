@@ -6,8 +6,10 @@
 // emprestada e devolvida quando a jogada volta — a visão faz os bonecos
 // trotarem de onde estiverem até a formação nova.
 
+import type { CelebrationId } from "../../player-appearance";
 import type { BotaoSide } from "../types";
-import { angleDelta, idleIntent, type FigureAction, type FigureIntent, type FigureState } from "./character";
+import { beamRoom } from "./celebration-fx";
+import { KAME, angleDelta, idleIntent, type FigureAction, type FigureIntent, type FigureState } from "./character";
 import { HALF_H, HALF_W } from "./stadium";
 
 export type Actor = {
@@ -48,6 +50,8 @@ type Track = {
   heading: number;
   speed: number;
   slideFrom: Point | null;
+  /** Relógio da coreografia quando a pose final ("hold") começou; -1 antes disso. */
+  heldAt: number;
 };
 
 /** Os mesmos ids de CELEBRATION_OPTIONS (player-appearance.ts), menos o "auto". */
@@ -61,12 +65,46 @@ const GOAL_CELEBRATIONS: GoalCelebration[] = [
   "heart", "shush", "armsCrossed", "cradle", "robot", "dance",
 ];
 
-const GOAL_SHOT_KINDS = new Set<string>(GOAL_CELEBRATIONS);
+/** Só aparecem quando escolhidas no criador (fora do sorteio "Variada" dos modos de sempre). */
+export const SIGNATURE_ONLY: GoalCelebration[] = ["kamehameha", "superSaiyan", "meditate", "cupEar", "fingerGuns"];
+/**
+ * "Variada" das partidas com elenco nomeado (Bobonline): as 12 de sempre mais
+ * as três novas que não esticam a pausa do gol. Kamehameha e Super Saiyajin só
+ * quando escolhidas: a extensão da pausa continua função só do id escolhido.
+ */
+export const BOBONLINE_VARIADA: GoalCelebration[] = [...GOAL_CELEBRATIONS, "meditate", "cupEar", "fingerGuns"];
+
+const GOAL_SHOT_KINDS = new Set<string>([...GOAL_CELEBRATIONS, ...SIGNATURE_ONLY]);
 
 /** Id do criador ("auto", "siuu"...) → comemoração da coreografia; null mantém o sorteio. */
 export function goalCelebrationOf(id: string | null | undefined): GoalCelebration | null {
   return id && GOAL_SHOT_KINDS.has(id) ? (id as GoalCelebration) : null;
 }
+
+/**
+ * Comemoração de cada botão numa partida com elenco nomeado: a escolhida no
+ * criador; "Variada" sorteia do BOBONLINE_VARIADA com a mesma semente nos dois
+ * aparelhos (mesma conta do sorteio de sempre).
+ */
+export function squadCelebrationFor(celebration: CelebrationId, scorerId: string, seed: number): GoalCelebration {
+  return goalCelebrationOf(celebration) ?? BOBONLINE_VARIADA[hash(`${seed}|${scorerId}`) % BOBONLINE_VARIADA.length];
+}
+
+/** Abaixo disso a tela está em pé (retrato): o raio do Kamehameha encurta e a câmera abre mais. */
+const PORTRAIT_ASPECT = 0.8;
+/**
+ * Ângulo (rad) entre o raio e a direção da câmera, para o lado de quem marcou: de
+ * três quartos para a câmera, com a ponta dentro do quadro (em pé e no campo virado).
+ */
+const KAME_BEAM_YAW = 0.95;
+/** A câmera começa a abrir isto (s) antes do disparo: ela chega atrasada e a ponta sai em 0,12 s. */
+const KAME_CAMERA_LEAD = 0.25;
+const KAME_BEAM_LENGTH = 110;
+const KAME_BEAM_LENGTH_PORTRAIT = 80;
+/** Meia largura do corredor do raio: adversário dentro dele cai sentado. */
+const KAME_CORRIDOR = 20;
+/** Quando (s depois de a pose começar) quem está no corredor cai: o raio sai em KAME.FIRE. */
+const KAME_KNOCKDOWN = 1.25;
 const NET_SHOT_SECONDS = 0.42;
 const MARGIN = 15;
 /** Raio da roda da comemoração: adversário dentro dele sai andando. */
@@ -111,6 +149,31 @@ const smoothstep = (value: number) => {
   return clamped * clamped * (3 - 2 * clamped);
 };
 
+/**
+ * Quanto tempo (s) a corrida do `advance` leva de `from` a `to` saindo do zero:
+ * a mesma aceleração e a mesma freada, em passos de 1/60 s.
+ */
+function runTime(from: Point, to: Point, speed: number) {
+  const dt = 1 / 60;
+  let x = from.x;
+  let z = from.z;
+  let velocity = 0;
+  let time = 0;
+  for (let guard = 0; guard < 600; guard += 1) {
+    const dx = to.x - x;
+    const dz = to.z - z;
+    const distance = Math.hypot(dx, dz);
+    const target = speed * Math.max(0.25, Math.min(1, distance / 26));
+    velocity += (target - velocity) * (1 - Math.exp(-dt * 9));
+    const move = velocity * dt;
+    if (distance <= Math.max(move, 1.5)) return time + distance / Math.max(1, velocity);
+    x += (dx / distance) * move;
+    z += (dz / distance) * move;
+    time += dt;
+  }
+  return time;
+}
+
 export class Choreographer {
   private tracks = new Map<string, Track>();
   private focusId: string | null = null;
@@ -123,6 +186,12 @@ export class Choreographer {
   private lastBall: Point | null = null;
   /** De onde a rampa de zoom parte: 1 na vista de jogo, o close atual quando uma festa emenda na outra. */
   private rampFrom = 1;
+  /** Para onde o raio do Kamehameha sai (yaw), para a câmera acompanhar. */
+  private beamYaw = 0;
+  /** Lado do raio do Kamehameha (±1; 1 nas outras festas): a órbita lenta gira para ele e fecha o ângulo. */
+  private beamSide = 1;
+  /** Última largura ÷ altura que a câmera recebeu (o gol pode chegar sem ela). */
+  private lastAspect = 16 / 9;
 
   get active() {
     return this.tracks.size > 0;
@@ -151,6 +220,7 @@ export class Choreographer {
     this.sideValue = null;
     this.rampFrom = 1;
     this.elapsed = 0;
+    this.beamSide = 1;
   }
 
   has(id: string) {
@@ -162,7 +232,8 @@ export class Choreographer {
   /**
    * Gol: quem marcou dispara para a festa (carrinho de joelho, bandeirinha,
    * aviãozinho, "siuuu", mortal, beijo no escudo, coração, silêncio, braços
-   * cruzados, embala neném, robô ou dancinha), os companheiros chegam
+   * cruzados, embala neném, robô ou dancinha; escolhidas no criador, também
+   * Kamehameha, Super Saiyajin, meditação, "não tô ouvindo" e pistoleiro), os companheiros chegam
    * correndo por trás dele (longe da câmera, para não taparem) e o outro time
    * desaba aos poucos.
    */
@@ -176,6 +247,13 @@ export class Choreographer {
     seed: number;
     /** Comemoração escolhida no criador: vale só quando quem marcou é o jogador do usuário. */
     signature?: GoalCelebration | null;
+    /**
+     * Elenco nomeado (Bobonline): a comemoração de cada botão. Quando vem, vale
+     * para quem marcou no lugar da regra do `isUser` (gol contra continua aviãozinho).
+     */
+    signatureFor?: (actorId: string) => GoalCelebration | null;
+    /** Largura ÷ altura da tela; sem ela, a última que a câmera recebeu (ou 16/9). O Kamehameha mira diferente em pé. */
+    aspect?: number;
   }) {
     this.stop();
     const field = args.actors.filter((actor) => !actor.keeper && actor.side);
@@ -189,7 +267,9 @@ export class Choreographer {
     const goalZ = args.side === "user" ? -HALF_H : HALF_H;
     const inward = args.side === "user" ? 1 : -1;
     const sx = Math.abs(scorer.x) > 18 ? Math.sign(scorer.x) : hash(`${args.seed}|side`) % 2 ? 1 : -1;
-    const signature = !args.ownGoalId && scorer.isUser ? args.signature ?? null : null;
+    const signature = args.ownGoalId
+      ? null
+      : args.signatureFor ? args.signatureFor(scorer.id) : scorer.isUser ? args.signature ?? null : null;
     const kind: GoalCelebration = args.ownGoalId
       ? "airplane"
       : signature ?? GOAL_CELEBRATIONS[hash(`${args.seed}|${scorer.id}`) % GOAL_CELEBRATIONS.length];
@@ -203,6 +283,8 @@ export class Choreographer {
     const reach = (target: Point, limit = RUN_LIMIT) => clampToField(limitFrom(start, target, limit));
     const steps: Step[] = [{ kind: "wait", duration: 0.08, state: "celebrate", action: null }];
     let finish: Point;
+    const portrait = (args.aspect ?? this.lastAspect) < PORTRAIT_ASPECT;
+    let beamYaw = args.cameraYaw;
     switch (kind) {
       case "kneeSlide": {
         // O plano clássico de TV: ele vem correndo NA DIREÇÃO da câmera e desliza de joelhos até ela.
@@ -271,21 +353,35 @@ export class Choreographer {
         steps.push({ kind: "hold", state: "celebrate", action: kind, face: { yaw: args.cameraYaw } });
         break;
       }
-      case "shush": {
-        // Vai para a arquibancada mais perto e cala a torcida. Vira para ela só até
-        // três quartos: de costas para a câmera o dedo nos lábios não aparece.
+      case "shush":
+      case "cupEar": {
+        // Vai para a arquibancada mais perto e cala a torcida (ou pede barulho). Vira para
+        // ela só até três quartos: de costas para a câmera o gesto no rosto não aparece.
         finish = reach({ x: sx * (HALF_W - 34), z: start.z + inward * 24 }, RUN_LIMIT);
         steps.push({ kind: "run", to: finish, speed: SCORER_SPEED, action: null });
         const crowdYaw = yawTo(finish, { x: sx * (HALF_W + 90), z: finish.z });
-        steps.push({ kind: "hold", state: "celebrate", action: "shush", face: { yaw: args.cameraYaw + angleDelta(args.cameraYaw, crowdYaw) * 0.45 } });
+        steps.push({ kind: "hold", state: "celebrate", action: kind, face: { yaw: args.cameraYaw + angleDelta(args.cameraYaw, crowdYaw) * 0.45 } });
         break;
       }
       case "armsCrossed":
-      case "robot": {
+      case "robot":
+      case "superSaiyan":
+      case "meditate":
+      case "fingerGuns": {
         // Corrida curta e para seco, de frente para a câmera.
         finish = reach({ x: start.x + toward.x * 55 + sx * 10, z: start.z + toward.z * 55 }, 60);
         steps.push({ kind: "run", to: finish, speed: SCORER_SPEED - 40, action: null });
         steps.push({ kind: "hold", state: "celebrate", action: kind, face: { yaw: args.cameraYaw } });
+        break;
+      }
+      case "kamehameha": {
+        // Corrida curta para o lado e para dentro; para de três quartos para a câmera,
+        // com o raio saindo para longe da roda dos companheiros (que fica atrás dele).
+        // O ângulo é fechado (e a órbita da câmera gira para o mesmo lado): a ponta continua dentro da tela.
+        finish = reach({ x: start.x + sx * 30, z: start.z + inward * 25 }, 70);
+        steps.push({ kind: "run", to: finish, speed: SCORER_SPEED, action: null });
+        beamYaw = args.cameraYaw + sx * KAME_BEAM_YAW;
+        steps.push({ kind: "hold", state: "celebrate", action: "kamehameha", face: { yaw: beamYaw } });
         break;
       }
       default: {
@@ -298,12 +394,22 @@ export class Choreographer {
     }
     this.add(scorer, steps);
     this.focusId = scorer.id;
+    this.beamYaw = beamYaw;
+    this.beamSide = kind === "kamehameha" ? sx : 1;
 
     // Companheiros: atrás de quem marcou, do ponto de vista da câmera.
     const away = args.cameraYaw + Math.PI;
     const mates = team.filter((actor) => actor.id !== scorer.id)
       .sort((a, b) => Math.hypot(a.x - finish.x, a.z - finish.z) - Math.hypot(b.x - finish.x, b.z - finish.z));
     const huddleActions: FigureAction[] = ["jumpCheer", "hug", "highFive", "jumpCheer", "clap"];
+    // Meditação: ninguém pula em volta de quem medita, aplaudem.
+    const cheer = (action: FigureAction): FigureAction => (kind === "meditate" && action === "jumpCheer" ? "clap" : action);
+    // Super Saiyajin: a aura precisa de espaço; a roda fica um pouco mais longe.
+    const roomy = kind === "superSaiyan" ? 10 : 0;
+    // Kamehameha: a roda fecha um pouco e escorrega para o lado contrário ao raio (ninguém fica na
+    // boca do golpe nem ao lado dele, na frente da câmera).
+    const lean = kind === "kamehameha" ? sx * 0.35 : 0;
+    const squeeze = kind === "kamehameha" ? 0.75 : 1;
     // Embala neném: os dois mais perto entram ao lado dele, embalando junto (Brasil, 94).
     const beside = { x: Math.cos(args.cameraYaw), z: -Math.sin(args.cameraYaw) };
     mates.forEach((mate, index) => {
@@ -320,22 +426,44 @@ export class Choreographer {
         ]);
         return;
       }
-      const spread = (index - (mates.length - 1) / 2) * 0.62;
-      const angle = away + spread;
-      const radius = 22 + (index % 2) * 7;
+      const spread = (index - (mates.length - 1) / 2) * 0.62 * squeeze;
+      const angle = away + spread + lean;
+      const radius = 22 + (index % 2) * 7 + roomy;
       const spot = clampToField({ x: finish.x + Math.sin(angle) * radius, z: finish.z + Math.cos(angle) * radius });
       this.add(mate, [
         { kind: "wait", duration: 0.12 + index * 0.09, state: "celebrate", action: "fistPump", face: { actor: scorer.id } },
-        { kind: "run", to: spot, speed: TEAMMATE_SPEED - index * 6, action: index % 2 ? "jumpCheer" : null },
-        { kind: "hold", state: "celebrate", action: huddleActions[index % huddleActions.length], face: { actor: scorer.id } },
+        { kind: "run", to: spot, speed: TEAMMATE_SPEED - index * 6, action: index % 2 ? cheer("jumpCheer") : null },
+        { kind: "hold", state: "celebrate", action: cheer(huddleActions[index % huddleActions.length]), face: { actor: scorer.id } },
       ]);
     });
+
+    // Kamehameha: quem estiver no caminho do raio cai sentado logo depois do disparo.
+    const beamX = Math.sin(beamYaw);
+    const beamZ = Math.cos(beamYaw);
+    // O mesmo corte da ponta que o efeito faz (no avental, antes da arquibancada): ninguém cai além dela.
+    const beamLength = Math.min(portrait ? KAME_BEAM_LENGTH_PORTRAIT : KAME_BEAM_LENGTH, Math.max(30, beamRoom(finish.x, finish.z, beamX, beamZ)));
+    const knockdownAt = kind === "kamehameha" ? 0.08 + runTime(start, finish, SCORER_SPEED) + KAME_KNOCKDOWN : -1;
+    const inBeam = (actor: Actor) => {
+      if (knockdownAt < 0) return false;
+      const dx = actor.x - finish.x;
+      const dz = actor.z - finish.z;
+      const along = dx * beamX + dz * beamZ;
+      return along > 0 && along < beamLength + 10 && Math.abs(dx * beamZ - dz * beamX) < KAME_CORRIDOR;
+    };
 
     // Quem tomou: cada um do seu jeito, andando devagar para a própria área.
     const sadActions: FigureAction[] = ["handsOnHead", "handsOnHips", "kneelSad", "kickGround", "handsOnHips"];
     rivals.forEach((rival, index) => {
       if (rival.id === args.ownGoalId) {
         this.add(rival, [{ kind: "hold", state: "sad", action: "kneelSad", face: null }]);
+        return;
+      }
+      if (inBeam(rival)) {
+        // Vê a carga de olhos arregalados e cai sentado com o raio.
+        this.add(rival, [
+          { kind: "wait", duration: knockdownAt, state: "idle", action: "handsOnHead", face: { actor: scorer.id } },
+          { kind: "hold", state: "sad", action: "sitDown", face: { actor: scorer.id } },
+        ]);
         return;
       }
       const action = sadActions[(hash(rival.id) + index) % sadActions.length];
@@ -498,6 +626,7 @@ export class Choreographer {
       heading: 0,
       speed: 0,
       slideFrom: null,
+      heldAt: -1,
     });
   }
 
@@ -531,6 +660,8 @@ export class Choreographer {
       if (step.kind === "hold") {
         // Parado de vez: velocidade velha faria o boneco "correr no lugar".
         track.speed = 0;
+        // A ação da pose final começa neste quadro e soma o dt inteiro (o relógio do boneco).
+        if (track.heldAt < 0) track.heldAt = this.elapsed - dt;
         break;
       }
       if (step.kind === "wait") {
@@ -663,8 +794,12 @@ export class Choreographer {
     }
   }
 
-  /** O que a câmera deve enquadrar agora (ou null para a vista de jogo). */
-  camera(): CameraShot | null {
+  /**
+   * O que a câmera deve enquadrar agora (ou null para a vista de jogo).
+   * `aspect` (largura ÷ altura, padrão 16/9) só muda o Kamehameha.
+   */
+  camera(aspect?: number): CameraShot | null {
+    if (aspect !== undefined && aspect > 0 && Number.isFinite(aspect)) this.lastAspect = aspect;
     if (!this.active) return null;
     // Gol: primeiro a rede estufando, depois o chicote até quem marcou.
     const netShot = this.kindValue !== null && GOAL_SHOT_KINDS.has(this.kindValue);
@@ -681,12 +816,22 @@ export class Choreographer {
     const focus = this.focusId ? this.tracks.get(this.focusId) : null;
     const point = focus ? { x: focus.x + Math.sin(focus.heading) * focus.speed * 0.06, z: focus.z + Math.cos(focus.heading) * focus.speed * 0.06 } : this.focusPoint;
     if (!point) return null;
-    return {
+    const shot = {
       x: point.x,
       z: point.z,
       zoom: this.rampFrom + (this.zoom - this.rampFrom) * ramp,
       pitch: this.pitch,
-      orbit: Math.min(0.42, this.elapsed * 0.16),
+      orbit: this.beamSide * Math.min(0.42, this.elapsed * 0.16),
     };
+    if (this.kindValue === "kamehameha" && focus && focus.heldAt >= 0) {
+      // Saindo o raio: o quadro anda junto com ele e abre (mais em pé, para a ponta caber).
+      const fired = smoothstep((this.elapsed - focus.heldAt - KAME.FIRE + KAME_CAMERA_LEAD) / 0.5);
+      if (fired > 0) {
+        shot.x += Math.sin(this.beamYaw) * 35 * fired;
+        shot.z += Math.cos(this.beamYaw) * 35 * fired;
+        shot.zoom += ((this.lastAspect < PORTRAIT_ASPECT ? 1.7 : 2.1) - shot.zoom) * fired;
+      }
+    }
+    return shot;
   }
 }

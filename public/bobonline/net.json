@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "nostrRelays": [
+    "wss://nos.lol",
+    "wss://relay.nostr.dev.br",
+    "wss://nostr.red5d.dev",
+    "wss://nostr.rblb.it",
+    "wss://relay.layer.systems",
+    "wss://relay.agentry.com",
+    "wss://relay.piazza.today",
+    "wss://0x-nostr-relay.fly.dev"
+  ],
+  "latestProtocol": 1,
+  "current": { "protocol": 1, "engineRev": 1, "celebrations": 18 }
+}

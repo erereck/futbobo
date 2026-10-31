@@ -12,16 +12,22 @@ import {
   penaltyKeeper,
   penaltyShooter,
   shotSpeedFor,
+  usesSquads,
   type BotaoBody,
   type BotaoEvent,
   type BotaoMatchState,
+  type BotaoPenaltyState,
 } from "../engine";
+import { playSignatureSound } from "../signature-audio";
+import { goalCelebrationExtensionMs } from "../celebration-timing";
+import { botaoTraceEnabled } from "../dev-trace";
 import { celebrationIdOf, teamKitPattern, randomPlayerAppearance, type PlayerAppearance } from "../../player-appearance";
 import { bodyAppearance, type BotaoRenderView } from "../render";
 import type { BotaoMatchSetup, BotaoSide } from "../types";
 import { BallView } from "./ball";
 import { FIGURE_HEIGHT, PlayerFigure, angleDelta, idleIntent, type FigureAction, type FigureIntent } from "./character";
-import { Choreographer, goalCelebrationOf, type Actor, type CameraShot, type Directive } from "./choreography";
+import { Choreographer, goalCelebrationOf, squadCelebrationFor, type Actor, type CameraShot, type Directive } from "./choreography";
+import { CelebrationFx } from "./celebration-fx";
 import { Effects } from "./effects";
 import { GOAL_HEIGHT, HALF_H, HALF_W, Stadium } from "./stadium";
 import { fieldThemeForMatch } from "../field-themes";
@@ -68,6 +74,44 @@ export type Botao3DOptions = {
   skipIntro?: boolean;
   /** O WebGL caiu (Android apertando memória): a partida recria a visão. */
   onContextLost?: () => void;
+  /** Bobonline: câmera do outro lado do campo (o convidado vê o próprio time atacando para cima). */
+  flip?: boolean;
+};
+
+/** Drama do pênalti da CPU: o batedor espera estes passos atrás da bola até o fim da contagem. */
+const WINDUP_STEP_BACK = 22;
+/** Com menos que isto para o chute, ele já corre para a bola. */
+const WINDUP_RUN_IN_S = 0.35;
+/** O rufar dura ~1,6 s e o acento final cai no chute. */
+const WINDUP_DRUMROLL_S = 1.6;
+// Drama do pênalti da CPU, só no 3D (Math.random, nunca a rng da partida): a
+// câmera vira para trás do batedor e a torcida segura a respiração.
+const CPU_PENALTY_DRAMA_MS = 1300;
+const CPU_PENALTY_DRAMA_JITTER_MS = 1000;
+const CAMERA_SETTLE_POLL_MS = 100;
+const CAMERA_SETTLE_MAX_MS = 700;
+
+/**
+ * Relógio do drama do pênalti da CPU no caminho offline. A BotaoMatch o guarda e
+ * conta `elapsedMs` em tempo de jogo (a pausa congela; a vista pode ser refeita no
+ * meio); a vista só o cria e diz quanto esperar a câmera.
+ */
+export type CpuPenaltyWindup = { shooterId: string; totalMs: number; elapsedMs: number; settleMs: number };
+
+/**
+ * Chave do último rufar do drama (uma vez por cobrança, quando faltam WINDUP_DRUMROLL_S). Rufa quando ela muda
+ * para uma não vazia. Pênaltis por demora repetem a mesma chave (rodada 1, ninguém bateu): fora da cena do
+ * pênalti ela volta a "", e a próxima cobrança rufa de novo.
+ */
+export function drumrollKeyAfter(lastKey: string, penaltyScene: boolean, penalties: BotaoPenaltyState | null, remainingS: number): string {
+  if (!penaltyScene) return "";
+  if (!penalties || remainingS > WINDUP_DRUMROLL_S) return lastKey;
+  return `${penalties.round}|${penalties.turn}|${penalties.results.user.length}|${penalties.results.cpu.length}`;
+}
+
+const smoothstep01 = (value: number) => {
+  const x = Math.max(0, Math.min(1, value));
+  return x * x * (3 - 2 * x);
 };
 
 type Entry = {
@@ -699,6 +743,12 @@ export class Botao3DView {
   // Comemorações: quem corre para onde, câmera de perto, câmera lenta do gol.
   private readonly choreo = new Choreographer();
   private readonly effects: Effects;
+  /** Raio, aura e brilhos das comemorações de assinatura (dirigidos pelas marcas do boneco). */
+  private readonly fx: CelebrationFx;
+  /** Drama do pênalti da CPU em andamento (a câmera fecha depois de assentar atrás do batedor). */
+  private windupActive = false;
+  private windupFraming = false;
+  private drumrollKey = "";
   private directives: Map<string, Directive> | null = null;
   private slowMo = -1;
   private showYawBase = 0;
@@ -825,6 +875,7 @@ export class Botao3DView {
       performance: lite,
     });
     this.scene.add(this.effects.group);
+    this.fx = new CelebrationFx(this.effects, { lite, reducedMotion: options.reducedMotion === true });
     this.markerTexture = labelTexture("VC", "#10271d", "#ffc72c");
     // A torcida faz uma ola enquanto a câmera desce para a mesa.
     if (!options.reducedMotion) this.stadium.wave();
@@ -839,6 +890,7 @@ export class Botao3DView {
     for (const sz of [-1, 1]) this.fitPoints.push(new THREE.Vector3(0, GOAL_HEIGHT, sz * HALF_H));
 
     this.setLandscape(options.landscape);
+    this.installDevHook();
     // Entrada de transmissão: começa baixa e de lado, e desce até a mesa.
     if (!options.reducedMotion && !options.skipIntro) {
       this.yaw = this.baseYaw - 0.95;
@@ -855,7 +907,8 @@ export class Botao3DView {
 
   setLandscape(landscape: boolean) {
     this.options = { ...this.options, landscape };
-    const turn = (landscape ? Math.PI / 2 : 0) - this.baseYaw;
+    // Convidado do Bobonline: a vista padrão é do outro gol (meia-volta), deitada ou em pé.
+    const turn = (landscape ? Math.PI / 2 : 0) + (this.options.flip ? Math.PI : 0) - this.baseYaw;
     this.baseYaw += turn;
     // O que estava guardado para depois (festa, modo foto) gira junto com o campo.
     if (this.yawBeforeShow !== null) this.yawBeforeShow += turn;
@@ -865,6 +918,41 @@ export class Botao3DView {
     if (this.photo || this.cameraKey.startsWith("show") || this.cameraKey.startsWith("penalty")) return;
     this.yawTarget = this.baseYaw;
     this.pitchTarget = DEFAULT_PITCH;
+  }
+
+  /**
+   * A câmera chegou ao enquadramento pedido: giro a menos de 0,05 rad do alvo e
+   * centro a menos de 6 unidades. O drama do pênalti da CPU espera isto (a volta
+   * de 180° depois do chute do humano, a entrada do pênalti por demora).
+   */
+  cameraSettled(): boolean {
+    const yawDone = this.yawTarget === null || Math.abs(angleDelta(this.yaw, this.yawTarget)) < 0.05;
+    return yawDone && this.target.distanceTo(this.targetGoal) < 6;
+  }
+
+  /**
+   * Pênalti da CPU no 3D: suspense de 1,3 a 2,3 s além de `baseMs`. Math.random e não a
+   * rng da partida: o chute gasta a mesma rng no 2D e no 3D, só o momento (e o goleiro
+   * naquele instante) muda.
+   */
+  cpuPenaltyWindup(shooterId: string, baseMs: number): CpuPenaltyWindup {
+    return { shooterId, totalMs: baseMs + (CPU_PENALTY_DRAMA_MS + Math.random() * CPU_PENALTY_DRAMA_JITTER_MS), elapsedMs: 0, settleMs: 0 };
+  }
+
+  /** Tempo do drama acabado: quanto ainda esperar a câmera chegar atrás do batedor (0 = bate já; no máximo 700 ms no todo). */
+  windupSettleWait(windup: CpuPenaltyWindup): number {
+    if (windup.settleMs >= CAMERA_SETTLE_MAX_MS || this.cameraSettled()) return 0;
+    windup.settleMs += CAMERA_SETTLE_POLL_MS;
+    return CAMERA_SETTLE_POLL_MS;
+  }
+
+  /**
+   * Quanto a comemoração longa do autor do último gol (Kamehameha, Super Saiyajin)
+   * estica a pausa do gol e o apito final. Fora do online só o 3D espera por ela,
+   * então a conta mora aqui, no pedaço do 3D, e não no pacote das rotas offline.
+   */
+  celebrationExtensionMs(state: BotaoMatchState): number {
+    return goalCelebrationExtensionMs(state.setup, state, { scorerId: state.touches.at(-1)?.bodyId ?? null, ownGoal: state.lastGoal?.ownGoal ?? false });
   }
 
   resetCamera() {
@@ -1301,6 +1389,15 @@ export class Botao3DView {
     const lastTouch = scorerOverride ?? state.touches.at(-1)?.bodyId ?? null;
     const actors = this.actors(state);
     const total = state.score.user + state.score.cpu;
+    const seed = hashString(`${this.setup.matchId}|${total}|${state.timeline.length}`);
+    // Elenco nomeado (Bobonline): cada botão tem a comemoração que o dono escolheu ("Variada" sorteia no bolo do Bobonline).
+    const setup = this.setup;
+    const signatureFor = usesSquads(setup)
+      ? (actorId: string) => {
+          const body = state.bodies.find((candidate) => candidate.id === actorId);
+          return squadCelebrationFor(celebrationIdOf(body ? bodyAppearance(setup, body) : null), actorId, seed);
+        }
+      : undefined;
     this.choreo.startGoal({
       side,
       scorerId: ownGoal ? null : lastTouch,
@@ -1308,8 +1405,10 @@ export class Botao3DView {
       ball: { x: this.ballDisplayX, z: this.ballDisplayZ },
       actors,
       cameraYaw: this.yaw,
-      seed: hashString(`${this.setup.matchId}|${total}|${state.timeline.length}`),
+      seed,
       signature: this.signatureCelebration(state),
+      signatureFor,
+      aspect: this.camera.aspect,
     });
     this.goalShowStarted = true;
     this.showReleased = false;
@@ -1585,6 +1684,28 @@ export class Botao3DView {
       this.penaltyOutcome = null;
     }
     if (!penaltyScene || !this.penaltyOutcome) this.frozenTrail = null;
+    // Drama do pênalti da CPU (§9): só com a cobrança armada e o batedor ainda parado.
+    // O tempo chega cru (a BotaoMatch e o driver só guardam o relógio dele): progresso e segundos restantes saem aqui.
+    const rawWindup = penaltyMode && penalties && !penalties.shotInFlight ? view.penaltyWindup ?? null : null;
+    const windup = rawWindup
+      ? {
+          shooterId: rawWindup.shooterId,
+          progress: Math.min(1, rawWindup.elapsedMs / Math.max(1, rawWindup.totalMs)),
+          remainingS: Math.max(0, (rawWindup.totalMs - rawWindup.elapsedMs) / 1000),
+        }
+      : null;
+    const keeperLook = windup && keeperBody ? { x: toWorldX(keeperBody.x), z: toWorldZ(keeperBody.y) } : null;
+    if (windup && penalties) {
+      // Banco de quem bate roendo as unhas, banco do goleiro batendo palmas.
+      for (const body of state.bodies) {
+        if (body.kind !== "disc" || body === shooter || !body.side) continue;
+        this.reactions.set(body.id, { action: body.side === penalties.turn ? "nervous" : "clap", until: this.time + 0.25 });
+      }
+    }
+    // Rufar do drama: uma vez por cobrança, e de novo no próximo pênalti por demora.
+    const drumrollKey = drumrollKeyAfter(this.drumrollKey, penaltyScene, windup ? penalties : null, windup?.remainingS ?? Infinity);
+    if (drumrollKey && drumrollKey !== this.drumrollKey) playSignatureSound("drumroll", 0.35);
+    this.drumrollKey = drumrollKey;
     // Pênalti por demora convertido vira "goal" sem emitir evento: a festa sai daqui.
     if (state.phase === "goal" && state.lastGoal && !this.goalShowStarted) {
       this.celebrateGoal(state, state.lastGoal.side, state.lastGoal.ownGoal, this.lastPenaltyShooterId);
@@ -1635,6 +1756,8 @@ export class Botao3DView {
       // Posição de destino: o motor, ou a fila no meio-campo durante os pênaltis.
       let targetX = toWorldX(body.x);
       let targetZ = toWorldZ(body.y);
+      // Drama: o batedor da CPU espera uns passos atrás da bola e só corre no fim da contagem.
+      if (windup && body === shooter && windup.remainingS > WINDUP_RUN_IN_S) targetZ += penaltyGoalTop ? WINDUP_STEP_BACK : -WINDUP_STEP_BACK;
       let benched = false;
       if (penaltyMode && body.kind === "disc" && body !== shooter && body.side) {
         benched = true;
@@ -1695,7 +1818,7 @@ export class Botao3DView {
           entry.chasing = true;
           // A CPU toca ~0,43s depois de montar a cobrança (e na saída do 2º tempo):
           // quem pode ser tacado logo chega antes disso, os outros trotam com calma.
-          const seconds = penaltyMode && body === shooter ? 0.34 : state.phase === "kickoff" && !state.clockPausedForKickoff ? 0.42 : 0.8;
+          const seconds = penaltyMode && body === shooter ? (windup ? 0.8 : 0.34) : state.phase === "kickoff" && !state.clockPausedForKickoff ? 0.42 : 0.8;
           entry.chaseSpeed = Math.max(95, away / seconds);
           entry.offX = 0;
           entry.offZ = 0;
@@ -1737,6 +1860,8 @@ export class Botao3DView {
         benched,
         ballLook,
         penaltyGoalTop,
+        windup,
+        keeperLook,
       });
       let intent = directive?.intent ?? natural();
       // Pênalti decidido no meio do mergulho: o goleiro termina o mergulho antes de reagir.
@@ -1883,18 +2008,19 @@ export class Botao3DView {
     if (ball) {
       const nearGoal = Math.min(ball.y, FIELD.height - ball.y);
       const danger = Math.max(0, 1 - nearGoal / 150);
-      this.stadium.setTension(state.phase === "resolving" ? danger : danger * 0.45);
+      // No drama a arquibancada vai se levantando até o chute (no modo desempenho não há torcida).
+      this.stadium.setTension(windup ? 0.45 + 0.45 * windup.progress : state.phase === "resolving" ? danger : danger * 0.45);
     }
     // A câmera da festa solta ~0,45s antes da saída de bola: quando o jogo volta, a vista já é a de jogo.
     // Gol com o relógio zerado não tem saída de bola depois (vem intervalo ou apito): segura até o fim.
     // Depois de soltar, não mergulha de novo se a saída atrasar (prompt do ex-clube, pausa).
     const resumesPlay = state.phase === "goal" && state.clock > 0;
     if (resumesPlay && view.goalEndsIn !== null && view.goalEndsIn !== undefined && view.goalEndsIn <= 0.45) this.showReleased = true;
-    const shot = !this.showReleased && !this.photo ? this.choreo.camera() : null;
+    const shot = !this.showReleased && !this.photo ? this.choreo.camera(this.camera.aspect) : null;
     if (this.rain) {
       this.rain.in -= sceneDt;
       if (this.rain.in <= 0) {
-        const focus = this.choreo.camera();
+        const focus = this.choreo.camera(this.camera.aspect);
         if (focus && !this.options.reducedMotion) this.confetti.rain(focus.x, focus.z, this.rain.colors);
         this.rain = null;
       }
@@ -1910,15 +2036,34 @@ export class Botao3DView {
       }
     }
 
+    // Comemorações de assinatura: lê as marcas que o boneco do foco soltou neste quadro.
+    const fxKind = this.goalShowStarted ? this.choreo.kind : null;
+    const fxFocus = fxKind && this.choreo.focus ? this.entries.get(this.choreo.focus) ?? null : null;
+    const fxSide = this.choreo.side;
+    const fxOut = this.fx.update(sceneDt, {
+      kind: fxKind,
+      focus: fxFocus ? { figure: fxFocus.figure, x: fxFocus.x, z: fxFocus.z, yaw: fxFocus.figure.yaw } : null,
+      side: fxSide,
+      teamColor: fxSide === "cpu" ? this.setup.cpuTeam.primary : this.setup.userTeam.primary,
+      stadium: this.stadium,
+      aspect: this.camera.aspect,
+    });
+    this.shake = Math.max(this.shake, fxOut.shake);
+    if (fxOut.glowColor && fxOut.glow >= this.glow) this.glowColor.set(fxOut.glowColor);
+    this.glow = Math.max(this.glow, fxOut.glow);
+
     // Luz: pulso na cor do time no gol e estádio escurecendo para o holofote da festa.
     this.glow *= Math.exp(-sceneDt * 1.6);
-    const wantDim = shot && !this.options.reducedMotion && this.choreo.kind !== "final" ? 1 : 0;
+    // No drama do pênalti o estádio escurece um pouco (0,5 da festa) e o holofote fica na bola.
+    const windupDim = windup && !shot && !this.options.reducedMotion ? 0.5 : 0;
+    const wantDim = shot && !this.options.reducedMotion && this.choreo.kind !== "final" ? 1 : windupDim;
     this.dim += (wantDim - this.dim) * (1 - Math.exp(-cameraStep * (wantDim ? 2.6 : 3.5)));
     this.sun.intensity = SUN_INTENSITY * (1 - 0.3 * this.dim);
     this.hemisphere.intensity = HEMISPHERE_INTENSITY * (1 - 0.24 * this.dim) + 0.5 * this.glow;
     this.hemisphere.color.copy(this.skyColor).lerp(this.glowColor, 0.32 * this.glow);
-    this.effects.setSpotlight(shot && wantDim ? { x: shot.x, z: shot.z } : null);
+    this.effects.setSpotlight(shot && wantDim ? { x: shot.x, z: shot.z } : windupDim ? { x: this.ballDisplayX, z: this.ballDisplayZ } : null);
     this.frameMoment(state, shot);
+    this.frameWindup(windup, shot);
     this.stadium.update(sceneDt, this.time);
     this.confetti.update(sceneDt);
     this.updateCamera(cameraStep);
@@ -1926,6 +2071,46 @@ export class Botao3DView {
     this.scheduleShadow(state, ball, sceneDt, anyChasing);
     this.renderer.render(this.scene, this.camera);
     this.renderCost += ((performance.now() - started) / 1000 - this.renderCost) * 0.06;
+  }
+
+  /**
+   * Drama do pênalti da CPU: com a câmera já atrás do batedor, ela fecha (2,05 → 2,35)
+   * e abaixa um pouco (0,82 → 0,76) acompanhando a contagem. No chute volta ao normal.
+   */
+  private frameWindup(windup: { progress: number } | null, shot: CameraShot | null) {
+    if (windup && !shot && !this.photo && this.cameraKey.startsWith("penalty")) {
+      this.windupActive = true;
+      if (!this.windupFraming && this.cameraSettled()) this.windupFraming = true;
+      if (!this.windupFraming) return;
+      const eased = smoothstep01(windup.progress);
+      this.focusZoomGoal = 2.05 + 0.3 * eased;
+      if (!this.orbit && !this.gesture) this.pitchTarget = 0.82 - 0.06 * eased;
+      return;
+    }
+    if (!this.windupActive) return;
+    this.windupActive = false;
+    this.windupFraming = false;
+    if (this.cameraKey.startsWith("penalty")) {
+      this.focusZoomGoal = 2.05;
+      this.pitchTarget = 0.82;
+    }
+  }
+
+  /** Gancho de desenvolvimento (?botaotrace=1 em loopback): projeta a ponta do raio para o teste de enquadramento. */
+  private devHook: Window["__botao3d"] | undefined;
+  private installDevHook() {
+    if (!botaoTraceEnabled()) return;
+    const projected = new THREE.Vector3();
+    this.devHook = {
+      projectBeamEnd: () => {
+        const end = this.fx.beamEnd();
+        if (!end) return null;
+        projected.set(end.x, end.y, end.z).project(this.camera);
+        return { x: projected.x, y: projected.y };
+      },
+      kind: () => (this.goalShowStarted || this.choreo.active ? this.choreo.kind : null),
+    };
+    window.__botao3d = this.devHook;
   }
 
   /**
@@ -1985,6 +2170,7 @@ export class Botao3DView {
     // Gol: vale na fase "goal" e segue no "finished" quando o gol encerrou a partida.
     if (this.goalShowStarted && state.phase !== "goal" && state.phase !== "finished") {
       this.choreo.stop();
+      this.fx.stop();
       this.goalShowStarted = false;
     }
     if (!this.choreo.active) this.showReleased = false;
@@ -2116,6 +2302,7 @@ export class Botao3DView {
     this.updateCamera(0);
     this.sun.shadow.needsUpdate = true;
     // Pools de efeito ficam visíveis só neste quadro descartável (sobe atlas e buffers).
+    this.fx.prepare();
     this.effects.prepare(this.renderer);
     this.renderer.render(this.scene, this.camera);
   }
@@ -2369,6 +2556,8 @@ export class Botao3DView {
       benched: boolean;
       ballLook: { x: number; z: number };
       penaltyGoalTop: boolean;
+      windup?: { shooterId: string; progress: number; remainingS: number } | null;
+      keeperLook?: { x: number; z: number } | null;
     },
   ): FigureIntent {
     const lookAtBall = { x: context.ballLook.x, z: context.ballLook.z };
@@ -2426,7 +2615,10 @@ export class Botao3DView {
       const shuffle = penalties ? penalties.keeperDirection * penalties.keeperSpeed * (context.penaltyGoalTop ? 1 : -1) : 0;
       // Com a bola no ar ele continua andando de lado até mergulhar (o motor não para a palheta).
       const stepping = !this.penaltyOutcome && dive === 0;
-      return idleIntent({ state: "keeper", faceYaw: facing, look: lookAtBall, dive, shuffle: stepping ? shuffle : 0 });
+      const keeperIntent = idleIntent({ state: "keeper", faceYaw: facing, look: lookAtBall, dive, shuffle: stepping ? shuffle : 0 });
+      // Drama do pênalti da CPU: o goleiro provoca de braços abertos (por cima do passinho).
+      if (context.windup) keeperIntent.action = "keeperTaunt";
+      return keeperIntent;
     }
 
     // Pênaltis: a fila no meio-campo assiste; o batedor encara o gol.
@@ -2449,6 +2641,11 @@ export class Botao3DView {
         }
         if (this.penaltyOutcome === "scored") return idleIntent({ state: "scorer", faceYaw: goalYaw });
         if (this.penaltyOutcome === "saved") return idleIntent({ state: "sad", faceYaw: goalYaw });
+        // Drama: concentrado, mãos na cintura e olho no goleiro, até a hora de correr.
+        // Online o batedor do outro aparelho fica assim até a primeira prévia de mira chegar.
+        if ((context.windup && context.windup.remainingS > WINDUP_RUN_IN_S) || (view.penaltyFocusId === body.id && !state.penalties?.shotInFlight)) {
+          return idleIntent({ state: "ready", action: "penaltyFocus", faceYaw: goalYaw, look: context.keeperLook ?? lookAtBall });
+        }
         return idleIntent({ state: "ready", faceYaw: goalYaw, look: lookAtBall });
       }
     }
@@ -2563,7 +2760,9 @@ export class Botao3DView {
     this.aim.dispose();
     this.trail.dispose();
     this.confetti.dispose();
+    this.fx.dispose();
     this.effects.dispose();
+    if (botaoTraceEnabled() && window.__botao3d === this.devHook) delete window.__botao3d;
     this.ringGeometry.dispose();
     this.plateGeometry.dispose();
     for (const material of Object.values(this.plateMaterials)) {

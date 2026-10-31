@@ -8,10 +8,13 @@ export default function GoalReplay({
   replay,
   setup,
   label,
+  mirrored = false,
 }: {
   replay: BotaoGoalReplay;
   setup: BotaoMatchSetup;
   label: string;
+  /** Bobonline: o convidado revê o lance como jogou, com a mesa girada 180°. */
+  mirrored?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [playing, setPlaying] = useState(true);
@@ -59,13 +62,13 @@ export default function GoalReplay({
       if (!context) return;
       const scale = (rect.width / VIEW_WIDTH) * dpr;
       context.setTransform(scale, 0, 0, scale, VIEW_PAD_X * scale, VIEW_PAD_Y * scale);
-      drawReplayFrame(context, setup, replay, frameIndex, blend);
+      drawReplayFrame(context, setup, replay, frameIndex, blend, mirrored);
       setProgress(Math.round((replayTime / duration) * 100));
       setActiveTurn(turnIndex);
     };
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
-  }, [playing, replay, setup]);
+  }, [playing, replay, setup, mirrored]);
 
   function togglePlayback() {
     const now = performance.now();
