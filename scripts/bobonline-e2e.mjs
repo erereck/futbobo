@@ -9,6 +9,7 @@
 //   node scripts/bobonline-e2e.mjs --out out --only 1,12,13  só alguns
 //   node scripts/bobonline-e2e.mjs --list                    lista os cenários
 //   node scripts/bobonline-e2e.mjs --out out --real          + fumaça real (relays públicos, 3 tentativas)
+//   node scripts/bobonline-e2e.mjs --out out --only R --real --relay   a fumaça real só por TURN (net.json do build)
 // Opções: --host 127.0.0.71 --port 47301 --cdp 9711 --edge <msedge.exe> --shots <pasta> --tmp <pasta>
 //
 // Ganchos usados (só existem com ?perfil num endereço local com porta):
@@ -41,6 +42,34 @@ const TMP = resolve(opt("tmp", join(tmpdir(), "sbr3", "bob")));
 const SHOTS = resolve(opt("shots", join(TMP, `e2e-shots-${RUN}`)));
 const PROFILE = join(TMP, `e2e-prof-${RUN}`);
 const REAL_HOSTS = ["127.0.0.72", "127.0.0.73"];
+/** `--relay`: toda RTCPeerConnection nasce só com candidatos de TURN (sem TURN que preste, a fumaça real não conecta). */
+const RELAY_ONLY = `(() => {
+  const Native = window.RTCPeerConnection;
+  const made = (window.__bobPcs = []);
+  function RelayOnly(config = {}, ...rest) {
+    const pc = new Native({ ...config, iceTransportPolicy: "relay" }, ...rest);
+    made.push(pc);
+    return pc;
+  }
+  RelayOnly.prototype = Native.prototype;
+  Object.setPrototypeOf(RelayOnly, Native);
+  window.RTCPeerConnection = RelayOnly;
+})();`;
+/** Par eleito (tipo local/remoto, pelo `transport`, que os dois lados têm) de cada conexão aberta; `states` = todas, para o diagnóstico. */
+const PAIR_TYPES = `(async () => {
+  const pairs = [];
+  const states = [];
+  for (const pc of window.__bobPcs ?? []) {
+    states.push(pc.connectionState);
+    if (pc.connectionState !== "connected") continue;
+    const stats = await pc.getStats();
+    stats.forEach((s) => {
+      const pair = s.type === "transport" && s.selectedCandidatePairId ? stats.get(s.selectedCandidatePairId) : null;
+      if (pair) pairs.push(stats.get(pair.localCandidateId)?.candidateType + "/" + stats.get(pair.remoteCandidateId)?.candidateType);
+    });
+  }
+  return { pairs, states };
+})()`;
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 class Skip extends Error {}
@@ -246,7 +275,7 @@ function urlFor(origin, perfil, extra = "") {
 }
 
 /** Uma janela nova (mesmo contexto, salvo `contextId`) já com foco emulado. */
-async function openPeer(name, { view = null, extra = "", origin = `http://${HOST}:${PORT}`, contextId, path, width = 412, height = 860, bc = true } = {}) {
+async function openPeer(name, { view = null, extra = "", origin = `http://${HOST}:${PORT}`, contextId, path, width = 412, height = 860, bc = true, relay = false } = {}) {
   const { targetId } = await cdp.send("Target.createTarget", { url: "about:blank", newWindow: true, ...(contextId ? { browserContextId: contextId } : {}) });
   const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
   const perfil = `${name}${scenarioTag}`;
@@ -256,6 +285,16 @@ async function openPeer(name, { view = null, extra = "", origin = `http://${HOST
     if (event.sessionId !== sessionId) return;
     if (event.method === "Runtime.exceptionThrown") peer.errors.push(event.params.exceptionDetails?.exception?.description ?? event.params.exceptionDetails?.text);
     if (event.method === "Runtime.consoleAPICalled" && event.params.type === "error") peer.errors.push(event.params.args.map((arg) => arg.value ?? arg.description).join(" "));
+    if (event.method === "Fetch.requestPaused") {
+      readFile(join(OUT_DIR, "bobonline", "net.json"))
+        .then((body) => peer.send("Fetch.fulfillRequest", {
+          requestId: event.params.requestId,
+          responseCode: 200,
+          responseHeaders: [{ name: "Content-Type", value: "application/json" }, { name: "Access-Control-Allow-Origin", value: "*" }],
+          body: body.toString("base64"),
+        }))
+        .catch((error) => peer.errors.push(`net.json local: ${error.message}`));
+    }
   });
   await peer.send("Page.enable");
   await peer.send("Runtime.enable");
@@ -266,6 +305,11 @@ async function openPeer(name, { view = null, extra = "", origin = `http://${HOST
   if (view) {
     // O visual de cada perfil na chave do próprio perfil (bobKey): A em 3D e B em 2D na mesma origem.
     await peer.send("Page.addScriptToEvaluateOnNewDocument", { source: `try { localStorage.setItem("futbobo:bobonline-view:v1:${perfil}", ${JSON.stringify(JSON.stringify(view))}); } catch {}` });
+  }
+  if (relay) {
+    // O net.json publicado (URL absoluta) vira o do build: testa o TURN que vai subir, não o que está no ar.
+    await peer.send("Page.addScriptToEvaluateOnNewDocument", { source: RELAY_ONLY });
+    await peer.send("Fetch.enable", { patterns: [{ urlPattern: "*/bobonline/net.json*" }] });
   }
   const url = path ? `${origin}${path.replace("{perfil}", perfil)}` : bc ? urlFor(origin, perfil, extra) : `${origin}/bobonline/?perfil=${perfil}${extra}`;
   await peer.send("Page.navigate", { url });
@@ -1111,15 +1155,23 @@ async function scenarioReal() {
     try {
       const contexts = [];
       for (let i = 0; i < 2; i++) contexts.push((await cdp.send("Target.createBrowserContext", {})).browserContextId);
-      const A = await openPeer("RA", { origin: `http://${REAL_HOSTS[0]}:${PORT}`, contextId: contexts[0], bc: false });
-      const B = await openPeer("RB", { origin: `http://${REAL_HOSTS[1]}:${PORT}`, contextId: contexts[1], bc: false });
+      const relay = flag("relay");
+      const A = await openPeer("RA", { origin: `http://${REAL_HOSTS[0]}:${PORT}`, contextId: contexts[0], bc: false, relay });
+      const B = await openPeer("RB", { origin: `http://${REAL_HOSTS[1]}:${PORT}`, contextId: contexts[1], bc: false, relay });
       const code = await createRoom(A, { format: "x1" });
       await joinRoom(B, code);
       await A.waitFor(`window.__bobonline.room()?.snapshot?.members.filter((m) => !m.left).length === 2`, "os dois na sala", 60000);
+      let pairs = "";
+      if (relay) {
+        const seen = { A: await A.eval(PAIR_TYPES), B: await B.eval(PAIR_TYPES) };
+        const ok = Object.values(seen).every((side) => side.pairs.length > 0 && side.pairs.every((type) => type === "relay/relay"));
+        assert(ok, `par eleito não é só TURN: ${JSON.stringify(seen)}`);
+        pairs = ` (só TURN: A ${seen.A.pairs.join(", ")} · B ${seen.B.pairs.join(", ")})`;
+      }
       await A.close();
       await B.close();
       for (const id of contexts) await cdp.send("Target.disposeBrowserContext", { browserContextId: id }).catch(() => {});
-      return `ok na tentativa ${attempt}`;
+      return `ok na tentativa ${attempt}${pairs}`;
     } catch (error) {
       if (attempt === 3) throw error;
       console.log(`  real: tentativa ${attempt} falhou (${error.message}); de novo`);

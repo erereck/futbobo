@@ -10,6 +10,13 @@
     "wss://relay.piazza.today",
     "wss://0x-nostr-relay.fly.dev"
   ],
+  "turn": [
+    {
+      "urls": ["turn:free.expressturn.com:3478?transport=udp", "turn:free.expressturn.com:3478?transport=tcp"],
+      "username": "000000002108812499",
+      "credential": "PmTYvjD36PsTI9VsFeN/5uj+mBM="
+    }
+  ],
   "latestProtocol": 1,
   "current": { "protocol": 1, "engineRev": 1, "celebrations": 18 }
 }

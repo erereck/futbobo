@@ -45,7 +45,14 @@ export type TurnServer = { urls: string | string[]; username?: string; credentia
  * dois. Ligar ou trocar a credencial: mude aqui E em public/bobonline/net.json no mesmo release
  * (formato: `{ urls: ["turn:host:3478?transport=udp", "turn:host:3478?transport=tcp"], username, credential }`).
  */
-export const TURN_SERVERS: readonly TurnServer[] = [];
+export const TURN_SERVERS: readonly TurnServer[] = [
+  // ExpressTURN, plano grátis (conta do dono, 2026-10-30). A credencial é pública de propósito: trocar aqui e no net.json se abusarem.
+  {
+    urls: ["turn:free.expressturn.com:3478?transport=udp", "turn:free.expressturn.com:3478?transport=tcp"],
+    username: "000000002108812499",
+    credential: "PmTYvjD36PsTI9VsFeN/5uj+mBM=",
+  },
+];
 
 /** Versão do envelope do fio (`Wire.p`). Diferente de BOB_PROTOCOL, que vai no hello. */
 export const WIRE_VERSION = 1;
