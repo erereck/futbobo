@@ -9,7 +9,7 @@ on:
       release_tag:
         description: Tag Android que receberá o APK
         required: true
-        default: android-v1.2.6
+        default: android-v1.3.0
 
 permissions:
   contents: write
@@ -65,7 +65,10 @@ jobs:
         shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          APK="futbobo-v93.10-android-${VERSION}.apk"
+          # A tag precisa bater com a versão do package.json: o app compara as duas para avisar da atualização.
+          test "$RELEASE_TAG" = "android-v${VERSION}"
+          # O aviso do app e o link "latest/download/futbobo.apk" do site procuram este nome exato.
+          APK="futbobo.apk"
           cp android/app/build/outputs/apk/release/app-release.apk "$APK"
           sha256sum "$APK" > "${APK}.sha256"
           echo "apk=$APK" >> "$GITHUB_OUTPUT"
@@ -78,6 +81,6 @@ jobs:
           VERSION: ${{ steps.release_meta.outputs.version }}
         run: |
           gh release create "$RELEASE_TAG" "$APK" "${APK}.sha256" \
-            --title "Futbobo Android ${VERSION} — v93.10 Time de Verdade" \
-            --notes "APK Android da Futbobo v93.10 — Time de Verdade. Inclui elenco persistente, nova aba Time, foco de país do empresário, traições entre rivais e as correções finais do pipeline. Build assinado, offline e gerado diretamente do commit ${GITHUB_SHA}." \
+            --title "Futbobo Android ${VERSION}" \
+            --notes "Bobonline: futebol de botão online com amigos, em X1 ou torneio de 4 e 8, com conexão mais resistente. Modo 3D com bonecos animados e comemorações novas. Scorebobo com 12 fases e a base jogável na carreira. Build assinado, offline, gerado do commit ${GITHUB_SHA}." \
             --latest
