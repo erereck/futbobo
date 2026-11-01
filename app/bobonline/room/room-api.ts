@@ -13,9 +13,31 @@ import type { BobTeam, BracketResult, LiveInfo, RoomSettings, RoomSnapshot, Room
 export type JoinError = "nao-encontrada" | "sem-rede" | "conexao" | "cheia" | "senha" | "senha-errada" | "iniciada" | "removido"
   | "time" | "versao" | "versao-nova" | "outra-aba" | "abrir" | "cripto";
 export type ResultFact = { bracketId: string; result: BracketResult; sides: [string, string] };
+/**
+ * O que a busca está fazendo de verdade (quem entra, phase "connecting"):
+ * - "rede": nenhum relay de sinalização respondeu ainda;
+ * - "procurando": relays no ar, nenhum outro aparelho apareceu na sala;
+ * - "achou": outro aparelho respondeu, os dois estão fechando a conexão;
+ * - "apoio": a conexão direta falhou, tentando de novo pelo servidor de apoio (TURN).
+ */
+export type SearchStep = "rede" | "procurando" | "achou" | "apoio";
+export type SearchState = {
+  step: SearchStep;
+  relays: { open: number; total: number } | null;            // null = transporte sem relays (testes)
+  deadlineLocal: number;                                     // Date.now() em que a busca desiste (barra de progresso)
+};
+/** Rota do link com um par: "direto" (host/srflx/prflx), "apoio" (TURN) ou ainda sem leitura. */
+export type LinkRoute = { route: "direto" | "apoio" | "?"; rttMs: number | null };
+
 export type RoomClientState = {
   phase: "connecting" | "in-room" | "error" | "left" | "superseded";
   joinStage: 0 | 1 | 2;                                      // copy escalonada da busca (§1.4)
+  search: SearchState | null;                                // só quem entra procurando a sala
+  /** Minha sinalização: "reconectando" quando os relays calaram (anfitrião sozinho fica invisível). */
+  signaling: "ok" | "reconectando";
+  links: Record<string /* playerId */, LinkRoute>;           // lido a cada poucos segundos na sala
+  /** Último motivo técnico de falha de conexão (vai no diagnóstico; nunca é a copy da tela). */
+  netError: string | null;
   error: JoinError | null;
   incompatible: { mine: HelloInfo; theirs: HelloInfo; who: "me" | "them"; nickname: string | null } | null;
   snapshot: RoomSnapshot | null; teams: RoomTeams; me: string /* playerId */;

@@ -103,6 +103,15 @@ export function sanitizeNetConfig(raw: unknown): NetConfig | null {
   return config;
 }
 
+/**
+ * Quanto o relógio deste aparelho está adiantado (+) ou atrasado (−) em ms, medido pelo cabeçalho
+ * Date da última busca do net.json; null quando não deu para ler (APK, offline, cache).
+ * CONTRATO T0: a implementação de verdade preenche no fetchNetConfig.
+ */
+export function netClockOffsetMs(): number | null {
+  return null;
+}
+
 let loaded: Promise<NetConfig> | null = null;
 
 type LoadOptions = { fetch?: typeof fetch; url?: string; timeoutMs?: number; fresh?: boolean };

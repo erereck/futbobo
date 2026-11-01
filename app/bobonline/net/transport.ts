@@ -10,6 +10,12 @@ import { createTrysteroTransport } from "./trystero-transport";
 
 export type LinkCandidate = "host" | "srflx" | "prflx" | "relay" | "unknown";
 
+/** Política de ICE das próximas aberturas: "relay" só aceita o servidor de apoio (TURN). */
+export type IcePolicy = "all" | "relay";
+
+/** Saúde dos relays de sinalização agora. `fresh` = abertos e com sinal de vida recente (respondem à sonda). */
+export type RelayHealth = { total: number; open: number; fresh: number };
+
 /**
  * Relógio da camada de rede. `now` é monotônico (ms) e serve para silêncio, reenvio e escada;
  * a hora de parede (`Date.now`) só vai no fio. O transporte de memória traz um relógio virtual,
@@ -53,6 +59,21 @@ export interface BobTransport {
    */
   lastInboundAt?(): number | null;
   linkInfo(peer: string): Promise<{ candidate: LinkCandidate; rttMs: number | null }>;
+  /** Vale a partir do próximo open (o rejoin reabre). Sem o método: sempre "all". */
+  setIcePolicy?(policy: IcePolicy): void;
+  /** Sem o método (memória, BroadcastChannel): a sinalização é local e não tem relays. */
+  relayHealth?(): RelayHealth;
+  /**
+   * Último evento de OUTRO aparelho nos tópicos desta sala desde o último open (anúncio, oferta,
+   * resposta, candidato), no relógio da sessão; null = ninguém apareceu. Diz se uma negociação
+   * está em andamento: com ela, reabrir mataria o que já começou.
+   */
+  peerSignalAt?(): number | null;
+  /**
+   * Volta ao primeiro plano / rede de volta: sonda já os relays, fecha os mortos (OPEN calado) e
+   * religa os fechados sem esperar o backoff. Barato; pode chamar à vontade.
+   */
+  kickSignaling?(): void;
 }
 export type TransportFactory = (cfg: NetConfig) => BobTransport;
 

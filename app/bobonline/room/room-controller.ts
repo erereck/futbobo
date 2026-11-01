@@ -541,6 +541,10 @@ export class BobRoomClient implements BobRoomClientApi {
     const state: RoomClientState = {
       phase: this.phase,
       joinStage: this.joinStage,
+      search: null,
+      signaling: "ok",
+      links: {},
+      netError: null,
       error: this.error,
       incompatible: this.incompatible,
       snapshot,

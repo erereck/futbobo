@@ -26,7 +26,7 @@ import {
   type SessionBodies,
 } from "../protocol";
 import { type Identity, nextIncarnation, playerIdFor, trackCrypto, verifySig } from "./identity";
-import { type BobTransport, type NetClock, realClock } from "./transport";
+import { type BobTransport, type IcePolicy, type LinkCandidate, type NetClock, realClock, type RelayHealth } from "./transport";
 
 export type { HelloInfo, MatchProgress, PeerHealth } from "../protocol";
 
@@ -537,6 +537,37 @@ export class BobSession {
     if (!this.transport.signalingUp()) return false;
     const at = this.transport.lastInboundAt?.() ?? null;
     return at === null || this.clock.now() - at <= RELAY_SILENT_MS;
+  }
+
+  /** Vale no próximo open: o rejoin reabre com ela ("relay" = só o servidor de apoio). */
+  setIcePolicy(policy: IcePolicy): void {
+    this.transport.setIcePolicy?.(policy);
+  }
+
+  /** null = transporte sem relays (memória, BroadcastChannel). */
+  relayHealth(): RelayHealth | null {
+    return this.transport.relayHealth?.() ?? null;
+  }
+
+  /** Último sinal de outro aparelho nos tópicos da sala desde o último open (relógio da sessão). */
+  peerSignalAt(): number | null {
+    return this.transport.peerSignalAt?.() ?? null;
+  }
+
+  kickSignaling(): void {
+    this.transport.kickSignaling?.();
+  }
+
+  /** Rota do link direto com esse jogador (direto × servidor de apoio) e RTT; null sem link direto. */
+  async linkInfo(playerId: string): Promise<{ candidate: LinkCandidate; rttMs: number | null } | null> {
+    const peer = this.peers.get(playerId);
+    const tp = peer ? this.directTp(peer) : null;
+    if (!tp) return null;
+    try {
+      return await this.transport.linkInfo(tp.id);
+    } catch {
+      return null;
+    }
   }
 
   // -------------------------------------------------------------------------
