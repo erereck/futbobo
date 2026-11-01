@@ -71,9 +71,10 @@ export interface BobTransport {
   peerSignalAt?(): number | null;
   /**
    * Volta ao primeiro plano / rede de volta: sonda já os relays, fecha os mortos (OPEN calado) e
-   * religa os fechados sem esperar o backoff. Barato; pode chamar à vontade.
+   * religa os fechados sem esperar o backoff. Barato; pode chamar à vontade. `force: false` (chutes
+   * periódicos de quem segue sem sinalização): sonda igual, mas os fechados seguem o backoff.
    */
-  kickSignaling?(): void;
+  kickSignaling?(force?: boolean): void;
 }
 export type TransportFactory = (cfg: NetConfig) => BobTransport;
 

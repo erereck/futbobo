@@ -486,6 +486,8 @@
 }
 /* Com uma folha aberta (ela ocupa o pé da tela), o aviso desce do topo, sobre o fundo escurecido, sem tapar botões. */
 body:has(.bob-sheet-backdrop) .bob-teams-toast-region { top: max(16px, env(safe-area-inset-top)); bottom: auto; }
+/* No lobby o pé é dos avisos da sala ("X entrou na sala"): a confirmação de cópia desce do topo. */
+body:has(.bob-shell[data-screen="lobby"]) .bob-teams-toast-region { top: max(16px, env(safe-area-inset-top)); bottom: auto; }
 .bob-teams-toast {
   margin: 0;
   padding: 12px 16px;

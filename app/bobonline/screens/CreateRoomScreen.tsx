@@ -1,6 +1,11 @@
 "use client";
 
 // Criar sala (§1.3): apelido, time, formato, regras, CPU e senha.
+//
+// O botão do fim diz "Abrir sala" e não repete o "Criar sala" do início: quem chega aqui já
+// escolheu criar, e o segundo toque é o que abre a sala de verdade. O caminho comum (X1,
+// Clássico, aberta a espectadores, sem senha) já vem marcado; espectadores e senha ficam em
+// "Mais opções" (abertas sozinhas quando o rascunho já mexeu nelas) para o botão subir na tela.
 
 import { useId, useState } from "react";
 import BobCrest from "../teams/BobCrest";
@@ -60,6 +65,7 @@ export default function CreateRoomScreen({
   onPickTeam,
   onBack,
   onSubmit,
+  onDiagnostics,
 }: {
   team: BobTeam;
   profileNickname: string;
@@ -72,13 +78,20 @@ export default function CreateRoomScreen({
   onBack: () => void;
   /** Recebe o apelido já saneado. */
   onSubmit: (nickname: string) => void;
+  /** "Testar conexão": a folha do diagnóstico. */
+  onDiagnostics: () => void;
 }) {
   const baseId = useId();
   const [nameError, setNameError] = useState<string | null>(null);
   const nickname = draft.nickname ?? profileNickname;
   const tournament = draft.format !== "x1";
+  const extrasChanged = draft.password !== "" || draft.allowSpectators !== DEFAULT_CREATE_DRAFT.allowSpectators;
+  const [extrasOpen, setExtrasOpen] = useState(extrasChanged);
+  const networkError = error !== null && RETRYABLE_ERRORS.has(error);
 
   function submit() {
+    // Abrindo a sala: o Enter do campo (o "Ir" do teclado tocado duas vezes) não recomeça com outro código.
+    if (busy) return;
     const clean = cleanNickname(nickname);
     if (!clean) {
       setNameError(`Mínimo ${LIMITS.nickname[0]} letras`);
@@ -104,6 +117,12 @@ export default function CreateRoomScreen({
           maxLength={LIMITS.nickname[1]}
           autoComplete="nickname"
           onChange={(event) => onDraft({ nickname: event.target.value })}
+          onKeyDown={(event) => {
+            // Enter segurado repete; o Enter que confirma a sugestão do teclado (IME) não envia.
+            if (event.key !== "Enter" || event.repeat || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            submit();
+          }}
         />
         {nameError && <span className="bob-field-error">{nameError}</span>}
       </div>
@@ -152,29 +171,31 @@ export default function CreateRoomScreen({
         </fieldset>
       )}
 
-      <Switch label="Permitir espectadores" checked={draft.allowSpectators} onChange={(value) => onDraft({ allowSpectators: value })} />
-
-      <div className="bob-field">
-        <label htmlFor={`${baseId}-pass`}>Senha da sala (opcional) <small>até {PASSWORD_MAX}</small></label>
-        <input
-          id={`${baseId}-pass`}
-          value={draft.password}
-          maxLength={PASSWORD_MAX}
-          autoComplete="off"
-          placeholder="Deixe vazio para sala aberta"
-          onChange={(event) => onDraft({ password: event.target.value })}
-        />
-      </div>
+      <details className="bob-more" open={extrasOpen} onToggle={(event) => setExtrasOpen(event.currentTarget.open)}>
+        <summary>Mais opções</summary>
+        <Switch label="Permitir espectadores" checked={draft.allowSpectators} onChange={(value) => onDraft({ allowSpectators: value })} />
+        <div className="bob-field">
+          <label htmlFor={`${baseId}-pass`}>Senha da sala (opcional) <small>até {PASSWORD_MAX}</small></label>
+          <input
+            id={`${baseId}-pass`}
+            value={draft.password}
+            maxLength={PASSWORD_MAX}
+            autoComplete="off"
+            placeholder="Deixe vazio para sala aberta"
+            onChange={(event) => onDraft({ password: event.target.value })}
+          />
+        </div>
+      </details>
 
       {error && (
         <div className="bob-error-card" role="alert">
           <p>{joinErrorText(error)}</p>
-          {RETRYABLE_ERRORS.has(error) && <button type="button" className="secondary-button" onClick={submit}>Tentar de novo</button>}
+          {networkError && <button type="button" className="bob-ghost-button" data-testid="bob-diagnostics" onClick={onDiagnostics}>Testar conexão</button>}
         </div>
       )}
 
       <button type="button" className="primary-button bob-submit" data-testid="bob-create-submit" disabled={busy} onClick={submit}>
-        {busy ? "Abrindo a sala…" : <>Criar sala <span>→</span></>}
+        {busy ? "Abrindo a sala…" : networkError ? "Tentar de novo" : "Abrir sala"}
       </button>
     </section>
   );

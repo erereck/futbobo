@@ -2,6 +2,11 @@
 
 // Sala de espera (§1.5): código grande para passar adiante, as vagas com pronto e
 // conexão de cada um, e os botões de quem manda (anfitrião) ou de quem chegou.
+//
+// Um botão dourado por vez: sozinho na sala, o convite (é a única coisa a fazer); com gente,
+// o "Começar" de quem manda ou o "Estou pronto" de quem chegou. A minha vaga mostra a minha
+// sinalização de verdade ("Reconectando…" quando os relays calaram: o anfitrião fica invisível
+// para quem procura), e as dos outros a rota do link, discreta ("direto · 40 ms").
 
 import { useEffect, useId, useRef, useState } from "react";
 import BobCrest from "../teams/BobCrest";
@@ -10,15 +15,12 @@ import { BOB_RULE_PRESETS } from "../teams/match-setup";
 import { showTeamsToast } from "../teams/team-storage";
 import { FORMAT_SIZE } from "../tournament/bracket";
 import { formatRoomCode, roomLink } from "../net/codes";
-import type { PeerHealth } from "../protocol";
 import type { RoomClientState } from "../room/room-api";
 import { copyText, openWhatsApp, shareRoomLink } from "../share";
-import type { CpuLevel, PeerPresence, RoomMember, RulesPresetId } from "../types";
-import { CPU_LEVEL_LABEL, playersOf, roomClient, settingsLine, spectatorsOf } from "../use-room";
+import type { CpuLevel, RoomMember, RulesPresetId } from "../types";
+import { CPU_LEVEL_LABEL, memberConnection, playersOf, roomClient, settingsLine, spectatorsOf } from "../use-room";
 import { Switch } from "./CreateRoomScreen";
 
-const PRESENCE_WORD: Record<PeerPresence, string> = { online: "ok", unstable: "instável", away: "fora do app", offline: "caiu" };
-const HEALTH_WORD: Record<PeerHealth, string> = { ok: "ok", unstable: "instável", away: "fora do app", lost: "caiu" };
 const RULES: RulesPresetId[] = ["flash", "classic", "marathon"];
 const LEVELS: CpuLevel[] = [2, 3, 4];
 
@@ -31,13 +33,6 @@ export function startBlockedReason(players: RoomMember[], hostId: string): strin
   if (waiting.length === 1) return `Esperando ${waiting[0].nickname} ficar pronto`;
   if (waiting.length > 1) return `Esperando ${waiting.length} jogadores ficarem prontos`;
   return null;
-}
-
-function connectionWord(state: RoomClientState, member: RoomMember): string {
-  if (member.playerId === state.me) return "ok";
-  // A presença do snapshot é a visão do anfitrião; o próprio anfitrião, visto daqui, vem da minha sessão.
-  if (member.playerId === state.snapshot?.hostId && !state.isHost) return HEALTH_WORD[state.health[member.playerId] ?? "ok"];
-  return PRESENCE_WORD[member.presence];
 }
 
 function spelledCode(code: string): string {
@@ -56,15 +51,15 @@ export default function LobbyScreen({
   onLeave: () => void;
 }) {
   const baseId = useId();
-  const [shared, setShared] = useState(false);
-  const [fallback, setFallback] = useState<string | null>(null);
+  /** O texto para copiar à mão; `focus`: seleciona já (cópia recusada). Do WhatsApp não: pode aparecer por baixo do alerta do Safari. */
+  const [fallback, setFallback] = useState<{ text: string; focus: boolean } | null>(null);
   const [kick, setKick] = useState<RoomMember | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const fallbackRef = useRef<HTMLInputElement>(null);
   const snapshot = state.snapshot;
 
   useEffect(() => {
-    if (!fallback) return;
+    if (!fallback?.focus) return;
     fallbackRef.current?.focus();
     fallbackRef.current?.select();
   }, [fallback]);
@@ -79,23 +74,26 @@ export default function LobbyScreen({
   const isHost = state.isHost;
   const alone = players.length <= 1;
   const blocked = startBlockedReason(players, snapshot.hostId);
+  // Sozinho, a dica de manter a tela aberta já diz o que falta: o "Falta 1 jogador" seria a segunda.
+  const startHint = alone ? null : blocked ?? startError;
 
   async function share() {
     const outcome = await shareRoomLink(code);
     if (outcome === "copied") showTeamsToast("Link copiado");
-    if (outcome === "failed") setFallback(roomLink(code, snapshot?.hostId));
-    if (outcome !== "cancelled") setShared(true);
+    if (outcome === "failed") setFallback({ text: roomLink(code, snapshot?.hostId), focus: true });
   }
 
   async function copyCode() {
     if (await copyText(code)) showTeamsToast("Código copiado");
-    else setFallback(code);
-    setShared(true);
+    else setFallback({ text: code, focus: true });
   }
 
-  function whatsapp() {
-    openWhatsApp(code);
-    setShared(true);
+  function sendWhatsApp() {
+    openWhatsApp(code, {
+      onBlocked: () => setFallback({ text: roomLink(code, snapshot?.hostId), focus: false }),
+      // O app abriu depois da espera: o link para copiar não serve mais.
+      onLeft: () => setFallback(null),
+    });
   }
 
   function start() {
@@ -113,17 +111,18 @@ export default function LobbyScreen({
       </header>
 
       <div className="bob-share">
-        <button type="button" className="primary-button bob-share-main" data-testid="bob-share-whatsapp" onClick={whatsapp}>Mandar no WhatsApp</button>
+        <button type="button" className={`${alone ? "primary-button" : "secondary-button"} bob-share-main`} data-testid="bob-share-whatsapp" onClick={sendWhatsApp}>Mandar no WhatsApp</button>
         <button type="button" className="secondary-button" data-testid="bob-share-link" onClick={() => void share()}>Compartilhar link</button>
         <button type="button" className="secondary-button" data-testid="bob-copy-code" onClick={() => void copyCode()}>Copiar código</button>
       </div>
       {fallback && (
         <div className="bob-field bob-copy-fallback">
           <label htmlFor={`${baseId}-fallback`}>Toque e segure para copiar.</label>
-          <input id={`${baseId}-fallback`} ref={fallbackRef} readOnly value={fallback} onFocus={(event) => event.currentTarget.select()} />
+          <input id={`${baseId}-fallback`} ref={fallbackRef} readOnly value={fallback.text} onFocus={(event) => event.currentTarget.select()} />
         </div>
       )}
-      {shared && alone && <p className="bob-hint">Mandou? Volte para cá: a sala só aparece com o jogo aberto.</p>}
+      {/* Uma dica só, desde o começo (a de antes só vinha depois de mandar): a sala só é achada com esta tela aberta. */}
+      {alone && <p className="bob-hint" data-testid="bob-alone-hint">Deixe esta tela aberta até seu amigo entrar.</p>}
 
       <ol className="bob-slots" aria-label="Vagas da sala">
         {Array.from({ length: capacity }, (_, index) => {
@@ -138,7 +137,7 @@ export default function LobbyScreen({
           }
           const team = state.teams[member.teamHash];
           const hostRow = member.playerId === snapshot.hostId;
-          const word = connectionWord(state, member);
+          const connection = memberConnection(state, member);
           return (
             <li key={member.playerId} className="bob-slot" data-testid="bob-slot" style={team ? { ["--bob-team-primary" as string]: team.primary } : undefined}>
               {team ? <BobCrest team={team} size={40} /> : <span className="bob-crest-blank" aria-hidden="true" />}
@@ -151,7 +150,7 @@ export default function LobbyScreen({
                   {!hostRow && (member.ready ? <em className="bob-badge bob-badge-ready">PRONTO</em> : <em className="bob-badge">PREPARANDO</em>)}
                 </span>
               </span>
-              <span className="bob-conn" data-state={word} aria-label={word}><i aria-hidden="true" />{word}</span>
+              <span className="bob-conn" data-state={connection.tone} data-testid="bob-conn"><i aria-hidden="true" />{connection.text}</span>
               {isHost && member.playerId !== state.me && (
                 <button type="button" className="bob-ghost-button bob-kick" onClick={() => setKick(member)}>Remover</button>
               )}
@@ -193,10 +192,10 @@ export default function LobbyScreen({
               <Switch label="Completar vagas com CPU" checked={settings.fillWithCpu} onChange={(value) => roomClient()?.hostSetSettings({ fillWithCpu: value })} testId="bob-fill-cpu" />
             </fieldset>
           )}
-          <button type="button" className="primary-button bob-submit" data-testid="bob-start" disabled={blocked !== null} onClick={start}>
+          <button type="button" className={`${alone ? "secondary-button" : "primary-button"} bob-submit`} data-testid="bob-start" disabled={blocked !== null} onClick={start}>
             {tournament ? "Começar torneio" : "Começar partida"} <span>→</span>
           </button>
-          {(blocked ?? startError) && <p className="bob-hint" role="status">{blocked ?? startError}</p>}
+          {startHint && <p className="bob-hint" role="status">{startHint}</p>}
           <div className="bob-lobby-actions">
             <button type="button" className="secondary-button" onClick={onTeams}>Trocar time</button>
             <button type="button" className="secondary-button" data-testid="bob-leave" onClick={onLeave}>Sair da sala</button>

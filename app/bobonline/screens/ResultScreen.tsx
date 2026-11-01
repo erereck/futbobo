@@ -171,7 +171,9 @@ export default function ResultScreen({
             className="secondary-button"
             data-testid="bob-back-lobby"
             onClick={() => {
-              if (!backInLobby) roomClient()?.backToLobby();
+              // Sempre, mesmo com a sala já no lobby (o outro voltou primeiro): é aqui que o meu pronto volta
+              // junto, e quem voltou para jogar de novo não precisa tocar em "Estou pronto" outra vez.
+              roomClient()?.backToLobby();
               onBackToLobby();
             }}
           >

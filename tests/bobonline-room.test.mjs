@@ -378,14 +378,13 @@ test("X1 começa direto (sem 'pronto?') e a revanche também; recusar e Voltar �
     assert.ok(await rig.until(() => rig.snap("A").series.away === 1 && rig.snap("A").stage === "done"));
     // A revanche não vira aviso: a tela de resultado desenha pelo state.rematch.
     for (const name of ["A", "B"]) assert.ok(!rig.state(name).toasts.some((toast) => /revanche/i.test(toast.text)), `${name}: aviso de revanche`);
-    // Voltar à sala: lobby com a série, convidado não pronto; o próximo jogo troca o mandante de novo.
+    // Voltar à sala: lobby com a série; quem pediu volta pronto (o anfitrião começa sem outro toque); o
+    // próximo jogo troca o mandante de novo.
     rig.dev.B.client.backToLobby();
     assert.ok(await rig.until(() => rig.snap("A").stage === "lobby" && rig.snap("B").stage === "lobby"));
     assert.deepEqual(rig.snap("A").series, { home: 1, away: 1 });
-    assert.equal(rig.snap("A").members.find((member) => member.playerId === rig.dev.B.id).ready, false);
-    rig.dev.B.client.setReady(true);
-    assert.ok(await rig.until(() => rig.snap("A").members.every((member) => member.ready)));
-    rig.dev.A.client.hostStart();
+    assert.equal(rig.snap("A").members.find((member) => member.playerId === rig.dev.B.id).ready, true, "quem voltou à sala perdeu o pronto");
+    assert.deepEqual(rig.dev.A.client.hostStart(), { ok: true });
     assert.equal(match().home.entrantId, rig.dev.A.id, "jogo 3 da série: o criador manda de novo");
     assert.equal(match().replay, 2, "o id da partida não repete na série");
   } finally {
@@ -719,21 +718,24 @@ test("remover e banir; senha (senha → senha-errada → entra); entrada tarde v
 test("busca da sala: textos escalonados, não achou / sem rede / conexão não fechou / versão; criar sem relay = abrir", async () => {
   const rig = roomRig({ seed: 803 });
   try {
-    // Ninguém com a sala aberta: 12 s → 1, 25 s → 2, 45 s → "não achamos a sala".
+    // Ninguém com a sala aberta: 12 s → 1, 40 s → 2, 75 s → "não achamos a sala" (da sinalização no ar).
     const lonely = await BobRoomClient.join({ code: CODE, team: rig.device("B").team, nickname: "B", transportFactory: () => rig.hub.transport("B") }, rig.deps("B"));
     rig.dev.B.client = lonely;
     await rig.runFor(12_500);
     assert.equal(lonely.getState().joinStage, 1);
-    await rig.runFor(13_000);
+    await rig.runFor(28_000);
     assert.equal(lonely.getState().joinStage, 2);
-    await rig.runFor(20_000);
+    await rig.runFor(34_000);
+    assert.equal(lonely.getState().phase, "connecting", "desistiu antes dos 75 s");
+    await rig.runFor(1000);
     assert.equal(lonely.getState().phase, "error");
     assert.equal(lonely.getState().error, "nao-encontrada");
-    // Sem relay nenhum aberto: "sem conexão".
+    assert.equal(lonely.getState().netError, "nao-encontrada");
+    // Sem relay nenhum aberto: "sem conexão", já em JOIN_NET_WAIT_MS (não espera a busca inteira).
     rig.hub.signaling("C", false);
     const offline = await BobRoomClient.join({ code: CODE, team: rig.device("C").team, nickname: "C", transportFactory: () => rig.hub.transport("C") }, rig.deps("C"));
     rig.dev.C.client = offline;
-    await rig.runFor(T.JOIN_TIMEOUT_MS + 1000);
+    await rig.runFor(T.JOIN_NET_WAIT_MS + 1000);
     assert.equal(offline.getState().error, "sem-rede");
     // Anfitrião que não consegue abrir a sala (nenhum relay em 8 s).
     rig.hub.signaling("D", false);
@@ -747,12 +749,15 @@ test("busca da sala: textos escalonados, não achou / sem rede / conexão não f
   const pair = roomRig({ seed: 804 });
   try {
     await pair.create("A", settingsFor("x1"));
-    // SDP trocado, ICE não fecha: "Não deu para conectar" logo, sem esperar o tempo da busca.
+    // SDP trocado, ICE não fecha nem pelo apoio: uma tentativa só pelo TURN e "Não deu para conectar" logo,
+    // sem esperar o tempo da busca.
     pair.hub.joinError("A", "B");
     const blocked = await BobRoomClient.join({ code: CODE, team: pair.device("B").team, nickname: "B", transportFactory: () => pair.hub.transport("B") }, pair.deps("B"));
     pair.dev.B.client = blocked;
     assert.ok(await pair.until(() => blocked.getState().phase === "error", 10_000));
     assert.equal(blocked.getState().error, "conexao");
+    assert.equal(pair.hub.icePolicy("B"), "relay", "a segunda tentativa não foi só pelo apoio");
+    assert.equal(blocked.getState().netError, "conexao: ICE não fechou (simulado)");
     pair.hub.joinError("A", "B", false);
     // Hello de outra versão: "desatualizado", com quem precisa atualizar.
     const hello = { ...loadTs("app/bobonline/net/session.ts").localHelloInfo() };
@@ -1989,6 +1994,525 @@ test("autoridade sem checkpoint: `resuming` só quando a partida já corria (lar
     assert.equal(rig.dev.A.duels[1].role, "authority");
     assert.equal(rig.dev.A.duels[1].args.restore ?? null, null);
     assert.equal(rig.dev.A.duels[1].args.resuming, true);
+  } finally {
+    await rig.close();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// A busca da sala de verdade (r-net-audit B1/B2/B9/B10/B12): erro de ICE com nova tentativa pelo
+// servidor de apoio, reabertura sem ninguém por perto, prazo da primeira sinalização, e o estado que a
+// tela e o diagnóstico leem (search, signaling, links, netError).
+// ---------------------------------------------------------------------------
+
+/** Quem procura a sala sem esperar o fim: a busca anda pelo estado (o rig.join espera entrar ou falhar). */
+async function searcher(rig, name, { hostId, deps = {} } = {}) {
+  const dev = rig.device(name);
+  dev.client = await BobRoomClient.join({
+    code: CODE, team: dev.team, nickname: dev.nickname, ...(hostId ? { hostId } : {}), transportFactory: () => rig.hub.transport(name),
+  }, rig.deps(name, deps));
+  return dev.client;
+}
+
+test("busca: o primeiro erro de ICE tenta de novo só pelo servidor de apoio e entra; a rota do link é 'apoio' e o anfitrião não ganha aviso", async () => {
+  const rig = roomRig({ seed: 2101 });
+  try {
+    await rig.create("A", settingsFor("x1"));
+    // Os dois atrás de CGNAT: o direto nunca fecha, pelo TURN fecha (Paris: ~420 ms de ida e volta).
+    rig.hub.joinError("A", "B", "direct");
+    rig.hub.setLatency("A", "B", 210);
+    const b = await searcher(rig, "B");
+    const steps = [];
+    b.subscribe(() => {
+      const step = b.getState().search?.step;
+      if (step && steps.at(-1) !== step) steps.push(step);
+    });
+    assert.ok(await rig.until(() => b.getState().search?.step === "apoio", 5000), `sem nova tentativa pelo apoio (${b.getState().phase}, ${b.getState().error})`);
+    assert.deepEqual(steps, ["procurando", "achou", "apoio"], "o passo não seguiu o que a busca fez");
+    assert.equal(b.getState().phase, "connecting", "o primeiro erro de ICE derrubou a busca");
+    assert.equal(rig.hub.icePolicy("B"), "relay");
+    assert.equal(rig.hub.opens("B"), 2, "a nova tentativa reabre a sala uma vez");
+    assert.equal(b.getState().netError, "ICE não fechou (simulado)");
+    assert.ok(await rig.until(() => b.getState().phase === "in-room", 10_000), `não entrou pelo apoio (${b.getState().error})`);
+    assert.equal(b.getState().search, null);
+    assert.equal(b.getState().error, null);
+    // As duas pontas leem a rota: pelo apoio, RTT de 10 em 10 ms.
+    assert.ok(await rig.until(() => b.getState().links[rig.dev.A.id]?.route === "apoio", 8000), JSON.stringify(b.getState().links));
+    assert.deepEqual(b.getState().links[rig.dev.A.id], { route: "apoio", rttMs: 420 });
+    assert.ok(await rig.until(() => rig.state("A").links[rig.dev.B.id]?.route === "apoio", 8000));
+    // O anfitrião: sem o aviso que cobria o código (quem entra tenta de novo sozinho); o motivo fica no diagnóstico.
+    assert.ok(!rig.state("A").toasts.some((toast) => /tentou entrar/.test(toast.text)), "aviso de entrada que falhou no anfitrião");
+    assert.equal(rig.state("A").netError, "ICE não fechou (simulado)");
+    assert.equal(rig.state("A").search, null, "o anfitrião não procura sala");
+  } finally {
+    await rig.close();
+  }
+});
+
+test("busca: erro de ICE também pelo apoio é 'conexao'; o erro que chega tarde ganha pelo menos 30 s; sem TURN, uma reabertura comum e falha no erro seguinte", async () => {
+  const rig = roomRig({ seed: 2102 });
+  try {
+    // O convidado procura antes de a sala existir; o anfitrião só abre aos 55 s, e o ICE não fecha nem pelo apoio.
+    rig.hub.joinError("A", "B");
+    const b = await searcher(rig, "B");
+    const t0 = rig.hub.now();
+    await rig.runFor(55_000);
+    assert.equal(b.getState().phase, "connecting");
+    await rig.create("A", settingsFor("x1"));
+    assert.ok(await rig.until(() => b.getState().search?.step === "apoio", 5000), `sem nova tentativa (${b.getState().phase})`);
+    const deadline = b.getState().search.deadlineLocal;
+    assert.ok(deadline - (rig.hub.now() + WALL0) >= 29_500, `a tentativa pelo apoio ficou com ${deadline - (rig.hub.now() + WALL0)} ms`);
+    assert.ok(deadline > t0 + WALL0 + T.JOIN_TIMEOUT_MS, "o prazo não foi empurrado");
+    assert.ok(await rig.until(() => b.getState().phase === "error", 5000));
+    assert.equal(b.getState().error, "conexao");
+    assert.equal(b.getState().netError, "conexao: ICE não fechou (simulado)");
+    // Sem TURN na config: a nova tentativa é uma reabertura comum (política "all") e o erro seguinte falha.
+    const noTurn = { ...DEFAULT_NET_CONFIG };
+    delete noTurn.turn;
+    rig.hub.joinError("A", "C");
+    const c = await searcher(rig, "C", { deps: { netConfig: noTurn } });
+    const steps = new Set();
+    c.subscribe(() => steps.add(c.getState().search?.step));
+    assert.ok(await rig.until(() => c.getState().phase === "error", 10_000));
+    assert.equal(c.getState().error, "conexao");
+    assert.equal(rig.hub.icePolicy("C"), "all");
+    assert.equal(rig.hub.opens("C"), 2, "sem TURN: uma reabertura e só");
+    assert.ok(!steps.has("apoio"), "sem TURN não existe tentativa pelo apoio");
+  } finally {
+    await rig.close();
+  }
+});
+
+test("busca: o erro de ICE chega calado 23,3 s depois da troca de SDP (como no Trystero): a busca espera por ele, tenta pelo apoio e, sem caminho nenhum, é 'conexao'", async () => {
+  // r-hostile: na rede real a busca reabria a cada 12 s (8 s sem sinal) antes de o Trystero desistir do
+  // SDP, o erro nunca chegava e tudo terminava em "nao-encontrada" sem tentar o apoio.
+  const rig = roomRig({ seed: 2111 });
+  try {
+    await rig.create("A", settingsFor("x1"));
+    rig.hub.joinError("A", "B", "direct", 23_333);
+    const b = await searcher(rig, "B");
+    const steps = [];
+    b.subscribe(() => {
+      const step = b.getState().search?.step;
+      if (step && steps.at(-1) !== step) steps.push(step);
+    });
+    assert.ok(await rig.until(() => b.getState().search?.step === "apoio", 30_000), `sem tentativa pelo apoio (${b.getState().phase}, ${b.getState().error}, ${rig.hub.opens("B")} aberturas)`);
+    assert.equal(rig.hub.opens("B"), 2, "reabriu no meio da negociação, antes do erro do Trystero");
+    // "achou" fica até o erro (o "procurando" do começo pode sair antes do subscribe).
+    assert.deepEqual(steps.filter((step) => step !== "procurando"), ["achou", "apoio"]);
+    assert.ok(!steps.slice(steps.indexOf("achou")).includes("procurando"), `voltou a "procurando" no meio: ${steps.join(" > ")}`);
+    assert.ok(await rig.until(() => b.getState().phase === "in-room", 10_000), `não entrou pelo apoio (${b.getState().error})`);
+  } finally {
+    await rig.close();
+  }
+  const none = roomRig({ seed: 2112 });
+  try {
+    await none.create("A", settingsFor("x1"));
+    none.hub.joinError("A", "C", true, 23_333);
+    const c = await searcher(none, "C");
+    assert.ok(await none.until(() => c.getState().phase === "error", 80_000), `a busca não terminou (${c.getState().search?.step})`);
+    assert.equal(c.getState().error, "conexao");
+    assert.equal(none.hub.opens("C"), 2, "uma reabertura só, a do apoio");
+    assert.equal(none.hub.icePolicy("C"), "relay");
+    assert.equal(c.getState().netError, "conexao: ICE não fechou (simulado)");
+  } finally {
+    await none.close();
+  }
+  // Erro de ICE esperando a vez quando o prazo vence: a sala respondeu, então é o apoio, não "nao-encontrada".
+  const late = roomRig({ seed: 2113 });
+  try {
+    const d = await searcher(late, "D");
+    await late.runFor(500);
+    const deadline = d.getState().search.deadlineLocal - WALL0;
+    await late.runFor(deadline - late.hub.now() - 1000);
+    d.session.transport.onJoinError({ peer: null, reason: "ICE no fim do prazo" });
+    await late.runFor(2000);
+    assert.equal(d.getState().phase, "connecting", `desistiu com o erro de ICE esperando (${d.getState().error})`);
+    assert.equal(d.getState().search.step, "apoio");
+  } finally {
+    await late.close();
+  }
+});
+
+test("busca pelo link (&h=): erro de ICE de outro par conhecido não conta na espera do anfitrião; com o anfitrião do link ligado, o erro de um id desconhecido não reabre", async () => {
+  const rig = roomRig({ seed: 2103 });
+  try {
+    await rig.create("A", settingsFor("t4"));
+    await rig.join("C");
+    // D chega pelo link de A: até A o caminho é lento (as boas-vindas demoram), até C é rápido.
+    rig.hub.setLatency("A", "D", 1500);
+    const d = await searcher(rig, "D", { hostId: rig.dev.A.id });
+    const session = d.session;
+    const transport = session.transport;
+    assert.ok(await rig.until(() => session.health(rig.dev.C.id) === "ok", 5000), "D não se ligou a C");
+    assert.equal(d.getState().phase, "connecting");
+    // O ICE com C (id já vinculado) falha na espera do anfitrião do link: não conta (B12).
+    transport.onJoinError({ peer: rig.dev.C.client.session.transport.selfId(), reason: "falha com C" });
+    await rig.runFor(2000);
+    assert.equal(rig.hub.opens("D"), 1, "o erro de C reabriu a busca");
+    assert.equal(d.getState().netError, null);
+    // A ligado, boas-vindas a caminho: o erro de um id nunca vinculado não reabre (mataria o link com A).
+    assert.ok(await rig.until(() => session.linked().includes(rig.dev.A.id), 10_000), "D não se ligou a A");
+    assert.equal(d.getState().phase, "connecting", "as boas-vindas chegaram cedo demais para o teste");
+    transport.onJoinError({ peer: "ninguem", reason: "falha sem dono" });
+    assert.ok(await rig.until(() => d.getState().phase === "in-room", 15_000), `D não entrou (${d.getState().error})`);
+    assert.equal(rig.hub.opens("D"), 1, "o erro sem dono reabriu a busca com o anfitrião ligado");
+    assert.equal(rig.snap("D").hostId, rig.dev.A.id);
+    assert.equal(d.getState().netError, "falha sem dono");
+  } finally {
+    await rig.close();
+  }
+});
+
+test("busca: sem ninguém por perto a sala do Trystero reabre a cada 12 s (aquecimento de novo); com outro aparelho negociando, não", async () => {
+  const rig = roomRig({ seed: 2104 });
+  try {
+    const b = await searcher(rig, "B");
+    assert.equal(rig.hub.opens("B"), 1);
+    const deadline = b.getState().search.deadlineLocal;
+    await rig.runFor(11_500);
+    assert.equal(rig.hub.opens("B"), 1, "reabriu antes de 12 s");
+    await rig.runFor(1000);
+    assert.equal(rig.hub.opens("B"), 2);
+    assert.ok(b.session.transport.softKicks >= 1 && b.session.transport.softKicks === b.session.transport.kicks, "o chute da reabertura zerou o backoff dos relays");
+    await rig.runFor(12_000);
+    assert.equal(rig.hub.opens("B"), 3);
+    assert.equal(b.getState().search.deadlineLocal, deadline, "reabrir mexeu no prazo");
+    assert.equal(b.getState().search.step, "procurando");
+  } finally {
+    await rig.close();
+  }
+  const other = roomRig({ seed: 2105 });
+  try {
+    // Outro aparelho dando sinal a cada 2 s (negociação andando, sem fechar nem falhar): nada de reabrir.
+    const c = await searcher(other, "C");
+    for (let index = 0; index < 15; index += 1) {
+      other.hub.touchSignal("C");
+      await other.runFor(2000);
+    }
+    assert.equal(other.hub.opens("C"), 1, "reabriu no meio da negociação");
+    assert.equal(c.getState().search.step, "achou");
+    // Calado depois do SDP não é "ninguém": o Trystero só desiste 23,3 s depois (onJoinError). Antes disso
+    // não reabre; passado o prazo dele sem erro nenhum, volta a reabrir e a busca volta a "procurando".
+    await other.runFor(22_000);
+    assert.equal(other.hub.opens("C"), 1, "reabriu antes de o Trystero desistir da negociação");
+    await other.runFor(5000);
+    assert.equal(other.hub.opens("C"), 2);
+    assert.equal(c.getState().search.step, "procurando");
+  } finally {
+    await other.close();
+  }
+});
+
+test("busca: na volta ao primeiro plano a escada e a busca não reabrem uma em cima da outra", async () => {
+  // Os relays voltam depois da página: a busca reabre primeiro, e a rajada da volta (escada) não repete.
+  const rig = roomRig({ seed: 2190 });
+  try {
+    const b = await searcher(rig, "B", { deps: { lifecycle: true } });
+    await rig.runFor(13_000);
+    assert.equal(rig.hub.opens("B"), 2);
+    rig.hub.signaling("B", false);
+    b.simulateBackground(20_000);
+    await rig.runFor(21_000);
+    assert.equal(rig.hub.opens("B"), 2, "reabriu sem sinalização");
+    rig.hub.signaling("B", true);
+    await rig.runFor(3000);
+    assert.equal(rig.hub.opens("B"), 3, "a volta reabriu duas vezes seguidas (busca + escada)");
+    await rig.runFor(9500);
+    assert.equal(rig.hub.opens("B"), 4, "a busca perdeu o ritmo de 12 s");
+  } finally {
+    await rig.close();
+  }
+  // Relays no ar na volta: a escada reabre na hora e a busca empurra a dela para 12 s depois.
+  const other = roomRig({ seed: 2191 });
+  try {
+    const c = await searcher(other, "C", { deps: { lifecycle: true } });
+    await other.runFor(13_000);
+    assert.equal(other.hub.opens("C"), 2);
+    c.simulateBackground(8000);
+    await other.runFor(10_000);
+    assert.equal(other.hub.opens("C"), 3, "a volta não reabriu uma vez só");
+    await other.runFor(9500);
+    assert.equal(other.hub.opens("C"), 3, "a busca reabriu logo atrás da escada");
+    await other.runFor(1500);
+    assert.equal(other.hub.opens("C"), 4);
+  } finally {
+    await other.close();
+  }
+});
+
+test("busca: o relógio começa na primeira sinalização (prazo e etapas); sem nenhuma em 25 s, 'sem rede'", async () => {
+  const rig = roomRig({ seed: 2106 });
+  try {
+    // 10 s sem relay nenhum (o chunk do Trystero e os sockets no 3G), depois a rede chega.
+    rig.hub.signaling("B", false);
+    const b = await searcher(rig, "B");
+    const t0 = rig.hub.now();
+    assert.equal(b.getState().search.step, "rede");
+    assert.equal(b.getState().search.relays, null, "memória não tem relays");
+    const latest = b.getState().search.deadlineLocal;
+    assert.equal(latest, t0 + WALL0 + T.JOIN_NET_WAIT_MS + T.JOIN_TIMEOUT_MS, "sem rede, o prazo é o mais tarde possível");
+    await rig.runFor(10_000);
+    assert.equal(b.getState().phase, "connecting");
+    assert.equal(b.getState().joinStage, 0);
+    rig.hub.signaling("B", true);
+    await rig.runFor(250);
+    const t1 = rig.hub.now();
+    assert.equal(b.getState().search.step, "procurando");
+    const deadline = b.getState().search.deadlineLocal;
+    assert.ok(deadline <= t1 + WALL0 + T.JOIN_TIMEOUT_MS && deadline >= t1 + WALL0 + T.JOIN_TIMEOUT_MS - 250, `prazo ${deadline - t1 - WALL0}`);
+    assert.ok(deadline <= latest, "a barra andou para trás");
+    await rig.runFor(35_000);
+    assert.equal(b.getState().joinStage, 1, "a etapa contou do toque, não da sinalização");
+    await rig.runFor(T.JOIN_TIMEOUT_MS - 35_000 - 1000);
+    assert.equal(b.getState().phase, "connecting", "o prazo contou do toque, não da sinalização");
+    await rig.runFor(1500);
+    assert.equal(b.getState().error, "nao-encontrada");
+    // Nenhuma sinalização: "sem rede" aos 25 s, não no fim da busca.
+    rig.hub.signaling("C", false);
+    const c = await searcher(rig, "C");
+    await rig.runFor(T.JOIN_NET_WAIT_MS - 500);
+    assert.equal(c.getState().phase, "connecting");
+    assert.equal(c.getState().search.step, "rede");
+    await rig.runFor(750);
+    assert.equal(c.getState().error, "sem-rede");
+    assert.equal(c.getState().netError, "sem-rede");
+  } finally {
+    await rig.close();
+  }
+});
+
+test("busca: no fim do prazo com outro aparelho negociando, estica uma vez (até 26 s do último sinal)", async () => {
+  const rig = roomRig({ seed: 2107 });
+  try {
+    const b = await searcher(rig, "B");
+    const t0 = rig.hub.now();
+    await rig.runFor(70_000);
+    // Negociação andando no fim do prazo (sinais a cada 2 s, sem fechar nem falhar).
+    for (let index = 0; index < 4; index += 1) {
+      rig.hub.touchSignal("B");
+      await rig.runFor(2000);
+    }
+    assert.equal(b.getState().phase, "connecting", "desistiu no meio da negociação");
+    const extended = b.getState().search.deadlineLocal - (t0 + WALL0);
+    assert.ok(extended > T.JOIN_TIMEOUT_MS + 15_000 && extended <= T.JOIN_TIMEOUT_MS + 26_000, `prazo ${extended}`);
+    // Uma vez só: negociando sem parar, desiste no prazo novo.
+    while (b.getState().phase === "connecting" && rig.hub.now() - t0 < 150_000) {
+      rig.hub.touchSignal("B");
+      await rig.runFor(1000);
+    }
+    assert.equal(b.getState().error, "nao-encontrada");
+    assert.ok(rig.hub.now() - t0 <= extended + 1000, `desistiu aos ${rig.hub.now() - t0} ms`);
+  } finally {
+    await rig.close();
+  }
+});
+
+test("escada sozinha no lobby: os chutes periódicos dela chegam ao transporte sem force (o proxy da sala repassa o argumento)", async () => {
+  const rig = roomRig({ seed: 2112 });
+  try {
+    const host = await BobRoomClient.create({ team: rig.device("A").team, nickname: "A", settings: settingsFor("x1"), transportFactory: () => rig.hub.transport("A") }, { ...rig.deps("A"), lifecycle: true });
+    rig.dev.A.client = host;
+    assert.ok(await rig.until(() => host.getState().phase === "in-room", 10_000));
+    rig.hub.signaling("A", false);
+    host.simulateBackground(1000);
+    await rig.runFor(4000);
+    const transport = host.session.transport;
+    const forced = transport.kicks - transport.softKicks;
+    assert.ok(forced >= 1, "a volta ao primeiro plano não chutou com tudo");
+    const soft = transport.softKicks;
+    await rig.runFor(16_000);
+    // Escada a cada 5 s + sala a cada 10 s, todos periódicos: nenhum zera o backoff dos relays.
+    assert.ok(transport.softKicks - soft >= 3, `poucos chutes periódicos (${transport.softKicks - soft})`);
+    assert.equal(transport.kicks - transport.softKicks, forced, "um chute periódico da escada virou forçado no caminho");
+  } finally {
+    await rig.close();
+  }
+});
+
+test("estado: search.relays da saúde dos relays, sem redesenho a cada tick; 'reconectando' com a sinalização calada 3 s na sala; rota dos links relida", async () => {
+  const rig = roomRig({ seed: 2108 });
+  try {
+    rig.hub.relays("B", { total: 8, open: 6, fresh: 5 });
+    const b = await searcher(rig, "B");
+    await rig.runFor(500);
+    assert.deepEqual(b.getState().search, { step: "procurando", relays: { open: 6, total: 8 }, deadlineLocal: b.getState().search.deadlineLocal });
+    const before = b.getState();
+    assert.equal(b.getState(), before, "getState mudou sem versão nova");
+    let calls = 0;
+    const off = b.subscribe(() => (calls += 1));
+    await rig.runFor(10_000);
+    assert.equal(calls, 0, "a busca parada redesenhou");
+    assert.equal(b.getState(), before);
+    rig.hub.relays("B", { total: 8, open: 7, fresh: 7 });
+    await rig.runFor(500);
+    assert.equal(calls, 1);
+    assert.deepEqual(b.getState().search.relays, { open: 7, total: 8 });
+    off();
+    await b.leave();
+    // Na sala: o anfitrião sozinho com a sinalização calada vira "reconectando" depois de 3 s (e pede para religar).
+    await rig.create("A", settingsFor("x1"));
+    assert.equal(rig.state("A").signaling, "ok");
+    rig.hub.signaling("A", false);
+    await rig.runFor(2500);
+    assert.equal(rig.state("A").signaling, "ok", "reconectando cedo demais");
+    await rig.runFor(1000);
+    assert.equal(rig.state("A").signaling, "reconectando");
+    const transportA = rig.dev.A.client.session.transport;
+    assert.ok(transportA.kicks >= 1, "não pediu ao transporte para religar os relays");
+    assert.equal(transportA.softKicks, 0, "o chute de quando calou é forçado");
+    await rig.runFor(10_500);
+    assert.ok(transportA.softKicks >= 1, "calada há 10 s: chute de novo");
+    assert.equal(transportA.kicks - transportA.softKicks, 1, "só o primeiro zera o backoff; os seguintes o respeitam");
+    rig.hub.signaling("A", true);
+    await rig.runFor(500);
+    assert.equal(rig.state("A").signaling, "ok");
+    // Rota e RTT do link (direto, de 10 em 10 ms), relidos a cada 5 s.
+    rig.hub.setLatency("A", "C", 37);
+    await rig.join("C");
+    assert.ok(await rig.until(() => rig.state("A").links[rig.dev.C.id] !== undefined, 6000), "o anfitrião não leu a rota");
+    assert.deepEqual(rig.state("A").links[rig.dev.C.id], { route: "direto", rttMs: 70 });
+    rig.hub.setLatency("A", "C", 52);
+    assert.ok(await rig.until(() => rig.state("A").links[rig.dev.C.id]?.rttMs === 100, 6000), JSON.stringify(rig.state("A").links));
+    // Quem sai some da lista.
+    await rig.dev.C.client.leave();
+    assert.ok(await rig.until(() => rig.state("A").links[rig.dev.C.id] === undefined, 8000));
+  } finally {
+    await rig.close();
+  }
+});
+
+test("X1 'Voltar à sala': o anfitrião volta primeiro (o convidado ainda no resultado não fica pronto); o convidado que volta depois fica pronto sem outro toque", async () => {
+  const rig = roomRig({ seed: 2109 });
+  try {
+    await lobby(rig, "x1", 2);
+    rig.dev.A.client.hostStart();
+    assert.ok(await rig.until(() => rig.dev.A.duels.length === 1 && rig.dev.B.duels.length === 1));
+    rig.dev.A.duels[0].finish("user");
+    assert.ok(await rig.until(() => rig.snap("A").bracket?.matches[0].status === "done" && rig.snap("B").stage === "done"));
+    rig.dev.A.client.backToLobby();
+    assert.ok(await rig.until(() => rig.snap("B").stage === "lobby"));
+    const readyB = () => rig.snap("A").members.find((member) => member.playerId === rig.dev.B.id).ready;
+    assert.equal(readyB(), false, "o convidado ainda no resultado ficou pronto");
+    assert.deepEqual(rig.dev.A.client.hostStart(), { ok: false, reason: "nao-prontos" });
+    // O convidado sai do resultado ("Voltar à sala" com a sala já no lobby): pronto de novo.
+    rig.dev.B.client.backToLobby();
+    assert.ok(await rig.until(() => readyB() === true, 3000), "o pronto não voltou");
+    assert.deepEqual(rig.dev.A.client.hostStart(), { ok: true });
+  } finally {
+    await rig.close();
+  }
+});
+
+test("voltando (resume) para uma sala que ninguém mais tem aberta: reabre sozinho, nunca vira anfitrião de uma sala só sua e desiste no prazo da busca", async () => {
+  const rig = roomRig({ seed: 2110 });
+  try {
+    await lobby(rig, "x1", 2);
+    await rig.kill("A");
+    await rig.dev.B.client.close();
+    await rig.runFor(1000);
+    const b = await rig.resume("B");
+    assert.equal(b.getState().phase, "in-room");
+    assert.equal(b.getState().search, null, "na sala guardada não há busca na tela");
+    await rig.runFor(30_000);
+    assert.ok(rig.hub.opens("B") >= 2, "não reabriu a busca sozinho");
+    await rig.runFor(T.JOIN_TIMEOUT_MS - 30_000 - 1000);
+    assert.equal(b.getState().phase, "in-room");
+    assert.notEqual(rig.snap("B").hostId, rig.dev.B.id, "virou anfitrião de uma sala só sua");
+    await rig.runFor(1500);
+    assert.equal(b.getState().error, "nao-encontrada");
+    // A sala acabou: sem sessão salva nem cópia, o "Voltar para a sala" e o convite velho não levam de novo ao lobby parado.
+    assert.equal(rig.dev.B.saved, null, "a sessão salva ficou");
+    assert.equal(rig.dev.B.roomStore.load(CODE), null, "a cópia da sala ficou");
+  } finally {
+    await rig.close();
+  }
+});
+
+test("voltando (resume) sem rede: não desiste em 25 s (HEAD esperava 45 s) nem renova a sessão salva; sem rede a sessão fica", async () => {
+  const rig = roomRig({ seed: 2120 });
+  try {
+    await lobby(rig, "x1", 2);
+    await rig.dev.B.client.close();
+    await rig.runFor(1000);
+    const savedAt = rig.dev.B.saved.savedAt;
+    rig.hub.signaling("B", false);
+    const b = await rig.resume("B");
+    await rig.runFor(45_000);
+    assert.equal(b.getState().phase, "in-room", `desistiu antes de 45 s (${b.getState().error})`);
+    assert.equal(rig.dev.B.saved?.savedAt, savedAt, "a volta sem resposta da sala renovou a sessão salva");
+    await rig.runFor(T.JOIN_TIMEOUT_MS + T.JOIN_NET_WAIT_MS - 45_000 + 1000);
+    assert.equal(b.getState().error, "sem-rede");
+    assert.ok(rig.dev.B.saved, "sem rede a sala pode estar viva: a sessão fica");
+  } finally {
+    await rig.close();
+  }
+});
+
+test("busca congelada antes do primeiro relay (APK no WhatsApp): escondida não dá 'sem rede', e a espera da rede recomeça na volta", async () => {
+  const rig = roomRig({ seed: 2121 });
+  try {
+    await rig.create("A", settingsFor("x1"));
+    rig.hub.signaling("C", false);
+    const c = await searcher(rig, "C");
+    await rig.runFor(1000);
+    c.simulateBackground(30_000);
+    await rig.runFor(30_500);
+    assert.equal(c.getState().phase, "connecting", `'sem rede' no primeiro passo da volta (${c.getState().error})`);
+    assert.equal(c.getState().search.step, "rede");
+    const left = c.getState().search.deadlineLocal - (rig.hub.now() + WALL0);
+    assert.ok(left >= T.JOIN_NET_WAIT_MS + T.JOIN_TIMEOUT_MS - 1000, `a barra não acompanhou a volta (${left} ms)`);
+    rig.hub.signaling("C", true);
+    assert.ok(await rig.until(() => c.getState().phase === "in-room", 20_000), `não entrou (${c.getState().error})`);
+  } finally {
+    await rig.close();
+  }
+});
+
+test("busca: a volta ao primeiro plano no meio de uma troca de SDP que vai falhar não reabre por cima (o erro do Trystero e o apoio chegam no tempo)", async () => {
+  // review-room: a escada reabria na volta (sinal de 10 s) e o leave sumia com o onJoinError: +12 s na memória, ~+25 s na rede real.
+  const rig = roomRig({ seed: 2122 });
+  try {
+    await rig.create("A", settingsFor("x1"));
+    rig.hub.joinError("A", "B", "direct", 23_333);
+    const t0 = rig.hub.now();
+    const b = await searcher(rig, "B", { deps: { lifecycle: true } });
+    await rig.runFor(3000);
+    b.simulateBackground(9000);
+    assert.ok(await rig.until(() => b.getState().phase !== "connecting", 60_000));
+    assert.equal(b.getState().phase, "in-room", `não entrou (${b.getState().error})`);
+    const took = rig.hub.now() - t0;
+    assert.ok(took <= 27_000, `entrou aos ${took} ms: a volta reabriu no meio da negociação`);
+    assert.equal(rig.hub.icePolicy("B"), "relay", "entrou pelo apoio");
+  } finally {
+    await rig.close();
+  }
+});
+
+test("rota dos links só na sala de espera: nenhum getStats no meio da partida; de volta à sala, relê", async () => {
+  const rig = roomRig({ seed: 2123 });
+  try {
+    await lobby(rig, "x1", 2);
+    const transport = rig.dev.A.client.session.transport;
+    const linkInfo = transport.linkInfo.bind(transport);
+    let reads = 0;
+    transport.linkInfo = (peer) => {
+      reads += 1;
+      return linkInfo(peer);
+    };
+    assert.ok(await rig.until(() => rig.state("A").links[rig.dev.B.id] !== undefined, 6000), "o lobby não leu a rota");
+    assert.deepEqual(rig.dev.A.client.hostStart(), { ok: true });
+    assert.ok(await rig.until(() => rig.snap("A").stage === "running" && rig.dev.A.duels.length === 1));
+    await rig.runFor(1000);
+    const before = reads;
+    await rig.runFor(20_000);
+    assert.equal(reads, before, "leu a rota no meio da partida");
+    assert.deepEqual(rig.state("A").links, {}, "a rota do lobby ficou no estado da partida");
+    rig.dev.A.duels[0].finish("user");
+    assert.ok(await rig.until(() => rig.snap("A").stage === "done"));
+    rig.dev.A.client.backToLobby();
+    assert.ok(await rig.until(() => rig.snap("A").stage === "lobby"));
+    assert.ok(await rig.until(() => rig.state("A").links[rig.dev.B.id] !== undefined, 1500), "de volta à sala não releu a rota");
   } finally {
     await rig.close();
   }

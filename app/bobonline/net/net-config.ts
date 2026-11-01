@@ -25,11 +25,15 @@ const NET_CONFIG_KEY = "futbobo:bobonline-netcfg:v1";
 const FETCH_TIMEOUT_MS = 2500;
 
 /**
- * Embutida, igual ao arquivo publicado (sem notice). Relays medidos de novo em 2026-10-30
- * (ida e volta de um evento efêmero no formato do Trystero): cdn.satellite.earth passou a pedir
- * AUTH e falhar, então saiu para nostr.red5d.dev. `current` repete BOB_PROTOCOL,
- * BOTAO_ENGINE_REV e CELEBRATION_OPTIONS.length como literais para este arquivo não puxar o
- * motor; o teste confere com as constantes.
+ * Embutida, igual ao arquivo publicado (sem notice). Relays medidos de novo em 2026-11-01 (4 rodadas
+ * de ida e volta de um evento efêmero no formato do Trystero, mais uma rajada de 12 eventos, que é o
+ * que um aperto de mão manda por relay em ~5 s): relay.layer.systems saiu (limita o IP depois de ~7
+ * eventos e depois bane por 40+ min com HTTP 429, e num CGNAT o IP é de muita gente); entraram
+ * relay.ditto.pub, relay.grigic.org, nostr-pub.wellorder.net e relay.primal.net (4/4 rodadas, 12/12 na
+ * rajada, sem AUTH, operadores e hospedagens diferentes). Em 2026-10-30 cdn.satellite.earth já tinha
+ * saído (passou a pedir AUTH). Ficar de olho: nostr.red5d.dev atrasou a escrita para 10,7 s sem erro.
+ * `current` repete BOB_PROTOCOL, BOTAO_ENGINE_REV e CELEBRATION_OPTIONS.length como literais para
+ * este arquivo não puxar o motor; o teste confere com as constantes.
  */
 export const DEFAULT_NET_CONFIG: NetConfig = {
   version: 1,
@@ -38,10 +42,13 @@ export const DEFAULT_NET_CONFIG: NetConfig = {
     "wss://relay.nostr.dev.br",
     "wss://nostr.red5d.dev",
     "wss://nostr.rblb.it",
-    "wss://relay.layer.systems",
     "wss://relay.agentry.com",
     "wss://relay.piazza.today",
     "wss://0x-nostr-relay.fly.dev",
+    "wss://relay.ditto.pub",
+    "wss://relay.grigic.org",
+    "wss://nostr-pub.wellorder.net",
+    "wss://relay.primal.net",
   ],
   ...(TURN_SERVERS.length
     ? { turn: TURN_SERVERS.map((server) => ({ ...server, urls: Array.isArray(server.urls) ? [...server.urls] : server.urls })) }
@@ -103,44 +110,140 @@ export function sanitizeNetConfig(raw: unknown): NetConfig | null {
   return config;
 }
 
+/** Busca mais velha que isto: a próxima sala busca de novo (TURN trocado chega às abas que vivem dias). */
+const REFETCH_AFTER_MS = 60_000;
+/** Desvio de relógio menor que isto não vale a correção (o Date do HTTP tem resolução de 1 s). */
+export const CLOCK_FIX_MIN_MS = 3000;
 /**
- * Quanto o relógio deste aparelho está adiantado (+) ou atrasado (−) em ms, medido pelo cabeçalho
- * Date da última busca do net.json; null quando não deu para ler (APK, offline, cache).
- * CONTRATO T0: a implementação de verdade preenche no fetchNetConfig.
+ * O relógio de parede andou isto contra o monotônico desde a medida: a pessoa acertou a hora (ou o
+ * aparelho dormiu; no Android o monotônico para no sono profundo). Só serve para medir de novo, nunca
+ * para corrigir o desvio direto (o sono daria um "pulo" que não é do relógio).
  */
-export function netClockOffsetMs(): number | null {
-  return null;
+const WALL_JUMP_MS = 2000;
+
+/** De onde veio a configuração em uso: do servidor agora, do cache local ou a embutida. */
+export type NetConfigSource = "rede" | "cache" | "padrão";
+
+let clockOffset: number | null = null;
+/** Date.now() − monotônico na hora da medida do desvio (null: nunca medido). */
+let wallBase: number | null = null;
+let lastSource: NetConfigSource | null = null;
+let loaded: Promise<NetConfig> | null = null;
+let loadedAt = 0;
+/** Relays da primeira configuração da página: o Trystero só os lê no primeiro joinRoom (issue #207). */
+let pinnedRelays: Pick<NetConfig, "nostrRelays" | "redundancy"> | null = null;
+
+const monotonicNow = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
+
+/** O relógio de parede pulou desde a última medida do desvio (ver WALL_JUMP_MS). */
+function wallJumped(): boolean {
+  return wallBase !== null && Math.abs(Date.now() - monotonicNow() - wallBase) > WALL_JUMP_MS;
 }
 
-let loaded: Promise<NetConfig> | null = null;
+/**
+ * Um desvio que vale a correção está medido: a busca seguinte mede de novo em vez de usar a de 60 s
+ * atrás. A tela pede "ative data e hora automáticas"; quem obedece volta com o relógio certo, e o
+ * desvio velho jogaria os eventos para o passado (relays recusam, clientes antigos descartam).
+ */
+function clockSuspect(): boolean {
+  return clockOffset !== null && Math.abs(clockOffset) >= CLOCK_FIX_MIN_MS;
+}
+
+/**
+ * Desvio do relógio local (ms; + adiantado) a partir do cabeçalho Date de uma resposta: o meio do
+ * pedido no relógio local contra Date + 500 ms (o Date tem resolução de 1 s, truncado). null sem
+ * Date legível (o APK busca de outra origem e o servidor não expõe o cabeçalho ao CORS).
+ */
+export function clockOffsetFromDate(date: string | null | undefined, sentAt: number, receivedAt: number): number | null {
+  if (!date) return null;
+  const server = Date.parse(date);
+  if (!Number.isFinite(server) || !Number.isFinite(sentAt) || !Number.isFinite(receivedAt) || receivedAt < sentAt) return null;
+  return Math.round((sentAt + receivedAt) / 2 - (server + 500));
+}
+
+/**
+ * Quanto o relógio deste aparelho está adiantado (+) ou atrasado (−) em ms, medido pelo cabeçalho
+ * Date da última busca do net.json que trouxe um; null quando nunca deu para ler (APK, offline, cache).
+ * A estratégia Nostr desconta isto da hora que põe nos eventos e no since.
+ */
+export function netClockOffsetMs(): number | null {
+  return clockOffset;
+}
+
+/** Origem da última configuração carregada nesta página (diagnóstico); null antes da primeira. */
+export function netConfigSource(): NetConfigSource | null {
+  return lastSource;
+}
 
 type LoadOptions = { fetch?: typeof fetch; url?: string; timeoutMs?: number; fresh?: boolean };
 
 /**
- * fetch no-cache com timeout 2,5 s → cache local → DEFAULT. O resultado vale para a página
- * inteira: uma configuração de relays só por sessão do app (Trystero issue #207).
- * `fresh` (testes) ignora o resultado guardado.
+ * fetch no-cache com timeout 2,5 s → cache local → DEFAULT. Uma busca vale por REFETCH_AFTER_MS: a
+ * sala criada ou buscada depois disso busca de novo, para um TURN trocado chegar à aba aberta há dias
+ * (o TURN é lido a cada joinRoom). Uma busca nova que falha fica com a anterior desta página (melhor
+ * que o cache). Os relays ficam presos aos da primeira configuração da página: o Trystero só os lê no
+ * primeiro joinRoom (issue #207), e trocar a lista no meio só desalinharia o diagnóstico.
+ * Com o relógio do aparelho errado (ou mexido desde a medida), toda chamada busca de novo: é o que
+ * mede o relógio, e a pessoa pode tê-lo acertado agora há pouco.
+ * `fresh` (testes) busca sem tocar no estado da página.
  */
 export function loadNetConfig(options: LoadOptions = {}): Promise<NetConfig> {
-  if (loaded && !options.fresh) return loaded;
-  const pending = fetchNetConfig(options);
-  if (!options.fresh) loaded = pending;
-  return pending;
+  if (options.fresh) return fetchNetConfig(options).then((result) => result.config);
+  const at = monotonicNow();
+  if (loaded && at - loadedAt < REFETCH_AFTER_MS && !clockSuspect() && !wallJumped()) return loaded;
+  const previous = loaded;
+  loadedAt = at;
+  loaded = fetchNetConfig(options).then(({ config, source }) => {
+    if (source !== "rede" && previous) return previous;
+    lastSource = source;
+    return pinRelays(config);
+  });
+  return loaded;
 }
 
-async function fetchNetConfig(options: LoadOptions): Promise<NetConfig> {
+function pinRelays(config: NetConfig): NetConfig {
+  if (!pinnedRelays) {
+    pinnedRelays = { nostrRelays: config.nostrRelays, redundancy: config.redundancy };
+    return config;
+  }
+  const next: NetConfig = { ...config };
+  delete next.nostrRelays;
+  delete next.redundancy;
+  if (pinnedRelays.nostrRelays) next.nostrRelays = pinnedRelays.nostrRelays;
+  if (pinnedRelays.redundancy !== undefined) next.redundancy = pinnedRelays.redundancy;
+  return next;
+}
+
+/**
+ * Configuração sem TURN (cache de antes do TURN existir, net.json mexido à mão) usa o embutido: sem
+ * ele, dois celulares atrás de CGNAT simétrico não conectam nunca. Com `iceServers` (controle total)
+ * fica como veio.
+ */
+function withTurnFallback(config: NetConfig): NetConfig {
+  if (config.turn || config.iceServers || !DEFAULT_NET_CONFIG.turn) return config;
+  return { ...config, turn: DEFAULT_NET_CONFIG.turn };
+}
+
+async function fetchNetConfig(options: LoadOptions): Promise<{ config: NetConfig; source: NetConfigSource }> {
   const key = bobKey(NET_CONFIG_KEY);
   const doFetch = options.fetch ?? (typeof fetch === "function" ? fetch : null);
   if (doFetch) {
     const controller = typeof AbortController === "function" ? new AbortController() : null;
     const timer = setTimeout(() => controller?.abort(), options.timeoutMs ?? FETCH_TIMEOUT_MS);
     try {
+      const sentAt = Date.now();
       const response = await doFetch(options.url ?? NET_CONFIG_URL, { cache: "no-cache", signal: controller?.signal });
+      const offset = clockOffsetFromDate(response.headers?.get?.("date"), sentAt, Date.now());
+      // Sem Date legível (offline, timeout, APK de outra origem) fica a medida anterior: nada diz que o relógio mudou.
+      if (offset !== null) {
+        clockOffset = offset;
+        wallBase = Date.now() - monotonicNow();
+      }
       if (response.ok) {
         const config = sanitizeNetConfig(await response.json());
         if (config) {
           writeJson(key, config);
-          return config;
+          return { config: withTurnFallback(config), source: "rede" };
         }
       }
     } catch {
@@ -149,5 +252,6 @@ async function fetchNetConfig(options: LoadOptions): Promise<NetConfig> {
       clearTimeout(timer);
     }
   }
-  return sanitizeNetConfig(readJson<unknown>(key)) ?? DEFAULT_NET_CONFIG;
+  const cached = sanitizeNetConfig(readJson<unknown>(key));
+  return cached ? { config: withTurnFallback(cached), source: "cache" } : { config: DEFAULT_NET_CONFIG, source: "padrão" };
 }

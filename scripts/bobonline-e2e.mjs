@@ -10,6 +10,8 @@
 //   node scripts/bobonline-e2e.mjs --list                    lista os cenários
 //   node scripts/bobonline-e2e.mjs --out out --real          + fumaça real (relays públicos, 3 tentativas)
 //   node scripts/bobonline-e2e.mjs --out out --only R --real --relay   a fumaça real só por TURN (net.json do build)
+//   node scripts/bobonline-e2e.mjs --out out --only R --real --real-out-a <export antigo>   versões cruzadas no fio
+//     (--real-out-a: o export do anfitrião RA; --real-out-b: o do convidado RB; os dois valem --out sem a opção)
 // Opções: --host 127.0.0.71 --port 47301 --cdp 9711 --edge <msedge.exe> --shots <pasta> --tmp <pasta>
 //
 // Ganchos usados (só existem com ?perfil num endereço local com porta):
@@ -42,6 +44,8 @@ const TMP = resolve(opt("tmp", join(tmpdir(), "sbr3", "bob")));
 const SHOTS = resolve(opt("shots", join(TMP, `e2e-shots-${RUN}`)));
 const PROFILE = join(TMP, `e2e-prof-${RUN}`);
 const REAL_HOSTS = ["127.0.0.72", "127.0.0.73"];
+/** Export servido em cada origem da fumaça real (RA anfitrião, RB convidado): um build antigo num lado testa o fio entre versões. */
+const REAL_OUTS = [resolve(opt("real-out-a", OUT_DIR)), resolve(opt("real-out-b", OUT_DIR))];
 /** `--relay`: toda RTCPeerConnection nasce só com candidatos de TURN (sem TURN que preste, a fumaça real não conecta). */
 const RELAY_ONLY = `(() => {
   const Native = window.RTCPeerConnection;
@@ -1171,7 +1175,8 @@ async function scenarioReal() {
       await A.close();
       await B.close();
       for (const id of contexts) await cdp.send("Target.disposeBrowserContext", { browserContextId: id }).catch(() => {});
-      return `ok na tentativa ${attempt}${pairs}`;
+      const mixed = REAL_OUTS[0] !== REAL_OUTS[1] ? ` (RA ${REAL_OUTS[0]} · RB ${REAL_OUTS[1]})` : "";
+      return `ok na tentativa ${attempt}${pairs}${mixed}`;
     } catch (error) {
       if (attempt === 3) throw error;
       console.log(`  real: tentativa ${attempt} falhou (${error.message}); de novo`);
@@ -1194,7 +1199,14 @@ async function main() {
     throw new Error(`sem ${join(OUT_DIR, "bobonline", "index.html")}: rode \`npx next build\` no sandbox e passe --out`);
   });
   servers.push(await serve(OUT_DIR, HOST, PORT));
-  if (flag("real")) for (const host of REAL_HOSTS) servers.push(await serve(OUT_DIR, host, PORT));
+  if (flag("real")) {
+    for (const [index, host] of REAL_HOSTS.entries()) {
+      await stat(join(REAL_OUTS[index], "bobonline", "index.html")).catch(() => {
+        throw new Error(`sem ${join(REAL_OUTS[index], "bobonline", "index.html")} para a origem ${host}`);
+      });
+      servers.push(await serve(REAL_OUTS[index], host, PORT));
+    }
+  }
   edge = spawn(EDGE, [
     `--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${PROFILE}`, "--headless=new", "--no-first-run", "--no-default-browser-check",
     "--disable-extensions", "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows",

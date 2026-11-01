@@ -93,6 +93,27 @@ body:has(.bob-shell) { min-height: 100dvh; background: #050b08; }
 }
 .bob-error-card p { margin: 0; font-size: 14px; font-weight: 800; line-height: 1.4; }
 .bob-error-card small { color: var(--muted, #aab8ac); font-size: 11px; }
+/* Segunda linha do cartão (o relógio errado): mais baixa que o erro, mas lida antes do botão. */
+.bob-error-card .bob-error-note { color: var(--muted, #aab8ac); font-size: 13px; font-weight: 700; }
+.bob-error-card .bob-ghost-button { justify-self: start; }
+
+/* Ação discreta (o "Testar conexão" do início): texto, sem caixa, com a área de toque inteira. */
+.bob-quiet-button {
+  justify-self: start;
+  min-height: 44px;
+  margin-left: -8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted, #aab8ac);
+  font: 800 13px var(--sans, "Manrope", sans-serif);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong, rgba(226,239,228,.16));
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.bob-quiet-button:hover { color: var(--text, #f2f5ed); }
 
 .bob-spinner {
   display: inline-block;
@@ -252,8 +273,28 @@ body:has(.bob-shell) { min-height: 100dvh; background: #050b08; }
 
 .bob-code-input { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace !important; font-size: 22px !important; letter-spacing: .12em; text-transform: uppercase; }
 
+/* "Mais opções" de criar sala: espectadores e senha, fechadas no caminho comum. */
+.bob-more { display: grid; gap: 12px; }
+.bob-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  min-height: 44px;
+  color: var(--muted, #aab8ac);
+  font: 800 13px var(--sans, "Manrope", sans-serif);
+  list-style: none;
+  cursor: pointer;
+}
+.bob-more > summary::-webkit-details-marker { display: none; }
+.bob-more > summary::after { width: 7px; height: 7px; margin-top: -3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; content: ""; transform: rotate(45deg); transition: transform 160ms; }
+.bob-more[open] > summary::after { margin-top: 3px; transform: rotate(225deg); }
+.bob-more > summary:hover { color: var(--text, #f2f5ed); }
+.bob-more > summary:focus-visible { outline: 2px solid var(--bob-accent); outline-offset: 2px; border-radius: 6px; }
+
 .bob-search { display: grid; gap: 10px; padding: 14px; border: 1px solid rgba(88,169,232,.3); border-radius: 12px; background: rgba(88,169,232,.06); }
 .bob-search p { margin: 0; font-size: 14px; font-weight: 800; line-height: 1.4; }
+.bob-search small { margin-top: -6px; color: var(--muted, #aab8ac); font-size: 13px; font-weight: 700; line-height: 1.4; }
 .bob-search .bob-ghost-button { justify-self: start; }
 .bob-progress { height: 6px; overflow: hidden; border-radius: 999px; background: var(--surface-3, #162b20); }
 .bob-progress i { display: block; height: 100%; border-radius: inherit; background: var(--bob-accent); transition: width 250ms linear; }
@@ -304,6 +345,9 @@ body:has(.bob-shell) { min-height: 100dvh; background: #050b08; }
 .bob-conn[data-state="instável"] i { background: var(--gold, #f4c430); }
 .bob-conn[data-state="fora do app"] i { background: var(--purple, #a98ae8); }
 .bob-conn[data-state="caiu"] i { background: var(--red, #ef6258); }
+.bob-conn[data-state="reconectando"] { color: var(--gold, #f4c430); }
+.bob-conn[data-state="reconectando"] i { background: var(--gold, #f4c430); animation: bob-blink 1.2s ease-in-out infinite; }
+@keyframes bob-blink { 50% { opacity: .35; } }
 .bob-spectators { display: grid; gap: 4px; }
 .bob-spectators span { color: var(--muted, #aab8ac); font: 800 9px/1.2 var(--sans, "Manrope", sans-serif); letter-spacing: .12em; text-transform: uppercase; }
 .bob-spectators p { margin: 0; font-size: 13px; font-weight: 700; }
@@ -473,6 +517,10 @@ body:has(.bob-shell) { min-height: 100dvh; background: #050b08; }
   pointer-events: none;
 }
 .bob-top-stack > .bob-toasts { position: absolute; top: calc(100% + 8px); }
+/* No lobby o topo é do código da sala (é o que a pessoa dita ou mostra): os avisos saem no pé. */
+.bob-shell[data-screen="lobby"] .bob-top-stack > .bob-toasts { position: fixed; top: auto; bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); }
+/* ...e a última fileira de botões rola para fora de baixo de um aviso. */
+.bob-shell[data-screen="lobby"] { padding-bottom: max(88px, calc(env(safe-area-inset-bottom) + 72px)); }
 /* Na partida: acima do rodapé inteiro da mesa (no 3D ele tem uma linha a mais), sem tapar o "Sua vez". */
 .bob-toasts[data-match="true"] { top: auto; bottom: max(128px, calc(env(safe-area-inset-bottom) + 120px)); width: min(360px, calc(100vw - 32px)); }
 .bob-toast {
@@ -520,6 +568,37 @@ body:has(.bob-shell) { min-height: 100dvh; background: #050b08; }
    enquanto ela está aberta a mesa sobe por cima deste aviso e dos avisos da sala, senão eles tapam o "Confirmar ordem ✓". */
 .botao-table-wrapper:has(.botao-order-overlay) { z-index: 260; }
 
+/* ——— Folhas da sala (screens/BobSheet.tsx): sair e testar conexão ———
+   Elas vão para o <body> (fora do .bob-shell): a base é a .bob-sheet do teams.css. */
+/* Sair da sala: ficar é o dourado; sair, o contorno vermelho discreto (não o vermelho cheio da .bob-confirm). */
+.bob-confirm.bob-leave-sheet .bob-danger-button { border-color: rgba(239,98,88,.42); background: transparent; color: #ff8a80; }
+
+.bob-diag-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.bob-diag-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line, rgba(226,239,228,.09));
+}
+.bob-diag-row:first-child { border-top: 0; }
+.bob-diag-text { display: grid; gap: 2px; min-width: 0; }
+.bob-diag-text strong { font-size: 14px; font-weight: 800; }
+.bob-diag-text small { color: var(--muted, #aab8ac); font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+.bob-diag-status { display: inline-flex; align-items: center; gap: 6px; color: var(--muted, #aab8ac); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.bob-diag-status .bob-spinner { width: 10px; height: 10px; margin-right: 0; border-width: 2px; }
+.bob-diag-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2, #728178); }
+.bob-diag-row[data-status="ok"] .bob-diag-status { color: var(--green, #67dd78); }
+.bob-diag-row[data-status="ok"] .bob-diag-status i { background: var(--green, #67dd78); }
+.bob-diag-row[data-status="aviso"] .bob-diag-status { color: var(--gold, #f4c430); }
+.bob-diag-row[data-status="aviso"] .bob-diag-status i { background: var(--gold, #f4c430); }
+.bob-diag-row[data-status="falha"] .bob-diag-status { color: #ff8a80; }
+.bob-diag-row[data-status="falha"] .bob-diag-status i { background: var(--red, #ef6258); }
+.bob-diag-verdict { margin: 0; font: 800 22px/1.1 var(--display, "Barlow Condensed", sans-serif); text-wrap: balance; }
+.bob-diag-sheet .bob-field textarea { font: 12px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace; }
+
 /* ——— Celular deitado: menos altura, duas colunas onde cabe ——— */
 @media (max-height: 480px) {
   .bob-shell { width: min(1000px, 100%); }
@@ -536,12 +615,14 @@ body:has(.bob-shell) { min-height: 100dvh; background: #050b08; }
   .bob-home > .bob-hero,
   .bob-home > .bob-resume,
   .bob-home > .bob-info,
+  .bob-home > .bob-hint,
   .bob-home > .bob-alert { grid-column: 1; }
   .bob-home > .bob-team-card,
   .bob-home > .bob-cta,
   .bob-home > .bob-view-toggle { grid-column: 2; }
   .bob-home > .bob-hero { grid-row: 1 / span 2; }
-  .bob-home > .bob-fineprint { grid-column: 1 / -1; }
+  .bob-home > .bob-fineprint,
+  .bob-home > .bob-quiet-button { grid-column: 1 / -1; }
   .bob-lobby { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 16px; align-items: start; }
   .bob-lobby > .bob-lobby-head,
   .bob-lobby > .bob-share,
@@ -576,6 +657,8 @@ body:has(.bob-shell) { min-height: 100dvh; background: #050b08; }
   .bob-champion,
   .bob-other-tab,
   .bob-toast { animation: none; }
+  .bob-conn[data-state="reconectando"] i { animation: none; }
+  .bob-more > summary::after { transition: none; }
   .bob-spinner { animation-duration: 2.4s; }
   .bob-progress i { transition: none; }
 }

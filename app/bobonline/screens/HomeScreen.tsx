@@ -1,6 +1,9 @@
 "use client";
 
 // Início do Bobonline (§1.1): time em uso, criar/entrar, a sala de antes e o visual da partida.
+// No pé, discreto, o "Testar conexão" (a folha do diagnóstico) e, só quando o relógio do
+// aparelho está muito errado, uma linha dizendo isso: com ele errado a busca da sala não acha
+// ninguém, e nada mais na tela explicaria o porquê.
 
 import { useEffect } from "react";
 import BobCrest from "../teams/BobCrest";
@@ -23,6 +26,7 @@ export default function HomeScreen({
   ready,
   cryptoOk,
   notice,
+  clockNote,
   saved,
   view,
   webgl,
@@ -33,6 +37,7 @@ export default function HomeScreen({
   onDiscard,
   onCancelResume,
   onView,
+  onDiagnostics,
 }: {
   team: BobTeam;
   nickname: string;
@@ -41,6 +46,8 @@ export default function HomeScreen({
   cryptoOk: boolean;
   /** Aviso do net.json (manutenção etc.). */
   notice: string | null;
+  /** Relógio do aparelho muito errado (clockSkewText), ou null. */
+  clockNote: string | null;
   saved: SavedRoomBanner | null;
   view: BobView;
   webgl: boolean;
@@ -51,6 +58,8 @@ export default function HomeScreen({
   onDiscard: () => void;
   onCancelResume: () => void;
   onView: (view: BobView) => void;
+  /** "Testar conexão": a folha do diagnóstico. */
+  onDiagnostics: () => void;
 }) {
   // Primeiro acesso: o time sorteado já foi gravado; o aviso sai uma vez só (aqui ou em Meus times).
   useEffect(() => {
@@ -102,6 +111,7 @@ export default function HomeScreen({
       </button>
 
       {notice && <p className="bob-info" role="note">{notice}</p>}
+      {clockNote && <p className="bob-hint bob-clock-note" role="note" data-testid="bob-clock-note">{clockNote}</p>}
       {!cryptoOk && <p className="bob-alert" role="alert">Este navegador não consegue fazer a conexão segura do Bobonline.</p>}
 
       <div className="bob-cta">
@@ -119,6 +129,7 @@ export default function HomeScreen({
       </div>
 
       <p className="bob-fineprint">Conexão direta entre os aparelhos: nenhuma partida passa por servidor do Futbobo.</p>
+      <button type="button" className="bob-quiet-button" data-testid="bob-diagnostics" onClick={onDiagnostics}>Testar conexão</button>
     </section>
   );
 }

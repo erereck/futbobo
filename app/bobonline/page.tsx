@@ -14,7 +14,7 @@ import type { BotaoMatchResult } from "../botao/types";
 import { BOB_PROTOCOL } from "./protocol";
 import { extractLinkHost, extractRoomCode } from "./net/codes";
 import { clearSession, cryptoAvailable, loadSession, type SavedSession } from "./net/identity";
-import { loadNetConfig, type NetConfig } from "./net/net-config";
+import { loadNetConfig, netClockOffsetMs, type NetConfig } from "./net/net-config";
 import { acquireTabLock, type TabLock } from "./net/tab-lock";
 import { devProfile } from "./storage";
 import TeamsScreen from "./teams/TeamsScreen";
@@ -40,6 +40,7 @@ import {
   autoResumeAllowed,
   bracketMatchOf,
   cancelAttempt,
+  clockSkewText,
   closeRoom,
   createRoom,
   deadClientNotice,
@@ -50,15 +51,21 @@ import {
   opponentLabel,
   resumeRoom,
   roomClient,
+  roomGoneNotice,
   roundKeyOf,
   useRoomView,
   type RoomView,
 } from "./use-room";
 import { effectiveView, prefetch3d, prefetchDriver, useViewPref, useWebglAvailable, writeViewPref } from "./view-pref";
 import { isNativeAndroid, keepAwake } from "./wake-lock";
+import { LeaveSheet } from "./screens/BobSheet";
 import BracketScreen from "./screens/BracketScreen";
 import ChampionScreen from "./screens/ChampionScreen";
 import CreateRoomScreen, { DEFAULT_CREATE_DRAFT, type CreateDraft } from "./screens/CreateRoomScreen";
+// A folha vem junto (uns 3,6 KB): por lazy(), sem rede ou depois de um deploy, o pedaço que não baixava
+// derrubava a tela inteira do Bobonline, e o lazy guardava a falha até recarregar. O diagnóstico pesado
+// (net/diagnostics) a própria folha baixa ao abrir.
+import DiagnosticsSheet from "./screens/DiagnosticsSheet";
 import HomeScreen from "./screens/HomeScreen";
 import JoinRoomScreen, { EMPTY_JOIN_DRAFT, type JoinDraft } from "./screens/JoinRoomScreen";
 import LobbyScreen from "./screens/LobbyScreen";
@@ -209,6 +216,8 @@ function BobonlineScreens() {
   const [forced, setForced] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [homeNotice, setHomeNotice] = useState<string | null>(null);
+  /** A folha "Testar conexão" aberta, com o motivo técnico da última falha (se veio de um erro). */
+  const [diagnostics, setDiagnostics] = useState<{ lastError: string | null } | null>(null);
   /** A rodada (sala + sorteio) a que `finished`, `dismissed` e `forced` pertencem. */
   const [seenRound, setSeenRound] = useState<string | null>(null);
 
@@ -232,6 +241,8 @@ function BobonlineScreens() {
   const connecting = room.loading || state?.phase === "connecting";
   const roomError = room.failure ?? (state?.phase === "error" ? state.error : null);
   const view = effectiveView(storedView);
+  // O relógio do aparelho só é medido na busca do net.json: antes dela, nada a dizer.
+  const clockNote = netConfig ? clockSkewText(netClockOffsetMs()) : null;
 
   // ——— Torneio novo na mesma sala (ou outra sala): as partidas repetem o id da chave, então os
   // resultados e as dispensas da rodada anterior saem antes de a tela ser escolhida ———
@@ -346,6 +357,11 @@ function BobonlineScreens() {
     setFinished({});
   }
 
+  /** "Testar conexão" (início e cartões de erro): leva o motivo técnico da última falha, se houver. */
+  function openDiagnostics() {
+    setDiagnostics({ lastError: getRoomView().state?.netError ?? null });
+  }
+
   function takeOverTab() {
     const lock = lockRef.current;
     if (!lock) return;
@@ -375,14 +391,18 @@ function BobonlineScreens() {
     const wantsResume = params.get("voltar") === "1";
     linkCodeRef.current = code ? extractRoomCode(code) ?? code.toUpperCase() : null;
     linkHostRef.current = code ? extractLinkHost(window.location.search) : null;
+    resumeWantedRef.current = wantsResume;
+    // O link é o da minha própria sala (o anfitrião tocou no convite que mandou): a volta automática
+    // leva para ela, e o início mostra o "Voltando para a sala…" em vez da tela de entrar.
+    const pending = code ? loadSession() : null;
+    const ownLink = pending !== null && autoResumeAllowed(pending, { wanted: wantsResume, linkCode: linkCodeRef.current });
     if (code) {
       queueMicrotask(() => {
         setJoinDraft((draft) => ({ ...draft, code: code.toUpperCase() }));
         setLinkProtocol(Number.isFinite(protocol) ? protocol : 0);
-        setNav({ ...HOME, screen: "join" });
+        if (!ownLink) setNav({ ...HOME, screen: "join" });
       });
     }
-    resumeWantedRef.current = wantsResume;
 
     let disposed = false;
     let lock: TabLock | null = null;
@@ -469,15 +489,37 @@ function BobonlineScreens() {
     const phase = state?.phase;
     // "superseded" fica na tela de outra aba (§1); ao voltar para a página, a montagem larga o cliente.
     if (phase !== "left" && phase !== "error") return;
-    // Removido, sala encerrada ou erro sem volta: o cliente morreu; volta para o início.
-    const notice = state?.error === "removido" ? joinErrorText("removido") : null;
+    // Removido, sala que não respondeu ou erro sem volta: o cliente morreu; volta para o início dizendo
+    // por quê (só a saída pedida, "left", volta calada).
+    const gone = getRoomView().state;
+    const notice = gone ? roomGoneNotice(gone) : null;
     queueMicrotask(() => {
       setNav(HOME);
-      setSaved(null);
+      // A sessão salva decide o "Voltar para a sala": a sala que não respondeu já a apagou; sem rede, ela fica.
+      setSaved(loadSession());
       setHomeNotice(notice);
     });
     void closeRoom();
   }, [inRoom, state?.phase, state?.error]);
+
+  // Relógio errado na tela: quem acerta a hora (como o aviso pede) e volta ao app mede de novo; o aviso
+  // some sem esperar a próxima sala. A config nova (objeto novo) redesenha e recalcula o clockNote.
+  const clockWrong = clockNote !== null;
+  useEffect(() => {
+    if (!clockWrong) return;
+    let disposed = false;
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      loadNetConfig().then((config) => {
+        if (!disposed) setNetConfig(config);
+      }).catch(() => {});
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      disposed = true;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [clockWrong]);
 
   // Resultado já na sala e a partida não terminou aqui (travou, ou o W.O. veio de fora): não prende na partida.
   const stuckMatchId = duel && playedResult && duel.matchId === playedResult.matchId && finished[duel.matchId] === undefined ? duel.matchId : null;
@@ -491,6 +533,12 @@ function BobonlineScreens() {
   useEffect(() => {
     backRef.current = (event: BackEvent) => {
       const current = lastScreenRef.current ?? "home";
+      if (diagnostics) {
+        // A folha do teste fecha primeiro; a tela fica.
+        pushScreen(current);
+        setDiagnostics(null);
+        return;
+      }
       if (current === "spectate") {
         fromPopRef.current = true;
         roomClient()?.stopSpectating();
@@ -599,13 +647,15 @@ function BobonlineScreens() {
       {inRoom && (
         // A faixa da próxima partida gruda no topo; os avisos da sala saem logo abaixo dela (ou da marca).
         <div className="bob-top-stack">
-          <NextMatchBanner state={room.state} />
+          {/* Na chave o cartão "Sua próxima partida" já tem o "Estou pronto": a faixa só apita. */}
+          <NextMatchBanner state={room.state} quiet={screen === "bracket"} />
           <RoomToasts toasts={room.state.toasts} matchOpen={false} />
         </div>
       )}
       {renderScreen()}
       {screen !== "teams" && screen !== "editor" && <TeamsToastHost />}
       {confirmSheet}
+      {diagnostics && <DiagnosticsSheet lastError={diagnostics.lastError} onClose={() => setDiagnostics(null)} />}
     </main>
   );
 
@@ -644,6 +694,7 @@ function BobonlineScreens() {
             onPickTeam={() => setNav({ ...HOME, screen: "teams", teamsMode: "pick", teamsBack: "create" })}
             onBack={goHome}
             onSubmit={submitCreate}
+            onDiagnostics={openDiagnostics}
           />
         );
       case "join": {
@@ -651,6 +702,7 @@ function BobonlineScreens() {
         const error = joining ? roomError : null;
         const newer = (netConfig?.latestProtocol ?? 0) > BOB_PROTOCOL;
         const shownError = error === "nao-encontrada" && newer ? "versao-nova" : error;
+        const joinCode = room.attempt?.kind === "join" ? room.attempt.args.code : null;
         return (
           <JoinRoomScreen
             team={active}
@@ -658,8 +710,13 @@ function BobonlineScreens() {
             draft={joinDraft}
             searching={connecting && joining}
             startedAt={room.startedAt}
+            search={joining ? state?.search ?? null : null}
+            clientLoading={joining && room.loading}
+            searchCode={joinCode}
             joinStage={joining && state ? state.joinStage : 0}
             error={shownError}
+            failedCode={error ? joinCode : null}
+            clockNote={clockNote}
             errorFormat={state?.snapshot?.settings.format ?? null}
             canSpectate={state?.snapshot?.settings.allowSpectators ?? true}
             incompatible={joining ? state?.incompatible ?? null : null}
@@ -675,6 +732,7 @@ function BobonlineScreens() {
               goHome();
             }}
             onUpdate={() => void updateApp()}
+            onDiagnostics={openDiagnostics}
           />
         );
       }
@@ -714,6 +772,7 @@ function BobonlineScreens() {
             ready={ready}
             cryptoOk={cryptoOk}
             notice={homeNotice ?? netConfig?.notice ?? null}
+            clockNote={clockNote}
             saved={saved ? {
               code: saved.code,
               resuming: resumeAttempt && connecting,
@@ -732,6 +791,7 @@ function BobonlineScreens() {
             }}
             onCancelResume={() => void closeRoom()}
             onView={writeViewPref}
+            onDiagnostics={openDiagnostics}
           />
         );
       }
@@ -765,16 +825,7 @@ function BobonlineScreens() {
     const running = current.snapshot?.stage === "running" && bracket !== null && current.snapshot.settings.format !== "x1";
     const entrant = running && bracket.entrants.some((item) => item.id === current.me);
     const pending = entrant && nextMatchFor(bracket, current.me) !== null;
-    return (
-      <ConfirmSheet
-        title={pending ? "Sair do torneio?" : "Sair da sala?"}
-        detail={pending ? "Suas próximas partidas viram W.O." : entrant ? "Você deixa de acompanhar o torneio." : undefined}
-        confirmLabel="Sair"
-        cancelLabel="Ficar"
-        danger={pending}
-        onConfirm={() => void confirmLeave()}
-        onCancel={() => setConfirm(null)}
-      />
-    );
+    // Sair não é a ação dourada: ficar é (LeaveSheet). O voltar do aparelho abre esta folha sem querer.
+    return <LeaveSheet pending={pending} entrant={entrant} onLeave={() => void confirmLeave()} onStay={() => setConfirm(null)} />;
   }
 }

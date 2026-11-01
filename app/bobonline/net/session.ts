@@ -554,8 +554,9 @@ export class BobSession {
     return this.transport.peerSignalAt?.() ?? null;
   }
 
-  kickSignaling(): void {
-    this.transport.kickSignaling?.();
+  /** `force: false`: chute periódico (o backoff dos relays fechados segue valendo). */
+  kickSignaling(force = true): void {
+    this.transport.kickSignaling?.(force);
   }
 
   /** Rota do link direto com esse jogador (direto × servidor de apoio) e RTT; null sem link direto. */

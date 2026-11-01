@@ -24,7 +24,12 @@ export type SearchStep = "rede" | "procurando" | "achou" | "apoio";
 export type SearchState = {
   step: SearchStep;
   relays: { open: number; total: number } | null;            // null = transporte sem relays (testes)
-  deadlineLocal: number;                                     // Date.now() em que a busca desiste (barra de progresso)
+  /**
+   * Date.now() em que a busca desiste (barra de progresso). Em "rede" ainda não há prazo: vale o mais tarde
+   * possível (a rede chegando no último instante + a busca inteira), então a barra só anda para a frente
+   * quando a sinalização sobe. Pode crescer depois: nova tentativa pelo apoio, ou outro aparelho negociando.
+   */
+  deadlineLocal: number;
 };
 /** Rota do link com um par: "direto" (host/srflx/prflx), "apoio" (TURN) ou ainda sem leitura. */
 export type LinkRoute = { route: "direto" | "apoio" | "?"; rttMs: number | null };
@@ -36,7 +41,11 @@ export type RoomClientState = {
   /** Minha sinalização: "reconectando" quando os relays calaram (anfitrião sozinho fica invisível). */
   signaling: "ok" | "reconectando";
   links: Record<string /* playerId */, LinkRoute>;           // lido a cada poucos segundos na sala
-  /** Último motivo técnico de falha de conexão (vai no diagnóstico; nunca é a copy da tela). */
+  /**
+   * Último motivo técnico de falha de conexão (vai no diagnóstico; nunca é a copy da tela): o texto do
+   * erro de ICE do Trystero, ou "código: motivo" quando a busca/abertura desiste ("sem-rede", "abrir",
+   * "nao-encontrada", "conexao: …"). Nunca leva usuário ou credencial do TURN.
+   */
   netError: string | null;
   error: JoinError | null;
   incompatible: { mine: HelloInfo; theirs: HelloInfo; who: "me" | "them"; nickname: string | null } | null;
@@ -89,7 +98,11 @@ export interface BobRoomClientApi {
   leftResultScreen(bracketId: string): void;   // manda match:free (a tela chama ao sair, ou 30 s depois)
   forfeit(bracketId: string): void;
   wantRematch(want: boolean): void;            // true pede/aceita, false cancela/recusa
-  backToLobby(): void;                         // X1: room:to-lobby
+  /**
+   * X1: room:to-lobby. Quem toca volta pronto (o anfitrião começa a próxima sem outro toque); com a sala
+   * já no lobby (o outro voltou primeiro), só devolve o meu pronto: a tela chama sempre que sai do resultado.
+   */
+  backToLobby(): void;
   spectate(bracketId: string): void;
   stopSpectating(): void;
   dismissToast(id: number): void;

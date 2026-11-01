@@ -63,9 +63,12 @@ import type {
   DuelHandle,
   JoinError,
   JoinRoomArgs,
+  LinkRoute,
   ResultFact,
   ResumeRoomArgs,
   RoomClientState,
+  SearchState,
+  SearchStep,
 } from "./room-api";
 import { factKey, factsOf, localRoomStore, mergeFacts, type PersistedRoom, type RoomStore } from "./room-store";
 
@@ -124,7 +127,51 @@ const TICK_MS = 250;
 const CLAIM_EVERY_MS = 1000;
 const PRESENCE_EVERY_MS = 1000;
 const HOST_RESUME_WINDOW_MS = 5000;
+/**
+ * Procurando a sala, o ICE com alguém não fechou (onJoinError do Trystero): as boas-vindas que já vinham
+ * ainda chegam neste prazo antes de agir. O primeiro erro que conta tenta de novo (só pelo servidor de
+ * apoio, se houver TURN); o seguinte, depois do mesmo prazo, é "conexao".
+ */
 const JOIN_ERROR_GRACE_MS = 1500;
+/** A nova tentativa depois do erro de ICE tem pelo menos isto até o fim da busca (TURN, ainda mais na França, demora). */
+const JOIN_RETRY_MIN_MS = 30_000;
+/**
+ * Procurando sem ninguém aparecer: reabre a sala do Trystero neste ritmo. Cada reabertura refaz o
+ * aquecimento (4 anúncios em 7,4 s); sem ela o próximo anúncio só sairia 60 s depois, e um anfitrião que
+ * perdeu o aquecimento (estava no WhatsApp, socket morto) nunca ouviria quem procura.
+ */
+const REBURST_EVERY_MS = 12_000;
+/**
+ * Procurando: um rejoin da escada (volta ao primeiro plano, sinalização fora) logo depois de uma reabertura
+ * não sai: o aquecimento do Trystero (4 anúncios em 7,4 s) ainda está no ar, e reabrir o cortaria.
+ */
+const REOPEN_SETTLE_MS = 8000;
+/**
+ * Uma troca de SDP que não fecha fica calada até o Trystero desistir dela: 23,3 s depois da resposta
+ * (answeringTtlMs/offerPostAnswerTtlMs) ele avisa o onJoinError, e só então a busca tenta pelo apoio. Este
+ * prazo cobre isso mais o JOIN_ERROR_GRACE_MS e uma folga. Reabrir antes mata a negociação sem erro nenhum:
+ * com 8 s, a rede real (r-hostile: os dois sem caminho, ou a 1ª tentativa sem candidato) reabria a cada
+ * 12 s, nunca chegava ao apoio e acabava em "Não achamos a sala" aos 77–100 s em vez de "conexao".
+ */
+const TRYSTERO_GIVE_UP_MS = 26_000;
+/** "Ninguém apareceu": nenhum sinal de outro aparelho há isto. Com um mais novo há negociação andando, e reabrir a mataria. */
+const PEER_QUIET_MS = TRYSTERO_GIVE_UP_MS;
+/** No fim do prazo, um sinal de outro aparelho mais novo que isto é negociação andando: o prazo estica (uma vez). */
+const NEGOTIATING_MS = TRYSTERO_GIVE_UP_MS;
+/** Até quanto o prazo estica, contado do último sinal: o erro do Trystero (e a tentativa pelo apoio) chega antes. */
+const JOIN_EXTEND_MS = TRYSTERO_GIVE_UP_MS;
+/** Na sala, a minha sinalização calada há isto vira "reconectando" (anfitrião sozinho: ninguém o acha). */
+const SIGNALING_DOWN_MS = 3000;
+/** Ainda calada: de novo o pedido ao transporte para sondar e religar os relays (barato, pode repetir). */
+const SIGNALING_KICK_MS = 10_000;
+/** Rota (direto × apoio) e RTT dos links, lidos neste ritmo na sala. */
+const LINKS_EVERY_MS = 5000;
+/** Uma leitura de rota que não volta nisto (getStats travado) não segura as próximas. */
+const LINKS_STUCK_MS = 15_000;
+/** "Voltar à sala" do convidado: o pronto volta sozinho se a sala virar lobby dentro disto. */
+const READY_ON_LOBBY_MS = 10_000;
+/** Teto do texto técnico em netError (vai no diagnóstico). */
+const NET_ERROR_CHARS = 240;
 /** Fim normal: quanto a partida ainda recebe depois do resultado na chave (o mesmo prazo da tela). */
 const RESULT_LINGER_MS = 8000;
 const MAX_TOASTS = 12;
@@ -177,6 +224,33 @@ const REJECT_ERROR: Record<RoomRejectReason, JoinError> = {
   cheia: "cheia", senha: "senha", "senha-errada": "senha-errada", iniciada: "iniciada", removido: "removido",
   time: "time", versao: "versao", "outra-aba": "outra-aba",
 };
+
+/** A config tem TURN (o servidor de apoio): só então a nova tentativa depois de um erro de ICE vai só por ele. */
+function hasTurn(config: NetConfig): boolean {
+  const urls = [...(config.turn ?? []), ...(config.iceServers ?? [])].flatMap((server) => (Array.isArray(server.urls) ? server.urls : [server.urls]));
+  return urls.some((url) => typeof url === "string" && /^turns?:/i.test(url));
+}
+
+/** O que a sessão leu do link (tipo do candidato e RTT) → rota da tela; RTT de 10 em 10 ms (sem redesenho por ruído). */
+function linkRouteOf(info: { candidate: string; rttMs: number | null } | null): LinkRoute {
+  if (!info) return { route: "?", rttMs: null };
+  const route = info.candidate === "relay" ? "apoio" : info.candidate === "host" || info.candidate === "srflx" || info.candidate === "prflx" ? "direto" : "?";
+  const rtt = info.rttMs;
+  return { route, rttMs: rtt === null || !Number.isFinite(rtt) ? null : Math.max(0, Math.round(rtt / 10) * 10) };
+}
+
+function sameLinks(a: Record<string, LinkRoute>, b: Record<string, LinkRoute>): boolean {
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  return keys.every((key) => b[key] !== undefined && b[key].route === a[key].route && b[key].rttMs === a[key].rttMs);
+}
+
+function sameSearch(a: SearchState | null, b: SearchState | null): boolean {
+  if (a === null || b === null) return a === b;
+  if (a.step !== b.step || a.deadlineLocal !== b.deadlineLocal) return false;
+  if (a.relays === null || b.relays === null) return a.relays === b.relays;
+  return a.relays.open === b.relays.open && a.relays.total === b.relays.total;
+}
 
 function presenceOf(health: PeerHealth): RoomMember["presence"] {
   return health === "ok" ? "online" : health === "unstable" ? "unstable" : health === "away" ? "away" : "offline";
@@ -382,7 +456,37 @@ export class BobRoomClient implements BobRoomClientApi {
 
   private startedAt = 0;
   private everSignaled = false;
+  /** Primeiro erro de ICE que conta, esperando JOIN_ERROR_GRACE_MS (relógio). */
   private joinErrorAt: number | null = null;
+
+  // Busca da sala (quem entra, ou volta para uma sala que ainda não respondeu).
+  /** Relógio da primeira sinalização no ar: o prazo e as etapas contam daí (null: ainda "rede"). */
+  private searchFrom: number | null = null;
+  /** Relógio em que a busca desiste (null antes da primeira sinalização: JOIN_NET_WAIT_MS desde startedAt). */
+  private deadlineAt: number | null = null;
+  /** O mesmo prazo em Date.now() (a barra da tela); só muda quando o prazo muda. */
+  private deadlineLocal = 0;
+  private deadlineExtended = false;
+  /** Último open da sala pedido daqui (connect, reabertura, nova tentativa): "achou" só vale depois dele. */
+  private openedAt = 0;
+  /** Última reabertura (da busca ou da escada; o connect não conta): a da escada não sai em cima dela. */
+  private reopenedAt = Number.NEGATIVE_INFINITY;
+  private nextBurstAt = Number.POSITIVE_INFINITY;
+  /** Tentativas depois de um erro de ICE: 1 = já tentou de novo, o próximo erro é "conexao". */
+  private joinRetries = 0;
+  /** A nova tentativa foi só pelo servidor de apoio (TURN): a busca mostra "apoio" até o fim. */
+  private relayOnly = false;
+  /** Texto do último erro de ICE que contou nesta busca (entra no netError da falha). */
+  private joinErrorReason: string | null = null;
+  private search: SearchState | null = null;
+  private netError: string | null = null;
+  private signaling: RoomClientState["signaling"] = "ok";
+  private signalingDownSince: number | null = null;
+  private links: Record<string, LinkRoute> = {};
+  private linksAt = Number.NEGATIVE_INFINITY;
+  private linksBusySince: number | null = null;
+  /** Convidado que tocou "Voltar à sala": até este relógio, a sala virando lobby devolve o pronto. */
+  private readyOnLobbyUntil: number | null = null;
   private hidden = false;
   private tickHandle: unknown = null;
   private lastClaimAt = Number.NEGATIVE_INFINITY;
@@ -448,6 +552,8 @@ export class BobRoomClient implements BobRoomClientApi {
   private readonly lateVetoAt = new Map<string, number>();
   /** X1: "Voltar à sala" pedido com o jogo ainda sem registro (relógio do pedido). */
   private toLobbyAt: number | null = null;
+  /** X1: quem pediu "Voltar à sala" (segue pronto: está no lobby para jogar de novo). */
+  private readonly toLobbyBy = new Set<string>();
   private readonly bothAbsentSince = new Map<string, number>();
   private readonly followerReports = new Map<string, { result: BracketResult; from: string }>();
   private readonly authorityAbsentSince = new Map<string, number>();
@@ -482,6 +588,11 @@ export class BobRoomClient implements BobRoomClientApi {
     this.checkpoints = deps.checkpoints ?? localCheckpointStore({ now: this.wallNow });
     this.graceS = deps.graceS ?? devGrace() ?? T.GRACE_POOL_S;
     this.ownsSaved = mode === "resume";
+    // Quem procura já nasce em "rede" (identidade, net.json e o chunk do Trystero ainda vêm).
+    if (mode !== "create") {
+      this.deadlineLocal = this.wallNow() + this.netWaitMs() + T.JOIN_TIMEOUT_MS;
+      this.search = { step: "rede", relays: null, deadlineLocal: this.deadlineLocal };
+    }
   }
 
   /** A abertura (identidade, net.json, sessão) terminou ou desistiu. Só testes e ferramentas esperam por isso. */
@@ -519,14 +630,23 @@ export class BobRoomClient implements BobRoomClientApi {
       this.session = session;
       this.wire(session);
       this.startedAt = this.clock.now();
+      this.openedAt = this.startedAt;
       if (this.mode === "create") this.openAsHost();
       else if (this.mode === "resume") this.openResumed();
       session.connect(this.code);
+      if (this.mode !== "create") {
+        // O relógio da busca começa na primeira sinalização no ar (já aqui, se o transporte abriu na hora).
+        this.setDeadline(null);
+        this.searchTick(this.startedAt);
+        this.refreshSearch();
+      }
       this.startLifecycle();
       this.scheduleTick();
     } catch (error) {
       console.error("[bobonline] sala", error);
-      this.fail(this.mode === "create" ? "abrir" : "sem-rede");
+      const code = this.mode === "create" ? "abrir" : "sem-rede";
+      this.noteNetError(`${code}: ${error instanceof Error ? error.message : String(error)}`);
+      this.fail(code);
     }
     this.changed();
   }
@@ -541,10 +661,11 @@ export class BobRoomClient implements BobRoomClientApi {
     const state: RoomClientState = {
       phase: this.phase,
       joinStage: this.joinStage,
-      search: null,
-      signaling: "ok",
-      links: {},
-      netError: null,
+      // A busca só existe enquanto procura (o tick a recalcula; a fase muda fora dele).
+      search: this.phase === "connecting" ? this.search : null,
+      signaling: this.phase === "in-room" ? this.signaling : "ok",
+      links: this.links,
+      netError: this.netError,
       error: this.error,
       incompatible: this.incompatible,
       snapshot,
@@ -735,8 +856,18 @@ export class BobRoomClient implements BobRoomClientApi {
   }
 
   backToLobby(): void {
-    if (this.isHost()) this.hostToLobby();
-    else this.sendHost("room:to-lobby", {});
+    if (this.isHost()) this.hostToLobby(false, this.me);
+    else {
+      // "Voltar à sala" é voltar para jogar de novo: quem jogou estava pronto (o X1 só começa com todos
+      // prontos, a revanche pede os dois), então o pronto volta junto e o anfitrião começa a próxima sem
+      // esperar outro toque. O anfitrião zera o pronto de quem não pediu (pode estar ainda no resultado);
+      // o meu volta aqui quando a sala virar lobby, ou já, se o outro voltou primeiro.
+      if (this.snapshot?.stage === "lobby") this.keepReady();
+      else {
+        this.readyOnLobbyUntil = this.clock.now() + READY_ON_LOBBY_MS;
+        this.sendHost("room:to-lobby", {});
+      }
+    }
     // Jogo largado sem registro: não volta a montar enquanto a sala não vira lobby, e o checkpoint dele
     // nunca mais serve (o próximo jogo tem outro id).
     const duel = this.duel;
@@ -750,6 +881,14 @@ export class BobRoomClient implements BobRoomClientApi {
 
   /** X1: partida que este aparelho largou com "Voltar à sala" antes do registro (não remonta até o lobby). */
   private leftToLobby: string | null = null;
+
+  /** Convidado de volta ao lobby pelo "Voltar à sala": pronto de novo, se o anfitrião o zerou. */
+  private keepReady(): void {
+    this.readyOnLobbyUntil = null;
+    const self = this.snapshot?.members.find((member) => member.playerId === this.me);
+    if (!self || self.role !== "player" || self.left || self.ready || this.snapshot?.stage !== "lobby") return;
+    this.sendHost("room:update", { ready: true });
+  }
 
   spectate(bracketId: string): void {
     const snapshot = this.snapshot;
@@ -901,7 +1040,26 @@ export class BobRoomClient implements BobRoomClientApi {
     const proxy = {
       linked: () => session.linked(),
       health: (playerId: string) => session.health(playerId),
-      rejoin: () => session.rejoin(),
+      rejoin: () => {
+        const now = this.clock.now();
+        // Procurando, a busca acabou de reabrir (o aquecimento está saindo) ou vai reabrir já pelo apoio
+        // (erro de ICE esperando a vez): a escada não reabre por cima. Na volta ao primeiro plano as duas
+        // queriam a rajada nova, e dois rejoins seguidos cortavam um o aquecimento do outro.
+        if (this.searching() && (now - this.reopenedAt < REOPEN_SETTLE_MS || this.joinErrorAt !== null)) return Promise.resolve();
+        // Procurando, com outro aparelho negociando há menos de PEER_QUIET_MS: reabrir mataria a troca de
+        // SDP sem erro nenhum (o onJoinError some com o leave); a busca reabre sozinha quando calar.
+        const peerAt = session.peerSignalAt();
+        if (this.searching() && peerAt !== null && now - peerAt < PEER_QUIET_MS) return Promise.resolve();
+        // A reabertura da escada (volta ao primeiro plano, sinalização fora) também refaz o aquecimento:
+        // a busca não reabre de novo logo atrás dela.
+        this.openedAt = now;
+        this.reopenedAt = now;
+        if (this.searchFrom !== null) this.nextBurstAt = Math.max(this.nextBurstAt, now + REBURST_EVERY_MS);
+        return session.rejoin();
+      },
+      // Opcionais na escada: chutar os relays na volta e não reabrir no meio de uma negociação.
+      kickSignaling: (force?: boolean) => session.kickSignaling(force),
+      peerSignalAt: () => session.peerSignalAt(),
       setVisible: (visible: boolean) => {
         session.setVisible(visible);
         this.setVisible(visible);
@@ -935,9 +1093,16 @@ export class BobRoomClient implements BobRoomClientApi {
   private offPagehide: (() => void) | null = null;
 
   private setVisible(visible: boolean): void {
-    if (visible && this.hidden) this.visibleSince = this.clock.now();
+    const back = visible && this.hidden;
+    if (back) this.visibleSince = this.clock.now();
     this.hidden = !visible;
     this.duel?.setVisible(visible);
+    // Voltou procurando sem sinalização ainda: a espera da rede conta de novo desde agora (searchTick),
+    // e a barra da busca acompanha.
+    if (back && this.searching() && this.searchFrom === null && this.session) {
+      this.setDeadline(null);
+      this.refreshSearch();
+    }
   }
 
   // =========================================================================
@@ -983,9 +1148,20 @@ export class BobRoomClient implements BobRoomClientApi {
       if (up) this.everSignaled = true;
     };
     session.onJoinError = (info) => {
-      if (this.phase === "connecting" && !this.snapshot) this.joinErrorAt ??= this.clock.now();
-      else if (this.isHost() && info.playerId === null && this.snapshot?.stage === "lobby") {
-        this.toast("Alguém tentou entrar, mas a conexão entre os aparelhos não fechou.", true);
+      const now = this.clock.now();
+      if (this.phase === "connecting" && !this.snapshot) {
+        // Qualquer um na sala do Trystero pode falhar o ICE comigo (B12). Pelo link (&h=), na espera do
+        // anfitrião dele, o erro de outro par já conhecido não conta; o de um id nunca vinculado (o caso
+        // normal: o ICE falha antes do hello) pode ser o dele e conta.
+        const other = this.linkHost !== null && info.playerId !== null && info.playerId !== this.linkHost && this.waitingLinkHost(now);
+        if (!other) {
+          this.joinErrorReason = this.noteNetError(info.reason);
+          this.joinErrorAt ??= now;
+        }
+      } else if (this.phase === "in-room") {
+        // Anfitrião: alguém tentou entrar e o ICE não fechou. Sem aviso (cobria o código da sala, e quem
+        // entra tenta de novo sozinho pelo apoio); o motivo fica para o diagnóstico.
+        this.noteNetError(info.reason);
       }
       this.duel?.noteJoinError(info.playerId);
       this.changed();
@@ -1153,7 +1329,7 @@ export class BobRoomClient implements BobRoomClientApi {
         this.hostLeave(from);
         return;
       case "room:to-lobby":
-        if (this.isMatchPlayer(from)) this.hostToLobby();
+        if (this.isMatchPlayer(from)) this.hostToLobby(false, from);
         return;
       case "match:ready":
         if (typeof data.bracketId === "string") this.hostReady(from, data.bracketId);
@@ -1218,9 +1394,14 @@ export class BobRoomClient implements BobRoomClientApi {
     this.pendingReject ??={ reason, settings: reason === "iniciada" ? rejectSettings(data?.settings) : null, from, at: this.clock.now() };
   }
 
-  /** Entrando pelo link com o id do anfitrião, ainda dentro de LINK_HOST_WAIT_MS da busca. */
+  /** Entrando pelo link com o id do anfitrião, ainda dentro de LINK_HOST_WAIT_MS da busca (contada da primeira sinalização). */
   private waitingLinkHost(now: number): boolean {
-    return this.phase === "connecting" && this.linkHost !== null && now - this.startedAt < LINK_HOST_WAIT_MS;
+    return this.phase === "connecting" && this.linkHost !== null && now - (this.searchFrom ?? now) < LINK_HOST_WAIT_MS;
+  }
+
+  /** Entrando pelo link: o anfitrião dele já está ligado (as boas-vindas vêm dele; erro de ICE era de outro par). */
+  private linkHostLinked(): boolean {
+    return this.linkHost !== null && !!this.session?.linked().includes(this.linkHost);
   }
 
   /**
@@ -1464,6 +1645,11 @@ export class BobRoomClient implements BobRoomClientApi {
       this.clearDuel();
       this.forgetTournament();
     }
+    // Toquei "Voltar à sala" e a sala virou lobby: o pronto que o anfitrião zerou volta (keepReady).
+    if (this.readyOnLobbyUntil !== null) {
+      if (this.clock.now() > this.readyOnLobbyUntil) this.readyOnLobbyUntil = null;
+      else if (snapshot.stage === "lobby" && !this.isHost()) this.keepReady();
+    }
     this.facts = mergeFacts(this.facts, factsOf(snapshot));
     // Relatórios, W.O. e concessões já registrados saem da fila.
     for (const [bracketId, report] of this.pendingReports) {
@@ -1520,6 +1706,7 @@ export class BobRoomClient implements BobRoomClientApi {
     this.pendingFree.clear();
     this.leftToLobby = null;
     this.toLobbyAt = null;
+    this.toLobbyBy.clear();
     this.live = {};
   }
 
@@ -1845,15 +2032,18 @@ export class BobRoomClient implements BobRoomClientApi {
   }
 
   /**
-   * X1 "Voltar à sala". Com o jogo ainda sem registro, espera o relatório da autoridade até
-   * TO_LOBBY_HOLD_MS (tick); `force`: o prazo passou ou o jogo fechou.
+   * X1 "Voltar à sala" (`by` pediu). Com o jogo ainda sem registro, espera o relatório da autoridade até
+   * TO_LOBBY_HOLD_MS (tick); `force`: o prazo passou ou o jogo fechou. Quem pediu segue pronto (voltou para
+   * jogar de novo); os outros não (podem estar ainda na tela de resultado, e o X1 começa sem "pronto?").
    */
-  private hostToLobby(force = false): void {
+  private hostToLobby(force = false, by: string | null = null): void {
     const snapshot = this.snapshot;
     if (!snapshot || snapshot.settings.format !== "x1" || snapshot.stage === "lobby") {
       this.toLobbyAt = null;
+      this.toLobbyBy.clear();
       return;
     }
+    if (by !== null) this.toLobbyBy.add(by);
     const game = snapshot.bracket?.matches[0];
     const open = !!game && game.status !== "done";
     if (open && !force) {
@@ -1861,6 +2051,8 @@ export class BobRoomClient implements BobRoomClientApi {
       return;
     }
     this.toLobbyAt = null;
+    const keep = new Set(this.toLobbyBy);
+    this.toLobbyBy.clear();
     // Jogo largado sem registro: a série não andou e o próximo repetiria o id dele (mesmo replay), com o
     // checkpoint e as telas do largado. Sorteio novo: ids novos (e a rodada da tela recomeça).
     const seed = open ? (this.deps.seed !== undefined ? hashSeed(this.deps.seed, snapshot.version) : newSeed()) : null;
@@ -1869,7 +2061,7 @@ export class BobRoomClient implements BobRoomClientApi {
       draft.bracket = null;
       draft.rematch = null;
       if (seed !== null) draft.seed = seed;
-      for (const member of draft.members) if (member.playerId !== this.me) member.ready = false;
+      for (const member of draft.members) if (member.playerId !== this.me && !keep.has(member.playerId)) member.ready = false;
     });
   }
 
@@ -2726,6 +2918,9 @@ export class BobRoomClient implements BobRoomClientApi {
       // outros sumiram junto com o anfitrião, ou quem caiu fui eu): só bem depois, com a sinalização no ar
       // e cada um que falta sumido há tanto quanto; aí a maioria é a dos que eu ouço.
       if (!session.signalingUp() || now - heard < LONE_CLAIM_MS) return;
+      // Voltando (resume) sem ninguém ter respondido ainda: a busca decide (ninguém mais com a sala aberta
+      // é "não achamos a sala"), nunca uma sala só minha. A busca de 75 s passa do LONE_CLAIM_MS.
+      if (this.searching()) return;
       const missing = eligible.filter((member) => !alive(member.playerId));
       if (missing.some((member) => now - (this.lastOk.get(member.playerId) ?? this.startedAt) < LONE_CLAIM_MS)) return;
       majority = Math.floor(ids.length / 2) + 1;
@@ -3010,14 +3205,17 @@ export class BobRoomClient implements BobRoomClientApi {
     }
 
     if (this.phase === "connecting") this.connectingTick(now);
-    if (this.phase !== "in-room") return;
-    this.lingerTick(now);
-    if (this.mode === "resume" && !this.confirmed && now - this.startedAt >= T.JOIN_TIMEOUT_MS) {
-      // Voltei para uma sala que ninguém mais tem aberta.
-      this.fail(this.everSignaled ? "nao-encontrada" : "sem-rede");
-      void this.shutdown("error");
+    this.refreshSearch();
+    if (this.phase !== "in-room") {
+      this.signalingDownSince = null;
       return;
     }
+    this.signalingTick(now, session);
+    this.linksTick(now, session);
+    this.lingerTick(now);
+    // Voltando para uma sala que ainda não respondeu: a mesma busca (prazo da primeira sinalização,
+    // reabertura sem ninguém por perto); ninguém mais com ela aberta, desiste.
+    if (this.searching() && this.searchTick(now)) return;
     if (this.resumeUntil !== null && now >= this.resumeUntil) {
       this.resumeUntil = null;
       if (this.snapshot?.hostId === this.me) {
@@ -3048,6 +3246,7 @@ export class BobRoomClient implements BobRoomClientApi {
       }
     } else {
       this.toLobbyAt = null;
+      this.toLobbyBy.clear();
       // Sondagem sem resposta: o meu anfitrião já não hospeda; quem mandou a linhagem nova a manda de novo.
       const probe = this.hostProbe;
       if (probe?.newer && this.probeExpired(probe.hostId)) {
@@ -3074,8 +3273,7 @@ export class BobRoomClient implements BobRoomClientApi {
         // Sozinho na sala nenhum evento da sessão redesenha: sem isto a tela ficava em "Abrindo a sala…".
         this.changed();
       } else if (elapsed >= T.OPEN_TIMEOUT_MS) {
-        this.fail("abrir");
-        void this.shutdown("error");
+        this.giveUp("abrir");
       }
       return;
     }
@@ -3086,22 +3284,247 @@ export class BobRoomClient implements BobRoomClientApi {
       if (this.phase !== "connecting") return;
     }
     if (this.applyPendingReject(now)) return;
-    const stages = T.JOIN_STAGES_MS;
-    const stage = elapsed >= stages[1] ? 2 : elapsed >= stages[0] ? 1 : 0;
-    if (stage !== this.joinStage) {
-      this.joinStage = stage;
-      this.changed();
+    this.searchTick(now);
+  }
+
+  /** Procurando a sala: entrando, ou voltando (resume) para uma que ainda não respondeu. */
+  private searching(): boolean {
+    if (this.disposed || this.mode === "create") return false;
+    return this.phase === "connecting" || (this.mode === "resume" && this.phase === "in-room" && !this.confirmed);
+  }
+
+  /**
+   * A busca da sala (§1.4). O relógio começa na primeira sinalização no ar (o chunk do Trystero e os relays
+   * levam segundos no 3G); sem nenhuma em JOIN_NET_WAIT_MS desde a abertura, "sem rede". Depois:
+   * - erro de ICE (quem entra): passado JOIN_ERROR_GRACE_MS sem boas-vindas, o primeiro tenta de novo
+   *   (só pelo servidor de apoio, com TURN) e o seguinte é "conexao";
+   * - ninguém aparece: reabre a sala do Trystero a cada REBURST_EVERY_MS (aquecimento de anúncios de
+   *   novo), nunca no meio de uma negociação (sinal de outro aparelho há menos de PEER_QUIET_MS) nem com
+   *   o erro de ICE esperando a vez;
+   * - no fim do prazo, com outro aparelho negociando, estica uma vez; senão desiste.
+   * true: desistiu (a sessão está fechando).
+   */
+  private searchTick(now: number): boolean {
+    const session = this.session;
+    if (!session || !this.searching()) return false;
+    const up = session.signalingUp();
+    if (up) this.everSignaled = true;
+    if (this.searchFrom === null) {
+      if (!this.everSignaled) {
+        // Escondida não declara "sem rede" (a aba de fundo do computador segue com timers), e o tempo
+        // congelado em segundo plano (APK no WhatsApp antes do primeiro relay) não conta: a espera
+        // recomeça na volta, quando o kick da escada ainda está trazendo os sockets.
+        if (this.hidden || now - this.netWaitFrom() < this.netWaitMs()) return false;
+        this.giveUp("sem-rede");
+        return true;
+      }
+      this.searchFrom = now;
+      this.nextBurstAt = now + REBURST_EVERY_MS;
+      this.setDeadline(now + T.JOIN_TIMEOUT_MS);
     }
-    if (this.joinErrorAt !== null && now - this.joinErrorAt >= JOIN_ERROR_GRACE_MS) {
-      this.fail("conexao");
-      void this.shutdown("error");
+    const connecting = this.phase === "connecting";
+    if (connecting) {
+      const elapsed = now - this.searchFrom;
+      const stages = T.JOIN_STAGES_MS;
+      const stage = elapsed >= stages[1] ? 2 : elapsed >= stages[0] ? 1 : 0;
+      if (stage !== this.joinStage) {
+        this.joinStage = stage;
+        this.changed();
+      }
+      if (this.joinErrorAt !== null && now - this.joinErrorAt >= JOIN_ERROR_GRACE_MS) {
+        this.joinErrorAt = null;
+        // Ligado ao anfitrião do link (as boas-vindas vêm dele): o erro era de outro par da sala.
+        if (!this.linkHostLinked()) {
+          if (this.joinRetries > 0) {
+            this.giveUp("conexao");
+            return true;
+          }
+          this.retryJoin(now);
+        }
+      }
+    }
+    const peerAt = session.peerSignalAt();
+    const quiet = peerAt === null || now - peerAt >= PEER_QUIET_MS;
+    // Voltando com a sala guardada: só reabre sozinho (ligado a alguém, a malha da sala cuida).
+    if (up && quiet && now >= this.nextBurstAt && this.joinErrorAt === null && !this.linkHostLinked()
+      && (connecting || session.linked().length === 0)) {
+      session.kickSignaling(false); // periódico: o backoff dos relays fechados segue valendo
+      this.reopen(now);
+    }
+    if (this.deadlineAt !== null && now >= this.deadlineAt) {
+      // Erro de ICE esperando a vez (JOIN_ERROR_GRACE_MS): a sala respondeu; daqui a pouco é o apoio ou "conexao".
+      if (this.joinErrorAt !== null) return false;
+      if (!this.deadlineExtended && peerAt !== null && now - peerAt <= NEGOTIATING_MS) {
+        // Outro aparelho está negociando agora: desistir mataria a ligação que está quase fechando.
+        this.deadlineExtended = true;
+        this.setDeadline(Math.max(now, peerAt + JOIN_EXTEND_MS));
+        this.refreshSearch();
+        return false;
+      }
+      const newer = connecting && (this.netConfig.latestProtocol ?? BOB_PROTOCOL) > BOB_PROTOCOL;
+      this.giveUp(newer ? "versao-nova" : "nao-encontrada");
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * O primeiro erro de ICE que conta: tenta de novo em vez de desistir (B1). Com TURN na config, só pelo
+   * servidor de apoio (os dois atrás de CGNAT é o caso comum entre celulares); a política vale só para
+   * esta sessão (o próximo cliente começa com "all"). A busca ganha pelo menos JOIN_RETRY_MIN_MS.
+   */
+  private retryJoin(now: number): void {
+    const session = this.session;
+    if (!session) return;
+    this.joinRetries = 1;
+    this.relayOnly = hasTurn(this.netConfig);
+    if (this.relayOnly) session.setIcePolicy("relay");
+    this.reopen(now);
+    this.setDeadline(Math.max(this.deadlineAt ?? now, now + JOIN_RETRY_MIN_MS));
+    this.refreshSearch();
+  }
+
+  /** Reabre a sala do Trystero: novo aquecimento de anúncios (e nova negociação). A próxima reabertura espera REBURST_EVERY_MS. */
+  private reopen(now: number): void {
+    this.openedAt = now;
+    this.reopenedAt = now;
+    this.nextBurstAt = now + REBURST_EVERY_MS;
+    void this.session?.rejoin();
+  }
+
+  /**
+   * Prazo da busca no relógio (null: ainda sem sinalização) e o mesmo prazo em Date.now() para a barra.
+   * Sem sinalização ainda vale o mais tarde possível (a rede chegando no último instante + a busca
+   * inteira): quando ela chega, a barra só anda para a frente.
+   */
+  private setDeadline(at: number | null): void {
+    this.deadlineAt = at;
+    const target = at ?? this.netWaitFrom() + this.netWaitMs() + T.JOIN_TIMEOUT_MS;
+    this.deadlineLocal = Math.round(this.wallNow() + (target - this.clock.now()));
+  }
+
+  /**
+   * Quanto a busca espera a primeira sinalização antes de "sem rede". Voltando (resume) para uma sala com
+   * partida andando, a busca inteira mais isso: desistir encerra o duelo e começa a gastar a reserva do
+   * outro, e uma queda de 25–45 s que antes passava não pode virar a tela de erro.
+   */
+  private netWaitMs(): number {
+    return this.mode === "resume" ? T.JOIN_TIMEOUT_MS + T.JOIN_NET_WAIT_MS : T.JOIN_NET_WAIT_MS;
+  }
+
+  /** Desde quando a espera da rede conta: a abertura, ou a última volta ao primeiro plano. */
+  private netWaitFrom(): number {
+    return Math.max(this.startedAt, this.visibleSince);
+  }
+
+  /** O estado da busca para a tela; só publica (changed) quando muda: o tick roda 4 vezes por segundo. */
+  private refreshSearch(): void {
+    const next = this.searchState();
+    if (sameSearch(this.search, next)) return;
+    this.search = next;
+    this.changed();
+  }
+
+  private searchState(): SearchState | null {
+    if (this.mode === "create" || this.phase !== "connecting") return null;
+    const session = this.session;
+    const health = session?.relayHealth() ?? null;
+    const peerAt = session?.peerSignalAt() ?? null;
+    const step: SearchStep = this.searchFrom === null ? "rede"
+      : this.relayOnly ? "apoio"
+        : peerAt !== null && peerAt >= this.openedAt ? "achou" : "procurando";
+    return { step, relays: health ? { open: health.open, total: health.total } : null, deadlineLocal: this.deadlineLocal };
+  }
+
+  /** Desiste da busca/abertura: o código vira o erro da tela e o motivo técnico fica no netError. */
+  private giveUp(error: JoinError): void {
+    const reason = this.joinErrorReason;
+    this.noteNetError(reason && error !== "sem-rede" && error !== "abrir" ? `${error}: ${reason}` : error);
+    // Voltando para uma sala que ninguém respondeu: ela acabou. A sessão salva e a cópia da sala saem,
+    // senão o "Voltar para a sala" e o próprio convite levavam de novo ao mesmo lobby parado. Sem rede
+    // ou sem conexão a sala pode estar viva: fica tudo.
+    if (this.mode === "resume" && error === "nao-encontrada") this.forgetRoom();
+    this.fail(error);
+    void this.shutdown("error");
+  }
+
+  /**
+   * Guarda o último motivo técnico (vai no diagnóstico que a pessoa copia e manda): curto e sem nunca
+   * levar usuário ou credencial do TURN, mesmo que algum texto de erro os repita.
+   */
+  private noteNetError(text: string): string {
+    let clean = String(text);
+    for (const server of [...(this.netConfig.turn ?? []), ...(this.netConfig.iceServers ?? [])]) {
+      for (const secret of [server.username, server.credential]) {
+        if (typeof secret === "string" && secret.length >= 4) clean = clean.split(secret).join("***");
+      }
+    }
+    clean = clean.slice(0, NET_ERROR_CHARS);
+    this.netError = clean;
+    return clean;
+  }
+
+  /** Na sala: "reconectando" com a minha sinalização calada há SIGNALING_DOWN_MS (sozinho, ninguém me acha). */
+  private signalingTick(now: number, session: BobSession): void {
+    if (session.signalingUp()) this.signalingDownSince = null;
+    else this.signalingDownSince ??= now;
+    const down = this.signalingDownSince !== null && now - this.signalingDownSince >= SIGNALING_DOWN_MS;
+    const next: RoomClientState["signaling"] = down ? "reconectando" : "ok";
+    // Calou agora: o transporte sonda e religa os relays já, sem esperar o backoff. Segue calada: de novo a
+    // cada 10 s, mas periódico (os fechados seguem o backoff da estratégia, que dobra até 60 s; o chute
+    // forçado a cada 10 s eram ~60 discagens por relay numa queda de 10 min).
+    if (down && (next !== this.signaling || now - this.signalingKickAt >= SIGNALING_KICK_MS)) {
+      session.kickSignaling(next !== this.signaling);
+      this.signalingKickAt = now;
+    }
+    if (next === this.signaling) return;
+    this.signaling = next;
+    this.changed();
+  }
+
+  private signalingKickAt = Number.NEGATIVE_INFINITY;
+
+  /**
+   * Rota (direto × servidor de apoio) e RTT de cada membro ligado, a cada LINKS_EVERY_MS. Publica só
+   * quando muda (RTT de 10 em 10 ms): a tela da sala não redesenha por ruído. Só na sala de espera.
+   */
+  private linksTick(now: number, session: BobSession): void {
+    if (this.snapshot?.stage !== "lobby") {
+      // Fora da sala de espera ninguém mostra a rota: sem getStats no meio da partida.
+      this.linksAt = Number.NEGATIVE_INFINITY; // de volta à sala, relê na hora
+      this.publishLinks({}); // sameLinks barra: um changed() só, na saída
       return;
     }
-    if (elapsed >= T.JOIN_TIMEOUT_MS) {
-      const newer = (this.netConfig.latestProtocol ?? BOB_PROTOCOL) > BOB_PROTOCOL;
-      this.fail(newer ? "versao-nova" : this.everSignaled ? "nao-encontrada" : "sem-rede");
-      void this.shutdown("error");
+    if (now - this.linksAt < LINKS_EVERY_MS) return;
+    if (this.linksBusySince !== null && now - this.linksBusySince < LINKS_STUCK_MS) return;
+    const snapshot = this.snapshot;
+    if (!snapshot) return;
+    this.linksAt = now;
+    const linked = new Set(session.linked());
+    const ids = snapshot.members.filter((member) => member.playerId !== this.me && !member.left && linked.has(member.playerId)).map((member) => member.playerId);
+    if (!ids.length) {
+      this.publishLinks({});
+      return;
     }
+    const since = now;
+    this.linksBusySince = since;
+    void Promise.all(ids.map(async (playerId) => [playerId, linkRouteOf(await session.linkInfo(playerId))] as const)).then(
+      (entries) => {
+        if (this.linksBusySince === since) this.linksBusySince = null;
+        // A partida começou com a leitura no ar: a rota velha não volta por cima da saída.
+        if (this.disposed || this.phase !== "in-room" || this.snapshot?.stage !== "lobby") return;
+        this.publishLinks(Object.fromEntries(entries));
+      },
+      () => {
+        if (this.linksBusySince === since) this.linksBusySince = null;
+      },
+    );
+  }
+
+  private publishLinks(next: Record<string, LinkRoute>): void {
+    if (sameLinks(this.links, next)) return;
+    this.links = next;
+    this.changed();
   }
 
   /** Presença de cada membro no snapshot (visão do anfitrião), no máximo uma publicação por segundo. */
@@ -3212,6 +3635,8 @@ export class BobRoomClient implements BobRoomClientApi {
 
   private saveSessionNow(): void {
     if (this.phase !== "in-room" || !this.snapshot) return;
+    // Voltando sem resposta da sala ainda: regravar renovaria a idade da sessão a cada volta que falha.
+    if (this.mode === "resume" && !this.confirmed) return;
     const session: SavedSession = {
       code: this.snapshot.code,
       ...(this.password ? { password: this.password } : {}),

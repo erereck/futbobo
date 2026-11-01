@@ -220,7 +220,9 @@ test("textos compartilhados da sala", () => {
   assert.equal(room.settingsLine({ format: "x1", rules: "flash", cpuLevel: 3, fillWithCpu: true, allowSpectators: true, locked: true }), "X1 · Relâmpago (2 gols · 90 segundos) · com senha");
   assert.equal(room.joinErrorText("iniciada", "x1"), "A partida já começou.");
   assert.equal(room.joinErrorText("iniciada", "t8"), "O torneio já começou.");
-  assert.equal(room.joinErrorText("conexao"), "Não deu para conectar com a sala. Tente outra rede (Wi-Fi ↔ dados móveis).");
+  // "ninguém respondeu" × "a sala respondeu e a ligação não fechou": cada um diz o seu (r-sim §4).
+  assert.equal(room.joinErrorText("conexao"), "Achamos a sala, mas os aparelhos não conseguiram se conectar. Tente outra rede (Wi-Fi ↔ dados móveis).");
+  assert.equal(room.joinErrorText("nao-encontrada"), "Não achamos a sala. Confira o código e peça para o anfitrião deixar a sala aberta na tela.");
   assert.ok(room.RETRYABLE_ERRORS.has("nao-encontrada") && !room.RETRYABLE_ERRORS.has("cheia"));
   const info = (proto, engine) => ({ proto, engine, celebrations: 18, app: "v96" });
   assert.equal(room.versionDetail(info(1, 1), info(2, 1)), "(versão do online: você 1.1 · sala 2.1)");
@@ -231,7 +233,7 @@ test("textos compartilhados da sala", () => {
 test("cliente da sala: criar, falhar, sair, largar e lembrar a última partida jogada", async () => {
   const calls = [];
   const listeners = new Set();
-  let state = { phase: "connecting", joinStage: 0, error: null, incompatible: null, snapshot: null, teams: {}, me: "eu", isHost: true, health: {}, live: {}, duel: null, nextMatch: null, rematch: null, toasts: [] };
+  let state = { phase: "connecting", joinStage: 0, search: null, signaling: "ok", links: {}, netError: null, error: null, incompatible: null, snapshot: null, teams: {}, me: "eu", isHost: true, health: {}, live: {}, duel: null, nextMatch: null, rematch: null, toasts: [] };
   const fake = {
     getState: () => state,
     subscribe: (listener) => {
@@ -407,7 +409,7 @@ test("cliente da sala: torneio novo esquece a partida do anterior; outra aba nã
   const calls = [];
   const listeners = new Set();
   const snap = (seed, extra = {}) => ({ code: "K7MPX3", seed, stage: "running", bracket: { matches: [] }, settings: { format: "t4" }, ...extra });
-  let state = { phase: "in-room", joinStage: 0, error: null, incompatible: null, snapshot: snap(11), teams: {}, me: "eu", isHost: false, health: {}, live: {}, duel: null, nextMatch: null, rematch: null, toasts: [] };
+  let state = { phase: "in-room", joinStage: 0, search: null, signaling: "ok", links: {}, netError: null, error: null, incompatible: null, snapshot: snap(11), teams: {}, me: "eu", isHost: false, health: {}, live: {}, duel: null, nextMatch: null, rematch: null, toasts: [] };
   const fake = {
     getState: () => state,
     subscribe: (listener) => {
@@ -453,11 +455,24 @@ test("cliente da sala: torneio novo esquece a partida do anterior; outra aba nã
   assert.equal(room.deadClientNotice({ phase: "error", error: "removido" }), "Você foi removido desta sala.");
   assert.equal(room.deadClientNotice({ phase: "error", error: "conexao" }), null);
   assert.equal(room.deadClientNotice({ phase: "left", error: null }), null);
+  // Quem estava na sala e ela acabou (convite velho de uma sala fechada, sem rede): o início diz por quê.
+  const gone = (error, phase = "error") => ({ phase, error, snapshot: { code: "K7MPX3" } });
+  assert.equal(room.deadClientNotice(gone("nao-encontrada")), "A sala K7M·PX3 não respondeu.");
+  assert.equal(room.roomGoneNotice(gone("nao-encontrada")), "A sala K7M·PX3 não respondeu.");
+  assert.equal(room.roomGoneNotice(gone("sem-rede")), room.joinErrorText("sem-rede"));
+  assert.equal(room.roomGoneNotice(gone("conexao")), room.joinErrorText("conexao"));
+  assert.equal(room.roomGoneNotice(gone("versao-nova")), room.joinErrorText("versao-nova"));
+  assert.equal(room.roomGoneNotice(gone("removido")), "Você foi removido desta sala.");
+  assert.equal(room.roomGoneNotice(gone("iniciada")), null, "recusa de quem entrava (cópia de prévia): a tela de entrar já disse");
+  assert.equal(room.roomGoneNotice(gone(null, "left")), null, "saída pedida: calada");
 
   // A página: resultados e dispensas da rodada anterior saem quando a rodada muda; a montagem larga o cliente morto.
   const page = read("app/bobonline/page.tsx");
   assert.match(page, /const round = roundKeyOf\(snapshot\);\s+if \(round !== null && round !== seenRound\) \{[\s\S]{0,120}setFinished\(\{\}\);\s+setDismissed\(\[\]\);\s+setForced\(\[\]\);/);
   assert.match(page, /deadClientNotice\(leftover\.state\)/);
+  // O cliente morreu na sala: o aviso sai de roomGoneNotice, e o cartão "Voltar para a sala" segue a sessão salva.
+  assert.match(page, /const gone = getRoomView\(\)\.state;\s+const notice = gone \? roomGoneNotice\(gone\) : null;/);
+  assert.match(page, /setSaved\(loadSession\(\)\);\s+setHomeNotice\(notice\);/);
 });
 
 test("volta automática: o link de outra sala manda; ?voltar=1 sempre volta", () => {
@@ -470,6 +485,302 @@ test("volta automática: o link de outra sala manda; ?voltar=1 sempre volta", ()
   assert.equal(room.autoResumeAllowed(session, { now: session.savedAt + 10 * 60_000, wanted: true, linkCode: "B4N9RT" }), true);
   assert.equal(room.autoResumeAllowed({ ...session, savedAt: Date.now() }, { wanted: false, linkCode: null }), true, "sem now: o relógio de agora");
   assert.match(read("app/bobonline/page.tsx"), /autoResumeAllowed\(session, \{ wanted: resumeWantedRef\.current, linkCode: linkCodeRef\.current \}\)/);
+});
+
+test("volta automática: o próprio convite volta para a sala depois dos 2 min (dentro da validade)", () => {
+  // O anfitrião manda o convite, fica no WhatsApp, e toca no próprio link 10 min depois (B4).
+  const host = { code: "K7MPX3", isHost: true, epoch: 1, savedAt: 1_000_000 };
+  const later = host.savedAt + 10 * 60_000;
+  assert.equal(room.autoResumeAllowed(host, { now: later, wanted: false, linkCode: "K7MPX3" }), true, "link da própria sala");
+  assert.equal(room.autoResumeAllowed(host, { now: later, wanted: false, linkCode: null }), false, "sem link continua só a sessão recente");
+  assert.equal(room.autoResumeAllowed(host, { now: later, wanted: false, linkCode: "B4N9RT" }), false, "link de outra sala nunca volta");
+  const ttl = host.savedAt + 30 * 60_000;
+  assert.equal(room.autoResumeAllowed(host, { now: ttl, wanted: false, linkCode: "K7MPX3" }), true, "no limite da validade");
+  assert.equal(room.autoResumeAllowed(host, { now: ttl + 1, wanted: false, linkCode: "K7MPX3" }), false, "sessão vencida não volta");
+  // A página não manda o próprio link para a tela de entrar: o início mostra o "Voltando para a sala…".
+  const page = read("app/bobonline/page.tsx");
+  assert.match(page, /const ownLink = pending !== null && autoResumeAllowed\(pending, \{ wanted: wantsResume, linkCode: linkCodeRef\.current \}\);/);
+  assert.match(page, /if \(!ownLink\) setNav\(\{ \.\.\.HOME, screen: "join" \}\);/);
+});
+
+test("busca: o texto sai do passo de verdade, não do relógio", () => {
+  assert.deepEqual(room.searchCopy("rede", "K7MPX3", 0), { line: "Conectando…", hint: null });
+  assert.deepEqual(room.searchCopy("procurando", "K7MPX3", 3000), { line: "Procurando a sala K7M·PX3…", hint: null });
+  assert.deepEqual(room.searchCopy("procurando", "K7MPX3", room.SEARCH_HOST_HINT_MS), {
+    line: "Procurando a sala K7M·PX3…", hint: "O anfitrião precisa estar com a sala aberta na tela.",
+  });
+  assert.equal(room.searchCopy("procurando", null, 0).line, "Procurando a sala…");
+  assert.deepEqual(room.searchCopy("achou", "K7MPX3", 30_000), { line: "Sala encontrada. Conectando os aparelhos…", hint: null });
+  assert.deepEqual(room.searchCopy("apoio", "K7MPX3", 30_000), { line: "A conexão direta não fechou. Tentando pelo servidor de apoio…", hint: null });
+  // Nenhum texto promete progresso sem sinal dele ("Quase lá…" saiu).
+  const join = read("app/bobonline/screens/JoinRoomScreen.tsx");
+  assert.doesNotMatch(join, /Quase lá/);
+  assert.match(join, /search\?\.step \?\? \(loading \? "rede" : "procurando"\)/);
+  assert.match(join, /search\?\.deadlineLocal \?\? startedAt \+ T\.JOIN_TIMEOUT_MS/);
+
+  // A barra vai até o prazo do controlador e nunca volta quando ele cresce (nova tentativa pelo apoio).
+  const anchor = { deadline: 45_000, at: 0, from: 0 };
+  assert.equal(room.searchBarAt(anchor, 0), 0);
+  assert.equal(room.searchBarAt(anchor, 22_500), 0.5);
+  assert.equal(room.searchBarAt(anchor, 90_000), 1);
+  const moved = { deadline: 75_000, at: 22_500, from: room.searchBarAt(anchor, 22_500) };
+  assert.equal(room.searchBarAt(moved, 22_500), 0.5, "o prazo novo não faz a barra voltar");
+  assert.equal(room.searchBarAt(moved, 48_750), 0.75);
+  assert.equal(room.searchBarAt({ deadline: 10, at: 10, from: 0.3 }, 10), 1, "prazo vencido: cheia");
+  assert.match(join, /else if \(anchor\.deadline !== deadline\) \{/);
+  // A reabertura volta o passo a "procurando": depois de "achou", a tela segue no texto de achou (sem a linha do anfitrião).
+  assert.match(join, /else if \(step === "achou" && !found\.value\) setFound\(\{ startedAt, value: true \}\);/);
+  assert.match(join, /const shown = found\.startedAt === startedAt && found\.value && step === "procurando" \? "achou" : step;/);
+  assert.match(join, /const copy = searchCopy\(shown, /);
+  assert.match(join, /data-step=\{step\}/, "o passo cru segue no DOM (e2e e diagnóstico)");
+});
+
+test("erro da busca: uma ação principal só, \"Testar conexão\" nos erros de rede e o relógio errado", () => {
+  const join = read("app/bobonline/screens/JoinRoomScreen.tsx");
+  // "Tentar de novo" é o próprio botão de entrar (o cartão não repete o botão: r-sim, recomendação 4).
+  assert.doesNotMatch(join, />Tentar de novo<\/button>/);
+  assert.match(join, /\{retry \? "Tentar de novo" : <>Entrar <span>→<\/span><\/>\}/);
+  assert.match(join, /networkError && <button type="button" className="bob-ghost-button" data-testid="bob-diagnostics" onClick=\{onDiagnostics\}>Testar conexão<\/button>/);
+  assert.match(join, /networkError && clockNote && <p className="bob-error-note">\{clockNote\}<\/p>/);
+  const create = read("app/bobonline/screens/CreateRoomScreen.tsx");
+  assert.doesNotMatch(create, />Tentar de novo<\/button>/);
+  // O segundo toque de criar é o que abre a sala: não repete o "Criar sala" do início.
+  assert.match(create, /busy \? "Abrindo a sala…" : networkError \? "Tentar de novo" : "Abrir sala"/);
+  // O Enter do campo passa pelo mesmo submit do botão: abrindo, nada; Enter segurado ou do IME, nada.
+  assert.match(create, /function submit\(\) \{\s+\/\/[^\n]*\n\s+if \(busy\) return;/);
+  assert.match(create, /if \(event\.key !== "Enter" \|\| event\.repeat \|\| event\.nativeEvent\.isComposing\) return;/);
+
+  assert.equal(room.clockSkewText(null), null);
+  assert.equal(room.clockSkewText(59_000), null);
+  assert.equal(room.clockSkewText(-59_999), null);
+  assert.equal(room.clockSkewText(Number.NaN), null);
+  assert.equal(room.clockSkewText(180_000), "O relógio do aparelho está 3 min adiantado. Ative data e hora automáticas.");
+  assert.equal(room.clockSkewText(-60_000), "O relógio do aparelho está 1 min atrasado. Ative data e hora automáticas.");
+  assert.equal(room.clockSkewText(-2.6 * 3_600_000), "O relógio do aparelho está 3 h atrasado. Ative data e hora automáticas.");
+  assert.equal(room.clockSkewText(3 * 86_400_000), "O relógio do aparelho está 3 dias adiantado. Ative data e hora automáticas.");
+  // O início também avisa, e só depois de medir (o relógio vem do net.json).
+  const page = read("app/bobonline/page.tsx");
+  assert.match(page, /const clockNote = netConfig \? clockSkewText\(netClockOffsetMs\(\)\) : null;/);
+  assert.match(page, /if \(!clockWrong\) return;[\s\S]{0,400}document\.addEventListener\("visibilitychange", onVisible\);/);
+  assert.match(page, /loadNetConfig\(\)\.then\(\(config\) => \{\s+if \(!disposed\) setNetConfig\(config\);/);
+  assert.match(read("app/bobonline/screens/HomeScreen.tsx"), /\{clockNote && <p className="bob-hint bob-clock-note"/);
+});
+
+test("Testar conexão: a folha vem com a página (sem rede ela nunca derruba a tela); o diagnóstico só baixa quando abre", () => {
+  const page = read("app/bobonline/page.tsx");
+  // Estática: por lazy(), sem rede (ou depois de um deploy) o pedaço que não baixava caía no ScreensBoundary.
+  assert.match(page, /^import DiagnosticsSheet from "\.\/screens\/DiagnosticsSheet";$/m);
+  assert.doesNotMatch(page, /lazy\(\(\) => import\("\.\/screens\/DiagnosticsSheet"\)\)/);
+  assert.doesNotMatch(page, /<Suspense[^>]*>\s*<DiagnosticsSheet/);
+  assert.doesNotMatch(page, /["']\.\/net\/diagnostics["']/, "a página nunca puxa o diagnóstico");
+  // Nenhum arquivo do /bobonline puxa o diagnóstico de forma estática (só tipos); a folha o importa ao abrir.
+  for (const file of filesUnder("app/bobonline")) {
+    for (const line of read(file).split("\n").filter((text) => /from ["'][./]*net\/diagnostics["']|from ["']\.\/diagnostics["']/.test(text))) {
+      assert.match(line, /^import type /, `${file}: ${line}`);
+    }
+  }
+  const sheet = read("app/bobonline/screens/DiagnosticsSheet.tsx");
+  assert.match(sheet, /import\("\.\.\/net\/diagnostics"\)/);
+  assert.match(sheet, /diagnostics\.diagnosticsText\(report\)/);
+  assert.match(sheet, /copied \? "Copiado" : "Copiar diagnóstico"/);
+  assert.match(sheet, /Testar de novo/);
+  // O módulo que não baixou: "Recarregar" no lugar de "Testar de novo" (o import() repetido cairia na falha guardada).
+  assert.match(sheet, /import\("\.\.\/net\/diagnostics"\)\.catch\(\(\) => \{\s+if \(alive\) setLoadFailed\(true\);\s+throw SKIP;/);
+  assert.match(sheet, /O teste não abriu\. Recarregue a página\./);
+  assert.match(sheet, /\{loadFailed \? \([\s\S]{0,260}window\.location\.reload\(\)\}>Recarregar<\/button>/);
+  assert.match(sheet, /const running = !report && !broken && !loadFailed;/);
+  assert.match(sheet, /"sem-webrtc": /, "a folha conhece todo veredito");
+  // Aberta de um erro, leva o motivo técnico da sala; nunca as credenciais do TURN (a folha nem as conhece).
+  assert.match(page, /setDiagnostics\(\{ lastError: getRoomView\(\)\.state\?\.netError \?\? null \}\)/);
+  assert.doesNotMatch(sheet, /credential|username|TURN_SERVERS/);
+});
+
+test("lobby: minha vaga mostra a sinalização, as outras a rota; um dourado por vez", () => {
+  const member = (playerId, presence = "online") => ({ playerId, presence, role: "player", left: false, nickname: playerId, ready: false, teamHash: "t" });
+  const base = { me: "eu", isHost: true, health: {}, signaling: "ok", links: {}, snapshot: { hostId: "eu" } };
+  assert.deepEqual(room.memberConnection(base, member("eu")), { text: "na sala", tone: "ok" });
+  assert.deepEqual(room.memberConnection({ ...base, signaling: "reconectando" }, member("eu")), { text: "Reconectando…", tone: "reconectando" });
+  assert.deepEqual(room.memberConnection(base, member("ze")), { text: "na sala", tone: "ok" }, "rota ainda não lida");
+  const links = { ze: { route: "direto", rttMs: 39.6 }, bia: { route: "apoio", rttMs: 420 }, caio: { route: "?", rttMs: null } };
+  assert.deepEqual(room.memberConnection({ ...base, links }, member("ze")), { text: "direto · 40 ms", tone: "ok" });
+  assert.deepEqual(room.memberConnection({ ...base, links }, member("bia")), { text: "via apoio · 420 ms", tone: "ok" });
+  assert.deepEqual(room.memberConnection({ ...base, links }, member("caio")), { text: "na sala", tone: "ok" });
+  assert.deepEqual(room.memberConnection({ ...base, links }, member("ze", "away")), { text: "fora do app", tone: "fora do app" }, "presença ruim manda");
+  // Visto por quem entrou, o anfitrião vem da saúde da minha sessão.
+  const guest = { ...base, me: "ze", isHost: false, health: { eu: "unstable" }, links: { eu: { route: "direto", rttMs: 12 } } };
+  assert.deepEqual(room.memberConnection(guest, member("eu")), { text: "instável", tone: "instável" });
+  assert.deepEqual(room.memberConnection({ ...guest, health: {} }, member("eu")), { text: "direto · 12 ms", tone: "ok" });
+  // Estado de antes do campo (sem links): não quebra.
+  assert.deepEqual(room.memberConnection({ ...base, links: undefined }, member("ze")), { text: "na sala", tone: "ok" });
+  assert.equal(room.linkRouteText({ route: "apoio", rttMs: null }), "via apoio");
+  assert.equal(room.linkRouteText(null), null);
+
+  const lobby = read("app/bobonline/screens/LobbyScreen.tsx");
+  assert.match(lobby, /className=\{`\$\{alone \? "primary-button" : "secondary-button"\} bob-share-main`\}/);
+  assert.match(lobby, /className=\{`\$\{alone \? "secondary-button" : "primary-button"\} bob-submit`\}/);
+  // Uma dica só enquanto está sozinho (a do "Mandou? Volte para cá…" virou esta).
+  assert.equal(lobby.match(/className="bob-hint"/g)?.length, 3, "sozinho, começar bloqueado, esperando o anfitrião");
+  assert.match(lobby, /\{alone && <p className="bob-hint" data-testid="bob-alone-hint">Deixe esta tela aberta até seu amigo entrar\.<\/p>\}/);
+  assert.doesNotMatch(lobby, /Mandou\? Volte para cá/);
+  assert.match(lobby, /const startHint = alone \? null : blocked \?\? startError;/);
+});
+
+test("lobby: os avisos não tapam o código; no máximo 2; o \"Estou pronto\" aparece uma vez na chave", () => {
+  const css = read("app/bobonline/bobonline.css");
+  assert.match(css, /\.bob-shell\[data-screen="lobby"\] \.bob-top-stack > \.bob-toasts \{ position: fixed; top: auto; bottom:/);
+  // ...e o "Código copiado"/"Link copiado" (mesmo pé, z-index acima) sai do topo no lobby, sem tapar o "X entrou".
+  assert.match(read("app/bobonline/teams/teams.css"), /body:has\(\.bob-shell\[data-screen="lobby"\]\) \.bob-teams-toast-region \{ top: max\(16px, env\(safe-area-inset-top\)\); bottom: auto; \}/);
+  const banner = read("app/bobonline/screens/NextMatchBanner.tsx");
+  assert.match(banner, /const MAX_TOASTS = 2;/);
+  assert.match(banner, /if \(quiet \|\| !visible/);
+  assert.match(read("app/bobonline/page.tsx"), /<NextMatchBanner state=\{room\.state\} quiet=\{screen === "bracket"\} \/>/);
+});
+
+test("sair da sala: ficar é a ação principal; sair, a secundária discreta", () => {
+  const sheet = read("app/bobonline/screens/BobSheet.tsx");
+  assert.match(sheet, /className="bob-danger-button" data-testid="bob-leave-confirm" onClick=\{onLeave\}>Sair<\/button>/);
+  assert.match(sheet, /className="primary-button" data-testid="bob-leave-stay" onClick=\{onStay\}>Ficar<\/button>/);
+  assert.match(sheet, /onClose=\{onStay\}/, "tocar fora e Esc ficam");
+  assert.match(read("app/bobonline/page.tsx"), /<LeaveSheet pending=\{pending\} entrant=\{entrant\}/);
+  assert.match(read("app/bobonline/bobonline.css"), /\.bob-confirm\.bob-leave-sheet \.bob-danger-button \{[^}]*background: transparent;/);
+});
+
+test("WhatsApp: celular na web abre o app na mesma aba e só cai no wa.me se nada abriu", () => {
+  const urls = { web: "https://wa.me/?text=x", app: "whatsapp://send?text=x" };
+  const fakeEnv = (patch) => {
+    const log = [];
+    const timers = [];
+    const leave = new Set();
+    const env = {
+      native: false, mobile: true, ios: false, visibleNow: true, focusedNow: true, popups: true,
+      go: (url) => log.push(["go", url]),
+      openTab: (url) => {
+        log.push(["tab", url]);
+        return env.popups;
+      },
+      later: (run, ms) => {
+        timers.push({ run, ms });
+      },
+      visible: () => env.visibleNow,
+      focused: () => env.focusedNow,
+      onLeave: (listener) => {
+        leave.add(listener);
+        return () => leave.delete(listener);
+      },
+      ...patch,
+    };
+    // fire(): roda o timer mais antigo ainda pendente (a espera do app; depois, o fim da escuta).
+    return { env, log, fire: () => timers.shift()?.run(), wait: () => timers[0]?.ms, leave: () => [...leave].forEach((listener) => listener()), listeners: () => leave.size };
+  };
+
+  // APK: o wa.me na própria WebView (o Capacitor entrega ao intent do WhatsApp).
+  const apk = fakeEnv({ native: true });
+  assert.equal(share.launchWhatsApp(urls, apk.env), "apk");
+  assert.deepEqual(apk.log, [["go", urls.web]]);
+  // Computador: wa.me numa aba nova, como antes.
+  const desk = fakeEnv({ mobile: false });
+  assert.equal(share.launchWhatsApp(urls, desk.env), "aba");
+  assert.deepEqual(desk.log, [["tab", urls.web]]);
+  // Celular com o app: esquema na mesma aba; a página saiu da frente, nada de aba nova (a volta cai no jogo).
+  const phone = fakeEnv();
+  assert.equal(share.launchWhatsApp(urls, phone.env), "app");
+  assert.deepEqual(phone.log, [["go", urls.app]]);
+  // Folgado: o Safari pergunta "Abrir no WhatsApp?" e o Android pode mostrar o seletor (os timers seguem correndo).
+  assert.equal(phone.wait(), share.WHATSAPP_APP_WAIT_MS);
+  assert.equal(share.WHATSAPP_APP_WAIT_MS, 2500);
+  phone.leave();
+  phone.fire();
+  assert.deepEqual(phone.log, [["go", urls.app]]);
+  assert.equal(phone.listeners(), 0, "saiu antes da espera: solta os ouvintes");
+  // Celular sem o app: continua na frente e com o foco depois da espera → wa.me numa aba nova.
+  const noApp = fakeEnv();
+  let blocked = 0;
+  share.launchWhatsApp(urls, noApp.env, { onBlocked: () => blocked++ });
+  noApp.fire();
+  assert.deepEqual(noApp.log, [["go", urls.app], ["tab", urls.web]]);
+  assert.equal(blocked, 0);
+  // ... e o navegador barra essa aba (o toque já foi gasto no esquema): a tela é avisada (oferece o link).
+  const barred = fakeEnv({ popups: false });
+  share.launchWhatsApp(urls, barred.env, { onBlocked: () => blocked++ });
+  barred.fire();
+  assert.equal(blocked, 1);
+  const deskBarred = fakeEnv({ mobile: false, popups: false });
+  share.launchWhatsApp(urls, deskBarred.env, { onBlocked: () => blocked++ });
+  assert.equal(blocked, 2, "computador com pop-up barrado também avisa");
+  // O app abriu depois da espera (toque lento no "Abrir", seletor demorado): a tela tira o link; os ouvintes saem.
+  const slow = fakeEnv({ popups: false });
+  let left = 0;
+  share.launchWhatsApp(urls, slow.env, { onBlocked: () => blocked++, onLeft: () => left++ });
+  slow.fire();
+  assert.equal(blocked, 3);
+  assert.equal(slow.listeners(), 1, "segue ouvindo a saída depois da espera");
+  assert.equal(slow.wait(), share.WHATSAPP_LEAVE_WATCH_MS);
+  slow.leave();
+  assert.equal(left, 1);
+  assert.equal(slow.listeners(), 0, "saiu: solta os ouvintes");
+  // Ninguém saiu: a escuta acaba sozinha.
+  const stays = fakeEnv({ popups: false });
+  share.launchWhatsApp(urls, stays.env, { onLeft: () => left++ });
+  stays.fire();
+  stays.fire();
+  assert.equal(stays.listeners(), 0, "fim da escuta: solta os ouvintes");
+  stays.leave();
+  assert.equal(left, 1);
+  // iPhone/iPad: a espera nunca abre aba (barrada, ou o problema da aba do wa.me): o link para copiar vem direto.
+  const iphone = fakeEnv({ ios: true });
+  share.launchWhatsApp(urls, iphone.env, { onBlocked: () => blocked++ });
+  iphone.fire();
+  assert.deepEqual(iphone.log, [["go", urls.app]]);
+  assert.equal(blocked, 4);
+  // Sem o foco na hora da espera (o alerta do Safari ou o seletor ainda por cima): nem aba, nem aviso.
+  const chooser = fakeEnv({ focusedNow: false });
+  share.launchWhatsApp(urls, chooser.env, { onBlocked: () => blocked++ });
+  chooser.fire();
+  assert.deepEqual(chooser.log, [["go", urls.app]]);
+  assert.equal(blocked, 4);
+  // O window.open sem "noopener" nas opções (com ele volta null mesmo abrindo); o opener sai depois.
+  const source = read("app/bobonline/share.ts");
+  assert.match(source, /const opened = window\.open\(url, "_blank"\);\s+if \(!opened\) return false;/);
+  const lobby = read("app/bobonline/screens/LobbyScreen.tsx");
+  assert.match(lobby, /onBlocked: \(\) => setFallback\(\{ text: roomLink\(code, snapshot\?\.hostId\), focus: false \}\)/);
+  assert.match(lobby, /onLeft: \(\) => setFallback\(null\)/);
+  // O campo do WhatsApp não puxa o foco (pode aparecer por baixo do alerta do Safari); o da cópia recusada, sim.
+  assert.match(lobby, /if \(!fallback\?\.focus\) return;/);
+  assert.match(lobby, /setFallback\(\{ text: code, focus: true \}\)/);
+  // Voltou escondida sem avisar (sem evento): também não abre a aba.
+  const hidden = fakeEnv();
+  share.launchWhatsApp(urls, hidden.env);
+  hidden.env.visibleNow = false;
+  hidden.fire();
+  assert.deepEqual(hidden.log, [["go", urls.app]]);
+
+  assert.equal(share.whatsappAppUrl("K7MPX3", null), `whatsapp://send?text=${encodeURIComponent(codes.shareText("K7MPX3"))}`);
+  const android = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36";
+  const iphoneUa = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+  const ipad = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
+  const windows = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
+  assert.equal(share.isMobileWeb(android), true);
+  assert.equal(share.isMobileWeb(iphoneUa), true);
+  assert.equal(share.isMobileWeb(ipad, 5), true, "iPadOS se diz Mac, mas tem toque");
+  assert.equal(share.isMobileWeb(ipad, 0), false, "Mac de verdade");
+  assert.equal(share.isMobileWeb(windows, 10), false, "notebook com tela de toque");
+  assert.equal(share.isIosWeb(iphoneUa), true);
+  assert.equal(share.isIosWeb(ipad, 5), true);
+  assert.equal(share.isIosWeb(ipad, 0), false);
+  assert.equal(share.isIosWeb(android), false);
+});
+
+test("WhatsApp: o esquema do app (e o wa.me do APK) dispara beforeunload e a página fica; o Trystero não sai das salas", () => {
+  const source = read("app/bobonline/share.ts");
+  // O ouvinte é do módulo (o /bobonline o carrega antes do Trystero ligar o dele), na window, sem capture.
+  const guard = /^if \(typeof window !== "undefined" && typeof window\.addEventListener === "function"\) \{\n[\s\S]*?^\}$/m.exec(source)?.[0];
+  assert.ok(guard, "o ouvinte do beforeunload não está no topo do módulo");
+  assert.match(guard, /window\.addEventListener\("beforeunload", \(event\) => \{\s+if \(performance\.now\(\) < externalNavUntil\) event\.stopImmediatePropagation\(\);\s+\}\);/);
+  assert.doesNotMatch(guard.replace(/\/\/[^\n]*/g, ""), /capture|preventDefault|returnValue/, "capture furaria a ordem; preventDefault/returnValue abririam o 'sair do site?'");
+  // Armado logo antes de navegar para fora (go: esquema do app e wa.me do APK); a aba nova não dispara beforeunload aqui.
+  assert.match(source, /go: \(url\) => \{\s+externalNavUntil = performance\.now\(\) \+ EXTERNAL_NAV_GRACE_MS;\s+window\.location\.assign\(url\);/);
+  assert.match(source, /const EXTERNAL_NAV_GRACE_MS = 1500;/);
+  assert.doesNotMatch(/openTab: \(url\) => \{[\s\S]*?\n {4}\},/.exec(source)?.[0] ?? "", /externalNavUntil/);
 });
 
 test("faixa da próxima partida: um aviso por \"pronto?\" (torneio novo avisa de novo) e também assistindo", () => {

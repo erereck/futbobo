@@ -1,18 +1,20 @@
 "use client";
 
 // Entrar na sala (§1.4): o código (de qualquer jeito que vier colado), o time e o
-// apelido, a busca de até 45 s com textos em etapas, e os erros com saída.
+// apelido, a busca com o texto do que ela está fazendo de verdade (SearchState), e os
+// erros com uma saída só: o botão principal vira "Tentar de novo" e o cartão oferece
+// "Testar conexão" quando o erro é de rede.
 
 import { useId, useRef, useState, useSyncExternalStore } from "react";
 import BobCrest from "../teams/BobCrest";
 import { LIMITS, cleanNickname } from "../teams/model";
 import { T } from "../protocol";
 import { extractLinkHost, extractRoomCode } from "../net/codes";
-import type { JoinError, RoomClientState } from "../room/room-api";
+import type { JoinError, RoomClientState, SearchState } from "../room/room-api";
 import type { BobTeam, RoomFormat } from "../types";
 import { useNow } from "../use-now";
 import { isNativeAndroid } from "../wake-lock";
-import { RETRYABLE_ERRORS, joinErrorText, versionDetail } from "../use-room";
+import { RETRYABLE_ERRORS, joinErrorText, searchBarAt, searchCopy, versionDetail, type SearchBarAnchor } from "../use-room";
 
 export type JoinDraft = {
   code: string;
@@ -33,20 +35,19 @@ const webOnAndroid = () => {
 };
 const serverFalse = () => false;
 
-const STAGE_COPY = [
-  "Procurando a sala…",
-  "Ainda procurando… o anfitrião precisa estar com o Futbobo aberto.",
-  "Quase lá… se demorar, peça para o anfitrião voltar para o jogo.",
-] as const;
-
 export default function JoinRoomScreen({
   team,
   profileNickname,
   draft,
   searching,
   startedAt,
+  search,
+  clientLoading,
+  searchCode,
   joinStage,
   error,
+  failedCode,
+  clockNote,
   errorFormat,
   canSpectate,
   incompatible,
@@ -59,6 +60,7 @@ export default function JoinRoomScreen({
   onPickTeam,
   onBack,
   onUpdate,
+  onDiagnostics,
 }: {
   team: BobTeam;
   profileNickname: string;
@@ -66,8 +68,19 @@ export default function JoinRoomScreen({
   searching: boolean;
   /** Date.now() do início da busca. */
   startedAt: number;
+  /** O que a busca está fazendo (null: o cliente ainda não chegou, ou um controlador sem esse estado). */
+  search: SearchState | null;
+  /** A fábrica do cliente ainda não devolveu (baixando o pedaço da rede, abrindo os relays). */
+  clientLoading: boolean;
+  /** O código que está sendo procurado (o da tentativa, não o campo, que pode mudar). */
+  searchCode: string | null;
+  /** Etapa por tempo do controlador: só vale quando `search` é null. */
   joinStage: 0 | 1 | 2;
   error: JoinError | null;
+  /** O código da tentativa que falhou: com o campo igual a ele, o botão principal é "Tentar de novo". */
+  failedCode: string | null;
+  /** Relógio do aparelho muito errado (clockSkewText): vai no cartão dos erros de rede. */
+  clockNote: string | null;
   /** Formato da sala que recusou (para "A partida já começou." × "O torneio já começou."). */
   errorFormat: RoomFormat | null;
   /** A sala que já começou aceita espectadores. */
@@ -85,6 +98,8 @@ export default function JoinRoomScreen({
   onPickTeam: () => void;
   onBack: () => void;
   onUpdate: () => void;
+  /** "Testar conexão": a folha do diagnóstico. */
+  onDiagnostics: () => void;
 }) {
   const baseId = useId();
   const nickRef = useRef<HTMLInputElement>(null);
@@ -113,6 +128,10 @@ export default function JoinRoomScreen({
 
   const showPassword = passwordAsked || error === "senha" || error === "senha-errada";
   const updateNeeded = error === "versao-nova" || (error === "versao" && incompatible?.who !== "them") || linkTooNew;
+  const networkError = error !== null && RETRYABLE_ERRORS.has(error);
+  // Uma ação principal só: depois de um erro de rede, o mesmo botão de entrar repete a busca. Com
+  // outro código no campo ele volta a ser "Entrar" (é uma busca nova, não a mesma de novo).
+  const retry = networkError && failedCode !== null && extractRoomCode(draft.code) === failedCode;
 
   return (
     <section className="bob-form-screen" aria-labelledby={`${baseId}-title`} aria-busy={searching || undefined}>
@@ -184,7 +203,7 @@ export default function JoinRoomScreen({
         </div>
       )}
 
-      {searching && <SearchProgress startedAt={startedAt} joinStage={joinStage} onCancel={onCancel} />}
+      {searching && <SearchProgress startedAt={startedAt} search={search} loading={clientLoading} code={searchCode} joinStage={joinStage} onCancel={onCancel} />}
 
       {!searching && linkTooNew && !error && (
         <div className="bob-error-card" role="alert">
@@ -207,28 +226,57 @@ export default function JoinRoomScreen({
           ) : (
             <p>{joinErrorText(error, errorFormat)}</p>
           )}
+          {networkError && clockNote && <p className="bob-error-note">{clockNote}</p>}
           {updateNeeded && <button type="button" className="secondary-button" onClick={onUpdate}>{updateLabel()}</button>}
           {error === "iniciada" && canSpectate && <button type="button" className="secondary-button" data-testid="bob-spectate" onClick={spectate}>Assistir</button>}
-          {RETRYABLE_ERRORS.has(error) && <button type="button" className="secondary-button" onClick={submit}>Tentar de novo</button>}
+          {networkError && <button type="button" className="bob-ghost-button" data-testid="bob-diagnostics" onClick={onDiagnostics}>Testar conexão</button>}
         </div>
       )}
 
       <button type="button" className="primary-button bob-submit" data-testid="bob-join-submit" disabled={searching} onClick={submit}>
-        Entrar <span>→</span>
+        {retry ? "Tentar de novo" : <>Entrar <span>→</span></>}
       </button>
     </section>
   );
 }
 
-/** A busca de até 45 s: barra e texto em etapas (só este pedaço redesenha com o relógio). */
-function SearchProgress({ startedAt, joinStage, onCancel }: { startedAt: number; joinStage: 0 | 1 | 2; onCancel: () => void }) {
+/**
+ * A busca: o texto do passo em que ela está e a barra até o prazo do controlador (só este pedaço
+ * redesenha com o relógio). Sem `search` (o cliente ainda carregando, ou um controlador antigo),
+ * carregando é "rede" e o resto é "procurando", com a linha do anfitrião pela etapa de tempo.
+ */
+function SearchProgress({ startedAt, search, loading, code, joinStage, onCancel }: {
+  startedAt: number;
+  search: SearchState | null;
+  loading: boolean;
+  code: string | null;
+  joinStage: 0 | 1 | 2;
+  onCancel: () => void;
+}) {
   const now = useNow(250);
   const elapsed = now > 0 && startedAt > 0 ? Math.max(0, now - startedAt) : 0;
-  const stage = Math.max(joinStage, elapsed >= T.JOIN_STAGES_MS[1] ? 2 : elapsed >= T.JOIN_STAGES_MS[0] ? 1 : 0) as 0 | 1 | 2;
-  const progress = Math.min(1, elapsed / T.JOIN_TIMEOUT_MS);
+  const step = search?.step ?? (loading ? "rede" : "procurando");
+  // Achou uma vez, achou: a reabertura da busca volta o passo a "procurando", mas a tela não volta a
+  // mandar procurar um anfitrião que já respondeu (nem a lembrar que ele precisa da sala aberta).
+  const [found, setFound] = useState({ startedAt, value: false });
+  if (found.startedAt !== startedAt) setFound({ startedAt, value: false });
+  else if (step === "achou" && !found.value) setFound({ startedAt, value: true });
+  const shown = found.startedAt === startedAt && found.value && step === "procurando" ? "achou" : step;
+  const copy = searchCopy(shown, code, search === null && joinStage > 0 ? Infinity : elapsed);
+  const deadline = search?.deadlineLocal ?? startedAt + T.JOIN_TIMEOUT_MS;
+  const [anchor, setAnchor] = useState<SearchBarAnchor & { startedAt: number }>({ deadline, at: startedAt, from: 0, startedAt });
+  if (anchor.startedAt !== startedAt) {
+    setAnchor({ deadline, at: startedAt, from: 0, startedAt });
+  } else if (anchor.deadline !== deadline) {
+    // O prazo mudou no meio: a barra segue de onde está (searchBarAt).
+    const at = now > 0 ? now : anchor.at;
+    setAnchor({ deadline, at, from: searchBarAt(anchor, at), startedAt });
+  }
+  const progress = now > 0 ? searchBarAt(anchor, now) : 0;
   return (
-    <div className="bob-search" role="status" aria-live="polite" data-testid="bob-join-search">
-      <p>{STAGE_COPY[stage]}</p>
+    <div className="bob-search" role="status" aria-live="polite" data-testid="bob-join-search" data-step={step}>
+      <p>{copy.line}</p>
+      {copy.hint && <small>{copy.hint}</small>}
       <div className="bob-progress" aria-hidden="true"><i style={{ width: `${Math.round(progress * 100)}%` }} /></div>
       <button type="button" className="bob-ghost-button" onClick={onCancel}>Cancelar</button>
     </div>

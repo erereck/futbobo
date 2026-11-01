@@ -994,20 +994,26 @@ function ladder(session, extra = {}) {
 }
 
 describe("escada de ciclo de vida", () => {
-  test("sozinho no lobby: só rejoin, nunca reload", async () => {
+  test("sozinho no lobby: só rejoin (no máximo um a cada 10 s com a sinalização fora), nunca reload", async () => {
     const session = fakeLifecycleSession({ linked: [], signalingUp: false });
     const { hub, doc, lifecycle, reloads, fire } = ladder(session, { isRunning: () => false });
     fire(doc, "visibilitychange", true);
     fire(doc, "pause");
     assert.deepEqual(session.calls.visible, [false]);
-    assert.equal(session.calls.pause, 1);
+    assert.equal(session.calls.pause, 0, "o pause do Capacitor não pausa os relays (o JS segue rodando)");
     await hub.advance(60_000);
     fire(doc, "visibilitychange", false);
     fire(doc, "resume");
-    await hub.advance(T.RESUME_SIGNALING_CHECK_MS + 100);
-    assert.equal(session.calls.rejoin, 1);
+    await hub.advance(4900);
+    assert.equal(session.calls.rejoin, 0, "a sinalização fora: nada de rajada antes de conferir");
+    await hub.advance(200);
+    assert.equal(session.calls.rejoin, 1, "conferida dos 5 s: fora → rejoin");
     await hub.advance(200_000);
-    assert.equal(session.calls.rejoin, 1);
+    assert.ok(session.calls.rejoin >= 15 && session.calls.rejoin <= 21, `um rejoin a cada 10 s no máximo (${session.calls.rejoin})`);
+    session.state.signalingUp = true;
+    const before = session.calls.rejoin;
+    await hub.advance(60_000);
+    assert.equal(session.calls.rejoin, before, "sinalização no ar: para");
     assert.equal(reloads.length, 0);
     // Rodando e sozinho (busca de sala), mesmo com tudo apontando para reload: nunca recarrega.
     const running = ladder(fakeLifecycleSession({ linked: [], signalingUp: false }));
@@ -1092,17 +1098,28 @@ describe("escada de ciclo de vida", () => {
     assert.equal(heal.reloads.length, 0);
   });
 
-  test("rede volta com a página escondida: religa sem mandar back e sem recarregar; o pause segura os relays", async () => {
+  test("rede volta com a página escondida: religa sem mandar back e sem recarregar; só a aba congelada segura os relays", async () => {
+    // APK no WhatsApp (pause do Capacitor, o JS segue rodando): a rede que volta solta os relays já.
+    const app = fakeLifecycleSession({ linked: ["B"], health: { B: "unstable" } });
+    const native = ladder(app);
+    native.fire(native.doc, "visibilitychange", true);
+    native.fire(native.doc, "pause");
+    native.fire(native.win, "offline");
+    native.fire(native.win, "online");
+    assert.equal(app.calls.pause, 0);
+    assert.equal(app.calls.resume, 1, "pause do Capacitor: o online solta os relays");
+    assert.deepEqual(app.calls.visible, [false]);
+
     const session = fakeLifecycleSession({ linked: ["B"], health: { B: "unstable" } });
     const { hub, doc, win, reloads, fire } = ladder(session);
     fire(doc, "visibilitychange", true);
-    fire(doc, "pause");
+    fire(doc, "freeze");
     session.state.linked = [];
     fire(win, "offline");
     await hub.advance(5000);
     fire(win, "online");
     assert.deepEqual(session.calls.visible, [false], "continua bg: nada de back");
-    assert.equal(session.calls.resume, 0, "pausado: os relays esperam o resume");
+    assert.equal(session.calls.resume, 0, "congelada: os relays esperam o resume");
     await hub.advance(T.REJOIN_AFTER_RESUME_MS + T.RELOAD_AFTER_FAILED_REJOIN_MS + T.REJOIN_RETRY_MS + 3000);
     assert.ok(session.calls.rejoin >= 2, "religa em segundo plano");
     assert.equal(reloads.length, 0, "escondida nunca recarrega");
@@ -1167,7 +1184,8 @@ describe("net.json e configuração", () => {
       minProtocol: 1, current: { protocol: 1, engineRev: "1", celebrations: 18 }, notice: "  Manutenção hoje  ", lixo: true,
     }), { version: 1, nostrRelays: ["wss://ok"], turn: [{ urls: "turn:x:3478", username: "u", credential: "c" }], minProtocol: 1, notice: "Manutenção hoje" });
     storage.clear();
-    const remote = { version: 1, nostrRelays: ["wss://relay.exemplo"], latestProtocol: 3 };
+    // Com TURN próprio (sem ele, loadNetConfig completa com o embutido: ver bobonline-net.test.mjs).
+    const remote = { version: 1, nostrRelays: ["wss://relay.exemplo"], turn: [{ urls: "turn:turn.exemplo:3478" }], latestProtocol: 3 };
     const got = await netConfig.loadNetConfig({ fresh: true, fetch: async (url, init) => {
       assert.equal(url, netConfig.NET_CONFIG_URL);
       assert.equal(init.cache, "no-cache");
@@ -1326,78 +1344,12 @@ describe("uma aba só", () => {
   });
 });
 
+// O transporte Trystero e a estratégia Nostr vendorizada (sockets falsos, sonda, portão pré-EOSE) são
+// testados em tests/bobonline-net.test.mjs.
+
 // ---------------------------------------------------------------------------
 // Carregador dos testes
 // ---------------------------------------------------------------------------
-
-describe("transporte Trystero sem rede (sockets falsos)", () => {
-  test("sinal de vida dos relays: ouvinte por socket, sonda só com o relay calado (no máximo uma rodada a cada 6 s), nunca a quem fechou a sonda; close tira os ouvintes", async () => {
-    const { createTrysteroTransport } = loadTs("app/bobonline/net/trystero-transport.ts");
-    let now = 1000;
-    Object.defineProperty(performance, "now", { value: () => now, configurable: true, writable: true });
-    try {
-      class FakeSocket extends EventTarget {
-        readyState = 0;
-        sent = [];
-        send(data) { this.sent.push(JSON.parse(data)); }
-      }
-      const message = (data) => Object.assign(new Event("message"), { data: JSON.stringify(data) });
-      const a = new FakeSocket();
-      const b = new FakeSocket();
-      const transport = createTrysteroTransport({});
-      // O módulo e a sala do Trystero no lugar (o open de verdade importaria o pacote e iria à rede).
-      transport.mod = { getRelaySockets: () => ({ a, b }), subscribe: (sub, topic) => JSON.stringify(["REQ", sub, { "#x": [topic] }]) };
-      transport.room = { leave: async () => {} };
-      assert.equal(transport.signalingUp(), false, "conectando");
-      assert.equal(transport.lastInboundAt(), null);
-      a.readyState = 1;
-      a.dispatchEvent(new Event("open"));
-      assert.equal(transport.signalingUp(), true);
-      assert.equal(transport.lastInboundAt(), 1000, "a abertura do socket é sinal de vida");
-      now = 6500;
-      transport.signalingUp();
-      assert.equal(a.sent.length, 0, "relay ouvido há menos de 6 s: sem sonda");
-      now = 7100;
-      transport.signalingUp();
-      assert.equal(a.sent.length, 1);
-      assert.equal(b.sent.length, 0, "só os sockets abertos");
-      const [kind, sub] = a.sent[0];
-      assert.equal(kind, "REQ");
-      assert.match(sub, /^bob-sonda-/);
-      now = 9000;
-      transport.signalingUp();
-      assert.equal(a.sent.length, 1, "uma rodada por 6 s");
-      a.dispatchEvent(message(["EOSE", sub]));
-      assert.equal(transport.lastInboundAt(), 9000, "a resposta do relay renova");
-      // b também abre (a rodada seguinte vai aos dois) e recusa a sonda: nunca mais é sondado.
-      b.readyState = 1;
-      now = 15_100;
-      transport.signalingUp();
-      assert.equal(a.sent.length, 2);
-      assert.equal(b.sent.length, 1);
-      b.dispatchEvent(message(["CLOSED", sub, "rate-limited: devagar"]));
-      assert.equal(transport.lastInboundAt(), 15_100);
-      now = 21_200;
-      transport.signalingUp();
-      assert.equal(a.sent.length, 3);
-      assert.equal(b.sent.length, 1, "quem fechou a sonda não recebe outra");
-      // Outro tráfego qualquer (anúncio de alguém) também conta e adia a sonda.
-      now = 30_000;
-      a.dispatchEvent(message(["EVENT", "x", { content: "{}" }]));
-      now = 35_000;
-      transport.signalingUp();
-      assert.equal(a.sent.length, 3);
-      assert.equal(transport.lastInboundAt(), 30_000);
-      await transport.close();
-      now = 40_000;
-      a.dispatchEvent(message(["EOSE", sub]));
-      assert.equal(transport.lastInboundAt(), 30_000, "fechado, o ouvinte saiu");
-      assert.equal(transport.signalingUp(), false);
-    } finally {
-      delete performance.now;
-    }
-  });
-});
 
 describe("ts-loader", () => {
   test("import.meta.url vira a URL do arquivo; room/cpu-sim.ts (que cria Worker) carrega aqui e num worker_threads", async () => {

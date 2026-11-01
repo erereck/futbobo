@@ -3,7 +3,8 @@
 // Avisos da sala que valem em qualquer tela do Bobonline (§1):
 // - a faixa da próxima partida quando o "pronto?" dela começa (vibra e apita uma vez);
 // - os avisos curtos da sala (entrou, saiu, caiu…). Durante a minha partida só passam
-//   os que são dela; os outros esperam e saem depois (no máximo 3, o mais novo primeiro).
+//   os que são dela; os outros esperam e saem depois (no máximo 2, o mais novo primeiro).
+//   No lobby eles saem no pé da tela (bobonline.css): no topo tapavam o código da sala.
 
 import { useEffect } from "react";
 import { playBotaoSound } from "../../botao/audio";
@@ -17,9 +18,13 @@ const announced = new Set<string>();
 const MAX_ANNOUNCED = 24;
 const scheduled = new Map<number, ReturnType<typeof setTimeout>>();
 const TOAST_MS = 4500;
-const MAX_TOASTS = 3;
+const MAX_TOASTS = 2;
 
-export default function NextMatchBanner({ state }: { state: RoomClientState }) {
+/**
+ * `quiet`: a tela já tem o próprio "Estou pronto" (o cartão da chave): a faixa só apita e
+ * vibra, sem desenhar um segundo botão igual na mesma tela.
+ */
+export default function NextMatchBanner({ state, quiet = false }: { state: RoomClientState; quiet?: boolean }) {
   const next = state.nextMatch;
   const match = next ? bracketMatchOf(state, next.bracketId) : null;
   const bracket = state.snapshot?.bracket ?? null;
@@ -39,7 +44,7 @@ export default function NextMatchBanner({ state }: { state: RoomClientState }) {
     playBotaoSound("whistle");
   }, [announceKey]);
 
-  if (!visible || !next || !match || !bracket || next.readyDeadlineLocal === null) return null;
+  if (quiet || !visible || !next || !match || !bracket || next.readyDeadlineLocal === null) return null;
   const opponent = next.opponent === "cpu" ? "a CPU" : nicknameOf(state, next.opponent);
   const pressed = match.readyBy.includes(state.me);
 

@@ -5,10 +5,13 @@
     "wss://relay.nostr.dev.br",
     "wss://nostr.red5d.dev",
     "wss://nostr.rblb.it",
-    "wss://relay.layer.systems",
     "wss://relay.agentry.com",
     "wss://relay.piazza.today",
-    "wss://0x-nostr-relay.fly.dev"
+    "wss://0x-nostr-relay.fly.dev",
+    "wss://relay.ditto.pub",
+    "wss://relay.grigic.org",
+    "wss://nostr-pub.wellorder.net",
+    "wss://relay.primal.net"
   ],
   "turn": [
     {
