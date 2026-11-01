@@ -146,6 +146,8 @@ export type BotaoMatchSetup = {
   cpuFormationId?: string;
   /** Bobonline: os cinco botões de cada lado com nome, número e atributos próprios, sem protagonista. Ignorado no modo técnico. */
   squads?: BotaoSquads;
+  /** Bobonline: os botões não cansam (fôlego fixo em 100). Ausente nos modos offline. */
+  noStamina?: boolean;
 };
 
 /** Elencos completos por lado (sempre 5). Ids precisam ser únicos nos DOIS lados. */

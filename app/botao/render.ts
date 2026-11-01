@@ -384,7 +384,7 @@ function drawDisc(
   ctx: CanvasRenderingContext2D,
   body: BotaoBody,
   colors: { primary: string; secondary: string },
-  options: { selected: boolean; ready: boolean; pulse: number; uprightLabel?: boolean; mirrored?: boolean; appearance?: PlayerAppearance | null; hideUserMarker?: boolean; showcase?: boolean; showcaseAngle?: number },
+  options: { selected: boolean; ready: boolean; pulse: number; uprightLabel?: boolean; mirrored?: boolean; appearance?: PlayerAppearance | null; hideUserMarker?: boolean; showcase?: boolean; showcaseAngle?: number; hideStamina?: boolean },
 ) {
   ctx.save();
   ctx.translate(body.x, body.y);
@@ -466,7 +466,8 @@ function drawDisc(
     }
   }
 
-  if (body.playerId) {
+  // Anel de fôlego; o Bobonline (setup.noStamina) não tem fôlego e não desenha.
+  if (body.playerId && !options.hideStamina) {
     const stamina = Math.max(0, Math.min(100, body.stamina));
     ctx.strokeStyle = stamina < 35 ? "#ff7c6e" : stamina < 60 ? "#ffc72c" : "rgba(245,247,242,.56)";
     ctx.lineWidth = 1.8;
@@ -790,6 +791,7 @@ export function drawMatch(
       hideUserMarker: view.hideUserMarker,
       showcase: view.showcase,
       showcaseAngle: time / 620,
+      hideStamina: state.setup.noStamina,
     });
   }
 

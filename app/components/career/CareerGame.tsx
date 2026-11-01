@@ -1,17 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { FUTBOBO_VERSION, FUTBOBO_VERSION_NAME } from "../../version";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ComponentType } from "react";
 import { CLUBS, COUNTRIES, FIRST_MATCH_EVENT, FORMATIONS, LEAGUES, POSITIONS, countryById, leagueById } from "../../game-data";
 import type { GameEvent, PositionKey } from "../../game-data";
 import { ROLE_LABELS, calculateSquadRole, createContract, createSeasonObjective } from "../../career-systems";
 import { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prestige";
 import { ACHIEVEMENTS, NEWS_TEMPLATES, fillNewsTemplate, findRivalry } from "../../mega-expansion";
 import BotaoMatch from "../../botao/BotaoMatch";
-import { BOTAO3D_ENABLED_EVENT, BOTAO3D_PERFORMANCE_EVENT, rememberBotao3dPerformance, rememberBotao3dPreference, resolveBotao3dPerformance, resolveBotao3dPreference } from "../../botao/view-mode";
+import { BOTAO3D_ENABLED_EVENT, BOTAO3D_PERFORMANCE_EVENT, rememberBotao3dPerformance, rememberBotao3dPreference, resolveBotao3dPerformance, resolveBotao3dPreference, webglAvailable } from "../../botao/view-mode";
 import GoalReplay from "../../botao/GoalReplay";
 import BotaoMatchStats from "../../botao/BotaoMatchStats";
 import { describeMatchTurningPoint } from "../../botao/result-story";
@@ -53,9 +54,63 @@ import CareerTeam from "./CareerTeam";
 import TransferMarketScreen from "./TransferMarketScreen";
 import PressConferenceDialog from "./PressConferenceDialog";
 import CycleShopDialog from "./CycleShopDialog";
+import type { YouthPlayPanelProps } from "./YouthPlayPanel";
+import type { SpecialTrainingPanelProps } from "./SpecialTrainingPanel";
 import { worldFinalOpponentForSeason } from "../../career/world-club-competitions";
 import { seasonResultStory } from "../../career/season-narrative";
 import FutboboIcon from "../FutboboIcon";
+
+/** Sem rede (ou um deploy novo trocou os arquivos): a base jogada não abre; o save guarda tudo para depois. */
+function YouthPlayUnavailable() {
+  return (
+    <section className="youth-screen youth-choice screen-enter">
+      <p className="youth-choice-lead">A base jogada não abriu. Confira a conexão e recarregue: o que você já jogou está salvo.</p>
+      <button type="button" className="primary-button youth-choice-reload" onClick={() => window.location.reload()}>Recarregar</button>
+    </section>
+  );
+}
+
+/** Mesmo motivo: o treino fica "em andamento" na loja e a QUADRA avisa. */
+function SpecialTrainingUnavailable({ onClose }: SpecialTrainingPanelProps) {
+  useEffect(() => {
+    onClose("O Treino especial não abriu. Recarregue a página para tentar de novo.");
+  }, [onClose]);
+  return null;
+}
+
+// A lista dos anos e o treino (e, a partir deles, o Scorebobo e o three.js) só baixam quando abrem.
+const YouthPlayPanel = dynamic(() => import("./YouthPlayPanel").catch(() => ({ default: YouthPlayUnavailable as ComponentType<YouthPlayPanelProps> })), {
+  ssr: false,
+  loading: () => <section className="youth-screen"><p className="simulating-label"><span /> Abrindo a base...</p></section>,
+});
+const SpecialTrainingPanel = dynamic(() => import("./SpecialTrainingPanel").catch(() => ({ default: SpecialTrainingUnavailable })), { ssr: false });
+
+/** Antes da base: Simular (a animação de sempre) ou Jogar (um minigame do Scorebobo por ano). */
+function YouthModeChoice({ game, onChoose }: { game: GameState; onChoose: (mode: "simulate" | "play") => void }) {
+  // Lido uma vez, só quando a escolha aparece: cada leitura custa um contexto de WebGL.
+  const [webgl] = useState(webglAvailable);
+  const club = clubById(game.academyClubId);
+  const lastAge = game.youthYears.at(-1)?.age ?? game.revealAge;
+  return (
+    <section className="youth-screen youth-choice screen-enter" aria-labelledby="youth-choice-title">
+      <div className="brand-mini"><BrandMark size="sm" /> FUTBOBO</div>
+      <div className="youth-club"><ClubBadge club={club} size="lg" /><span>Categorias de base</span><strong id="youth-choice-title">{club.shortName}</strong></div>
+      <p className="youth-choice-span">Dos 12 aos {lastAge}</p>
+      <p className="youth-choice-lead">Como você quer passar pela base?</p>
+      <div className="youth-choice-cards">
+        <button type="button" className="youth-choice-card" onClick={() => onChoose("simulate")}>
+          <small>EM SEGUNDOS</small><strong>Simular</strong><p>A formação passa em segundos, como sempre.</p><b aria-hidden="true">→</b>
+        </button>
+        <button type="button" className="youth-choice-card youth-choice-play" disabled={!webgl} onClick={() => onChoose("play")}>
+          <small>SCOREBOBO · 3D</small><strong>Jogar a base</strong>
+          <p>{game.youthYears.length} minigames do Scorebobo com o seu jogador. 3 chances por ano. Jogue bem e ganhe até +3 de potencial máximo.</p>
+          {!webgl && <em>Precisa de 3D (WebGL), e este aparelho não liberou.</em>}
+          <b aria-hidden="true">→</b>
+        </button>
+      </div>
+    </section>
+  );
+}
 
 type CareerGameProps = {
   initialHallEntry?: CareerHallEntry | null;
@@ -131,6 +186,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   const [pressConferenceOpen, setPressConferenceOpen] = useState(false);
   const [cycleShopDismissedSeason, setCycleShopDismissedSeason] = useState(0);
   const [cycleShopFeedback, setCycleShopFeedback] = useState("");
+  const [specialTrainingOpen, setSpecialTrainingOpen] = useState(false);
+  // "Jogar a base" tocado: o painel (sob demanda) grava a escolha ao abrir.
+  const [youthPlayRequested, setYouthPlayRequested] = useState(false);
   const [summaryClubId, setSummaryClubId] = useState("");
   const [shareBusy, setShareBusy] = useState(false);
   const saveImportRef = useRef<HTMLInputElement>(null);
@@ -351,8 +409,11 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     };
   }, [game.phase]);
 
+  // Só a base simulada anima: a escolha e a base jogada não têm relógio.
+  // No desafio a base é sempre simulada (um save de antes da escolha também).
+  const youthMode = game.youthPlay?.mode ?? (game.challengeId ? "simulate" : null);
   useEffect(() => {
-    if (game.phase !== "youth") return;
+    if (game.phase !== "youth" || youthMode !== "simulate") return;
     const timers = game.youthYears.map((_, index) =>
       window.setTimeout(() => setYouthStep(index + 1), 350 + index * 340),
     );
@@ -364,7 +425,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       timers.forEach(window.clearTimeout);
       window.clearTimeout(finish);
     };
-  }, [game.phase, game.youthYears]);
+  }, [game.phase, game.youthYears, youthMode]);
 
   useEffect(() => {
     if (!toast) return;
@@ -689,6 +750,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
 
   function restoreSavedGame(state: GameState, saveKey: string) {
     setGame(state);
+    setYouthPlayRequested(false);
     const pendingMatch = state.pendingBotaoMatches[0];
     if (!pendingMatch || state.phase !== "botao-final") return;
     try {
@@ -979,6 +1041,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   function selectPlayerStory(storyId: PlayerStoryId) {
     setYouthStep(0);
     setYouthFinished(false);
+    setYouthPlayRequested(false);
     setGame((current) => {
       const journey = createYouthJourney(current, current.formationId);
       const revealAge = storyId === "late-bloomer"
@@ -1019,9 +1082,24 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         storyFlags: storyId === "academy-reject"
           ? [`dispensado-por:${storyClubCandidate(originated, 1901, "reject").id}`]
           : [],
+        // No desafio a base é sempre simulada (sem a escolha); fora dele, a escolha aparece na fase "youth".
+        youthPlay: current.challengeId ? { mode: "simulate", years: [], current: 0, bonus: null } : null,
       };
     });
     vibrate();
+  }
+
+  // A escolha vale uma vez (youth-play.ts, chooseYouthMode). "Jogar" chega com o painel, sob demanda:
+  // o clique já baixa a lista dos anos, que grava a escolha ao abrir e pré-aquece a cena do Scorebobo.
+  function pickYouthMode(mode: "simulate" | "play") {
+    vibrate();
+    if (mode === "play") {
+      setYouthPlayRequested(true);
+      return;
+    }
+    setYouthStep(0);
+    setYouthFinished(false);
+    setGame((current) => current.youthPlay ? current : { ...current, youthPlay: { mode: "simulate", years: [], current: 0, bonus: null } });
   }
 
   function selectRandomPlayerStory() {
@@ -2023,6 +2101,11 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   }
 
   function buyCycleShopItem(itemId: CycleShopItemId, countryId?: string) {
+    // O Treino especial não se compra: abre (ou retoma) o treino por cima da loja.
+    if (itemId === "special-training") {
+      openSpecialTraining();
+      return;
+    }
     const purchase = purchaseCycleShopItem(game, itemId, countryId);
     if (purchase.state === game) return;
     setGame(purchase.forcedClose
@@ -2038,7 +2121,20 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     setGame((current) => ({ ...current, lastCycleShopSeason: current.season }));
     setCycleShopDismissedSeason(game.season);
     setCycleShopFeedback("");
+    setSpecialTrainingOpen(false);
     vibrate();
+  }
+
+  /** O painel grava a chave da QUADRA e o par de fases ao abrir, antes da primeira jogada (recarregar não troca nem refaz). */
+  function openSpecialTraining() {
+    setCycleShopFeedback("");
+    setSpecialTrainingOpen(true);
+    vibrate();
+  }
+
+  function closeSpecialTraining(feedback?: string) {
+    setSpecialTrainingOpen(false);
+    if (feedback) setCycleShopFeedback(feedback);
   }
 
   function requestLoan() {
@@ -2531,6 +2627,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       {toast && <div className="toast" role="status">{toast}</div>}
       {(pressConferenceOpen || presentationOpen) && game.pendingPressConference && <PressConferenceDialog conference={game.pendingPressConference} onAnswer={answerPressConference} />}
       {cycleShopOpen && <CycleShopDialog game={game} feedback={cycleShopFeedback} onBuy={buyCycleShopItem} onClose={closeCycleShop} />}
+      {cycleShopOpen && specialTrainingOpen && <SpecialTrainingPanel game={game} setGame={setGame} club={game.isFreeAgent || !game.currentClubId ? null : clubById(game.currentClubId)} performance={appSettings.botao3dPerformance === true} onClose={closeSpecialTraining} />}
       {androidInstallOpen && (
         <AndroidInstallDialog
           native={nativeAndroid}
@@ -3137,7 +3234,21 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         </section>
       )}
 
-      {game.phase === "youth" && (
+      {game.phase === "youth" && !youthMode && !youthPlayRequested && <YouthModeChoice game={game} onChoose={pickYouthMode} />}
+
+      {game.phase === "youth" && (youthMode === "play" || (!youthMode && youthPlayRequested)) && (
+        <YouthPlayPanel
+          game={game}
+          setGame={setGame}
+          club={clubById(game.academyClubId)}
+          badge={<ClubBadge club={clubById(game.academyClubId)} size="md" />}
+          brand={<div className="brand-mini"><BrandMark size="sm" /> FUTBOBO</div>}
+          performance={appSettings.botao3dPerformance === true}
+          onContinue={() => setGame((current) => ({ ...current, phase: "revelation" }))}
+        />
+      )}
+
+      {game.phase === "youth" && youthMode === "simulate" && (
         <section className="youth-screen screen-enter">
           <div className="brand-mini"><BrandMark size="sm" /> FUTBOBO</div>
           <div className="youth-club"><ClubBadge club={clubById(game.academyClubId)} size="lg" /><span>Formando em</span><strong>{clubById(game.academyClubId).shortName}</strong></div>

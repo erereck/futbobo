@@ -1611,7 +1611,8 @@ export class Botao3DView {
   }
 
   private updateStamina(entry: Entry, body: BotaoBody) {
-    if (!body.playerId) return;
+    // Sem anel no Bobonline (setup.noStamina): o fôlego não existe lá.
+    if (!body.playerId || this.setup.noStamina) return;
     const value = Math.round(Math.max(0, Math.min(100, body.stamina)));
     if (value === entry.staminaValue) return;
     entry.staminaValue = value;

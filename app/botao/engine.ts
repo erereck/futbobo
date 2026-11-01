@@ -999,12 +999,15 @@ function commitActiveShotDistance(state: BotaoMatchState) {
   if (!bodyId) return;
   const body = state.bodies.find((candidate) => candidate.id === bodyId);
   if (body?.kind === "disc") {
-    const cost = clamp(
-      state.activeShotDistance * STAMINA_DISTANCE_FACTOR,
-      0,
-      MAX_STAMINA_COST_PER_SHOT,
-    );
-    body.stamina = clamp(body.stamina - cost, 0, 100);
+    // Bobonline (setup.noStamina): o botão não cansa, o fôlego fica onde está.
+    if (!state.setup.noStamina) {
+      const cost = clamp(
+        state.activeShotDistance * STAMINA_DISTANCE_FACTOR,
+        0,
+        MAX_STAMINA_COST_PER_SHOT,
+      );
+      body.stamina = clamp(body.stamina - cost, 0, 100);
+    }
     if (body.playerId) {
       const player = state.managerPlayerStats[body.playerId];
       if (player) {

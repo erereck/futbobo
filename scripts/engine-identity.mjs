@@ -608,6 +608,8 @@ function newpathSetup(seed, variant) {
         return player;
       });
     setup.squads = { user: squad("user"), cpu: squad("cpu") };
+    // Igual ao buildDuelSetup: no Bobonline o fôlego não cai.
+    setup.noStamina = true;
   }
   return setup;
 }

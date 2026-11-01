@@ -1,0 +1,32 @@
+/* Minigame da carreira: a fase em tela cheia por cima de tudo da carreira
+   (toast 100, QUADRA 140, modal e aviso do Android 200, história 240). Os hosts põem
+   o minigame no body: dentro da carreira um ancestral com transform ou blur prenderia o fixed. */
+
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  /* Enquanto o adversário sai dos clubes, a carreira não aparece por trás. */
+  background: radial-gradient(ellipse at 50% 30%, #12202c, #04070b 70%);
+}
+
+/* Rótulo da carreira ("BASE · 13 ANOS") no lugar do número, no chip do objetivo. */
+.root [data-sb-career="kicker"] {
+  max-width: 96px;
+  padding: 4px 8px;
+  font-size: 10px;
+  line-height: 1.15;
+  letter-spacing: 0.06em;
+  text-align: center;
+  /* "TREINO ESPECIAL · 1 DE 2" quebra em linhas parecidas, sem um "2" sozinho embaixo. */
+  text-wrap: balance;
+}
+
+/* "Chance 1 de 3", discreto, logo abaixo do objetivo. */
+.root [data-sb-career="note"] {
+  padding: 5px 9px;
+  color: rgba(244, 247, 251, 0.78);
+  font: 800 10px/1 var(--display-font);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}

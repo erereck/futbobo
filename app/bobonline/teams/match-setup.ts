@@ -90,5 +90,7 @@ export function buildDuelSetup(args: {
       cpu: cpu.map((player) => player.appearance),
     },
     squads,
+    // Online ninguém cansa: X1, torneio, contra a CPU e CPU×CPU (o offline segue com fôlego).
+    noStamina: true,
   };
 }

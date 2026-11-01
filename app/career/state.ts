@@ -9,8 +9,9 @@ import { DEFAULT_PLAYER_APPEARANCE, normalizePlayerAppearance, randomPlayerAppea
 import { GOALKEEPER_EVENTS } from "../goalkeeper-events";
 import { CLUB_SPECIFIC_EVENTS } from "./club-specific-events";
 import { NEW_CAREER_EVENTS } from "../new-career-events";
-import type { AttributeKey, AwardPresentation, CareerHallEntry, CareerRival, CompetitionId, CustomCharacter, CustomClubDefinition, GameState, MonteCarloReport, PendingBotaoMatch, PlayerAttributes, PlayerStats, SeasonRecord, SpecialTraitId, StoredBotaoResult } from "./model";
+import type { AttributeKey, AwardPresentation, CareerHallEntry, CareerRival, CompetitionId, CustomCharacter, CustomClubDefinition, GameState, MonteCarloReport, PendingBotaoMatch, PlayerAttributes, PlayerStats, SeasonRecord, SpecialTraining, SpecialTraitId, StoredBotaoResult, YouthPlay, YouthPlayYear } from "./model";
 import { positionByKey } from "./academy";
+import { isScoreboboTrackLevel } from "./scorebobo-track";
 import { competitiveStrength } from "./performance";
 import { clamp, clubById, pick, seeded } from "./shared";
 import { emptyWorldPlayerUniverse, normalizeWorldPlayerUniverse } from "./world-players";
@@ -385,6 +386,7 @@ export function initialState(seedOverride?: number): GameState {
     revealAge: 18,
     youthScore: 0,
     youthYears: [],
+    youthPlay: null,
     proOffers: [],
     currentClubId: "",
     currentLeagueId: "",
@@ -483,6 +485,7 @@ export function initialState(seedOverride?: number): GameState {
     forcedFreeAgentUntilSeason: 0,
     corruptionGuaranteedSeason: 0,
     lastCycleShopSeason: 0,
+    specialTraining: null,
     agentCountryFocus: "",
     nextContractYearsAdjustment: 0,
     betrayedClubIds: [],
@@ -510,6 +513,57 @@ export function initialState(seedOverride?: number): GameState {
     matchesMissedInjuries: 0,
     challengeId: "",
     challengeDate: "",
+  };
+}
+
+/** Inteiro preso à faixa; lixo vira o mínimo. */
+function boundedInteger(value: unknown, min: number, max: number) {
+  return typeof value === "number" && Number.isFinite(value) ? clamp(Math.round(value), min, max) : min;
+}
+
+/**
+ * Base jogada no save: formato errado vira null (a escolha volta a aparecer) e os
+ * números ficam presos às faixas. Com bônus gravado, a base está fechada e não reaplica.
+ */
+function normalizeYouthPlay(value: unknown): YouthPlay | null {
+  if (!value || typeof value !== "object") return null;
+  const play = value as Partial<Record<keyof YouthPlay, unknown>>;
+  if (play.mode === "simulate") return { mode: "simulate", years: [], current: 0, bonus: null };
+  if (play.mode !== "play" || !Array.isArray(play.years)) return null;
+  const years: YouthPlayYear[] = [];
+  for (const item of play.years as unknown[]) {
+    if (!item || typeof item !== "object") return null;
+    const year = item as Partial<Record<keyof YouthPlayYear, unknown>>;
+    if (!isScoreboboTrackLevel(year.levelId)) return null;
+    const skipped = year.skipped === true;
+    years.push({
+      levelId: year.levelId,
+      chancesUsed: boundedInteger(year.chancesUsed, 0, 3),
+      bestStars: skipped ? 0 : boundedInteger(year.bestStars, 0, 3),
+      ...(skipped ? { skipped } : {}),
+    });
+  }
+  const bonus = play.bonus === null || play.bonus === undefined ? null : boundedInteger(play.bonus, 0, 3);
+  if (bonus !== null || !years.length) return { mode: "play", years, current: years.length, bonus: bonus ?? 0 };
+  return { mode: "play", years, current: boundedInteger(play.current, 0, years.length - 1), bonus: null };
+}
+
+/** Treino especial no save: formato errado vira null; chances e estrelas de 0 a 3. */
+function normalizeSpecialTraining(value: unknown): SpecialTraining | null {
+  if (!value || typeof value !== "object") return null;
+  const training = value as Partial<Record<keyof SpecialTraining, unknown>>;
+  const levelIds = training.levelIds;
+  if (typeof training.season !== "number" || !Number.isFinite(training.season)) return null;
+  if (!Array.isArray(levelIds) || levelIds.length !== 2 || !isScoreboboTrackLevel(levelIds[0]) || !isScoreboboTrackLevel(levelIds[1]) || levelIds[0] === levelIds[1]) return null;
+  const pair = (list: unknown): [number, number] => Array.isArray(list) ? [boundedInteger(list[0], 0, 3), boundedInteger(list[1], 0, 3)] : [0, 0];
+  const rewarded = typeof training.rewarded === "boolean" ? training.rewarded : null;
+  return {
+    season: Math.round(training.season),
+    levelIds: [levelIds[0], levelIds[1]],
+    chancesUsed: pair(training.chancesUsed),
+    bestStars: pair(training.bestStars),
+    current: rewarded === null ? boundedInteger(training.current, 0, 1) : 2,
+    rewarded,
   };
 }
 
@@ -620,6 +674,8 @@ export function normalizeSave(value: unknown): GameState {
     forcedFreeAgentUntilSeason: saved.forcedFreeAgentUntilSeason ?? 0,
     corruptionGuaranteedSeason: saved.corruptionGuaranteedSeason ?? 0,
     lastCycleShopSeason: saved.lastCycleShopSeason ?? 0,
+    youthPlay: normalizeYouthPlay(saved.youthPlay),
+    specialTraining: normalizeSpecialTraining(saved.specialTraining),
     agentCountryFocus: typeof saved.agentCountryFocus === "string" ? saved.agentCountryFocus : "",
     nextContractYearsAdjustment: saved.nextContractYearsAdjustment === -1 || saved.nextContractYearsAdjustment === 1 ? saved.nextContractYearsAdjustment : 0,
     betrayedClubIds: Array.isArray(saved.betrayedClubIds) ? saved.betrayedClubIds.filter((id): id is string => typeof id === "string") : [],

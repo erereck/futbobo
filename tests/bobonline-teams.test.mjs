@@ -19,6 +19,8 @@ const crest = loadTs("app/bobonline/teams/crest.ts");
 const { kitDistance } = loadTs("app/botao/kits.ts");
 const { hashSeed, createRng } = loadTs("app/botao/rng.ts");
 const { usesSquads, createMatch } = loadTs("app/botao/engine.ts");
+const engine = loadTs("app/botao/engine.ts");
+const codec = loadTs("app/botao/match-codec.ts");
 const { CELEBRATION_OPTIONS, KIT_PATTERN_NAMES, normalizePlayerAppearance } = loadTs("app/player-appearance.ts");
 
 const TEAM_KEYS = ["abbr", "createdAt", "crest", "id", "kitPattern", "name", "players", "primary", "secondary", "shortName", "updatedAt", "version"];
@@ -625,6 +627,7 @@ test("buildDuelSetup: ids com lado, visual por vaga, camisa reserva, 72/72 e det
   assert.deepEqual(setup.visuals.player, setup.squads.user[0].appearance);
   assert.equal(setup.visuals.enabled, true);
   assert.equal(usesSquads(setup), true);
+  assert.equal(setup.noStamina, true, "online ninguém cansa");
 
   // Cores iguais: o visitante cede (o mandante fica intacto).
   assert.equal(setup.userTeam.primary, home.primary);
@@ -675,6 +678,132 @@ test("buildDuelSetup: ids com lado, visual por vaga, camisa reserva, 72/72 e det
   const state = createMatch(setup);
   assert.equal(state.bodies.filter((body) => body.side === "user").length, 5);
   assert.equal(state.bodies.filter((body) => body.side === "cpu").length, 5);
+});
+
+// ---------------------------------------------------------------------------
+// Bobonline sem fôlego (setup.noStamina)
+// ---------------------------------------------------------------------------
+
+const duelArgs = (seed) => ({
+  matchId: `F0LEGO-r1m${seed}-0`,
+  seed: hashSeed(seed, `F0LEGO-r1m${seed}-0`),
+  home: team(300 + seed, "bob-casa234567"),
+  away: team(400 + seed, "bob-fora234567"),
+  rules: "marathon",
+  stageName: "X1",
+});
+
+/** O mesmo setup sem a chave: o fôlego de sempre (como o offline). */
+function withoutFlag(setup) {
+  const copy = plain(setup);
+  delete copy.noStamina;
+  return copy;
+}
+
+const discsIn = (state) => state.bodies.filter((body) => body.kind === "disc");
+
+/**
+ * Joga até `touches` toques, sempre até o descanso. As decisões saem de uma rng própria olhando o primeiro
+ * aparelho e a MESMA ação vale para todos (o jeito do Bobonline). `onRest` roda depois de cada passo.
+ */
+function playTouches(devices, seed, touches, onRest = () => {}) {
+  const drv = createRng(hashSeed(seed, "folego"));
+  const [lead] = devices;
+  let played = 0;
+  for (let guard = 0; guard < touches * 4 && played < touches && lead.phase !== "finished"; guard += 1) {
+    if (lead.phase === "goal") devices.forEach((state) => engine.resumeAfterGoal(state));
+    else if (lead.phase === "interval") devices.forEach((state) => engine.startNextPeriod(state));
+    else if (lead.phase === "aim" || lead.phase === "kickoff") {
+      const discs = engine.discsOf(lead, lead.turn);
+      const disc = discs[drv.int(0, discs.length - 1)];
+      const ball = engine.ballOf(lead);
+      const angle = Math.atan2(ball.y - disc.y, ball.x - disc.x) + drv.range(-0.4, 0.4);
+      const pull = drv.range(40, 140);
+      const aim = engine.aimFromDrag(disc, disc.x - Math.cos(angle) * pull, disc.y - Math.sin(angle) * pull);
+      const shot = { bodyId: disc.id, vx: aim.vx, vy: aim.vy };
+      for (const state of devices) {
+        if (!engine.beginShot(state, shot)) engine.skipTurn(state);
+        for (let steps = 0; state.phase === "resolving" && steps < 5000; steps += 1) engine.stepMatch(state, 1 / 120);
+      }
+      played += 1;
+    } else break;
+    onRest(played);
+  }
+  return played;
+}
+
+test("Bobonline sem fôlego: em 30 toques todo botão segue com 100, o hash bate nos dois aparelhos e sem a flag o fôlego cai", () => {
+  const args = duelArgs(1);
+  const setup = setupModule.buildDuelSetup(args);
+  assert.equal(setup.noStamina, true);
+  // Cada aparelho monta o próprio setup; o seguidor também pode receber o da autoridade pela rede (JSON, m:setup).
+  const host = createMatch(setupModule.buildDuelSetup(args));
+  let guest = createMatch(plain(setup));
+  assert.equal(codec.hashMatch(host), codec.hashMatch(guest));
+  let rests = 0;
+  const check = () => {
+    rests += 1;
+    assert.equal(codec.hashMatch(host), codec.hashMatch(guest), `hash no descanso ${rests}`);
+    for (const state of [host, guest]) {
+      for (const disc of discsIn(state)) assert.equal(disc.stamina, 100, `${disc.id} no descanso ${rests}`);
+    }
+  };
+  assert.equal(playTouches([host, guest], 17, 30, check), 30);
+  // Renascido do serializado (checkpoint, m:sync): continua sem fôlego.
+  guest = codec.restoreMatch(guest.setup, plain(codec.serializeMatch(guest)));
+  assert.equal(guest.setup.noStamina, true);
+  assert.equal(playTouches([host, guest], 18, 12, check), 12);
+  assert.ok(host.turns >= 42 && rests >= 42);
+
+  // Sem a flag (o mesmo duelo, como era antes): o fôlego cai.
+  const tired = createMatch(withoutFlag(setup));
+  assert.equal(playTouches([tired], 17, 30), 30);
+  assert.ok(discsIn(tired).some((disc) => disc.stamina < 100), "sem a flag o fôlego precisa cair");
+
+  // O primeiro toque é idêntico nos dois (fôlego cheio): a flag só corta o desconto, o resto é igual.
+  const fresh = createMatch(plain(setup));
+  const before = createMatch(withoutFlag(setup));
+  playTouches([fresh], 23, 1);
+  playTouches([before], 23, 1);
+  assert.deepEqual(fresh.bodies.map((body) => [body.id, body.x, body.y]), before.bodies.map((body) => [body.id, body.x, body.y]));
+  assert.equal(fresh.rng.cursor(), before.rng.cursor());
+  assert.ok(discsIn(fresh).every((disc) => disc.stamina === 100));
+  assert.equal(discsIn(before).filter((disc) => disc.stamina < 100).length, 1, "só o botão tacado cansa");
+});
+
+/** Contexto 2D falso: aceita qualquer chamada e anota os arcos. */
+function recordingContext() {
+  const fields = { arcs: [] };
+  const gradient = { addColorStop() {} };
+  const methods = {
+    arc: (x, y, radius, start, end) => void fields.arcs.push({ radius, start, end }),
+    measureText: (text) => ({ width: String(text).length * 6, actualBoundingBoxAscent: 6, actualBoundingBoxDescent: 2 }),
+    createLinearGradient: () => gradient,
+    createRadialGradient: () => gradient,
+    createConicGradient: () => gradient,
+    createPattern: () => null,
+  };
+  return new Proxy(fields, {
+    get: (target, key) => (key in methods ? methods[key] : key in target ? target[key] : () => undefined),
+    set: (target, key, value) => {
+      target[key] = value;
+      return true;
+    },
+  });
+}
+
+test("Bobonline sem fôlego: o 2D não desenha o anel de fôlego; sem a flag desenha um por botão", () => {
+  const render = loadTs("app/botao/render.ts");
+  const view = { selectedId: null, aim: null, highlight: true, penaltyMode: false, trail: [], goalFlash: 0, goalFlashSide: null, hideUserMarker: true };
+  const rings = (state) => {
+    const ctx = recordingContext();
+    render.drawMatch(ctx, state, view, 0);
+    const radii = new Set(discsIn(state).map((disc) => disc.radius + 2.7));
+    return ctx.arcs.filter((arc) => radii.has(arc.radius) && arc.start === -Math.PI / 2).length;
+  };
+  const setup = setupModule.buildDuelSetup(duelArgs(2));
+  assert.equal(rings(createMatch(setup)), 0);
+  assert.equal(rings(createMatch(withoutFlag(setup))), 10);
 });
 
 test("escudo e miniaturas: SVG saneado, 4 formas e 12 estampas diferentes", () => {

@@ -314,6 +314,15 @@ export function mountLaunch(dev, launch, seed = 0) {
     cpu = { rng: brain, skill: launch.cpuBrain.skill };
   }
   dev.player ??= { name: dev.name, seed: mix(seed, dev.name), plans: new Map(), ordered: new Set(), script: null, slowChance: 0 };
+  // As jogadas são por `n` DENTRO de uma partida (recarregar a página mantém). Partida nova (revanche, outra rodada):
+  // caderno novo, senão a jogada `n` já feita na partida anterior trava o robô na vez dele (na saída, para sempre).
+  if (dev.player.matchId !== launch.setup.matchId) {
+    if (dev.player.matchId !== undefined) {
+      dev.player.plans = new Map();
+      dev.player.ordered = new Set();
+    }
+    dev.player.matchId = launch.setup.matchId;
+  }
   dev.state = state;
   dev.controls = launch.controls;
   dev.mountedKey = launch.key;

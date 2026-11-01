@@ -2,12 +2,25 @@
 
 import { useMemo, useState } from "react";
 import { CLUBS, COUNTRIES } from "../../game-data";
+import { webglAvailable } from "../../botao/view-mode";
 import { CYCLE_SHOP_ITEMS, cycleShopPurchaseKey } from "../../career/cycle-shop";
 import type { CycleShopItemId } from "../../career/cycle-shop";
 import type { GameState } from "../../career/model";
 import { formatMoney } from "../../career/performance";
+import { specialTrainingStatus, type SpecialTrainingStatus } from "../../career/special-training-status";
 import { NationBadge } from "./CareerPrimitives";
 import styles from "./CareerOverlays.module.css";
+
+/** Botão do Treino especial: abre (grátis) ou diz por que não. */
+const TRAINING_LABELS: Record<SpecialTrainingStatus, string> = {
+  available: "Treinar grátis",
+  "in-progress": "Continuar treino",
+  challenge: "Fora do desafio",
+  "no-webgl": "Precisa de 3D",
+  maxed: "No limite",
+  rewarded: "Treinado ✓",
+  "no-reward": "Sem bônus",
+};
 
 type Props = {
   game: GameState;
@@ -26,6 +39,9 @@ export default function CycleShopDialog({ game, feedback, onBuy, onClose }: Prop
       .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }, [countrySearch]);
   const focusedCountry = COUNTRIES.find((country) => country.id === game.agentCountryFocus);
+  // O treino roda no Scorebobo (3D). Lido uma vez por abertura da loja: cada leitura custa um contexto de WebGL.
+  const [webgl] = useState(webglAvailable);
+  const trainingStatus = specialTrainingStatus(game, webgl);
   return (
     <div className={styles.backdrop} role="presentation">
       <section aria-labelledby="cycle-shop-title" aria-modal="true" className={styles.shopDialog} role="dialog">
@@ -44,7 +60,10 @@ export default function CycleShopDialog({ game, feedback, onBuy, onClose }: Prop
               const atOverallLimit = item.id === "overall" && game.overall >= 99;
               const pendingContract = (item.id === "contract-shorter" || item.id === "contract-longer") && game.nextContractYearsAdjustment !== 0;
               const releaseUnavailable = item.id === "release" && (game.isFreeAgent || game.contractYears <= 0);
-              const disabled = !item.available || bought || atOverallLimit || pendingContract || releaseUnavailable || game.spendableMoney < item.price;
+              const training = item.id === "special-training";
+              const disabled = training
+                ? trainingStatus !== "available" && trainingStatus !== "in-progress"
+                : !item.available || bought || atOverallLimit || pendingContract || releaseUnavailable || game.spendableMoney < item.price;
               const openCountryPicker = item.id === "agent-country";
               return (
                 <article className={styles.shopItem} data-tone={item.tone} key={item.id}>
@@ -54,7 +73,7 @@ export default function CycleShopDialog({ game, feedback, onBuy, onClose }: Prop
                     <p className={styles.itemDescription}>{item.description}{openCountryPicker && focusedCountry ? ` Foco atual: ${focusedCountry.name}.` : ""}</p>
                   </div>
                   <button className={styles.buy} disabled={disabled} onClick={() => openCountryPicker ? setCountryPickerOpen(true) : onBuy(item.id)} type="button">
-                    {!item.available ? "Em breve" : bought ? "Adquirido" : atOverallLimit ? "No limite" : pendingContract ? "Ajuste pendente" : releaseUnavailable ? "Sem contrato" : formatMoney(item.price)}
+                    {training ? TRAINING_LABELS[trainingStatus] : !item.available ? "Em breve" : bought ? "Adquirido" : atOverallLimit ? "No limite" : pendingContract ? "Ajuste pendente" : releaseUnavailable ? "Sem contrato" : formatMoney(item.price)}
                   </button>
                 </article>
               );

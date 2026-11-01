@@ -15,6 +15,9 @@ O `app/page.tsx` é apenas a entrada da rota. A implementação da carreira fica
 - `events.ts`: escolha e aplicação de eventos e histórias.
 - `press-conferences.ts`: conteúdo determinístico de zona mista, apresentação e reencontro com ex-clube. Cada pergunta sorteia três respostas de pools maiores.
 - `cycle-shop.ts`: catálogo, frequência, preço e consequências da loja quadrienal. A interface apenas apresenta e despacha compras.
+- `youth-play.ts`: "Jogar a base". Escolha Simular × Jogar, uma fase do Scorebobo por ano de base (em ordem de dificuldade, a revelação é sempre a "Final da Copa"), 3 chances por ano, e o bônus de potencial máximo (0 a +3), aplicado uma única vez. `SCOREBOBO_TRACK` espelha as fases do Scorebobo sem importá-lo.
+- `special-training.ts`: Treino especial da QUADRA, grátis. Duas fases sorteadas pela seed e pela temporada, 3 jogadas em cada; 3★ nas duas dá +1 OVR, no padrão do "Salto de nível". Uma vez por ciclo, fora do desafio e só com WebGL.
+- `scorebobo-track.ts` e `special-training-status.ts`: as partes que o save e a loja usam (ids e nomes da trilha; a situação do treino). Ficam fora de `youth-play.ts` e `special-training.ts`, que seguem reexportando, para que as transições só baixem com os painéis sob demanda.
 - `simulation.ts`: resolução da temporada e simulação Monte Carlo.
 
 A interface está em `app/components/career/`:

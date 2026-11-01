@@ -276,7 +276,7 @@ function shortNameOf(name: string) {
   return `${parts[0][0]}. ${last}`;
 }
 
-type ClubLike = { id: string; name: string; shortName: string; abbr: string; primary: string; secondary: string; reputation: number };
+export type ClubLike = { id: string; name: string; shortName: string; abbr: string; primary: string; secondary: string; reputation: number };
 
 function teamOf(club: ClubLike): TeamInfo {
   return { id: club.id, name: club.shortName || club.name, abbr: club.abbr || club.shortName.slice(0, 3).toUpperCase(), primary: club.primary, secondary: club.secondary };
@@ -388,5 +388,34 @@ export function levelWithHero(level: ScoreLevel, profile: ScoreboboProfile): Sco
       number: profile.fromSave ? profile.number : level.hero.number,
       appearance: { ...(level.hero.appearance ?? {}), ...profile.appearance },
     },
+  };
+}
+
+// ------------------------------------------------------------- carreira
+
+/** Time da casa a partir de um clube da carreira (o mesmo crachá do /scorebobo); sem clube, o clássico. */
+export function teamInfoFromClub(club: ClubLike | null | undefined): TeamInfo {
+  return club ? teamOf(club) : CLASSIC_HOME;
+}
+
+/**
+ * O jogador da carreira em memória, sem ler o save (a carreira do desafio mora
+ * em outra chave): nome curto, número e aparência entram no herói como os do
+ * save, e o clube vira o time da casa.
+ */
+export function profileFromCareer({ name, number, appearance, club }: {
+  name: string;
+  number: number;
+  appearance: PlayerAppearance | null | undefined;
+  club?: ClubLike | null;
+}): ScoreboboProfile {
+  const trimmed = name.trim();
+  return {
+    name: trimmed || "Você",
+    shortName: trimmed ? shortNameOf(trimmed) : "Você",
+    number: Math.max(1, Math.min(99, Math.round(Number(number) || 10))),
+    appearance: normalizePlayerAppearance(appearance),
+    fromSave: true,
+    club: teamInfoFromClub(club),
   };
 }

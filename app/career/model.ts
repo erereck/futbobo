@@ -388,6 +388,41 @@ export type YouthYear = {
   overall?: number;
 };
 
+/** Um ano da base jogado no Scorebobo: a fase sorteada para a idade, as chances gastas e a melhor nota. */
+export type YouthPlayYear = {
+  /** id de uma fase do Scorebobo (`SCOREBOBO_TRACK` em youth-play.ts). */
+  levelId: string;
+  /** Jogadas inteiras já começadas neste ano (0..3). */
+  chancesUsed: number;
+  /** Melhor nota entre as jogadas (0..3). */
+  bestStars: number;
+  /** O ano ficou para trás em "Simular o resto": conta 0★. */
+  skipped?: boolean;
+};
+
+/** Como a base foi vivida: simulada (como sempre) ou jogada ano a ano no Scorebobo. */
+export type YouthPlay = {
+  mode: "simulate" | "play";
+  /** Modo play: um por `youthYears`, na mesma ordem. Modo simulate: []. */
+  years: YouthPlayYear[];
+  /** Ano em jogo; `=== years.length` quando acabou. */
+  current: number;
+  /** Potencial máximo somado no fim (0..3); null = ainda não aplicado. */
+  bonus: number | null;
+};
+
+/** Treino especial da QUADRA: duas fases do Scorebobo sorteadas, 3 jogadas em cada, vale a melhor. */
+export type SpecialTraining = {
+  season: number;
+  levelIds: [string, string];
+  chancesUsed: [number, number];
+  bestStars: [number, number];
+  /** Fase em jogo: 0, 1; 2 = acabou. */
+  current: number;
+  /** null = em andamento; true = ganhou +1 OVR; false = não ganhou. */
+  rewarded: boolean | null;
+};
+
 export type SeasonRecord = PlayerStats & {
   age: number;
   season: number;
@@ -456,6 +491,8 @@ export type GameState = {
   revealAge: number;
   youthScore: number;
   youthYears: YouthYear[];
+  /** Escolha Simular × Jogar a base e o andamento dos minigames; null = ainda não escolheu (ou save antigo). */
+  youthPlay: YouthPlay | null;
   proOffers: string[];
   currentClubId: string;
   currentLeagueId: string;
@@ -538,6 +575,8 @@ export type GameState = {
   forcedFreeAgentUntilSeason: number;
   corruptionGuaranteedSeason: number;
   lastCycleShopSeason: number;
+  /** Último Treino especial da QUADRA (em andamento ou encerrado); null = nunca treinou. */
+  specialTraining: SpecialTraining | null;
   agentCountryFocus: string;
   nextContractYearsAdjustment: -1 | 0 | 1;
   betrayedClubIds: string[];

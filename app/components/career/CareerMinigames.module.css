@@ -1,0 +1,436 @@
+/* Minigames do Scorebobo dentro da carreira: a base jogada (fase "youth" no modo
+   Jogar) e o Treino especial da QUADRA. Chega junto com os painéis, sob demanda;
+   a escolha Simular × Jogar mora no globals.css (.youth-choice-*), no bundle da carreira. */
+
+/* ------------------------------------------------------------ base jogada */
+
+.youthPage {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  gap: 14px;
+  padding: calc(env(safe-area-inset-top) + 22px) 16px calc(env(safe-area-inset-bottom) + 24px);
+  background: radial-gradient(circle at 50% 14%, rgba(50, 130, 84, 0.24), transparent 46%), var(--bg);
+}
+
+.youthHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 13px;
+  margin-top: 6px;
+}
+
+.youthHeader small {
+  color: var(--gold);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.17em;
+}
+
+.youthHeader strong {
+  display: block;
+  margin-top: 5px;
+  font: 900 21px/1.02 var(--display);
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+/* O título do resumo recebe o foco quando a base fecha (só o teclado vê o anel). */
+.youthHeader strong:focus { outline: none; }
+.youthHeader strong:focus-visible { border-radius: 4px; outline: 2px solid var(--gold); outline-offset: 4px; }
+
+.youthHeader p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.tally {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 13px;
+  border: 1px solid rgba(255, 199, 44, 0.2);
+  border-radius: 13px;
+  background: rgba(255, 199, 44, 0.05);
+}
+
+.tally span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.tally strong {
+  color: var(--gold);
+  font: 900 22px/1 var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+.tally small {
+  color: var(--muted);
+  font: 800 11px var(--sans);
+}
+
+/* Anos da base e fases do treino: o mesmo cartão. */
+.years,
+.stages {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.year {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: rgba(16, 39, 29, 0.72);
+}
+
+.year[data-state="next"] { opacity: 0.55; }
+.year[data-state="skipped"] { opacity: 0.7; }
+
+.year[data-state="current"] {
+  border-color: rgba(255, 199, 44, 0.5);
+  background: linear-gradient(160deg, rgba(255, 199, 44, 0.1), rgba(16, 39, 29, 0.8) 60%);
+  box-shadow: 0 0 0 3px rgba(255, 199, 44, 0.06);
+}
+
+.age {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-content: center;
+  justify-items: center;
+  border-radius: 12px;
+  background: rgba(255, 199, 44, 0.1);
+  color: var(--gold);
+  font: 900 16px/1 var(--display);
+}
+
+.age small {
+  margin-top: 2px;
+  color: rgba(255, 199, 44, 0.7);
+  font: 900 6px/1 var(--sans);
+  letter-spacing: 0.12em;
+}
+
+.yearCopy { min-width: 0; }
+
+.yearCopy strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.yearCopy small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.yearCopy p {
+  margin: 4px 0 0;
+  color: rgba(159, 179, 166, 0.82);
+  font-size: 10px;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.stars {
+  display: inline-flex;
+  gap: 1px;
+  font-size: 15px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.stars i { font-style: normal; }
+.starOn { color: var(--gold); text-shadow: 0 0 10px rgba(255, 199, 44, 0.35); }
+.starOff { color: rgba(255, 255, 255, 0.16); }
+
+.lock {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.yearActions {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.play,
+.ghost,
+.danger {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 13px;
+  font: 900 13px/1.15 var(--sans);
+  text-align: center;
+  cursor: pointer;
+  transition: filter 160ms, border-color 160ms, color 160ms;
+}
+
+.play {
+  border: 0;
+  background: var(--gold);
+  color: #102116;
+  box-shadow: 0 8px 22px rgba(255, 199, 44, 0.16);
+}
+
+.play:hover { filter: brightness(1.05); }
+
+.ghost {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+}
+
+.ghost:hover { border-color: rgba(255, 199, 44, 0.5); color: var(--gold); }
+
+.danger {
+  border: 1px solid rgba(255, 90, 78, 0.45);
+  background: rgba(255, 90, 78, 0.1);
+  color: #ffb0a9;
+}
+
+.play:focus-visible,
+.ghost:focus-visible,
+.danger:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.footer {
+  display: grid;
+  gap: 9px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.confirm {
+  display: grid;
+  gap: 8px;
+  padding: 13px;
+  border: 1px solid rgba(255, 90, 78, 0.3);
+  border-radius: 15px;
+  background: rgba(255, 90, 78, 0.06);
+}
+
+.confirm strong { font-size: 13px; }
+
+.confirm p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.confirm > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+/* Resumo: o bônus é a notícia; o número do potencial continua oculto. */
+.bonus {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 20px 16px 16px;
+  border: 1px solid rgba(255, 199, 44, 0.32);
+  border-radius: 20px;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 199, 44, 0.16), transparent 70%), rgba(16, 39, 29, 0.6);
+  text-align: center;
+}
+
+.bonus strong {
+  color: var(--gold);
+  font: 900 76px/0.9 var(--display);
+  letter-spacing: -0.06em;
+}
+
+.bonus[data-bonus="0"] strong { color: var(--muted); }
+
+.bonus span {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.bonus p {
+  max-width: 34ch;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+@media (min-width: 541px) {
+  .youthPage { min-height: calc(100dvh - 38px); padding-inline: 22px; }
+}
+
+@media (min-width: 900px) {
+  .youthPage { width: min(720px, 100%); margin-inline: auto; }
+  .yearActions { grid-auto-columns: max-content; justify-content: start; }
+  .yearActions .play, .yearActions .ghost { min-width: 160px; }
+  .footer { grid-template-columns: minmax(0, 360px); justify-content: center; }
+}
+
+/* ------------------------------------------------------- treino especial */
+
+/* Acima do fundo da QUADRA (140); o minigame (300) abre por cima de tudo. */
+.trainingBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 160;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 24px;
+  background: rgba(0, 8, 6, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.trainingDialog {
+  display: grid;
+  gap: 14px;
+  width: min(600px, 100%);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid rgba(246, 199, 36, 0.32);
+  border-radius: 26px;
+  color: #f2f4ef;
+  background: radial-gradient(circle at 90% 0%, rgba(246, 199, 36, 0.14), transparent 40%), #071812;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+}
+
+/* O foco entra no diálogo ao abrir (só para o teclado seguir daqui); o anel fica nos botões. */
+.trainingDialog:focus { outline: none; }
+
+.trainingHeader h2 {
+  margin: 2px 0 8px;
+  font: 800 clamp(38px, 7vw, 56px)/0.86 var(--font-barlow-condensed), sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.trainingHeader > p:last-child {
+  max-width: 52ch;
+  margin: 0;
+  color: #9db0a7;
+  font: 500 13px/1.45 var(--font-manrope), sans-serif;
+  text-wrap: pretty;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #f6c724;
+  font: 800 10px/1.1 var(--font-manrope), sans-serif;
+  letter-spacing: 0.16em;
+}
+
+.trainingNote {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 2px solid #43bdf3;
+  color: #c6d1cc;
+  background: rgba(51, 174, 235, 0.06);
+  font: 600 12px/1.45 var(--font-manrope), sans-serif;
+}
+
+.verdict {
+  display: grid;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid rgba(151, 185, 169, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
+}
+
+.verdict[data-won="true"] {
+  border-color: rgba(99, 227, 107, 0.45);
+  background: radial-gradient(circle at 50% 0%, rgba(99, 227, 107, 0.16), transparent 70%), rgba(99, 227, 107, 0.04);
+}
+
+.verdict strong {
+  font: 800 30px/1 var(--font-barlow-condensed), sans-serif;
+}
+
+.verdict[data-won="true"] strong { color: var(--green); }
+
+.verdict span {
+  color: #9db0a7;
+  font: 600 12px/1.45 var(--font-manrope), sans-serif;
+}
+
+.trainingFooter {
+  display: grid;
+  justify-content: end;
+}
+
+@media (max-width: 640px) {
+  .trainingBackdrop { place-items: end center; padding: 8px; }
+  .trainingDialog { max-height: calc(100dvh - 16px); padding: 20px 16px 16px; border-radius: 24px; }
+  .trainingFooter { justify-content: stretch; }
+}
+
+/* --------------------------------------------- carregando / sem minigame */
+
+/* O mesmo fundo do minigame (CareerChallenge.module.css), no mesmo andar. */
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px;
+  background: radial-gradient(ellipse at 50% 30%, #12202c, #04070b 70%);
+  color: rgba(244, 247, 251, 0.78);
+  text-align: center;
+}
+
+.veil p {
+  max-width: 30ch;
+  margin: 0;
+  font: 800 12px/1.4 var(--sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Só o "carregando" pulsa; o aviso de erro (com botão) fica parado. */
+@media (prefers-reduced-motion: no-preference) {
+  .veil p:only-child { animation: veil-pulse 1.4s ease-in-out infinite; }
+}
+
+@keyframes veil-pulse {
+  50% { opacity: 0.55; }
+}

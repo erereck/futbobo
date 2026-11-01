@@ -20,7 +20,7 @@ import type {
   BotaoSide,
 } from "./types";
 
-export const BOTAO_ENGINE_REV = 1;   // sobe quando a física/regra muda (vai no hello e no net.json "current")
+export const BOTAO_ENGINE_REV = 2;   // sobe quando a física/regra muda (vai no hello e no net.json "current"). 2: Bobonline sem fôlego (setup.noStamina)
 
 /**
  * Estado sem `rng` e sem `setup`, seguro para JSON. Os quatro postes vão sem

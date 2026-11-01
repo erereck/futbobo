@@ -27,7 +27,8 @@ export const CYCLE_SHOP_ITEMS: CycleShopItem[] = [
   { id: "release", name: "Rescindir contrato", eyebrow: "LIBERDADE", description: "Encerre o vínculo com seu clube e entre no mercado como agente livre.", price: 3_000_000, tone: "highlight", available: true },
   { id: "contract-shorter", name: "Próximo contrato mais curto", eyebrow: "CONTRATO", description: "Reduz em 1 ano o próximo contrato assinado, com mínimo de 1 ano. Não altera o atual.", price: 1_000_000, tone: "standard", available: true },
   { id: "contract-longer", name: "Próximo contrato mais longo", eyebrow: "CONTRATO", description: "Acrescenta 1 ano ao próximo contrato assinado. Não altera o atual.", price: 1_000_000, tone: "standard", available: true },
-  { id: "special-training", name: "Treino especial", eyebrow: "EM BREVE", description: "Uma nova forma de transformar seu jogador.", price: 0, tone: "locked", available: false },
+  // Grátis e jogado no Scorebobo: o fluxo é beginSpecialTraining (special-training.ts), não a compra.
+  { id: "special-training", name: "Treino especial", eyebrow: "SCOREBOBO", description: "2 minigames sorteados. 3★ nos dois = +1 OVR de graça.", price: 0, tone: "highlight", available: true },
 ];
 
 export type CycleShopPurchase = {
@@ -54,7 +55,8 @@ export function purchaseCycleShopItem(state: GameState, itemId: CycleShopItemId,
   const validCountryFocus = itemId !== "agent-country" || Boolean(countryId && COUNTRIES.some((country) => country.id === countryId));
   const contractAdjustment = itemId === "contract-shorter" || itemId === "contract-longer";
   const releaseUnavailable = itemId === "release" && (state.isFreeAgent || state.contractYears <= 0);
-  if (!item || !item.available || !validCountryFocus || releaseUnavailable || (contractAdjustment && state.nextContractYearsAdjustment !== 0) || (itemId === "overall" && state.overall >= 99) || state.spendableMoney < item.price || state.economyPurchases.includes(purchaseKey)) {
+  // O Treino especial não se compra: o fluxo é beginSpecialTraining (special-training.ts).
+  if (!item || !item.available || itemId === "special-training" || !validCountryFocus || releaseUnavailable || (contractAdjustment && state.nextContractYearsAdjustment !== 0) || (itemId === "overall" && state.overall >= 99) || state.spendableMoney < item.price || state.economyPurchases.includes(purchaseKey)) {
     return { state, feedback: "Esta compra não está disponível.", toast: "Compra indisponível", forcedClose: false };
   }
 

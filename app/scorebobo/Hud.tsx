@@ -205,10 +205,16 @@ export const ScoreBug = memo(function ScoreBug({ home, away, homeScore, awayScor
   );
 });
 
-export const ObjectiveChip = memo(function ObjectiveChip({ index, name, objective }: { index: number; name: string; objective: string }) {
+export const ObjectiveChip = memo(function ObjectiveChip({ index, name, objective, kicker }: {
+  index: number;
+  name: string;
+  objective: string;
+  /** No lugar do número da fase (a carreira: "BASE · 13 ANOS"); quem hospeda dá o tamanho pelo `data-sb-career`. */
+  kicker?: string;
+}) {
   return (
     <div className={styles.objective}>
-      <span className={styles.objectiveIndex}>{String(index + 1).padStart(2, "0")}</span>
+      <span className={styles.objectiveIndex} data-sb-career={kicker === undefined ? undefined : "kicker"}>{kicker ?? String(index + 1).padStart(2, "0")}</span>
       <span className={styles.objectiveText}>
         <strong>{name}</strong>
         <small>{objective}</small>
@@ -357,7 +363,7 @@ export function ReplayTag({ onSkip, stats }: { onSkip: () => void; stats?: strin
   );
 }
 
-export function IntroCard({ index, name, situation, objective, rules, onSkip }: {
+export function IntroCard({ index, name, situation, objective, rules, onSkip, kicker }: {
   index: number;
   name: string;
   situation: string;
@@ -365,11 +371,13 @@ export function IntroCard({ index, name, situation, objective, rules, onSkip }: 
   /** Regras da 2ª e da 3ª estrela. */
   rules: [string, string];
   onSkip: () => void;
+  /** No lugar de "FASE 0X" (a carreira: "BASE · 13 ANOS"). */
+  kicker?: string;
 }) {
   return (
     <div className={styles.intro}>
       <div className={styles.introCard}>
-        <span className={styles.introKicker}>FASE {String(index + 1).padStart(2, "0")}</span>
+        <span className={styles.introKicker}>{kicker ?? <>FASE {String(index + 1).padStart(2, "0")}</>}</span>
         <strong>{name}</strong>
         <small>{situation}</small>
         {/* O objetivo e as estrelas antes da primeira bola (só apareciam no fim). */}

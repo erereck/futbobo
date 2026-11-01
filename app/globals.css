@@ -243,6 +243,9 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .random-name-die:hover { border-color: rgba(255,199,44,.55); background: rgba(255,199,44,.17); }
 .random-name-die:active { transform: rotate(12deg) scale(.92); }
 .random-name-die:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* Cartão da QUADRA que recebe o foco quando o Treino especial fecha (o botão dele fica desligado). */
+[role=dialog] article:focus { outline: none; }
+[role=dialog] article:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .two-fields { display: grid; grid-template-columns: 92px 1fr; gap: 12px; }
 .foot-field { min-width: 0; border: 0; padding: 0; }
 .foot-field legend { margin-bottom: 8px; }
@@ -332,6 +335,28 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .youth-continue { display: grid; width: 100%; gap: 9px; margin-top: 16px; padding: 12px; border: 1px solid rgba(255,199,44,.24); border-radius: 16px; background: rgba(255,199,44,.06); }
 .youth-continue > span { color: var(--muted); font-size: 9px; text-align: center; }
 .youth-continue .primary-button { min-height: 48px; }
+/* Escolha Simular × Jogar a base (antes da animação; a base jogada vem em CareerMinigames.module.css). */
+.youth-screen.youth-choice { display: flex; flex-direction: column; }
+.youth-choice-span { margin: 16px 0 0; color: var(--gold); font: 900 30px/1 var(--display); letter-spacing: -.05em; text-align: center; }
+.youth-choice-lead { max-width: 34ch; margin: 8px auto 0; color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; text-wrap: pretty; }
+.youth-choice-cards { display: grid; width: 100%; gap: 10px; margin-top: auto; padding-top: 22px; }
+.youth-choice-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 14px; min-height: 104px; padding: 15px 16px; border: 1px solid var(--line); border-radius: 18px; background: rgba(16,39,29,.72); color: var(--text); text-align: left; cursor: pointer; transition: border-color 160ms, background 160ms; }
+.youth-choice-card > small { grid-column: 1; color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .16em; }
+.youth-choice-card > strong { grid-column: 1; font: 900 22px/1 var(--display); letter-spacing: -.04em; }
+.youth-choice-card > p, .youth-choice-card > em { grid-column: 1; margin: 2px 0 0; color: var(--muted); font-size: 11px; font-style: normal; line-height: 1.45; text-wrap: pretty; }
+.youth-choice-card > em { color: #ffb0a9; font-weight: 800; }
+.youth-choice-card > b { grid-column: 2; grid-row: 1 / span 4; color: var(--gold); font-size: 22px; }
+.youth-choice-card:hover:not(:disabled), .youth-choice-card:focus-visible { border-color: rgba(255,199,44,.55); }
+.youth-choice-play { border-color: rgba(255,199,44,.42); background: linear-gradient(150deg, rgba(255,199,44,.13), rgba(16,39,29,.82) 62%); }
+.youth-choice-play > small { color: var(--gold); }
+.youth-choice-card:disabled { cursor: not-allowed; opacity: .6; }
+.youth-choice-card:disabled > b { visibility: hidden; }
+.youth-choice-reload { max-width: 320px; margin: 18px auto 0; }
+/* No desktop a escolha não usa a grade de duas colunas da animação (premium.css): uma coluna no centro. */
+@media (min-width: 900px) {
+  .youth-screen.youth-choice { width: min(640px, 100%); }
+  .youth-choice .youth-choice-cards { margin-top: 8px; }
+}
 
 .youth-complete-screen { display: flex; min-height: 100dvh; flex-direction: column; justify-content: center; padding: calc(env(safe-area-inset-top) + 28px) 18px calc(env(safe-area-inset-bottom) + 28px); background: radial-gradient(circle at 50% 30%, rgba(99,227,107,.16), transparent 34%), var(--bg); }
 .youth-complete-screen .brand-mini { position: absolute; top: calc(env(safe-area-inset-top) + 20px); }

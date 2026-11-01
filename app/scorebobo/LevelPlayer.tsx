@@ -63,6 +63,33 @@ const DEFAULT_ENGINE: ScoreboboEngine = {
   },
 };
 
+/**
+ * A fase como minigame da carreira (anos da base, treino especial). Quem conta
+ * as chances e grava no save é o host; aqui a fase não grava o progresso do
+ * /scorebobo, não recomeça sozinha (cada chance é uma montagem nova, do host) e
+ * as saídas (continuar, sair) são as dele.
+ */
+export type ScoreboboCareerMode = {
+  /** No lugar de "FASE 0X" (carregando, chip do objetivo, cartão de entrada, resultado). Ex.: "BASE · 13 ANOS". */
+  kicker: string;
+  /** Chances que sobram DEPOIS desta jogada (0 = sem "Tentar de novo" no resultado). */
+  retriesLeft: number;
+  /** A jogada começou de verdade (cena pronta, status "ready"): o host gasta a chance aqui. Chamado 1x por montagem. */
+  onBegin: () => void;
+  /** Fim da jogada com as estrelas (0..3). Não é chamado no fim do "Ver replay". */
+  onResult: (stars: StarCount) => void;
+  /** "Tentar de novo (N)": nova chance; o host remonta a fase (key nova). */
+  onRetry: () => void;
+  /** "Continuar": volta para a carreira (a melhor nota já foi guardada no `onResult`). */
+  onContinue: () => void;
+  /** Sair no meio (pausa) ou depois da falha do 3D: volta para a carreira sem avançar. */
+  onLeave: () => void;
+  /** Linha discreta sob o objetivo durante a jogada (ex.: "Chance 1 de 3"). */
+  note?: string;
+  /** O 3D caiu nesta montagem (antes ou depois de começar): o host decide se devolve a chance. Chamado 1x. */
+  onFailure?: () => void;
+};
+
 export type LevelPlayerProps = {
   /** A fase já com o herói do jogador. */
   level: ScoreLevel;
@@ -82,6 +109,8 @@ export type LevelPlayerProps = {
   onSlowDevice?: () => void;
   /** Monta a fase de novo do zero (canvas e WebGL novos): o 3D caiu, ou o modo desempenho mudou. */
   onRemount?: () => void;
+  /** Jogada da carreira (`ScoreboboCareerMode`); sem ela, a fase é a do /scorebobo de sempre. */
+  career?: ScoreboboCareerMode;
 };
 
 /** Se a cena não ficar pronta nesse tempo, avisa em vez de deixar a tela preta. */
@@ -110,6 +139,19 @@ const DOUBLE_TAP_PX = 48;
  */
 const NEAR_MISS_RADII = 2.5;
 const TURN_LEARNED_KEY = "futbobo:scorebobo:camera-turn";
+
+/**
+ * Gancho de teste da carreira: só num host local COM porta (o servidor de
+ * teste; o app do Android serve sem porta) e com `?sbtest=1` na URL.
+ */
+function careerTestHost() {
+  try {
+    const { hostname, port, search } = window.location;
+    return port !== "" && (hostname === "localhost" || /^127\.\d+\.\d+\.\d+$/.test(hostname)) && new URLSearchParams(search).get("sbtest") === "1";
+  } catch {
+    return false;
+  }
+}
 
 function readTurnLearned() {
   try {
@@ -344,7 +386,7 @@ function confettiFor(home: TeamInfo): ConfettiPiece[] {
   }));
 }
 
-export default function LevelPlayer({ level, levelIndex, teams, home, away, performance: performanceMode, muted, onToggleMute, hasNext, nextUnlocked, onNext, onLevels, engine = DEFAULT_ENGINE, onSlowDevice, onRemount }: LevelPlayerProps) {
+export default function LevelPlayer({ level, levelIndex, teams, home, away, performance: performanceMode, muted, onToggleMute, hasNext, nextUnlocked, onNext, onLevels, engine = DEFAULT_ENGINE, onSlowDevice, onRemount, career }: LevelPlayerProps) {
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, readReducedMotion, serverReducedMotion);
   // Fase em que passe não vale (o gol depois dele fica sem estrela): dica e prévia falam só do gol.
   const directOnly = level.require?.some((rule) => rule.kind === "maxPasses" && rule.max === 0) ?? false;
@@ -421,6 +463,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const resumeLoopRef = useRef<(() => void) | null>(null);
   const onSlowDeviceRef = useRef(onSlowDevice);
   const onRemountRef = useRef(onRemount);
+  /** Jogada da carreira (o host refaz o objeto a cada render: os avisos leem daqui). */
+  const careerRef = useRef(career);
   // `active`: segundos de jogo rodando nesta fase (pausa, aba escondida e engasgos não contam: quem volta não perde o replay).
   const phaseRef = useRef<{ phase: Phase | null; since: number; active: number; retryAt: number; forceAt: number }>({ phase: null, since: 0, active: 0, retryAt: 0, forceAt: 0 });
   /** Melhor resultado desta visita (para as notas do resultado e se a simulação não fechar a fase sozinha). */
@@ -448,6 +492,10 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     onSlowDeviceRef.current = onSlowDevice;
     onRemountRef.current = onRemount;
   }, [onSlowDevice, onRemount]);
+
+  useEffect(() => {
+    careerRef.current = career;
+  }, [career]);
 
   useEffect(() => {
     toastOnRef.current = toast !== null;
@@ -547,11 +595,48 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       setRewatch(false);
       return;
     }
-    const record = recordStars(level.id, stars);
+    // Na carreira a demo não grava nada (nem "NOVO RECORDE"): quem guarda a melhor nota das chances é o host.
+    const record = careerRef.current ? false : recordStars(level.id, stars);
     if (stars > 0) audioRef.current?.finalWhistle();
     setReplayable(gameRef.current?.canReplay ?? false);
     setResults({ stars, record, notes, met });
+    careerRef.current?.onResult(stars);
   }, [level.id]);
+
+  // Carreira: a chance conta quando a jogada começa de verdade (cena pronta),
+  // uma vez por montagem; e o 3D que cai avisa o host (uma vez) para ele
+  // devolver a chance da jogada que ficou sem resultado.
+  const begunRef = useRef(false);
+  const failedRef = useRef(false);
+  useEffect(() => {
+    const current = careerRef.current;
+    if (!current) return;
+    if (status === "ready" && !begunRef.current) {
+      begunRef.current = true;
+      current.onBegin();
+    } else if (status === "failed" && !failedRef.current) {
+      failedRef.current = true;
+      current.onFailure?.();
+    }
+  }, [status]);
+
+  // Gancho de teste da carreira (só no servidor local de teste, com `?sbtest=1`):
+  // encerra a jogada atual pelo mesmo `finish` do fim de verdade.
+  const careerOn = career !== undefined;
+  useEffect(() => {
+    if (!careerOn || status !== "ready" || !careerTestHost()) return;
+    const hook = {
+      finish(stars: number) {
+        const count = Math.max(0, Math.min(3, Math.round(Number(stars) || 0))) as StarCount;
+        finish(count, [], [count >= 1, count >= 2, count >= 3]);
+      },
+    };
+    const target = window as Window & { __careerScorebobo?: typeof hook };
+    target.__careerScorebobo = hook;
+    return () => {
+      if (target.__careerScorebobo === hook) delete target.__careerScorebobo;
+    };
+  }, [careerOn, status, finish]);
 
   /** Próxima bola depois de um resultado sem vitória (ou fecha a fase sem bolas). */
   const advance = useCallback(() => {
@@ -1128,6 +1213,15 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     onNext();
   }, [onNext]);
 
+  // Carreira: nova chance, "Continuar" e sair são do host (a gravação do replay sai já no toque).
+  const careerExit = useCallback((action: "onRetry" | "onContinue" | "onLeave") => {
+    const current = careerRef.current;
+    if (!current) return;
+    playUiSound(action === "onLeave" ? "back" : "select");
+    gameRef.current?.dispose?.();
+    current[action]();
+  }, []);
+
   /** "Ver replay" no resultado: o cartão sai da frente, o gol passa de novo e o cartão volta como estava. */
   const watchReplay = useCallback(() => {
     const game = gameRef.current;
@@ -1550,7 +1644,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
               running={phase === "flight" || phase === "outcome"}
               bump={bump}
             />
-            <ObjectiveChip index={levelIndex} name={level.name} objective={level.objective} />
+            <ObjectiveChip index={levelIndex} name={level.name} objective={level.objective} kicker={career?.kicker} />
+            {career?.note && <span className={styles.objective} data-sb-career="note">{career.note}</span>}
           </div>
           <div className={styles.topRight}>
             <AttemptBalls total={level.attempts} left={Math.max(0, Math.min(level.attempts, hud.attemptsLeft))} />
@@ -1569,6 +1664,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
               objective={level.objective}
               rules={[describeRule(level.stars[0]), describeRule(level.stars[1])]}
               onSkip={skip}
+              kicker={career?.kicker}
             />
           )}
           {phase === "replay" && <ReplayTag onSkip={skip} stats={replayStats} />}
@@ -1590,7 +1686,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       {status === "loading" && (
         <div className={styles.loading} role="status">
           <div className={styles.loadingBall} aria-hidden="true" />
-          <span className={styles.loadingKicker}>FASE {String(levelIndex + 1).padStart(2, "0")}</span>
+          <span className={styles.loadingKicker}>{career?.kicker ?? <>FASE {String(levelIndex + 1).padStart(2, "0")}</>}</span>
           <strong>{level.name}</strong>
           <small>{level.situation}</small>
           <em>Montando o estádio…</em>
@@ -1601,12 +1697,12 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         <div className={styles.overlay} role="alertdialog" aria-labelledby="sb-fail-title">
           <div className={styles.menuCard}>
             <h2 id="sb-fail-title">O 3D parou de responder</h2>
-            <p>O Scorebobo só existe no Modo 3D. Recarregue a página ou feche outros apps pesados e tente de novo.</p>
+            <p>{career ? "O minigame só existe em 3D. Feche outros apps pesados e tente de novo." : "O Scorebobo só existe no Modo 3D. Recarregue a página ou feche outros apps pesados e tente de novo."}</p>
             <div className={styles.menuActions}>
               {/* Monta a fase de novo com um WebGL novo, sem recarregar o app (a carreira em memória fica). */}
               {onRemount && <button type="button" className={styles.primaryButton} onClick={() => onRemount()}>Tentar de novo</button>}
-              <button type="button" className={onRemount ? styles.secondaryButton : styles.primaryButton} onClick={() => window.location.reload()}>Recarregar</button>
-              <button type="button" className={styles.secondaryButton} onClick={leave}>Fases</button>
+              {!career && <button type="button" className={onRemount ? styles.secondaryButton : styles.primaryButton} onClick={() => window.location.reload()}>Recarregar</button>}
+              <button type="button" className={styles.secondaryButton} onClick={career ? () => careerExit("onLeave") : leave}>{career ? "Voltar" : "Fases"}</button>
             </div>
           </div>
         </div>
@@ -1623,8 +1719,8 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
                 <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4l10 6-10 6z" fill="currentColor" /></svg>
                 Continuar
               </button>
-              <button type="button" className={styles.secondaryButton} onClick={restart}>Recomeçar</button>
-              <button type="button" className={styles.secondaryButton} onClick={leave}>Fases</button>
+              {!career && <button type="button" className={styles.secondaryButton} onClick={restart}>Recomeçar</button>}
+              <button type="button" className={styles.secondaryButton} onClick={career ? () => careerExit("onLeave") : leave}>{career ? "Sair" : "Fases"}</button>
             </div>
             <small className={styles.menuNote}>Esc pausa · M liga e desliga o som · Espaço pula o replay</small>
           </div>
@@ -1646,6 +1742,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
           onRetry={restart}
           onReplay={replayable ? watchReplay : undefined}
           onLevels={leave}
+          career={career ? { kicker: career.kicker, retriesLeft: career.retriesLeft, onRetry: () => careerExit("onRetry"), onContinue: () => careerExit("onContinue") } : undefined}
         />
       )}
     </div>

@@ -18,7 +18,7 @@ const STAR_START_MS = 650;
 /** Botões desarmados logo que o cartão aparece (o "click" atrasado do toque que pulou o replay). */
 const ARM_MS = 400;
 
-export function Results({ level, levelIndex, stars, record, notes, met, hasNext, nextUnlocked, away = false, onNext, onRetry, onReplay, onLevels }: {
+export function Results({ level, levelIndex, stars, record, notes, met, hasNext, nextUnlocked, away = false, onNext, onRetry, onReplay, onLevels, career }: {
   level: ScoreLevel;
   levelIndex: number;
   stars: StarCount;
@@ -36,6 +36,12 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
   /** Fase ganha com o gol ainda guardado: o botão "Ver replay". */
   onReplay?: () => void;
   onLevels: () => void;
+  /**
+   * Jogada da carreira (base, treino especial): o rótulo do host no lugar de
+   * "FASE 0X", "Continuar" sempre e "Tentar de novo (N)" só com chance sobrando
+   * e menos de 3 estrelas; sem "Próxima fase" e sem "Fases". A taça, só na final.
+   */
+  career?: { kicker: string; retriesLeft: number; onRetry: () => void; onContinue: () => void };
 }) {
   const primaryRef = useRef<HTMLButtonElement>(null);
   const replayRef = useRef<HTMLButtonElement>(null);
@@ -86,7 +92,8 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
   const rules = [level.objective, describeRule(level.stars[0]), describeRule(level.stars[1])];
   const lit = (index: number) => (met ? won && met[index] : index < stars);
   // A última fase é a final: quem marca levanta a taça.
-  const champion = won && !hasNext;
+  const champion = won && (career ? level.id === "final-da-copa" : !hasNext);
+  const careerRetry = career ? career.retriesLeft > 0 && stars < 3 : false;
   const verdict = champion ? (stars === 3 ? "Perfeito: o gol do título é seu" : "O gol do título é seu") : stars === 3 ? "Perfeito!" : stars === 2 ? "Jogada de craque" : stars === 1 ? "Objetivo cumprido" : level.attempts === 1 ? "Era uma bola só" : "As bolas acabaram";
 
   return (
@@ -100,7 +107,7 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
       }}
     >
       <div className={`${styles.resultsCard} ${won ? styles.resultsWon : styles.resultsLost}`}>
-        <span className={styles.resultsKicker}>FASE {String(levelIndex + 1).padStart(2, "0")} · {level.name.toUpperCase()}</span>
+        <span className={styles.resultsKicker}>{career ? career.kicker : <>FASE {String(levelIndex + 1).padStart(2, "0")}</>} · {level.name.toUpperCase()}</span>
         <h2 id="sb-results-title" className={styles.resultsTitle}>{champion ? "É CAMPEÃO!" : won ? "FASE CONCLUÍDA" : "NÃO FOI DESSA VEZ"}</h2>
         <p className={styles.resultsVerdict}>{verdict}</p>
 
@@ -135,26 +142,45 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
         )}
 
         <div className={styles.resultsActions}>
-          {hasNext && (won || nextUnlocked) ? (
+          {career ? (
+            <>
+              {/* Com chance sobrando e menos de ★★★, o destaque é jogar de novo: na carreira vale a melhor das 3. */}
+              <button ref={careerRetry ? undefined : primaryRef} type="button" className={careerRetry ? styles.secondaryButton : styles.primaryButton} onClick={armed(career.onContinue)}>
+                Continuar
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
+              {careerRetry && (
+                <button ref={primaryRef} type="button" className={styles.primaryButton} onClick={armed(career.onRetry)}>
+                  <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10a5.5 5.5 0 1 0 1.8-4.1M4 3.5v3.6h3.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  Tentar de novo ({career.retriesLeft})
+                </button>
+              )}
+            </>
+          ) : null}
+          {!career && hasNext && (won || nextUnlocked) ? (
             <button ref={won ? primaryRef : undefined} type="button" className={won ? styles.primaryButton : styles.secondaryButton} onClick={armed(onNext)} disabled={!nextUnlocked}>
               Próxima fase
               <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           ) : null}
-          <button ref={won && hasNext ? undefined : primaryRef} type="button" className={won && hasNext ? styles.secondaryButton : styles.primaryButton} onClick={armed(onRetry)}>
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10a5.5 5.5 0 1 0 1.8-4.1M4 3.5v3.6h3.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            Tentar de novo
-          </button>
+          {!career && (
+            <button ref={won && hasNext ? undefined : primaryRef} type="button" className={won && hasNext ? styles.secondaryButton : styles.primaryButton} onClick={armed(onRetry)}>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10a5.5 5.5 0 1 0 1.8-4.1M4 3.5v3.6h3.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              Tentar de novo
+            </button>
+          )}
           {won && onReplay && (
             <button ref={replayRef} type="button" className={styles.secondaryButton} onClick={armed(onReplay)}>
               <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8.4 7.3v5.4l4.5-2.7z" fill="currentColor" /></svg>
               Ver replay
             </button>
           )}
-          <button type="button" className={styles.secondaryButton} onClick={armed(onLevels)}>
-            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 3.5h5v5h-5zM11.5 3.5h5v5h-5zM3.5 11.5h5v5h-5zM11.5 11.5h5v5h-5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
-            Fases
-          </button>
+          {!career && (
+            <button type="button" className={styles.secondaryButton} onClick={armed(onLevels)}>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 3.5h5v5h-5zM11.5 3.5h5v5h-5zM3.5 11.5h5v5h-5zM11.5 11.5h5v5h-5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
+              Fases
+            </button>
+          )}
         </div>
       </div>
     </div>

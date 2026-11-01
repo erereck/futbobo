@@ -47,7 +47,7 @@ export const DEFAULT_NET_CONFIG: NetConfig = {
     ? { turn: TURN_SERVERS.map((server) => ({ ...server, urls: Array.isArray(server.urls) ? [...server.urls] : server.urls })) }
     : {}),
   latestProtocol: 1,
-  current: { protocol: 1, engineRev: 1, celebrations: 18 },
+  current: { protocol: 1, engineRev: 2, celebrations: 18 },
 };
 
 const isInt = (value: unknown, min: number, max: number): value is number =>
