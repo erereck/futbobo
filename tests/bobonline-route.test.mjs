@@ -7,7 +7,8 @@ import { loadTs, stubBrowser } from "./helpers/ts-loader.mjs";
 
 // Rota /bobonline (design §1, §1.10, §11.1): fontes, menu, sitemap, build e os textos do resultado.
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const read = (path) => readFileSync(join(ROOT, path), "utf8");
+// CRLF vira LF: num checkout do Windows (core.autocrlf) as regex de várias linhas falhariam.
+const read = (path) => readFileSync(join(ROOT, path), "utf8").replace(/\r\n/g, "\n");
 stubBrowser();
 
 const copy = loadTs("app/bobonline/result-copy.ts");
