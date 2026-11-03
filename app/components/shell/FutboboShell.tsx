@@ -542,7 +542,7 @@ export default function FutboboShell() {
 
       <footer className={styles.footer}>
         <div><span><FutboboIcon name="career" /> {CLUBS.length} clubes</span><span><FutboboIcon name="player" /> 12 posições</span><span><FutboboIcon name="trophy" /> {LEAGUES.length} ligas</span><span><FutboboIcon name="globe" /> {COUNTRIES.length} seleções</span></div>
-        <strong>{FUTBOBO_VERSION} · {FUTBOBO_VERSION_NAME}</strong>
+        <strong><span className={styles.credit}>EriLab™ / Erick Luiz</span>{FUTBOBO_VERSION} · {FUTBOBO_VERSION_NAME}</strong>
       </footer>
     </main>
   );
