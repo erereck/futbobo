@@ -462,6 +462,9 @@ export default function FutboboShell() {
             <a className={styles.modeCard} href="https://mmmweb.vercel.app" target="_blank" rel="noreferrer">
               <span className={styles.modeIndex}>03</span><div><small>MINIMALISTA</small><strong>Muito, Muito Minimalista</strong><p>Abra o MMM Web e jogue direto pelo navegador.</p></div><b><FutboboIcon name="arrow-right" /></b>
             </a>
+            <a className={styles.modeCard} href="https://erereck.github.io/bobobike/" target="_blank" rel="noreferrer">
+              <span className={styles.modeIndex}>04</span><div><small>OBBY INFINITO</small><strong>Bobobike</strong><p>Encare pistas procedurais de BMX, scooter ou patinete e bata seu recorde de distância.</p></div><b><FutboboIcon name="arrow-right" /></b>
+            </a>
           </div>
         </section>
       )}
