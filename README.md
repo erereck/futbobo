@@ -10,6 +10,14 @@ Você começa aos **12 anos**, escolhe posição e caminho de formação, é rev
 
 ---
 
+## Laboratório: seis futuros jogáveis
+
+Uma galeria de conceitos de menu e tela de escolhas está em `/conceitos/`: **Holofote**, **Resenha**, **Primeira Página**, **Legado**, **Fita 98** e **Próximo Lance**. Cada direção tem composição própria, prévia com largura de celular e uma minicarreira interativa de três decisões.
+
+As demonstrações usam dados e armazenamento separados dos saves do jogo. Consulte [o estudo das seis direções](docs/six-concepts.md) e os [prompts das artes originais](docs/concept-art-prompts.json). Execute `npm run test:concepts` para compilar e validar as rotas e os 27 caminhos possíveis da demonstração.
+
+---
+
 ## 🎮 Modos
 
 ### Carreira de Jogador

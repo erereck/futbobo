@@ -1,0 +1,13 @@
+export const CONCEPTS = [
+  { id: "holofote", number: "01", name: "Holofote", category: "CINEMA × FUTEBOL", line: "O estádio inteiro. A sua história.", description: "A tensão do túnel, a grandeza do campo e uma decisão que merece todos os olhares.", accent: "#d5fc55", art: "stadium", signature: "Imersão cinematográfica", architecture: "Palco dividido · escolhas numeradas", mobile: "Narrativa compacta, decisões em destaque" },
+  { id: "resenha", number: "02", name: "Resenha", category: "RUA × PERSONALIDADE", line: "Da nossa rua pro mundo.", description: "O futebol de onde tudo começa: uma quadra, uma conversa e um sonho grande demais.", accent: "#ff793e", art: "street", signature: "Brasil sem filtro", architecture: "Mural de jogo · conversa com o empresário", mobile: "Bilhetes grandes e leitura de conversa" },
+  { id: "primeira-pagina", number: "03", name: "Primeira Página", category: "IMPRENSA × NARRATIVA", line: "A próxima manchete é sua.", description: "Sua carreira vira notícia. Cada escolha decide o que o mundo vai ler amanhã.", accent: "#ca4d39", art: "stadium", signature: "A carreira como edição de jornal", architecture: "Capa editorial · três manchetes possíveis", mobile: "Uma coluna editorial, sem ruído" },
+  { id: "legado", number: "04", name: "Legado", category: "MEMÓRIA × GRANDEZA", line: "Algumas carreiras ficam.", description: "Um arquivo vivo para quem quer muito mais que ganhar: quer deixar uma história.", accent: "#d3b879", art: "legacy", signature: "Museu pessoal do futebol", architecture: "Arquivo de temporadas · capítulo central", mobile: "O peso da história em uma tela leve" },
+  { id: "fita-98", number: "05", name: "Fita 98", category: "ARCADE × NOSTALGIA", line: "Só mais uma temporada.", description: "A alegria imediata dos videogames de futebol. Ligue o console, aperte jogar e faça história.", accent: "#ffa24a", art: null, signature: "Um videogame dentro do navegador", architecture: "Console de duas áreas · diálogo de RPG", mobile: "Comandos táteis e placar sempre presente" },
+  { id: "proximo-lance", number: "06", name: "Próximo Lance", category: "FOCO × FLUIDEZ", line: "Sua carreira. No seu ritmo.", description: "O caminho mais direto entre você e a próxima grande decisão. Tudo onde seu polegar espera.", accent: "#4466ef", art: null, signature: "Uma decisão por vez", architecture: "Agenda de carreira · carta de decisão", mobile: "Desenhado a partir de 360px" },
+] as const;
+
+export type Concept = (typeof CONCEPTS)[number];
+export type ConceptId = Concept["id"];
+export const assetRoot = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+export function art(name: string) { return `${assetRoot}/concept-art/${name}.webp`; }
