@@ -12,9 +12,9 @@ Você começa aos **12 anos**, escolhe posição e caminho de formação, é rev
 
 ## Laboratório: seis futuros jogáveis
 
-Uma galeria de conceitos de menu e tela de escolhas está em `/conceitos/`: **Holofote**, **Resenha**, **Primeira Página**, **Legado**, **Fita 98** e **Próximo Lance**. Cada direção tem composição própria, prévia com largura de celular e uma minicarreira interativa de três decisões.
+Na segunda rodada, a galeria em `/conceitos/` explora seis formas de jogar: **Na Bola** (ler um lance por turnos), **Estrada** (escolher uma rota), **Contrato** (negociar condições), **Entrelinhas** (ouvir e se comprometer), **Na Mão** (combinar a temporada) e **Pulso** (decidir por gesto). Cada conceito tem menu, situação jogável e regras próprias.
 
-As demonstrações usam dados e armazenamento separados dos saves do jogo. Consulte [o estudo das seis direções](docs/six-concepts.md) e os [prompts das artes originais](docs/concept-art-prompts.json). Execute `npm run test:concepts` para compilar e validar as rotas e os 27 caminhos possíveis da demonstração.
+As demonstrações usam dados e armazenamento separados dos saves do jogo. A [exploração de 22 possibilidades](docs/concepts-round-two.md) documenta os critérios e os caminhos descartados; o [guia da rodada](docs/six-concepts.md) resume os controles. Execute `npm run test:concepts` para compilar e validar os seis sistemas e as rotas exportadas.
 
 ---
 

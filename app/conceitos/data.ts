@@ -1,13 +1,86 @@
 export const CONCEPTS = [
-  { id: "holofote", number: "01", name: "Holofote", category: "CINEMA × FUTEBOL", line: "O estádio inteiro. A sua história.", description: "A tensão do túnel, a grandeza do campo e uma decisão que merece todos os olhares.", accent: "#d5fc55", art: "stadium", signature: "Imersão cinematográfica", architecture: "Palco dividido · escolhas numeradas", mobile: "Narrativa compacta, decisões em destaque" },
-  { id: "resenha", number: "02", name: "Resenha", category: "RUA × PERSONALIDADE", line: "Da nossa rua pro mundo.", description: "O futebol de onde tudo começa: uma quadra, uma conversa e um sonho grande demais.", accent: "#ff793e", art: "street", signature: "Brasil sem filtro", architecture: "Mural de jogo · conversa com o empresário", mobile: "Bilhetes grandes e leitura de conversa" },
-  { id: "primeira-pagina", number: "03", name: "Primeira Página", category: "IMPRENSA × NARRATIVA", line: "A próxima manchete é sua.", description: "Sua carreira vira notícia. Cada escolha decide o que o mundo vai ler amanhã.", accent: "#ca4d39", art: "stadium", signature: "A carreira como edição de jornal", architecture: "Capa editorial · três manchetes possíveis", mobile: "Uma coluna editorial, sem ruído" },
-  { id: "legado", number: "04", name: "Legado", category: "MEMÓRIA × GRANDEZA", line: "Algumas carreiras ficam.", description: "Um arquivo vivo para quem quer muito mais que ganhar: quer deixar uma história.", accent: "#d3b879", art: "legacy", signature: "Museu pessoal do futebol", architecture: "Arquivo de temporadas · capítulo central", mobile: "O peso da história em uma tela leve" },
-  { id: "fita-98", number: "05", name: "Fita 98", category: "ARCADE × NOSTALGIA", line: "Só mais uma temporada.", description: "A alegria imediata dos videogames de futebol. Ligue o console, aperte jogar e faça história.", accent: "#ffa24a", art: null, signature: "Um videogame dentro do navegador", architecture: "Console de duas áreas · diálogo de RPG", mobile: "Comandos táteis e placar sempre presente" },
-  { id: "proximo-lance", number: "06", name: "Próximo Lance", category: "FOCO × FLUIDEZ", line: "Sua carreira. No seu ritmo.", description: "O caminho mais direto entre você e a próxima grande decisão. Tudo onde seu polegar espera.", accent: "#4466ef", art: null, signature: "Uma decisão por vez", architecture: "Agenda de carreira · carta de decisão", mobile: "Desenhado a partir de 360px" },
+  {
+    id: "na-bola",
+    number: "01",
+    name: "Na Bola",
+    verb: "Ler o campo",
+    accent: "#e9c36a",
+    description:
+      "Um lance por turnos. O espaço, o companheiro e o relógio mudam a sua decisão.",
+    control: "Toque no campo",
+    stakes: "O passe muda a próxima chance.",
+    scope:
+      "Mais perto do futebol jogado. A carreira reage à sua leitura do lance.",
+  },
+  {
+    id: "estrada",
+    number: "02",
+    name: "Estrada",
+    verb: "Escolher o caminho",
+    accent: "#adc4a0",
+    description:
+      "A carreira tem bifurcações. Cada destino custa algo e deixa outro para trás.",
+    control: "Explore as bifurcações",
+    stakes: "O caminho fecha e abre portas.",
+    scope:
+      "A carreira vira um percurso legível. Você planeja além do próximo evento.",
+  },
+  {
+    id: "contrato",
+    number: "03",
+    name: "Contrato",
+    verb: "Negociar a vida",
+    accent: "#d9c5a4",
+    description:
+      "Dinheiro, minutos ou liberdade. Uma proposta boa para o clube pode ser ruim para você.",
+    control: "Edite as cláusulas",
+    stakes: "O clube responde aos seus termos.",
+    scope:
+      "O mercado deixa de ser uma lista de destinos. O compromisso vira parte da história.",
+  },
+  {
+    id: "entrelinhas",
+    number: "04",
+    name: "Entrelinhas",
+    verb: "Dar a sua palavra",
+    accent: "#d69972",
+    description:
+      "Ouvir muda o que faz sentido dizer. E o que você promete volta para te encontrar.",
+    control: "Escute e componha a resposta",
+    stakes: "A promessa reaparece depois.",
+    scope:
+      "Pessoas, contexto e confiança têm memória. A decisão não se encerra no diálogo.",
+  },
+  {
+    id: "na-mao",
+    number: "05",
+    name: "Na Mão",
+    verb: "Montar uma temporada",
+    accent: "#d7bb78",
+    description:
+      "Preparar, disputar, recuperar. As mesmas cartas podem fazer anos muito diferentes.",
+    control: "Combine e ordene as cartas",
+    stakes: "A ordem muda a temporada.",
+    scope:
+      "Preserva a carreira rápida, com estratégia na preparação e no custo de cada compromisso.",
+  },
+  {
+    id: "pulso",
+    number: "06",
+    name: "Pulso",
+    verb: "Escolher no gesto",
+    accent: "#eaa751",
+    description:
+      "Um acontecimento, dois lados. O próximo dia vai lembrar do que você decidiu hoje.",
+    control: "Arraste ou toque num lado",
+    stakes: "Um gesto puxa o próximo acontecimento.",
+    scope:
+      "Uma versão para jogar com uma mão: decisões curtas e consequências que se encadeiam.",
+  },
 ] as const;
-
 export type Concept = (typeof CONCEPTS)[number];
 export type ConceptId = Concept["id"];
 export const assetRoot = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-export function art(name: string) { return `${assetRoot}/concept-art/${name}.webp`; }
+export function art(name: string) {
+  return `${assetRoot}/concept-art/${name}.webp`;
+}
