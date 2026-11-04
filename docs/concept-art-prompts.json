@@ -1,0 +1,20 @@
+{
+  "tool": "built-in ImageGen",
+  "assets": [
+    {
+      "name": "stadium",
+      "file": "public/concept-art/stadium.webp",
+      "prompt": "Use case: photorealistic-natural. Asset type: cinematic backdrop for a Brazilian football career game interface, landscape 3:2. A young adult Brazilian football player with dark skin and close cropped curly black hair, seen entirely from behind, wearing a deep charcoal black football shirt with a single vivid acid lime number 10 and dark shorts. He is at the edge of an immense emerald green football pitch, in a real South American night stadium, monumental floodlights, atmospheric humid haze, distant crowded stands. Player positioned in right third, full upper body and legs visible. Left half is very dark spacious smoky tunnel with subtle black detail, reserved negative space for live UI text. Photographic realism, dramatic natural lighting, beautifully composed analog sports editorial photography, fine film grain, rich blacks, athletic hopeful atmosphere. No branding, no text except number 10, no interface, no watermarks. High visual sophistication."
+    },
+    {
+      "name": "street",
+      "file": "public/concept-art/street.webp",
+      "prompt": "Use case: stylized-concept. Asset type: full-bleed illustration backdrop for a joyful Brazilian football career game. Landscape 3:2 artwork. Beautiful contemporary editorial illustration of a neighborhood football court in Brazil at late afternoon, cobalt blue painted court and goal, orange sun, pastel peach buildings and lush green plants, dangling powerlines. A young adult brown-skinned footballer wearing a cream and royal blue striped kit, big curly dark hair, white socks, electric orange boots, juggling a ball at the right half of image. Expressive bold ink outlines, cut paper texture, screenprinted soft grain, playful but designed for teens and young adults, like a sophisticated independent sports magazine illustration. Palette warm butter yellow, cobalt blue, tangerine, green foliage. Composition subject right half, court perspective and quiet large sky left half. No lettering, no text, no logo, no UI."
+    },
+    {
+      "name": "legacy",
+      "file": "public/concept-art/legacy.webp",
+      "prompt": "Use case: product-mockup. Asset type: elegant artwork for a football career game legacy menu. Landscape 3:2 photograph of a luminous brass golden football sculpture resting on a brutalist small dark marble plinth, in an extraordinarily beautiful quiet dark emerald green museum space, light falling precisely onto the golden ball from upper right, reflective etched pentagons, slight atmospheric haze and subtle film grain. Trophy on right third, large on frame, very dark green wall and ample negative space on left half. Art direction like prestigious contemporary sports photography, refined, majestic but understated. No words, no letters, no writing, no logos, no UI, no text. Restrained dark forest green and rich pale antique gold, warm whites, physically realistic materials."
+    }
+  ]
+}
