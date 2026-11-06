@@ -206,6 +206,22 @@
   color: #f4c430;
   font: 800 28px var(--font-barlow-condensed, sans-serif);
 }
+.matchLineup {
+  display: grid;
+  gap: 5px;
+  padding: 13px 16px 0;
+}
+.matchLineup span {
+  color: #f4c430;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+.matchLineup strong {
+  color: #dce7dd;
+  font-size: 11px;
+  line-height: 1.45;
+}
 .matchActions {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
@@ -266,8 +282,14 @@
   line-height: 1.5;
   text-wrap: pretty;
 }
-.previewFormationButton {
+.lineupQuickActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 12px;
+}
+.previewFormationButton {
+  margin-top: 0;
   color: #f4c430;
 }
 .teamLayout {
@@ -493,24 +515,21 @@
   font: 900 13px var(--font-barlow-condensed, sans-serif);
 }
 .lineupGrid {
-  min-height: 326px;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(138px, auto));
-  align-items: center;
-  gap: 8px;
-  padding: 18px 28px 10px;
+  position: relative;
+  min-height: 420px;
+  background: linear-gradient(transparent 49.8%, rgba(226, 239, 228, .15) 50%, transparent 50.2%);
 }
 .lineupGrid > .starter {
-  width: 100%;
-  min-height: 132px;
-  grid-column: span 2;
+  position: absolute;
+  width: 96px;
+  min-height: 104px;
+  transform: translate(-50%, -50%);
 }
-.lineupGrid > .starter:nth-child(4) {
-  grid-column: 2 / span 2;
+.lineupGrid > .starter:active {
+  transform: translate(-50%, -50%) scale(.98);
 }
-.lineupGrid > .starter:nth-child(5) {
-  grid-column: 4 / span 2;
+.lineupGrid > .rosterDropTarget {
+  transform: translate(-50%, -50%) scale(1.04);
 }
 .formationRotation {
   display: grid;
@@ -534,7 +553,7 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 4px;
 }
-.formationRotation > div > span {
+.formationRotation > div > button {
   position: relative;
   min-width: 0;
   min-height: 58px;
@@ -544,7 +563,13 @@
   gap: 3px;
   border: 1px solid rgba(226, 239, 228, 0.08);
   border-radius: 9px;
+  color: #dce7dd;
   background: rgba(226, 239, 228, 0.035);
+  cursor: pointer;
+}
+.formationRotation > div > button[aria-pressed="true"] {
+  border-color: rgba(244, 196, 48, .75);
+  background: rgba(244, 196, 48, .13);
 }
 .formationRotation > div b {
   color: #f4c430;
@@ -557,14 +582,6 @@
   font-size: 7px;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.formationRotation > div i {
-  position: absolute;
-  z-index: 2;
-  right: -8px;
-  color: rgba(244, 196, 48, 0.62);
-  font-size: 11px;
-  font-style: normal;
 }
 .teamLayout > aside {
   min-width: 0;
@@ -1100,6 +1117,61 @@
   color: #819087;
   font-size: 10px;
 }
+.transferModal > section {
+  width: min(580px, 100%);
+}
+.transferChoices {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.transferChoices button {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 2px;
+  border: 1px solid rgba(226, 239, 228, .12);
+  border-radius: 10px;
+  padding: 9px;
+  color: #f2f5ed;
+  background: #102219;
+  text-align: left;
+  cursor: pointer;
+}
+.transferChoices button:hover:not(:disabled) {
+  border-color: rgba(244, 196, 48, .65);
+  background: #173325;
+}
+.transferChoices button:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+.transferChoices button > span {
+  min-width: 0;
+}
+.transferChoices button > span:first-child {
+  grid-row: span 2;
+}
+.transferChoices strong,
+.transferChoices small {
+  display: block;
+}
+.transferChoices strong {
+  font-size: 11px;
+}
+.transferChoices small {
+  margin-top: 3px;
+  color: #aab8ac;
+  font-size: 8px;
+}
+.transferChoices b {
+  grid-column: 2;
+  color: #f4c430;
+  font-size: 9px;
+  white-space: nowrap;
+}
 
 .historyList,
 .statHero,
@@ -1239,7 +1311,9 @@
   white-space: nowrap;
 }
 .market {
-  margin-bottom: 12px;
+  max-width: 980px;
+  margin: 16px auto 0;
+  scroll-margin-top: 16px;
   border: 1px solid rgba(244, 196, 48, 0.2);
   border-radius: 14px;
   padding: 14px;
@@ -1262,9 +1336,44 @@
   color: #aab8ac;
   font-size: 10px;
 }
+.marketFocus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+.market .marketFocus button {
+  min-height: 32px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  border-color: rgba(226, 239, 228, .12);
+  border-radius: 7px;
+  padding: 6px 10px;
+  color: #aab8ac;
+  font-size: 9px;
+  font-weight: 800;
+}
+.market .marketFocus button[aria-pressed="true"] {
+  border-color: rgba(244, 196, 48, .42);
+  color: #f4c430;
+  background: rgba(244, 196, 48, .1);
+}
+.market .marketFocus button:focus-visible {
+  outline: 2px solid #f4c430;
+  outline-offset: 2px;
+}
+.marketEmpty {
+  margin: 12px 0 0;
+  padding: 14px;
+  border: 1px dashed rgba(226, 239, 228, .13);
+  border-radius: 8px;
+  color: #aab8ac;
+  font-size: 10px;
+}
 .market > div {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 12px;
 }
@@ -1280,6 +1389,10 @@
   background: #102219;
   text-align: left;
   cursor: pointer;
+}
+.market button:disabled {
+  border-color: rgba(226, 239, 228, .06);
+  cursor: not-allowed;
 }
 .market button > span:nth-child(2) {
   min-width: 0;
@@ -1301,9 +1414,21 @@
   font-size: 8px;
 }
 .market button b {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
   color: #f4c430;
   font-size: 9px;
   white-space: nowrap;
+}
+.market button b small {
+  margin: 0;
+  color: #67dd78;
+  font-size: 7px;
+  letter-spacing: .06em;
+}
+.market button:disabled b small {
+  color: #aab8ac;
 }
 .worldGrid {
   display: grid;
@@ -1442,6 +1567,7 @@
   cursor: pointer;
 }
 .jobs button span {
+  min-width: 0;
   flex: 1;
   text-align: left;
 }
@@ -1452,6 +1578,10 @@
 .jobs button small {
   color: #aab8ac;
   font-size: 8px;
+}
+.jobs button small + small {
+  margin-top: 3px;
+  color: #f4c430;
 }
 
 .onboardingRoot,
@@ -1569,7 +1699,7 @@
 }
 .dismissed section > div {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 22px;
 }
@@ -1584,6 +1714,22 @@
   color: #f2f5ed;
   background: #0b1812;
   cursor: pointer;
+}
+.dismissed button > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+}
+.dismissed button strong {
+  font-size: 12px;
+}
+.dismissed button small {
+  color: #aab8ac;
+  font-size: 9px;
+}
+.dismissed button small:last-child {
+  color: #f4c430;
 }
 .loading {
   min-height: 100dvh;
@@ -1609,6 +1755,97 @@
   background: transparent;
   cursor: pointer;
 }
+.archiveDetails {
+  display: grid;
+  gap: 12px;
+  padding: 13px 14px 16px;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  background: #0a140e;
+}
+.archiveSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.archiveSummary span {
+  padding: 6px 8px;
+  border: 1px solid rgba(244, 196, 48, .16);
+  border-radius: 6px;
+  color: #d8d6b8;
+  font-size: 9px;
+  font-weight: 800;
+}
+.archiveCompetitions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.archiveCompetitions > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, .06);
+  border-radius: 7px;
+  background: #111d15;
+}
+.archiveCompetitions strong {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archiveCompetitions span {
+  flex: 0 0 auto;
+  color: #8c9d90;
+  font-size: 9px;
+}
+.archiveCompetitions .archiveChampion {
+  color: #f4c430;
+  font-weight: 900;
+}
+.archiveMatches {
+  display: grid;
+  gap: 0;
+}
+.archiveMatches > small {
+  margin-bottom: 5px;
+  color: #819386;
+  font: 900 8px/1 ui-monospace, monospace;
+  letter-spacing: .1em;
+}
+.archiveMatches > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 10px;
+  padding: 7px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+}
+.archiveMatches > div span {
+  grid-column: 1 / -1;
+  color: #819386;
+  font-size: 8px;
+}
+.archiveMatches > div strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archiveMatches > div em {
+  color: #f4c430;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+}
+.archiveMatches p {
+  margin: 0;
+  color: #819386;
+  font-size: 9px;
+}
 
 @media (min-width: 1100px) {
   .managerCareer :global(.bottom-nav) {
@@ -1628,6 +1865,28 @@
     grid-column: 2 / 12;
     width: 100%;
     max-width: none;
+  }
+}
+
+@media (min-width: 900px) {
+  .managerCareer:global(.career-shell) > .matchStage {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-content: start;
+    overflow-y: auto;
+  }
+  .managerCareer .matchStage > :global(.objective-card) {
+    grid-column: 1;
+    grid-row: 1;
+    width: min(760px, calc(100% - 32px));
+    margin: 18px auto 0;
+  }
+  .managerCareer .matchStage > .keyMatch {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    height: auto;
+    margin: 14px auto 32px;
   }
 }
 
@@ -1682,14 +1941,11 @@
     padding: 10px;
   }
   .lineupGrid {
-    min-height: 300px;
-    grid-template-rows: repeat(2, minmax(126px, auto));
-    gap: 4px;
-    padding: 14px 8px 8px;
+    min-height: 400px;
   }
   .lineupGrid > .starter {
-    width: 100%;
-    min-height: 120px;
+    width: 88px;
+    min-height: 100px;
   }
   .formationRotation {
     overflow: hidden;
@@ -1750,6 +2006,9 @@
   .managerStatsGrid {
     grid-template-columns: 1fr;
   }
+  .archiveCompetitions {
+    grid-template-columns: 1fr;
+  }
   .squadProduction > div > article {
     padding-inline: 10px;
   }
@@ -1786,7 +2045,7 @@
     padding: 16px;
   }
   .dismissed section > div {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 }
 

@@ -150,6 +150,29 @@ export function slotIndexForPosition(formation: BotaoFormation, position: BotaoP
   return bestIndex;
 }
 
+/** Mesma distribuição usada na prévia do técnico e na mesa. */
+export function arrangeManagerStarters<T extends { position: BotaoPositionKey }>(
+  starters: T[],
+  formation: BotaoFormation,
+): T[] {
+  const remaining = starters.slice();
+  const arranged: T[] = [];
+  for (let slot = 0; slot < formation.slots.length; slot += 1) {
+    let bestIndex = 0;
+    let bestCost = Number.POSITIVE_INFINITY;
+    remaining.forEach((player, index) => {
+      const cost = Math.abs(slotIndexForPosition(formation, player.position) - slot);
+      if (cost < bestCost) {
+        bestCost = cost;
+        bestIndex = index;
+      }
+    });
+    const [picked] = remaining.splice(bestIndex, 1);
+    if (picked) arranged.push(picked);
+  }
+  return arranged;
+}
+
 /** Rótulo curto usado no HUD ("Você agora é o mais adiantado"). */
 export function slotRoleLabel(slot: BotaoSlot): string {
   if (slot.zone === "fundo") return "último homem";

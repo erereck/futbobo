@@ -9,10 +9,12 @@ import {
 } from "react";
 import {
   BOTAO_FORMATIONS,
+  arrangeManagerStarters,
   formationById,
-  slotIndexForPosition,
+  type BotaoSlot,
 } from "../../botao/formations";
 import BotaoMatch from "../../botao/BotaoMatch";
+import { walkoverBotaoResult } from "../../botao/adapter";
 import TeamCrest from "../../botao/TeamCrest";
 import { hashSeed } from "../../botao/rng";
 import { simulateBotaoMatch } from "../../botao/simulate";
@@ -28,16 +30,23 @@ import {
   hireManagerAtClub,
   managerClub,
   managerDecision,
+  managerMarketFit,
   managerMarketOffers,
   managerMatchSetup,
   managerOpponent,
+  managerRecoveryOffers,
+  managerSaleValue,
   managerSquad,
   marketFee,
   normalizeManagerState,
+  replaceManagerPlayer,
+  setManagerFormation,
   setManagerLineup,
   sellManagerPlayer,
   signManagerPlayer,
   startManagerCareer,
+  suggestManagerLineup,
+  type ManagerMarketFocus,
   type ManagerState,
 } from "../../career/manager-model";
 import {
@@ -134,13 +143,43 @@ function money(value: number) {
 function resultLabel(value: "win" | "loss" | "draw") {
   return value === "win" ? "VITÓRIA" : value === "loss" ? "DERROTA" : "EMPATE";
 }
+const managerMatchProgressKey = (careerId: string) =>
+  `futbobo:manager-match-in-progress:v1:${careerId}`;
+
 function loadManagerState() {
-  if (typeof window === "undefined") return createManagerState(1);
+  if (typeof window === "undefined")
+    return { state: createManagerState(1), abandoned: false };
   const activeId = getActiveCareerId();
   const saved = activeId ? readCareerSlotState(activeId) : null;
-  return saved && "mode" in saved && saved.mode === "manager"
+  const state = saved && "mode" in saved && saved.mode === "manager"
     ? normalizeManagerState(saved)
     : createManagerState();
+  const markerKey = managerMatchProgressKey(activeId);
+  try {
+    const marker = JSON.parse(localStorage.getItem(markerKey) ?? "null") as {
+      matchId?: string;
+    } | null;
+    if (!marker) return { state, abandoned: false };
+    if (state.pendingMatch?.id !== marker.matchId) {
+      localStorage.removeItem(markerKey);
+      return { state, abandoned: false };
+    }
+    const prepared = managerMatchSetup(state);
+    if (!prepared || prepared.setup.matchId !== marker.matchId) {
+      localStorage.removeItem(markerKey);
+      return { state, abandoned: false };
+    }
+    const afterAbandon = applyManagerMatchResult(
+      prepared.state,
+      walkoverBotaoResult(prepared.setup),
+    );
+    localStorage.setItem(SAVE_KEY, JSON.stringify(afterAbandon));
+    syncActiveCareerSlot();
+    localStorage.removeItem(markerKey);
+    return { state: afterAbandon, abandoned: true };
+  } catch {
+    return { state, abandoned: false };
+  }
 }
 
 export default function ManagerGame({ onExit }: { onExit?: () => void }) {
@@ -149,18 +188,21 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
   const state = loadedState ?? loadingState;
   const [tab, setTab] = useState<ManagerTab>("career");
   const [worldSection, setWorldSection] = useState<ManagerWorldSection>("now");
+  const [marketFocus, setMarketFocus] = useState<ManagerMarketFocus>("all");
+  const [openArchiveSeason, setOpenArchiveSeason] = useState<string | null>(null);
   const [matchSetup, setMatchSetup] = useState<
     NonNullable<ReturnType<typeof managerMatchSetup>>["setup"] | null
   >(null);
-  const [matchStarted, setMatchStarted] = useState(false);
   const [matchSummary, setMatchSummary] = useState<ManagerMatchSummary>(null);
   const [formationPreviewOpen, setFormationPreviewOpen] = useState(false);
   const [previewFormationId, setPreviewFormationId] = useState("muralha");
   const [selectedPlayer, setSelectedPlayer] = useState("");
+  const [transferTargetId, setTransferTargetId] = useState("");
   const [rosterDrag, setRosterDrag] = useState<ManagerRosterDrag>(null);
   const [rosterDragHover, setRosterDragHover] = useState("");
   const rosterDragRef = useRef<ManagerRosterDrag>(null);
   const rosterDragLayerRef = useRef<HTMLDivElement | null>(null);
+  const marketRef = useRef<HTMLElement | null>(null);
   const rosterDragCleanupRef = useRef<() => void>(() => undefined);
   const [managerName, setManagerName] = useState("");
   const [nationality, setNationality] = useState("brasil");
@@ -171,9 +213,22 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     loadedState.careerStage === "consequence";
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setState(loadManagerState()), 0);
+    const timer = window.setTimeout(() => {
+      const restored = loadManagerState();
+      setState(restored.state);
+      if (restored.abandoned)
+        setNotice("Partida abandonada: derrota por W.O. registrada no histórico.");
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+  useEffect(() => {
+    if (!transferTargetId) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setTransferTargetId("");
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [transferTargetId]);
   useEffect(() => {
     if (!loadedState) return;
     localStorage.setItem(SAVE_KEY, JSON.stringify(loadedState));
@@ -202,50 +257,63 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     () => new Map(squad.map((player) => [player.id, player])),
     [squad],
   );
+  const startingLineup = useMemo(() => {
+    const formation = formationById(state.formationId);
+    const starters = state.starters
+      .map((id) => playerById.get(id))
+      .filter((player): player is WorldPlayer => Boolean(player));
+    return arrangeManagerStarters(starters, formation).map((player, index) => ({
+      player,
+      slot: formation.slots[index],
+    }));
+  }, [playerById, state.formationId, state.starters]);
   const previewLineup = useMemo(() => {
     const formation = formationById(previewFormationId);
-    const available = formation.slots.map((slot, index) => ({ slot, index }));
-    return state.starters.flatMap((id, playerIndex) => {
-      const player = playerById.get(id);
-      if (!player || !available.length) return [];
-      const preferredIndex = slotIndexForPosition(formation, player.position);
-      let availableIndex = available.findIndex(
-        (candidate) => candidate.index === preferredIndex,
-      );
-      if (availableIndex < 0) {
-        availableIndex = available.reduce(
-          (best, candidate, index) =>
-            Math.abs(candidate.index - preferredIndex) <
-            Math.abs(available[best].index - preferredIndex)
-              ? index
-              : best,
-          Math.min(playerIndex, available.length - 1),
-        );
-      }
-      const [{ slot }] = available.splice(availableIndex, 1);
-      return [{ id, player, slot }];
-    });
+    const starters = state.starters
+      .map((id) => playerById.get(id))
+      .filter((player): player is WorldPlayer => Boolean(player));
+    return arrangeManagerStarters(starters, formation).map((player, index) => ({
+      id: player.id,
+      player,
+      slot: formation.slots[index],
+    }));
   }, [playerById, previewFormationId, state.starters]);
-  const marketOffers = useMemo(() => managerMarketOffers(state), [state]);
+  const marketOffers = useMemo(
+    () => managerMarketOffers(state, marketFocus),
+    [marketFocus, state],
+  );
+  const transferTarget = marketOffers.find((player) => player.id === transferTargetId);
   const decision = useMemo(() => managerDecision(state), [state]);
   const careerTotals = useMemo(
     () =>
-      state.seasonHistory.reduce(
+      [
+        ...state.seasonHistory,
+        ...(state.pendingSeasonRecord ? [state.pendingSeasonRecord] : []),
+      ].reduce(
         (totals, record) => ({
           matches: totals.matches + record.matches,
           wins: totals.wins + record.wins,
+          draws: totals.draws + record.draws,
           goalsFor: totals.goalsFor + record.goalsFor,
           goalsAgainst: totals.goalsAgainst + record.goalsAgainst,
         }),
-        { matches: 0, wins: 0, goalsFor: 0, goalsAgainst: 0 },
+        { matches: 0, wins: 0, draws: 0, goalsFor: 0, goalsAgainst: 0 },
       ),
-    [state.seasonHistory],
+    [state.pendingSeasonRecord, state.seasonHistory],
   );
   const latestSeason = state.seasonHistory.at(-1);
+  const seasonHasTitle = latestSeason?.competitions.some(
+    (competition) => competition.champion,
+  );
+  const lastMatchWasAbandoned =
+    state.history[0]?.season === state.season &&
+    state.history[0]?.id === state.lastResult?.matchId &&
+    state.history[0]?.walkover === true;
   const jobOffers = useMemo(() => {
     const ids = new Set(state.jobOffers);
     return CLUBS.filter((item) => ids.has(item.id)).slice(0, 3);
   }, [state.jobOffers]);
+  const recoveryOffers = useMemo(() => managerRecoveryOffers(state), [state]);
   const playerStatsRows = useMemo(
     () =>
       squad
@@ -271,26 +339,72 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         ),
     [squad, state.playerStats],
   );
-  const worldLeaders = useMemo(
+  const activeWorldPlayers = useMemo(
     () =>
-      Object.values(state.worldPlayers.players)
-        .filter((player) => player.status === "active")
+      Object.values(state.worldPlayers.players).filter(
+        (player) => player.status === "active",
+      ),
+    [state.worldPlayers.players],
+  );
+  const worldByOverall = useMemo(
+    () =>
+      activeWorldPlayers
+        .slice()
+        .sort((a, b) => b.overall - a.overall || b.reputation - a.reputation)
+        .slice(0, 12),
+    [activeWorldPlayers],
+  );
+  const worldByReputation = useMemo(
+    () =>
+      activeWorldPlayers
+        .slice()
         .sort((a, b) => b.reputation - a.reputation || b.overall - a.overall)
         .slice(0, 12),
-    [state.worldPlayers.players],
+    [activeWorldPlayers],
+  );
+  const worldByValue = useMemo(
+    () =>
+      activeWorldPlayers
+        .slice()
+        .sort((a, b) => marketFee(b) - marketFee(a) || b.overall - a.overall)
+        .slice(0, 12),
+    [activeWorldPlayers],
   );
   const worldProspects = useMemo(
     () =>
-      Object.values(state.worldPlayers.players)
-        .filter(
-          (player) =>
-            player.status === "active" &&
-            state.season - player.birthSeason <= 23,
-        )
+      activeWorldPlayers
+        .filter((player) => state.season - player.birthSeason <= 23)
         .sort((a, b) => b.potential - a.potential || b.overall - a.overall)
         .slice(0, 12),
-    [state.season, state.worldPlayers.players],
+    [activeWorldPlayers, state.season],
   );
+  const trajectoryClubs = useMemo(() => {
+    const grouped = new Map<
+      string,
+      { seasons: number; titles: number; wins: number }
+    >();
+    for (const record of state.seasonHistory) {
+      const current = grouped.get(record.clubId) ?? {
+        seasons: 0,
+        titles: 0,
+        wins: 0,
+      };
+      current.seasons += 1;
+      current.titles += record.competitions.filter(
+        (competition) => competition.champion,
+      ).length;
+      current.wins += record.wins;
+      grouped.set(record.clubId, current);
+    }
+    if (!grouped.has(state.currentClubId))
+      grouped.set(state.currentClubId, { seasons: 0, titles: 0, wins: 0 });
+    return [...grouped.entries()].sort(
+      (a, b) =>
+        b[1].titles - a[1].titles ||
+        b[1].wins - a[1].wins ||
+        b[1].seasons - a[1].seasons,
+    );
+  }, [state.currentClubId, state.seasonHistory]);
   const worldClubs = useMemo(
     () =>
       CLUBS.slice()
@@ -317,9 +431,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       });
     state.history.slice(0, 4).forEach((match) => {
       const rival = CLUBS.find((candidate) => candidate.id === match.opponentId);
+      const matchClub = CLUBS.find((candidate) => candidate.id === match.clubId);
       items.push({
         id: `match-${match.id}`,
-        title: `${club.shortName} ${match.score} ${rival?.shortName ?? "Adversário"} · ${match.competitionName}`,
+        title: `${matchClub?.shortName ?? "Clube"} ${match.score} ${rival?.shortName ?? "Adversário"} · ${match.competitionName}${match.walkover ? " · W.O." : ""}`,
       });
     });
     if (!items.length)
@@ -350,15 +465,21 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       setTab("team");
       return;
     }
+    localStorage.setItem(SAVE_KEY, JSON.stringify(prepared.state));
+    syncActiveCareerSlot();
+    localStorage.setItem(
+      managerMatchProgressKey(getActiveCareerId()),
+      JSON.stringify({ matchId: prepared.setup.matchId, startedAt: Date.now() }),
+    );
     setState(prepared.state);
     setMatchSetup(prepared.setup);
-    setMatchStarted(false);
   };
   const completeResult = (
     base: ManagerState,
     setup: NonNullable<ReturnType<typeof managerMatchSetup>>["setup"],
     result: BotaoMatchResult,
   ) => {
+    if (base.pendingMatch?.id !== result.matchId) return;
     const starters =
       setup.managerRosters?.user.starters
         .map((player) => player.id)
@@ -366,38 +487,27 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     const bench = base.squadIds
       .filter((id) => !starters.includes(id))
       .slice(0, 3);
-    setState(
-      applyManagerMatchResult(setManagerLineup(base, starters, bench), result),
+    const next = applyManagerMatchResult(
+      setManagerLineup(base, starters, bench), result,
     );
+    localStorage.setItem(SAVE_KEY, JSON.stringify(next));
+    syncActiveCareerSlot();
+    localStorage.removeItem(managerMatchProgressKey(getActiveCareerId()));
+    setState(next);
     setMatchSummary({ setup, result });
     setMatchSetup(null);
-    setMatchStarted(false);
     setTab("career");
     setNotice("");
   };
   const swapPlayerIds = (firstId: string, nextId: string) => {
     if (!firstId || firstId === nextId) return;
-    const starters = state.starters.map((id) =>
-      id === firstId ? nextId : id === nextId ? firstId : id,
-    );
-    const bench = state.bench.map((id) =>
-      id === firstId ? nextId : id === nextId ? firstId : id,
-    );
-    const aRelated =
-      state.starters.includes(firstId) || state.bench.includes(firstId);
-    const bRelated =
-      state.starters.includes(nextId) || state.bench.includes(nextId);
-    if (aRelated !== bRelated) {
-      if (state.starters.includes(firstId))
-        starters[state.starters.indexOf(firstId)] = nextId;
-      else if (state.bench.includes(firstId))
-        bench[state.bench.indexOf(firstId)] = nextId;
-      else if (state.starters.includes(nextId))
-        starters[state.starters.indexOf(nextId)] = firstId;
-      else if (state.bench.includes(nextId))
-        bench[state.bench.indexOf(nextId)] = firstId;
-    }
-    setState(setManagerLineup(state, starters, bench));
+    setState((current) => current && current.squadIds.includes(firstId) && current.squadIds.includes(nextId)
+      ? setManagerLineup(
+          current,
+          current.starters.map((id) => id === firstId ? nextId : id === nextId ? firstId : id),
+          current.bench.map((id) => id === firstId ? nextId : id === nextId ? firstId : id),
+        )
+      : current);
     setSelectedPlayer("");
     setRosterDrag(null);
     rosterDragRef.current = null;
@@ -481,7 +591,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         .elementFromPoint(clientX, clientY)
         ?.closest<HTMLElement>("[data-player-id]");
       const nextHover =
-        target?.dataset.playerArea !== current.area
+        target?.dataset.playerId !== current.id
           ? (target?.dataset.playerId ?? "")
           : "";
       setRosterDragHover((previous) =>
@@ -497,7 +607,6 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       .elementFromPoint(clientX, clientY)
       ?.closest<HTMLElement>("[data-player-id]");
     const targetId = target?.dataset.playerId ?? "";
-    const targetArea = target?.dataset.playerArea;
     rosterDragRef.current = null;
     setRosterDrag(null);
     setRosterDragHover("");
@@ -505,7 +614,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
       swapPlayers(current.id);
       return;
     }
-    if (targetId && targetId !== current.id && targetArea !== current.area) {
+    if (targetId && targetId !== current.id) {
       swapPlayerIds(current.id, targetId);
     }
   };
@@ -564,70 +673,13 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     );
   }
 
-  if (matchSetup && matchStarted)
+  if (matchSetup)
     return (
       <BotaoMatch
         setup={matchSetup}
         onFinish={(result) => completeResult(state, matchSetup, result)}
       />
     );
-  if (matchSetup) {
-    const lobbyOpponent = opponent ?? club;
-    return (
-      <main className="botao-lobby botao-career-lobby screen-enter">
-        <span className="botao-lobby-kicker">PARTIDA DECISIVA</span>
-        <h1>{state.pendingMatch?.stageName ?? "Final"}</h1>
-        <p className="botao-lobby-lead">
-          {state.pendingMatch?.competitionName} · Agora a taça depende da mesa.
-        </p>
-        <div className="botao-card botao-final-versus">
-          <div className="botao-team">
-            <ClubBadge club={club} size="md" />
-            <strong>{club.shortName}</strong>
-          </div>
-          <div className="botao-versus-mark">
-            <small>DECISÃO</small>
-            <b>×</b>
-          </div>
-          <div className="botao-team botao-team-cpu">
-            <strong>{lobbyOpponent.shortName}</strong>
-            <ClubBadge club={lobbyOpponent} size="md" />
-          </div>
-        </div>
-        <div className="botao-card botao-career-player">
-          <span>SEUS CINCO</span>
-          <strong>
-            {state.starters
-              .map((id) => playerById.get(id)?.name.split(" ").at(-1))
-              .filter(Boolean)
-              .join(" · ")}
-          </strong>
-          <p>
-            Muralha abre a partida. Depois de cada gol, os desenhos avançam na
-            mesma rotação do Rumo ao Estrelato.
-          </p>
-        </div>
-        <div className="botao-actions">
-          <button
-            type="button"
-            className="botao-primary"
-            onClick={() => setMatchStarted(true)}
-          >
-            Jogar no futebol de botão
-          </button>
-          <button
-            type="button"
-            className="botao-ghost"
-            onClick={() =>
-              completeResult(state, matchSetup, simulateBotaoMatch(matchSetup))
-            }
-          >
-            Simular esta partida
-          </button>
-        </div>
-      </main>
-    );
-  }
   if (!loadedState)
     return (
       <main className={styles.loading} aria-live="polite">
@@ -709,20 +761,25 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     return (
       <main className={`app-shell ${styles.dismissed}`}>
         <section>
-          <span>FIM DE CICLO</span>
+          <span>FIM DE CICLO · {state.season}</span>
           <h1>A diretoria encerrou o projeto.</h1>
           <p>
-            Sua reputação continua. Escolha um novo clube e volte para a mesa.
+            Seu trabalho continua em {state.season + 1}. Escolha o próximo
+            clube; seu histórico e o mundo seguem com você.
           </p>
           <div>
-            {CLUBS.slice(0, 12).map((item) => (
+            {recoveryOffers.map((item) => (
               <button
                 type="button"
                 key={item.id}
                 onClick={() => setState(hireManagerAtClub(state, item.id))}
               >
                 <ClubBadge club={item} size="sm" />
-                <span>{item.shortName}</span>
+                <span>
+                  <strong>{item.shortName}</strong>
+                  <small>{LEAGUES.find((league) => league.id === item.leagueId)?.name ?? "Liga nacional"}</small>
+                  <small>Caixa inicial {money(Math.round(item.strength * 115_000))}</small>
+                </span>
               </button>
             ))}
           </div>
@@ -737,7 +794,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           <div className="objective-card">
             <span>META DA DIRETORIA</span>
             <strong>{state.objective}</strong>
-            <p>Suas decisões e o jogo-chave alteram a confiança no trabalho.</p>
+            <p>
+              Quer reforçar? Abra Time antes desta decisão. O elenco conta na
+              campanha.
+            </p>
             <small>Confiança atual: {Math.round(state.boardTrust)}%</small>
             <WorldPulseTicker
               headlines={managerHeadlines}
@@ -842,7 +902,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
           <header>
             <span>{state.pendingMatch?.competitionName ?? "JOGO-CHAVE"}</span>
             <strong>
-              {state.pendingMatch?.stageName ?? "Temporada"} · FINAL{" "}
+              {state.pendingMatch?.stageName ?? "Temporada"} · JOGO{" "}
               {state.pendingMatch?.order ?? 1}/{state.pendingMatch?.total ?? 1}
             </strong>
           </header>
@@ -859,13 +919,17 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               <small>ADVERSÁRIO</small>
             </div>
           </div>
+          <div className={styles.matchLineup}>
+            <span>SEUS CINCO · {formationById(state.formationId).name} {formationById(state.formationId).shape}</span>
+            <strong>{startingLineup.map(({ player }) => player.name.split(" ").at(-1)).join(" · ")}</strong>
+          </div>
           <div className={styles.matchActions}>
             <button
               type="button"
               className={styles.primaryAction}
               onClick={openMatch}
             >
-              <FutboboIcon name="play" /> Jogar partida
+              <FutboboIcon name="play" /> Jogar no futebol de botão
             </button>
             <button
               type="button"
@@ -883,7 +947,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 );
               }}
             >
-              Simular com a mesma IA
+              Simular esta partida
             </button>
           </div>
           <footer>
@@ -896,7 +960,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     );
   };
 
-  const rosterPlayer = (id: string, area: "starter" | "bench") => {
+  const rosterPlayer = (id: string, area: "starter" | "bench", slot?: BotaoSlot) => {
     const player = playerById.get(id);
     if (!player) return null;
     return (
@@ -905,6 +969,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
         key={id}
         data-player-id={id}
         data-player-area={area}
+        style={slot ? { left: `${slot.lane * 100}%`, top: `${14 + slot.depth * 70}%` } : undefined}
         className={`${styles.rosterPlayer} ${styles[area]} ${selectedPlayer === id ? styles.selectedPlayer : ""} ${rosterDrag?.id === id && rosterDrag.moved ? styles.draggingPlayer : ""} ${rosterDragHover === id ? styles.rosterDropTarget : ""}`}
         aria-label={`${area === "starter" ? "Titular" : "Reserva"}: ${player.name}`}
         aria-pressed={selectedPlayer === id}
@@ -928,6 +993,84 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
     );
   };
 
+  const renderMarket = () => (
+    <section
+      ref={marketRef}
+      className={styles.market}
+      aria-label="Mercado do elenco"
+    >
+      <header>
+        <span>MERCADO</span>
+        <strong>Reforços para o seu elenco</strong>
+        <small>Caixa: {money(state.budget)} · Banco: {state.bench.length}/3</small>
+      </header>
+      <nav className={styles.marketFocus} aria-label="Buscar reforços por setor">
+        {([
+          ["all", "Sugestões"],
+          ["goal", "Goleiro"],
+          ["defense", "Defesa"],
+          ["midfield", "Meio"],
+          ["attack", "Ataque"],
+        ] as Array<[ManagerMarketFocus, string]>).map(([focus, label]) => (
+          <button
+            type="button"
+            key={focus}
+            aria-pressed={marketFocus === focus}
+            onClick={() => setMarketFocus(focus)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      <div>
+        {marketOffers.map((player) => {
+          const fee = marketFee(player);
+          const fullSquad = state.squadIds.length >= 8 || state.bench.length >= 3;
+          const canSign = !fullSquad && state.budget >= fee;
+          const canReplace = fullSquad && state.bench.some((id) => {
+            const outgoing = playerById.get(id);
+            return outgoing && state.budget + managerSaleValue(outgoing) >= fee;
+          });
+          const available = canSign || canReplace;
+          const currentClub = CLUBS.find((item) => item.id === player.currentClubId);
+          return (
+            <button
+              type="button"
+              key={player.id}
+              disabled={!available}
+              aria-label={`${player.name}, ${player.position}, ${player.overall} OVR, ${money(fee)}${canReplace ? ", trocar por reserva" : canSign ? ", contratar" : ", indisponível"}`}
+              onClick={() => {
+                if (canReplace) {
+                  setTransferTargetId(player.id);
+                  return;
+                }
+                const next = signManagerPlayer(state, player.id);
+                if (next !== state) {
+                  setState(next);
+                  setNotice(`${player.name} assinou com o ${club.shortName}.`);
+                }
+              }}
+            >
+              <PlayerPortrait player={player} state={state} size={42} neutral />
+              <span>
+                <strong>{player.name}</strong>
+                <small>{player.position} · {player.overall} OVR · {currentClub?.shortName ?? "Agente livre"}</small>
+                <small>{managerMarketFit(state, player)}</small>
+              </span>
+              <b>{money(fee)}<small>{canReplace ? "TROCAR RESERVA" : canSign ? "CONTRATAR" : "SEM CAIXA"}</small></b>
+            </button>
+          );
+        })}
+      </div>
+      {!marketOffers.length ? (
+        <p className={styles.marketEmpty}>
+          Nenhum reforço viável para este setor agora. Consulte outro setor ou
+          avance a temporada.
+        </p>
+      ) : null}
+    </section>
+  );
+
   const renderPanel = () => {
     if (tab === "team")
       return (
@@ -936,16 +1079,49 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             <span>TIME</span>
             <h2>Escolha quem começa.</h2>
             <p>
-              Troque titulares e reservas. O desenho em campo muda sozinho na
-              rotação clássica do Futbobo.
+              Toque em dois jogadores ou arraste um até outro para trocar. Escolha
+              abaixo a formação de entrada; depois de cada gol, ela avança na rotação.
             </p>
-            <button
-              type="button"
-              className={styles.previewFormationButton}
-              onClick={() => setFormationPreviewOpen(true)}
-            >
-              <FutboboIcon name="player" /> Ver posições nas formações
-            </button>
+            <div className={styles.lineupQuickActions}>
+              <button
+                type="button"
+                className={styles.previewFormationButton}
+                onClick={() =>
+                  marketRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  })
+                }
+              >
+                <FutboboIcon name="wallet" /> Ir ao mercado
+              </button>
+              <button
+                type="button"
+                className={styles.previewFormationButton}
+                onClick={() => {
+                  const next = suggestManagerLineup(state);
+                  if (next !== state) setState(next);
+                  setSelectedPlayer("");
+                  setNotice(
+                    next === state
+                      ? "O melhor cinco já está escalado."
+                      : "Melhor cinco escalado. Você ainda pode fazer trocas manuais.",
+                  );
+                }}
+              >
+                <FutboboIcon name="team" /> Escalar melhor cinco
+              </button>
+              <button
+                type="button"
+                className={styles.previewFormationButton}
+                onClick={() => {
+                  setPreviewFormationId(state.formationId);
+                  setFormationPreviewOpen(true);
+                }}
+              >
+                <FutboboIcon name="player" /> Ver posições nas formações
+              </button>
+            </div>
           </header>
           <div className={styles.teamLayout}>
             <section className={styles.lineupBoard}>
@@ -957,20 +1133,24 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 <b>{state.starters.length}/5</b>
               </header>
               <div className={styles.lineupGrid}>
-                {state.starters.map((id) => rosterPlayer(id, "starter"))}
+                {startingLineup.map(({ player, slot }) => rosterPlayer(player.id, "starter", slot))}
               </div>
               <div className={styles.formationRotation}>
                 <span>
-                  <small>ROTAÇÃO AUTOMÁTICA</small>
-                  <strong>Um desenho novo a cada gol</strong>
+                  <small>FORMAÇÃO INICIAL</small>
+                  <strong>Escolha a entrada · depois avança a cada gol</strong>
                 </span>
                 <div>
-                  {BOTAO_FORMATIONS.map((formation, index) => (
-                    <span key={formation.id}>
+                  {BOTAO_FORMATIONS.map((formation) => (
+                    <button
+                      type="button"
+                      key={formation.id}
+                      aria-pressed={state.formationId === formation.id}
+                      onClick={() => setState((current) => current ? setManagerFormation(current, formation.id) : current)}
+                    >
                       <b>{formation.shape}</b>
                       <small>{formation.name}</small>
-                      {index < BOTAO_FORMATIONS.length - 1 ? <i>→</i> : null}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -996,19 +1176,85 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                           );
                         }}
                       >
-                        Vender · {money(Math.round(marketFee(player) * 0.72))}
+                        Vender · {money(managerSaleValue(player))}
                       </button>
                     </div>
                   );
                 })}
                 {!state.bench.length ? (
                   <p className={styles.emptyBench}>
-                    Banco vazio. Contrate até três reservas no Mundo.
+                    Banco vazio. Contrate até três reservas no Mercado abaixo.
                   </p>
                 ) : null}
               </div>
             </aside>
           </div>
+          {renderMarket()}
+          {transferTarget ? (
+            <div
+              className={`${styles.formationModal} ${styles.transferModal}`}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Contratar ${transferTarget.name}`}
+            >
+              <section>
+                <header>
+                  <span>
+                    <small>JANELA DE TRANSFERÊNCIAS</small>
+                    <strong>Quem sai para {transferTarget.name} chegar?</strong>
+                  </span>
+                  <button
+                    type="button"
+                    aria-label="Fechar negociação"
+                    autoFocus
+                    onClick={() => setTransferTargetId("")}
+                  >
+                    ×
+                  </button>
+                </header>
+                <p>
+                  O elenco tem oito jogadores. Escolha um reserva para vender e
+                  liberar a vaga. O valor da venda entra na mesma negociação.
+                </p>
+                <div className={styles.transferChoices}>
+                  {state.bench.map((id) => {
+                    const outgoing = playerById.get(id);
+                    if (!outgoing) return null;
+                    const sale = managerSaleValue(outgoing);
+                    const net = marketFee(transferTarget) - sale;
+                    const affordable = state.budget >= net;
+                    return (
+                      <button
+                        type="button"
+                        key={id}
+                        disabled={!affordable}
+                        onClick={() => {
+                          const next = replaceManagerPlayer(state, transferTarget.id, id);
+                          if (next === state) return;
+                          setState(next);
+                          setTransferTargetId("");
+                          setNotice(`${transferTarget.name} chegou; ${outgoing.name} deixou o elenco.`);
+                        }}
+                      >
+                        <PlayerPortrait player={outgoing} state={state} size={40} />
+                        <span>
+                          <strong>{outgoing.name}</strong>
+                          <small>{outgoing.position} · {outgoing.overall} OVR · venda {money(sale)}</small>
+                        </span>
+                        <b>
+                          {affordable
+                            ? net >= 0
+                              ? `CUSTO LÍQUIDO ${money(net)}`
+                              : `CAIXA +${money(-net)}`
+                            : "SEM CAIXA"}
+                        </b>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+          ) : null}
           {rosterDrag?.moved && playerById.get(rosterDrag.id) ? (
             <div
               ref={rosterDragLayerRef}
@@ -1080,8 +1326,8 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                   })}
                 </div>
                 <p>
-                  A partida começa na Muralha e avança uma formação a cada gol,
-                  sempre nesta ordem.
+                  A partida começa em {formationById(state.formationId).name} e
+                  avança uma formação a cada gol, nesta ordem.
                 </p>
               </section>
             </div>
@@ -1212,17 +1458,26 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
             <div>
               <small>JOGOS</small>
               <strong>{careerTotals.matches}</strong>
-              <span>{state.seasonHistory.length} temporada(s)</span>
+              <span>
+                {state.seasonHistory.length} temporada(s) concluída(s)
+                {state.pendingSeasonRecord ? " · temporada em curso" : ""}
+              </span>
             </div>
             <div>
               <small>APROVEITAMENTO</small>
               <strong>
                 {careerTotals.matches
-                  ? Math.round((careerTotals.wins / careerTotals.matches) * 100)
+                  ? Math.round(
+                      ((careerTotals.wins * 3 + careerTotals.draws) /
+                        (careerTotals.matches * 3)) *
+                        100,
+                    )
                   : 0}
                 <em>%</em>
               </strong>
-              <span>{careerTotals.wins} vitória(s)</span>
+              <span>
+                {careerTotals.wins} vitória(s) · {careerTotals.draws} empate(s)
+              </span>
             </div>
             <div>
               <small>SALDO DE GOLS</small>
@@ -1397,55 +1652,6 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                     : `O trabalho de ${state.name} terminou o ano com ${Math.round(state.boardTrust)}% de confiança.`}
                 </p>
               </article>
-              {marketOffers.length ? (
-                <article className={styles.market}>
-                  <header>
-                    <span>OBSERVAÇÃO DO ELENCO</span>
-                    <strong>Três nomes disponíveis.</strong>
-                    <small>
-                      A contratação ocupa uma vaga aberta no banco (
-                      {state.bench.length}/3).
-                    </small>
-                  </header>
-                  <div>
-                    {marketOffers.map((player) => (
-                      <button
-                        type="button"
-                        key={player.id}
-                        onClick={() => {
-                          const next = signManagerPlayer(state, player.id);
-                          if (next === state)
-                            setNotice(
-                              state.squadIds.length >= 8
-                                ? "Venda um reserva para abrir uma vaga."
-                                : "O caixa não comporta essa contratação.",
-                            );
-                          else {
-                            setState(next);
-                            setNotice(
-                              `${player.name} assinou com o ${club.shortName}.`,
-                            );
-                          }
-                        }}
-                      >
-                        <PlayerPortrait
-                          player={player}
-                          state={state}
-                          size={42}
-                          neutral
-                        />
-                        <span>
-                          <strong>{player.name}</strong>
-                          <small>
-                            {player.position} · {player.overall} OVR
-                          </small>
-                        </span>
-                        <b>{money(marketFee(player))}</b>
-                      </button>
-                    ))}
-                  </div>
-                </article>
-              ) : null}
               <section className={worldStyles.newsSection}>
                 <header>
                   <span>GIRO DO MUNDO</span>
@@ -1469,8 +1675,9 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                             {rival?.shortName ?? "Adversário"}
                           </strong>
                           <p>
-                            {resultLabel(item.outcome)} · {item.substitutions}{" "}
-                            {item.substitutions === 1 ? "troca" : "trocas"}
+                            {item.walkover
+                              ? "W.O. POR ABANDONO"
+                              : `${resultLabel(item.outcome)} · ${item.substitutions} ${item.substitutions === 1 ? "troca" : "trocas"}`}
                           </p>
                         </span>
                         {item.outcome === "win" ? <b>●</b> : null}
@@ -1494,14 +1701,14 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 <small>CLUBES</small>
                 <strong>Clubes em evidência</strong>
                 <p>
-                  Tradição, momento e liga — o índice interno não é exibido.
+                  Clubes de maior força no início da carreira, por liga.
                 </p>
               </header>
               <article className={worldStyles.playerBoard}>
                 <header>
                   <span>
                     <small>RANKING DE CLUBES</small>
-                    <strong>Protagonistas do momento</strong>
+                    <strong>Força dos clubes</strong>
                   </span>
                   <b>{worldClubs.length}</b>
                 </header>
@@ -1527,13 +1734,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                           )?.name
                         }
                       </small>
-                      <span>
-                        {rankedClub.reputation >= 8
-                          ? "ELITE"
-                          : rankedClub.reputation >= 6
-                            ? "DESTAQUE"
-                            : "TRADIÇÃO"}
-                      </span>
+                      <span>{rankedClub.city}</span>
                     </p>
                   ))}
                 </div>
@@ -1555,10 +1756,10 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       <small>NÍVEL ATUAL</small>
                       <strong>Craques da geração</strong>
                     </span>
-                    <b>{worldLeaders.length}</b>
+                    <b>{worldByOverall.length}</b>
                   </header>
                   <div>
-                    {worldLeaders.map((player, index) => (
+                    {worldByOverall.map((player, index) => (
                       <p key={player.id}>
                         <b>#{index + 1}</b>
                         <strong>{player.name}</strong>
@@ -1580,23 +1781,17 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       <small>REPUTAÇÃO</small>
                       <strong>Nomes mais influentes</strong>
                     </span>
-                    <b>{worldLeaders.length}</b>
+                    <b>{worldByReputation.length}</b>
                   </header>
                   <div>
-                    {worldLeaders
-                      .slice()
-                      .sort(
-                        (a, b) =>
-                          b.reputation - a.reputation || b.overall - a.overall,
-                      )
-                      .map((player, index) => (
-                        <p key={player.id}>
-                          <b>#{index + 1}</b>
-                          <strong>{player.name}</strong>
-                          <small>{player.position}</small>
-                          <span>{player.reputation} REP</span>
-                        </p>
-                      ))}
+                    {worldByReputation.map((player, index) => (
+                      <p key={player.id}>
+                        <b>#{index + 1}</b>
+                        <strong>{player.name}</strong>
+                        <small>{player.position}</small>
+                        <span>{player.reputation} REP</span>
+                      </p>
+                    ))}
                   </div>
                 </article>
                 <article className={worldStyles.playerBoard}>
@@ -1630,23 +1825,20 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                     <b>TOP 12</b>
                   </header>
                   <div>
-                    {worldLeaders
-                      .slice()
-                      .sort((a, b) => marketFee(b) - marketFee(a))
-                      .map((player, index) => (
-                        <p key={player.id}>
-                          <b>#{index + 1}</b>
-                          <strong>{player.name}</strong>
-                          <small>
-                            {
-                              CLUBS.find(
-                                (item) => item.id === player.currentClubId,
-                              )?.shortName
-                            }
-                          </small>
-                          <span>{money(marketFee(player))}</span>
-                        </p>
-                      ))}
+                    {worldByValue.map((player, index) => (
+                      <p key={player.id}>
+                        <b>#{index + 1}</b>
+                        <strong>{player.name}</strong>
+                        <small>
+                          {
+                            CLUBS.find(
+                              (item) => item.id === player.currentClubId,
+                            )?.shortName
+                          }
+                        </small>
+                        <span>{money(marketFee(player))}</span>
+                      </p>
+                    ))}
                   </div>
                 </article>
               </div>
@@ -1668,12 +1860,28 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       CLUBS.find(
                         (candidate) => candidate.id === record.clubId,
                       ) ?? club;
+                    const archiveKey = `${record.season}-${record.clubId}`;
+                    const archiveMatches = state.history
+                      .filter(
+                        (match) =>
+                          match.season === record.season &&
+                          match.clubId === record.clubId,
+                      )
+                      .reverse();
                     return (
                       <article
                         className={worldStyles.officialCard}
-                        key={`${record.season}-${record.clubId}`}
+                        key={archiveKey}
                       >
-                        <button type="button">
+                        <button
+                          type="button"
+                          aria-expanded={openArchiveSeason === archiveKey}
+                          onClick={() =>
+                            setOpenArchiveSeason((current) =>
+                              current === archiveKey ? null : archiveKey,
+                            )
+                          }
+                        >
                           <span>
                             <small>
                               {record.season} · {record.age} ANOS
@@ -1690,6 +1898,66 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                           </span>
                           <b>{record.boardTrust}</b>
                         </button>
+                        {openArchiveSeason === archiveKey ? (
+                          <div className={styles.archiveDetails}>
+                            <div className={styles.archiveSummary}>
+                              <span>{record.wins} vitórias</span>
+                              <span>{record.draws} empates</span>
+                              <span>{record.losses} derrotas</span>
+                              <span>
+                                {record.goalsFor - record.goalsAgainst > 0
+                                  ? "+"
+                                  : ""}
+                                {record.goalsFor - record.goalsAgainst} saldo
+                              </span>
+                            </div>
+                            <div className={styles.archiveCompetitions}>
+                              {record.competitions.map((competition) => (
+                                <div key={competition.id}>
+                                  <strong>{competition.name}</strong>
+                                  <span
+                                    className={
+                                      competition.champion
+                                        ? styles.archiveChampion
+                                        : ""
+                                    }
+                                  >
+                                    {competition.stage}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className={styles.archiveMatches}>
+                              <small>
+                                HISTÓRICO RECENTE · {archiveMatches.length}/
+                                {record.matches} PARTIDAS
+                              </small>
+                              {archiveMatches.map((match) => {
+                                const rival = CLUBS.find(
+                                  (candidate) => candidate.id === match.opponentId,
+                                );
+                                return (
+                                  <div key={match.id}>
+                                    <span>
+                                      {match.competitionName} · {match.stageName}
+                                    </span>
+                                    <strong>
+                                      {recordClub.shortName} {match.score}{" "}
+                                      {rival?.shortName ?? "Adversário"}
+                                    </strong>
+                                    <em>{match.walkover ? "W.O." : resultLabel(match.outcome)}</em>
+                                  </div>
+                                );
+                              })}
+                              {!archiveMatches.length ? (
+                                <p>
+                                  Detalhes das partidas não estão mais no
+                                  histórico recente.
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : null}
                       </article>
                     );
                   })}
@@ -1703,26 +1971,17 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               <article className={worldStyles.playerBoard}>
                 <header>
                   <span>
-                    <small>CLUBES IMPORTANTES</small>
-                    <strong>Dossiê histórico do universo</strong>
+                    <small>SUA TRAJETÓRIA</small>
+                    <strong>Clubes que você comandou</strong>
                   </span>
-                  <b>
-                    {Math.max(1, state.season - new Date().getFullYear() + 1)}{" "}
-                    ano(s)
-                  </b>
+                  <b>{trajectoryClubs.length}</b>
                 </header>
                 <div>
-                  {worldClubs.slice(0, 10).map((importantClub, index) => {
-                    const titles = state.seasonHistory.reduce(
-                      (total, record) =>
-                        total +
-                        (record.clubId === importantClub.id
-                          ? record.competitions.filter(
-                              (competition) => competition.champion,
-                            ).length
-                          : 0),
-                      0,
+                  {trajectoryClubs.map(([importantClubId, totals], index) => {
+                    const importantClub = CLUBS.find(
+                      (candidate) => candidate.id === importantClubId,
                     );
+                    if (!importantClub) return null;
                     return (
                       <p
                         key={importantClub.id}
@@ -1742,11 +2001,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                           }
                         </small>
                         <span>
-                          {titles
-                            ? `${titles} TÍTULO(S)`
-                            : importantClub.reputation >= 8
-                              ? "GIGANTE"
-                              : "TRADICIONAL"}
+                          {totals.titles} taça(s) · {totals.seasons} temporada(s)
                         </span>
                       </p>
                     );
@@ -1793,13 +2048,11 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               FIM DA TEMPORADA {state.season}
             </span>
             <div
-              className={`result-symbol ${latestSeason?.competitions.some((competition) => competition.champion) ? "winner" : ""}`}
+              className={`result-symbol ${seasonHasTitle ? "winner" : ""}`}
             >
               <FutboboIcon
                 name={
-                  latestSeason?.competitions.some(
-                    (competition) => competition.champion,
-                  )
+                  seasonHasTitle
                     ? "trophy"
                     : (latestSeason?.wins ?? 0) < (latestSeason?.losses ?? 0)
                       ? "trend-down"
@@ -1808,13 +2061,16 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               />
             </div>
             <h1>
-              {latestSeason?.competitions.some(
-                (competition) => competition.champion,
-              )
-                ? "Uma temporada com taça."
-                : "A temporada está encerrada."}
+              {lastMatchWasAbandoned
+                ? "Derrota por W.O. registrada."
+                : seasonHasTitle
+                  ? "Uma temporada com taça."
+                  : "A temporada está encerrada."}
             </h1>
             <p>
+              {lastMatchWasAbandoned
+                ? "A partida iniciada foi abandonada e terminou em 0 × 3. "
+                : ""}
               {latestSeason
                 ? `${latestSeason.matches} partidas na temporada, ${latestSeason.wins} vitórias e saldo de ${latestSeason.goalsFor - latestSeason.goalsAgainst} gols.`
                 : "A temporada foi simulada até o fim."}{" "}
@@ -1873,16 +2129,19 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                       <ClubBadge club={offer} size="sm" />
                       <span>
                         <strong>{offer.shortName}</strong>
-                        <small>proposta para o próximo ciclo</small>
+                        <small>{LEAGUES.find((league) => league.id === offer.leagueId)?.name ?? "Liga nacional"}</small>
+                        <small>Caixa inicial {money(Math.round(offer.strength * 115_000))}</small>
                       </span>
                       <FutboboIcon name="arrow-right" />
                     </button>
                   ))}
                   <button
                     type="button"
-                    onClick={() => setState(dismissManagerJobOffers(state))}
+                    onClick={() =>
+                      setState(continueManagerSeason(dismissManagerJobOffers(state)))
+                    }
                   >
-                    Continuar no {club.shortName}
+                    Seguir no {club.shortName} em {state.season + 1}
                   </button>
                 </div>
               </article>

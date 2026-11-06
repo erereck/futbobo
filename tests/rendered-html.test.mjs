@@ -185,7 +185,7 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
   assert.match(botaoMatch, /data-substitution-target/);
   assert.match(botaoMatch, /startSubstitutionDrag/);
   assert.doesNotMatch(botaoMatch, /Escolha um botão para sair/);
-  assert.match(engine, /const selectedUserFormation = formation/);
+  assert.match(engine, /formationById\(setup\.userFormationId/);
   assert.match(engine, /state\.formationIndex\.user \+= 1/);
   assert.match(model, /function normalizeHistory/);
   assert.match(model, /const safePhase/);
@@ -193,7 +193,7 @@ test("blinda o modo técnico contra perda de save e mantém a mesa acessível no
   assert.match(layout, /viewportFit: "cover"/);
   assert.doesNotMatch(layout, /maximumScale/);
   assert.match(styles, /\.lineupGrid/);
-  assert.match(styles, /\.lineupGrid > \.starter:nth-child\(4\)/);
+  assert.match(styles, /\.lineupGrid > \.starter/);
   assert.match(manager, /WorldPulseTicker/);
   assert.match(manager, /Avançando automaticamente em 5 segundos/);
   assert.match(styles, /\.formationModal/);
