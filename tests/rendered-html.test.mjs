@@ -29,6 +29,7 @@ const careerSourceFiles = [
   "../app/components/career/album/LuckOverlay.tsx",
   "../app/components/career/album/Pictogram.tsx",
   "../app/components/career/album/SeasonResultSpread.tsx",
+  "../app/components/career/album/AwardEnvelope.tsx",
   "../app/components/career/album/SideSpreads.tsx",
   "../app/components/career/album/primitives.tsx",
   "../app/components/career/album/tabs/HistoryTab.tsx",
@@ -500,7 +501,7 @@ test("mantém a carreira no celular com abas e ações fixas no rodapé", async 
   assert.match(page, /styles\.continueDock/);
   assert.match(page, /ALBUM_PHASES\.has\(game\.phase\)/);
   assert.match(album, /@media \(max-width: 1023px\) \{[\s\S]*\.tabs \{[\s\S]*position: fixed;[\s\S]*bottom: 0;/);
-  assert.match(album, /padding-bottom: calc\(var\(--tabs-h\) \+ 10px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(album, /padding-bottom: calc\(var\(--tabs-h\) \+ 4px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(spread, /\.o-dock \{[\s\S]*position: fixed;/);
   assert.match(styles, /@media \(max-width: 540px\)/);
   assert.match(styles, /\.career-shell \{[\s\S]*height: 100%/);
@@ -1295,7 +1296,7 @@ test("atributos influenciam a simulação, premiações têm suspense e o escân
   assert.match(page, /game\.attributes\[key\]/);
   assert.match(page, /type AwardNomination/);
   assert.match(page, /won: false/);
-  assert.match(page, /O VENCEDOR É/);
+  assert.match(page, /O vencedor é/);
   assert.match(page, /Você chegou à final/);
   assert.match(gameData, /rareChance\?: number/);
   assert.match(gameData, /forcedAlternativeTransfer\?: boolean/);

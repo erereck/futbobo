@@ -41,6 +41,14 @@ const PRESET_COLORS: ReadonlyArray<{ hex: string; name: string }> = [
 ];
 
 type ColorSlot = "primary" | "secondary";
+/** Celular: uma parte do editor por vez (no desktop as duas páginas mostram tudo e as abas somem). */
+type Pane = "nome" | "cores" | "uniforme" | "elenco";
+const PANES: ReadonlyArray<{ id: Pane; label: string }> = [
+  { id: "nome", label: "Nome" },
+  { id: "cores", label: "Cores" },
+  { id: "uniforme", label: "Uniforme" },
+  { id: "elenco", label: "Elenco" },
+];
 type Confirm = "shuffle" | "delete" | "leave" | null;
 type Sheet = { kind: "player"; index: number } | { kind: "export"; team: BobTeam } | null;
 
@@ -80,6 +88,7 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
   // Sigla e nome curto acompanham o nome até o usuário mexer neles.
   const [manual, setManual] = useState<{ abbr: boolean; shortName: boolean } | null>(null);
   const [colorSlot, setColorSlot] = useState<ColorSlot>("primary");
+  const [pane, setPane] = useState<Pane>("nome");
   const [sheet, setSheet] = useState<Sheet>(null);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const baseId = useId();
@@ -217,7 +226,9 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
   }
 
   const firstIssue = issues[0];
-  const chip = !valid && firstIssue
+  // A aba com o que falta corrigir ganha a marca vermelha (o selo diz o campo, a aba diz onde ele está).
+  const invalidPane: Pane | null = firstIssue ? (firstIssue.field.startsWith("players") ? "elenco" : "nome") : null;
+  const chip =!valid && firstIssue
     ? { state: "invalid", text: `Não salvo: corrija ${issueLabel(firstIssue, current)}` }
     : pending
       ? { state: "saving", text: "Salvando…" }
@@ -235,7 +246,7 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
   const shownName = cleanText(current.shortName, LIMITS.shortName[1]) || cleanText(current.name, LIMITS.teamName[1]) || "Seu time";
 
   return (
-    <Spread className="bob-editor" aria-labelledby={`${baseId}-titulo`} style={teamInks(current.primary, current.secondary)}>
+    <Spread className="bob-editor" aria-labelledby={`${baseId}-titulo`} data-show={pane} style={teamInks(current.primary, current.secondary)}>
       <Page side="left" label="Identidade do time" className="bob-editor-left">
         <div className="bob-editor-bar">
           <BackButton onClick={leave} />
@@ -256,9 +267,18 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
           className="bob-editor-hero"
         />
 
+        {/* Celular: as partes do time em abas, uma por vez (no desktop as duas páginas mostram tudo). */}
+        <div className="bob-editor-tabs" role="group" aria-label="Parte do time">
+          {PANES.map((item) => (
+            <button key={item.id} type="button" aria-pressed={pane === item.id} data-invalid={invalidPane === item.id ? "true" : undefined} onClick={() => setPane(item.id)}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+
         {stageNotice && <p className="bob-editor-notice" role="note">{stageNotice}</p>}
 
-        <section className="bob-editor-section" aria-labelledby={`${baseId}-identidade`}>
+        <section className="bob-editor-section" data-pane="nome" aria-labelledby={`${baseId}-identidade`}>
           <h2 id={`${baseId}-identidade`} className="bob-section-title">Identidade</h2>
           <div className="bob-editor-grid">
             <Field label="Nome do time" htmlFor={nameId} error={issueFor("name")} counter={`${Array.from(current.name).length}/${LIMITS.teamName[1]}`}>
@@ -306,7 +326,7 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
           </div>
         </section>
 
-        <section className="bob-editor-block" aria-labelledby={`${baseId}-cores`}>
+        <section className="bob-editor-block" data-pane="cores" aria-labelledby={`${baseId}-cores`}>
           <div className="bob-block-title"><h2 id={`${baseId}-cores`}>Cores</h2></div>
           <div className="bob-color-tabs" role="group" aria-label="Qual cor editar">
             <button type="button" aria-pressed={colorSlot === "primary"} onClick={() => setColorSlot("primary")}>
@@ -354,7 +374,7 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
       </Page>
 
       <Page side="right" label="Uniforme, escudo e elenco" className="bob-editor-right">
-        <section className="bob-editor-block" aria-labelledby={`${baseId}-uniforme`}>
+        <section className="bob-editor-block" data-pane="uniforme" aria-labelledby={`${baseId}-uniforme`}>
           <div className="bob-block-title"><h2 id={`${baseId}-uniforme`}>Uniforme</h2><b>{KIT_PATTERN_NAMES[current.kitPattern] ?? KIT_PATTERN_NAMES[0]}</b></div>
           <div className="bob-kit-grid" role="group" aria-label="Uniforme">
             {KIT_PATTERN_NAMES.map((name, pattern) => (
@@ -365,7 +385,7 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
           </div>
         </section>
 
-        <section className="bob-editor-block" aria-labelledby={`${baseId}-escudo`}>
+        <section className="bob-editor-block" data-pane="uniforme" aria-labelledby={`${baseId}-escudo`}>
           <div className="bob-block-title"><h2 id={`${baseId}-escudo`}>Escudo</h2></div>
           <div className="bob-shape-grid" role="group" aria-label="Escudo">
             {CREST_SHAPE_NAMES.map((name, shape) => (
@@ -377,7 +397,7 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
           </div>
         </section>
 
-        <section className="bob-editor-block" aria-labelledby={`${baseId}-elenco`}>
+        <section className="bob-editor-block" data-pane="elenco" aria-labelledby={`${baseId}-elenco`}>
           <div className="bob-block-title"><h2 id={`${baseId}-elenco`}>Elenco</h2><b>toque para personalizar</b></div>
           <ul className="bob-roster">
             {current.players.map((player, index) => {
@@ -415,7 +435,8 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
           </ul>
         </section>
 
-        <div className="bob-editor-actions">
+        {/* As ações do time ficam na aba Nome; o "Usar este time" (rodapé amarelo) vale em todas. */}
+        <div className="bob-editor-actions" data-pane={isActive ? "nome" : undefined}>
           {isActive ? (
             <p className="bob-editor-inuse"><em className="bob-team-tag">Em uso</em> Este é o time que vai para a sala.</p>
           ) : (
@@ -423,12 +444,12 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
               <button type="button" className="primary-button" onClick={useThisTeam}>Usar este time</button>
             </Dock>
           )}
-          <button type="button" className="secondary-button" onClick={() => setSheet({ kind: "export", team: flush() })}>Exportar código</button>
-          <button type="button" className="secondary-button" onClick={() => setConfirm("shuffle")}>Sortear time inteiro</button>
-          <button type="button" className="bob-danger-button" disabled={lastTeam} aria-describedby={lastTeam ? `${baseId}-ultimo` : undefined} onClick={() => setConfirm("delete")}>
+          <button type="button" className="secondary-button" data-pane="nome" onClick={() => setSheet({ kind: "export", team: flush() })}>Exportar código</button>
+          <button type="button" className="secondary-button" data-pane="nome" onClick={() => setConfirm("shuffle")}>Sortear time inteiro</button>
+          <button type="button" className="bob-danger-button" data-pane="nome" disabled={lastTeam} aria-describedby={lastTeam ? `${baseId}-ultimo` : undefined} onClick={() => setConfirm("delete")}>
             Excluir time
           </button>
-          {lastTeam && <small id={`${baseId}-ultimo`} className="bob-editor-hint">Você precisa de pelo menos um time.</small>}
+          {lastTeam && <small id={`${baseId}-ultimo`} className="bob-editor-hint" data-pane="nome">Você precisa de pelo menos um time.</small>}
         </div>
         {!isActive && <DockSpacer />}
       </Page>

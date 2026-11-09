@@ -3587,3 +3587,7 @@ body:has(.botao-root) { background: #cfd3d0; }
   .botao-root .botao-controls-meta > span { display: none; }
   .botao-root .botao-controls-meta { justify-content: center; }
 }
+
+/* v97 — Álbum: a vez de quem fica no meio da fita, e o contador de toques no centro do painel */
+.botao-root .botao-turn { align-content: center; text-align: center; }
+.botao-root .botao-controls-meta > span { text-align: center; }

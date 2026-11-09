@@ -62,7 +62,19 @@ A faixa de cabeçalho de cada aba (`InkBand`) usa a cor dela.
 - Fora desta pasta, no mesmo papel: a partida de botão (bloco "v97 — Álbum" no fim de `app/botao/botao.css`, preso em
   `.botao-root`: placar como ingresso, a vez de quem na fita amarela, carimbos, pausas em papel; a mesa e o 3D não mudam),
   a base jogada (`.paper` em `../CareerMinigames.module.css`; o minigame do Scorebobo abre com o visual dele),
-  o aviso do Android (`app/AndroidInstallDialog.tsx`, folha solta) e o convite do Modo 3D (`FutboboShell.module.css`).
+  o aviso do Android (`app/AndroidInstallDialog.tsx`, folha solta), o convite do Modo 3D (`FutboboShell.module.css`) e a
+  viagem de transferência (`TransferJourneyOverlay` em `../TransferMarketScreen.tsx`: uma passagem de papel com a faixa na
+  cor do clube de destino).
+- Noite de premiação (`AwardEnvelope.tsx`, `awards.module.css`): indicação é um envelope com os três finalistas e o botão
+  "Abrir o envelope"; prêmio ganho é uma figurinha com medalha e carimbo. O convite da gala (`app/ceremony/gala-card.module.css`)
+  e o da festa do título (`app/parade/launch-card.module.css`) também são papel; os filmes da gala e do trio continuam noturnos.
+- Pôster de compartilhar (`makePoster` em `../CareerGame.tsx`): página do álbum em 1080×1350 — capa amarela, faixa do clube,
+  figurinha com o busto (`drawPlayerBust`), ficha da carreira, taças em carimbos e a logo. As fontes saem dos tokens
+  `--font-display`/`--font-text` lidos da página; escudo só do próprio site, para o canvas não ficar sujo.
+- A base da página (html/body em `globals.css`/`premium.css`), a cor da barra do navegador e a do app instalado são papel:
+  nada pisca escuro antes do álbum montar. Esperas ("Abrindo a base…") usam `.waitPage`.
 - Celular: cada tela tenta caber inteira, sem rolar. Listas longas (conquistas, arquivo da carreira) podem rolar.
+  Na mesa de decisão, a meta do treinador vira uma faixa (`.metaStrip`) e Empréstimo, Transferência e Aposentar dividem
+  uma linha; a ficha técnica, a temporada anterior e as notícias ficam nas abas. Cabe em 390×703.
 - O menu continua disparando a carreira pela tela antiga de boas-vindas do `CareerGame` (`.career-new-tile`, `.career-load-tile`);
   ela fica invisível sob o papel (`FutboboShell.module.css`). O índice das carreiras guarda `number` e `appearance` para a figurinha do menu.

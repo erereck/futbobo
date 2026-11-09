@@ -270,12 +270,12 @@
 @media (max-width: 1023px) {
   .root {
     --tabs-h: 62px;
-    padding-bottom: calc(var(--tabs-h) + 10px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--tabs-h) + 4px + env(safe-area-inset-bottom));
   }
   .album {
     max-width: 640px;
     margin: 0 auto;
-    padding: max(10px, env(safe-area-inset-top)) 16px 18px;
+    padding: max(10px, env(safe-area-inset-top)) 16px 8px;
   }
   .spread { display: flex; flex-direction: column; gap: 18px; }
   .page { display: flex; flex-direction: column; gap: 16px; }
@@ -345,3 +345,30 @@
   font-size: 16px;
   letter-spacing: 0;
 }
+
+/* ───────────── espera curta entre páginas (a base abrindo) e o aviso quando ela não abre ───────────── */
+.waitPage {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 18px;
+  background: var(--grain), var(--paper);
+  color: var(--ink-2);
+  font-family: var(--font-text);
+  text-align: center;
+}
+.waitPage > div { display: grid; justify-items: center; gap: 16px; max-width: 34ch; }
+.waitPage p { display: flex; align-items: center; gap: 10px; font-size: 14.5px; line-height: 1.45; }
+.waitPage[aria-busy="true"] p::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .waitPage[aria-busy="true"] p::before { animation: waitPulse .9s ease-in-out infinite alternate; }
+}
+@keyframes waitPulse { to { scale: .55; } }

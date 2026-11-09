@@ -90,14 +90,14 @@ export default function BallonDorGalaCard({ seed, season, playerName, appearance
       <header className={styles.header}>
         <span className={styles.emblem} aria-hidden="true" />
         <div>
-          <small>{watched ? "RESULTADO DA GALA" : "A GALA DA BOLA DE OURO"}</small>
+          <small>{watched ? "Resultado da gala" : "A gala da Bola de Ouro"}</small>
           <strong>Ballon d&apos;Or {season}</strong>
         </div>
       </header>
 
       {!watched ? (
         <>
-          <span className={styles.label}>OS TRÊS FINALISTAS</span>
+          <span className={styles.label}>Os três finalistas</span>
           <ul className={styles.finalists}>
             {input.finalists.map((finalist) => (
               <FinalistRow key={finalist.id} finalist={finalist} />
@@ -115,7 +115,7 @@ export default function BallonDorGalaCard({ seed, season, playerName, appearance
       ) : (
         <>
           <div className={styles.result}>
-            <small>{user.place === 1 ? "VOCÊ É O MELHOR DO MUNDO" : `VOCÊ TERMINOU EM ${user.place}º LUGAR`}</small>
+            <small>{user.place === 1 ? "Você é o melhor do mundo" : `Você terminou em ${user.place}º lugar`}</small>
             <strong>{user.place === 1 ? `Bola de Ouro ${season}` : first.name}</strong>
             <p>{user.place === 1 ? "Seu nome foi chamado no fim da noite." : `levou a Bola de Ouro ${season}. Você fechou o ano no top 3 do mundo.`}</p>
           </div>
@@ -124,7 +124,7 @@ export default function BallonDorGalaCard({ seed, season, playerName, appearance
               <li key={finalist.id} className={finalist.isUser ? styles.you : ""}>
                 <b>{finalist.place}º</b>
                 <span>{finalist.name}</span>
-                {finalist.isUser && <em>VOCÊ</em>}
+                {finalist.isUser && <em>você</em>}
               </li>
             ))}
           </ol>
@@ -156,7 +156,7 @@ function FinalistRow({ finalist }: { finalist: CeremonyFinalist }) {
     <li className={finalist.isUser ? styles.you : ""} style={{ "--club-a": finalist.club.primary, "--club-b": finalist.club.secondary } as CSSProperties}>
       <i aria-hidden="true" />
       <span>{finalist.name}</span>
-      <small>{finalist.isUser ? "VOCÊ" : finalist.club.shortName}</small>
+      <small>{finalist.isUser ? "você" : finalist.club.shortName}</small>
     </li>
   );
 }

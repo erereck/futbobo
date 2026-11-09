@@ -514,9 +514,31 @@ a.bob-back { text-decoration: none; }
 .bob-slots:not([data-size="2"]) .bob-slot-free { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-height: 52px; padding: 8px 12px; font-size: 12.5px; text-align: left; }
 .bob-slots:not([data-size="2"]) .bob-slot-free-mark { flex: none; width: 26px; height: 26px; }
 .bob-slot-free-mark { width: 38px; height: 38px; border: 2px dashed var(--rule-strong); border-radius: 50%; }
+.bob-slot-free-all { display: none; }
 .bob-host-panel,
 .bob-guest-panel { display: grid; gap: 12px; }
+.bob-host-rules,
+.bob-lobby-rules { display: grid; gap: 12px; }
+/* celular: "Mudar regras" abre as regras ali mesmo; no desktop elas estão sempre na página */
+.bob-rules-toggle {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 650;
+  -webkit-tap-highlight-color: transparent;
+}
+.bob-rules-toggle::after { width: 7px; height: 7px; margin-top: -3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; content: ""; transform: rotate(45deg); transition: transform 160ms; }
+.bob-rules-toggle[aria-expanded="true"]::after { margin-top: 3px; transform: rotate(225deg); }
+.bob-rules-toggle:hover { color: var(--ink); }
 .bob-lobby-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bob-lobby-menu { display: none; }
 .bob-guest-panel .bob-ready-on { border-color: var(--green-deep); color: var(--green-deep); }
 
 /* ═════════════ chave ═════════════ */
@@ -571,6 +593,9 @@ a.bob-back { text-decoration: none; }
 .bob-bracket-row { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 36px; color: var(--ink-3); font-size: 13.5px; font-weight: 500; }
 .bob-bracket-row + .bob-bracket-row { border-top: 1px dashed var(--rule); }
 .bob-bracket-row > span:not(.bob-crest):not(.bob-crest-blank) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bob-bracket-team { display: flex; align-items: center; min-width: 0; }
+.bob-bracket-team > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bob-bracket-team > .bob-cpu-tag { flex: none; }
 .bob-bracket-row b { color: var(--ink); font-family: var(--font-display); font-stretch: 80%; font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; }
 .bob-bracket-row.is-winner { color: var(--ink); font-weight: 700; }
 .bob-bracket-row.is-me > span:not(.bob-crest) { color: var(--blue-deep); font-weight: 700; }
@@ -867,6 +892,33 @@ a.bob-back { text-decoration: none; }
 @media (min-width: 1024px) and (max-width: 1279px) {
   .bob-slots[data-size="8"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bob-format-card small { display: none; }
+  .bob-format-card { min-height: 52px; }
+  /* página estreita: o "Começa em 15s" numa linha só ao lado do "Estou pronto" */
+  .bob-next-ready strong { font-size: 21px; white-space: nowrap; }
+  /* torneio de 8 em duas colunas: as figurinhas deitam e as vagas livres viram uma só (como no celular),
+     senão quatro fileiras de figurinha empurram o "Começar torneio" para fora da página */
+  .bob-slots[data-size="8"] .bob-club-card { grid-template-columns: 40px minmax(0, 1fr); column-gap: 9px; align-content: center; padding: 5px 8px 6px 5px; }
+  .bob-slots[data-size="8"] .bob-club-card > :first-child { grid-row: 1 / span 3; align-self: stretch; height: auto; min-height: 54px; }
+  .bob-slots[data-size="8"] .bob-club-card > :first-child > span { width: 32px; }
+  .bob-slots[data-size="8"] .bob-club-card > :is(strong, small) { grid-column: 2; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bob-slots[data-size="8"] .bob-club-card > strong { padding-top: 2px; font-size: 15.5px; }
+  .bob-slots[data-size="8"] .bob-badges { grid-column: 2; padding: 4px 0 0; }
+  .bob-slots[data-size="8"] .bob-conn { grid-column: 2; padding: 3px 0 0; }
+  .bob-slots[data-size="8"] .bob-slot-free:not([data-first]) { display: none; }
+  .bob-slots[data-size="8"] .bob-slot-free:has(> .bob-slot-free-all) > .bob-slot-free-one { display: none; }
+  .bob-slots[data-size="8"] .bob-slot-free-all { display: block; }
+  .bob-slots[data-size="8"] .bob-slot:has(> .bob-kick) .bob-club-card > :is(strong, small) { padding-right: 22px; }
+}
+
+/* álbum baixo (notebook): criar torneio cabia só rolando a página, com o "Abrir sala" cortado no pé.
+   As regras ficam só no nome (a ficha ao lado já detalha) e o nível da CPU divide a linha com o título. */
+@media (min-width: 1024px) and (max-height: 900px) {
+  .bob-page.bob-form-page { gap: 10px; }
+  .bob-form-page .bob-chips button { min-height: 46px; }
+  .bob-form-page .bob-chips small { display: none; }
+  .bob-cpu-choice { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; }
+  .bob-cpu-choice > legend { float: left; margin: 0; }
+  .bob-cpu-choice > .bob-switch { grid-column: 1 / -1; }
 }
 
 /* ═════════════ celular: uma página, ação no rodapé amarelo ═════════════ */
@@ -945,7 +997,37 @@ a.bob-back { text-decoration: none; }
   .bob-slots { gap: 12px 10px; }
   .bob-slots[data-size="8"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bob-slot-free { min-height: 122px; }
+  .bob-lobby-actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
   .bob-lobby-actions .secondary-button { min-height: 44px; font-size: 15px; }
+  /* o pé do menu vira o "Menu" da fileira de ações; as regras abrem num toque */
+  .bob-lobby-right > .bob-colophon { display: none; }
+  .bob-lobby-menu { display: inline-flex; justify-content: center; padding: 0 2px; font-size: 13.5px; }
+  .bob-rules-toggle { display: flex; }
+  .bob-lobby-rules:not([data-open]) { display: none; }
+  /* copiar à mão (cópia recusada): a instrução ao lado do campo, numa linha só */
+  .bob-copy-fallback { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 10px; }
+  .bob-copy-fallback > label { max-width: 8.5em; line-height: 1.25; }
+  /* com gente na sala, os convites descem para carimbo baixo */
+  .bob-lobby:not([data-alone]) .bob-share .secondary-button { min-height: 44px; }
+  /* torneio: figurinha deitada (faixa com o escudo à esquerda), conexão boa vira só a bolinha */
+  .bob-slots:not([data-size="2"]) .bob-club-card { grid-template-columns: 40px minmax(0, 1fr); column-gap: 9px; align-content: center; padding: 5px 8px 6px 5px; }
+  .bob-slots:not([data-size="2"]) .bob-club-card > :first-child { grid-row: 1 / span 3; align-self: stretch; height: auto; min-height: 54px; }
+  .bob-slots:not([data-size="2"]) .bob-club-card > :first-child > span { width: 32px; }
+  .bob-slots:not([data-size="2"]) .bob-club-card > :is(strong, small) { grid-column: 2; padding: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bob-slots:not([data-size="2"]) .bob-club-card > strong { padding-top: 2px; font-size: 15.5px; }
+  .bob-slots:not([data-size="2"]) .bob-badges { grid-column: 2; padding: 4px 0 0; }
+  .bob-slots:not([data-size="2"]) .bob-conn { grid-column: 2; padding: 3px 0 0; }
+  .bob-slots:not([data-size="2"]) .bob-conn[data-state="ok"] { position: absolute; right: 8px; bottom: 10px; padding: 0; font-size: 0; }
+  .bob-slots:not([data-size="2"]) .bob-slot-free { min-height: 66px; }
+  /* as vagas livres do torneio numa só ("5 vagas livres · viram CPU ao começar") */
+  .bob-slots:not([data-size="2"]) .bob-slot-free:not([data-first]) { display: none; }
+  .bob-slots:not([data-size="2"]) .bob-slot-free:has(> .bob-slot-free-all) > .bob-slot-free-one { display: none; }
+  .bob-slots:not([data-size="2"]) .bob-slot-free-all { display: block; }
+  /* um selo por figurinha: a minha já tem o contorno de tinta, o "Você" fica para o leitor de tela */
+  .bob-slots:not([data-size="2"]) .bob-badge-me { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .bob-slots:not([data-size="2"]) .bob-slot[data-me] > .bob-club-card { box-shadow: 0 0 0 2.5px var(--ink); }
+  .bob-slots:not([data-size="2"]) .bob-slot .bob-kick { top: -9px; right: -7px; width: 34px; height: 34px; min-height: 34px; }
+  .bob-slots:not([data-size="2"]) .bob-slot:has(> .bob-kick) .bob-club-card > :is(strong, small) { padding-right: 22px; }
 
   /* chave: o título da página some (a faixa já diz), a chave rola de lado */
   .bob-bracket-title { display: none; }
@@ -954,8 +1036,21 @@ a.bob-back { text-decoration: none; }
   .bob-next-card .bob-next-vs { gap: 4px 10px; font-size: 21px; }
   .bob-next-vs .bob-crest { width: 28px !important; height: 28px !important; }
   .bob-next-ready { gap: 10px; }
-  .bob-next-ready strong { font-size: 20px; white-space: nowrap; }
+  .bob-next-ready strong { font-size: 18px; white-space: nowrap; }
   .bob-next-ready .primary-button { min-height: 48px; padding: 0 12px; font-size: 16px; }
+  /* canhoto mais estreito: o "Começa em 12s" e o "Estou pronto" cabem lado a lado em 360 px */
+  .bob-next-card > div,
+  .bob-lobby-ticket > div { --cut: 54px; }
+  /* o estado de cada jogo é um carimbo batido na borda de baixo do cartão (não ocupa uma linha) */
+  .bob-bracket-scroll { padding-bottom: 16px; }
+  .bob-bracket-col-list { gap: 22px; }
+  .bob-bracket-card { padding-bottom: 8px; }
+  .bob-bracket-row { min-height: 32px; }
+  .bob-bracket-card > .bob-chip { position: absolute; right: 8px; bottom: -11px; margin: 0; background: #fff; }
+  .bob-bracket-card > .bob-chip[data-tone="ready"] { background: linear-gradient(rgba(246, 196, 49, .2), rgba(246, 196, 49, .2)), #fff; }
+  /* ingresso da próxima partida mais justo (nomes longos quebram o "×" em duas linhas) */
+  .bob-next-card > div > div:first-child { gap: 10px; padding-top: 13px; padding-bottom: 12px; }
+  .bob-next-card p:not([class]) { font-size: 13px; }
 
   /* resultado: o carimbo do apito e os números num olhar */
   .bob-result-left,
@@ -973,6 +1068,13 @@ a.bob-back { text-decoration: none; }
   .bob-form-page .bob-chips small { font-size: 11.5px; line-height: 1.2; }
   .bob-form-page .bob-chips strong { font-size: 18px; }
   .bob-choice legend { margin-bottom: 4px; }
+  /* torneio: o nível da CPU na mesma linha do título dele (Fácil, Médio e Difícil são curtos) */
+  .bob-cpu-choice { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; }
+  .bob-cpu-choice > legend { float: left; margin: 0; }
+  .bob-cpu-choice > .bob-switch { grid-column: 1 / -1; }
+  .bob-format-card { min-height: 48px; }
+  .bob-switch { min-height: 44px; }
+  .bob-playing-with { padding-bottom: 10px; }
 
   /* campeão */
   .bob-champion-hero { width: min(42%, 156px); }
@@ -982,6 +1084,8 @@ a.bob-back { text-decoration: none; }
   .bob-champion-path-title { font-size: 26px; padding-bottom: 6px; }
   .bob-champion-path li { padding: 8px 2px; }
   .bob-champion-path strong { font-size: 17px; }
+  /* o torneio acabou: o rodapé leva ao início (e de lá ao menu), o pé da página sai */
+  .bob-champion-right > .bob-colophon { display: none; }
 
   .bob-next-banner { padding: 8px 10px 8px 16px; }
 }
@@ -1000,6 +1104,14 @@ a.bob-back { text-decoration: none; }
   .bob-club-card > span:first-child { height: 40px; }
   .bob-club-card > span:first-child > span { width: 34px; }
   .bob-badges { padding-top: 3px; }
+  /* chave: faixa, colunas e pé mais justos (com nomes longos o ingresso da próxima partida ganha uma linha) */
+  .bob-bracket-left > .bob-band h1 { font-size: 28px; }
+  .bob-next-card .bob-next-vs { font-size: 19px; }
+  .bob-bracket-col { gap: 6px; }
+  .bob-bracket-scroll { padding-bottom: 14px; }
+  .bob-bracket-right > .bob-colophon { padding-top: 4px; }
+  /* resultado com revanche (rodapé de duas fileiras): o pé do menu sai para o placar caber */
+  .bob-result-right:has(.bob-dock[data-double]) > .bob-colophon { display: none; }
 }
 
 @media (max-width: 379px) {
@@ -1031,6 +1143,7 @@ a.bob-back { text-decoration: none; }
   .bob-toast { animation: none; }
   .bob-conn[data-state="reconectando"] i { animation: none; }
   .bob-more > summary::after,
+  .bob-rules-toggle::after,
   .bob-switch i,
   .bob-switch i::after,
   .bob-team-card,

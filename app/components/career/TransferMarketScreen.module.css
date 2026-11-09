@@ -39,33 +39,32 @@
 .secondaryAction strong { display: flex; align-items: center; gap: 7px; }
 .secondaryAction:disabled { opacity: .45; cursor: not-allowed; }
 
+/* ───────────── viagem: a passagem de papel entre o clube antigo e o novo ───────────── */
 .travelOverlay {
   position: fixed;
   inset: 0;
   z-index: 10000;
   display: grid;
   place-items: center;
-  padding: clamp(10px, 2.5vw, 28px);
-  background: rgba(2, 10, 7, .92);
-  backdrop-filter: blur(16px);
+  padding: clamp(12px, 3vw, 32px);
+  background: rgba(52, 56, 52, .6);
   animation: travelBackdropIn .22s ease-out both;
 }
 .travelCard {
   position: relative;
   isolation: isolate;
-  width: min(96vw, 1020px);
-  max-height: 92dvh;
+  width: min(100%, 940px);
+  max-height: 94dvh;
   display: grid;
   grid-template-rows: auto auto auto;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, .13);
-  border-radius: 26px;
-  background:
-    radial-gradient(circle at 8% 40%, color-mix(in srgb, var(--journey-from) 28%, transparent), transparent 34%),
-    radial-gradient(circle at 92% 42%, color-mix(in srgb, var(--journey-to) 32%, transparent), transparent 35%),
-    linear-gradient(145deg, #07140f 0%, #0a1c15 46%, #07150f 100%);
-  box-shadow: 0 30px 100px rgba(0, 0, 0, .48);
-  animation: travelCardIn .34s cubic-bezier(.2,.8,.2,1) both;
+  color: var(--ink, #161616);
+  background: var(--paper, #fbfbf7);
+  border: 2px solid var(--ink, #161616);
+  border-radius: 12px;
+  box-shadow: 6px 6px 0 rgba(22, 22, 22, .88), 0 26px 60px rgba(22, 24, 20, .26);
+  rotate: -.35deg;
+  animation: travelCardIn .34s cubic-bezier(.2, .8, .2, 1) both;
 }
 .travelCard::before {
   content: "";
@@ -73,45 +72,65 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: .25;
-  background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-  background-size: 34px 34px;
-  mask-image: linear-gradient(to bottom, black, transparent 82%);
+  background: radial-gradient(rgba(150, 145, 130, .17) 1px, transparent 1.5px) 0 0 / 7px 7px;
 }
+/* a faixa de cima é impressa na cor do clube de destino */
 .travelHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 24px 28px 18px;
-  border-bottom: 1px solid rgba(255,255,255,.09);
-  background: rgba(5, 18, 13, .54);
-}
-.travelHeader div { display: grid; gap: 5px; }
-.travelHeader span { color: #f8c932; font-size: 11px; font-weight: 950; letter-spacing: .16em; }
-.travelHeader strong { font-size: clamp(24px, 3vw, 34px); line-height: 1; letter-spacing: -.02em; }
-.travelHeader small { padding: 7px 10px; color: #b8cac1; font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; background: rgba(255,255,255,.04); }
-.travelStage {
   position: relative;
-  min-height: 350px;
-  display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(280px, 2.3fr) minmax(150px, 1fr);
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 18px;
-  padding: 28px 34px 24px;
+  padding: 16px 24px 15px;
+  color: var(--to-ink, #fff);
+  background: var(--to, #161616);
+  border-bottom: 2px solid var(--ink, #161616);
+  overflow: hidden;
 }
-.travelGlow {
+.travelHeader::after {
+  content: "";
   position: absolute;
-  top: 50%;
-  width: 240px;
-  height: 240px;
-  border-radius: 50%;
-  filter: blur(60px);
-  opacity: .12;
+  top: -20%;
+  bottom: -20%;
+  right: 24%;
+  width: 46px;
+  rotate: 18deg;
+  background: var(--to-2, #fff);
+  opacity: .9;
   pointer-events: none;
 }
-.travelGlowFrom { left: -80px; background: var(--journey-from); transform: translateY(-50%); }
-.travelGlowTo { right: -80px; background: var(--journey-to); transform: translateY(-50%); }
+.travelHeader div { position: relative; z-index: 1; display: grid; gap: 3px; }
+.travelHeader span { font-size: 13px; font-weight: 650; opacity: .9; }
+.travelHeader strong {
+  font-family: var(--font-display, "Arial Narrow", sans-serif);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: .95;
+}
+.travelHeader small {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  padding: 6px 11px;
+  color: var(--ink, #161616);
+  font-size: 13px;
+  font-weight: 650;
+  background: var(--yellow, #f6c431);
+  border: 2px solid var(--ink, #161616);
+  border-radius: 7px;
+  box-shadow: 2px 2px 0 var(--ink, #161616);
+  rotate: 1.5deg;
+}
+.travelStage {
+  position: relative;
+  min-height: 320px;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(260px, 2.2fr) minmax(150px, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 26px 30px 22px;
+}
 .terminal {
   position: relative;
   z-index: 2;
@@ -121,22 +140,34 @@
   align-items: center;
   text-align: center;
 }
+/* o escudo vira figurinha colada na passagem */
 .badgeShell {
-  width: 88px;
-  height: 88px;
+  width: 92px;
+  height: 92px;
   display: grid;
   place-items: center;
-  margin-bottom: 15px;
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 23px;
-  background: rgba(255,255,255,.055);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
+  margin-bottom: 14px;
+  background: #fff;
+  border: 2px solid var(--ink, #161616);
+  border-radius: 10px;
+  box-shadow: 3px 3px 0 var(--ink, #161616);
+  rotate: -3deg;
 }
-.terminal > span { margin-bottom: 5px; color: #789289; font-size: 10px; font-weight: 950; letter-spacing: .13em; }
-.terminal > strong { max-width: 180px; font-size: clamp(19px, 2.8vw, 30px); line-height: .95; letter-spacing: -.025em; }
-.terminal > small { margin-top: 8px; color: #a9bbb3; font-size: 11px; }
-.destinationTerminal { opacity: .46; animation: destinationArrival .42s ease-out 2.05s forwards; }
-.destinationTerminal .badgeShell { box-shadow: 0 0 0 0 color-mix(in srgb, var(--journey-to-secondary) 65%, transparent); animation: arrivalRing .7s ease-out 2.02s both; }
+.badgeShell :global(.club-badge) { width: 66px; height: 66px; box-shadow: none; }
+.destinationTerminal .badgeShell { rotate: 3deg; }
+.terminal > span { margin-bottom: 2px; color: var(--ink-3, #66665e); font-size: 12.5px; font-weight: 600; }
+.terminal > strong {
+  max-width: 190px;
+  font-family: var(--font-display, "Arial Narrow", sans-serif);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: clamp(22px, 2.6vw, 30px);
+  line-height: .98;
+  overflow-wrap: anywhere;
+}
+.terminal > small { margin-top: 6px; color: var(--ink-2, #45453f); font-size: 12.5px; }
+.destinationTerminal { opacity: .4; animation: destinationArrival .42s ease-out 2.05s forwards; }
+.destinationTerminal .badgeShell { animation: arrivalRing .7s ease-out 2.02s both; }
 .route {
   position: relative;
   height: 180px;
@@ -146,9 +177,9 @@
 }
 .routeSvg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .routeShadow, .routeLine { fill: none; vector-effect: non-scaling-stroke; }
-.routeShadow { stroke: rgba(0,0,0,.45); stroke-width: 5; }
-.routeLine { stroke: rgba(232, 244, 238, .48); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 5 10; animation: routeDash 1s linear infinite; }
-.routePoint { fill: #0a1a14; stroke: rgba(255,255,255,.72); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.routeShadow { stroke: rgba(22, 22, 22, .07); stroke-width: 9; stroke-linecap: round; }
+.routeLine { stroke: var(--ink, #161616); stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 6 9; animation: routeDash 1s linear infinite; }
+.routePoint { fill: var(--paper, #fbfbf7); stroke: var(--ink, #161616); stroke-width: 2.2; vector-effect: non-scaling-stroke; }
 .vehicleMotion {
   position: absolute;
   z-index: 4;
@@ -163,45 +194,54 @@
 .vehicleCenter {
   display: grid;
   place-items: center;
-  color: #fff;
-  filter: drop-shadow(0 8px 12px rgba(0,0,0,.42));
+  color: var(--ink, #161616);
+  filter: drop-shadow(2px 2px 0 rgba(22, 22, 22, .85));
   transform: translate(-50%, -50%);
 }
 .vehiclePlane .vehicleCenter { width: 66px; height: 44px; }
 .vehicleBus .vehicleCenter { width: 58px; height: 42px; }
-.vehicleSvg { width: 100%; height: 100%; overflow: visible; fill: rgba(8, 28, 20, .96); stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.vehiclePlane .vehicleSvg { fill: #edf4ef; stroke: rgba(4, 18, 12, .9); stroke-width: .85; }
+.vehicleSvg { width: 100%; height: 100%; overflow: visible; fill: #fff; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.vehiclePlane .vehicleSvg { fill: #fff; stroke: var(--ink, #161616); stroke-width: 1.4; }
+/* um pedaço de fita amarela marcando o trecho */
 .routeStatus {
   position: absolute;
   left: 50%;
-  bottom: -2px;
-  padding: 6px 9px;
-  color: #9db1a8;
-  font-size: 9px;
-  font-weight: 950;
-  letter-spacing: .14em;
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 999px;
-  background: rgba(5, 18, 13, .8);
-  transform: translateX(-50%);
+  bottom: 4px;
+  padding: 3px 10px;
+  color: var(--ink, #161616);
+  font-size: 12.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--yellow, #f6c431) 82%, transparent);
+  transform: translateX(-50%) rotate(-2deg);
 }
+/* o canhoto: picote, siglas e o recado */
 .travelFooter {
-  min-height: 72px;
+  position: relative;
+  min-height: 66px;
   display: grid;
-  grid-template-columns: auto 88px auto 1fr;
+  grid-template-columns: auto 74px auto 1fr;
   align-items: center;
-  gap: 13px;
-  padding: 16px 28px;
-  border-top: 1px solid rgba(255,255,255,.09);
-  background: rgba(5, 18, 13, .62);
+  gap: 12px;
+  padding: 14px 26px;
+  border-top: 2px dashed rgba(22, 22, 22, .32);
+  background: #f3f1e9;
 }
-.travelFooter > span, .travelFooter > strong { font-size: 16px; font-weight: 950; letter-spacing: .08em; }
-.travelFooter > strong { color: #f8c932; }
+.travelFooter > span, .travelFooter > strong {
+  font-family: var(--font-display, "Arial Narrow", sans-serif);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: 24px;
+  line-height: 1;
+}
+.travelFooter > span { justify-self: start; color: var(--ink-3, #66665e); }
+.travelFooter > strong { justify-self: start; }
+.travelFooter > strong { color: var(--ink, #161616); box-shadow: inset 0 -.38em 0 color-mix(in srgb, var(--yellow, #f6c431) 70%, transparent); }
 .travelFooter > div { display: flex; align-items: center; gap: 6px; }
-.travelFooter i { width: 18px; height: 3px; display: block; border-radius: 999px; background: rgba(255,255,255,.17); animation: progressBlink .9s ease-in-out infinite alternate; }
+.travelFooter i { width: 16px; height: 3px; display: block; border-radius: 2px; background: rgba(22, 22, 22, .18); animation: progressBlink .9s ease-in-out infinite alternate; }
 .travelFooter i:nth-child(2) { animation-delay: .18s; }
 .travelFooter i:nth-child(3) { animation-delay: .36s; }
-.travelFooter small { justify-self: end; color: #849b91; font-size: 11px; }
+.travelFooter small { justify-self: end; color: var(--ink-2, #45453f); font-size: 13px; }
 
 @keyframes travelBackdropIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes travelCardIn { from { opacity: 0; transform: scale(.97) translateY(10px); } to { opacity: 1; transform: none; } }
@@ -210,30 +250,53 @@
 @keyframes travelCardFadeOut { to { opacity: 0; } }
 @keyframes routeDash { to { stroke-dashoffset: -15; } }
 @keyframes destinationArrival { to { opacity: 1; transform: translateY(-4px); } }
-@keyframes arrivalRing { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--journey-to-secondary) 70%, transparent); } 100% { box-shadow: 0 0 0 22px transparent; } }
-@keyframes progressBlink { from { opacity: .3; } to { opacity: 1; background: #f8c932; } }
+@keyframes arrivalRing { 0% { scale: .9; } 60% { scale: 1.08; } 100% { scale: 1; } }
+@keyframes progressBlink { from { opacity: .35; } to { opacity: 1; background: var(--ink, #161616); } }
 
 .travelLeaving { pointer-events: none; animation: travelBackdropOut 320ms cubic-bezier(.77,0,.175,1) forwards; }
 .travelLeaving .travelCard { animation: travelCardOut 320ms cubic-bezier(.77,0,.175,1) forwards; }
 
 @media (max-width: 700px) {
-  .travelOverlay { padding: 8px; }
-  .travelCard { width: 100%; max-height: 96dvh; border-radius: 22px; }
-  .travelHeader { padding: 17px 16px 13px; }
-  .travelHeader strong { font-size: 21px; }
-  .travelHeader small { padding: 6px 8px; font-size: 9px; }
-  .travelStage { min-height: 260px; grid-template-columns: 90px minmax(112px, 1fr) 90px; gap: 6px; padding: 18px 8px 14px; }
-  .badgeShell { width: 62px; height: 62px; margin-bottom: 10px; border-radius: 17px; }
-  .terminal > span { font-size: 8px; }
-  .terminal > strong { max-width: 92px; font-size: 16px; }
-  .terminal > small { max-width: 98px; margin-top: 6px; font-size: 8px; line-height: 1.25; }
-  .route { height: 150px; }
-  .vehiclePlane .vehicleCenter { width: 48px; height: 32px; }
-  .vehicleBus .vehicleCenter { width: 44px; height: 32px; }
-  .routeStatus { bottom: -6px; font-size: 7px; }
-  .travelFooter { min-height: 62px; grid-template-columns: auto 58px auto; gap: 8px; padding: 12px 15px; }
-  .travelFooter i { width: 12px; }
-  .travelFooter small { grid-column: 1 / -1; justify-self: start; margin-top: -2px; font-size: 9px; }
+  .travelOverlay { padding: 10px; }
+  .travelCard { width: 100%; rotate: 0deg; box-shadow: 4px 4px 0 rgba(22, 22, 22, .88), 0 18px 40px rgba(22, 24, 20, .24); }
+  .travelHeader { padding: 13px 15px 12px; gap: 10px; }
+  .travelHeader::after { right: 34%; width: 30px; }
+  .travelHeader span { font-size: 12px; }
+  .travelHeader strong { font-size: 26px; }
+  .travelHeader small { padding: 4px 8px; font-size: 12px; }
+  .travelStage { min-height: 236px; grid-template-columns: 92px minmax(96px, 1fr) 92px; gap: 6px; padding: 18px 10px 14px; }
+  .badgeShell { width: 64px; height: 64px; margin-bottom: 10px; border-radius: 8px; box-shadow: 2px 2px 0 var(--ink, #161616); }
+  .badgeShell :global(.club-badge) { width: 46px; height: 46px; }
+  .terminal > span { font-size: 11px; }
+  .terminal > strong { max-width: 92px; font-size: 18px; }
+  .terminal > small { max-width: 96px; margin-top: 4px; font-size: 11px; line-height: 1.25; }
+  .route { height: 140px; }
+  .vehiclePlane .vehicleCenter { width: 46px; height: 31px; }
+  .vehicleBus .vehicleCenter { width: 42px; height: 30px; }
+  .routeStatus { bottom: -4px; font-size: 11.5px; padding: 2px 8px; }
+  .travelFooter { min-height: 0; grid-template-columns: auto 52px auto 1fr; gap: 6px 8px; padding: 11px 15px 12px; }
+  .travelFooter > span, .travelFooter > strong { font-size: 20px; }
+  .travelFooter i { width: 11px; }
+  .travelFooter small { grid-column: 1 / -1; justify-self: start; font-size: 12px; }
+}
+
+@media (max-width: 380px) {
+  .travelHeader strong { font-size: 23px; }
+  .travelStage { grid-template-columns: 80px minmax(84px, 1fr) 80px; padding-inline: 6px; }
+  .badgeShell { width: 56px; height: 56px; }
+  .badgeShell :global(.club-badge) { width: 40px; height: 40px; }
+  .terminal > strong { max-width: 80px; font-size: 16px; }
+  .terminal > small { max-width: 82px; font-size: 10.5px; }
+  .route { height: 124px; }
+  .vehiclePlane .vehicleCenter { width: 40px; height: 27px; }
+  .vehicleBus .vehicleCenter { width: 37px; height: 27px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .travelCard, .routeLine, .destinationTerminal, .destinationTerminal .badgeShell, .travelFooter i { animation: none; }
+  .destinationTerminal { opacity: 1; }
+  .travelLeaving { animation: travelBackdropOut 180ms linear forwards; }
+  .travelLeaving .travelCard { animation: travelCardFadeOut 180ms linear forwards; }
 }
 
 @media (max-width: 600px) {
@@ -248,23 +311,4 @@
   .reason { padding-right: 12px; }
   .details div { grid-template-columns: 1fr 1fr; padding-left: 70px; }
   .secondaryAction { align-items: flex-start; flex-direction: column; gap: 3px; }
-}
-
-@media (max-width: 420px) {
-  .travelHeader { gap: 10px; }
-  .travelHeader strong { font-size: 19px; }
-  .travelStage { grid-template-columns: 78px minmax(96px, 1fr) 78px; min-height: 235px; padding-inline: 5px; }
-  .badgeShell { width: 54px; height: 54px; }
-  .terminal > strong { max-width: 78px; font-size: 14px; }
-  .terminal > small { max-width: 80px; font-size: 7px; }
-  .route { height: 136px; }
-  .vehiclePlane .vehicleCenter { width: 42px; height: 28px; }
-  .vehicleBus .vehicleCenter { width: 38px; height: 28px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .travelCard, .routeLine, .destinationTerminal, .destinationTerminal .badgeShell, .travelFooter i { animation: none; }
-  .destinationTerminal { opacity: 1; }
-  .travelLeaving { animation: travelBackdropOut 180ms linear forwards; }
-  .travelLeaving .travelCard { animation: travelCardFadeOut 180ms linear forwards; }
 }

@@ -15,7 +15,8 @@ import BotaoMatch from "../../botao/BotaoMatch";
 import { BOTAO3D_ENABLED_EVENT, BOTAO3D_PERFORMANCE_EVENT, rememberBotao3dPerformance, rememberBotao3dPreference, resolveBotao3dPerformance, resolveBotao3dPreference } from "../../botao/view-mode";
 import AndroidInstallDialog from "../../AndroidInstallDialog";
 import PlayerAppearanceEditor from "../../PlayerAppearanceEditor";
-import { teamKitPattern, visualRosterForMatch } from "../../player-appearance";
+import { drawPlayerBust, teamKitPattern, visualRosterForMatch } from "../../player-appearance";
+import { VERIFIED_CLUB_ASSET_IDS } from "../../verified-club-assets";
 import { checkForAndroidUpdate, isAndroidDevice, isNativeAndroid, openAndroidDownload } from "../../android-app";
 import type { AndroidRelease } from "../../android-app";
 import { buildFinalSetup, buildNationalMatchSetup, describeFinal, finalOutcome, nationalMatchRole, pickClubWorldOpponent, pickNationalOpponent, ratingsFromAttributes, walkoverBotaoResult } from "../../botao/adapter";
@@ -48,6 +49,8 @@ import type { SpecialTrainingPanelProps } from "./SpecialTrainingPanel";
 import { worldFinalOpponentForSeason } from "../../career/world-club-competitions";
 import FutboboIcon from "../FutboboIcon";
 import AlbumShell, { albumHostClass } from "./album/AlbumShell";
+import albumStyles from "./album/album.module.css";
+import { clubInks } from "./album/inks";
 import type { AlbumTabId } from "./album/AlbumShell";
 import CareerSpread from "./album/CareerSpread";
 import careerSpreadStyles from "./album/careerSpread.module.css";
@@ -67,9 +70,11 @@ import WorldTab from "./album/tabs/WorldTab";
 /** Sem rede (ou um deploy novo trocou os arquivos): a base jogada não abre; o save guarda tudo para depois. */
 function YouthPlayUnavailable() {
   return (
-    <section className="youth-screen youth-choice screen-enter">
-      <p className="youth-choice-lead">A base jogada não abriu. Confira a conexão e recarregue: o que você já jogou está salvo.</p>
-      <button type="button" className="primary-button youth-choice-reload" onClick={() => window.location.reload()}>Recarregar</button>
+    <section className={`${albumStyles.tokens} ${albumStyles.waitPage} albumMounted screen-enter`}>
+      <div>
+        <p>A base jogada não abriu. Confira a conexão e recarregue: o que você já jogou está salvo.</p>
+        <Stamp variant="primary" onClick={() => window.location.reload()}>Recarregar</Stamp>
+      </div>
     </section>
   );
 }
@@ -85,7 +90,7 @@ function SpecialTrainingUnavailable({ onClose }: SpecialTrainingPanelProps) {
 // A lista dos anos e o treino (e, a partir deles, o Scorebobo e o three.js) só baixam quando abrem.
 const YouthPlayPanel = dynamic(() => import("./YouthPlayPanel").catch(() => ({ default: YouthPlayUnavailable as ComponentType<YouthPlayPanelProps> })), {
   ssr: false,
-  loading: () => <section className="youth-screen"><p className="simulating-label"><span /> Abrindo a base...</p></section>,
+  loading: () => <section className={`${albumStyles.tokens} ${albumStyles.waitPage} albumMounted`} aria-busy="true"><div><p>Abrindo a base…</p></div></section>,
 });
 const SpecialTrainingPanel = dynamic(() => import("./SpecialTrainingPanel").catch(() => ({ default: SpecialTrainingUnavailable })), { ssr: false });
 
@@ -2101,6 +2106,30 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       canvas.height = 1350;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas indisponível");
+      // O pôster é uma página do álbum: capa amarela, papel pontilhado, a faixa do clube,
+      // a figurinha do jogador, a ficha da carreira e as taças em carimbos.
+      const tokens = getComputedStyle(document.querySelector(".albumMounted") ?? document.body);
+      const displayFont = tokens.getPropertyValue("--font-display").trim() || '"Arial Narrow", sans-serif';
+      const textFont = tokens.getPropertyValue("--font-text").trim() || "Arial, sans-serif";
+      const INK = "#161616";
+      const INK_2 = "#45453f";
+      const INK_3 = "#66665e";
+      const PAPER = "#fbfbf7";
+      const YELLOW = "#f6c431";
+      const inks = clubInks(currentClub.primary || "#0b5cad", currentClub.secondary || "#ffffff") as Record<string, string>;
+      const setFont = (kind: "display" | "text", weight: number, size: number) => {
+        ctx.font = `${weight} ${kind === "display" ? "condensed " : ""}${size}px ${kind === "display" ? displayFont : textFont}`;
+        if ("fontStretch" in ctx) (ctx as CanvasRenderingContext2D & { fontStretch: string }).fontStretch = kind === "display" ? "condensed" : "normal";
+      };
+      const fit = (value: string, maxWidth: number, startSize: number, minSize: number, kind: "display" | "text", weight: number) => {
+        let size = startSize;
+        setFont(kind, weight, size);
+        while (size > minSize && ctx.measureText(value).width > maxWidth) {
+          size -= 2;
+          setFont(kind, weight, size);
+        }
+        return size;
+      };
       const roundRect = (x: number, y: number, width: number, height: number, radius: number) => {
         const r = Math.min(radius, width / 2, height / 2);
         ctx.beginPath();
@@ -2111,156 +2140,274 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         ctx.arcTo(x, y, x + width, y, r);
         ctx.closePath();
       };
-      const fitText = (value: string, maxWidth: number, startSize: number, minSize: number, weight = 900) => {
-        let size = startSize;
-        do {
-          ctx.font = `${weight} ${size}px "Barlow Condensed", "Arial Narrow", sans-serif`;
-          if (ctx.measureText(value).width <= maxWidth) break;
-          size -= 2;
-        } while (size > minSize);
-        return size;
+      const dots = (x: number, y: number, width: number, height: number, color: string, step: number) => {
+        ctx.fillStyle = color;
+        for (let dy = y + step / 2; dy < y + height; dy += step) {
+          for (let dx = x + step / 2; dx < x + width; dx += step) ctx.fillRect(dx - 1, dy - 1, 2, 2);
+        }
       };
-      const card = (x: number, y: number, width: number, height: number, fill = "#0d2118") => {
-        roundRect(x, y, width, height, 22);
-        ctx.fillStyle = fill;
-        ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,.12)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      };
+      const loadImage = (src: string) => new Promise<HTMLImageElement | null>((resolve) => {
+        const image = document.createElement("img");
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null);
+        image.src = src;
+      });
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+      // Só escudos do próprio site: imagem de outro domínio sujaria o canvas e o pôster não sairia.
+      const badgePath = currentClub.customBadge || (VERIFIED_CLUB_ASSET_IDS.has(currentClub.id) ? `/assets/clubs/${currentClub.id}.png` : "");
+      const [badge, logo] = await Promise.all([
+        badgePath.startsWith("/") || badgePath.startsWith("data:") ? loadImage(badgePath.startsWith("/") ? `${basePath}${badgePath}` : badgePath) : Promise.resolve(null),
+        loadImage(`${basePath}/favicon.svg`),
+      ]);
 
-      ctx.fillStyle = "#06130d";
+      // capa e papel
+      ctx.fillStyle = YELLOW;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "rgba(244,196,48,.035)";
-      for (let x = -300; x < 1300; x += 180) {
+      ctx.save();
+      ctx.shadowColor = "rgba(60, 50, 0, .28)";
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 6;
+      roundRect(28, 28, 1024, 1294, 20);
+      ctx.fillStyle = PAPER;
+      ctx.fill();
+      ctx.restore();
+      ctx.save();
+      roundRect(28, 28, 1024, 1294, 20);
+      ctx.clip();
+      dots(28, 28, 1024, 1294, "rgba(150, 145, 130, .16)", 12);
+      ctx.restore();
+
+      // faixa do clube
+      ctx.save();
+      roundRect(72, 72, 936, 196, 10);
+      ctx.clip();
+      ctx.fillStyle = inks["--club"];
+      ctx.fillRect(72, 72, 936, 196);
+      dots(72, 72, 936, 196, inks["--club-ink"] === "#ffffff" ? "rgba(255, 255, 255, .09)" : "rgba(0, 0, 0, .07)", 9);
+      ctx.fillStyle = inks["--club-2"];
+      ctx.beginPath();
+      ctx.moveTo(742, 72);
+      ctx.lineTo(812, 72);
+      ctx.lineTo(742, 268);
+      ctx.lineTo(672, 268);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(168, 170, 66, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0, 0, 0, .14)";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      if (badge) {
+        const scale = Math.min(98 / badge.width, 98 / badge.height);
+        ctx.drawImage(badge, 168 - (badge.width * scale) / 2, 170 - (badge.height * scale) / 2, badge.width * scale, badge.height * scale);
+      } else {
+        ctx.fillStyle = inks["--club"];
+        ctx.textAlign = "center";
+        fit(currentClub.abbr, 100, 40, 22, "display", 800);
+        ctx.fillText(currentClub.abbr, 168, 184);
+        ctx.textAlign = "left";
+      }
+      ctx.fillStyle = inks["--club-ink"];
+      ctx.globalAlpha = .86;
+      setFont("text", 600, 24);
+      ctx.fillText("Fim de carreira", 262, 128);
+      ctx.globalAlpha = 1;
+      fit(displayGame.name, 470, 86, 44, "display", 800);
+      ctx.fillText(displayGame.name, 260, 206);
+      setFont("text", 600, 24);
+      ctx.globalAlpha = .9;
+      ctx.fillText(`${position.name} · ${nationCountry.name}`, 262, 244);
+      ctx.globalAlpha = 1;
+      // selo do pico de OVR
+      ctx.fillStyle = YELLOW;
+      ctx.beginPath();
+      ctx.arc(920, 170, 64, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = INK;
+      ctx.textAlign = "center";
+      setFont("text", 600, 17);
+      ctx.fillText("pico", 920, 138);
+      setFont("display", 800, 58);
+      ctx.fillText(String(peakOverall), 920, 192);
+      setFont("text", 700, 17);
+      ctx.fillText("OVR", 920, 214);
+      ctx.textAlign = "left";
+
+      // figurinha
+      const appearance = appSettings.characterButtonsEnabled !== false ? { ...displayGame.playerAppearance, kitPattern: teamKitPattern(displayGame.seed, currentClub.id) } : null;
+      ctx.save();
+      ctx.translate(270, 566);
+      ctx.rotate((-2.4 * Math.PI) / 180);
+      ctx.translate(-270, -566);
+      ctx.save();
+      ctx.shadowColor = "rgba(30, 30, 20, .28)";
+      ctx.shadowBlur = 22;
+      ctx.shadowOffsetY = 8;
+      roundRect(80, 316, 380, 500, 14);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.restore();
+      ctx.save();
+      roundRect(94, 330, 352, 380, 8);
+      ctx.clip();
+      ctx.fillStyle = inks["--club"];
+      ctx.fillRect(94, 330, 352, 380);
+      dots(94, 330, 352, 380, "rgba(0, 0, 0, .1)", 9);
+      ctx.fillStyle = inks["--club-2"];
+      ctx.globalAlpha = .9;
+      ctx.beginPath();
+      ctx.moveTo(94, 560);
+      ctx.lineTo(446, 470);
+      ctx.lineTo(446, 520);
+      ctx.lineTo(94, 610);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      if (appearance) {
         ctx.save();
-        ctx.translate(x, 0);
-        ctx.transform(1, 0, -.35, 1, 0, 0);
-        ctx.fillRect(0, 0, 82, 1350);
+        ctx.translate(270, 330 + 380 * .5);
+        drawPlayerBust(ctx, appearance, currentClub.primary, currentClub.secondary, 352 * .43, 0, { cutout: true });
         ctx.restore();
       }
-      ctx.fillStyle = "#f4c430";
-      ctx.fillRect(0, 0, 1080, 14);
-
-      ctx.fillStyle = "#f4c430";
-      ctx.font = '900 42px "Barlow Condensed", "Arial Narrow", sans-serif';
-      ctx.fillText("F⚽ FUTBOBO", 64, 86);
-      ctx.fillStyle = "#91a79c";
-      ctx.font = '800 22px Manrope, Arial, sans-serif';
-      ctx.textAlign = "right";
-      ctx.fillText("ARQUIVO DE CARREIRA", 1016, 80);
-      ctx.textAlign = "left";
-
-      card(64, 124, 952, 320, "#0b1d15");
-      ctx.fillStyle = currentClub.primary || "#1a5e42";
-      ctx.beginPath();
-      ctx.arc(172, 268, 76, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = currentClub.secondary || "#f4c430";
-      ctx.lineWidth = 8;
-      ctx.stroke();
+      ctx.restore();
+      setFont("display", 800, appearance ? 64 : 150);
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = INK;
       ctx.fillStyle = "#ffffff";
+      if (appearance) {
+        ctx.strokeText(String(displayGame.number), 110, 394);
+        ctx.fillText(String(displayGame.number), 110, 394);
+      } else {
+        ctx.textAlign = "center";
+        ctx.strokeText(String(displayGame.number), 270, 572);
+        ctx.fillText(String(displayGame.number), 270, 572);
+        ctx.textAlign = "left";
+      }
+      ctx.fillStyle = YELLOW;
+      ctx.beginPath();
+      ctx.arc(404, 374, 38, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      ctx.font = '900 38px "Barlow Condensed", "Arial Narrow", sans-serif';
-      ctx.fillText(currentClub.abbr.slice(0, 4), 172, 281);
+      setFont("display", 800, 36);
+      ctx.fillText(String(peakOverall), 404, 384);
+      setFont("text", 700, 12);
+      ctx.fillText("OVR", 404, 400);
       ctx.textAlign = "left";
+      fit(displayGame.name, 340, 40, 24, "display", 800);
+      ctx.fillText(displayGame.name, 100, 760);
+      setFont("text", 500, 20);
+      ctx.fillStyle = INK_3;
+      ctx.fillText(`${position.name}, camisa ${displayGame.number}`, 100, 792);
+      ctx.restore();
 
-      ctx.fillStyle = "#f4c430";
-      ctx.font = '900 20px Manrope, Arial, sans-serif';
-      ctx.fillText(displayGame.archetype.toLocaleUpperCase("pt-BR"), 280, 193);
-      const nameSize = fitText(displayGame.name.toLocaleUpperCase("pt-BR"), 570, 76, 42);
-      ctx.fillStyle = "#f3f6f4";
-      ctx.font = `900 ${nameSize}px "Barlow Condensed", "Arial Narrow", sans-serif`;
-      ctx.fillText(displayGame.name.toLocaleUpperCase("pt-BR"), 280, 265);
-      ctx.fillStyle = "#91a79c";
-      ctx.font = '700 24px Manrope, Arial, sans-serif';
-      ctx.fillText(`#${displayGame.number} · ${position.name} · ${nationCountry.name}`, 280, 307);
-      ctx.fillText(`${displayGame.history.length} temporadas · aposentou aos ${displayGame.age}`, 280, 346);
-      ctx.fillStyle = "#f4c430";
-      ctx.font = '900 76px "Barlow Condensed", "Arial Narrow", sans-serif';
-      ctx.textAlign = "right";
-      ctx.fillText(String(peakOverall), 960, 379);
-      ctx.fillStyle = "#91a79c";
-      ctx.font = '800 17px Manrope, Arial, sans-serif';
-      ctx.fillText("PICO OVR", 960, 407);
-      ctx.textAlign = "left";
-
-      const metrics = [
-        ["JOGOS", displayGame.stats.appearances],
-        [displayGame.position === "GOL" ? "SEM SOFRER" : "GOLS", displayGame.position === "GOL" ? displayGame.stats.cleanSheets : displayGame.stats.goals],
-        ["ASSISTÊNCIAS", displayGame.stats.assists],
-        ["TAÇAS", totalTitles],
-      ] as const;
-      metrics.forEach(([label, value], index) => {
-        const x = 64 + index * 242;
-        card(x, 468, 226, 132);
-        ctx.fillStyle = "#91a79c";
-        ctx.font = '800 17px Manrope, Arial, sans-serif';
-        ctx.fillText(label, x + 22, 508);
-        ctx.fillStyle = index === 3 ? "#f4c430" : "#f3f6f4";
-        ctx.font = '900 50px "Barlow Condensed", "Arial Narrow", sans-serif';
-        ctx.fillText(String(value), x + 22, 568);
+      // ficha da carreira
+      ctx.fillStyle = INK;
+      setFont("display", 800, 36);
+      ctx.fillText("Ficha da carreira", 504, 346);
+      ctx.fillRect(504, 362, 504, 3);
+      const clubsPlayed = new Set(displayGame.history.map((item) => item.clubId)).size || 1;
+      const ficha: Array<[string, number]> = [
+        ["Temporadas", displayGame.history.length],
+        ["Clubes", clubsPlayed],
+        ["Jogos", displayGame.stats.appearances],
+        displayGame.position === "GOL" ? ["Jogos sem sofrer", displayGame.stats.cleanSheets] : ["Gols", displayGame.stats.goals],
+        ["Assistências", displayGame.stats.assists],
+        ["Taças", totalTitles],
+        ["Bolas de Ouro", ballonDor],
+        ["Prêmios individuais", totalIndividualAwards],
+      ];
+      ficha.forEach(([label, value], index) => {
+        const y = 412 + index * 50;
+        setFont("text", 500, 23);
+        ctx.fillStyle = INK_2;
+        ctx.fillText(label, 504, y);
+        const labelEnd = 504 + ctx.measureText(label).width;
+        setFont("display", 800, 34);
+        ctx.fillStyle = INK;
+        ctx.textAlign = "right";
+        ctx.fillText(String(value), 1008, y + 2);
+        const valueStart = 1008 - ctx.measureText(String(value)).width;
+        ctx.textAlign = "left";
+        ctx.save();
+        ctx.strokeStyle = "rgba(22, 22, 22, .3)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([2, 7]);
+        ctx.beginPath();
+        ctx.moveTo(labelEnd + 12, y - 6);
+        ctx.lineTo(valueStart - 12, y - 6);
+        ctx.stroke();
+        ctx.restore();
       });
 
-      card(64, 624, 952, 226, "#102218");
-      ctx.fillStyle = "#f4c430";
-      ctx.font = '900 20px Manrope, Arial, sans-serif';
-      ctx.fillText("PRINCIPAIS CONQUISTAS", 88, 664);
+      // taças em carimbos
+      ctx.fillStyle = INK;
+      setFont("display", 800, 36);
+      ctx.fillText("Principais taças", 72, 878);
+      ctx.fillRect(72, 894, 936, 3);
       const posterHonours = shareTitleHighlights.slice(0, 4);
       if (posterHonours.length) {
         posterHonours.forEach((entry, index) => {
-          const col = index % 2;
-          const row = Math.floor(index / 2);
-          const x = 88 + col * 452;
-          const y = 714 + row * 66;
-          ctx.fillStyle = "#f4c430";
-          ctx.font = '900 34px "Barlow Condensed", "Arial Narrow", sans-serif';
-          ctx.fillText(`${entry.count}×`, x, y);
-          ctx.fillStyle = "#f3f6f4";
-          ctx.font = '800 20px Manrope, Arial, sans-serif';
-          ctx.fillText(entry.label, x + 58, y - 2);
+          const x = 72 + (index % 2) * 484;
+          const y = 920 + Math.floor(index / 2) * 94;
+          ctx.fillStyle = INK;
+          roundRect(x + 4, y + 4, 452, 74, 8);
+          ctx.fill();
+          roundRect(x, y, 452, 74, 8);
+          ctx.fillStyle = index === 0 ? YELLOW : "#ffffff";
+          ctx.fill();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = INK;
+          ctx.stroke();
+          ctx.fillStyle = INK;
+          setFont("display", 800, 40);
+          const count = `${entry.count}×`;
+          ctx.fillText(count, x + 20, y + 51);
+          const countWidth = ctx.measureText(count).width;
+          fit(entry.label, 452 - 52 - countWidth, 25, 16, "text", 650);
+          ctx.fillText(entry.label, x + 34 + countWidth, y + 46);
         });
       } else {
-        ctx.fillStyle = "#91a79c";
-        ctx.font = '700 24px Manrope, Arial, sans-serif';
-        ctx.fillText("Uma história construída além das taças.", 88, 732);
+        ctx.fillStyle = INK_2;
+        setFont("text", 500, 26);
+        ctx.fillText("Uma história construída além das taças.", 72, 948);
       }
 
-      card(64, 874, 952, 174, "#151f18");
-      ctx.fillStyle = "#cdb9ff";
-      ctx.font = '900 19px Manrope, Arial, sans-serif';
-      ctx.fillText("PRÊMIOS INDIVIDUAIS", 88, 916);
-      const awards = [
-        ["BOLAS DE OURO", ballonDor],
-        ["WORLD XI", worldXi],
-        ["TOTAL", totalIndividualAwards],
-      ] as const;
-      awards.forEach(([label, value], index) => {
-        const x = 88 + index * 300;
-        ctx.fillStyle = value > 0 ? "#f3f6f4" : "#617269";
-        ctx.font = '900 44px "Barlow Condensed", "Arial Narrow", sans-serif';
-        ctx.fillText(String(value), x, 982);
-        ctx.fillStyle = "#91a79c";
-        ctx.font = '800 15px Manrope, Arial, sans-serif';
-        ctx.fillText(label, x + 50, 979);
-      });
+      // caminho
+      const pathLine = Array.from(new Set(displayGame.history.map((item) => clubById(item.clubId).shortName))).join(" · ") || currentClub.shortName;
+      ctx.fillStyle = INK_3;
+      setFont("text", 600, 22);
+      ctx.fillText("Caminho", 72, 1132);
+      ctx.fillStyle = INK;
+      fit(pathLine, 936, 34, 18, "display", 750);
+      ctx.fillText(pathLine, 72, 1172);
 
-      ctx.fillStyle = "#91a79c";
-      ctx.font = '800 17px Manrope, Arial, sans-serif';
-      ctx.fillText("CAMINHO", 64, 1096);
-      ctx.fillStyle = "#f3f6f4";
-      const pathSize = fitText(clubLine || currentClub.shortName, 952, 30, 19, 800);
-      ctx.font = `800 ${pathSize}px "Barlow Condensed", "Arial Narrow", sans-serif`;
-      ctx.fillText(clubLine || currentClub.shortName, 64, 1140);
-
-      ctx.fillStyle = "#f4c430";
-      ctx.font = '900 48px "Barlow Condensed", "Arial Narrow", sans-serif';
-      ctx.fillText(legacyStanding.label.toLocaleUpperCase("pt-BR"), 64, 1222);
-      ctx.fillStyle = "#91a79c";
-      ctx.font = '800 19px Manrope, Arial, sans-serif';
-      ctx.fillText(`${displayGame.legacyPoints} pontos de legado · ${displayGame.unlockedAchievements.length}/${ACHIEVEMENTS.length} conquistas`, 64, 1260);
+      // legado, conquistas e a marca
+      const legacyLabel = legacyStanding.label;
+      const legacySize = fit(legacyLabel, 760, 56, 34, "display", 800);
+      const legacyWidth = ctx.measureText(legacyLabel).width;
+      ctx.fillStyle = "rgba(246, 196, 49, .9)";
+      ctx.fillRect(66, 1264 - legacySize * .62, legacyWidth + 14, legacySize * .5);
+      ctx.fillStyle = INK;
+      ctx.fillText(legacyLabel, 72, 1262);
+      ctx.fillStyle = INK_2;
+      setFont("text", 500, 22);
+      ctx.fillText(`${displayGame.legacyPoints} pontos de legado · ${displayGame.unlockedAchievements.length}/${ACHIEVEMENTS.length} conquistas`, 72, 1298);
+      if (logo) ctx.drawImage(logo, 912, 1196, 96, 96);
+      ctx.fillStyle = INK_2;
+      setFont("text", 600, 19);
       ctx.textAlign = "right";
-      ctx.fillText("futbobo.top", 1016, 1300);
+      ctx.fillText("futbobo.top", logo ? 896 : 1008, 1298);
+      ctx.textAlign = "left";
 
       return new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Falha ao criar pôster")), "image/png"));
     };

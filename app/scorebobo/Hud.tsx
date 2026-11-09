@@ -1,9 +1,9 @@
 "use client";
 
-// Camada de TV por cima do 3D: placar de transmissão, objetivo, bolas
-// restantes, passes, dica do traço, leitura do plano, faixas de resultado,
-// tarja de replay. Tudo aqui é desenho: quem decide o que mostrar é o
-// `LevelPlayer`, que lê o estado da simulação.
+// Papel do álbum por cima do 3D: placar como ingresso, objetivo, bolas
+// restantes, passes na fita amarela, dica do traço, leitura do plano, faixas
+// de tinta do resultado, tarja de replay. Tudo aqui é desenho: quem decide o
+// que mostrar é o `LevelPlayer`, que lê o estado da simulação.
 
 import { memo } from "react";
 import type { CSSProperties, ReactNode } from "react";
@@ -100,6 +100,26 @@ export function bannerSubtitle(outcome: Outcome, title: string): string[] {
   return lines;
 }
 
+/** "Fase 01": o número da fase como o álbum escreve. */
+export function levelLabel(index: number): string {
+  return `Fase ${String(index + 1).padStart(2, "0")}`;
+}
+
+/**
+ * O rótulo que a carreira manda em caixa alta ("BASE · 13 ANOS", "TREINO
+ * ESPECIAL · 1 DE 2") vira frase normal no papel: "Base · 13 anos".
+ */
+export function sentenceKicker(text: string): string {
+  if (text !== text.toLocaleUpperCase("pt-BR")) return text;
+  return text
+    .split(" · ")
+    .map((part) => {
+      const lower = part.toLocaleLowerCase("pt-BR");
+      return lower.charAt(0).toLocaleUpperCase("pt-BR") + lower.slice(1);
+    })
+    .join(" · ");
+}
+
 /** "89'" vira um relógio de transmissão que anda com a jogada ("89:07"). */
 export function formatClock(clock: string, seconds: number): string {
   const match = /^(\d{1,3})'?$/.exec(clock.trim());
@@ -114,36 +134,36 @@ export function formatClock(clock: string, seconds: number): string {
 export function BallIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      <circle cx="12" cy="12" r="10.5" fill="#f7f7f2" stroke="#0b0f14" strokeWidth="1.2" />
-      <path d="M12 7.2l3.6 2.6-1.4 4.2H9.8L8.4 9.8z" fill="#0b0f14" />
-      <path d="M12 7.2V2.6M15.6 9.8l4.3-1.6M14.2 14l2.7 3.8M9.8 14l-2.7 3.8M8.4 9.8L4.1 8.2" stroke="#0b0f14" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="10.4" fill="#ffffff" stroke="#161616" strokeWidth="1.5" />
+      <path d="M12 7.2l3.6 2.6-1.4 4.2H9.8L8.4 9.8z" fill="#161616" />
+      <path d="M12 7.2V2.6M15.6 9.8l4.3-1.6M14.2 14l2.7 3.8M9.8 14l-2.7 3.8M8.4 9.8L4.1 8.2" stroke="#161616" strokeWidth="1.1" fill="none" strokeLinecap="round" />
     </svg>
   );
 }
 
+/** Estrela impressa: amarela com contorno de tinta; apagada, só o contorno claro (o espaço da figurinha). */
 export function StarIcon({ lit, className, style }: { lit: boolean; className?: string; style?: CSSProperties }) {
   return (
     <svg viewBox="0 0 24 24" className={className} style={style} aria-hidden="true" data-lit={lit ? "1" : "0"}>
       <path
         d="M12 2.4l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.2l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"
-        fill={lit ? "url(#sbStarGold)" : "rgba(255,255,255,0.08)"}
-        stroke={lit ? "#fff3b0" : "rgba(255,255,255,0.32)"}
-        strokeWidth="1.2"
+        fill={lit ? "url(#sbStarGold)" : "rgba(22,22,22,0.06)"}
+        stroke={lit ? "#161616" : "rgba(22,22,22,0.34)"}
+        strokeWidth={lit ? 1.5 : 1.2}
         strokeLinejoin="round"
       />
     </svg>
   );
 }
 
-/** Gradiente compartilhado das estrelas (um por página basta). */
+/** Tinta compartilhada das estrelas (uma por página basta). */
 export function StarDefs() {
   return (
     <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true" focusable="false">
       <defs>
         <linearGradient id="sbStarGold" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff6c2" />
-          <stop offset="0.45" stopColor="#ffd23f" />
-          <stop offset="1" stopColor="#e08a00" />
+          <stop offset="0" stopColor="#f8cf4a" />
+          <stop offset="1" stopColor="#f0b91e" />
         </linearGradient>
       </defs>
     </svg>
@@ -186,14 +206,13 @@ export const ScoreBug = memo(function ScoreBug({ home, away, homeScore, awayScor
 }) {
   return (
     <div className={styles.scoreBug} role="group" aria-label={`${home.name} ${homeScore} x ${awayScore} ${away.name}, ${clock}`}>
-      <span className={styles.bugBrand} aria-hidden="true">SB</span>
       <span className={styles.bugTeam}>
         <i style={{ background: `linear-gradient(180deg, ${home.primary} 0 60%, ${home.secondary} 60%)` }} />
         {home.abbr}
       </span>
       <span className={styles.bugScore}>
         <b key={`h${bump}`} className={bump ? styles.bugBump : undefined}>{homeScore}</b>
-        <em>-</em>
+        <em>–</em>
         <b>{awayScore}</b>
       </span>
       <span className={styles.bugTeam}>
@@ -214,7 +233,10 @@ export const ObjectiveChip = memo(function ObjectiveChip({ index, name, objectiv
 }) {
   return (
     <div className={styles.objective}>
-      <span className={styles.objectiveIndex} data-sb-career={kicker === undefined ? undefined : "kicker"}>{kicker ?? String(index + 1).padStart(2, "0")}</span>
+      <span className={styles.objectiveIndex} data-sb-career={kicker === undefined ? undefined : "kicker"}>
+        {/* O rótulo da carreira em duas linhas ("Treino especial" / "1 de 2"), sem o ponto no começo de uma delas. */}
+        {kicker === undefined ? String(index + 1).padStart(2, "0") : sentenceKicker(kicker).split(" · ").map((part, at) => <span key={at}>{part}</span>)}
+      </span>
       <span className={styles.objectiveText}>
         <strong>{name}</strong>
         <small>{objective}</small>
@@ -240,7 +262,7 @@ export const PassCounter = memo(function PassCounter({ passes }: { passes: numbe
   return (
     <div className={styles.passes} key={passes} aria-live="polite">
       <b>{passes}</b>
-      <span>{passes === 1 ? "PASSE" : "PASSES"}</span>
+      <span>{passes === 1 ? "passe" : "passes"}</span>
     </div>
   );
 });
@@ -266,7 +288,7 @@ export const PlanChip = memo(function PlanChip({ plan, directOnly = false }: {
   const tone = voided || plan.danger === "cut" ? styles.gradeBad : plan.accuracy >= 0.78 ? styles.gradeGood : plan.accuracy >= 0.55 ? styles.gradeMid : styles.gradeBad;
   return (
     <div className={`${styles.planChip} ${plan.shot ? styles.planShot : ""} ${voided || plan.danger === "cut" ? styles.planDanger : ""}`}>
-      <span className={styles.planKind}>{plan.shot ? "CHUTE" : "PASSE"}</span>
+      <span className={styles.planKind}>{plan.shot ? "Chute" : "Passe"}</span>
       <strong>{planTitle(plan)}</strong>
       <span className={`${styles.planMeter} ${tone}`} aria-label={voided ? "Passe não vale nesta fase" : `Precisão: ${grade}`}>
         <i style={{ transform: `scaleX(${Math.max(0.06, plan.accuracy)})` }} />
@@ -353,12 +375,9 @@ export const OutcomeBanner = memo(function OutcomeBanner({ outcome }: { outcome:
 export function ReplayTag({ onSkip, stats }: { onSkip: () => void; stats?: string | null }) {
   return (
     <div className={styles.replay}>
-      <span className={styles.replayTag}><i aria-hidden="true" />REPLAY</span>
+      <span className={styles.replayTag}><i aria-hidden="true" />Replay</span>
       {stats && <span className={styles.replayStats}>{stats}</span>}
-      <button type="button" className={styles.skipButton} onClick={onSkip}>
-        Pular
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4l7 6-7 6zM11 4l7 6-7 6z" fill="currentColor" /></svg>
-      </button>
+      <button type="button" className={styles.skipButton} onClick={onSkip}>Pular</button>
     </div>
   );
 }
@@ -377,20 +396,21 @@ export function IntroCard({ index, name, situation, objective, rules, onSkip, ki
   return (
     <div className={styles.intro}>
       <div className={styles.introCard}>
-        <span className={styles.introKicker}>{kicker ?? <>FASE {String(index + 1).padStart(2, "0")}</>}</span>
-        <strong>{name}</strong>
-        <small>{situation}</small>
-        {/* O objetivo e as estrelas antes da primeira bola (só apareciam no fim). */}
-        <ul className={styles.introRules}>
-          <li><StarIcon lit className={styles.introStar} />{objective}</li>
-          <li><StarIcon lit={false} className={styles.introStar} />{rules[0]}</li>
-          <li><StarIcon lit={false} className={styles.introStar} />{rules[1]}</li>
-        </ul>
+        <div className={styles.introBand}>
+          <span className={styles.introKicker}>{kicker === undefined ? levelLabel(index) : sentenceKicker(kicker)}</span>
+          <strong>{name}</strong>
+        </div>
+        <div className={styles.introBody}>
+          <small>{situation}</small>
+          {/* O objetivo e as estrelas antes da primeira bola (só apareciam no fim). */}
+          <ul className={styles.introRules}>
+            <li><StarIcon lit className={styles.introStar} />{objective}</li>
+            <li><StarIcon lit={false} className={styles.introStar} />{rules[0]}</li>
+            <li><StarIcon lit={false} className={styles.introStar} />{rules[1]}</li>
+          </ul>
+        </div>
       </div>
-      <button type="button" className={styles.skipButton} onClick={onSkip}>
-        Pular
-        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4l7 6-7 6zM11 4l7 6-7 6z" fill="currentColor" /></svg>
-      </button>
+      <button type="button" className={styles.skipButton} onClick={onSkip}>Pular</button>
     </div>
   );
 }

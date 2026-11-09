@@ -76,7 +76,7 @@ export default function ParadeLaunchCard({ seed, season, countryId, playerName, 
               <svg viewBox="0 0 32 32"><path d="M3 21h17v-9h5l4 5v4h-2" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" /><circle cx="9" cy="23" r="2.6" fill="currentColor" /><circle cx="23" cy="23" r="2.6" fill="currentColor" /><path d="M5 12V7m4 5V5m4 7V8m4 4V6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></svg>
             </span>
             <div>
-              <small>A FESTA DO TÍTULO</small>
+              <small>A festa do título</small>
               <strong>Trio elétrico pelas ruas de {input.city.name}</strong>
             </div>
           </header>

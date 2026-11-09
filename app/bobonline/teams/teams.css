@@ -203,6 +203,9 @@
 .bob-kit-art,
 .bob-kit-art svg { display: block; line-height: 0; }
 
+/* abas das partes do time: só no celular (no desktop as duas páginas mostram tudo) */
+.bob-editor-tabs { display: none; }
+
 .bob-editor-section { display: grid; gap: 12px; min-width: 0; }
 .bob-editor-grid { display: grid; gap: 12px; }
 .bob-editor-pair { display: grid; grid-template-columns: minmax(0, 1fr) 104px; gap: 10px; }
@@ -393,7 +396,8 @@ body:has(.bob-shell[data-screen="lobby"]) .bob-teams-toast-region { top: max(16p
 }
 @media (min-width: 1024px) and (max-width: 1279px) {
   .bob-team-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .bob-roster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* o elenco numa fileira só: em duas, o "Usar este time" caía para fora da página */
+  .bob-roster { gap: 10px 8px; }
   .bob-color-tabs span small { display: none; }
 }
 
@@ -408,6 +412,52 @@ body:has(.bob-shell[data-screen="lobby"]) .bob-teams-toast-region { top: max(16p
   .bob-editor-kit svg { width: 40px; height: 40px; }
   .bob-roster { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 12px; }
   .bob-editor-actions .bob-dock :is(.primary-button) { width: 100%; }
+
+  /* Editor: uma parte por vez, em abas presas na faixa do time (o rodapé amarelo vale em todas). */
+  .bob-editor-left,
+  .bob-editor-right { gap: 12px; }
+  .bob-editor-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: -2px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .bob-editor-tabs button {
+    position: relative;
+    min-width: 0;
+    min-height: 44px;
+    margin-bottom: -2px;
+    padding: 0 2px;
+    border: 2px solid transparent;
+    border-bottom: 0;
+    border-radius: 7px 7px 0 0;
+    background: none;
+    color: var(--ink-3);
+    font-family: var(--font-display);
+    font-stretch: 82%;
+    font-weight: 750;
+    font-size: 16px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .bob-editor-tabs button[aria-pressed="true"] { border-color: var(--ink); background: var(--paper); color: var(--ink); }
+  /* o que falta corrigir está nesta aba */
+  .bob-editor-tabs button[data-invalid]::after { content: ""; position: absolute; top: 9px; right: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+  .bob-editor[data-show="nome"] [data-pane]:not([data-pane="nome"]),
+  .bob-editor[data-show="cores"] [data-pane]:not([data-pane="cores"]),
+  .bob-editor[data-show="uniforme"] [data-pane]:not([data-pane="uniforme"]),
+  .bob-editor[data-show="elenco"] [data-pane]:not([data-pane="elenco"]) { display: none; }
+  /* cada aba começa no alto (sem o filete de bloco); o título que a aba já diz fica só para leitor de tela */
+  .bob-editor-block { padding-top: 0; border-top: 0; }
+  .bob-editor-block[data-pane="uniforme"] + .bob-editor-block[data-pane="uniforme"] { padding-top: 12px; border-top: 1.5px solid var(--rule); }
+  .bob-editor-section > .bob-section-title,
+  .bob-editor-block[data-pane="cores"] .bob-block-title,
+  .bob-editor-block[data-pane="elenco"] .bob-block-title h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* "Em uso" já está na faixa */
+  .bob-editor-inuse { display: none; }
+  /* elenco: três figurinhas em cima e duas no meio embaixo, como na página do álbum */
+  .bob-roster { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 12px; }
+  .bob-roster > li { flex: 0 0 calc((100% - 24px) / 3); min-width: 0; }
   /* com rodapé amarelo na tela, o aviso curto sobe acima dele */
   body:has(.bob-dock) .bob-teams-toast-region { bottom: calc(var(--dock-lift, 0px) + 84px + env(safe-area-inset-bottom)); }
 }

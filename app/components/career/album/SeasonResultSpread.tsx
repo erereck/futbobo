@@ -13,7 +13,8 @@ import { seasonResultStory } from "../../../career/season-narrative";
 import BallonDorGalaCard from "../../../ceremony/BallonDorGalaCard";
 import ParadeLaunchCard from "../../../parade/ParadeLaunchCard";
 import { careerWorldCupTitles, paradeStars } from "../../../parade/parade-stars";
-import { AwardCeremony, AwardReveal, CompetitionBadge, NationBadge } from "../CareerPrimitives";
+import { CompetitionBadge, NationBadge } from "../CareerPrimitives";
+import { AwardEnvelope, AwardSticker } from "./AwardEnvelope";
 import FutboboIcon from "../../FutboboIcon";
 import { AlbumPage } from "./AlbumShell";
 import { BlockTitle, ClubBand, Ficha, Stamp } from "./primitives";
@@ -234,7 +235,7 @@ export default function SeasonResultSpread({ game, club, continueLabel, onContin
                     rivals={game.rivals}
                   />
                 ) : seasonCeremonyNomination && (
-                  <AwardCeremony
+                  <AwardEnvelope
                     key={`${seasonCeremonyNomination.award}-${result.season}`}
                     award={seasonCeremonyNomination.award}
                     playerName={game.name}
@@ -248,7 +249,7 @@ export default function SeasonResultSpread({ game, club, continueLabel, onContin
                 {[...result.awards]
                   .sort((a, b) => awardTierWeight(b) - awardTierWeight(a))
                   .filter((award) => award !== seasonCeremonyNomination?.award)
-                  .map((award) => <AwardReveal key={award} award={award} />)}
+                  .map((award) => <AwardSticker key={award} award={award} />)}
               </div>
             </section>
           )}

@@ -178,3 +178,19 @@
 .offerBody footer button:hover { border-color: #161616; }
 .offerBody footer .offerEnable,
 .offerBody footer .offerEnable:hover { border-color: #161616; background: #f6c431; color: #161616; box-shadow: 3px 3px 0 #161616; }
+
+/* aviso "Modo 3D ativado": etiqueta amarela carimbada, igual ao toast do álbum */
+.offerToast.offerToast {
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  gap: 10px;
+  padding: 9px 16px 9px 10px;
+  color: #161616;
+  background: #f6c431;
+  border: 2px solid #161616;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 #161616;
+  backdrop-filter: none;
+}
+.offerToast.offerToast > b { width: 28px; height: 28px; place-items: center; font-size: 17px; color: #161616; background: #fbfbf7; border: 2px solid #161616; border-radius: 50%; }
+.offerToast.offerToast strong { font-size: 14px; font-weight: 750; }
+.offerToast.offerToast small { color: rgba(22, 22, 22, .72); font-size: 12px; }

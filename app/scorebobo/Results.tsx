@@ -8,7 +8,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import { playStarSound } from "./audio";
-import { describeRule, StarIcon } from "./Hud";
+import { describeRule, levelLabel, sentenceKicker, StarIcon } from "./Hud";
 import type { ScoreLevel } from "./types";
 import type { StarCount } from "./storage";
 import styles from "./hud.module.css";
@@ -106,81 +106,86 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
         pressedHere.current = true;
       }}
     >
-      <div className={`${styles.resultsCard} ${won ? styles.resultsWon : styles.resultsLost}`}>
-        <span className={styles.resultsKicker}>{career ? career.kicker : <>FASE {String(levelIndex + 1).padStart(2, "0")}</>} · {level.name.toUpperCase()}</span>
-        <h2 id="sb-results-title" className={styles.resultsTitle}>{champion ? "É CAMPEÃO!" : won ? "FASE CONCLUÍDA" : "NÃO FOI DESSA VEZ"}</h2>
-        <p className={styles.resultsVerdict}>{verdict}</p>
-
-        <div className={styles.resultsStars} aria-label={`${stars} de 3 estrelas`}>
-          {[0, 1, 2].map((index) => (
-            <span
-              key={index}
-              className={`${styles.resultsStar} ${index < stars ? styles.resultsStarLit : ""}`}
-              style={{ "--delay": `${STAR_START_MS + index * STAR_DELAY_MS}ms`, "--tilt": `${(index - 1) * 9}deg` } as CSSProperties}
-            >
-              <StarIcon lit={false} className={styles.resultsStarBase} />
-              {index < stars && <StarIcon lit className={styles.resultsStarGold} />}
-              {index < stars && <i className={styles.resultsBurst} aria-hidden="true" />}
+      <div className={`${styles.resultsCard} ${won ? styles.resultsWon : ""} ${champion ? styles.resultsChampion : ""}`}>
+        <i className={styles.tape} data-side="left" aria-hidden="true" />
+        <i className={styles.tape} data-side="right" aria-hidden="true" />
+        <div className={styles.resultsHead}>
+          <header className={styles.resultsBand}>
+            <span className={styles.resultsKicker}>{career ? sentenceKicker(career.kicker) : levelLabel(levelIndex)} · {level.name}</span>
+            <h2 id="sb-results-title" className={styles.resultsTitle}>{champion ? "É campeão!" : won ? "Fase concluída" : "Não foi dessa vez"}</h2>
+          </header>
+          {record && (
+            <span className={styles.resultsRecord} style={{ "--delay": `${STAR_START_MS + stars * STAR_DELAY_MS}ms` } as CSSProperties}>
+              <b>Novo</b><b>recorde</b>
             </span>
-          ))}
+          )}
+          <p className={styles.resultsVerdict}>{verdict}</p>
+
+          <div className={styles.resultsStars} aria-label={`${stars} de 3 estrelas`}>
+            {[0, 1, 2].map((index) => (
+              <span
+                key={index}
+                className={styles.resultsStar}
+                style={{ "--delay": `${STAR_START_MS + index * STAR_DELAY_MS}ms`, "--tilt": `${(index - 1) * 9}deg` } as CSSProperties}
+              >
+                <StarIcon lit={false} className={styles.resultsStarBase} />
+                {index < stars && <StarIcon lit className={styles.resultsStarGold} />}
+                {index < stars && <i className={styles.resultsBurst} aria-hidden="true" />}
+              </span>
+            ))}
+          </div>
         </div>
 
-        {record && <span className={styles.resultsRecord} style={{ "--delay": `${STAR_START_MS + stars * STAR_DELAY_MS}ms` } as CSSProperties}>NOVO RECORDE</span>}
+        <div className={styles.resultsBody}>
+          <ul className={styles.resultsRules}>
+            {rules.map((rule, index) => (
+              <li key={index} className={lit(index) ? styles.ruleDone : ""} style={{ "--delay": `${STAR_START_MS + index * STAR_DELAY_MS}ms` } as CSSProperties}>
+                <StarIcon lit={lit(index)} className={styles.ruleStar} />
+                <span>{rule}</span>
+              </li>
+            ))}
+          </ul>
 
-        <ul className={styles.resultsRules}>
-          {rules.map((rule, index) => (
-            <li key={index} className={lit(index) ? styles.ruleDone : ""} style={{ "--delay": `${STAR_START_MS + index * STAR_DELAY_MS}ms` } as CSSProperties}>
-              <StarIcon lit={lit(index)} className={styles.ruleStar} />
-              <span>{rule}</span>
-            </li>
-          ))}
-        </ul>
+          {/* Ganhou: as linhas das estrelas já contam a história. Perdeu: a dica do que fazer. */}
+          {!won && notes.length > 0 && (
+            <p className={styles.resultsNotes}>{notes.join(" · ")}</p>
+          )}
 
-        {/* Ganhou: as linhas das estrelas já contam a história. Perdeu: a dica do que fazer. */}
-        {!won && notes.length > 0 && (
-          <p className={styles.resultsNotes}>{notes.join(" · ")}</p>
-        )}
-
-        <div className={styles.resultsActions}>
-          {career ? (
-            <>
-              {/* Com chance sobrando e menos de ★★★, o destaque é jogar de novo: na carreira vale a melhor das 3. */}
-              <button ref={careerRetry ? undefined : primaryRef} type="button" className={careerRetry ? styles.secondaryButton : styles.primaryButton} onClick={armed(career.onContinue)}>
-                Continuar
-                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </button>
-              {careerRetry && (
-                <button ref={primaryRef} type="button" className={styles.primaryButton} onClick={armed(career.onRetry)}>
-                  <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10a5.5 5.5 0 1 0 1.8-4.1M4 3.5v3.6h3.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  Tentar de novo ({career.retriesLeft})
+          <div className={styles.resultsActions}>
+            {career ? (
+              <>
+                {/* Com chance sobrando e menos de ★★★, o destaque é jogar de novo: na carreira vale a melhor das 3. */}
+                <button ref={careerRetry ? undefined : primaryRef} type="button" className={careerRetry ? styles.secondaryButton : styles.primaryButton} onClick={armed(career.onContinue)}>
+                  Continuar
                 </button>
-              )}
-            </>
-          ) : null}
-          {!career && hasNext && (won || nextUnlocked) ? (
-            <button ref={won ? primaryRef : undefined} type="button" className={won ? styles.primaryButton : styles.secondaryButton} onClick={armed(onNext)} disabled={!nextUnlocked}>
-              Próxima fase
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            </button>
-          ) : null}
-          {!career && (
-            <button ref={won && hasNext ? undefined : primaryRef} type="button" className={won && hasNext ? styles.secondaryButton : styles.primaryButton} onClick={armed(onRetry)}>
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10a5.5 5.5 0 1 0 1.8-4.1M4 3.5v3.6h3.6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              Tentar de novo
-            </button>
-          )}
-          {won && onReplay && (
-            <button ref={replayRef} type="button" className={styles.secondaryButton} onClick={armed(onReplay)}>
-              <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4" width="15" height="12" rx="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" /><path d="M8.4 7.3v5.4l4.5-2.7z" fill="currentColor" /></svg>
-              Ver replay
-            </button>
-          )}
-          {!career && (
-            <button type="button" className={styles.secondaryButton} onClick={armed(onLevels)}>
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 3.5h5v5h-5zM11.5 3.5h5v5h-5zM3.5 11.5h5v5h-5zM11.5 11.5h5v5h-5z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
-              Fases
-            </button>
-          )}
+                {careerRetry && (
+                  <button ref={primaryRef} type="button" className={styles.primaryButton} onClick={armed(career.onRetry)}>
+                    Tentar de novo ({career.retriesLeft})
+                  </button>
+                )}
+              </>
+            ) : null}
+            {!career && hasNext && (won || nextUnlocked) ? (
+              <button ref={won ? primaryRef : undefined} type="button" className={won ? styles.primaryButton : styles.secondaryButton} onClick={armed(onNext)} disabled={!nextUnlocked}>
+                Próxima fase
+              </button>
+            ) : null}
+            {!career && (
+              <button ref={won && hasNext ? undefined : primaryRef} type="button" className={won && hasNext ? styles.secondaryButton : styles.primaryButton} onClick={armed(onRetry)}>
+                Tentar de novo
+              </button>
+            )}
+            {won && onReplay && (
+              <button ref={replayRef} type="button" className={styles.secondaryButton} onClick={armed(onReplay)}>
+                Ver replay
+              </button>
+            )}
+            {!career && (
+              <button type="button" className={styles.secondaryButton} onClick={armed(onLevels)}>
+                Fases
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -239,6 +239,15 @@ export default function CareerSpread(props: CareerSpreadProps) {
         <div className={styles.bottomRow}>
           {objective && (
             <div className={styles["o-meta"]}>
+              {/* celular: a meta numa linha, sem o espaço de figurinha */}
+              <p className={`${styles.metaStrip} ${styles.mobileOnly}`}>
+                <span><b>Meta:</b> {objective.description.charAt(0).toLocaleLowerCase("pt-BR")}{objective.description.slice(1)}</span>
+                <span className={styles.metaScore}>
+                  <b className={styles.num}>0/{objective.target}</b>
+                  <small className={styles.num}><i data-tone="up">+{objective.reward}</i> <i data-tone="down">−{objective.penalty}</i></small>
+                </span>
+              </p>
+              <div className={styles.desktopOnly}>
               <SpecialSlot
                 labelledBy="meta-titulo"
                 title={objective.label}
@@ -247,6 +256,7 @@ export default function CareerSpread(props: CareerSpreadProps) {
                 reward={objective.reward}
                 penalty={objective.penalty}
               />
+              </div>
             </div>
           )}
           {mode === "decision" && (
@@ -255,7 +265,12 @@ export default function CareerSpread(props: CareerSpreadProps) {
               {market.cooldown && <p>Pedido já feito nesta temporada.</p>}
               <div className={styles.marketActions}>
                 <Stamp pill={`${market.loanChance}%`} disabled={market.loanDisabled} onClick={market.onLoan}>Empréstimo</Stamp>
-                <Stamp disabled={market.transferDisabled} onClick={market.onTransfer}>Pedir transferência</Stamp>
+                <Stamp disabled={market.transferDisabled} onClick={market.onTransfer}><span className={styles.desktopOnly}>Pedir transferência</span><span className={styles.mobileOnly}>Transferência</span></Stamp>
+                {/* no celular o Aposentar divide a linha com o mercado, sem a ficha técnica em volta */}
+                <button type="button" className={`${styles.retire} ${styles.mobileOnly}`} onClick={props.onRetire}>
+                  <FutboboIcon name="hourglass" />
+                  Aposentar
+                </button>
               </div>
             </section>
           )}

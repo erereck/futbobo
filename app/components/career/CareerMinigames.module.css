@@ -576,3 +576,43 @@
   .paper .youthHeader p { font-size: 12px; }
   .youthPage.paper { gap: 10px; }
 }
+
+/* ═════════════ espera do minigame em papel ═════════════
+   "Preparando o campo…" e o aviso de erro abrem antes do Scorebobo, que agora também é do álbum. */
+.veil {
+  background: var(--grain, none), #fbfbf7;
+  color: #45453f;
+}
+.veil p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 34ch;
+  font: 600 14px/1.45 var(--font-text, var(--sans));
+  letter-spacing: 0;
+  text-transform: none;
+}
+.veil p:only-child::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f6c431;
+  border: 2px solid #161616;
+}
+.veil .play,
+.veil .ghost {
+  min-width: 180px;
+  min-height: 46px;
+  border: 2px solid #161616;
+  border-radius: 6px;
+  box-shadow: 3px 3px 0 #161616;
+  color: #161616;
+  font: 750 15px/1.1 var(--font-display, var(--display));
+  font-stretch: 82%;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.veil .play { background: #f6c431; }
+.veil .ghost { background: #fff; }

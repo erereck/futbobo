@@ -183,7 +183,7 @@ export default function CreateRoomScreen({
         </fieldset>
 
         {tournament && (
-          <fieldset className="bob-choice">
+          <fieldset className="bob-choice bob-cpu-choice">
             <legend>Nível da CPU</legend>
             <div className="bob-chips bob-chips-compact">
               {LEVELS.map((level) => (

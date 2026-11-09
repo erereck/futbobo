@@ -20,9 +20,10 @@
 * { box-sizing: border-box; }
 .futbobo-icon { display: block; flex: 0 0 auto; overflow: visible; }
 
+/* a base é papel: o jogo inteiro é o álbum, e a página nunca pisca escuro antes de montar */
 html {
-  background: #06110d;
-  color-scheme: dark;
+  background: #fbfbf7;
+  color-scheme: light;
   text-rendering: optimizeLegibility;
   -webkit-text-size-adjust: 100%;
 }
@@ -30,9 +31,7 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
-  background:
-    radial-gradient(circle at 50% -10%, rgba(49, 126, 81, 0.25), transparent 38rem),
-    #06110d;
+  background: #fbfbf7;
   color: var(--text);
   font-family: var(--sans);
   overscroll-behavior-y: none;

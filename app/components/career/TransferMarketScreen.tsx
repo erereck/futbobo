@@ -8,6 +8,7 @@ import { formatMoney } from "../../career/performance";
 import { clubById } from "../../career/shared";
 import { ClubBadge } from "./CareerPrimitives";
 import styles from "./TransferMarketScreen.module.css";
+import { clubInks } from "./album/inks";
 import FutboboIcon from "../FutboboIcon";
 
 type Props = {
@@ -92,13 +93,18 @@ export function TransferJourneyOverlay({ journey, origin, leaving }: { journey: 
   const { destination, offer, mode } = journey;
   const originCountry = countryById(origin.countryId);
   const destinationCountry = countryById(destination.countryId);
-  const routeLabel = mode === "plane" ? "VOO INTERNACIONAL" : "VIAGEM NACIONAL";
-  const transferLabel = offer.type === "loan" ? "EMPRÉSTIMO CONFIRMADO" : "TRANSFERÊNCIA CONFIRMADA";
+  const routeLabel = mode === "plane" ? "Voo internacional" : "Viagem nacional";
+  const transferLabel = offer.type === "loan" ? "Empréstimo confirmado" : "Transferência confirmada";
+  // a faixa da passagem sai impressa na cor do clube de destino, com tinta que dá contraste
+  const toInks = clubInks(destination.primary, destination.secondary) as Record<string, string>;
   const style = {
     "--journey-from": origin.primary,
     "--journey-from-secondary": origin.secondary,
     "--journey-to": destination.primary,
     "--journey-to-secondary": destination.secondary,
+    "--to": toInks["--club"],
+    "--to-2": toInks["--club-2"],
+    "--to-ink": toInks["--club-ink"],
   } as CSSProperties;
   const routeRef = useRef<HTMLDivElement | null>(null);
   const vehicleRef = useRef<HTMLDivElement | null>(null);
@@ -181,12 +187,9 @@ export function TransferJourneyOverlay({ journey, origin, leaving }: { journey: 
         </header>
 
         <div className={styles.travelStage} aria-live="polite">
-          <div className={`${styles.travelGlow} ${styles.travelGlowFrom}`} />
-          <div className={`${styles.travelGlow} ${styles.travelGlowTo}`} />
-
           <div className={`${styles.terminal} ${styles.originTerminal}`}>
             <div className={styles.badgeShell}><ClubBadge club={origin} /></div>
-            <span>ORIGEM</span>
+            <span>Origem</span>
             <strong>{origin.shortName}</strong>
             <small>{origin.city} · {originCountry.name}</small>
           </div>
@@ -201,12 +204,12 @@ export function TransferJourneyOverlay({ journey, origin, leaving }: { journey: 
             <div ref={vehicleRef} className={`${styles.vehicleMotion} ${mode === "bus" ? styles.vehicleBus : styles.vehiclePlane}`}>
               <div className={styles.vehicleCenter}><TravelVehicle mode={mode} /></div>
             </div>
-            <span className={styles.routeStatus}>{mode === "plane" ? "EM VOO" : "NA ESTRADA"}</span>
+            <span className={styles.routeStatus}>{mode === "plane" ? "Em voo" : "Na estrada"}</span>
           </div>
 
           <div className={`${styles.terminal} ${styles.destinationTerminal}`}>
             <div className={styles.badgeShell}><ClubBadge club={destination} /></div>
-            <span>DESTINO</span>
+            <span>Destino</span>
             <strong>{destination.shortName}</strong>
             <small>{destination.city} · {destinationCountry.name}</small>
           </div>

@@ -205,7 +205,8 @@
   cursor: pointer;
 }
 .newsCard > button > span { display: grid; gap: 1px; }
-.newsCard em { font-style: normal; font-size: 12px; color: var(--ink-3); }
+.newsCard em { display: block; font-style: normal; font-size: 12px; color: var(--ink-3); text-transform: lowercase; }
+.newsCard em::first-letter { text-transform: uppercase; }
 .newsCard > button > span b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 32px; line-height: 1; }
 .newsCard > button > div { display: grid; gap: 3px; }
 .newsCard strong { font-family: var(--font-display); font-stretch: 80%; font-weight: 750; font-size: 20px; line-height: 1.15; }
@@ -225,8 +226,16 @@
   .twoCols, .threeCols { grid-template-columns: 1fr; }
   .editorActions, .characterAdder { flex-wrap: wrap; }
   .characterAdder input { flex-basis: 100%; }
-  .installGrid { grid-template-columns: 1fr; }
-  .installNote { grid-template-columns: 1fr; gap: 4px; }
+  .installGrid { grid-template-columns: 1fr; gap: 14px; }
+  /* celular: cada versão em poucas linhas, para a folha caber sem rolar */
+  .installCard { gap: 6px; padding: 15px 18px 17px; }
+  .installCard.featured { padding-top: 20px; }
+  .installCard > b { font-size: 26px; }
+  .installCard p { font-size: 14px; line-height: 1.4; }
+  .installCard ul { display: none; }
+  .installCard button { margin-top: 4px; }
+  .installNote { grid-template-columns: 1fr; gap: 2px; padding-top: 10px; }
+  .installNote span { font-size: 13px; line-height: 1.4; }
   .newsCard > button { grid-template-columns: 70px minmax(0, 1fr) 22px; gap: 12px; }
   .newsCard > button > span b { font-size: 24px; }
   .newsCard strong { font-size: 17px; }

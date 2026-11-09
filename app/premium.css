@@ -23,17 +23,17 @@
   --shadow-overlay: 0 28px 80px rgba(0, 0, 0, .48);
 }
 
-* { scrollbar-color: rgba(226, 239, 228, .16) transparent; }
+* { scrollbar-color: rgba(22, 22, 22, .26) transparent; }
 
 html {
-  background: #050b08;
+  background: #fbfbf7;
   scroll-behavior: smooth;
 }
 
 body {
   --display: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
   --sans: var(--font-manrope), "Segoe UI", sans-serif;
-  background: #050b08;
+  background: #fbfbf7;
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: auto;
@@ -4147,14 +4147,12 @@ p,
 .appearance-3d-poses button {
   min-height: 32px;
   padding: 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 6px;
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  font-size: 12.5px;
+  font-weight: 650;
 }
 .appearance-3d-poses button[aria-pressed="true"] {
   border-color: var(--gold);

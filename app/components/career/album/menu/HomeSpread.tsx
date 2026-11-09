@@ -227,7 +227,7 @@ export default function HomeSpread({
 
         <footer className={styles.colophon}>
           <span>{CLUBS.length} clubes · 12 posições · {LEAGUES.length} ligas · {COUNTRIES.length} seleções</span>
-          <b>{FUTBOBO_VERSION} · {FUTBOBO_VERSION_NAME}</b>
+          <b>{FUTBOBO_VERSION} · {FUTBOBO_VERSION_NAME.charAt(0)}{FUTBOBO_VERSION_NAME.slice(1).toLocaleLowerCase("pt-BR")}</b>
         </footer>
       </AlbumPage>
       {children}

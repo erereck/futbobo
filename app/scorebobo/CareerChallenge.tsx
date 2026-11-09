@@ -40,6 +40,7 @@ import {
   type TeamInfo,
 } from "./storage";
 import type { ScoreLevel, ScoreTeams } from "./types";
+import albumCss from "../components/career/album/album.module.css";
 import styles from "./CareerChallenge.module.css";
 
 export type CareerChallengeProps = {
@@ -239,7 +240,7 @@ export default function CareerChallenge({
   if (!opening) return null;
 
   return (
-    <div className={styles.root}>
+    <div className={`${albumCss.tokens} ${styles.root}`}>
       {stage && (
         <LevelPlayer
           key={mount.key}

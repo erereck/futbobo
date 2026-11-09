@@ -1,12 +1,16 @@
 "use client";
 
-// Abertura do Scorebobo: logotipo, a prancheta com a jogada em loop, as fases
-// (com estrelas e cadeados), o seu jogador e os ajustes. Nada de 3D aqui — o
-// three.js, a fase e a cama da torcida só chegam no tempo ocioso do menu.
+// Abertura do Scorebobo, no papel do álbum: uma folha dupla sobre a mesa. À
+// esquerda, o pôster da prancheta (a jogada em loop), como jogar, o seu
+// jogador e os ajustes; à direita, as fases como figurinhas (as trancadas são
+// o espaço vazio esperando a figurinha). Nada de 3D aqui — o three.js, a fase
+// e a cama da torcida só chegam no tempo ocioso do menu.
 
 import Link from "next/link";
 import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties } from "react";
+import albumCss from "../components/career/album/album.module.css";
+import { clubInks } from "../components/career/album/inks";
 import { drawPlayerBust } from "../player-appearance";
 import { playUiSound, primeScoreboboAudio, warmScoreboboAudio } from "./audio";
 import { StarDefs, StarIcon } from "./Hud";
@@ -15,7 +19,6 @@ import { levelUnlocked, readProgress, type ScoreboboProfile, type ScoreboboProgr
 import type { ScoreLevel } from "./types";
 import styles from "./scorebobo.module.css";
 
-const LOGO = "SCOREBOBO";
 const SKY_LABEL: Record<ScoreLevel["sky"], string> = { day: "Tarde", sunset: "Pôr do sol", night: "Noite" };
 
 // O progresso mora no localStorage: o servidor (e o hidrato) desenham sem ele.
@@ -23,6 +26,7 @@ const noopSubscribe = () => () => undefined;
 const clientTrue = () => true;
 const serverFalse = () => false;
 
+/** O busto recortado do seu jogador, colado na figurinha pequena (as cores do clube ficam no fundo dela). */
 function HeroBust({ profile, size }: { profile: ScoreboboProfile; size: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -34,8 +38,8 @@ function HeroBust({ profile, size }: { profile: ScoreboboProfile; size: number }
     canvas.height = pixels;
     const context = canvas.getContext("2d");
     if (!context) return;
-    context.setTransform(density, 0, 0, density, size / 2 * density, size / 2 * density);
-    drawPlayerBust(context, profile.appearance, profile.club.primary, profile.club.secondary, size / 2 - 0.5);
+    context.setTransform(density, 0, 0, density, size / 2 * density, size * 0.47 * density);
+    drawPlayerBust(context, profile.appearance, profile.club.primary, profile.club.secondary, size * 0.43, 0, { cutout: true });
   }, [profile, size]);
   return <canvas ref={ref} className={styles.bust} style={{ width: size, height: size }} aria-hidden="true" />;
 }
@@ -86,31 +90,28 @@ const LevelCard = memo(function LevelCard({ level, index, stars, locked, home, a
       disabled={disabled}
       aria-label={`Fase ${index + 1}: ${level.name}. ${level.situation}.${locked === null ? "" : locked ? " Bloqueada" : ` ${stars} de 3 estrelas`}`}
     >
-      <span className={styles.cardArt}>
-        <LevelMap level={level} home={home} away={away} locked={locked !== false} />
-        <span className={styles.cardIndex}>{String(index + 1).padStart(2, "0")}</span>
-        <span className={styles.cardSky} data-sky={level.sky}>{SKY_LABEL[level.sky]} · {level.clock}</span>
-        {locked && (
-          <span key={nudge} className={`${styles.cardLock} ${nudge ? styles.cardLockNudge : ""}`}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7.5a5 5 0 0110 0V10M5.5 10h13v10h-13z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><circle cx="12" cy="15" r="1.6" fill="currentColor" /></svg>
+      <span className={styles.cardFace}>
+        <span className={styles.cardArt}>
+          <LevelMap level={level} home={home} away={away} locked={locked !== false} />
+          <span className={styles.cardIndex}>{index + 1}</span>
+          <span className={styles.cardSky} data-sky={level.sky}>{SKY_LABEL[level.sky]} · {level.clock}</span>
+          {locked && (
+            <span key={nudge} className={`${styles.cardLock} ${nudge ? styles.cardLockNudge : ""}`}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7.5a5 5 0 0110 0V10M5.5 10h13v10h-13z" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" /><circle cx="12" cy="15" r="1.6" fill="currentColor" /></svg>
+            </span>
+          )}
+        </span>
+        <span className={styles.cardBody}>
+          <strong>{level.name}</strong>
+          <small>{level.situation}</small>
+          <span className={styles.cardMeta}>
+            <span className={styles.cardStars}>
+              {[0, 1, 2].map((star) => <StarIcon key={star} lit={star < stars} className={styles.cardStar} />)}
+            </span>
+            <span className={styles.cardBalls}>{level.attempts} {level.attempts === 1 ? "bola" : "bolas"}</span>
           </span>
-        )}
-      </span>
-      <span className={styles.cardBody}>
-        <strong>{level.name}</strong>
-        <small>{level.situation}</small>
-        <span className={styles.cardMeta}>
-          <span className={styles.cardStars}>
-            {[0, 1, 2].map((star) => <StarIcon key={star} lit={star < stars} className={styles.cardStar} />)}
-          </span>
-          <span className={styles.cardBalls}>{level.attempts} {level.attempts === 1 ? "bola" : "bolas"}</span>
         </span>
       </span>
-      {locked === false && (
-        <span className={styles.cardPlay} aria-hidden="true">
-          <svg viewBox="0 0 20 20"><path d="M6 4l10 6-10 6z" fill="currentColor" /></svg>
-        </span>
-      )}
     </button>
   );
 });
@@ -197,90 +198,102 @@ export function TitleScreen({ levels, progress, profile, away, hasWebgl, perform
     playUiSound(sound);
   };
 
+  const note = lockedNote ? `Ganhe ao menos 1 estrela na fase ${lockedNote.index} para liberar esta.` : loadFailed ? "A fase não abriu. Confira a conexão e toque de novo." : "";
+  const playerInks = clubInks(home?.primary ?? "#f7d117", home?.secondary ?? "#1d4fc4");
+
   return (
-    <main className={`${styles.page} ${covered ? styles.pageCovered : ""}`} aria-hidden={covered || undefined} inert={covered || undefined}>
+    <main
+      className={`${albumCss.root} albumMounted ${styles.screen} ${covered ? styles.screenCovered : ""}`}
+      data-centered=""
+      aria-hidden={covered || undefined}
+      inert={covered || undefined}
+    >
       <StarDefs />
-      <TitleBackdrop home={homeColor} away={away.primary} still={reducedMotion} />
+      <div className={`${albumCss.album} ${styles.album}`}>
+        <div className={albumCss.cover} aria-hidden="true" />
+        <div className={`${albumCss.spread} ${styles.spread}`}>
+          {/* ───────────── página da esquerda: o pôster, como jogar, o seu jogador ───────────── */}
+          <section className={`${albumCss.page} ${styles.left}`} data-side="left" aria-label="Scorebobo">
+            <header className={styles.poster}>
+              <TitleBackdrop home={homeColor} away={away.primary} still={reducedMotion} />
+              <div className={styles.posterLabels}>
+                <h1 className={styles.logo} aria-label="Scorebobo">
+                  <span className={styles.logoScore} aria-hidden="true">Score</span>
+                  <span className={styles.logoBobo} aria-hidden="true">bobo</span>
+                </h1>
+                <p className={styles.tagline}>Desenhe a jogada</p>
+              </div>
+            </header>
 
-      <header className={styles.hero}>
-        <span className={styles.kicker}><i aria-hidden="true" />MODO 3D · TREINO</span>
-        <h1 className={styles.logo} aria-label="Scorebobo">
-          {Array.from(LOGO).map((letter, index) => (
-            <span key={index} aria-hidden="true" className={index >= 5 ? styles.logoBobo : undefined} style={{ "--i": index } as CSSProperties}>{letter}</span>
-          ))}
-        </h1>
-        <svg className={styles.swoosh} viewBox="0 0 520 60" aria-hidden="true">
-          <path d="M14 44C120 52 210 14 300 22s150 30 196 4" pathLength={1} className={styles.swooshGlow} />
-          <path d="M14 44C120 52 210 14 300 22s150 30 196 4" pathLength={1} className={styles.swooshLine} />
-          <g className={styles.swooshBall}>
-            <circle cx="496" cy="26" r="9" />
-            <path d="M496 20.5l3.3 2.4-1.3 3.9h-4l-1.3-3.9z" />
-          </g>
-        </svg>
-        <p className={styles.tagline}>Desenhe a jogada</p>
-      </header>
-
-      {!hasWebgl && (
-        <div className={styles.noWebgl} role="alert">
-          <strong>Este aparelho não tem 3D (WebGL)</strong>
-          <span>O Scorebobo existe só no Modo 3D. Ative a aceleração de hardware do navegador ou abra o Futbobo em outro aparelho.</span>
-        </div>
-      )}
-
-      <section className={styles.levels} aria-labelledby="sb-levels-title">
-        <ol className={styles.steps} aria-label="Como jogar">
-          <li><b>1</b><span><strong>O tempo congela</strong>Encoste o dedo ou o mouse na bola</span></li>
-          <li><b>2</b><span><strong>Desenhe a jogada</strong>Até um companheiro, no espaço ou no gol</span></li>
-          <li><b>3</b><span><strong>Solte</strong>A bola vai perto do traço — não igual</span></li>
-        </ol>
-        <div className={styles.levelsHead}>
-          <h2 id="sb-levels-title">Fases</h2>
-          <span className={styles.totalStars}>
-            <StarIcon lit className={styles.totalStar} />
-            {totalStars}<small>/{levels.length * 3}</small>
-          </span>
-        </div>
-        <div ref={gridRef} className={styles.grid}>
-          {levels.map((level, index) => (
-            <LevelCard
-              key={level.id}
-              level={level}
-              index={index}
-              stars={progress.stars[level.id] ?? 0}
-              locked={known ? !levelUnlocked(levels, index, progress) : null}
-              home={homeColor}
-              away={away.primary}
-              onPick={pick}
-              disabled={!hasWebgl || starting}
-            />
-          ))}
-        </div>
-        <p className={styles.lockedNote} aria-live="polite">
-          {lockedNote ? `Ganhe ao menos 1 estrela na fase ${lockedNote.index} para liberar esta.` : loadFailed ? "A fase não abriu. Confira a conexão e toque de novo." : " "}
-        </p>
-      </section>
-
-      <footer className={styles.footer}>
-        <div className={styles.player}>
-          {profile ? <HeroBust profile={profile} size={52} /> : <span className={styles.bustSkeleton} />}
-          <span className={styles.playerText}>
-            <small>{profile?.fromSave ? "Jogando com o seu craque" : "Jogando como"}</small>
-            <strong>{profile ? `${profile.name} · ${profile.number}` : "Procurando o seu save…"}</strong>
-            {home && (
-              <span className={styles.playerClub}>
-                <i style={{ background: `linear-gradient(90deg, ${home.primary} 0 55%, ${home.secondary} 55%)` }} />
-                {home.name} <em>x</em> {away.name}
-              </span>
+            {!hasWebgl && (
+              <div className={styles.noWebgl} role="alert">
+                <strong>Este aparelho não tem 3D (WebGL)</strong>
+                <span>O Scorebobo existe só no Modo 3D. Ative a aceleração de hardware do navegador ou abra o Futbobo em outro aparelho.</span>
+              </div>
             )}
-          </span>
+
+            <ol className={styles.steps} aria-label="Como jogar">
+              <li><b>1</b><span><strong>O tempo congela</strong>Encoste o dedo ou o mouse na bola</span></li>
+              <li><b>2</b><span><strong>Desenhe a jogada</strong>Até um companheiro, no espaço ou no gol</span></li>
+              <li><b>3</b><span><strong>Solte</strong>A bola vai perto do traço — não igual</span></li>
+            </ol>
+
+            <footer className={styles.footer}>
+              <div className={styles.player}>
+                <span className={styles.playerSticker} style={playerInks} aria-hidden="true">
+                  <span className={styles.playerArt}>
+                    {profile ? <HeroBust profile={profile} size={64} /> : <span className={styles.bustSkeleton} />}
+                    {profile && <b className={styles.playerNum}>{profile.number}</b>}
+                  </span>
+                </span>
+                <span className={styles.playerText}>
+                  <small>{profile?.fromSave ? "Jogando com o seu craque" : "Jogando como"}</small>
+                  <strong>{profile ? profile.name : "Procurando o seu save…"}</strong>
+                  {home && (
+                    <span className={styles.playerClub}>
+                      <i style={{ background: `linear-gradient(90deg, ${home.primary} 0 55%, ${home.secondary} 55%)` }} />
+                      {home.name} <em>x</em> {away.name}
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className={styles.settings}>
+                <Toggle label="Modo desempenho" note="Menos sombra e resolução" on={performanceMode} onChange={click(onTogglePerformance)} disabled={!hasWebgl} />
+                <Toggle label="Som" on={!muted} onChange={click(onToggleMute)} />
+                <Toggle label="Liberar todas (demo)" on={progress.unlockAll} onChange={click(onToggleUnlockAll)} />
+              </div>
+              <Link href="/" className={styles.back}>Voltar ao Futbobo</Link>
+            </footer>
+          </section>
+
+          {/* ───────────── página da direita: as fases, uma figurinha por fase ───────────── */}
+          <section className={`${albumCss.page} ${styles.right}`} data-side="right" aria-labelledby="sb-levels-title">
+            <div className={styles.levelsHead}>
+              <h2 id="sb-levels-title">Fases</h2>
+              <span className={styles.totalStars}>
+                <StarIcon lit className={styles.totalStar} />
+                <b>{totalStars}</b><small>de {levels.length * 3}</small>
+              </span>
+            </div>
+            <div ref={gridRef} className={styles.grid}>
+              {levels.map((level, index) => (
+                <LevelCard
+                  key={level.id}
+                  level={level}
+                  index={index}
+                  stars={progress.stars[level.id] ?? 0}
+                  locked={known ? !levelUnlocked(levels, index, progress) : null}
+                  home={homeColor}
+                  away={away.primary}
+                  onPick={pick}
+                  disabled={!hasWebgl || starting}
+                />
+              ))}
+            </div>
+            <p className={styles.lockedNote} aria-live="polite">{note}</p>
+          </section>
         </div>
-        <div className={styles.settings}>
-          <Toggle label="Modo desempenho" note="Menos sombra e resolução" on={performanceMode} onChange={click(onTogglePerformance)} disabled={!hasWebgl} />
-          <Toggle label="Som" on={!muted} onChange={click(onToggleMute)} />
-          <Toggle label="Liberar todas (demo)" on={progress.unlockAll} onChange={click(onToggleUnlockAll)} />
-        </div>
-        <Link href="/" className={styles.back}>Voltar ao Futbobo</Link>
-      </footer>
+      </div>
     </main>
   );
 }

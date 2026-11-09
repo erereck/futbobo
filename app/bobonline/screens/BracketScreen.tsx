@@ -99,7 +99,8 @@ function SideRow({ state, match, side }: { state: RoomClientState; match: Bracke
     <div className={`bob-bracket-row${winner ? " is-winner" : ""}${entry.entrantId === state.me ? " is-me" : ""}`}>
       {/* O selo CPU vai ao lado do nome: no escudo de 26 px ele cobriria o desenho inteiro. */}
       {team ? <BobCrest team={team} size={26} /> : <span className="bob-crest-blank" aria-hidden="true" />}
-      <span>{team?.shortName ?? nicknameOf(state, entry.entrantId)}{cpu && <em className="bob-cpu-tag">CPU</em>}</span>
+      {/* Nome que não cabe ganha reticências; o selo CPU fica inteiro ao lado. */}
+      <span className="bob-bracket-team"><span>{team?.shortName ?? nicknameOf(state, entry.entrantId)}</span>{cpu && <em className="bob-cpu-tag">CPU</em>}</span>
       <b>{sideScore(state, match, side)}</b>
     </div>
   );
