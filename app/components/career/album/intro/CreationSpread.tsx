@@ -103,6 +103,8 @@ export default function CreationSpread({ game, setGame, shirtNumberInput, setShi
     updateShirtNumber(current + delta);
   };
 
+  const rollVisual = () => setGame((current) => ({ ...current, playerAppearance: { ...randomPlayerAppearance(), boots: current.playerAppearance.boots, celebration: current.playerAppearance.celebration } }));
+
   const confirmName = () => {
     if (!game.name.trim()) return;
     setGame((current) => ({ ...current, name: current.name.trim(), phase: "appearance" }));
@@ -252,7 +254,7 @@ export default function CreationSpread({ game, setGame, shirtNumberInput, setShi
           <div className={`${sheetStyles.editorScope} ${styles.editor}`}>
             <div className={styles.editorHead}>
               <h2>Visual</h2>
-              <Stamp onClick={() => setGame((current) => ({ ...current, playerAppearance: { ...randomPlayerAppearance(), boots: current.playerAppearance.boots, celebration: current.playerAppearance.celebration } }))}>
+              <Stamp onClick={rollVisual}>
                 <Dice /> Sortear visual
               </Stamp>
             </div>
@@ -281,7 +283,7 @@ export default function CreationSpread({ game, setGame, shirtNumberInput, setShi
             <span><small>País da base</small><strong>{academyCountry.name}</strong></span>
             <em>Trocar</em>
           </button>
-          <Stamp onClick={randomClub}><Dice /> Sortear</Stamp>
+          <Stamp onClick={randomClub} aria-label="Sortear clube"><Dice /><span className={styles.wideOnly}>Sortear</span></Stamp>
           <Stamp onClick={() => setPicker("all-clubs")}>Qualquer time</Stamp>
         </div>
         <ul className={styles.clubGrid}>
@@ -290,7 +292,7 @@ export default function CreationSpread({ game, setGame, shirtNumberInput, setShi
               <button type="button" className={styles.clubSticker} style={{ ...offerInks(club), "--r": `${index % 3 === 0 ? -.8 : index % 3 === 1 ? .5 : -.3}deg` } as CSSProperties} onClick={() => chooseClub(club.id)}>
                 <span className={styles.clubBand}><span className={styles.clubCrest}><ClubBadge club={club} size="md" /></span></span>
                 <strong>{club.shortName}</strong>
-                <small>{club.city} · {leagueById(club.leagueId).name}</small>
+                <small><span className={styles.wideOnly}>{club.city} · </span>{leagueById(club.leagueId).name}</small>
               </button>
             </li>
           ))}
@@ -312,7 +314,17 @@ export default function CreationSpread({ game, setGame, shirtNumberInput, setShi
           <button type="button" className={styles.back} onClick={back}><FutboboIcon name="arrow-left" /> Voltar</button>
           <span className={styles.stepCount}>Passo <b>{Math.min(stepIndex + 1, 5)}</b> de 5</span>
         </header>
-        <AthleteFicha game={game} kit={kit} steps={fichaSteps} stepIndex={stepIndex} compact />
+        {/* No celular a figurinha só aparece onde ela é a prévia (nome e visual): as outras perguntas cabem na tela sem rolar. */}
+        {(game.phase === "identity" || game.phase === "academy") && (
+          <AthleteFicha
+            game={game}
+            kit={kit}
+            steps={fichaSteps}
+            stepIndex={stepIndex}
+            compact
+            action={game.phase === "academy" && appearanceEnabled ? <button type="button" className={styles.dice} onClick={rollVisual} aria-label="Sortear visual"><Dice /></button> : undefined}
+          />
+        )}
         <h1 className={styles.question}>{step.title}</h1>
         <div className={styles.stepBody} data-step={game.phase}>{content}</div>
         {primary && <div className={styles.dock}>{primary}</div>}

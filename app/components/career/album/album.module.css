@@ -283,7 +283,7 @@
     z-index: 40;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: var(--dock-lift, 0px);
     align-items: flex-start;
     gap: 3px;
     padding: 0 6px env(safe-area-inset-bottom);
@@ -313,6 +313,11 @@
     min-height: 62px;
     box-shadow: 0 -4px 0 var(--paper);
   }
+}
+
+/* menu e introdução (sem abas no rodapé): sem a reserva das abas, a página cabe na tela */
+@media (max-width: 1023px) {
+  .root[data-centered] { padding-bottom: 0; }
 }
 
 @media (min-width: 640px) and (max-width: 1023px) {

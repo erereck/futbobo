@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { CLUBS, COUNTRIES, POSITIONS } from "../../../../game-data";
 import type { Club, Country } from "../../../../game-data";
 import type { GameState } from "../../../../career/model";
@@ -35,7 +36,7 @@ type Row = { label: string; value: string | null; edit?: () => void };
  * A ficha do atleta: figurinha montada até aqui e o formulário preenchido.
  * `compact` é a tira do celular (figurinha pequena e o essencial ao lado).
  */
-export function AthleteFicha({ game, kit, steps, stepIndex, compact = false, overall = null, showFace = true }: {
+export function AthleteFicha({ game, kit, steps, stepIndex, compact = false, overall = null, showFace = true, action }: {
   game: GameState;
   kit: IntroKit;
   steps: FichaStep[];
@@ -43,6 +44,8 @@ export function AthleteFicha({ game, kit, steps, stepIndex, compact = false, ove
   compact?: boolean;
   overall?: number | null;
   showFace?: boolean;
+  /** Botão ao lado da figurinha na tira do celular (sortear visual). */
+  action?: ReactNode;
 }) {
   const position = POSITIONS.find((item) => item.key === game.position) ?? POSITIONS[0];
   const story = PLAYER_STORIES.find((item) => item.id === game.playerStoryId) ?? PLAYER_STORIES[0];
@@ -85,6 +88,7 @@ export function AthleteFicha({ game, kit, steps, stepIndex, compact = false, ove
           {stepIndex >= 3 && <span className={styles.stripFlag}><NationBadge country={kit.country} size="sm" /> {kit.country.name}</span>}
           {kit.club && <span>Base: {kit.club.shortName}</span>}
         </div>
+        {action}
       </div>
     );
   }

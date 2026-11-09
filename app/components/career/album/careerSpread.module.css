@@ -350,6 +350,15 @@
   .o-news { order: 13; }
   .slot { display: none; }
   .desktopOnly { display: none !important; }
+  /* celular: ficha técnica, temporada anterior e notícias já aparecem em Jogador, Histórico e Mundo; o Aposentar fica */
+  .o-ficha > :not(.o-retire) { display: none; }
+  .o-prev, .o-news { display: none; }
+  .marketActions { grid-template-columns: 1fr 1fr; }
+  .marketActions > button { padding-left: 10px; }
+  /* consequência no celular: só a escolha e o que ela causou, sem precisar rolar */
+  .flowSpread:has(.consequenceMode) :is(.o-band, .o-sticker, .o-meters, .o-chapHead, .o-meta) { display: none; }
+  .consequenceMode .stuckStamp,
+  .consequenceMode .headline { display: none; }
 
   .kicker b { font-size: 26px; }
   .kicker span { font-size: 13px; }
@@ -379,7 +388,7 @@
     z-index: 40;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: var(--dock-lift, 0px);
     margin: 0;
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
     background: var(--yellow);

@@ -50,6 +50,8 @@ export type CareerSpreadProps = {
 };
 
 const LETTERS = ["A", "B", "C", "D", "E"];
+/** Etiqueta redonda do capítulo (Estreia, Visual novo…). Escondida a pedido; troque para true para ela voltar. */
+const SHOW_CHAPTER_SEAL = false;
 const CHANGE_TO_METER: Record<string, string> = { moral: "Moral", "físico": "Físico", "prestígio": "Prestígio", torcida: "Torcida" };
 
 /** "+10 moral" / "−5 físico" → deltas por medidor, para a página mostrar o que a escolha mexeu. */
@@ -265,7 +267,7 @@ export default function CareerSpread(props: CareerSpreadProps) {
         <div className={styles.chapWrap}>
           <header className={`${styles.chapHead} ${styles["o-chapHead"]}`}>
             <div className={styles.kicker}><span>Ano</span><b className={styles.num}>{season}</b></div>
-            <Seal text={event.tag.toLocaleLowerCase("pt-BR")} />
+            {SHOW_CHAPTER_SEAL && <Seal text={event.tag.toLocaleLowerCase("pt-BR")} />}
           </header>
 
           <div className={styles.chapGrid}>

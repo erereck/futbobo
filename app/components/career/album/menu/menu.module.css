@@ -58,6 +58,9 @@
 .currentSticker { max-width: clamp(170px, 26vh, 236px); margin: 0 auto; }
 .currentInfo { display: grid; gap: 12px; align-content: center; min-width: 0; }
 .lock { font-size: 12.5px; color: var(--ink-3); }
+.mobileMeta { display: none; }
+.links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; }
+.newLink { display: none; color: var(--ink); font-weight: 650; text-decoration: none; }
 .linkButton {
   justify-self: start;
   min-height: 32px;
@@ -245,25 +248,45 @@
 .colophon b { font-weight: 600; color: var(--ink-2); }
 
 /* ═════════════ celular / tablet ═════════════ */
+/* celular: a primeira folha inteira cabe na tela, sem rolar (carreira, índice e atalhos) */
 @media (max-width: 1023px) {
-  .masthead { gap: 12px; padding-bottom: 12px; }
-  .masthead h1 { font-size: clamp(50px, 15vw, 64px); }
-  .masthead p { margin-top: 5px; font-size: 14px; }
+  .homeLeft, .homeRight { gap: 12px; }
+  .masthead { gap: 10px; padding-bottom: 10px; }
+  .masthead :global(.brand-mark) { width: 44px; }
+  .masthead :global(.brand-mark img) { border-radius: 10px; }
+  .masthead h1 { font-size: clamp(42px, 12.6vw, 52px); }
+  .masthead p { margin-top: 3px; font-size: 13px; }
+  .career { gap: 10px; }
+  .sectionTitle { font-size: 20px; }
   .current,
-  .firstCareer { grid-template-columns: minmax(118px, 40%) minmax(0, 1fr); gap: 16px; }
+  .firstCareer { grid-template-columns: 108px minmax(0, 1fr); gap: 14px; }
   .currentSticker, .emptySlot:not(.emptySmall) { max-width: 100%; }
-  .saveRow { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 12px; }
-  .homeRight { margin-top: 6px; }
-  .indexTitle { font-size: 46px; }
-  .tocRow { grid-template-columns: 44px minmax(0, 1fr); gap: 14px; }
-  .tocChip { width: 44px; height: 44px; }
-  .tocChip svg { width: 23px; height: 23px; }
-  .tocLine strong { font-size: 22px; }
+  .currentInfo { gap: 8px; }
+  .wideFicha { display: none; }
+  .mobileMeta { display: block; font-size: 13px; color: var(--ink-2); }
+  .newWide, .newSlotItem { display: none; }
+  .newLink { display: inline-block; }
+  .saveRow { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 10px; }
+  .homeRight { margin-top: 2px; }
+  .indexTitle { font-size: 30px; padding-bottom: 6px; border-bottom-width: 2.5px; }
+  .tocRow { grid-template-columns: 38px minmax(0, 1fr); gap: 12px; padding: 7px 2px; }
+  .tocChip { width: 38px; height: 38px; box-shadow: 0 0 0 2px #fff, 0 1px 2px rgba(0, 0, 0, .18), 0 4px 7px rgba(30, 30, 20, .14); }
+  .tocChip svg { width: 20px; height: 20px; }
+  .tocLine strong { font-size: 20px; }
   .tocLine em { font-size: 12px; }
-  .tocMain small { font-size: 13px; }
-  .extras ul { column-gap: 14px; }
-  .extras button { font-size: 14px; }
-  .colophon { margin-top: 8px; }
+  .tocMain small { display: none; }
+  .extras ul { grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 10px; }
+  .extras button { min-height: 44px; gap: 6px; padding: 6px 0; font-size: 13px; }
+  .extras button svg { width: 18px; height: 18px; }
+  .extras button b { display: none; }
+  .colophon { display: none; }
+}
+
+/* celulares baixos: tira o subtítulo e o rótulo dos atalhos para a folha caber */
+@media (max-width: 1023px) and (max-height: 680px) {
+  .masthead p, .extras .smallTitle { display: none; }
+  .masthead h1 { font-size: 40px; }
+  .tocRow { padding: 4px 2px; }
 }
 
 @media (max-width: 379px) {

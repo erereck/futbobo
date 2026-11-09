@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import FutboboIcon from "../../FutboboIcon";
 import type { FutboboIconName } from "../../FutboboIcon";
 import { clubInks } from "./inks";
+import { useDockLift } from "./useDockLift";
 import styles from "./album.module.css";
 
 /** Ponto de montagem das sobreposições do álbum (use com createPortal). */
@@ -45,6 +46,7 @@ export default function AlbumShell({
   centered?: boolean;
   children: ReactNode;
 }) {
+  useDockLift();
   return (
     <div className={`${styles.root} albumMounted`} style={clubInks(club.primary, club.secondary)} data-tabs={showTabs ? "" : undefined} data-centered={centered ? "" : undefined}>
       <section className={styles.album} aria-label={label}>

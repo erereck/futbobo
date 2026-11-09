@@ -201,7 +201,7 @@
     z-index: 40;
     left: 0;
     right: 0;
-    bottom: 0;
+    bottom: var(--dock-lift, 0px);
     margin: 0;
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
     background: var(--yellow);

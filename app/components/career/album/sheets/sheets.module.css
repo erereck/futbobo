@@ -6,7 +6,7 @@
 
 .backdrop {
   position: fixed;
-  inset: 0;
+  inset: 0 0 var(--dock-lift, 0px);
   z-index: 90;
   display: grid;
   place-items: center;
@@ -557,6 +557,8 @@
   --display: var(--font-display);
   min-width: 0;
 }
+/* o alvo mínimo de toque do celular (min-height 44) deixava as bolinhas 40×44: ovais */
+.editorScope :global(.appearance-palette button) { min-width: 0; min-height: 0; aspect-ratio: 1; flex: none; }
 .editorScope :global(.appearance-editor) { width: 100%; grid-template-columns: minmax(230px, .72fr) minmax(0, 1.28fr); gap: 14px; }
 .editorScope :global(.appearance-preview),
 .editorScope :global(.appearance-controls) { border: 1.5px solid var(--rule); border-radius: 8px; background: #fff; }

@@ -18,7 +18,7 @@ import styles from "./intro.module.css";
 const DONE_STEPS: FichaStep[] = Array.from({ length: 5 }, () => ({ done: true }));
 
 /** A casca da base: ficha completa à esquerda (agora na camisa do clube) e a etapa à direita. */
-function BaseAlbum({ game, label, overall, head, children }: { game: GameState; label: string; overall: number | null; head?: ReactNode; children: ReactNode }) {
+function BaseAlbum({ game, label, overall, head, strip = false, children }: { game: GameState; label: string; overall: number | null; head?: ReactNode; strip?: boolean; children: ReactNode }) {
   const kit = introKit(game);
   return (
     <AlbumShell club={kit} tab={null} onTab={() => undefined} showTabs={false} centered label={label}>
@@ -27,7 +27,8 @@ function BaseAlbum({ game, label, overall, head, children }: { game: GameState; 
       </AlbumPage>
       <AlbumPage side="right" label={label} className={styles.stepPage}>
         {head}
-        <AthleteFicha game={game} kit={kit} steps={DONE_STEPS} stepIndex={5} overall={overall} compact />
+        {/* No celular a figurinha pequena só entra na escolha da base: a simulação e o contrato cabem na tela sem rolar. */}
+        {strip && <AthleteFicha game={game} kit={kit} steps={DONE_STEPS} stepIndex={5} overall={overall} compact />}
         {children}
       </AlbumPage>
     </AlbumShell>
@@ -41,7 +42,7 @@ export function YouthChoiceSpread({ game, onChoose }: { game: GameState; onChoos
   const club = clubById(game.academyClubId);
   const lastAge = game.youthYears.at(-1)?.age ?? game.revealAge;
   return (
-    <BaseAlbum game={game} label="Categorias de base" overall={null}>
+    <BaseAlbum game={game} label="Categorias de base" overall={null} strip>
       <div className={styles.centerBlock}>
       <header className={styles.baseHead}>
         <p className={styles.kicker}>Categorias de base do {club.shortName}</p>

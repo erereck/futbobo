@@ -115,7 +115,9 @@ export default function HomeSpread({
                 <SaveSticker meta={current} size="lg" tilt="-2.6deg" className={styles.currentSticker} />
               </button>
               <div className={styles.currentInfo}>
+                <p className={styles.mobileMeta}>{currentClub?.shortName ?? "Em criação"} · {current.season} · {formatLastPlayed(current.lastPlayedAt)}</p>
                 <Ficha
+                  className={styles.wideFicha}
                   rows={[
                     { label: "Clube", value: currentClub?.shortName ?? "Em criação" },
                     { label: "Temporada", value: current.season },
@@ -125,7 +127,11 @@ export default function HomeSpread({
                 />
                 {current.pin && <p className={styles.lock}>Protegida por senha</p>}
                 <Stamp variant="primary" onClick={() => onOpen(current.id)}>Continuar carreira</Stamp>
-                <button type="button" className={styles.linkButton} onClick={() => onDelete(current.id)}>Excluir esta carreira</button>
+                <div className={styles.links}>
+                  {/* no celular a nova carreira vira link aqui, para a folha caber sem rolar */}
+                  <button type="button" className={`${styles.linkButton} ${styles.newLink}`} onClick={onNew}>+ Nova carreira</button>
+                  <button type="button" className={styles.linkButton} onClick={() => onDelete(current.id)}>Excluir esta carreira</button>
+                </div>
               </div>
             </div>
           ) : (
@@ -152,7 +158,7 @@ export default function HomeSpread({
             <div className={styles.more}>
               <h3 className={styles.smallTitle}>Outras carreiras</h3>
               <ul className={styles.saveRow}>
-                <li>
+                <li className={styles.newSlotItem}>
                   <button type="button" className={`${styles.emptySlot} ${styles.emptySmall}`} onClick={onNew}>
                     <span className={styles.slotPlus} aria-hidden="true">+</span>
                     <span>Nova carreira</span>
