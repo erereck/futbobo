@@ -125,7 +125,8 @@ test("atenção começa em zero, cresce devagar e dá +8 global uma vez no OVR 7
   assert.equal(steady.attention.global, 0);
   assert.equal(steady.attention.continental.SOUTH_AMERICA, 1);
   assert.deepEqual(steady.transferOffers, []);
-  const { attention: _legacyAttention, ...legacy } = { ...declined, history: [{ season: 2029, overall: 72 }] };
+  const legacy = { ...declined, history: [{ season: 2029, overall: 72 }] };
+  delete legacy.attention;
   assert.equal(normalizeSave(legacy).attention.global, 8);
 });
 
