@@ -17,6 +17,9 @@ const careerSourceFiles = [
   "../app/components/career/CycleShopDialog.tsx",
   "../app/components/career/PressConferenceDialog.tsx",
   "../app/components/career/album/AlbumShell.tsx",
+  "../app/components/career/album/BotaoSpreads.tsx",
+  "../app/components/career/album/sheets/AlbumSheet.tsx",
+  "../app/components/career/album/sheets/StoryDecisionSheet.tsx",
   "../app/components/career/album/CareerSpread.tsx",
   "../app/components/career/album/LuckOverlay.tsx",
   "../app/components/career/album/Pictogram.tsx",
@@ -1992,8 +1995,9 @@ test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
     /applyBotaoMatchResult\(walkoverBotaoResult\(setup\), setup\)/,
   );
   assert.match(page, /function startCurrentBotaoMatch/);
-  assert.match(page, /onClick=\{startCurrentBotaoMatch\}/);
-  assert.match(page, /DERROTA POR W\.O\./);
+  assert.match(page, /onPlay=\{startCurrentBotaoMatch\}/);
+  assert.match(page, /onClick=\{onPlay\}/);
+  assert.match(page, /Derrota por W\.O\./);
 
   const startMatch = page.indexOf("function startCurrentBotaoMatch");
   const markerWrite = page.indexOf(
@@ -2130,7 +2134,7 @@ test("coloca convocados de OVR baixo no banco e preserva o placar anterior", asy
   assert.match(adapter, /args\.rules\.halfSeconds \/ 2/);
   assert.match(engine, /period: setup\.entry\?\.period \?\? 1/);
   assert.match(engine, /timeline: setup\.entry\?\.timeline/);
-  assert.match(page, /VOCÊ COMEÇA NO BANCO/);
+  assert.match(page, /Você começa no banco/);
   assert.match(page, /antes da sua entrada/);
 });
 
@@ -3081,7 +3085,7 @@ test("expande coletivas e abre a loja QUADRA sem inflar a carreira", async () =>
     shop,
     /state\.potential < 80 \? state\.potential \+ 2 : state\.potential - 2/,
   );
-  assert.match(shopUi, /LOJA DO QUADRIÊNIO/);
+  assert.match(shopUi, /kicker="Loja do quadriênio"/);
   assert.match(shop, /name: "Treino especial"/);
 });
 

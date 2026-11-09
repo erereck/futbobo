@@ -17,10 +17,15 @@ Concept de origem: `concepts/carreira/02-album.html`.
 | `CareerSpread.tsx` | aba Carreira | página do jogador + página do ano; decisão e consequência no mesmo componente |
 | `tabs/*.tsx` | cada aba | Jogador, Time, Histórico, Estatísticas, Mundo |
 | `SeasonResultSpread.tsx`, `SideSpreads.tsx`, `LuckOverlay.tsx` | fases | fim de temporada, mercado, pedido negado, aposentadoria, sorte |
+| `BotaoSpreads.tsx` | fases | decisão no futebol de botão: ingresso e regras da mesa antes, placar carimbado, gols, replay e números da mesa depois |
+| `sheets/AlbumSheet.tsx`, `sheets/sheets.module.css` | folhas soltas | pop-ups da carreira presos com fita (faixa de tinta, corpo que rola, rodapé amarelo no celular) |
+| `sheets/StoryDecisionSheet.tsx` | folhas soltas | capítulo da história de origem; a coletiva, a QUADRA e o treino especial usam `AlbumSheet` nos próprios arquivos (`../PressConferenceDialog.tsx`, `../CycleShopDialog.tsx`, `../SpecialTrainingPanel.tsx`) |
 
 Cada aba calcula o que precisa a partir de `game` (GameState); o `CareerGame` só passa estado e ações.
 
-## Tokens (definidos em `.root` da casca)
+## Tokens (definidos em `.root` da casca e em `.tokens`)
+
+`.tokens` leva as mesmas tintas para o que monta fora das páginas (as folhas soltas). Some com `clubInks()` inline para a cor do clube.
 
 - Papel `--paper #fbfbf7`, `--paper-2`, `--paper-edge`; tinta `--ink #161616`, `--ink-2`, `--ink-3`; filetes `--rule`, `--rule-strong`.
 - Tintas do álbum: `--blue`, `--red`, `--yellow` (capa e ação), `--green`, `--mustard`, cada uma com `-deep`.
@@ -42,6 +47,8 @@ A faixa de cabeçalho de cada aba (`InkBand`) usa a cor dela.
 - Números comparáveis com `font-variant-numeric: tabular-nums`. Foco visível. Alvos de 44 px no toque.
 - Um momento de movimento por tela (figurinhas caindo, voo da escolhida). Todo o resto é feedback curto.
   `prefers-reduced-motion` sempre: conteúdo nunca depende de animação para aparecer.
+- Pop-up é folha solta (`AlbumSheet`): desktop no centro com a página de baixo torta e fita nos cantos; celular sobe do rodapé.
+  O editor de visual é o componente compartilhado da criação, vestido de papel só dentro da folha (`.editorScope`).
 - Celular: página que rola com as abas fixas; a ação principal vira um dock amarelo no rodapé quando não há abas.
   Nada de overflow horizontal em 360 px.
 - Jogo idêntico: só apresentação muda. Mesmos textos de consequência, mesmas regras, mesmos botões.

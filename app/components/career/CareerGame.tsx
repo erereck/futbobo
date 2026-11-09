@@ -13,16 +13,12 @@ import { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prest
 import { ACHIEVEMENTS, NEWS_TEMPLATES, fillNewsTemplate, findRivalry } from "../../mega-expansion";
 import BotaoMatch from "../../botao/BotaoMatch";
 import { BOTAO3D_ENABLED_EVENT, BOTAO3D_PERFORMANCE_EVENT, rememberBotao3dPerformance, rememberBotao3dPreference, resolveBotao3dPerformance, resolveBotao3dPreference, webglAvailable } from "../../botao/view-mode";
-import GoalReplay from "../../botao/GoalReplay";
-import BotaoMatchStats from "../../botao/BotaoMatchStats";
-import { describeMatchTurningPoint } from "../../botao/result-story";
-import TeamCrest from "../../botao/TeamCrest";
 import AndroidInstallDialog from "../../AndroidInstallDialog";
 import PlayerAppearanceEditor from "../../PlayerAppearanceEditor";
 import { teamKitPattern, visualRosterForMatch } from "../../player-appearance";
 import { checkForAndroidUpdate, isAndroidDevice, isNativeAndroid, openAndroidDownload } from "../../android-app";
 import type { AndroidRelease } from "../../android-app";
-import { buildFinalSetup, buildNationalMatchSetup, describeFinal, finalOutcome, formatGoalMinute, isMatchGoal, nationalMatchRole, pickClubWorldOpponent, pickNationalOpponent, ratingsFromAttributes, walkoverBotaoResult } from "../../botao/adapter";
+import { buildFinalSetup, buildNationalMatchSetup, describeFinal, finalOutcome, nationalMatchRole, pickClubWorldOpponent, pickNationalOpponent, ratingsFromAttributes, walkoverBotaoResult } from "../../botao/adapter";
 import { simulateBotaoMatch } from "../../botao/simulate";
 import type { BotaoMatchResult, BotaoMatchSetup } from "../../botao/types";
 import { PLAYER_STORIES, playerStoryById } from "../../player-stories";
@@ -56,6 +52,10 @@ import careerSpreadStyles from "./album/careerSpread.module.css";
 import SeasonResultSpread from "./album/SeasonResultSpread";
 import { RetirementSpread, TransferDeniedSpread, TransferSpread } from "./album/SideSpreads";
 import LuckOverlay from "./album/LuckOverlay";
+import { BotaoLobbySpread, BotaoResultSpread } from "./album/BotaoSpreads";
+import AlbumSheet, { sheetStyles } from "./album/sheets/AlbumSheet";
+import StoryDecisionSheet from "./album/sheets/StoryDecisionSheet";
+import { Stamp } from "./album/primitives";
 import PlayerTab from "./album/tabs/PlayerTab";
 import TeamTab from "./album/tabs/TeamTab";
 import HistoryTab from "./album/tabs/HistoryTab";
@@ -128,7 +128,7 @@ function isFormerClubOpponent(state: GameState, clubId: string) {
 }
 
 // Fases da carreira que vivem no álbum.
-const ALBUM_PHASES = new Set<Phase>(["career", "consequence", "season-result", "transfer", "transfer-denied", "retirement-confirm"]);
+const ALBUM_PHASES = new Set<Phase>(["career", "consequence", "season-result", "transfer", "transfer-denied", "retirement-confirm", "botao-final", "botao-result"]);
 
 export default function CareerGame({ initialHallEntry = null, onCloseHallPreview }: CareerGameProps = {}) {
   const [game, setGame] = useState<GameState>(() => initialState());
@@ -2371,48 +2371,18 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       );
     }
     return (
-      <main className="botao-lobby botao-career-lobby screen-enter">
-        <span className="botao-lobby-kicker">
-          {currentBotaoMatch.source === "national" ? "SELEÇÃO EM CAMPO" : "PARTIDA DECISIVA"}
-        </span>
-        <h1>{currentBotaoMatch.stageName}</h1>
-        <p className="botao-lobby-lead">
-          {currentBotaoMatch.competitionName} · Agora a taça depende da mesa.
-        </p>
-        <div className="botao-card botao-final-versus">
-          <div className="botao-team">
-            <TeamCrest team={currentBotaoSetup.userTeam} size={58} />
-            <strong>{currentBotaoSetup.userTeam.shortName}</strong>
-          </div>
-          <div className="botao-versus-mark"><small>DECISÃO</small><b>×</b></div>
-          <div className="botao-team botao-team-cpu">
-            <strong>{currentBotaoSetup.cpuTeam.shortName}</strong>
-            <TeamCrest team={currentBotaoSetup.cpuTeam} size={58} />
-          </div>
-        </div>
-        <div className="botao-card botao-career-player">
-          <span>{currentBotaoSetup.entry ? "VOCÊ COMEÇA NO BANCO" : "SEU BOTÃO"}</span>
-          <strong>#{game.number} · {positionByKey(game.position).name} · {game.overall} OVR</strong>
-          {currentBotaoSetup.entry && (
-            <div className="botao-reserve-entry">
-              <b>ENTRA AOS 45&apos;</b>
-              <p>
-                Seu OVR ainda está abaixo do nível de titularidade desta seleção. Você assume o botão
-                na metade final da partida{currentBotaoSetup.entry.score.user + currentBotaoSetup.entry.score.cpu > 0
-                  ? ` com o placar em ${currentBotaoSetup.entry.score.user} × ${currentBotaoSetup.entry.score.cpu}.`
-                  : " com o jogo ainda empatado."}
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="botao-actions">
-          <button type="button" className="botao-primary" onClick={startCurrentBotaoMatch}>
-            Jogar no futebol de botão
-          </button>
-          <button type="button" className="botao-ghost" onClick={simulateCurrentBotaoMatch} disabled={botaoSimulating}>
-            {botaoSimulating ? "Simulando…" : "Simular esta partida"}
-          </button>
-        </div>
+      <main className={shellClass}>
+        <AlbumShell club={currentBotaoSetup.userTeam} tab={null} onTab={changeTab} showTabs={false} label={`${currentBotaoMatch.stageName} · ${currentBotaoMatch.competitionName}`}>
+          <BotaoLobbySpread
+            match={currentBotaoMatch}
+            setup={currentBotaoSetup}
+            player={{ name: game.name, number: game.number, overall: game.overall, positionName: positionByKey(game.position).name, appearance: albumAppearance }}
+            club={currentClub}
+            simulating={botaoSimulating}
+            onPlay={startCurrentBotaoMatch}
+            onSimulate={simulateCurrentBotaoMatch}
+          />
+        </AlbumShell>
       </main>
     );
   }
@@ -2421,69 +2391,23 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     const { match, result } = game.lastBotaoResult;
     const setup = setupForPendingBotaoMatch(game, match);
     return (
-      <main className="botao-lobby botao-career-result screen-enter">
-        <p className="botao-lobby-lead">
-          {match.competitionName} · {match.stageName}
-          {result.walkover ? " · W.O. por abandono" : result.simulated ? " · simulada" : ""}
-        </p>
-        <h1 className={`botao-headline ${result.champion ? "botao-headline-win" : "botao-headline-loss"}`}>
-          {result.walkover ? "DERROTA POR W.O." : result.champion ? (match.stageName === "Final" ? "CAMPEÃO" : "CLASSIFICADO") : match.stageName === "Final" ? "VICE" : "ELIMINADO"}
-        </h1>
-        {result.walkover && (
-          <div className="botao-card botao-walkover-notice">
-            <span>W.O. REGISTRADO</span>
-            <strong>A partida foi abandonada</strong>
-            <p>Atualizar ou fechar a página depois de entrar em campo confirma derrota administrativa por 3 × 0.</p>
-          </div>
-        )}
-        <div className="botao-card">
-          <div className="botao-scoreboard">
-            <div className="botao-team"><TeamCrest team={setup.userTeam} /><strong>{setup.userTeam.shortName}</strong></div>
-            <div className="botao-score"><b>{result.goalsFor}</b><span>×</span><b>{result.goalsAgainst}</b></div>
-            <div className="botao-team botao-team-cpu"><strong>{setup.cpuTeam.shortName}</strong><TeamCrest team={setup.cpuTeam} /></div>
-          </div>
-          {!result.walkover && <p className="botao-match-recap">{describeMatchTurningPoint(result, setup)}</p>}
-          <div className="botao-formation-row">
-            {result.decision === "penalties" && <span className="botao-chip">Pênaltis {result.penaltyFor} × {result.penaltyAgainst}</span>}
-            <span className="botao-chip botao-chip-you">Você: {result.playerGoals}G · {result.playerAssists}A</span>
-            {result.manOfTheMatch && <span className="botao-chip botao-chip-stat">Melhor em campo</span>}
-            {!result.walkover && <span className="botao-chip">{result.turns} toques</span>}
-          </div>
-        </div>
-        {!result.walkover && <BotaoMatchStats result={result} />}
-        <div className="botao-card">
-          <span className="botao-card-title">Gols da partida</span>
-          {result.timeline.some(isMatchGoal) ? (
-            <div className="botao-result-lines">
-              {result.timeline.map((entry, timelineIndex) => ({ entry, timelineIndex })).filter(({ entry }) => isMatchGoal(entry)).map(({ entry, timelineIndex }) => {
-                const replayIndex = result.replays?.findIndex((replay) => replay.timelineIndex === timelineIndex) ?? -1;
-                return (
-                  <div key={`${entry.clock}-${timelineIndex}`} className={`botao-result-line ${entry.byUser ? "botao-result-line-you" : ""} ${entry.beforePlayerEntry ? "botao-result-line-before-entry" : ""}`}>
-                    <span className="botao-result-goal-copy"><b>{entry.text}</b><span>{entry.side === "user" ? setup.userTeam.abbr : setup.cpuTeam.abbr} · {formatGoalMinute(entry, setup.rules)}{entry.beforePlayerEntry ? " · antes da sua entrada" : ""}</span></span>
-                    {replayIndex >= 0 && <button type="button" onClick={() => setActiveGoalReplay(activeGoalReplay === replayIndex ? null : replayIndex)}>{activeGoalReplay === replayIndex ? "Fechar replay" : "Ver replay"}</button>}
-                  </div>
-                );
-              })}
-            </div>
-          ) : <p className="botao-result-empty">{result.walkover ? "Partida encerrada por abandono. Placar administrativo de 3 × 0." : result.decision === "penalties" ? "A decisão foi para os pênaltis depois de um jogo sem gols." : "A partida terminou sem gols."}</p>}
-          {activeGoalReplay !== null && result.replays?.[activeGoalReplay] && (
-            <GoalReplay
-              replay={result.replays[activeGoalReplay]}
-              setup={setup}
-              label={result.timeline[result.replays[activeGoalReplay].timelineIndex]?.text ?? "Gol da partida"}
-            />
-          )}
-        </div>
-        <div className="botao-actions">
-          <button type="button" className="botao-primary" onClick={continueAfterBotaoResult}>
-            {game.pendingPressConference
+      <main className={shellClass}>
+        <AlbumShell club={setup.userTeam} tab={null} onTab={changeTab} showTabs={false} label={`Resultado · ${match.stageName}`}>
+          <BotaoResultSpread
+            match={match}
+            result={result}
+            setup={setup}
+            continueLabel={game.pendingPressConference
               ? "Ir para a coletiva de imprensa"
               : game.pendingBotaoMatches.length
                 ? "Próxima decisão"
                 : "Ver resumo da temporada"}
-          </button>
-        </div>
-        {pressConferenceOpen && game.pendingPressConference && <PressConferenceDialog conference={game.pendingPressConference} onAnswer={answerPressConference} />}
+            onContinue={continueAfterBotaoResult}
+            activeReplay={activeGoalReplay}
+            onToggleReplay={setActiveGoalReplay}
+          />
+        </AlbumShell>
+        {pressConferenceOpen && game.pendingPressConference && <PressConferenceDialog conference={game.pendingPressConference} club={setup.userTeam} onAnswer={answerPressConference} />}
       </main>
     );
   }
@@ -2493,8 +2417,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       {toast && <div className="toast" role="status">{toast}</div>}
-      {(pressConferenceOpen || presentationOpen) && game.pendingPressConference && <PressConferenceDialog conference={game.pendingPressConference} onAnswer={answerPressConference} />}
-      {cycleShopOpen && <CycleShopDialog game={game} feedback={cycleShopFeedback} onBuy={buyCycleShopItem} onClose={closeCycleShop} />}
+      {(pressConferenceOpen || presentationOpen) && game.pendingPressConference && <PressConferenceDialog conference={game.pendingPressConference} club={currentClub} onAnswer={answerPressConference} />}
+      {cycleShopOpen && <CycleShopDialog game={game} club={currentClub} feedback={cycleShopFeedback} onBuy={buyCycleShopItem} onClose={closeCycleShop} />}
       {cycleShopOpen && specialTrainingOpen && <SpecialTrainingPanel game={game} setGame={setGame} club={game.isFreeAgent || !game.currentClubId ? null : clubById(game.currentClubId)} performance={appSettings.botao3dPerformance === true} onClose={closeSpecialTraining} />}
       {androidInstallOpen && (
         <AndroidInstallDialog
@@ -2510,30 +2434,13 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         />
       )}
       {game.phase === "season-result" && game.pendingStoryDecision && (
-        <div className="modal-backdrop story-decision-backdrop" role="presentation">
-          <section className={`story-decision-modal story-${playerStoryById(game.playerStoryId).tone}`} role="dialog" aria-modal="true" aria-labelledby="story-decision-title">
-            <div className="story-decision-chapter-track" aria-hidden="true">
-              {Array.from({ length: 8 }, (_, index) => <i key={index} className={index < game.storyLog.length + 1 ? "active" : ""} />)}
-            </div>
-            <header>
-              <span className="story-decision-icon">{game.pendingStoryDecision.icon}</span>
-              <div>
-                <small>{game.pendingStoryDecision.kicker}</small>
-                <h2 id="story-decision-title">{game.pendingStoryDecision.title}</h2>
-              </div>
-            </header>
-            <p>{game.pendingStoryDecision.description}</p>
-            <div className="story-decision-choices">
-              {game.pendingStoryDecision.choices.map((choice, index) => (
-                <button type="button" key={choice.label} onClick={() => resolveStoryDecision(index)}>
-                  <em>{String(index + 1).padStart(2, "0")}</em>
-                  <span><strong>{choice.label}</strong><small>{choice.hint}</small></span><b>→</b>
-                </button>
-              ))}
-            </div>
-            <footer><b>◆</b><span>Esta decisão vira parte permanente da história de {game.name}.</span></footer>
-          </section>
-        </div>
+        <StoryDecisionSheet
+          decision={game.pendingStoryDecision}
+          story={playerStoryById(game.playerStoryId)}
+          playerName={game.name}
+          club={currentClub}
+          onChoose={resolveStoryDecision}
+        />
       )}
       {updateNoticeOpen && (
         <div className="modal-backdrop update-backdrop" role="presentation">
@@ -2736,10 +2643,18 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       )}
 
       {appearanceEditorOpen && appSettings.characterButtonsEnabled !== false && game.phase === "career" && (
-        <div className="modal-backdrop appearance-editor-backdrop" role="presentation" onMouseDown={() => setAppearanceEditorOpen(false)}>
-          <section className="appearance-editor-sheet" role="dialog" aria-modal="true" aria-labelledby="appearance-editor-title" onMouseDown={(event) => event.stopPropagation()}>
-            <header><div><span>VESTIÁRIO</span><h2 id="appearance-editor-title">Personalizar jogador</h2></div><button type="button" className="icon-button" aria-label="Fechar editor" onClick={() => setAppearanceEditorOpen(false)}>×</button></header>
-            <p>Altere quando quiser. A nova aparência entra em campo já na próxima partida.</p>
+        <AlbumSheet
+          ink="blue"
+          club={currentClub}
+          size="wide"
+          titleId="appearance-editor-title"
+          kicker="Vestiário"
+          title="Personalizar jogador"
+          onDismiss={() => setAppearanceEditorOpen(false)}
+          footer={<Stamp variant="primary" onClick={() => setAppearanceEditorOpen(false)}>Salvar visual</Stamp>}
+        >
+          <p className={sheetStyles.lead}>Altere quando quiser. A nova aparência entra em campo já na próxima partida.</p>
+          <div className={sheetStyles.editorScope}>
             <PlayerAppearanceEditor
               compact
               value={game.playerAppearance}
@@ -2750,9 +2665,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               secondary={currentClub.secondary}
               kitPattern={teamKitPattern(game.seed, currentClub.id)}
             />
-            <button type="button" className="primary-button" onClick={() => setAppearanceEditorOpen(false)}>Salvar visual <span>✓</span></button>
-          </section>
-        </div>
+          </div>
+        </AlbumSheet>
       )}
 
       {selectedAchievementId && (() => {

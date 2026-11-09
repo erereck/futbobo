@@ -1,52 +1,65 @@
 import type { PressConference } from "../../career/model";
-import FutboboIcon from "../FutboboIcon";
-import styles from "./CareerOverlays.module.css";
+import { Pictogram } from "./album/Pictogram";
+import AlbumSheet, { sheetStyles as styles } from "./album/sheets/AlbumSheet";
 
 type Props = {
   conference: PressConference;
+  /** Cores do clube (ou da seleção) para a tinta da folha. */
+  club: { primary: string; secondary: string };
   onAnswer: (answerIndex: number) => void;
 };
 
 const COPY = {
-  "post-match": { eyebrow: "ZONA MISTA", title: "A palavra é sua" },
-  presentation: { eyebrow: "COLETIVA DE APRESENTAÇÃO", title: "Primeiras palavras" },
-  "former-club": { eyebrow: "REENCONTRO", title: "Depois do apito" },
-  betrayal: { eyebrow: "TRANSFERÊNCIA ENTRE RIVAIS", title: "A cidade quer uma resposta" },
+  "post-match": { eyebrow: "Zona mista", title: "A palavra é sua" },
+  presentation: { eyebrow: "Coletiva de apresentação", title: "Primeiras palavras" },
+  "former-club": { eyebrow: "Reencontro", title: "Depois do apito" },
+  betrayal: { eyebrow: "Transferência entre rivais", title: "A cidade quer uma resposta" },
 } as const;
 
-export default function PressConferenceDialog({ conference, onAnswer }: Props) {
+const TONE_LABEL = { bold: "Resposta forte", team: "Valoriza o grupo", calm: "Resposta serena" } as const;
+
+/** Coletiva no álbum: recorte de jornal com a pergunta em destaque e três respostas numeradas. */
+export default function PressConferenceDialog({ conference, club, onAnswer }: Props) {
   const kind = conference.kind ?? "post-match";
   const copy = COPY[kind];
   const question = conference.questions[conference.questionIndex];
   if (!question) return null;
+  const total = conference.questions.length;
 
   return (
-    <div className={styles.backdrop} role="presentation">
-      <section aria-labelledby="press-question" aria-modal="true" className={styles.dialog} role="dialog">
-        <header className={styles.pressHero}>
-          <div className={styles.iconTile}><FutboboIcon name="microphone" size={24} /></div>
-          <div>
-            <p className={styles.eyebrow}>{copy.eyebrow}</p>
-            <h2 className={styles.heroTitle}>{copy.title}</h2>
-          </div>
-          <span className={styles.counter}>{conference.questionIndex + 1}/{conference.questions.length}</span>
-        </header>
-        <div className={styles.pressBody}>
-          <p className={styles.context}>{conference.competitionName} · {conference.opponentName}<br />{question.context}</p>
-          <h3 className={styles.question} id="press-question">{question.question}</h3>
-          <div className={styles.answers}>
-            {question.answers.slice(0, 3).map((answer, index) => (
-              <button className={styles.answer} key={`${question.id}-${answer.label}`} onClick={() => onAnswer(index)} type="button">
-                <span>
-                  <span className={styles.answerLabel}>{answer.label}</span>
-                  <span className={styles.answerTone}>{answer.toneLabel ?? (answer.tone === "bold" ? "Resposta forte" : answer.tone === "team" ? "Valoriza o grupo" : "Resposta serena")}</span>
-                </span>
-                <FutboboIcon className={styles.answerArrow} name="arrow-right" size={20} />
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-    </div>
+    <AlbumSheet
+      ink="ink"
+      club={club}
+      titleId="press-title"
+      labelledBy="press-title press-question"
+      kicker={copy.eyebrow}
+      title={copy.title}
+      emblem={<Pictogram name="press" />}
+      aside={(
+        <span className={styles.pips} role="img" aria-label={`Pergunta ${conference.questionIndex + 1} de ${total}`}>
+          {conference.questions.map((item, index) => <i key={item.id} data-on={index <= conference.questionIndex ? "" : undefined} />)}
+          <b className={styles.num}>{conference.questionIndex + 1}/{total}</b>
+        </span>
+      )}
+    >
+      <p className={styles.pressMeta}><b>{conference.competitionName}</b><span>{conference.opponentName}</span></p>
+      <p className={styles.situation}>{question.context}</p>
+      <blockquote className={styles.question}>
+        <h3 id="press-question">{question.question}</h3>
+      </blockquote>
+      <ol className={styles.answers}>
+        {question.answers.slice(0, 3).map((answer, index) => (
+          <li key={`${question.id}-${answer.label}`}>
+            <button className={styles.answer} onClick={() => onAnswer(index)} type="button">
+              <span className={styles.answerNo} aria-hidden="true">{index + 1}</span>
+              <span className={styles.answerText}>
+                <strong>{answer.label}</strong>
+                <em className={styles.tone} data-tone={answer.tone}>{answer.toneLabel ?? TONE_LABEL[answer.tone]}</em>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </AlbumSheet>
   );
 }

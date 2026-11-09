@@ -4,7 +4,9 @@
    Mobile (<1024): uma página por vez, abas do índice presas no rodapé.
    ═══════════════════════════════════════════════════════════════════════ */
 
-.root {
+/* `.tokens` leva as mesmas tintas para o que monta fora do álbum (folhas soltas, telas da final de botão). */
+.root,
+.tokens {
   /* papel e tinta */
   --paper: #fbfbf7;
   --paper-2: #f3f3ee;
@@ -44,7 +46,9 @@
   --ease-in: cubic-bezier(.55, 0, .75, .2);
   /* medidas */
   --tabs-h: 0px;
+}
 
+.root {
   color-scheme: light;
   position: relative;
   min-height: 100dvh;

@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { Club } from "../../../game-data";
 import FutboboIcon from "../../FutboboIcon";
 import type { FutboboIconName } from "../../FutboboIcon";
 import { clubInks } from "./inks";
@@ -34,7 +33,8 @@ export default function AlbumShell({
   spreadClassName,
   children,
 }: {
-  club: Club;
+  /** Cores da tinta do clube (clube atual ou seleção em campo). */
+  club: { primary: string; secondary: string };
   tab: AlbumTabId | null;
   onTab: (tab: AlbumTabId) => void;
   showTabs: boolean;
@@ -44,7 +44,7 @@ export default function AlbumShell({
 }) {
   return (
     <div className={`${styles.root} albumMounted`} style={clubInks(club.primary, club.secondary)} data-tabs={showTabs ? "" : undefined}>
-      <main className={styles.album} aria-label={label}>
+      <section className={styles.album} aria-label={label}>
         <div className={styles.cover} aria-hidden="true" />
         <div className={`${styles.spread} ${spreadClassName ?? ""}`}>{children}</div>
         {showTabs && (
@@ -68,7 +68,7 @@ export default function AlbumShell({
             </ul>
           </nav>
         )}
-      </main>
+      </section>
       {/* Folhas e diálogos das abas montam aqui: cobrem o álbum inteiro, abas incluídas, sem sair dos tokens. */}
       <div id={ALBUM_OVERLAY_ID} className={styles.overlayRoot} />
     </div>
