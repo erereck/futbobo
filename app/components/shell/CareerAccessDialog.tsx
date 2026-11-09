@@ -41,7 +41,7 @@ export default function CareerAccessDialog({ creating, name, onClose, onSubmit }
           setBusy(false);
         }
       }}>
-        <span>RUMO AO ESTRELATO</span>
+        <span>Rumo ao Estrelato</span>
         <h2 id="career-access-title">{creating ? "Nova carreira" : "Carreira protegida"}</h2>
         <p>{creating ? "Você pode proteger esta carreira com uma senha de 4 números." : `Digite a senha para continuar ${name || "sua carreira"}.`}</p>
         {creating && <label className={styles.pinToggle}><input type="checkbox" checked={protectedCareer} disabled={busy} onChange={(event) => { setProtectedCareer(event.target.checked); setPin(""); setError(""); }} /> Proteger com senha</label>}

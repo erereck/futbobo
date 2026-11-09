@@ -14,11 +14,6 @@ import { AlbumPage } from "./AlbumShell";
 import { BlockTitle, Ficha, InkBand, PlayerSticker, Stamp } from "./primitives";
 import styles from "./botaoSpreads.module.css";
 
-/** 120 → "2:00": o mesmo formato das Configurações. */
-function clock(seconds: number) {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-}
-
 type Player = { name: string; number: number; overall: number; positionName: string; appearance: PlayerAppearance | null };
 
 function Side({ team, align }: { team: BotaoTeam; align: "start" | "end" }) {
@@ -73,17 +68,6 @@ export function BotaoLobbySpread({
             <span className={styles.num}>{match.season}</span>
           </div>
           </div>
-        </section>
-        <section className={styles.rules} aria-labelledby="botao-rules-title">
-          <BlockTitle as="h3" id="botao-rules-title">Regras da mesa</BlockTitle>
-          <Ficha
-            rows={[
-              { label: "Gols para vencer", value: setup.rules.goalLimit > 0 ? setup.rules.goalLimit : "Só o cronômetro" },
-              { label: "Tempo por etapa", value: clock(setup.rules.halfSeconds) },
-              { label: "Prorrogação", value: setup.rules.extraHalves > 0 ? `${clock(setup.rules.extraSeconds)} por etapa` : "Sem prorrogação" },
-              { label: "Pênaltis", value: setup.rules.penalties ? `${setup.rules.penaltyRounds} cobranças` : "Sem pênaltis" },
-            ]}
-          />
         </section>
         <div className={styles.dock}>
           <Stamp variant="primary" onClick={onPlay}>Jogar no futebol de botão</Stamp>

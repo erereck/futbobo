@@ -74,12 +74,13 @@ test("rota: página, telas, layout e textos principais", () => {
 
 test("menu, sitemap, dependência e build estático", () => {
   const shell = read("app/components/shell/FutboboShell.tsx");
-  assert.match(shell, /href="\/bobonline"/);
-  assert.match(shell, /<small>ONLINE<\/small><strong>Bobonline<\/strong>/);
-  assert.match(shell, /href="\/bobonline\/\?voltar=1"/);
+  // O menu é a primeira folha do álbum: o Bobonline é uma linha do índice.
+  const home = read("app/components/career/album/menu/HomeSpread.tsx");
+  assert.match(home, /href: "\/bobonline", title: "Bobonline"/);
+  assert.match(home, /tag: "Online"/);
+  assert.match(home, /href="\/bobonline\/\?voltar=1"/);
   assert.match(shell, /peekBobonlineSession/);
-  assert.match(shell, /online com a galera/);
-  assert.match(read("app/components/shell/FutboboShell.module.css"), /\.modeList \{ min-height:0; grid-template-rows:repeat\(5,/);
+  assert.match(shell, /bobonlineRoom=\{bobonlineRoom\}/);
   assert.match(read("app/sitemap.ts"), /https:\/\/futbobo\.top\/bobonline\//);
   assert.match(read("package.json"), /"trystero": "0\.26\.0"/);
   assert.ok(existsSync(join(ROOT, "out/bobonline/index.html")), "out/bobonline/index.html (rode o build antes)");

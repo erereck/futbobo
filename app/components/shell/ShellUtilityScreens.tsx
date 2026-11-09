@@ -261,7 +261,6 @@ export function SettingsScreen() {
   return (
     <section className={styles.utilityScreen}>
       <header className={styles.hero}>
-        <span>CONFIGURAÇÕES</span>
         <h2>Seu Futbobo.</h2>
         <p>Só o que muda a experiência. O resto fica fora do caminho.</p>
       </header>
@@ -708,7 +707,6 @@ export function InstallScreen() {
   return (
     <section className={styles.utilityScreen}>
       <header className={styles.hero}>
-        <span>INSTALAR</span>
         <h2>Futbobo no seu aparelho.</h2>
         <p>Escolha a versão certa. Sem tutorial de quinze parágrafos.</p>
       </header>
@@ -835,7 +833,6 @@ export function NewsScreen() {
   return (
     <section className={styles.utilityScreen}>
       <header className={styles.hero}>
-        <span>NOVIDADES</span>
         <h2>O que mudou.</h2>
         <p>
           Sem parede de patch note. Só as coisas que você vai perceber jogando.

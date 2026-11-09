@@ -17,9 +17,13 @@ Concept de origem: `concepts/carreira/02-album.html`.
 | `CareerSpread.tsx` | aba Carreira | página do jogador + página do ano; decisão e consequência no mesmo componente |
 | `tabs/*.tsx` | cada aba | Jogador, Time, Histórico, Estatísticas, Mundo |
 | `SeasonResultSpread.tsx`, `SideSpreads.tsx`, `LuckOverlay.tsx` | fases | fim de temporada, mercado, pedido negado, aposentadoria, sorte |
-| `BotaoSpreads.tsx` | fases | decisão no futebol de botão: ingresso e regras da mesa antes, placar carimbado, gols, replay e números da mesa depois |
+| `BotaoSpreads.tsx` | fases | decisão no futebol de botão: ingresso e a sua figurinha antes, placar carimbado, gols, replay e números da mesa depois |
 | `sheets/AlbumSheet.tsx`, `sheets/sheets.module.css` | folhas soltas | pop-ups da carreira presos com fita (faixa de tinta, corpo que rola, rodapé amarelo no celular) |
 | `sheets/StoryDecisionSheet.tsx` | folhas soltas | capítulo da história de origem; a coletiva, a QUADRA e o treino especial usam `AlbumSheet` nos próprios arquivos (`../PressConferenceDialog.tsx`, `../CycleShopDialog.tsx`, `../SpecialTrainingPanel.tsx`) |
+| `intro/CreationSpread.tsx`, `intro/IntroParts.tsx`, `intro/intro.module.css` | introdução | ficha do atleta: a figurinha se monta à esquerda (cores do país até entrar num clube) e uma pergunta por vez à direita (nome, posição no campo de botão, camisa e pé, visual/país/história, clube da base) |
+| `intro/BaseSpreads.tsx` | introdução | base: escolha Simular/Jogar, anos da base colados um por um e o primeiro contrato (propostas iguais às da janela de transferências). O Scorebobo da base fica na própria tela |
+| `menu/HomeSpread.tsx`, `menu/menu.module.css` | menu | primeira folha: Rumo ao Estrelato com a figurinha da última carreira (continuar num toque), outras carreiras e o espaço vazio da nova; índice com os outros modos e o resto do álbum |
+| `menu/MenuSpreads.tsx`, `menu/pages.module.css` | menu | Hall da Fama (1º do álbum + ranking), Conquistas (figurinhas numeradas por raridade), folha de excluir carreira e `PaperScreen`, a folha solta sobre a mesa de Configurações, Instalar, Novidades e Outros jogos |
 
 Cada aba calcula o que precisa a partir de `game` (GameState); o `CareerGame` só passa estado e ações.
 
@@ -52,3 +56,6 @@ A faixa de cabeçalho de cada aba (`InkBand`) usa a cor dela.
 - Celular: página que rola com as abas fixas; a ação principal vira um dock amarelo no rodapé quando não há abas.
   Nada de overflow horizontal em 360 px.
 - Jogo idêntico: só apresentação muda. Mesmos textos de consequência, mesmas regras, mesmos botões.
+- Sem abas do índice (menu, introdução), `AlbumShell centered` põe o álbum no meio da mesa.
+- O menu continua disparando a carreira pela tela antiga de boas-vindas do `CareerGame` (`.career-new-tile`, `.career-load-tile`);
+  ela fica invisível sob o papel (`FutboboShell.module.css`). O índice das carreiras guarda `number` e `appearance` para a figurinha do menu.

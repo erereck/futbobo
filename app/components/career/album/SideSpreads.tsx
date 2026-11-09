@@ -20,8 +20,11 @@ import styles from "./sideSpreads.module.css";
 
 const sentence = (text: string) => text ? text.charAt(0).toLocaleUpperCase("pt-BR") + text.slice(1).toLocaleLowerCase("pt-BR") : text;
 
+/** A maior palavra do nome do clube: o CSS encolhe a letra até ela caber sem quebrar no meio. */
+export const nameFit = (name: string) => ({ "--word": Math.max(...name.split(/[\s-]+/).map((word) => word.length), 1) }) as CSSProperties;
+
 /** Cores impressas da faixa de um clube de proposta (sem mexer nas cores do clube atual da página). */
-function offerInks(club: Club): CSSProperties {
+export function offerInks(club: Club): CSSProperties {
   const band = luminance(club.primary) > 0.6 && luminance(club.secondary) < 0.6 ? club.secondary : club.primary;
   const stripe = band === club.primary ? club.secondary : club.primary;
   return { "--o-club": band, "--o-deep": darken(band, 0.28), "--o-soft": lighten(band, 0.16), "--o-stripe": luminance(stripe) > 0.85 && luminance(band) < 0.45 ? "#ffffff" : stripe } as CSSProperties;
@@ -169,8 +172,16 @@ export function TransferSpread({ game, club, appearance, offers, renewalOffer, o
                   <span className={styles.offerBand} aria-hidden="true"><span className={styles.offerCrest}><ClubBadge club={destination} /></span></span>
                   <span className={styles.offerBody}>
                     <small>{sentence(offer.reasonLabel)}</small>
-                    <strong>{destination.shortName}</strong>
+                    <strong style={nameFit(destination.shortName)}>{destination.shortName}</strong>
                     <em>{league.name}{changesCountry ? `, ${countryById(destination.countryId).name}` : ""}</em>
+                  </span>
+                  {/* O contrato vem impresso na própria figurinha, no canto direito. */}
+                  <span className={styles.offerTerms}>
+                    <span><b>{formatMoney(offer.annualSalary)}</b> por ano</span>
+                    {offer.type === "loan"
+                      ? <span>até <b>{offer.loanEndSeason}</b></span>
+                      : <span><b>{offer.contractYears}</b> {offer.contractYears === 1 ? "ano" : "anos"}<span className={styles.wide}> de contrato</span></span>}
+                    {offer.type === "loan" && <span>destino paga <b>{offer.destinationSalaryShare}%</b></span>}
                   </span>
                   <span className={styles.offerDeal}>
                     <small>{moveLabel(offer)}</small>
@@ -178,16 +189,6 @@ export function TransferSpread({ game, club, appearance, offers, renewalOffer, o
                   </span>
                 </button>
                 <p className={styles.reason}>{offer.reasonText}</p>
-                <details className={styles.details}>
-                  <summary>Ver contrato</summary>
-                  <Ficha
-                    rows={[
-                      { label: "Salário anual", value: formatMoney(offer.annualSalary) },
-                      { label: "Vínculo", value: offer.type === "loan" ? `Até ${offer.loanEndSeason}` : `${offer.contractYears} ano${offer.contractYears === 1 ? "" : "s"}` },
-                      ...(offer.type === "loan" ? [{ label: "Salário pago pelo destino", value: `${offer.destinationSalaryShare}%` }] : []),
-                    ]}
-                  />
-                </details>
               </article>
             );
           })}
@@ -198,7 +199,7 @@ export function TransferSpread({ game, club, appearance, offers, renewalOffer, o
                 <span className={styles.offerBand} aria-hidden="true"><span className={styles.offerCrest}><ClubBadge club={club} /></span></span>
                 <span className={styles.offerBody}>
                   <small>{state.youthLoanDecision ? "Disputar espaço" : state.contractYears === 0 ? "Renovação" : "Continuidade"}</small>
-                  <strong>{club.shortName}</strong>
+                  <strong style={nameFit(club.shortName)}>{club.shortName}</strong>
                   <em>Manter o projeto atual</em>
                 </span>
                 <span className={styles.offerDeal}>

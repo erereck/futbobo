@@ -104,7 +104,6 @@ export default function CareerSpread(props: CareerSpreadProps) {
   const pickMode = pickState?.mode ?? "stuck";
   const sourceRect = useRef<DOMRect | null>(null);
   const placedRef = useRef<HTMLDivElement>(null);
-  const metaRef = useRef<HTMLDivElement>(null);
   const pickTimer = useRef(0);
   useEffect(() => () => window.clearTimeout(pickTimer.current), []);
 
@@ -217,12 +216,6 @@ export default function CareerSpread(props: CareerSpreadProps) {
 
         <div className={`${styles.metersCol} ${styles["o-meters"]}`}>
           <Meters items={meters} />
-          {objective && (
-            <button type="button" className={`${styles.metaChip} ${styles.mobileOnly}`} onClick={() => metaRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" })}>
-              <b>{objective.label}</b>
-              <span className={styles.num}>0/{objective.target}</span>
-            </button>
-          )}
         </div>
 
         {lastSeason && mode === "decision" && (
@@ -243,7 +236,7 @@ export default function CareerSpread(props: CareerSpreadProps) {
 
         <div className={styles.bottomRow}>
           {objective && (
-            <div ref={metaRef} className={styles["o-meta"]}>
+            <div className={styles["o-meta"]}>
               <SpecialSlot
                 labelledBy="meta-titulo"
                 title={objective.label}

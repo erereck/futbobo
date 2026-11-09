@@ -82,26 +82,48 @@
   box-shadow: 0 0 0 3px rgba(255, 255, 255, .35);
 }
 .offerCrest :global(.club-badge) { width: 42px; height: 42px; box-shadow: none; }
-.offerBody { display: grid; align-content: center; gap: 2px; padding: 8px 12px 8px 14px; min-width: 0; }
+.offerBody { display: grid; align-content: center; gap: 2px; padding: 8px 12px 8px 14px; min-width: 0; container-type: inline-size; }
 .offerBody small { font-size: 12px; font-weight: 600; color: var(--ink-3); }
 .offerBody strong {
+  --name-max: 22px;
   font-family: var(--font-display);
   font-stretch: 78%;
   font-weight: 800;
-  font-size: 22px;
+  font-size: var(--name-max);
+  /* nomes longos (Internacional, Mönchengladbach) encolhem para caber ao lado do contrato */
+  font-size: clamp(13px, calc(100cqi / (var(--word, 8) * .55)), var(--name-max));
   line-height: 1.02;
   overflow-wrap: anywhere;
 }
 .offerBody em { font-style: normal; font-size: 13px; color: var(--ink-2); }
-.offerDeal {
+/* letras miúdas do contrato, no canto direito da figurinha */
+.offerTerms {
   display: grid;
   align-content: center;
   justify-items: end;
-  gap: 4px;
-  padding: 8px 10px 8px 6px;
+  gap: 3px;
+  margin: 8px 0;
+  padding: 0 10px 0 12px;
+  border-left: 1.5px dashed var(--rule);
+  font-size: 12.5px;
+  line-height: 1.25;
+  color: var(--ink-3);
   text-align: right;
+  white-space: nowrap;
 }
-.offerDeal small { font-size: 12px; color: var(--ink-3); max-width: 15ch; }
+.offerTerms b { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums lining-nums; }
+/* rodapé: o tipo de negócio e o papel no elenco */
+.offerDeal {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+  padding: 7px 6px 2px;
+  border-top: 1.5px dashed var(--rule);
+}
+.offerDeal small { font-size: 12.5px; color: var(--ink-3); }
 .offerDeal b {
   display: inline-grid;
   place-content: center;
@@ -124,19 +146,6 @@
 .offerSticker:not(:disabled):active { translate: 0 1px; }
 .offerSticker:disabled { opacity: .55; }
 .reason { font-size: 13px; color: var(--ink-2); padding: 0 6px; text-wrap: pretty; }
-.details { padding: 0 6px; font-size: 13px; }
-.details summary {
-  cursor: pointer;
-  width: fit-content;
-  min-height: 32px;
-  display: inline-flex;
-  align-items: center;
-  font-weight: 600;
-  color: var(--ink-2);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.details[open] summary { margin-bottom: 4px; }
 
 .secondary { display: grid; gap: 10px; margin-top: 4px; }
 .secondaryNote { font-size: 12.5px; color: var(--ink-3); }
@@ -179,14 +188,13 @@
   .firstOnMobile { order: -1; }
   .playerRow { grid-template-columns: 112px minmax(0, 1fr); gap: 16px; }
   .title { font-size: clamp(26px, 7.4vw, 32px); }
-  .offerSticker { grid-template-columns: 76px minmax(0, 1fr); }
-  .offerDeal { grid-column: 1 / -1; grid-template-columns: 1fr auto; justify-items: start; align-items: center; padding: 8px 6px 2px; text-align: left; border-top: 1.5px dashed var(--rule); margin-top: 5px; }
-  .offerDeal small { max-width: none; }
-  .offerDeal b { justify-self: end; }
+  .offerSticker { grid-template-columns: 76px minmax(0, 1fr) auto; }
+  .offerBody { padding: 8px 8px 8px 12px; }
+  .offerTerms { padding: 0 6px 0 10px; font-size: 12px; }
   .offerBand { min-height: 76px; }
   .offerCrest { width: 46px; height: 46px; }
   .offerCrest :global(.club-badge) { width: 36px; height: 36px; }
-  .offerBody strong { font-size: 20px; }
+  .offerBody strong { --name-max: 20px; }
   .deniedCard h2 { padding-right: 0; padding-top: 34px; }
   .dock {
     position: fixed;
@@ -200,6 +208,13 @@
     box-shadow: 0 -1px 0 rgba(0, 0, 0, .08), 0 -8px 18px rgba(40, 40, 20, .1);
   }
   .dockSpacer { height: 96px; }
+}
+@media (max-width: 379px) {
+  /* celulares estreitos: faixa mais fina e contrato mais curto, sobra mais espaço para o nome */
+  .offerSticker { grid-template-columns: 66px minmax(0, 1fr) auto; }
+  .offerCrest { width: 42px; height: 42px; }
+  .offerCrest :global(.club-badge) { width: 33px; height: 33px; }
+  .offerTerms .wide { display: none; }
 }
 @media (min-width: 1024px) {
   .dockSpacer { display: none; }

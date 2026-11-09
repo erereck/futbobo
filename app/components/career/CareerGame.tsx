@@ -12,7 +12,7 @@ import { ROLE_LABELS, calculateSquadRole, createContract, createSeasonObjective 
 import { legacyBreakdownForState, legacyTierV2 } from "../../career/legacy-prestige";
 import { ACHIEVEMENTS, NEWS_TEMPLATES, fillNewsTemplate, findRivalry } from "../../mega-expansion";
 import BotaoMatch from "../../botao/BotaoMatch";
-import { BOTAO3D_ENABLED_EVENT, BOTAO3D_PERFORMANCE_EVENT, rememberBotao3dPerformance, rememberBotao3dPreference, resolveBotao3dPerformance, resolveBotao3dPreference, webglAvailable } from "../../botao/view-mode";
+import { BOTAO3D_ENABLED_EVENT, BOTAO3D_PERFORMANCE_EVENT, rememberBotao3dPerformance, rememberBotao3dPreference, resolveBotao3dPerformance, resolveBotao3dPreference } from "../../botao/view-mode";
 import AndroidInstallDialog from "../../AndroidInstallDialog";
 import PlayerAppearanceEditor from "../../PlayerAppearanceEditor";
 import { teamKitPattern, visualRosterForMatch } from "../../player-appearance";
@@ -38,7 +38,8 @@ import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateT
 import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../career/save-system";
 import { compactBotaoMatchResult, compactGameForPersistence } from "../../career/save-compaction";
 import { applyNationalBotaoProduction } from "../../career/botao-production";
-import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
+import CreationSpread from "./album/intro/CreationSpread";
+import { FirstContractSpread, YouthChoiceSpread, YouthSimSpread } from "./album/intro/BaseSpreads";
 import PressConferenceDialog from "./PressConferenceDialog";
 import CycleShopDialog from "./CycleShopDialog";
 import type { YouthPlayPanelProps } from "./YouthPlayPanel";
@@ -87,33 +88,6 @@ const YouthPlayPanel = dynamic(() => import("./YouthPlayPanel").catch(() => ({ d
 });
 const SpecialTrainingPanel = dynamic(() => import("./SpecialTrainingPanel").catch(() => ({ default: SpecialTrainingUnavailable })), { ssr: false });
 
-/** Antes da base: Simular (a animação de sempre) ou Jogar (um minigame do Scorebobo por ano). */
-function YouthModeChoice({ game, onChoose }: { game: GameState; onChoose: (mode: "simulate" | "play") => void }) {
-  // Lido uma vez, só quando a escolha aparece: cada leitura custa um contexto de WebGL.
-  const [webgl] = useState(webglAvailable);
-  const club = clubById(game.academyClubId);
-  const lastAge = game.youthYears.at(-1)?.age ?? game.revealAge;
-  return (
-    <section className="youth-screen youth-choice screen-enter" aria-labelledby="youth-choice-title">
-      <div className="brand-mini"><BrandMark size="sm" /> FUTBOBO</div>
-      <div className="youth-club"><ClubBadge club={club} size="lg" /><span>Categorias de base</span><strong id="youth-choice-title">{club.shortName}</strong></div>
-      <p className="youth-choice-span">Dos 12 aos {lastAge}</p>
-      <p className="youth-choice-lead">Como você quer passar pela base?</p>
-      <div className="youth-choice-cards">
-        <button type="button" className="youth-choice-card" onClick={() => onChoose("simulate")}>
-          <small>EM SEGUNDOS</small><strong>Simular</strong><p>A formação passa em segundos, como sempre.</p><b aria-hidden="true">→</b>
-        </button>
-        <button type="button" className="youth-choice-card youth-choice-play" disabled={!webgl} onClick={() => onChoose("play")}>
-          <small>SCOREBOBO · 3D</small><strong>Jogar a base</strong>
-          <p>{game.youthYears.length} minigames do Scorebobo com o seu jogador. 3 chances por ano. Jogue bem e ganhe até +3 de potencial máximo.</p>
-          {!webgl && <em>Precisa de 3D (WebGL), e este aparelho não liberou.</em>}
-          <b aria-hidden="true">→</b>
-        </button>
-      </div>
-    </section>
-  );
-}
-
 type CareerGameProps = {
   initialHallEntry?: CareerHallEntry | null;
   onCloseHallPreview?: () => void;
@@ -129,6 +103,8 @@ function isFormerClubOpponent(state: GameState, clubId: string) {
 
 // Fases da carreira que vivem no álbum.
 const ALBUM_PHASES = new Set<Phase>(["career", "consequence", "season-result", "transfer", "transfer-denied", "retirement-confirm", "botao-final", "botao-result"]);
+// A introdução da carreira no álbum: ficha do atleta, base e primeiro contrato.
+const INTRO_PHASES = new Set<Phase>(["identity", "appearance", "nationality", "academy", "formation", "story", "youth", "revelation"]);
 
 export default function CareerGame({ initialHallEntry = null, onCloseHallPreview }: CareerGameProps = {}) {
   const [game, setGame] = useState<GameState>(() => initialState());
@@ -397,7 +373,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
 
   // O álbum rola como página: cada fase nova começa do topo, sem travar a viewport.
   useEffect(() => {
-    if (ALBUM_PHASES.has(game.phase)) window.scrollTo(0, 0);
+    if (ALBUM_PHASES.has(game.phase) || INTRO_PHASES.has(game.phase)) window.scrollTo(0, 0);
   }, [game.phase]);
 
   // Só a base simulada anima: a escolha e a base jogada não têm relógio.
@@ -2319,7 +2295,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
 
   const shellPhase = hallPreview ? "summary" : game.phase;
   // A carreira (decisão, abas, consequência, fim de temporada e mercado) é o álbum: página que rola, sem a casca antiga.
-  const albumHost = !hallPreview && ALBUM_PHASES.has(game.phase);
+  // A introdução (criação, base simulada e primeiro contrato) também; só o Scorebobo da base fica na própria tela.
+  const youthPlayOnScreen = game.phase === "youth" && (youthMode === "play" || (!youthMode && youthPlayRequested));
+  const albumHost = !hallPreview && (ALBUM_PHASES.has(game.phase) || (INTRO_PHASES.has(game.phase) && !youthPlayOnScreen));
   const shellClass = `app-shell app-shell-${shellPhase}${shellPhase === "welcome" ? " app-shell-welcome" : ""}${albumHost ? ` ${albumHostClass}` : ""}`;
 
   if (monteCarloReport) {
@@ -2810,7 +2788,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       )}
 
       {(["identity", "appearance", "nationality", "academy", "formation", "story"] as Phase[]).includes(game.phase) && (
-        <PlayerCreationV2
+        <CreationSpread
           game={game}
           setGame={setGame}
           shirtNumberInput={shirtNumberInput}
@@ -3016,7 +2994,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         </section>
       )}
 
-      {game.phase === "youth" && !youthMode && !youthPlayRequested && <YouthModeChoice game={game} onChoose={pickYouthMode} />}
+      {game.phase === "youth" && !youthMode && !youthPlayRequested && <YouthChoiceSpread game={game} onChoose={pickYouthMode} />}
 
       {game.phase === "youth" && (youthMode === "play" || (!youthMode && youthPlayRequested)) && (
         <YouthPlayPanel
@@ -3031,26 +3009,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       )}
 
       {game.phase === "youth" && youthMode === "simulate" && (
-        <section className="youth-screen screen-enter">
-          <div className="brand-mini"><BrandMark size="sm" /> FUTBOBO</div>
-          <div className="youth-club"><ClubBadge club={clubById(game.academyClubId)} size="lg" /><span>Formando em</span><strong>{clubById(game.academyClubId).shortName}</strong></div>
-          <div className="age-counter"><small>SUA IDADE</small><strong>{game.youthYears[Math.max(0, youthStep - 1)]?.age ?? 12}</strong><span>ANOS</span></div>
-          <div className="youth-progress"><span style={{ width: `${(youthStep / Math.max(1, game.youthYears.length)) * 100}%` }} /></div>
-          <div className="youth-feed">
-            {game.youthYears.slice(0, youthStep).map((year, index) => (
-              <article className="youth-feed-item" key={`${year.age}-${year.title}`} style={{ animationDelay: `${index * 20}ms` }}>
-                <span>{year.age}</span><div><strong>{year.title}</strong><p>{year.text}</p></div><em>{year.overall ? `OVR ${year.overall}` : `+${year.delta}`}</em>
-              </article>
-            ))}
-          </div>
-          {!youthFinished ? (
-            <p className="simulating-label"><span /> Simulando sua formação...</p>
-          ) : (
-            <div className="youth-continue">
-              <button className="primary-button" onClick={() => setGame((current) => ({ ...current, phase: "revelation" }))}>Continuar <b>→</b></button>
-            </div>
-          )}
-        </section>
+        <YouthSimSpread game={game} youthStep={youthStep} finished={youthFinished} onContinue={() => setGame((current) => ({ ...current, phase: "revelation" }))} />
       )}
 
       {false && game.phase === "youth-complete" && (
@@ -3070,7 +3029,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         </section>
       )}
 
-      {game.phase === "revelation" && <FirstContractV2 game={game} onBack={() => setGame((current) => ({ ...current, phase: "youth" }))} onSign={signProfessional} />}
+      {game.phase === "revelation" && <FirstContractSpread game={game} onBack={() => setGame((current) => ({ ...current, phase: "youth" }))} onSign={signProfessional} />}
 
       {false && game.phase === "revelation" && (
         <section className="revelation-screen screen-enter">

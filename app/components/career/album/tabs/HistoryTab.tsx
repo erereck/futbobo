@@ -213,8 +213,6 @@ export default function HistoryTab({ game, club }: { game: GameState; club: Club
             </li>
           ))}
         </ol>
-
-        {seasons.length === 0 && <p className={styles.empty}>A primeira temporada profissional cola a primeira figurinha desta coleção.</p>}
       </AlbumPage>
     </>
   );

@@ -140,6 +140,7 @@
     height: var(--album-h);
     margin-right: 96px;
   }
+  .root[data-centered] .album { width: min(1360px, calc(100vw - 120px)); margin-right: 0; }
   .cover {
     display: block;
     position: absolute;

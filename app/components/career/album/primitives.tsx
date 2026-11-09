@@ -93,28 +93,36 @@ export function PlayerSticker({
   tilt = "-2.4deg",
   className,
   style,
+  kit,
+  crest,
 }: {
   name: string;
   number: number;
-  overall: number;
+  /** `null` esconde o selo de OVR (jogador ainda sem nota, na criação). */
+  overall: number | null;
   subtitle?: string;
-  club: Club;
+  /** Clube impresso na figurinha. Sem clube, use `kit` (cores) e `crest` (bandeira, por exemplo). */
+  club?: Club;
   appearance: PlayerAppearance | null;
   size?: "lg" | "sm";
   tilt?: string;
   className?: string;
   style?: CSSProperties;
+  kit?: { primary: string; secondary: string };
+  crest?: ReactNode;
 }) {
+  const colors = kit ?? club ?? { primary: "#0b5cad", secondary: "#ffffff" };
+  const crestNode = crest ?? (club ? <ClubBadge club={club} size="sm" /> : null);
   return (
     <figure className={`${styles.sticker} ${className ?? ""}`} data-size={size} style={{ "--tilt": tilt, ...style } as CSSProperties}>
       <div className={styles.face}>
         <div className={styles.plArt}>
           {appearance
-            ? <StickerBust className={styles.plBust} appearance={appearance} primary={club.primary} secondary={club.secondary} />
+            ? <StickerBust className={styles.plBust} appearance={appearance} primary={colors.primary} secondary={colors.secondary} />
             : <span className={styles.plNoPortrait} aria-hidden="true">{number}</span>}
           {appearance && <span className={`${styles.plNum} ${styles.num}`} aria-hidden="true">{number}</span>}
-          <span className={styles.plOvr} aria-label={`OVR ${overall}`}><b className={styles.num}>{overall}</b><small>OVR</small></span>
-          <span className={styles.plCrest}><ClubBadge club={club} size="sm" /></span>
+          {overall !== null && <span className={styles.plOvr} aria-label={`OVR ${overall}`}><b className={styles.num}>{overall}</b><small>OVR</small></span>}
+          {crestNode && <span className={styles.plCrest}>{crestNode}</span>}
         </div>
         <figcaption className={styles.plName}>
           <strong>{name}</strong>

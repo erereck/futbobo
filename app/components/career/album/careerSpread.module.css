@@ -25,7 +25,6 @@
 .retire svg { width: 16px; height: 16px; }
 .retire:hover { background: #fff1f1; border-color: rgba(224, 38, 47, .4); }
 .metersCol { display: grid; gap: 10px; align-content: start; }
-.metaChip { display: none; }
 
 .prev { border-top: 1.5px solid var(--rule); padding-top: 9px; display: grid; gap: 5px; }
 .prev ul { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-2); }
@@ -333,11 +332,12 @@
   .chapGrid,
   .choices { display: contents; }
   .fichaBlock { gap: 6px; }
-  .o-band, .o-chapHead, .o-chapCopy, .o-choice, .o-result, .o-dock, .o-meta, .o-market, .o-ficha, .o-retire, .o-prev, .o-news { grid-column: 1 / -1; }
+  .o-band, .o-chapCopy, .o-choice, .o-result, .o-dock, .o-meta, .o-market, .o-ficha, .o-retire, .o-prev, .o-news { grid-column: 1 / -1; }
   .o-band { order: 1; }
-  .o-sticker { order: 2; grid-column: 1; align-self: start; --tilt: -3deg; }
-  .o-meters { order: 3; grid-column: 2; align-self: center; }
-  .o-chapHead { order: 4; margin-top: 6px; }
+  /* O ano fica ao lado da figurinha, embaixo dos medidores: as escolhas sobem na tela. */
+  .o-sticker { order: 2; grid-column: 1; grid-row: span 2; align-self: start; --tilt: -3deg; }
+  .o-meters { order: 3; grid-column: 2; align-self: end; }
+  .o-chapHead { order: 4; grid-column: 2; align-self: start; }
   .o-chapCopy { order: 5; }
   .o-choice { order: 6; }
   .o-result { order: 6; }
@@ -350,22 +350,6 @@
   .o-news { order: 13; }
   .slot { display: none; }
   .desktopOnly { display: none !important; }
-
-  .metaChip {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 34px;
-    padding: 5px 9px;
-    border: 2px dashed transparent;
-    border-radius: 7px;
-    background: linear-gradient(var(--paper), var(--paper)) padding-box, var(--foil) border-box;
-    font-size: 12px;
-    line-height: 1.2;
-    text-align: left;
-    color: var(--ink-2);
-  }
-  .metaChip b { font-family: var(--font-display); font-stretch: 80%; font-weight: 800; font-size: 13.5px; color: var(--ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   .kicker b { font-size: 26px; }
   .kicker span { font-size: 13px; }

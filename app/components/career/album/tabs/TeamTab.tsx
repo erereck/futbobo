@@ -171,7 +171,6 @@ export default function TeamTab({ game, club }: { game: GameState; club: Club })
         <div className={styles.inner} style={inks}>
           <header className={styles.benchHead}>
             <h2>Banco de reservas</h2>
-            <p>Três opções para mudar a partida. Os mesmos nomes crescem, envelhecem e trocam de clube com a sua carreira.</p>
           </header>
 
           <div className={styles.bench}>

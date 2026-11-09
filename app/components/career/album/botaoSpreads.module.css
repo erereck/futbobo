@@ -5,12 +5,14 @@
 
 .num { font-variant-numeric: tabular-nums lining-nums; }
 .page { gap: clamp(14px, 2vh, 20px); }
-.rules { display: grid; gap: 6px; max-width: 420px; }
 
 @media (min-width: 1024px) {
   /* a figurinha centralizada na página, como capa do capítulo */
   /* a curva da página (::after) também tem margem automática: a sobra divide em cima e embaixo */
   .centered > :first-child { margin-top: auto; }
+  /* o ingresso fica no meio do espaço entre a faixa e os botões */
+  .ticket:has(+ .dock) { margin-block: auto; }
+  .ticket + .dock { margin-top: 0; }
   .centered .playerRow { grid-template-columns: clamp(180px, 16vw, 236px) minmax(0, 1fr); }
 }
 

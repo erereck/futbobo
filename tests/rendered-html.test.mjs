@@ -8,7 +8,11 @@ const careerSourceFiles = [
   "../app/components/career/CareerGame.tsx",
   "../app/components/career/CareerPrimitives.tsx",
   "../app/components/career/TransferMarketScreen.tsx",
-  "../app/components/career/PlayerCreationV2.tsx",
+  "../app/components/career/album/intro/CreationSpread.tsx",
+  "../app/components/career/album/intro/BaseSpreads.tsx",
+  "../app/components/career/album/intro/IntroParts.tsx",
+  "../app/components/career/album/menu/HomeSpread.tsx",
+  "../app/components/career/album/menu/MenuSpreads.tsx",
   "../app/components/career/CareerExtraStats.tsx",
   "../app/components/career/CareerReworkPanels.tsx",
   "../app/components/career/CareerTimeline.tsx",
@@ -680,7 +684,7 @@ test("deixa o fim de temporada rolar sem o rodapé cobrir o conteúdo", async ()
   );
   assert.doesNotMatch(careerGame, /futbobo-viewport-locked/);
   assert.match(careerGame, /"consequence", "season-result", "transfer"/);
-  assert.match(page, /if \(ALBUM_PHASES\.has\(game\.phase\)\) window\.scrollTo\(0, 0\)/);
+  assert.match(page, /if \(ALBUM_PHASES\.has\(game\.phase\) \|\| INTRO_PHASES\.has\(game\.phase\)\) window\.scrollTo\(0, 0\)/);
   assert.match(album, /\.host\.host \{[\s\S]*height: auto;[\s\S]*overflow: visible;/);
   assert.match(styles, /body\.futbobo-viewport-locked[\s\S]*position: fixed/);
   assert.match(
@@ -3024,8 +3028,15 @@ test("fecha a v93 com iconografia vetorial própria e remove símbolos improvisa
   assert.match(albumShell, /icon: "history"/);
   assert.match(albumShell, /<FutboboIcon name=\{item\.icon\} \/>/);
   assert.doesNotMatch(career, /<span>│<\/span>Histórico/);
-  assert.match(shell, /FutboboIcon name="settings"/);
-  assert.match(shell, /FutboboIcon name="medal"/);
+  // O menu é a primeira folha do álbum: os atalhos levam os ícones vetoriais do jogo.
+  const home = await readFile(
+    new URL("../app/components/career/album/menu/HomeSpread.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(shell, /<HomeSpread/);
+  assert.match(home, /icon: "settings"/);
+  assert.match(home, /icon: "medal"/);
+  assert.match(home, /<FutboboIcon name=\{item\.icon\} \/>/);
 });
 
 test("encerra a viagem de transferência com uma saída suave", async () => {

@@ -193,6 +193,7 @@
   place-items: center;
 }
 .plCrest :global(.club-badge) { width: 26px; height: 26px; box-shadow: none; }
+.plCrest :global(.nation-badge) { width: 26px; height: 26px; border: 0; border-radius: 50%; box-shadow: none; }
 .plName { padding: 7px 4px 2px; display: grid; gap: 1px; }
 .plName strong {
   font-family: var(--font-display);
@@ -213,7 +214,8 @@
   .plOvr b { font-size: 14px; }
   .plOvr small { font-size: 6.5px; }
   .plCrest { width: 22px; height: 22px; right: 4px; bottom: 4px; padding: 2px; }
-  .plCrest :global(.club-badge) { width: 18px; height: 18px; }
+  .plCrest :global(.club-badge),
+  .plCrest :global(.nation-badge) { width: 18px; height: 18px; }
   .plName { padding: 4px 2px 1px; }
   .plName strong { font-size: 14px; }
   .plName span { display: none; }

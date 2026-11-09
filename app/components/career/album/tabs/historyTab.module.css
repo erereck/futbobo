@@ -328,15 +328,6 @@
 .slotMeta { font-size: 12.5px; color: var(--ink-2); }
 .slotHint { font-size: 11.5px; color: var(--ink-3); position: relative; }
 
-.empty {
-  padding: 18px;
-  border: 2px dashed var(--rule-strong);
-  border-radius: 9px;
-  font-size: 14px;
-  color: var(--ink-2);
-  text-align: center;
-}
-
 /* ════════════════ DESKTOP ════════════════ */
 @media (min-width: 1024px) and (max-width: 1279px) {
   .grid { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); }

@@ -31,6 +31,7 @@ export default function AlbumShell({
   showTabs,
   label,
   spreadClassName,
+  centered = false,
   children,
 }: {
   /** Cores da tinta do clube (clube atual ou seleção em campo). */
@@ -40,10 +41,12 @@ export default function AlbumShell({
   showTabs: boolean;
   label: string;
   spreadClassName?: string;
+  /** Sem espaço reservado para as abas à direita: o álbum fica no meio da mesa. */
+  centered?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className={`${styles.root} albumMounted`} style={clubInks(club.primary, club.secondary)} data-tabs={showTabs ? "" : undefined}>
+    <div className={`${styles.root} albumMounted`} style={clubInks(club.primary, club.secondary)} data-tabs={showTabs ? "" : undefined} data-centered={centered ? "" : undefined}>
       <section className={styles.album} aria-label={label}>
         <div className={styles.cover} aria-hidden="true" />
         <div className={`${styles.spread} ${spreadClassName ?? ""}`}>{children}</div>
