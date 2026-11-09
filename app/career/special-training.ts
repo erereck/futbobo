@@ -3,6 +3,7 @@ import { SCOREBOBO_TRACK } from "./scorebobo-track";
 import { trainingOfSeason } from "./special-training-status";
 import { shiftPlayerAttributes } from "./state";
 import { clamp, seeded } from "./shared";
+import { attentionAtOverall } from "./attention";
 
 // A situação para a loja mora em special-training-status.ts (a QUADRA só precisa dela); daqui segue exportada como antes.
 export { isSpecialTrainingAvailable, specialTrainingStatus, type SpecialTrainingStatus } from "./special-training-status";
@@ -151,6 +152,7 @@ export function completeSpecialTraining(state: GameState): GameState {
   return {
     ...state,
     overall,
+    attention: attentionAtOverall(state.attention, overall),
     potential: Math.max(state.potential, overall),
     attributes: shiftPlayerAttributes(state.attributes, overall - state.overall, state.position, state.seed + state.season * ATTRIBUTE_SALT),
     specialTraining: finished,

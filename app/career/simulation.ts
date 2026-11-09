@@ -11,7 +11,8 @@ import { ALL_PRO_EVENTS, BALLON_DOR_EXCLUDED_TROPHIES, POSITION_PRIMARY_ATTRIBUT
 import { clamp, clubById, pick, seeded } from "./shared";
 import { DOMESTIC_SUPER_CUP_NAMES, clubConfederation, continentalSlotAfterSeason, initialAdaptation, initialContinentalSlot, isEuropeanClub, isOutsideAcademyHome, isOutsideCountry, positionByKey, randomAcademyClubs } from "./academy";
 import { addStats, competitiveStrength, describeEffects, isIdolAtClub, marketValue, medicalRecordForSeason, mergeEffects, seasonAverageRating, seasonPerformanceScore, simulatedWorldCupStats, worldCupGamesThroughStage } from "./performance";
-import { applyAcceptedTransfer, completeLoanReturn, materializeTransferOffers, selectAlternativeExileOffers, selectTransferOffers, shouldOfferYouthLoanInsteadOfSale } from "./transfer-market";
+import { applyAcceptedTransfer, completeLoanReturn, materializeTransferOffers, selectAlternativeExileOffers, selectTransferOffers, settleSeasonScouting, shouldOfferYouthLoanInsteadOfSale } from "./transfer-market";
+import { attentionAtOverall, worldCupProductionAwards } from "./attention";
 import { advanceWorldPlayerUniverse, ensureClubSquadPlayers } from "./world-players";
 import { seasonFitnessAfterLoad } from "./fatigue";
 import { worldFinalOpponentForSeason } from "./world-club-competitions";
@@ -556,7 +557,7 @@ export function simulateSeason(
   if (!isKeeper && playsContinental && continentalChampion && assists >= continentalAssistLine && performanceScore >= 78) awards.push(`Líder de Assistências da ${continentalNames[playsContinental].name}`);
   const worldCupGoals = nationalHistoryAdd?.name === "Copa do Mundo" ? nationalHistoryAdd.tournamentStats?.goals ?? 0 : 0;
   const worldCupAssists = nationalHistoryAdd?.name === "Copa do Mundo" ? nationalHistoryAdd.tournamentStats?.assists ?? 0 : 0;
-  if (!isKeeper && worldCupGoals >= 6) awards.push("Artilheiro da Copa do Mundo");
+  if (!isKeeper) awards.push(...worldCupProductionAwards(worldCupGoals, worldCupAssists));
   if (inEurope && playsContinental === "champions" && continentalChampion && nextOverall >= 88 && seeded(state.seed, state.season * 191) > 0.55) awards.push("Melhor da UEFA");
   if (inEurope && playsContinental === "champions" && continentalChampion && performanceScore >= 84 && seeded(state.seed, state.season * 193) > 0.38) awards.push("MVP da Champions League");
   const hasLeagueGoldenBoot = awards.some((award) => award.includes("Artilheiro"));
@@ -713,6 +714,7 @@ export function simulateSeason(
     age: nextAge,
     season: affected.season + 1,
     overall: nextOverall,
+    attention: attentionAtOverall(affected.attention, nextOverall),
     attributes: nextAttributes,
     fitness: nextFitness,
     morale: nextMorale,
@@ -811,7 +813,7 @@ export function simulateSeason(
   const nationalitySwitchTarget = maybeOfferNationalitySwitch(nextBase, affected.season * 71);
   const squadWorld = ensureClubSquadPlayers(nextBase.worldPlayers, nextBase.currentClubId, affected.season, 14);
   const worldPlayers = advanceWorldPlayerUniverse(squadWorld, { season: nextBase.season, rivals: nextBase.rivals, awardNominations: result.awardNominations, protagonistName: nextBase.name, focusClubId: nextBase.currentClubId });
-  return { ...nextBase, nextEventId: nationalitySwitchTarget ? NATIONALITY_SWITCH_EVENT_ID : selectNextEvent(nextBase, affected.season * 37), pendingNationalitySwitchTarget: nationalitySwitchTarget ?? "", nationalitySwitchInviteUsed: nextBase.nationalitySwitchInviteUsed || Boolean(nationalitySwitchTarget), transferOffers, transferMarketOffers, worldPlayers, legacyPoints, unlockedAchievements: [...nextBase.unlockedAchievements, ...newlyUnlocked.map((achievement) => achievement.id)], newsFeed: [...achievementNews, ...offFieldNews, seasonHeadline, ...nextBase.newsFeed].slice(0, 16) };
+  return settleSeasonScouting({ ...nextBase, nextEventId: nationalitySwitchTarget ? NATIONALITY_SWITCH_EVENT_ID : selectNextEvent(nextBase, affected.season * 37), pendingNationalitySwitchTarget: nationalitySwitchTarget ?? "", nationalitySwitchInviteUsed: nextBase.nationalitySwitchInviteUsed || Boolean(nationalitySwitchTarget), transferOffers, transferMarketOffers, worldPlayers, legacyPoints, unlockedAchievements: [...nextBase.unlockedAchievements, ...newlyUnlocked.map((achievement) => achievement.id)], newsFeed: [...achievementNews, ...offFieldNews, seasonHeadline, ...nextBase.newsFeed].slice(0, 16) });
 }
 
 export function eventForState(state: GameState) {
@@ -887,7 +889,7 @@ export function simulateMonteCarloCareer(seed: number, careerIndex: number): Mon
       resultText = succeeded ? choice.luck.successText : choice.luck.failureText;
       luckOutcome = succeeded ? "success" : "failure";
     }
-    state = simulateSeason(state, event, effect, choice.label, resultText, luckOutcome);
+    state = simulateSeason(state, event, effect, choice.label, resultText, luckOutcome, "simulate");
     seasons += 1;
     if (state.retireAfterSeason) break;
     if (state.transferOffers.length) {
