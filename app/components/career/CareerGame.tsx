@@ -35,7 +35,8 @@ import { applyEffect, applyStoryOrigin, createYouthJourney, selectNextEvent, sto
 import { buildFormerClubConference, buildPressConference, buildTransferPresentation } from "../../career/press-conferences";
 import { isCycleShopDue, purchaseCycleShopItem } from "../../career/cycle-shop";
 import type { CycleShopItemId } from "../../career/cycle-shop";
-import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, loanClubPermanentOffer, materializeTransferOffers, requestPlayerLoan, resolveTransferRequest, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";
+import { applyAcceptedTransfer, buildRenewalOffer, completeLoanReturn, generateTransferOffers, loanClubPermanentOffer, materializeTransferOffers, requestPlayerLoan, resolveTransferRequest, settleSeasonScouting, stayAfterYouthLoanRecommendation } from "../../career/transfer-market";
+import { WORLD_CUP_ASSIST_LEADER } from "../../career/attention";
 import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../career/save-system";
 import { compactBotaoMatchResult, compactGameForPersistence } from "../../career/save-compaction";
 import { applyNationalBotaoProduction } from "../../career/botao-production";
@@ -519,14 +520,16 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   const publicImage = useMemo(() => publicImageProfile(displayGame), [displayGame]);
   const legacyStanding = useMemo(() => legacyTierV2(displayGame.legacyPoints), [displayGame.legacyPoints]);
   const marketOffers = useMemo(() => {
-    const validIds = new Set(game.transferOffers);
-    const rich = game.transferMarketOffers.filter((offer) => validIds.size === 0 || validIds.has(offer.clubId));
-    return rich.length === game.transferOffers.length
-      ? rich
-      : materializeTransferOffers(game, game.transferOffers, game.season * 43, {
-          includeForeign: true,
-          mode: game.pendingTransferMode === "loan" ? "loan" : game.isFreeAgent ? "free-agent" : "permanent",
-        });
+    const offers = new Map(game.transferMarketOffers.map((offer) => [offer.clubId, offer]));
+    const missingIds = game.transferOffers.filter((id) => !offers.has(id));
+    for (const offer of materializeTransferOffers(game, missingIds, game.season * 43, {
+      includeForeign: true,
+      mode: game.pendingTransferMode === "loan" ? "loan" : game.isFreeAgent ? "free-agent" : "permanent",
+    })) offers.set(offer.clubId, offer);
+    return game.transferOffers.flatMap((id) => {
+      const offer = offers.get(id);
+      return offer ? [offer] : [];
+    });
   }, [game]);
   const renewalOffer = useMemo(() => game.contractYears === 0 ? buildRenewalOffer(game) : null, [game]);
   const awardEntries = useMemo(
@@ -681,7 +684,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       } | null;
       const setup = setupForPendingBotaoMatch(state, pendingMatch);
       if (marker?.saveKey === saveKey && marker.matchId === setup.matchId) {
-        applyBotaoMatchResult(walkoverBotaoResult(setup), setup);
+        applyBotaoMatchResult(walkoverBotaoResult(setup), setup, pendingMatch.id);
       } else if (marker?.saveKey === saveKey) {
         localStorage.removeItem(BOTAO_IN_PROGRESS_KEY);
       }
@@ -1128,12 +1131,12 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     vibrate();
   }
 
-  function applyBotaoMatchResult(matchResult: BotaoMatchResult, setupOverride?: BotaoMatchSetup | null) {
+  function applyBotaoMatchResult(matchResult: BotaoMatchResult, setupOverride?: BotaoMatchSetup | null, pendingMatchId = currentBotaoMatch?.id) {
     const resolvedSetup = setupOverride ?? currentBotaoSetup;
     localStorage.removeItem(BOTAO_IN_PROGRESS_KEY);
     setGame((current) => {
       const match = current.pendingBotaoMatches[0];
-      if (!match || matchResult.matchId !== resolvedSetup?.matchId) return current;
+      if (!match || match.id !== pendingMatchId || matchResult.matchId !== resolvedSetup?.matchId) return current;
       // Replay só existe para a tela imediatamente após o apito. Arquivar os
       // frames em cada temporada multiplicava o tamanho do save a cada partida.
       const archivedMatchResult = compactBotaoMatchResult(matchResult);
@@ -1486,42 +1489,16 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       }
 
       const seasonResolved = !nextState.pendingBotaoMatches.some((pending) => pending.season === match.season);
-      let resolvedResult = nextState.lastResult;
+      nextState = settleSeasonScouting(nextState);
+      const resolvedResult = nextState.lastResult;
       const playsInEurope = isEuropeanClub(clubById(nextState.currentClubId));
       const resolvedWorldCupStats = worldCupStatsForSeason(nextState, match.season);
-      const earnedWorldCupGoldenBoot = Boolean(
-        seasonResolved &&
-        resolvedResult &&
-        resolvedWorldCupStats &&
-        resolvedWorldCupStats.goals >= 6 &&
-        !resolvedResult.awards.includes("Artilheiro da Copa do Mundo"),
-      );
-      if (earnedWorldCupGoldenBoot && resolvedResult) {
-        const goldenBootAward = "Artilheiro da Copa do Mundo";
-        const updatedAwardCabinet = {
-          ...nextState.awardCabinet,
-          [goldenBootAward]: (nextState.awardCabinet[goldenBootAward] ?? 0) + 1,
-        };
-        const addGoldenBoot = <T extends SeasonRecord | SeasonResult>(record: T): T => ({
-          ...record,
-          awards: [...record.awards, goldenBootAward],
-        });
-        resolvedResult = addGoldenBoot(resolvedResult);
-        nextState = {
-          ...nextState,
-          awards: nextState.awards + 1,
-          awardCabinet: updatedAwardCabinet,
-          lastResult: resolvedResult,
-          history: nextState.history.map((record) =>
-            record.season === match.season ? addGoldenBoot(record) : record,
-          ),
-        };
-      }
       const alreadyHasBallon = Boolean(resolvedResult?.awards.includes("Bola de Ouro"));
       const hasProductionAward = Boolean(resolvedResult?.awards.some((award) =>
         award.includes("Artilheiro") ||
         award.includes("Chuteira de Ouro") ||
-        award.includes("Rei das Assistências"),
+        award.includes("Rei das Assistências") ||
+        award === WORLD_CUP_ASSIST_LEADER,
       ));
       const worldCupBallonSurge = Boolean((resolvedWorldCupStats?.goals ?? 0) >= 8);
       const manualBallonEligible = Boolean(
@@ -3244,7 +3221,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             <SeasonResultSpread
               game={game}
               club={currentClub}
-              continueLabel={game.retireAfterSeason ? "Concluir carreira" : game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"}
+              continueLabel={game.retireAfterSeason ? "Concluir carreira" : game.transferMarketOffers.some((offer) => offer.reason === "scouted") ? "Ver propostas recebidas" : game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"}
               onContinue={continueAfterResult}
             />
           )}
