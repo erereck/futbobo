@@ -1,0 +1,488 @@
+/* Aba Mundo: páginas de notícias e campeões do álbum (tinta verde). */
+
+.num { font-variant-numeric: tabular-nums lining-nums; }
+.stack { display: flex; flex-direction: column; gap: clamp(12px, 1.8vh, 16px); }
+
+/* escudo pequeno num círculo de papel */
+.crest {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 1px var(--rule), 0 1px 2px rgba(30, 30, 20, .12);
+  color: var(--green-deep);
+}
+.crest :global(.club-badge),
+.crest :global(.nation-badge) { width: 26px; height: 26px; box-shadow: none; }
+.crest svg { width: 18px; height: 18px; }
+.crest b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 13px; color: var(--ink-2); }
+
+/* ───────────── índice de seções (abas impressas sobre um filete verde) ───────────── */
+.sections {
+  display: flex;
+  gap: 4px;
+  border-bottom: 3px solid var(--green);
+  padding: 0 2px;
+}
+.sections button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 8px 5px;
+  border: 1.5px solid var(--rule);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 650;
+  font-stretch: 88%;
+  translate: 0 2px;
+  transition: background-color .15s, color .15s, translate .15s var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.sections button svg { width: 16px; height: 16px; flex: none; }
+.sections button span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sections button:hover { color: var(--ink); translate: 0 0; }
+.sections button[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: #fff; translate: 0 0; }
+
+/* ───────────── recortes de notícia ───────────── */
+.clippings { display: grid; gap: 14px; }
+.clipping {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px 16px 13px;
+  background: #fff;
+  border-radius: 2px;
+  rotate: -.5deg;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .12), 0 8px 14px -8px rgba(30, 30, 20, .3);
+}
+.clippings .clipping:nth-child(even) { rotate: .45deg; }
+.clipping::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: calc(50% - 30px);
+  width: 60px;
+  height: 15px;
+  background: rgba(246, 196, 49, .45);
+  rotate: -2deg;
+  box-shadow: inset 0 0 0 1px rgba(165, 124, 0, .12);
+}
+.clipCrest {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--ink-3);
+}
+.clipCrest :global(.club-badge),
+.clipCrest :global(.nation-badge) { width: 36px; height: 36px; box-shadow: none; }
+.clipCrest svg { width: 22px; height: 22px; }
+.clipMeta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 12px; color: var(--ink-3); }
+.clipMeta span { font-weight: 700; color: var(--green-deep); }
+.clipMeta b {
+  padding: 0 6px;
+  border: 1.5px solid var(--red);
+  border-radius: 3px;
+  color: var(--red-deep);
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  rotate: -3deg;
+}
+.clipping strong {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-display);
+  font-stretch: 82%;
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+.clipping p:not(.clipMeta) { margin-top: 5px; font-size: 13.5px; line-height: 1.42; color: var(--ink-2); text-wrap: pretty; }
+.clipping[data-lead] { grid-template-columns: 58px minmax(0, 1fr); padding: 18px 18px 16px; rotate: -.8deg; }
+.clipping[data-lead] .clipCrest { width: 58px; height: 58px; }
+.clipping[data-lead] .clipCrest :global(.club-badge),
+.clipping[data-lead] .clipCrest :global(.nation-badge) { width: 52px; height: 52px; }
+.clipping[data-lead] strong { font-size: clamp(22px, 3.2vh, 30px); line-height: 1.02; letter-spacing: -.01em; }
+.clipping[data-lead] p:not(.clipMeta) { font-size: 14.5px; }
+
+.shortcut {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 14px 8px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  text-align: left;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: translate .12s var(--ease-out), box-shadow .12s var(--ease-out);
+}
+.shortcut strong { display: block; font-family: var(--font-display); font-stretch: 82%; font-weight: 750; font-size: 16px; line-height: 1.1; }
+.shortcut small { font-size: 12.5px; color: var(--ink-3); }
+.shortcut:hover { translate: -1px -1px; box-shadow: 4px 4px 0 var(--ink); }
+.shortcut:active { translate: 2px 2px; box-shadow: 1px 1px 0 var(--ink); }
+
+/* manchetes da própria carreira, como um caderno de recortes datados */
+.careerNews { display: grid; gap: 8px; margin-top: 4px; }
+.careerNews ol { display: grid; border-top: 3px solid var(--ink); }
+.careerNews li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 8px 2px; border-bottom: 1px dotted rgba(22, 22, 22, .25); }
+.careerNews time { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 18px; color: var(--green-deep); }
+.careerNews p { grid-column: 2; font-size: 13.5px; line-height: 1.4; color: var(--ink); text-wrap: pretty; }
+.careerNews li > p:only-child { grid-column: 1 / -1; }
+
+/* ───────────── capas de seção ───────────── */
+.cover { display: grid; gap: 8px; }
+.cover > p { font-size: 14px; color: var(--ink-2); }
+.coverStats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 6px; }
+.coverStats > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 12px;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .12), 0 6px 10px -6px rgba(30, 30, 20, .25);
+}
+.coverStats .crest { grid-row: span 2; width: 44px; height: 44px; }
+.coverStats .crest :global(.nation-badge),
+.coverStats .crest :global(.club-badge) { width: 34px; height: 34px; }
+.coverStats b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 30px; line-height: 1; }
+.coverStats small { font-size: 12.5px; color: var(--ink-2); }
+.yourRanks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.yourRanks li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  background: linear-gradient(transparent 32%, rgba(246, 196, 49, .55) 32% 88%, transparent 88%);
+  font-size: 13px;
+}
+.yourRanks b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 18px; }
+
+/* ───────────── competições (linhas que abrem) ───────────── */
+.ledgerList { display: grid; }
+.ledger, .ledgerGroup { border-top: 1.5px solid var(--rule); }
+.ledgerList > .ledger:last-child { border-bottom: 1.5px solid var(--rule); }
+.ledgerHead {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 9px 4px;
+  border: 0;
+  background: none;
+  text-align: left;
+  transition: background-color .15s;
+}
+.ledgerHead:hover { background: rgba(31, 138, 76, .05); }
+.ledgerCopy { display: grid; gap: 1px; min-width: 0; }
+.ledgerCopy strong { font-family: var(--font-display); font-stretch: 84%; font-weight: 750; font-size: 16px; line-height: 1.15; }
+.ledgerCopy small { font-size: 12.5px; color: var(--ink-2); }
+.ledgerCopy em { font-style: normal; font-size: 12.5px; font-weight: 650; color: var(--green-deep); }
+.toggleMark {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--rule-strong);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--ink-2);
+}
+.ledger[data-open] > .ledgerHead .toggleMark,
+.ledgerGroup[data-open] > .ledgerHead .toggleMark { background: var(--green); border-color: var(--green); color: #fff; }
+.recordMark {
+  flex: none;
+  padding: 3px 7px;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  rotate: -4deg;
+}
+.ledger[data-living] .recordMark { border-color: var(--green); color: var(--green-deep); }
+.ledgerBody { display: grid; gap: 12px; padding: 4px 4px 16px; }
+.ledgerGroup > .ledgerList { padding: 0 0 8px 14px; border-left: 3px solid var(--green); margin-left: 16px; }
+
+.subhead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 12.5px; color: var(--ink-3); }
+.subhead strong { font-family: var(--font-display); font-stretch: 84%; font-size: 15px; color: var(--ink); }
+
+/* campeões como figurinhas pequenas */
+.champions { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.champions li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  column-gap: 9px;
+  align-items: center;
+  padding: 8px 10px 8px 8px;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .14), 0 5px 9px -5px rgba(30, 30, 20, .25);
+}
+.champions li:nth-child(odd) { rotate: -.6deg; }
+.champions li:nth-child(even) { rotate: .5deg; }
+.champions .crest { grid-row: span 3; }
+.champions time { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 17px; line-height: 1; color: var(--green-deep); }
+.champions strong { font-size: 13px; font-weight: 650; line-height: 1.2; overflow-wrap: anywhere; }
+.champions small { font-size: 11.5px; color: var(--ink-3); }
+
+/* Copa do Brasil final por final */
+.cupFinals { display: grid; max-height: 380px; overflow: auto; overscroll-behavior: contain; border: 1.5px solid var(--rule); border-radius: 6px; background: #fff; }
+.cupFinals li { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; align-items: center; gap: 2px 12px; padding: 3px 10px; border-top: 1px solid var(--rule); }
+.cupFinals li:first-child { border-top: 0; }
+.cupFinals time { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 18px; color: var(--green-deep); }
+.cupWinner { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 40px; padding: 2px 0; border: 0; background: none; text-align: left; }
+.cupWinner strong { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cupWinner .crest { width: 28px; height: 28px; }
+.cupWinner .crest :global(.club-badge) { width: 22px; height: 22px; }
+.cupRunner { justify-self: end; min-height: 40px; padding: 2px 0; border: 0; background: none; font-size: 12.5px; color: var(--ink-3); text-align: left; }
+button.cupRunner, button.cupWinner { cursor: pointer; }
+button.cupRunner:hover, button.cupWinner:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ranking impresso */
+.ranking { display: grid; }
+.ranking li > div,
+.ranking li > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 34px auto minmax(0, auto) minmax(16px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 3px 4px;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+}
+.ranking li > div:not(:has(.crest)) { grid-template-columns: 34px minmax(0, auto) minmax(16px, 1fr) auto; }
+.ranking li > button:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+.ranking b { font-family: var(--font-display); font-stretch: 78%; font-weight: 800; font-size: 15px; color: var(--ink-3); }
+.ranking strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranking em { font-style: normal; font-family: var(--font-display); font-stretch: 78%; font-weight: 800; font-size: 17px; }
+.ranking .crest { width: 28px; height: 28px; }
+.ranking .crest :global(.club-badge), .ranking .crest :global(.nation-badge) { width: 22px; height: 22px; }
+.lead { border-bottom: 1.5px dotted rgba(22, 22, 22, .3); translate: 0 4px; }
+.ranking li[data-you] > * { background: linear-gradient(transparent 18%, rgba(246, 196, 49, .5) 18% 86%, transparent 86%); }
+
+/* ───────────── rankings de jogadores ───────────── */
+.boards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 20px; align-items: start; }
+.board { display: grid; gap: 6px; border-top: 3px solid var(--ink); padding-top: 8px; }
+.board header { display: grid; gap: 1px; }
+.board header strong { font-family: var(--font-display); font-stretch: 82%; font-weight: 800; font-size: 17px; line-height: 1.1; }
+.board header small { font-size: 12px; color: var(--ink-3); }
+.board ol { display: grid; }
+.board li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 2px;
+  border-top: 1px dotted rgba(22, 22, 22, .22);
+  font-size: 13px;
+}
+.board li:first-child { border-top: 0; }
+.board li b { font-family: var(--font-display); font-stretch: 78%; font-weight: 800; color: var(--ink-3); }
+.board li strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board li strong i {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--yellow);
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.board li small { font-size: 11.5px; color: var(--ink-3); }
+.board li span { font-weight: 700; text-align: right; white-space: nowrap; }
+.board li[data-you] { background: linear-gradient(transparent 12%, rgba(246, 196, 49, .38) 12% 90%, transparent 90%); }
+
+/* ───────────── ficha do clube ───────────── */
+.dossier { display: grid; gap: 12px; }
+.backLink {
+  justify-self: start;
+  min-height: 36px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font-weight: 650;
+  font-size: 13.5px;
+  color: var(--green-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+.searchRow { display: flex; align-items: end; gap: 10px; }
+.search { flex: 1; display: grid; gap: 3px; font-size: 12px; color: var(--ink-3); }
+.search input {
+  width: 100%;
+  min-height: 42px;
+  padding: 6px 2px;
+  border: 0;
+  border-bottom: 2px solid var(--ink);
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  outline-offset: 2px;
+}
+.myClub {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  font-weight: 700;
+  font-size: 13.5px;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.clubStrip { display: flex; flex-wrap: wrap; gap: 6px; }
+.clubStrip button {
+  min-height: 34px;
+  padding: 4px 11px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 99px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.clubStrip button[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: #fff; }
+.clubStrip span { align-self: center; font-size: 12px; color: var(--ink-3); }
+
+.clubCard {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .12), 0 10px 18px -12px rgba(30, 30, 20, .35);
+}
+.clubIdentity { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
+.clubCrest {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--paper-2);
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+.clubCrest :global(.club-badge) { width: 58px; height: 58px; box-shadow: none; }
+.clubCrest b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 24px; color: var(--ink-2); }
+.clubIdentity small { font-size: 12.5px; color: var(--green-deep); font-weight: 650; }
+.clubIdentity strong { display: block; font-family: var(--font-display); font-stretch: 78%; font-weight: 800; font-size: clamp(24px, 3.4vh, 32px); line-height: 1; text-transform: uppercase; }
+.clubIdentity span { font-size: 13px; color: var(--ink-2); }
+.clubNumbers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1.5px solid var(--rule); border-bottom: 1.5px solid var(--rule); padding: 8px 0; }
+.clubNumbers div { display: grid; text-align: center; }
+.clubNumbers dd { margin: 0; font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+.clubNumbers dt { font-size: 12px; color: var(--ink-3); }
+.cupBlock { display: grid; gap: 8px; }
+.cupNote { margin-top: -6px; font-size: 12.5px; color: var(--ink-3); }
+.yearStamps { display: flex; flex-wrap: wrap; gap: 5px; }
+.yearStamps span {
+  padding: 2px 6px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+.yearStamps span[data-save] { border-color: var(--green); background: var(--green); color: #fff; }
+.yearStamps em { font-style: normal; font-size: 13px; color: var(--ink-3); }
+.finals { display: grid; gap: 6px; }
+.finalsHead { display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--ink-3); }
+.finalsHead strong { font-family: var(--font-display); font-stretch: 84%; font-size: 15px; color: var(--ink); }
+.finals ol { display: grid; max-height: 300px; overflow: auto; overscroll-behavior: contain; border: 1.5px solid var(--rule); border-radius: 6px; }
+.finals li { display: grid; grid-template-columns: 44px 72px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 40px; padding: 4px 10px; border-top: 1px solid var(--rule); font-size: 13px; }
+.finals li:first-child { border-top: 0; }
+.finals li[data-won] { background: rgba(31, 138, 76, .07); }
+.finals time { font-family: var(--font-display); font-stretch: 78%; font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+.finals li strong { font-weight: 700; }
+.finals li[data-won] strong { color: var(--green-deep); }
+.finals li button { justify-self: start; min-height: 32px; padding: 0; border: 0; background: none; text-align: left; font-size: 13px; color: var(--ink); text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.finals li small { font-size: 11.5px; color: var(--ink-3); }
+.honours { display: grid; gap: 10px; }
+.honours > div { display: grid; gap: 2px; padding-top: 8px; border-top: 1px dotted rgba(22, 22, 22, .25); }
+.honours p { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.honours strong { font-size: 14px; font-weight: 700; }
+.honours b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 22px; }
+.honours small { font-size: 12px; color: var(--ink-3); }
+.honours span { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+.emptyBlock { display: grid; gap: 4px; padding: 18px; border: 2px dashed var(--rule-strong); border-radius: 9px; background: var(--dots-slot), var(--paper-2); }
+.emptyBlock strong { font-family: var(--font-display); font-stretch: 84%; font-size: 17px; }
+.emptyBlock span, .emptyNote { font-size: 13.5px; color: var(--ink-3); }
+.footNote { font-size: 12px; color: var(--ink-3); }
+
+/* ════════════════ CELULAR ════════════════ */
+@media (max-width: 1023px) {
+  .sections { gap: 3px; padding: 0; }
+  .sections button {
+    flex-direction: column;
+    gap: 2px;
+    min-height: 52px;
+    padding: 6px 2px 5px;
+    font-size: 11.5px;
+    font-stretch: 80%;
+  }
+  .sections button svg { width: 18px; height: 18px; }
+  .clipping { padding: 13px 14px 12px; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; }
+  .clipCrest { width: 34px; height: 34px; }
+  .clipCrest :global(.club-badge), .clipCrest :global(.nation-badge) { width: 30px; height: 30px; }
+  .clipping[data-lead] { grid-template-columns: 46px minmax(0, 1fr); padding: 16px 14px 14px; }
+  .clipping[data-lead] .clipCrest { width: 46px; height: 46px; }
+  .clipping[data-lead] .clipCrest :global(.club-badge), .clipping[data-lead] .clipCrest :global(.nation-badge) { width: 42px; height: 42px; }
+  .clipping[data-lead] strong { font-size: 23px; }
+  .boards { grid-template-columns: 1fr; }
+  .careerNews li:nth-child(n + 6) { display: none; }
+  .champions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cupFinals, .finals ol { max-height: 60vh; }
+  .cupFinals li { grid-template-columns: 46px minmax(0, 1fr); padding: 4px 10px; }
+  .cupFinals time { grid-row: span 2; }
+  .cupRunner { justify-self: start; min-height: 32px; }
+  .finals li { grid-template-columns: 40px 60px minmax(0, 1fr); }
+  .finals li small { grid-column: 2 / -1; }
+  .ledgerGroup > .ledgerList { margin-left: 6px; padding-left: 10px; }
+}
+
+@media (max-width: 380px) {
+  .champions { grid-template-columns: 1fr; }
+  .coverStats { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sections button, .ledgerHead, .shortcut { transition: none; }
+}

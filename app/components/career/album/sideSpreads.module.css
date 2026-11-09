@@ -1,0 +1,210 @@
+/* Telas laterais da carreira: janela de transferências, pedido recusado, aposentadoria. */
+
+.num { font-variant-numeric: tabular-nums lining-nums; }
+
+/* página compacta do jogador (esquerda) */
+.playerRow { display: grid; grid-template-columns: clamp(150px, 13vw, 196px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.fichaBlock { display: grid; gap: 8px; align-content: start; }
+
+/* camisas da carreira */
+.clubs { display: grid; gap: 8px; border-top: 1.5px solid var(--rule); padding-top: 10px; }
+.clubs ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 14px; }
+.clubs li { display: grid; grid-template-columns: 34px minmax(0, 1fr); column-gap: 8px; align-items: center; }
+.clubs li strong { font-family: var(--font-display); font-stretch: 80%; font-weight: 800; font-size: 15px; line-height: 1.1; }
+.clubs li small { grid-column: 2; font-size: 12px; color: var(--ink-3); }
+.clubCrest { grid-row: span 2; width: 34px; height: 34px; display: grid; place-items: center; }
+.clubCrest :global(.club-badge) { width: 32px; height: 32px; box-shadow: none; }
+
+/* cabeçalho da página da direita */
+.kicker { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.title {
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: clamp(30px, 4.6vh, 46px);
+  line-height: 1;
+  letter-spacing: -.015em;
+  text-wrap: balance;
+}
+.lead { color: var(--ink-2); max-width: 52ch; text-wrap: pretty; }
+.head { display: grid; gap: 6px; }
+
+/* propostas como figurinhas de clube */
+.offers { display: grid; gap: 14px; }
+.offer { display: grid; gap: 6px; }
+.offerSticker {
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  padding: 5px;
+  border: 0;
+  border-radius: 9px;
+  background: #fff;
+  text-align: left;
+  rotate: var(--r, 0deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .18)) drop-shadow(0 6px 10px rgba(30, 30, 20, .14));
+  transition: translate .18s var(--ease-out), rotate .18s var(--ease-out), filter .18s var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.offer:nth-child(odd) .offerSticker { --r: -.6deg; }
+.offer:nth-child(even) .offerSticker { --r: .5deg; }
+.offerBand {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  overflow: hidden;
+  min-height: 86px;
+  background: var(--dots-light), linear-gradient(160deg, var(--o-soft), var(--o-club) 55%, var(--o-deep));
+}
+.offerBand::before {
+  content: "";
+  position: absolute;
+  inset: auto -30% 16% -30%;
+  height: 22%;
+  background: var(--o-stripe);
+  transform: rotate(-16deg);
+  opacity: .9;
+}
+.offerCrest {
+  position: relative;
+  z-index: 1;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .35);
+}
+.offerCrest :global(.club-badge) { width: 42px; height: 42px; box-shadow: none; }
+.offerBody { display: grid; align-content: center; gap: 2px; padding: 8px 12px 8px 14px; min-width: 0; }
+.offerBody small { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.offerBody strong {
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+}
+.offerBody em { font-style: normal; font-size: 13px; color: var(--ink-2); }
+.offerDeal {
+  display: grid;
+  align-content: center;
+  justify-items: end;
+  gap: 4px;
+  padding: 8px 10px 8px 6px;
+  text-align: right;
+}
+.offerDeal small { font-size: 12px; color: var(--ink-3); max-width: 15ch; }
+.offerDeal b {
+  display: inline-grid;
+  place-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 99px;
+  background: var(--yellow);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.offer[data-stay] .offerDeal b { background: var(--paper-2); border: 1.5px dashed var(--rule-strong); }
+@media (hover: hover) {
+  .offerSticker:not(:disabled):hover {
+    translate: 0 -3px;
+    rotate: 0deg;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .18)) drop-shadow(0 12px 16px rgba(30, 30, 20, .18));
+  }
+}
+.offerSticker:not(:disabled):active { translate: 0 1px; }
+.offerSticker:disabled { opacity: .55; }
+.reason { font-size: 13px; color: var(--ink-2); padding: 0 6px; text-wrap: pretty; }
+.details { padding: 0 6px; font-size: 13px; }
+.details summary {
+  cursor: pointer;
+  width: fit-content;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.details[open] summary { margin-bottom: 4px; }
+
+.secondary { display: grid; gap: 10px; margin-top: 4px; }
+.secondaryNote { font-size: 12.5px; color: var(--ink-3); }
+
+/* pedido recusado */
+.deniedCard {
+  position: relative;
+  padding: 18px 18px 16px;
+  border: 2px dashed var(--rule-strong);
+  border-radius: 10px;
+  background: var(--dots-slot), var(--paper-2);
+  display: grid;
+  gap: 10px;
+}
+.deniedStamp {
+  position: absolute;
+  right: 16px;
+  top: 14px;
+  padding: 4px 10px;
+  border: 3px solid var(--red);
+  border-radius: 6px;
+  color: var(--red);
+  background: rgba(255, 255, 255, .6);
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 22px;
+  text-transform: uppercase;
+  rotate: -9deg;
+}
+.deniedCard h2 { font-family: var(--font-display); font-stretch: 82%; font-weight: 800; font-size: 24px; line-height: 1.05; padding-right: 120px; }
+.deniedCard p { color: var(--ink-2); }
+.mood { display: grid; gap: 6px; }
+
+/* ação final (mobile vira dock amarelo) */
+.dock { display: grid; gap: 10px; margin-top: auto; padding-top: 6px; }
+.dockRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+@media (max-width: 1023px) {
+  .firstOnMobile { order: -1; }
+  .playerRow { grid-template-columns: 112px minmax(0, 1fr); gap: 16px; }
+  .title { font-size: clamp(26px, 7.4vw, 32px); }
+  .offerSticker { grid-template-columns: 76px minmax(0, 1fr); }
+  .offerDeal { grid-column: 1 / -1; grid-template-columns: 1fr auto; justify-items: start; align-items: center; padding: 8px 6px 2px; text-align: left; border-top: 1.5px dashed var(--rule); margin-top: 5px; }
+  .offerDeal small { max-width: none; }
+  .offerDeal b { justify-self: end; }
+  .offerBand { min-height: 76px; }
+  .offerCrest { width: 46px; height: 46px; }
+  .offerCrest :global(.club-badge) { width: 36px; height: 36px; }
+  .offerBody strong { font-size: 20px; }
+  .deniedCard h2 { padding-right: 0; padding-top: 34px; }
+  .dock {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--yellow);
+    box-shadow: 0 -1px 0 rgba(0, 0, 0, .08), 0 -8px 18px rgba(40, 40, 20, .1);
+  }
+  .dockSpacer { height: 96px; }
+}
+@media (min-width: 1024px) {
+  .dockSpacer { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .offerSticker { transition: none; }
+}

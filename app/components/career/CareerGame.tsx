@@ -18,10 +18,7 @@ import BotaoMatchStats from "../../botao/BotaoMatchStats";
 import { describeMatchTurningPoint } from "../../botao/result-story";
 import TeamCrest from "../../botao/TeamCrest";
 import AndroidInstallDialog from "../../AndroidInstallDialog";
-import BallonDorGalaCard from "../../ceremony/BallonDorGalaCard";
-import ParadeLaunchCard from "../../parade/ParadeLaunchCard";
-import { careerWorldCupTitles, paradeStars } from "../../parade/parade-stars";
-import PlayerAppearanceEditor, { PlayerAppearancePortrait } from "../../PlayerAppearanceEditor";
+import PlayerAppearanceEditor from "../../PlayerAppearanceEditor";
 import { teamKitPattern, visualRosterForMatch } from "../../player-appearance";
 import { checkForAndroidUpdate, isAndroidDevice, isNativeAndroid, openAndroidDownload } from "../../android-app";
 import type { AndroidRelease } from "../../android-app";
@@ -30,13 +27,13 @@ import { simulateBotaoMatch } from "../../botao/simulate";
 import type { BotaoMatchResult, BotaoMatchSetup } from "../../botao/types";
 import { PLAYER_STORIES, playerStoryById } from "../../player-stories";
 import type { PlayerStoryId } from "../../player-stories";
-import type { AppSettings, AwardNomination, CareerHallEntry, ChallengeResult, CompetitionId, CompetitionResult, CustomClubDefinition, GameState, InstallPromptEvent, MonteCarloReport, NationalTier, PendingBotaoMatch, Phase, SeasonRecord, SeasonResult, SocialPost, TransferOffer } from "../../career/model";
-import { ATTRIBUTE_GROUPS, ATTRIBUTE_LABELS, BALLON_DOR_EXCLUDED_TROPHIES, BOTAO_IN_PROGRESS_KEY, CHALLENGE_RESULTS_KEY, CHALLENGE_SAVE_KEY, HALL_OF_FAME_KEY, ORIGINAL_CLUB_PRESENTATION, POSITION_PRIMARY_ATTRIBUTES, SAVE_KEY, SETTINGS_KEY, SPECIAL_TRAITS, applyCustomClubDefinitions, archivedCareerState, attributeAverage, attributeTone, awardFinalists, awardPresentation, awardTierWeight, careerHallEntry, createCareerRivals, createPlayerAttributes, dailyChallenge, fictionalAwardWinner, initialState, normalizeSave, randomPlayerName, selectCareerTraits, shiftPlayerAttributes } from "../../career/state";
+import type { AppSettings, AwardNomination, CareerHallEntry, ChallengeResult, CompetitionId, CompetitionResult, CustomClubDefinition, GameState, InstallPromptEvent, MonteCarloReport, PendingBotaoMatch, Phase, SeasonRecord, SeasonResult, SocialPost, TransferOffer } from "../../career/model";
+import { BALLON_DOR_EXCLUDED_TROPHIES, BOTAO_IN_PROGRESS_KEY, CHALLENGE_RESULTS_KEY, CHALLENGE_SAVE_KEY, HALL_OF_FAME_KEY, ORIGINAL_CLUB_PRESENTATION, SAVE_KEY, SETTINGS_KEY, applyCustomClubDefinitions, archivedCareerState, awardFinalists, awardPresentation, awardTierWeight, careerHallEntry, createCareerRivals, createPlayerAttributes, dailyChallenge, fictionalAwardWinner, initialState, normalizeSave, randomPlayerName, selectCareerTraits, shiftPlayerAttributes } from "../../career/state";
 import { clamp, clubById, pick, seeded } from "../../career/shared";
-import { eventForState, isNegativeConsequence, runMonteCarloCareers, simulateSeason } from "../../career/simulation";
-import { PLAYABLE_ACADEMY_COUNTRIES, academyRouteCopy, continentalNationalTournament, continentalSlotAfterSeason, defaultAcademyCountry, hasLocalAcademyRoute, initialContinentalSlot, isEuropeanClub, isOutsideAcademyHome, positionByKey, randomAcademyClubs, sortedCountries } from "../../career/academy";
-import { POSITION_FIELD_SPOTS, careerTrend, fanMood, formatFollowers, formatMoney, marketValue, mergeEffects, publicImageProfile, seasonAverageRating, simulatedWorldCupStats, worldCupStatsForSeason } from "../../career/performance";
-import { AwardCeremony, AwardReveal, BrandMark, ClubBadge, CompetitionBadge, Metric, NationBadge, Progress, TROPHY_PRESENTATIONS, TrophyGallery } from "./CareerPrimitives";
+import { eventForState, runMonteCarloCareers, simulateSeason } from "../../career/simulation";
+import { PLAYABLE_ACADEMY_COUNTRIES, academyRouteCopy, continentalNationalTournament, continentalSlotAfterSeason, defaultAcademyCountry, hasLocalAcademyRoute, initialContinentalSlot, isEuropeanClub, positionByKey, randomAcademyClubs, sortedCountries } from "../../career/academy";
+import { POSITION_FIELD_SPOTS, fanMood, formatFollowers, formatMoney, mergeEffects, publicImageProfile, seasonAverageRating, simulatedWorldCupStats, worldCupStatsForSeason } from "../../career/performance";
+import { BrandMark, ClubBadge, CompetitionBadge, Metric, NationBadge, TROPHY_PRESENTATIONS, TrophyGallery } from "./CareerPrimitives";
 import { applyEffect, applyStoryOrigin, createYouthJourney, selectNextEvent, storyClubCandidate } from "../../career/events";
 import { buildFormerClubConference, buildPressConference, buildTransferPresentation } from "../../career/press-conferences";
 import { isCycleShopDue, purchaseCycleShopItem } from "../../career/cycle-shop";
@@ -46,19 +43,24 @@ import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../
 import { compactBotaoMatchResult, compactGameForPersistence } from "../../career/save-compaction";
 import { applyNationalBotaoProduction } from "../../career/botao-production";
 import PlayerCreationV2, { FirstContractV2 } from "./PlayerCreationV2";
-import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanels";
-import CareerExtraStats from "./CareerExtraStats";
-import CareerTimeline from "./CareerTimeline";
-import CareerWorld, { WorldPulseButton } from "./CareerWorld";
-import CareerTeam from "./CareerTeam";
-import TransferMarketScreen from "./TransferMarketScreen";
 import PressConferenceDialog from "./PressConferenceDialog";
 import CycleShopDialog from "./CycleShopDialog";
 import type { YouthPlayPanelProps } from "./YouthPlayPanel";
 import type { SpecialTrainingPanelProps } from "./SpecialTrainingPanel";
 import { worldFinalOpponentForSeason } from "../../career/world-club-competitions";
-import { seasonResultStory } from "../../career/season-narrative";
 import FutboboIcon from "../FutboboIcon";
+import AlbumShell, { albumHostClass } from "./album/AlbumShell";
+import type { AlbumTabId } from "./album/AlbumShell";
+import CareerSpread from "./album/CareerSpread";
+import careerSpreadStyles from "./album/careerSpread.module.css";
+import SeasonResultSpread from "./album/SeasonResultSpread";
+import { RetirementSpread, TransferDeniedSpread, TransferSpread } from "./album/SideSpreads";
+import LuckOverlay from "./album/LuckOverlay";
+import PlayerTab from "./album/tabs/PlayerTab";
+import TeamTab from "./album/tabs/TeamTab";
+import HistoryTab from "./album/tabs/HistoryTab";
+import StatsTab from "./album/tabs/StatsTab";
+import WorldTab from "./album/tabs/WorldTab";
 
 /** Sem rede (ou um deploy novo trocou os arquivos): a base jogada não abre; o save guarda tudo para depois. */
 function YouthPlayUnavailable() {
@@ -125,6 +127,9 @@ function isFormerClubOpponent(state: GameState, clubId: string) {
   );
 }
 
+// Fases da carreira que vivem no álbum.
+const ALBUM_PHASES = new Set<Phase>(["career", "consequence", "season-result", "transfer", "transfer-denied", "retirement-confirm"]);
+
 export default function CareerGame({ initialHallEntry = null, onCloseHallPreview }: CareerGameProps = {}) {
   const [game, setGame] = useState<GameState>(() => initialState());
   const nameRollRef = useRef(0);
@@ -172,7 +177,6 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   const [customClubSecondary, setCustomClubSecondary] = useState("#f4c542");
   const [customClubBadge, setCustomClubBadge] = useState("");
   const [shirtNumberInput, setShirtNumberInput] = useState("10");
-  const [economyFeedback, setEconomyFeedback] = useState("");
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [installHelp, setInstallHelp] = useState(false);
   const [androidInstallOpen, setAndroidInstallOpen] = useState(false);
@@ -391,22 +395,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     });
   }, [game]);
 
+  // O álbum rola como página: cada fase nova começa do topo, sem travar a viewport.
   useEffect(() => {
-    const locksViewport =
-      game.phase === "career" ||
-      game.phase === "consequence" ||
-      game.phase === "transfer" ||
-      game.phase === "transfer-denied" ||
-      game.phase === "retirement-confirm";
-    if (!locksViewport) return;
-
-    document.documentElement.classList.add("futbobo-viewport-locked");
-    document.body.classList.add("futbobo-viewport-locked");
-    window.scrollTo(0, 0);
-    return () => {
-      document.documentElement.classList.remove("futbobo-viewport-locked");
-      document.body.classList.remove("futbobo-viewport-locked");
-    };
+    if (ALBUM_PHASES.has(game.phase)) window.scrollTo(0, 0);
   }, [game.phase]);
 
   // Só a base simulada anima: a escolha e a base jogada não têm relógio.
@@ -457,18 +448,6 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     .sort((a, b) => b.score - a.score);
   const todayChallengeBest = todayChallengeResults[0] ?? null;
   const currentClub = useMemo(() => clubById(displayGame.currentClubId || displayGame.academyClubId), [displayGame.currentClubId, displayGame.academyClubId]);
-  const seasonStory = game.lastResult ? seasonResultStory(game.lastResult, clubById(game.lastResult.clubId).shortName) : null;
-  const seasonClubTitles = game.lastResult?.competitions.filter((competition) => competition.champion) ?? [];
-  const seasonNationalTitles = game.lastResult
-    ? game.nationalHistory.filter((record) => record.season === game.lastResult?.season && record.champion)
-    : [];
-  const seasonWorldCupRecord = game.lastResult
-    ? game.nationalHistory.find((record) => record.season === game.lastResult?.season && record.name === "Copa do Mundo")
-    : null;
-  const seasonTitleCount = seasonClubTitles.length + seasonNationalTitles.length;
-  const seasonBotaoResults = game.lastResult?.botaoResults ?? [];
-  const seasonBotaoWins = seasonBotaoResults.filter(({ result }) => result.champion).length;
-  const seasonBotaoLosses = seasonBotaoResults.length - seasonBotaoWins;
   const currentBotaoMatch = game.pendingBotaoMatches[0] ?? null;
   function setupForPendingBotaoMatch(state: GameState, match: PendingBotaoMatch): BotaoMatchSetup {
     const ratings = ratingsFromAttributes(state.attributes, state.overall);
@@ -556,18 +535,6 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   const position = useMemo(() => positionByKey(displayGame.position), [displayGame.position]);
   const supporterMood = useMemo(() => fanMood(game.fanSupport), [game.fanSupport]);
   const publicImage = useMemo(() => publicImageProfile(displayGame), [displayGame]);
-  const sponsorCareerValue = useMemo(
-    () => [
-      ...game.sponsorHistory,
-      ...(game.activeSponsor ? [game.activeSponsor] : []),
-    ].reduce((total, deal) => {
-      const elapsedSeasons = deal.status === "active"
-        ? Math.max(1, game.season - deal.startSeason)
-        : Math.max(1, deal.endSeason - deal.startSeason);
-      return total + deal.annualValue * elapsedSeasons;
-    }, 0),
-    [game.sponsorHistory, game.activeSponsor, game.season],
-  );
   const legacyStanding = useMemo(() => legacyTierV2(displayGame.legacyPoints), [displayGame.legacyPoints]);
   const marketOffers = useMemo(() => {
     const validIds = new Set(game.transferOffers);
@@ -591,15 +558,6 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   const totalIndividualAwards = useMemo(
     () => awardEntries.reduce((total, [, count]) => total + count, 0),
     [awardEntries],
-  );
-  const seasonCeremonyNomination = useMemo(
-    () => [...(game.lastResult?.awardNominations ?? [])]
-      .sort((a, b) => awardTierWeight(b.award) - awardTierWeight(a.award) || Number(b.won) - Number(a.won))[0] ?? null,
-    [game.lastResult],
-  );
-  const totalAwardNominations = useMemo(
-    () => game.history.reduce((total, record) => total + record.awardNominations.length, 0),
-    [game.history],
   );
   const clubCareerSummary = useMemo(() => {
     const byClub = new Map<string, {
@@ -664,31 +622,13 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     if (displayGame.nationalTrophies > 0) clubTitles.push({ label: "Títulos pela Seleção", shortLabel: "SEL", count: displayGame.nationalTrophies });
     return clubTitles.slice(0, 5);
   }, [displayGame.trophyCabinet, displayGame.nationalTrophies]);
-  const statistics = useMemo(() => {
-    const history = game.history;
-    const by = <K extends keyof SeasonRecord>(key: K) => [...history].sort((a, b) => Number(b[key] ?? 0) - Number(a[key] ?? 0))[0] ?? null;
-    const bestSeason = [...history].sort((a, b) =>
-      (b.averageRating ?? seasonAverageRating(b.performanceScore ?? 0, game.seed, b.season)) -
-      (a.averageRating ?? seasonAverageRating(a.performanceScore ?? 0, game.seed, a.season)) ||
-      b.goals + b.assists - a.goals - a.assists,
-    )[0] ?? null;
-    return {
-      recent: history.slice(-10),
-      bestSeason,
-      mostGoals: by("goals"),
-      mostAssists: by("assists"),
-      mostAppearances: by("appearances"),
-      highestOverall: by("overall"),
-      highestValue: [...history].sort((a, b) => (b.marketValue ?? 0) - (a.marketValue ?? 0))[0] ?? null,
-      goalRate: game.stats.appearances ? game.stats.goals / game.stats.appearances : 0,
-      contributionRate: game.stats.appearances ? (game.stats.goals + game.stats.assists) / game.stats.appearances : 0,
-      careerRating: history.length
-        ? history.reduce((total, record) => total + (record.averageRating ?? seasonAverageRating(record.performanceScore ?? 0, game.seed, record.season)), 0) / history.length
-        : 0,
-      manOfTheMatchAwards: history.reduce((total, record) => total + (record.manOfTheMatchAwards ?? 0), 0),
-    };
-  }, [game.history, game.seed, game.stats.appearances, game.stats.goals, game.stats.assists]);
   const currentEvent = eventForState(game);
+  const albumTab: AlbumTabId = activeTab === "life" || activeTab === "legacy" ? "event" : activeTab;
+  // A figurinha do jogador usa o boneco da mesa, na camisa do clube atual (ou o número, se os bonecos estiverem desligados).
+  const albumAppearance = useMemo(
+    () => appSettings.characterButtonsEnabled !== false ? { ...game.playerAppearance, kitPattern: teamKitPattern(game.seed, currentClub.id) } : null,
+    [appSettings.characterButtonsEnabled, game.playerAppearance, game.seed, currentClub.id],
+  );
 
   useEffect(() => {
     if (!luckSpin) return;
@@ -714,7 +654,6 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   }, [luckSpin, appSettings.finalMatchMode]);
   const headerSeason = game.phase === "consequence" || game.phase === "season-result" ? game.lastResult?.season ?? game.season : game.season;
   const headerAge = game.phase === "consequence" || game.phase === "season-result" ? game.lastResult?.age ?? game.age : game.age;
-  const nationalTierLabel: Record<NationalTier, string> = { none: "Fora dos planos", sub17: "Seleção Sub-17", sub20: "Seleção Sub-20", olympic: "Seleção Olímpica", main: "Seleção Principal" };
 
   function vibrate() {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(18);
@@ -2027,79 +1966,6 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     vibrate();
   }
 
-  function buyCareerItem(item: "recovery" | "media" | "coach" | "potential" | "corruption") {
-    const prices = { recovery: 350_000, media: 600_000, coach: 1_200_000, potential: 2_500_000, corruption: 2_000_000 };
-    const price = prices[item];
-    const purchaseKey = `${game.season}:${item}`;
-    if (game.spendableMoney < price || game.economyPurchases.includes(purchaseKey)) return;
-    const corruptionSucceeded = item === "corruption" && seeded(game.seed, game.season * 1877 + game.economyPurchases.length * 31) < 0.5;
-    const corruptionBanYears = 5;
-    setGame((current) => {
-      const next = {
-        ...current,
-        money: current.money - price,
-        spendableMoney: current.spendableMoney - price,
-        economyPurchases: [...current.economyPurchases, purchaseKey],
-      };
-      if (item === "recovery") {
-        next.fitness = clamp(current.fitness + 12);
-        next.morale = clamp(current.morale + 7);
-      } else if (item === "media") {
-        next.mediaRelation = clamp(current.mediaRelation + 10);
-        next.lifeBalance = clamp(current.lifeBalance + 5);
-        next.followers = current.followers + Math.max(25_000, Math.round(current.followers * 0.04));
-      } else if (item === "coach") {
-        next.attributes = shiftPlayerAttributes(current.attributes, 1, current.position, current.seed + current.season * 613);
-      } else if (item === "potential") {
-        next.potential = clamp(current.potential < 80 ? current.potential + 2 : current.potential - 2, current.overall, 99);
-      } else if (corruptionSucceeded) {
-        next.corruptionGuaranteedSeason = current.season;
-        next.discipline = clamp(current.discipline - 18);
-        next.mediaRelation = clamp(current.mediaRelation - 8);
-      } else {
-        next.phase = "transfer" as Phase;
-        next.isFreeAgent = true;
-        next.freeAgentSinceSeason = current.season;
-        next.forcedFreeAgentUntilSeason = current.season + corruptionBanYears;
-        next.transferOffers = [];
-        next.contractYears = 0;
-        next.annualSalary = 0;
-        next.activeSponsor = null;
-        next.managerTrust = 0;
-        next.fanSupport = clamp(current.fanSupport - 30);
-        next.reputation = clamp(current.reputation - 35);
-        next.discipline = clamp(current.discipline - 45);
-        next.transferRequested = true;
-        next.transferStatus = {
-          success: false,
-          chance: 50,
-          headline: "O esquema foi descoberto",
-          text: `A investigação expulsou você do mercado por ${corruptionBanYears} anos. Nenhum clube poderá contratar você antes de ${current.season + corruptionBanYears}.`,
-        };
-        next.newsFeed = [
-          `${current.season}: tentativa de corrupção descoberta; ${current.name} foi afastado do futebol por ${corruptionBanYears} anos.`,
-          ...current.newsFeed,
-        ].slice(0, 16);
-      }
-      return next;
-    });
-    setEconomyFeedback(
-      item === "corruption"
-        ? corruptionSucceeded
-          ? "O acordo ficou escondido. O título nacional desta temporada está garantido — mas sua disciplina e sua imagem já carregam a escolha."
-          : `O pagamento deixou rastros. Você foi banido do mercado por ${corruptionBanYears} anos e terá de atravessar esse período como agente livre.`
-        : item === "potential"
-        ? "A recalibração foi concluída. O relatório continua confidencial: você só descobrirá o efeito acompanhando sua evolução."
-        : item === "coach"
-          ? "O trabalho individual acrescentou um pequeno ganho técnico aos seus atributos."
-          : item === "media"
-            ? "A nova equipe reorganizou sua imagem, sua agenda e seu alcance."
-            : "A estrutura de recuperação devolveu energia e tranquilidade.",
-    );
-    setToast(item === "corruption" ? (corruptionSucceeded ? "Esquema fechado — título garantido" : "Esquema descoberto") : `${formatMoney(price)} investidos na carreira`);
-    vibrate();
-  }
-
   function buyCycleShopItem(itemId: CycleShopItemId, countryId?: string) {
     // O Treino especial não se compra: abre (ou retoma) o treino por cima da loja.
     if (itemId === "special-training") {
@@ -2452,7 +2318,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   }
 
   const shellPhase = hallPreview ? "summary" : game.phase;
-  const shellClass = `app-shell app-shell-${shellPhase}${shellPhase === "welcome" ? " app-shell-welcome" : ""}`;
+  // A carreira (decisão, abas, consequência, fim de temporada e mercado) é o álbum: página que rola, sem a casca antiga.
+  const albumHost = !hallPreview && ALBUM_PHASES.has(game.phase);
+  const shellClass = `app-shell app-shell-${shellPhase}${shellPhase === "welcome" ? " app-shell-welcome" : ""}${albumHost ? ` ${albumHostClass}` : ""}`;
 
   if (monteCarloReport) {
     return (
@@ -3312,295 +3180,60 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       )}
 
       {(game.phase === "career" || game.phase === "consequence" || game.phase === "season-result" || game.phase === "transfer" || game.phase === "transfer-denied" || game.phase === "retirement-confirm") && (
-        <section className={`career-shell career-phase-${game.phase} career-tab-${activeTab} screen-enter`}>
-          <header className="career-header">
-            <div className="club-identity"><ClubBadge club={currentClub} size="sm" /><span><small>{headerSeason}</small><strong>{currentClub.shortName}</strong></span></div>
-            <div className="career-age"><strong>{headerAge}</strong><span>ANOS</span></div>
-            <div className="player-identity"><span><small>OVR</small><strong>{game.overall}</strong></span><div className="mini-avatar">{game.position}</div></div>
-          </header>
-          <div className="career-bars career-bars-four">
-            <Progress label="Moral" value={game.morale} color="#2ca8ff" />
-            <Progress label="Físico" value={game.fitness} color={game.fitness < 55 ? "#ff5a4e" : "#63e36b"} />
-            <Progress label="Prestígio" value={game.reputation} color="#ffc72c" />
-            <Progress label={supporterMood.label} value={game.fanSupport} color={supporterMood.color} />
-          </div>
-          <div className={`career-status-strip ${game.phase === "retirement-confirm" ? "retirement-open" : ""}`}>
-            <span><small>STATUS</small><strong>{ROLE_LABELS[game.squadRole]}</strong></span>
-            <span><small>TREINADOR</small><strong>{Math.round(game.managerTrust)}%</strong></span>
-            <span><small>CONTRATO</small><strong>{game.contractYears ? `${game.contractYears} ano${game.contractYears > 1 ? "s" : ""}` : "Expirado"}</strong></span>
-            {game.phase !== "retirement-confirm" && <button className="retirement-trigger" onClick={requestRetirement}><small>CARREIRA</small><strong><FutboboIcon name="hourglass" /> Aposentar</strong></button>}
-          </div>
+        <AlbumShell
+          club={currentClub}
+          tab={game.phase === "career" ? albumTab : null}
+          onTab={changeTab}
+          showTabs={game.phase === "career"}
+          label={`Álbum da carreira de ${game.name}, temporada ${headerSeason}`}
+          spreadClassName={(game.phase === "career" && albumTab === "event") || game.phase === "consequence" ? careerSpreadStyles.flowSpread : undefined}
+        >
+        {luckSpin && <LuckOverlay choiceLabel={luckSpin.event.choices[luckSpin.choiceIndex]?.label ?? ""} chance={luckSpin.event.choices[luckSpin.choiceIndex]?.luck?.chance ?? 50} />}
 
-          {luckSpin && (
-            <div className="luck-roulette-overlay" role="status" aria-live="assertive">
-              <div className="luck-roulette-card">
-                <span className="result-kicker">ESCOLHA DE SORTE</span>
-                <div className="roulette-wheel"><i /><b>◆</b></div>
-                <h2>A sorte está girando...</h2>
-                <p>O resultado da sua aposta será revelado em instantes.</p>
-              </div>
-            </div>
-          )}
-
-          {game.phase === "career" && activeTab === "event" && (
-            <div className="event-stage">
-              <div className="market-strip"><span><small>MERCADO</small><strong>{game.transferCooldownSeason >= game.season ? "Pedido já feito nesta temporada" : "Quer mudar de camisa?"}</strong></span><div className="market-actions"><button onClick={requestLoan} disabled={game.transferCooldownSeason >= game.season || game.isFreeAgent || game.contractYears <= 0 || Boolean(game.activeLoan || game.loanParentClubId)} title={game.squadRole === "titular" || game.squadRole === "estrela" ? "35% de chance" : "100% de chance"}>⇄ Empréstimo ({game.squadRole === "titular" || game.squadRole === "estrela" ? "35%" : "100%"})</button><button onClick={requestTransfer} disabled={game.transferCooldownSeason >= game.season}>⇄ Pedir transferência</button></div></div>
-              {game.currentObjective && <div className="objective-card">
-                <span>META DO TREINADOR</span>
-                <strong>{game.currentObjective.label}</strong>
-                <p>{game.currentObjective.description}</p>
-                <small>Recompensa: +{game.currentObjective.reward} confiança · Falha: −{game.currentObjective.penalty}</small>
-                <WorldPulseButton state={game} onOpen={() => changeTab("world")} />
-              </div>}
-              <div className="event-art" data-icon={currentEvent.icon}><span className="event-tag">{currentEvent.tag}</span><div className="event-watermark">{currentEvent.icon}</div></div>
-              <article className="event-card">
-                <div className="event-heading"><span>{game.currentEventId === "debut" ? "PRIMEIRO CAPÍTULO" : `TEMPORADA ${game.season}`}</span><h1>{currentEvent.title}</h1><p>{currentEvent.description}</p></div>
-                <div className="choice-list" data-choice-count={currentEvent.choices.length}>
-                  {currentEvent.choices.map((choice, index) => <button key={choice.label} className="decision-button" onClick={() => chooseEvent(index)}><span><strong>{choice.label}</strong><small>{choice.hint}</small></span><b>→</b></button>)}
-                </div>
-              </article>
-            </div>
-          )}
-
-          {game.phase === "consequence" && game.lastConsequence && (
-            <div className={`consequence-stage screen-enter ${game.lastConsequence.luckOutcome ? `luck-${game.lastConsequence.luckOutcome}` : ""}`}>
-              <span className="result-kicker">CONSEQUÊNCIAS DA ESCOLHA</span>
-              <div className="consequence-symbol">↯</div>
-              <small>VOCÊ ESCOLHEU</small>
-              <h1>{game.lastConsequence.choice}</h1>
-              <p>{game.lastConsequence.resultText}</p>
-              <div className="consequence-list">
-                {game.lastConsequence.changes.map((change) => <span key={change} className={isNegativeConsequence(change) ? "negative" : "positive"}>{change}</span>)}
-              </div>
-              <div className="consequence-note"><strong>{game.lastConsequence.headline}</strong><span>Agora veja como essa decisão atravessou a temporada.</span></div>
-              <div className="mobile-action-dock consequence-action-dock">
-                <button className="primary-button" onClick={continueAfterConsequence}>{game.retireAfterSeason ? "Ver resultado da última temporada" : "Ver resultado da temporada"} <span>→</span></button>
-                <div className="consequence-autoplay" aria-live="polite">
-                  <span>Avançando automaticamente em 5 segundos</span>
-                  <div><i /></div>
-                </div>
-              </div>
-            </div>
+          {((game.phase === "career" && albumTab === "event") || (game.phase === "consequence" && game.lastConsequence)) && (
+            <CareerSpread
+              mode={game.phase === "consequence" ? "consequence" : "decision"}
+              game={game}
+              club={currentClub}
+              event={currentEvent}
+              season={headerSeason}
+              age={headerAge}
+              positionName={position.name}
+              leagueName={leagueById(game.currentLeagueId || currentClub.leagueId).name}
+              nationName={nationCountry.name}
+              supporter={supporterMood}
+              appearance={albumAppearance}
+              consequence={game.phase === "consequence" ? game.lastConsequence : null}
+              market={{
+                loanChance: game.squadRole === "titular" || game.squadRole === "estrela" ? 35 : 100,
+                loanDisabled: game.transferCooldownSeason >= game.season || game.isFreeAgent || game.contractYears <= 0 || Boolean(game.activeLoan || game.loanParentClubId),
+                transferDisabled: game.transferCooldownSeason >= game.season,
+                cooldown: game.transferCooldownSeason >= game.season,
+                onLoan: requestLoan,
+                onTransfer: requestTransfer,
+              }}
+              continueLabel={game.retireAfterSeason ? "Ver resultado da última temporada" : "Ver resultado da temporada"}
+              onChoose={chooseEvent}
+              onContinue={continueAfterConsequence}
+              onRetire={requestRetirement}
+              onOpenWorld={() => changeTab("world")}
+            />
           )}
 
           {game.phase === "season-result" && game.lastResult && (
-            <div className="result-stage screen-enter">
-              <span className="result-kicker">TEMPORADA {game.lastResult.season}</span>
-              <div className={`result-symbol ${game.lastResult.title ? "winner" : game.lastResult.breakoutBonus > 0 ? "breakout" : ""}`}><FutboboIcon name={game.lastResult.title ? "trophy" : game.lastResult.development < 0 ? "trend-down" : "trend-up"} /></div>
-              <h1>{seasonStory?.headline}</h1>
-              <p>{seasonStory?.detail}</p>
-              <div className="season-stat-grid">
-                <Metric label="Jogos" value={game.lastResult.appearances} />
-                <Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.lastResult.cleanSheets : game.lastResult.goals} tone="green" />
-                <Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.lastResult.goalsConceded : game.lastResult.assists} />
-                <Metric label="Novo OVR" value={game.overall} tone={game.lastResult.development > 0 ? "gold" : game.lastResult.development < 0 ? "danger" : "default"} />
-              </div>
-              <div className={`season-rating-card rating-${(game.lastResult.averageRating ?? 6) >= 8 ? "elite" : (game.lastResult.averageRating ?? 6) >= 7 ? "good" : "regular"}`}>
-                <div><span>AVALIAÇÃO MÉDIA</span><strong>{(game.lastResult.averageRating ?? seasonAverageRating(game.lastResult.performanceScore, game.seed, game.lastResult.season)).toFixed(1)}</strong></div>
-                <p>{(game.lastResult.averageRating ?? 6) >= 8.5 ? "Uma temporada de nível mundial." : (game.lastResult.averageRating ?? 6) >= 7.5 ? "Você foi decisivo e constante." : (game.lastResult.averageRating ?? 6) >= 6.7 ? "Um ano sólido, com espaço para crescer." : "O rendimento ficou abaixo da cobrança."}</p>
-                <b>{game.lastResult.manOfTheMatchAwards ?? 0}<small>MELHOR EM CAMPO</small></b>
-              </div>
-              <section className="season-result-section">
-                <header className="season-result-section-heading"><span>DESEMPENHO</span><small>Como seu ano mudou o jogador</small></header>
-                <div className={`season-development ${game.lastResult.development > 0 ? "up" : game.lastResult.development < 0 ? "down" : ""}`}>
-                  <span>EVOLUÇÃO NA TEMPORADA</span>
-                  <strong>{game.lastResult.development > 0 ? "+" : ""}{game.lastResult.development} OVR</strong>
-                  <small>{game.lastResult.development > 2 ? "Você está alcançando o nível profissional rapidamente." : game.lastResult.development > 0 ? "Mais um passo na direção da elite." : game.lastResult.development === 0 ? "Seu nível se manteve." : "A carreira também cobra seus anos difíceis."}</small>
-                </div>
-                {game.lastResult.breakoutBonus > 0 && (
-                  <div className="breakout-result">
-                    <div><span>⚡ EXPLOSÃO DE TALENTO</span><strong>Temporada fora da curva</strong><p>Você jogou tão bem que rompeu a evolução normal da carreira.</p></div>
-                    <b>+{game.lastResult.breakoutBonus}<small>OVR EXTRA</small></b>
-                  </div>
-                )}
-                {game.lastResult.europeanSpotlight > 0 && (
-                  <div className="european-spotlight">
-                    <span>VITRINE EUROPEIA</span>
-                    <strong>+{game.lastResult.europeanSpotlight} prestígio</strong>
-                    <p>Seu desempenho ganhou alcance internacional{game.lastResult.europeanDevelopmentBonus > 0 ? ` e acelerou sua evolução em +${game.lastResult.europeanDevelopmentBonus} OVR` : ""}.</p>
-                  </div>
-                )}
-                <div className="season-compact-grid">
-                  <div className="discipline-result"><span>DISCIPLINA</span><strong>{game.lastResult.yellowCards} amarelos · {game.lastResult.redCards} vermelhos</strong></div>
-                  {positionByKey(game.position).zone !== "gol" && (
-                    <div className="defensive-season-result">
-                      <span>TRABALHO SEM A BOLA</span>
-                      <strong>{game.lastResult.tackles} desarmes</strong>
-                    </div>
-                  )}
-                </div>
-              </section>
-              <section className="season-result-section">
-                <header className="season-result-section-heading"><span>BASTIDORES</span><small>Dinheiro, meta e contrato</small></header>
-                <section className="season-finance-card legacy-ui-hidden">
-                  <header><span>PATRIMÔNIO ATUAL</span><strong>{formatMoney(game.lastResult.balanceAfter ?? game.money)}</strong></header>
-                  <div>
-                    <span><small>Salário</small><b>+{formatMoney(game.lastResult.salaryIncome ?? 0)}</b></span>
-                    <span><small>Patrocínios</small><b>+{formatMoney(game.lastResult.sponsorIncome ?? 0)}</b></span>
-                    <span className="expense"><small>Custos</small><b>−{formatMoney(game.lastResult.livingCost ?? 0)}</b></span>
-                  </div>
-                  <p>Saldo anterior: {formatMoney(game.lastResult.balanceBefore ?? 0)} · +{formatMoney(game.lastResult.spendableIncome ?? 0)} liberados para compras · caixa livre atual: {formatMoney(game.lastResult.spendableAfter ?? game.spendableMoney)}.</p>
-                </section>
-                {game.lastResult.objectiveResult && <div className={`objective-result ${game.lastResult.objectiveResult.completed ? "completed" : "failed"}`}><span>{game.lastResult.objectiveResult.completed ? "META CUMPRIDA" : "META PERDIDA"}</span><strong>{game.lastResult.objectiveResult.label}</strong><p>{game.lastResult.objectiveResult.text}</p></div>}
-                {game.lastResult.promotion && <div className="objective-result completed"><span>ACESSO CONQUISTADO</span><strong>O clube subiu de divisão</strong><p>{game.lastResult.promotion}</p></div>}
-                {game.youthLoanDecision && <div className="contract-expired"><span>PLANO DE DESENVOLVIMENTO</span><strong>O clube recomenda um empréstimo</strong><p>Você poderá buscar mais minutos em outro projeto ou continuar disputando espaço no elenco atual.</p></div>}
-                {game.forcedClubExit && <div className="contract-expired"><span>VENDA OBRIGATÓRIA</span><strong>O clube colocou você no mercado</strong><p>Seu overall e seu rendimento ficaram muito abaixo da exigência do elenco. Sem status de ídolo, você terá de escolher outro destino.</p></div>}
-                {game.contractYears === 0 && (
-                  <div className="contract-expired">
-                    <span>CONTRATO ENCERRADO</span>
-                    <strong>{game.renewalDenied ? "O clube optou por não renovar" : "Seu futuro está aberto"}</strong>
-                    <p>{game.renewalDenied ? "Depois de uma temporada difícil, a diretoria decidiu não seguir com você. Na próxima tela você precisa escolher um novo clube." : "Na próxima tela você poderá renovar ou escolher um novo clube."}</p>
-                  </div>
-                )}
-              </section>
-              {(seasonTitleCount > 0 || seasonBotaoResults.length > 0) && (
-                <section className="season-title-parade">
-                  <header>
-                    <span>TAÇAS DA TEMPORADA</span>
-                    <strong>{seasonTitleCount > 0 ? `${seasonTitleCount} volta${seasonTitleCount > 1 ? "s" : ""} olímpica${seasonTitleCount > 1 ? "s" : ""}` : "Nenhuma taça levantada"}</strong>
-                  </header>
-                  {seasonTitleCount > 0 && (
-                    <div className="season-title-list">
-                      {seasonClubTitles.map((competition) => (
-                        <article key={`title-${competition.id}`}>
-                          <CompetitionBadge competition={competition} leagueId={game.lastResult?.leagueId || game.currentLeagueId || currentClub.leagueId} />
-                          <div><small>CAMPEÃO</small><strong>{competition.name}</strong></div>
-                          <b><FutboboIcon name="trophy" /></b>
-                        </article>
-                      ))}
-                      {seasonNationalTitles.map((record) => (
-                        <article key={`national-title-${record.season}-${record.name}`} className="national-season-title">
-                          <NationBadge country={nationCountry} size="sm" />
-                          <div><small>CAMPEÃO PELA SELEÇÃO</small><strong>{record.name}</strong></div>
-                          <b><FutboboIcon name="trophy" /></b>
-                        </article>
-                      ))}
-                    </div>
-                  )}
-                  {seasonBotaoResults.length > 0 && (
-                    <div className="played-finals-summary">
-                      <header>
-                        <span>DECIDIDO NO FUTEBOL DE BOTÃO</span>
-                        <small>Finais e mata-matas da temporada</small>
-                      </header>
-                      <div>
-                        <b><strong>{seasonBotaoResults.length}</strong><small>DISPUTADAS</small></b>
-                        <b className="won"><strong>{seasonBotaoWins}</strong><small>GANHAS</small></b>
-                        <b className="lost"><strong>{seasonBotaoLosses}</strong><small>PERDIDAS</small></b>
-                      </div>
-                    </div>
-                  )}
-                </section>
-              )}
-              {game.lastResult.competitions.some((competition) => !competition.champion) && (
-                <section className="season-result-section season-campaigns">
-                  <header className="season-result-section-heading"><span>OUTRAS CAMPANHAS</span><small>Onde a caminhada terminou</small></header>
-                  <div className="competition-grid">
-                    {game.lastResult.competitions.filter((competition) => !competition.champion).map((competition) => <article key={competition.id} className="competition-card"><CompetitionBadge competition={competition} leagueId={game.lastResult?.leagueId || game.currentLeagueId || currentClub.leagueId} /><div><strong>{competition.name}</strong><small>{competition.stage}</small></div></article>)}
-                  </div>
-                </section>
-              )}
-              {game.lastResult.medicalRecord && (
-                <section className={`season-medical-card severity-${game.lastResult.medicalRecord.severity}`}>
-                  <header><span>DEPARTAMENTO MÉDICO</span><b>{game.lastResult.medicalRecord.severity.toLocaleUpperCase("pt-BR")}</b></header>
-                  <strong>{game.lastResult.medicalRecord.name}</strong>
-                  <div><span><b>{game.lastResult.medicalRecord.recoveryMonths}</b><small>MESES</small></span><span><b>{game.lastResult.medicalRecord.matchesMissed}</b><small>JOGOS FORA</small></span><span><b>{game.lastResult.medicalRecord.recurring ? "SIM" : "NÃO"}</b><small>RECORRENTE</small></span></div>
-                </section>
-              )}
-              {game.lastResult.twist && <div className={`season-twist ${game.lastResult.twist.includes("improvável") ? "positive" : "negative"}`}><span>O IMPREVISTO DA TEMPORADA</span><p>{game.lastResult.twist}</p></div>}
-              {game.lastResult.nationalNote && <div className="season-national-note"><NationBadge country={nationCountry} size="sm" /><p>{game.lastResult.nationalNote}</p></div>}
-              {seasonWorldCupRecord?.tournamentStats && (
-                <section className={`world-cup-stat-report ${seasonWorldCupRecord.champion ? "champion" : ""}`}>
-                  <header>
-                    <div><span>RELATÓRIO DA COPA DO MUNDO</span><strong>{seasonWorldCupRecord.stage}</strong></div>
-                    <NationBadge country={nationCountry} size="sm" />
-                  </header>
-                  <div className="world-cup-stat-totals">
-                    <Metric label="Jogos" value={seasonWorldCupRecord.tournamentStats.appearances} />
-                    <Metric label="Gols" value={seasonWorldCupRecord.tournamentStats.goals} tone="gold" />
-                    <Metric label="Assistências" value={seasonWorldCupRecord.tournamentStats.assists} tone="green" />
-                    <Metric label="G+A" value={seasonWorldCupRecord.tournamentStats.goals + seasonWorldCupRecord.tournamentStats.assists} />
-                  </div>
-                  <div className="world-cup-stat-split">
-                    <span><small>FASE DE GRUPOS · SIMULADA</small><strong>{seasonWorldCupRecord.tournamentStats.groupAppearances}J · {seasonWorldCupRecord.tournamentStats.groupGoals}G · {seasonWorldCupRecord.tournamentStats.groupAssists}A</strong></span>
-                    <span><small>MATA-MATA</small><strong>{seasonWorldCupRecord.tournamentStats.knockoutAppearances}J · {seasonWorldCupRecord.tournamentStats.knockoutGoals}G · {seasonWorldCupRecord.tournamentStats.knockoutAssists}A</strong></span>
-                  </div>
-                  {seasonWorldCupRecord.tournamentStats.goals >= 8 && (
-                    <div className="world-cup-ballon-surge"><b>◉</b><span><strong>A eleição mudou de figura</strong><small>Oito ou mais gols na Copa colocaram seu nome no centro da disputa pela Bola de Ouro.</small></span></div>
-                  )}
-                </section>
-              )}
-              {seasonWorldCupRecord?.champion && (() => {
-                // Campeão do mundo: a festa do trio elétrico (só existe para a Copa do Mundo).
-                const paradeCountry = seasonWorldCupRecord.countryId ?? game.nationality;
-                const paradeSeason = game.lastResult.season;
-                return (
-                  <ParadeLaunchCard
-                    key={`parade-${paradeSeason}`}
-                    seed={game.seed}
-                    season={paradeSeason}
-                    countryId={paradeCountry}
-                    playerName={game.name}
-                    appearance={game.playerAppearance}
-                    number={game.number}
-                    stars={paradeStars(paradeCountry, careerWorldCupTitles(game.nationalHistory, paradeCountry, paradeSeason, game.nationality))}
-                  />
-                );
-              })()}
-              {(game.lastResult.awards.length > 0 || game.lastResult.awardNominations.length > 0) && (
-                <section className={`season-awards-showcase ${game.lastResult.awardNominations.some((nomination) => nomination.award === "Bola de Ouro") ? "has-ballon-dor" : ""}`}>
-                  <div className="season-awards-heading">
-                    <span>NOITE DE PREMIAÇÃO</span>
-                    <strong>{seasonCeremonyNomination?.award === "Bola de Ouro" ? "Você está entre os três melhores do mundo" : game.lastResult.awards.length > 1 ? `${game.lastResult.awards.length} prêmios na mesma temporada` : seasonCeremonyNomination?.won ? "Seu nome foi chamado" : "Você está entre os finalistas"}</strong>
-                    <p>O resultado só aparece quando o envelope for aberto.</p>
-                  </div>
-                  <div className="season-awards-list">
-                    {seasonCeremonyNomination?.award === "Bola de Ouro" ? (
-                      // A Bola de Ouro tem gala própria (top 3 no palco); os outros prêmios seguem no envelope.
-                      <BallonDorGalaCard
-                        key={`ballon-dor-${game.lastResult.season}`}
-                        seed={game.seed}
-                        season={game.lastResult.season}
-                        playerName={game.name}
-                        appearance={game.playerAppearance}
-                        number={game.number}
-                        clubId={game.currentClubId}
-                        nationality={game.nationality}
-                        finalists={seasonCeremonyNomination.finalists ?? awardFinalists(game.name, "Bola de Ouro", game.seed, game.lastResult.season, game.rivals)}
-                        won={seasonCeremonyNomination.won}
-                        winner={seasonCeremonyNomination.winner}
-                        rivals={game.rivals}
-                      />
-                    ) : seasonCeremonyNomination && (
-                      <AwardCeremony
-                        key={`${seasonCeremonyNomination.award}-${game.lastResult.season}`}
-                        award={seasonCeremonyNomination.award}
-                        playerName={game.name}
-                        seed={game.seed}
-                        season={game.lastResult.season}
-                        won={seasonCeremonyNomination.won}
-                        winner={seasonCeremonyNomination.winner}
-                        finalists={seasonCeremonyNomination.finalists}
-                      />
-                    )}
-                    {[...game.lastResult.awards]
-                      .sort((a, b) => awardTierWeight(b) - awardTierWeight(a))
-                      .filter((award) => award !== seasonCeremonyNomination?.award)
-                      .map((award) => <AwardReveal key={award} award={award} />)}
-                  </div>
-                </section>
-              )}
-              <div className="result-details"><span>Valor de mercado <strong>{formatMoney(game.lastResult.marketValue)}</strong></span>{game.lastResult.calledUp && <span className="callup-badge"><FutboboIcon name="globe" /> Convocado pela Seleção</span>}</div>
-              <div className="mobile-action-dock">
-                <button className="primary-button" onClick={continueAfterResult}>{game.retireAfterSeason ? "Concluir carreira" : game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"} <span>→</span></button>
-              </div>
-            </div>
+            <SeasonResultSpread
+              game={game}
+              club={currentClub}
+              continueLabel={game.retireAfterSeason ? "Concluir carreira" : game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"}
+              onContinue={continueAfterResult}
+            />
           )}
 
           {game.phase === "transfer" && (
-            <TransferMarketScreen
-              state={game}
-              currentClub={currentClub}
+            <TransferSpread
+              game={game}
+              club={currentClub}
+              appearance={albumAppearance}
               offers={marketOffers}
               renewalOffer={renewalOffer}
               onChoose={chooseTransfer}
@@ -3611,497 +3244,35 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           )}
 
           {game.phase === "transfer-denied" && game.transferStatus && (
-            <div className="transfer-denied-stage screen-enter">
-              <span className="result-kicker">{game.transferStatus.headline === "O clube recusou o empréstimo" ? "PEDIDO DE EMPRÉSTIMO" : "PEDIDO DE TRANSFERÊNCIA"}</span>
-              <div className="denied-symbol">×</div>
-              <h1>{game.transferStatus.headline}</h1>
-              <p>{game.transferStatus.text}</p>
-              <div className="fan-backlash"><span>REAÇÃO DA TORCIDA</span><strong>{supporterMood.label}</strong><div><i style={{ width: `${game.fanSupport}%` }} /></div><small>{game.transferStatus.headline === "O clube recusou o empréstimo" ? "O clube quer manter você no elenco" : "Torcida e comissão perderam confiança"}</small></div>
-              <div className="mobile-action-dock">
-                <button className="primary-button" onClick={continueAfterDeniedTransfer}>Encarar a temporada <span>→</span></button>
-              </div>
-            </div>
+            <TransferDeniedSpread game={game} club={currentClub} appearance={albumAppearance} supporter={supporterMood} onContinue={continueAfterDeniedTransfer} />
           )}
 
           {game.phase === "retirement-confirm" && (
-            <div className="retirement-stage screen-enter">
-              <span className="result-kicker">DECISÃO DE CARREIRA</span>
-              <div className="retirement-symbol"><FutboboIcon name="hourglass" /></div>
-              <h1>Pendurar as chuteiras agora?</h1>
-              <p>Você pode encerrar a carreira em qualquer idade. O legado será fechado exatamente como está — esta decisão é definitiva.</p>
-              <div className="retirement-recap">
-                <Metric label="Idade" value={`${game.age} anos`} />
-                <Metric label="Temporadas" value={game.history.length} />
-                <Metric label="OVR atual" value={game.overall} tone="gold" />
-                <Metric label="Legado" value={game.legacyPoints} tone="green" />
-              </div>
-              <div className="retirement-actions mobile-action-dock">
-                <button className="danger-button" onClick={confirmRetirement}>Confirmar aposentadoria <span>→</span></button>
-                <button className="secondary-button" onClick={cancelRetirement}>Ainda não</button>
-              </div>
-            </div>
+            <RetirementSpread game={game} club={currentClub} appearance={albumAppearance} onConfirm={confirmRetirement} onCancel={cancelRetirement} />
           )}
 
-          {activeTab === "history" && game.phase === "career" && (
-            <CareerTimeline state={game} />
+          {game.phase === "career" && albumTab === "profile" && (
+            <PlayerTab
+              game={game}
+              club={currentClub}
+              showAppearance={appSettings.characterButtonsEnabled !== false}
+              onEditAppearance={() => setAppearanceEditorOpen(true)}
+              positionChange={{
+                open: positionChangeOpen,
+                setOpen: setPositionChangeOpen,
+                target: positionChangeTarget,
+                setTarget: setPositionChangeTarget,
+                feedback: positionChangeFeedback,
+                setFeedback: setPositionChangeFeedback,
+                attempt: attemptPositionChange,
+              }}
+            />
           )}
-          {activeTab === "profile" && game.phase === "career" && (
-            <div className="panel-screen screen-enter">
-              <div className="profile-hero"><div className="academy-avatar"><span>{game.number}</span><small>{game.position}</small></div><div><span>{game.archetype}</span><h2>{game.name}</h2><p>{position.style} · {game.foot}</p></div></div>
-              {appSettings.characterButtonsEnabled !== false && (
-                <section className="player-appearance-profile">
-                  <PlayerAppearancePortrait appearance={{ ...game.playerAppearance, kitPattern: teamKitPattern(game.seed, currentClub.id) }} primary={currentClub.primary} secondary={currentClub.secondary} size={112} label={`Visual de ${game.name}`} />
-                  <div><span>IDENTIDADE VISUAL</span><strong>Seu rosto dentro da mesa</strong><p>O personagem permanece; o uniforme muda com cada transferência.</p></div>
-                  <button type="button" className="secondary-button" onClick={() => setAppearanceEditorOpen(true)}>Personalizar</button>
-                </section>
-              )}
-              <PlayerReworkPanels state={game} />
-              <section className={`player-story-profile legacy-ui-hidden story-${playerStoryById(game.playerStoryId).tone}`}>
-                <header><b>{playerStoryById(game.playerStoryId).icon}</b><div><span>HISTÓRIA DO JOGADOR</span><strong>{playerStoryById(game.playerStoryId).title}</strong></div><em>{game.storyLog.length} capítulo{game.storyLog.length === 1 ? "" : "s"}</em></header>
-                <p>{playerStoryById(game.playerStoryId).description}</p>
-                {game.storyLog.length > 0 && (
-                  <div className="player-story-log">
-                    {[...game.storyLog].reverse().slice(0, 4).map((entry) => (
-                      <article key={`${entry.season}-${entry.chapter}`}>
-                        <span>{entry.season}</span><div><strong>{entry.title}</strong><small>{entry.choice}</small><p>{entry.result}</p></div>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </section>
-              <div className="position-change-card">
-                <div><span>FUNÇÃO EM CAMPO</span><strong>{position.name}</strong><p>Você pode pedir ao treinador uma mudança. Quanto mais velho e mais distante da sua função atual, maior o risco de recusa.</p></div>
-                <button
-                  className="secondary-button"
-                  disabled={game.positionChangeCooldownSeason >= game.season}
-                  onClick={() => {
-                    setPositionChangeOpen((open) => !open);
-                    setPositionChangeFeedback(null);
-                  }}
-                >
-                  {game.positionChangeCooldownSeason >= game.season ? "Tentativa usada nesta temporada" : "Tentar mudar de posição"}
-                </button>
-                {positionChangeOpen && (
-                  <div className="position-change-picker">
-                    {POSITIONS.filter((item) => item.key !== game.position).map((item) => (
-                      <button
-                        key={item.key}
-                        className={positionChangeTarget === item.key ? "selected" : ""}
-                        onClick={() => setPositionChangeTarget(item.key)}
-                      >
-                        <span style={{ color: item.color }}>{item.icon}</span><strong>{item.key}</strong><small>{item.name}</small>
-                      </button>
-                    ))}
-                    <button className="primary-button position-change-confirm" disabled={!positionChangeTarget} onClick={attemptPositionChange}>Pedir a mudança <span>→</span></button>
-                  </div>
-                )}
-                {positionChangeFeedback && (
-                  <div className={`position-change-feedback ${positionChangeFeedback.success ? "success" : "failure"}`}>
-                    <strong>{positionChangeFeedback.headline}</strong>
-                    <p>{positionChangeFeedback.text}</p>
-                  </div>
-                )}
-              </div>
-              <div className="profile-metrics legacy-ui-hidden"><Metric label="OVR" value={game.overall} tone="gold" /><Metric label="Momento" value={careerTrend(game.history)} /><Metric label="Valor" value={formatMoney(marketValue(game.overall, game.age, currentClub, game.reputation, game.history.at(-1)))} /></div>
-              <section className="medical-department">
-                <header><div><span>DEPARTAMENTO MÉDICO</span><strong>Prontuário da carreira</strong></div><b className={game.medicalHistory.length ? "has-history" : ""}><FutboboIcon name="medical" /></b></header>
-                <div className="medical-overview">
-                  <Metric label="Lesões sérias" value={game.medicalHistory.length} tone={game.medicalHistory.length ? "danger" : "green"} />
-                  <Metric label="Jogos perdidos" value={game.matchesMissedInjuries} />
-                  <Metric label="Sequência saudável" value={`${game.injuryFreeSeasons} ano${game.injuryFreeSeasons === 1 ? "" : "s"}`} tone="green" />
-                </div>
-                {game.medicalHistory.length ? (
-                  <div className="medical-history-list">
-                    {game.medicalHistory.slice(0, 5).map((record) => (
-                      <article key={record.id}><b>{record.season}</b><div><strong>{record.name}</strong><small>{record.recoveryMonths} meses · {record.matchesMissed} jogos fora{record.recurring ? " · recorrência" : ""}</small></div><span>{record.severity}</span></article>
-                    ))}
-                  </div>
-                ) : <p>Nenhuma lesão séria registrada. O histórico começa a ser construído temporada por temporada.</p>}
-              </section>
-              <section className="trait-card legacy-ui-hidden">
-                <div><span>CARACTERÍSTICAS ESPECIAIS</span><strong>O que torna seu jogo diferente</strong></div>
-                <section>
-                  {game.traits.map((traitId) => {
-                    const trait = SPECIAL_TRAITS[traitId];
-                    return <article className={`trait-${trait.tone}`} key={traitId}><b>{trait.icon}</b><div><strong>{trait.name}</strong><small>{trait.description}</small></div></article>;
-                  })}
-                </section>
-                {game.traits.length === 0 && <p>Este save começou antes do sistema de características. Uma nova carreira já nasce com identidade própria.</p>}
-              </section>
-              <div className="market-context legacy-ui-hidden"><span>{currentClub.countryId === "brasil" ? "MERCADO BRASILEIRO" : "MERCADO INTERNACIONAL"}</span><p>{currentClub.countryId === "brasil" ? "O mesmo jogador costuma valer menos no Brasil. Uma ida à Europa pode multiplicar sua cotação — e também a cobrança." : `${leagueById(game.currentLeagueId || currentClub.leagueId).name} amplia sua vitrine e o valor do seu passe.`}</p></div>
-              <section className="career-economy legacy-ui-hidden">
-                <header>
-                  <div><span>VIDA FINANCEIRA</span><strong>Patrimônio: {formatMoney(game.money)}</strong></div>
-                  <small>Caixa livre: {formatMoney(game.spendableMoney)}</small>
-                </header>
-                <p>Salário e patrocínios formam seu patrimônio, mas só 18% da renda líquida vira caixa livre para decisões pessoais. O restante fica preso em impostos, contratos, reservas e gestão da carreira.</p>
-                <div className="career-shop">
-                  {[
-                    { id: "recovery" as const, icon: "✚", name: "Centro de recuperação", description: "+12 físico e +7 moral", price: 350_000 },
-                    { id: "media" as const, icon: "@", name: "Equipe de imagem", description: "Imprensa, equilíbrio e seguidores", price: 600_000 },
-                    { id: "coach" as const, icon: "↗", name: "Treinador particular", description: "Pequeno ganho nos atributos", price: 1_200_000 },
-                    { id: "potential" as const, icon: "?", name: "Recalibração experimental", description: "Uso cego: em tetos abaixo de 80, abre +1 de margem. Em tetos já altos, a interferência pode reduzir 1. Seu potencial nunca é revelado.", price: 2_500_000 },
-                    { id: "corruption" as const, icon: "⚖", name: "Comprar os árbitros", description: "50/50: garante o título nacional deste ano ou causa banimento de 3 a 5 anos sem clube.", price: 2_000_000 },
-                  ].map((item) => {
-                    const purchased = game.economyPurchases.includes(`${game.season}:${item.id}`);
-                    return (
-                      <article className={item.id === "potential" || item.id === "corruption" ? "risky" : ""} key={item.id}>
-                        <b>{item.icon}</b>
-                        <div><strong>{item.name}</strong><small>{item.description}</small></div>
-                        <button disabled={purchased || game.spendableMoney < item.price} onClick={() => buyCareerItem(item.id)}>
-                          {purchased ? "Usado neste ano" : formatMoney(item.price)}
-                        </button>
-                      </article>
-                    );
-                  })}
-                </div>
-                {economyFeedback && <div className="economy-feedback">{economyFeedback}</div>}
-              </section>
-              <section className="football-attributes-card legacy-ui-hidden">
-                <div className="football-attributes-heading">
-                  <div><span>ATRIBUTOS DE CAMPO</span><strong>Seu estilo em números</strong></div>
-                  <b>{Math.round(attributeAverage(game.attributes, POSITION_PRIMARY_ATTRIBUTES[game.position]))}<small>MÉDIA-CHAVE</small></b>
-                </div>
-                <p>Os atributos mudam a simulação: finalização gera gols, passe e visão criam assistências, fôlego aumenta seus jogos e qualidades defensivas ou de goleiro decidem o rendimento.</p>
-                <div className="football-attribute-groups">
-                  {ATTRIBUTE_GROUPS.map((group) => (
-                    <article key={group.label}>
-                      <span>{group.label}</span>
-                      <div>
-                        {group.keys.map((key) => (
-                          <div className={POSITION_PRIMARY_ATTRIBUTES[game.position].includes(key) ? "is-key" : ""} key={key}>
-                            <label>{ATTRIBUTE_LABELS[key]}</label>
-                            <i><em style={{ width: `${game.attributes[key]}%`, background: attributeTone(game.attributes[key]) }} /></i>
-                            <strong style={{ color: attributeTone(game.attributes[key]) }}>{game.attributes[key]}</strong>
-                          </div>
-                        ))}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-                <small>◆ atributo-chave para {position.name}</small>
-              </section>
-              <div className="contract-card legacy-ui-hidden"><span>CONTRATO E ELENCO</span><div><strong>{ROLE_LABELS[game.squadRole]}{game.clubCaptain ? " · Capitão" : ""}</strong><small>{game.isFreeAgent ? "Agente livre" : game.loanParentClubId ? `Emprestado pelo ${clubById(game.loanParentClubId).shortName}` : game.contractYears ? `${game.contractYears} ano(s) restantes` : "Contrato encerrado"} · {formatMoney(game.annualSalary)}/ano</small></div><Progress label="Confiança do treinador" value={game.managerTrust} color="#a675ff" /></div>
-              <div className="supporter-card legacy-ui-hidden"><span>RELAÇÃO COM A TORCIDA</span><strong style={{ color: supporterMood.color }}>{supporterMood.label}</strong><p>{game.fanSupport < 38 ? "Cada toque pode virar vaia. Títulos e entrega reconquistam a arquibancada." : game.fanSupport >= 82 ? "Seu nome já faz parte da identidade do clube." : "A arquibancada ainda está decidindo que história contará sobre você."}</p></div>
-              <div className="attribute-card legacy-ui-hidden">
-                <Progress label="Moral" value={game.morale} color="#2ca8ff" />
-                <Progress label="Condição" value={game.fitness} color="#63e36b" />
-                <Progress label="Prestígio" value={game.reputation} color="#ffc72c" />
-                <Progress label="Liderança" value={game.leadership} color="#a675ff" />
-                <Progress label="Seleção" value={game.nationalLevel} color="#f5f7f2" />
-                <Progress label="Torcida" value={game.fanSupport} color={supporterMood.color} />
-                <Progress label="Disciplina" value={game.discipline} color={game.discipline < 45 ? "#ff5a4e" : "#63e36b"} />
-                {isOutsideAcademyHome(game, currentClub) && <Progress label="Adaptação" value={game.adaptation} color="#2ca8ff" />}
-              </div>
-              <div className="career-total-card legacy-ui-hidden"><span>TOTAIS DA CARREIRA</span><div><Metric label="Jogos" value={game.stats.appearances} /><Metric label={game.position === "GOL" ? "Sem sofrer" : "Gols"} value={game.position === "GOL" ? game.stats.cleanSheets : game.stats.goals} /><Metric label={game.position === "GOL" ? "Sofridos" : "Assistências"} value={game.position === "GOL" ? game.stats.goalsConceded : game.stats.assists} /><Metric label={game.position === "GOL" ? "Defesas" : "Desarmes"} value={game.position === "GOL" ? game.stats.cleanSheets * 3 : game.stats.tackles} /><Metric label="Taças" value={game.trophies + game.nationalTrophies} tone="gold" /></div></div>
-              <div className="legacy-ui-hidden"><TrophyGallery state={game} /></div>
-              <div className="national-team-card legacy-ui-hidden">
-                <span>CENTRAL DA SELEÇÃO</span>
-                <div className="national-team-head">
-                  <NationBadge country={nationCountry} size="md" />
-                  <div><strong>{nationCountry.name}</strong><small>{nationalTierLabel[game.nationalCategory]}{game.nationalCaptain ? " · Capitão" : ""}</small></div>
-                </div>
-                <div className="national-team-metrics">
-                  <Metric label="Jogos" value={game.nationalCaps} />
-                  <Metric label="Gols" value={game.nationalGoals} />
-                  <Metric label="Assistências" value={game.nationalAssists} />
-                  <Metric label="Taças" value={game.nationalTrophies} tone="gold" />
-                </div>
-                {game.nationalHistory.length === 0 ? (
-                  <p>Ainda sem convocações. Bons números no clube abrem a porta da Seleção.</p>
-                ) : (
-                  <div className="national-history-list">
-                    {[...game.nationalHistory].reverse().map((entry) => (
-                      <article key={`${entry.season}-${entry.name}`}><span>{entry.season}</span><div><strong>{entry.name}</strong><small>{entry.stage}</small></div>{entry.champion && <b><FutboboIcon name="trophy" /></b>}</article>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="career-fortune legacy-ui-hidden"><span>TRAJETÓRIA</span><div><Metric label="Baques" value={game.setbacks} tone="danger" /><Metric label="Viradas de sorte" value={game.luckyBreaks} tone="green" /></div></div>
-              <div className="discipline-card legacy-ui-hidden"><span>HISTÓRICO DISCIPLINAR</span><div><Metric label="Amarelos" value={game.stats.yellowCards} /><Metric label="Vermelhos" value={game.stats.redCards} tone="danger" /><Metric label="Suspensão" value={`${game.suspensionMatches}J`} tone={game.suspensionMatches ? "danger" : "default"} /><Metric label="Metas" value={`${game.objectivesCompleted}/${game.objectivesCompleted + game.objectivesFailed}`} tone="green" /></div></div>
-              <div className="award-cabinet legacy-ui-hidden">
-                <div className="award-cabinet-title">
-                  <div><span>PRÊMIOS INDIVIDUAIS</span><strong>Sua galeria pessoal</strong></div>
-                  <b>{totalIndividualAwards}<small>{totalAwardNominations} INDICAÇÕES</small></b>
-                </div>
-                {awardEntries.length === 0 ? (
-                  <p>O primeiro prêmio ainda está por vir. Grandes temporadas, números decisivos e títulos colocam seu nome entre os candidatos.</p>
-                ) : (
-                  <>
-                    <div className={`award-cabinet-feature award-${awardPresentation(awardEntries[0][0]).tier}`}>
-                      <span>{awardPresentation(awardEntries[0][0]).icon}</span>
-                      <div><small>MAIOR HONRARIA</small><strong>{awardEntries[0][0]}</strong><p>{awardPresentation(awardEntries[0][0]).description}</p></div>
-                      <b>{awardEntries[0][1]}×</b>
-                    </div>
-                    <div className="award-cabinet-list">
-                      {awardEntries.map(([award, count]) => {
-                        const presentation = awardPresentation(award);
-                        const seasonsWon = game.history.filter((record) => record.awards.includes(award)).map((record) => record.season);
-                        return (
-                          <article className={`award-${presentation.tier}`} key={award}>
-                            <span>{presentation.icon}</span>
-                            <div><strong>{award}</strong><small>{presentation.kicker}{seasonsWon.length ? ` · ${seasonsWon.slice(-3).join(", ")}` : ""}</small></div>
-                            <b>{count}×</b>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "life" && game.phase === "career" && (
-            <div className="panel-screen life-screen screen-enter">
-              <header className="life-hero">
-                <div className="life-network-icon">@</div>
-                <div><span>VIDA FORA DO CAMPO</span><strong>{formatFollowers(game.followers)}</strong><small>SEGUIDORES</small></div>
-                <aside><small>IMAGEM PÚBLICA</small><strong style={{ color: publicImage.color }}>{publicImage.label}</strong></aside>
-                <p>{publicImage.description}</p>
-              </header>
-
-              <section className="public-life-dashboard">
-                <Progress label="Humor das redes" value={game.socialSentiment} color={game.socialSentiment < 40 ? "#ff5a4e" : "#63e36b"} />
-                <Progress label="Relação com a imprensa" value={game.mediaRelation} color="#2ca8ff" />
-                <Progress label="Equilíbrio pessoal" value={game.lifeBalance} color={game.lifeBalance < 40 ? "#ff8c5a" : "#a675ff"} />
-                <Progress label="Impacto social" value={game.charityReputation} color="#ffc72c" />
-              </section>
-
-              {game.history.some((record) => (record.followers ?? 0) > 0) && (
-                <section className="audience-growth-card">
-                  <div><span>CRESCIMENTO DE AUDIÊNCIA</span><strong>Seu alcance por temporada</strong></div>
-                  <div className="audience-bars">
-                    {game.history.slice(-10).map((record) => {
-                      const recentRecords = game.history.slice(-10);
-                      const highestReach = Math.max(...recentRecords.map((item) => item.followers ?? 0), 1);
-                      return (
-                        <article key={`audience-${record.season}`}>
-                          <b>{formatFollowers(record.followers ?? 0)}</b>
-                          <i><em style={{ height: `${clamp(((record.followers ?? 0) / highestReach) * 100, 7, 100)}%` }} /></i>
-                          <small>{String(record.season).slice(-2)}</small>
-                        </article>
-                      );
-                    })}
-                  </div>
-                </section>
-              )}
-
-              <section className={`sponsor-hub ${game.activeSponsor ? "has-deal" : "no-deal"}`}>
-                <div className="sponsor-heading"><div><span>PATROCINADOR PESSOAL</span><strong>{game.activeSponsor ? "Contrato ativo" : "Sua chuteira ainda está livre"}</strong></div><b><FutboboIcon name="tag" /></b></div>
-                {game.activeSponsor ? (
-                  <>
-                    <article className="active-sponsor-card">
-                      <div className="sponsor-wordmark">{game.activeSponsor.brand}</div>
-                      <div><small>PARCERIA PERSISTENTE</small><strong>{formatMoney(game.activeSponsor.annualValue)}<em>/ano</em></strong><p>{Math.max(0, game.activeSponsor.endSeason - game.season)} temporada(s) restante(s) · acompanha qualquer transferência</p></div>
-                    </article>
-                    <div className="sponsor-contract-progress"><span><i style={{ width: `${clamp(((game.season - game.activeSponsor.startSeason) / Math.max(1, game.activeSponsor.endSeason - game.activeSponsor.startSeason)) * 100)}%` }} /></span><small>{game.activeSponsor.startSeason}</small><small>{game.activeSponsor.endSeason}</small></div>
-                  </>
-                ) : (
-                  <div className="sponsor-empty"><strong>Grandes temporadas atraem grandes marcas.</strong><p>Prestígio, seguidores, boa imagem e impacto social aumentam o nível e o valor das propostas.</p></div>
-                )}
-                <footer><span>VALOR GERADO NA CARREIRA</span><strong>{formatMoney(sponsorCareerValue)}</strong><small>Simulação fictícia, sem vínculo com as marcas citadas.</small></footer>
-              </section>
-
-              {game.sponsorHistory.length > 0 && (
-                <section className="sponsor-history-card">
-                  <div><span>HISTÓRICO COMERCIAL</span><strong>Marcas que passaram pela carreira</strong></div>
-                  <section>
-                    {game.sponsorHistory.map((deal) => (
-                      <article key={deal.id}><div className="sponsor-wordmark small">{deal.brand}</div><div><strong>{deal.startSeason}–{deal.endSeason}</strong><small>{formatMoney(deal.annualValue)}/ano · contrato concluído</small></div><b>✓</b></article>
-                    ))}
-                  </section>
-                </section>
-              )}
-
-              <section className="social-feed-card">
-                <div className="social-feed-heading"><div><span>LINHA DO TEMPO</span><strong>O que estão falando</strong></div><b>AO VIVO</b></div>
-                {game.socialFeed.length === 0 ? (
-                  <div className="social-empty"><span>@</span><strong>O primeiro post ainda está por vir</strong><p>Assine seu contrato profissional e comece a construir uma audiência.</p></div>
-                ) : (
-                  <section className="social-post-list">
-                    {game.socialFeed.map((post) => (
-                      <article className={`post-${post.tone}`} key={post.id}>
-                        <div className={`social-avatar source-${post.source}`}>{post.source === "player" ? game.number : post.source === "sponsor" ? "◇" : post.source === "fans" ? "♥" : "●"}</div>
-                        <div><strong>{post.author}</strong><small>{post.source === "player" ? "JOGADOR" : post.source === "sponsor" ? "PUBLICIDADE" : post.source === "fans" ? "TORCIDA" : "IMPRENSA"} · {post.season}</small><p>{post.text}</p><footer><span>♥ {formatFollowers(post.likes)}</span><span>↗ compartilhar</span></footer></div>
-                      </article>
-                    ))}
-                  </section>
-                )}
-              </section>
-
-              <section className="life-advisor-card">
-                <div><span>TERMÔMETRO PESSOAL</span><strong>O que merece atenção</strong></div>
-                <section>
-                  <article className={game.lifeBalance < 45 ? "warning" : "good"}><b>{game.lifeBalance < 45 ? "!" : "✓"}</b><div><strong>{game.lifeBalance < 45 ? "A carreira está ocupando tudo" : "Rotina sob controle"}</strong><small>{game.lifeBalance < 45 ? "Baixo equilíbrio reduz rendimento e aumenta o risco físico." : "Descanso e vida pessoal ajudam sua consistência em campo."}</small></div></article>
-                  <article className={game.socialSentiment < 40 ? "warning" : "good"}><b>{game.socialSentiment < 40 ? "!" : "✓"}</b><div><strong>{game.socialSentiment < 40 ? "As redes viraram contra você" : "Comunidade saudável"}</strong><small>{game.socialSentiment < 40 ? "Uma resposta ruim pode afastar público e patrocinadores." : "Seu alcance cresce com uma base de torcedores favorável."}</small></div></article>
-                  <article className={game.mediaRelation < 38 ? "warning" : "good"}><b>{game.mediaRelation < 38 ? "!" : "✓"}</b><div><strong>{game.mediaRelation < 38 ? "Relação hostil com a imprensa" : "Narrativa bem administrada"}</strong><small>{game.mediaRelation < 38 ? "Entrevistas e manchetes terão menos boa vontade." : "Sua versão dos fatos encontra espaço nas manchetes."}</small></div></article>
-                </section>
-              </section>
-
-              {game.offFieldMilestones.length > 0 && <div className="life-milestones"><span>MARCOS DIGITAIS</span>{[...game.offFieldMilestones].reverse().slice(0, 6).map((milestone) => <strong key={milestone}>✦ {milestone}</strong>)}</div>}
-            </div>
-          )}
-
-          {activeTab === "stats" && game.phase === "career" && (
-            <div className="panel-screen statistics-screen screen-enter" role="region" tabIndex={0} aria-label="Estatísticas da carreira">
-              <header className="statistics-hero">
-                <span>CENTRAL ESTATÍSTICA</span>
-                <h2>Sua carreira em números</h2>
-                <p>Cada temporada registrada, comparada e transformada em recordes.</p>
-                <div>
-                  <Metric label="Temporadas" value={game.history.length} />
-                  <Metric label="G+A" value={game.stats.goals + game.stats.assists} tone="gold" />
-                  <Metric label="Nota média" value={statistics.careerRating.toFixed(1)} tone="green" />
-                  <Metric label="Melhor em campo" value={statistics.manOfTheMatchAwards} />
-                </div>
-              </header>
-
-              {statistics.recent.length > 0 ? (
-                <>
-                  <section className="season-chart-card">
-                    <div><span>EVOLUÇÃO RECENTE</span><strong>Nota de temporada</strong></div>
-                    <div className="season-bars" role="img" aria-label="Notas das últimas temporadas">
-                      {statistics.recent.map((record) => {
-                        const score = record.averageRating ?? seasonAverageRating(record.performanceScore ?? 0, game.seed, record.season);
-                        return (
-                          <article key={`score-${record.season}`}>
-                            <b>{score.toFixed(1)}</b>
-                            <i><em style={{ height: `${clamp((score - 5) * 20, 8, 100)}%` }} /></i>
-                            <small>{String(record.season).slice(-2)}</small>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  </section>
-
-                  <section className="production-chart-card">
-                    <div><span>PRODUÇÃO OFENSIVA</span><strong>Gols e assistências por ano</strong></div>
-                    <div className="production-list">
-                      {statistics.recent.map((record) => {
-                        const total = Math.max(1, record.goals + record.assists);
-                        return (
-                          <article key={`production-${record.season}`}>
-                            <small>{record.season}</small>
-                            <div><i className="goals" style={{ width: `${record.goals / total * 100}%` }} /><i className="assists" style={{ width: `${record.assists / total * 100}%` }} /></div>
-                            <strong>{record.goals}G · {record.assists}A</strong>
-                          </article>
-                        );
-                      })}
-                    </div>
-                    <footer><span><i className="goals" /> Gols</span><span><i className="assists" /> Assistências</span></footer>
-                  </section>
-
-                  {statistics.bestSeason && (
-                    <section className="best-season-card">
-                      <span>MELHOR TEMPORADA</span>
-                      <div><strong>{statistics.bestSeason.season}</strong><small>{clubById(statistics.bestSeason.clubId).shortName} · {statistics.bestSeason.age} anos</small></div>
-                      <section>
-                        <Metric label="Nota" value={(statistics.bestSeason.averageRating ?? seasonAverageRating(statistics.bestSeason.performanceScore ?? 0, game.seed, statistics.bestSeason.season)).toFixed(1)} tone="gold" />
-                        <Metric label="Jogos" value={statistics.bestSeason.appearances} />
-                        <Metric label="Gols" value={statistics.bestSeason.goals} />
-                        <Metric label="Assist." value={statistics.bestSeason.assists} />
-                      </section>
-                    </section>
-                  )}
-
-                  <section className="record-book">
-                    <div><span>LIVRO DE RECORDES</span><strong>Seus picos</strong></div>
-                    <section>
-                      <article><span><FutboboIcon name="ball" /></span><div><small>MAIS GOLS</small><strong>{statistics.mostGoals?.goals ?? 0}</strong><em>{statistics.mostGoals?.season}</em></div></article>
-                      <article><span><FutboboIcon name="stats" /></span><div><small>MAIS ASSISTÊNCIAS</small><strong>{statistics.mostAssists?.assists ?? 0}</strong><em>{statistics.mostAssists?.season}</em></div></article>
-                      <article><span>▶</span><div><small>MAIS JOGOS</small><strong>{statistics.mostAppearances?.appearances ?? 0}</strong><em>{statistics.mostAppearances?.season}</em></div></article>
-                      <article><span>↑</span><div><small>MAIOR OVR</small><strong>{statistics.highestOverall?.overall ?? game.overall}</strong><em>{statistics.highestOverall?.season}</em></div></article>
-                      <article className="value-record"><span>€</span><div><small>MAIOR VALOR</small><strong>{formatMoney(statistics.highestValue?.marketValue ?? 0)}</strong><em>{statistics.highestValue?.season}</em></div></article>
-                    </section>
-                  </section>
-                </>
-              ) : <div className="statistics-empty"><span><FutboboIcon name="stats" /></span><strong>A central abre depois da estreia</strong><p>Complete a primeira temporada para começar seu arquivo estatístico.</p></div>}
-
-              <CareerStatisticsArchive state={game} />
-              <CareerExtraStats state={game} />
-              {/* Rivais continuam no GameState e na simulação para alimentar memória/notícias em updates futuros; somente a UI está oculta. */}
-              <section className="rival-center legacy-ui-hidden">
-                <div><span>RIVAIS DE GERAÇÃO</span><strong>{game.rivals.length ? "Eles também estão construindo uma carreira" : "Esta carreira não ganhou um rival"}</strong></div>
-                {game.rivals.length === 0 ? <p>Nem toda história precisa de um antagonista. Em outra carreira — ou com seus Personagens — alguém pode aparecer.</p> : (
-                  <section>
-                    {game.rivals.map((rival) => {
-                      const rivalClub = clubById(rival.currentClubId);
-                      const relationship = rival.relationship >= 68 ? "Respeito mútuo" : rival.relationship <= 34 ? "Rivalidade quente" : "Competição aberta";
-                      return (
-                        <article className={!rival.active ? "retired" : ""} key={rival.id}>
-                          <ClubBadge club={rivalClub} size="sm" />
-                          <div><strong>{rival.name}{rival.custom ? " ✦" : ""}</strong><small>{rival.position} · {rival.age} anos · {rivalClub.shortName}</small><em>{relationship}</em></div>
-                          <span><b>{rival.overall}</b><small>OVR</small></span>
-                          <footer>{rival.appearances}J · {rival.goals}G · {rival.assists}A · {rival.awards} prêmio(s)</footer>
-                        </article>
-                      );
-                    })}
-                  </section>
-                )}
-              </section>
-            </div>
-          )}
-
-          {activeTab === "team" && game.phase === "career" && (
-            <CareerTeam state={game} />
-          )}
-          {activeTab === "world" && game.phase === "career" && (
-            <CareerWorld state={game} />
-          )}
-          {activeTab === "legacy" && game.phase === "career" && (
-            <div className="panel-screen legacy-screen screen-enter">
-              <div className="legacy-hero">
-                <span>ÍNDICE DE LEGADO</span>
-                <strong style={{ color: legacyStanding.color }}>{game.legacyPoints}</strong>
-                <h2>{legacyStanding.label}</h2>
-                <p>Títulos importam, mas longevidade, seleção, prêmios, números e até as voltas por cima também constroem uma carreira.</p>
-              </div>
-              <div className="legacy-grid">
-                <Metric label="Temporadas" value={game.history.length} />
-                <Metric label="Clubes" value={new Set(game.history.map((item) => item.clubId)).size || 1} />
-                <Metric label="Pico OVR" value={Math.max(game.overall, ...game.history.map((item) => item.overall), 0)} tone="gold" />
-                <Metric label="Patrimônio" value={formatMoney(game.money)} tone="green" />
-              </div>
-              <div className="news-card">
-                <span>ÚLTIMAS MANCHETES</span>
-                {game.newsFeed.length ? game.newsFeed.map((headline, index) => <article key={`${headline}-${index}`}><small>{index === 0 ? "AGORA" : "ARQUIVO"}</small><strong>{headline}</strong></article>) : <p>A imprensa ainda espera o primeiro grande capítulo.</p>}
-              </div>
-              <div className="legacy-checklist">
-                <span>MARCOS DA CARREIRA</span>
-                <article className={game.stats.appearances >= 100 ? "done" : ""}><b>{game.stats.appearances >= 100 ? "✓" : "○"}</b><div><strong>Centenário</strong><small>100 jogos profissionais</small></div></article>
-                <article className={game.trophies + game.nationalTrophies >= 5 ? "done" : ""}><b>{game.trophies + game.nationalTrophies >= 5 ? "✓" : "○"}</b><div><strong>Colecionador</strong><small>5 títulos na carreira</small></div></article>
-                <article className={game.nationalCaps >= 50 ? "done" : ""}><b>{game.nationalCaps >= 50 ? "✓" : "○"}</b><div><strong>Camisa da pátria</strong><small>50 jogos pela Seleção</small></div></article>
-                <article className={(game.awardCabinet["Bola de Ouro"] ?? 0) > 0 ? "done legendary" : ""}><b>{(game.awardCabinet["Bola de Ouro"] ?? 0) > 0 ? "★" : "○"}</b><div><strong>Bola de Ouro</strong><small>O marco quase impossível</small></div></article>
-              </div>
-              <div className="achievement-gallery">
-                <div><span>CONQUISTAS</span><strong>{game.unlockedAchievements.length}/{ACHIEVEMENTS.length}</strong></div>
-                <section>
-                  {ACHIEVEMENTS.map((achievement) => {
-                    const unlocked = game.unlockedAchievements.includes(achievement.id);
-                    const legendarySecret = achievement.rarity === "lendário" && !unlocked;
-                    return <button type="button" className={`achievement-card ${unlocked ? "unlocked" : ""} rarity-${achievement.rarity}`} key={achievement.id} onClick={() => setSelectedAchievementId(achievement.id)}><b>{unlocked ? achievement.icon : "?"}</b><div><strong>{legendarySecret ? "Conquista secreta" : achievement.title}</strong><small>{unlocked ? achievement.description : legendarySecret ? "Lendária · requisito oculto" : achievement.description}</small></div></button>;
-                  })}
-                </section>
-              </div>
-            </div>
-          )}
-
-          {game.phase === "career" && (
-            <nav className="bottom-nav" aria-label="Navegação da carreira">
-              <div className="desktop-career-nav-brand" aria-hidden="true">
-                <BrandMark size="sm" />
-                <span><small>CENTRAL DO JOGADOR</small><strong>{game.name}</strong><em>{position.name} · {leagueById(game.currentLeagueId || currentClub.leagueId).name}</em></span>
-              </div>
-              <button aria-pressed={activeTab === "event"} className={activeTab === "event" ? "selected" : ""} onClick={() => changeTab("event")}><span><FutboboIcon name="career" /></span>Carreira</button>
-              <button aria-pressed={activeTab === "profile"} className={activeTab === "profile" ? "selected" : ""} onClick={() => changeTab("profile")}><span><FutboboIcon name="player" /></span>Jogador</button>
-              <button aria-pressed={activeTab === "team"} className={activeTab === "team" ? "selected" : ""} onClick={() => changeTab("team")}><span><FutboboIcon name="team" /></span>Time</button>
-              <button aria-pressed={activeTab === "history"} className={activeTab === "history" ? "selected" : ""} onClick={() => changeTab("history")}><span><FutboboIcon name="history" /></span>Histórico</button>
-              <button aria-pressed={activeTab === "stats"} className={activeTab === "stats" ? "selected" : ""} onClick={() => changeTab("stats")}><span><FutboboIcon name="stats" /></span>Estatísticas</button>
-              <button aria-pressed={activeTab === "world"} className={activeTab === "world" ? "selected" : ""} onClick={() => changeTab("world")}><span><FutboboIcon name="globe" /></span>Mundo</button>
-            </nav>
-          )}
-        </section>
+          {game.phase === "career" && albumTab === "team" && <TeamTab game={game} club={currentClub} />}
+          {game.phase === "career" && albumTab === "history" && <HistoryTab game={game} club={currentClub} />}
+          {game.phase === "career" && albumTab === "stats" && <StatsTab game={game} club={currentClub} />}
+          {game.phase === "career" && albumTab === "world" && <WorldTab game={game} club={currentClub} />}
+        </AlbumShell>
       )}
 
       {(game.phase === "summary" || hallPreview) && (

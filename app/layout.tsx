@@ -24,6 +24,27 @@ const barlowCondensed = localFont({
   display: "swap",
 });
 
+// Álbum da carreira: display estreito e texto. Sem preload: só a carreira usa, o menu não espera por elas.
+const bricolage = localFont({
+  src: "../public/fonts/bricolage-grotesque-latin.woff2",
+  variable: "--font-bricolage",
+  weight: "400 800",
+  style: "normal",
+  display: "swap",
+  preload: false,
+  declarations: [{ prop: "font-stretch", value: "75% 100%" }],
+});
+
+const instrumentSans = localFont({
+  src: "../public/fonts/instrument-sans-latin.woff2",
+  variable: "--font-instrument",
+  weight: "400 700",
+  style: "normal",
+  display: "swap",
+  preload: false,
+  declarations: [{ prop: "font-stretch", value: "75% 100%" }],
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://futbobo.top/"),
   title: {
@@ -129,7 +150,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={`${manrope.variable} ${barlowCondensed.variable}`}>
+      <body className={`${manrope.variable} ${barlowCondensed.variable} ${bricolage.variable} ${instrumentSans.variable}`}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

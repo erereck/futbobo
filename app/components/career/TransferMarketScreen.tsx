@@ -21,9 +21,9 @@ type Props = {
   onWait: () => void;
 };
 
-type TravelMode = "plane" | "bus";
+export type TravelMode = "plane" | "bus";
 
-type TransferJourney = {
+export type TransferJourney = {
   offer: TransferOffer;
   destination: Club;
   mode: TravelMode;
@@ -31,7 +31,7 @@ type TransferJourney = {
 
 type Point = { x: number; y: number };
 
-function windowCopy(state: GameState, currentClub: Club, count: number) {
+export function windowCopy(state: GameState, currentClub: Club, count: number) {
   if (state.forcedFreeAgentUntilSeason > state.season) return { eyebrow: "FORA DO MERCADO", title: "Nenhum clube pode contratar você", text: `A punição vai até ${state.forcedFreeAgentUntilSeason}.` };
   if (state.youthLoanDecision) return { eyebrow: "PLANO DE DESENVOLVIMENTO", title: "Empréstimo ou permanência", text: `${count} projeto${count === 1 ? "" : "s"} oferece${count === 1 ? "" : "m"} mais minutos. A decisão continua sendo sua.` };
   if (state.pendingTransferMode === "loan") return { eyebrow: "EMPRÉSTIMO", title: "Minutos em outro clube", text: `A duração varia por proposta. Ao fim do empréstimo, você retorna ao ${currentClub.shortName}.` };
@@ -43,7 +43,7 @@ function windowCopy(state: GameState, currentClub: Club, count: number) {
   return { eyebrow: "MERCADO", title: "Seu próximo passo", text: `${count} propostas e a opção de continuar o projeto atual.` };
 }
 
-function moveLabel(offer: TransferOffer) {
+export function moveLabel(offer: TransferOffer) {
   if (offer.type === "loan") { const seasons = Math.max(1, (offer.loanEndSeason || offer.season + 1) - offer.season); return `Empréstimo · ${seasons} temporada${seasons === 1 ? "" : "s"}`; }
   if (offer.type === "free-agent") return "Sem taxa de transferência";
   if (offer.type === "renewal") return "Renovação";
@@ -88,7 +88,7 @@ function TravelVehicle({ mode }: { mode: TravelMode }) {
   );
 }
 
-function TransferJourneyOverlay({ journey, origin, leaving }: { journey: TransferJourney; origin: Club; leaving: boolean }) {
+export function TransferJourneyOverlay({ journey, origin, leaving }: { journey: TransferJourney; origin: Club; leaving: boolean }) {
   const { destination, offer, mode } = journey;
   const originCountry = countryById(origin.countryId);
   const destinationCountry = countryById(destination.countryId);

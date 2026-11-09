@@ -16,6 +16,19 @@ const careerSourceFiles = [
   "../app/components/career/CareerTeam.tsx",
   "../app/components/career/CycleShopDialog.tsx",
   "../app/components/career/PressConferenceDialog.tsx",
+  "../app/components/career/album/AlbumShell.tsx",
+  "../app/components/career/album/CareerSpread.tsx",
+  "../app/components/career/album/LuckOverlay.tsx",
+  "../app/components/career/album/Pictogram.tsx",
+  "../app/components/career/album/SeasonResultSpread.tsx",
+  "../app/components/career/album/SideSpreads.tsx",
+  "../app/components/career/album/primitives.tsx",
+  "../app/components/career/album/tabs/HistoryTab.tsx",
+  "../app/components/career/album/tabs/PlayerTab.tsx",
+  "../app/components/career/album/tabs/StatsTab.tsx",
+  "../app/components/career/album/tabs/TeamTab.tsx",
+  "../app/components/career/album/tabs/WorldTab.tsx",
+  "../app/components/career/album/tabs/worldDossier.tsx",
   "../app/components/shell/FutboboShell.tsx",
   "../app/components/shell/FutboboShellWithNames.tsx",
   "../app/components/shell/ShellUtilityScreens.tsx",
@@ -244,8 +257,13 @@ test("aplica o redesign Matchday Editorial com fontes offline e layouts realment
     "barlow-condensed-700.woff2",
     "barlow-condensed-800.woff2",
     "barlow-condensed-900.woff2",
+    "bricolage-grotesque-latin.woff2",
+    "instrument-sans-latin.woff2",
     "manrope-latin.woff2",
   ]);
+  // O álbum da carreira usa duas fontes locais que não pesam no menu.
+  assert.match(layout, /--font-bricolage[\s\S]*preload: false/);
+  assert.match(layout, /--font-instrument[\s\S]*preload: false/);
 });
 
 test("adiciona desafio diario, avaliacao e departamento medico sem alterar a navegacao da carreira", async () => {
@@ -259,15 +277,16 @@ test("adiciona desafio diario, avaliacao e departamento medico sem alterar a nav
   assert.match(page, /function dailyChallenge/);
   assert.match(page, /Todos começam iguais\./);
   assert.match(page, /function seasonAverageRating/);
-  assert.match(page, /AVALIAÇÃO MÉDIA/);
+  assert.match(page, /nota média/);
   assert.match(page, /type MedicalRecord/);
-  assert.match(page, /DEPARTAMENTO MÉDICO/);
+  assert.match(page, /Departamento médico/);
+  assert.match(page, /Prontuário/);
   assert.match(page, /medicalHistory: medicalRecord/);
   assert.match(styles, /\.welcome-layout/);
   assert.match(styles, /@media \(min-width: 900px\)/);
   assert.match(styles, /\.season-rating-card/);
   assert.match(styles, /\.medical-department/);
-  assert.match(page, /<nav className="bottom-nav"/);
+  assert.match(page, /<nav aria-label="Navegação da carreira">/);
 });
 
 test("fecha a Copa do Mundo com estatisticas completas e impacto forte na Bola de Ouro", async () => {
@@ -281,8 +300,8 @@ test("fecha a Copa do Mundo com estatisticas completas e impacto forte na Bola d
   assert.match(page, /function simulatedWorldCupStats/);
   assert.match(page, /groupAppearances/);
   assert.match(page, /knockoutAppearances/);
-  assert.match(page, /RELATÓRIO DA COPA DO MUNDO/);
-  assert.match(page, /FASE DE GRUPOS · SIMULADA/);
+  assert.match(page, /Relatório da Copa do Mundo/);
+  assert.match(page, /Fase de grupos \(simulada\)/);
   const ballon = await readFile(
     new URL("../app/career/ballon-dor.ts", import.meta.url),
     "utf8",
@@ -410,16 +429,20 @@ test("inclui o conteúdo central do jogo no bundle", async () => {
     "Copa América",
     "Eurocopa",
     "Jogos Olímpicos",
-    "CENTRAL DA SELEÇÃO",
+    "Ficha técnica",
+    "Quer mudar de camisa",
+    "Notícias da rodada",
+    "Cole aqui a figurinha da sua escolha",
+    "Banco de reservas",
+    "Camisas da carreira",
+    "Sala de troféus",
     "Pedir transferência",
     "Aposentar",
     "Pendurar as chuteiras agora",
     "Rota alternativa",
     "VITRINE EUROPEIA",
-    "CONSEQUÊNCIAS DA ESCOLHA",
-    "META DO TREINADOR",
-    "CONTRATO E ELENCO",
-    "ÍNDICE DE LEGADO",
+    "Consequência da escolha",
+    "Meta do treinador",
     "CONQUISTAS",
     "Fla-Flu",
   ]) {
@@ -451,15 +474,26 @@ test("mantém o novo equilíbrio de progressão, mercado e clubes brasileiros", 
   assert.match(page, /retirement-confirm/);
 });
 
-test("mantém a carreira encaixada na tela mobile com ações fixas", async () => {
+test("mantém a carreira no celular com abas e ações fixas no rodapé", async () => {
   const page = await readCareerSource();
   const styles = await readFile(
     new URL("../app/globals.css", import.meta.url),
     "utf8",
   );
+  const album = await readFile(
+    new URL("../app/components/career/album/album.module.css", import.meta.url),
+    "utf8",
+  );
+  const spread = await readFile(
+    new URL("../app/components/career/album/careerSpread.module.css", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(page, /mobile-action-dock/);
-  assert.match(page, /career-phase-\$\{game\.phase\}/);
+  assert.match(page, /styles\.continueDock/);
+  assert.match(page, /ALBUM_PHASES\.has\(game\.phase\)/);
+  assert.match(album, /@media \(max-width: 1023px\) \{[\s\S]*\.tabs \{[\s\S]*position: fixed;[\s\S]*bottom: 0;/);
+  assert.match(album, /padding-bottom: calc\(var\(--tabs-h\) \+ 10px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(spread, /\.o-dock \{[\s\S]*position: fixed;/);
   assert.match(styles, /@media \(max-width: 540px\)/);
   assert.match(styles, /\.career-shell \{[\s\S]*height: 100%/);
   assert.match(styles, /\.mobile-action-dock \{[\s\S]*position: fixed/);
@@ -632,12 +666,19 @@ test("deixa o fim de temporada rolar sem o rodapé cobrir o conteúdo", async ()
     "utf8",
   );
 
-  assert.match(page, /futbobo-viewport-locked/);
-  assert.match(
-    page,
-    /game\.phase === "consequence" \|\|\s+game\.phase === "transfer"/,
+  // O álbum rola como página: nenhuma fase da carreira trava a viewport, e cada fase nova começa do topo.
+  const careerGame = await readFile(
+    new URL("../app/components/career/CareerGame.tsx", import.meta.url),
+    "utf8",
   );
-  assert.match(page, /window\.scrollTo\(0, 0\)/);
+  const album = await readFile(
+    new URL("../app/components/career/album/album.module.css", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(careerGame, /futbobo-viewport-locked/);
+  assert.match(careerGame, /"consequence", "season-result", "transfer"/);
+  assert.match(page, /if \(ALBUM_PHASES\.has\(game\.phase\)\) window\.scrollTo\(0, 0\)/);
+  assert.match(album, /\.host\.host \{[\s\S]*height: auto;[\s\S]*overflow: visible;/);
   assert.match(styles, /body\.futbobo-viewport-locked[\s\S]*position: fixed/);
   assert.match(
     styles,
@@ -655,15 +696,8 @@ test("deixa o fim de temporada rolar sem o rodapé cobrir o conteúdo", async ()
     styles,
     /\.career-phase-season-result \.mobile-action-dock \{[\s\S]*position: static;/,
   );
-  assert.match(
-    page,
-    /className="season-result-section-heading"><span>DESEMPENHO<\/span>/,
-  );
-  assert.match(
-    page,
-    /className="season-result-section-heading"><span>BASTIDORES<\/span>/,
-  );
-  assert.match(page, /className="season-result-section season-campaigns"/);
+  assert.match(page, />Taças da temporada/);
+  assert.match(page, />Outras campanhas</);
   assert.match(
     page,
     /competitions\.filter\(\(competition\) => !competition\.champion\)/,
@@ -718,10 +752,9 @@ test("classifica para supercopas e recopás e exibe uma galeria completa de tít
   assert.match(page, /wonLastSeason\(\["libertadores", "sudamericana"\]\)/);
   assert.match(page, /function TrophyGallery/);
   assert.match(page, /ÚLTIMAS VOLTAS OLÍMPICAS/);
-  assert.match(page, /<TrophyGallery state=\{game\}/);
+  assert.match(page, /Sala de troféus/);
   assert.match(page, /<TrophyGallery state=\{displayGame\} final/);
-  assert.match(page, /className="season-title-parade"/);
-  assert.match(page, /TAÇAS DA TEMPORADA/);
+  assert.match(page, /Taças da temporada/);
   assert.match(styles, /\.trophy-gallery-hero/);
   assert.match(styles, /\.recent-titles/);
   assert.match(styles, /\.season-title-parade/);
@@ -752,7 +785,7 @@ test("protege o OVR jovem e permite explosões raras de talento", async () => {
   assert.match(page, /const breakoutThreshold = isKeeper \? 70/);
   assert.match(page, /const breakoutChance = clamp\(12[\s\S]*12, 55\)/);
   assert.match(page, /hugeBreakout \? 5 : 3/);
-  assert.match(page, /EXPLOSÃO DE TALENTO/);
+  assert.match(page, /Temporada fora da curva/);
   assert.match(styles, /\.breakout-result/);
   assert.match(styles, /@keyframes breakout-glow/);
 });
@@ -1249,7 +1282,7 @@ test("atributos influenciam a simulação, premiações têm suspense e o escân
   assert.match(page, /const finishingSkill = attributes\.finishing/);
   assert.match(page, /const creationSkill = attributes\.passing/);
   assert.match(page, /keeperSkill \/ 270/);
-  assert.match(page, /ATRIBUTOS DE CAMPO/);
+  assert.match(page, /Atributos de campo/);
   assert.match(page, /game\.attributes\[key\]/);
   assert.match(page, /type AwardNomination/);
   assert.match(page, /won: false/);
@@ -1478,7 +1511,8 @@ test("adiciona central estatística, empréstimos, rivais, personagens, agente l
     "utf8",
   );
 
-  assert.match(page, /CENTRAL ESTATÍSTICA/);
+  assert.match(page, /Sua carreira em números/);
+  assert.match(page, /Livro de recordes/);
   assert.match(page, /function createCareerRivals/);
   assert.match(page, /DYNAMIC_RIVAL_EVENT_ID/);
   assert.match(page, /SETTINGS_KEY = "futbobo:settings:v1"/);
@@ -1556,9 +1590,9 @@ test("adiciona vida fora do campo, redes sociais e patrocinadores persistentes",
     /money: Math\.max\(0, affected\.money \+ affected\.annualSalary \+ sponsorIncome - seasonLivingCost\)/,
   );
   assert.match(page, /socialFeed: \[\.\.\.milestonePosts, seasonSocialPost/);
-  assert.match(page, /VIDA FORA DO CAMPO/);
-  assert.match(page, /PATROCINADOR PESSOAL/);
-  assert.match(page, /LINHA DO TEMPO/);
+  assert.match(page, /Fora de campo/);
+  assert.match(page, /label: "Patrocínio"/);
+  assert.match(page, /formatFollowers\(game\.followers\)/);
   assert.match(page, /setUpdateNoticePage\("previous"\)/);
   assert.match(page, /v91 · DUELO LOCAL/);
   assert.match(page, /A resenha cabe na mesma mesa/);
@@ -1611,14 +1645,10 @@ test("integra o futebol de botão às finais da carreira e ao mata-mata do Mundi
     page,
     /finalMatchMode: AppSettings\["finalMatchMode"\] = "play-key-matches"/,
   );
-  assert.match(page, /DECIDIDO NO FUTEBOL DE BOTÃO/);
-  assert.match(page, /seasonClubTitles/);
-  assert.match(page, /seasonNationalTitles/);
-  assert.match(page, /seasonBotaoWins/);
-  assert.match(page, /seasonBotaoLosses/);
-  assert.match(page, /DISPUTADAS/);
-  assert.match(page, /GANHAS/);
-  assert.match(page, /PERDIDAS/);
+  assert.match(page, /Decidido no futebol de botão/);
+  assert.match(page, /"disputadas"/);
+  assert.match(page, /"ganhas"/);
+  assert.match(page, /"perdidas"/);
   assert.doesNotMatch(page, /className="played-finals-card"/);
   assert.match(adapter, /function buildNationalMatchSetup/);
   assert.match(adapter, /function pickNationalOpponent/);
@@ -1725,12 +1755,7 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
 
   assert.match(drama, /id: "drama-billie-eilish-photo"/);
   assert.match(drama, /followers: 10_000_000/);
-  assert.match(page, /id: "corruption" as const/);
-  assert.match(page, /seeded\(state\.seed, state\.season \* 1877/);
-  assert.match(
-    page,
-    /forcedFreeAgentUntilSeason = current\.season \+ corruptionBanYears/,
-  );
+  assert.doesNotMatch(page, /id: "corruption" as const/);
   assert.match(page, /seasonNetIncome \* 0\.18/);
   assert.match(page, /spendableMoney/);
 
@@ -1748,7 +1773,7 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
     simulation,
     /const forcedClubExit = !loanedOut && !isIdolAtClub/,
   );
-  assert.match(page, /VENDA OBRIGATÓRIA/);
+  assert.match(page, /Venda obrigatória/);
 
   assert.match(page, /botaoGoalLimit\?: 0 \| 3 \| 5/);
   assert.match(page, /botaoHalfSeconds\?: 90 \| 120 \| 180/);
@@ -1829,9 +1854,15 @@ test("usa uma central de carreira própria no computador sem alterar o layout mo
     new URL("../app/globals.css", import.meta.url),
     "utf8",
   );
+  const album = await readFile(
+    new URL("../app/components/career/album/album.module.css", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(page, /desktop-career-nav-brand/);
-  assert.match(page, /CENTRAL DO JOGADOR/);
+  // No computador a carreira é o álbum aberto: duas páginas e as abas do índice saindo da borda.
+  assert.match(page, /export const ALBUM_TABS/);
+  assert.match(album, /@media \(min-width: 1024px\) \{[\s\S]*\.spread \{[\s\S]*grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\);/);
+  assert.match(album, /\.tabs \{[\s\S]*left: calc\(100% - 28px\);/);
   assert.match(styles, /grid-template-columns: 294px minmax\(0, 1fr\)/);
   assert.match(styles, /\.career-shell > \.bottom-nav \{/);
   assert.match(styles, /\.career-shell > \.event-stage \{/);
@@ -2768,8 +2799,13 @@ test("lança a v93.10 com elenco persistente, rota do empresário e traição en
     "utf8",
   );
 
-  assert.match(game, /changeTab\("team"\)/);
-  assert.match(game, /activeTab === "team"/);
+  const albumShell = await readFile(
+    new URL("../app/components/career/album/AlbumShell.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(albumShell, /\{ id: "team", label: "Time", icon: "team"/);
+  assert.match(game, /onTab=\{changeTab\}/);
+  assert.match(game, /albumTab === "team"/);
   assert.match(team, /reserveCapacity: 3/);
   assert.match(
     team,
@@ -2977,7 +3013,12 @@ test("fecha a v93 com iconografia vetorial própria e remove símbolos improvisa
 
   assert.match(icons, /viewBox="0 0 24 24"/);
   assert.match(icons, /strokeWidth="1\.8"/);
-  assert.match(career, /FutboboIcon name="history"/);
+  const albumShell = await readFile(
+    new URL("../app/components/career/album/AlbumShell.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(albumShell, /icon: "history"/);
+  assert.match(albumShell, /<FutboboIcon name=\{item\.icon\} \/>/);
   assert.doesNotMatch(career, /<span>│<\/span>Histórico/);
   assert.match(shell, /FutboboIcon name="settings"/);
   assert.match(shell, /FutboboIcon name="medal"/);
