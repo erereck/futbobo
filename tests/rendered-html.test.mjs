@@ -20,6 +20,7 @@ const careerSourceFiles = [
   "../app/components/shell/FutboboShellWithNames.tsx",
   "../app/components/shell/ShellUtilityScreens.tsx",
   "../app/career/model.ts",
+  "../app/career/attention.ts",
   "../app/career/shared.ts",
   "../app/career/sponsors.ts",
   "../app/career/state.ts",
@@ -694,7 +695,7 @@ test("mostra o resultado da última temporada antes de concluir a aposentadoria"
     /function continueAfterResult\(\) \{[\s\S]*if \(game\.retireAfterSeason\) \{[\s\S]*phase: "summary"/,
   );
   assert.match(page, /Ver resultado da última temporada/);
-  assert.match(page, /game\.retireAfterSeason \? "Concluir carreira"/);
+  assert.match(page, /game\.retireAfterSeason\s*\? "Concluir carreira"/);
 });
 
 test("classifica para supercopas e recopás e exibe uma galeria completa de títulos", async () => {
@@ -1378,7 +1379,7 @@ test("expõe um laboratório Monte Carlo que reutiliza a simulação completa da
   assert.match(page, /function runMonteCarloCareers/);
   assert.match(
     page,
-    /state = simulateSeason\(state, event, effect, choice\.label, resultText, luckOutcome\)/,
+    /state = simulateSeason\(state, event, effect, choice\.label, resultText, luckOutcome, "simulate"\)/,
   );
   assert.match(page, /__FUTBOBO_MONTE_CARLO__/);
   assert.match(page, /params\.get\("montecarlo"\)/);
@@ -1958,7 +1959,7 @@ test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
   assert.match(page, /function restoreSavedGame/);
   assert.match(
     page,
-    /applyBotaoMatchResult\(walkoverBotaoResult\(setup\), setup\)/,
+    /applyBotaoMatchResult\(walkoverBotaoResult\(setup\), setup, pendingMatch\.id\)/,
   );
   assert.match(page, /function startCurrentBotaoMatch/);
   assert.match(page, /onClick=\{startCurrentBotaoMatch\}/);

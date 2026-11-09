@@ -1,4 +1,4 @@
-import type { ContinentalSlot, Effect, PositionKey } from "../game-data";
+import type { Confederation, ContinentalSlot, Effect, PositionKey } from "../game-data";
 import type { CareerObjective, ObjectiveResult, SquadRole } from "../career-systems";
 import type { PlayerAppearance } from "../player-appearance";
 import type { BotaoMatchResult } from "../botao/types";
@@ -25,6 +25,13 @@ export type Phase =
   | "transfer-denied"
   | "retirement-confirm"
   | "summary";
+
+export type CareerAttention = {
+  global: number;
+  continental: Partial<Record<Confederation, number>>;
+  reachedOverall72: boolean;
+  lastSettledSeason: number;
+};
 
 export type CompetitionId =
   | "domesticLeague"
@@ -240,7 +247,8 @@ export type MarketReason =
   | "veteran-leadership"
   | "position-need"
   | "rebuild"
-  | "alternative-route";
+  | "alternative-route"
+  | "scouted";
 
 export type TransferOffer = {
   id: string;
@@ -472,6 +480,7 @@ export type SeasonResult = SeasonRecord & {
 
 export type GameState = {
   version: 7;
+  attention: CareerAttention;
   phase: Phase;
   seed: number;
   name: string;

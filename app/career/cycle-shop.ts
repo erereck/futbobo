@@ -3,6 +3,7 @@ import type { GameState, Phase } from "./model";
 import { shiftPlayerAttributes } from "./state";
 import { clamp, seeded } from "./shared";
 import { generateTransferOffers } from "./transfer-market";
+import { attentionAtOverall } from "./attention";
 
 export type CycleShopItemId = "recovery" | "media" | "coach" | "overall" | "potential" | "corruption" | "agent-country" | "special-training" | "release" | "contract-shorter" | "contract-longer";
 
@@ -89,6 +90,7 @@ export function purchaseCycleShopItem(state: GameState, itemId: CycleShopItemId,
     next = {
       ...next,
       overall,
+      attention: attentionAtOverall(state.attention, overall),
       potential: Math.max(state.potential, overall),
       attributes: shiftPlayerAttributes(state.attributes, overall - state.overall, state.position, state.seed + state.season * 719),
     };

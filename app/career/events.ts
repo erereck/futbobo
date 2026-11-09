@@ -11,6 +11,7 @@ import { ALL_PRO_EVENTS, shiftPlayerAttributes } from "./state";
 import { clamp, clubById, pick, seeded } from "./shared";
 import { clubConfederation, isEuropeanClub, positionByKey, randomClubSelection, revelationOfferPool } from "./academy";
 import { formatFollowers, formatMoney, sponsorOfferPool } from "./performance";
+import { attentionAtOverall } from "./attention";
 
 export function eligibleEvents(state: GameState) {
   const club = clubById(state.currentClubId || state.academyClubId);
@@ -786,6 +787,7 @@ export function applyEffect(state: GameState, effect: Effect) {
   return {
     ...state,
     overall,
+    attention: attentionAtOverall(state.attention, overall),
     attributes,
     potential: nextPotential,
     morale: clamp(state.morale + (effect.morale ?? 0)),

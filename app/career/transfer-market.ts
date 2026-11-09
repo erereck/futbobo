@@ -12,6 +12,9 @@ import { clubWithPlayerImpact } from "./player-club-impact";
 import { findRivalry } from "../mega-expansion";
 import { buildBetrayalConference } from "./press-conferences";
 import { ensureClubSquadPlayers } from "./world-players";
+import { seasonScouting } from "./attention";
+import type { ScoutingSpotlight } from "./attention";
+import { leagueDivision } from "./league-divisions";
 
 export const SECOND_DIVISION_LEAGUES = new Set(["brasileirao-b", "championship"]);
 export type TransferTrigger = "season-end" | "requested" | "forced-exit" | "youth-development" | "contract-expired" | "free-agent-wait" | "event";
@@ -163,7 +166,7 @@ export function rankMarketDestinations(profile: MarketPlayerProfile, options: { 
 function candidateRole(state: GameState, club: Club): SquadRole {
   return calculateSquadRole(state.overall, club, leagueById(club.leagueId).prestige, Math.max(46, state.managerTrust), state.age);
 }
-function targetStrength(state: GameState, context: MarketContext) {
+function targetStrength(context: MarketContext) {
   const performanceStep = clamp((context.performanceScore - 58) / 4.5, -7, 8);
   const ageStep = context.careerPhase === "promise" && context.standout ? 2 : context.careerPhase === "veteran" ? -2 : 0;
   return clamp(competitiveStrength(context.sourceClub) + performanceStep + ageStep, 55, 94);
@@ -199,8 +202,31 @@ function candidateScore(state: GameState, club: Club, context: MarketContext, sa
   const veteranHomeBonus = context.careerPhase === "veteran" && club.countryId === state.academyCountryId ? 5 : 0;
   const buyingPowerPenalty = context.mode === "permanent" && club.reputation <= 2 && state.overall >= 80 ? 8 : 0;
   const noise = seeded(state.seed, salt + CLUBS.indexOf(club) * 29) * 2.4;
-  return Math.abs(competitiveStrength(club) - targetStrength(state, context)) + rolePenalty + buyingPowerPenalty + noise
+  let scoutingStep = 0;
+  if (context.mode !== "loan") {
+    const confederation = clubConfederation(club);
+    const regionalAttention = state.attention.continental[confederation] ?? 0;
+    const attention = confederation === clubConfederation(context.sourceClub)
+      ? regionalAttention : Math.max(regionalAttention, state.attention.global);
+    scoutingStep = Math.min(6, attention / 9);
+  }
+  return Math.abs(competitiveStrength(club) - targetStrength(context) - scoutingStep) + rolePenalty + buyingPowerPenalty + noise
     - clubPositionNeed(state, club) / 22 - domesticBonus - regionalBonus - veteranHomeBonus;
+}
+
+function hasEliteYouthInterest(state: GameState, age = state.age) {
+  return age < 23 && state.overall >= 74 && state.attention.global >= 50;
+}
+
+function eliteEuropeanClub(club: Club) {
+  return club.reputation >= 5 && club.strength >= 88 && isEuropeanClub(club);
+}
+
+function showcaseRival(state: GameState, seller: Club, buyer: Club) {
+  return state.contractYears > 0 && (
+    Boolean(findRivalry(seller.id, buyer.id)) ||
+    (seller.reputation >= 4 && seller.strength >= 80 && seller.countryId === buyer.countryId)
+  );
 }
 
 function offerReason(state: GameState, club: Club, role: SquadRole, context: MarketContext): { reason: MarketReason; label: string; text: string } {
@@ -360,25 +386,32 @@ export function generateTransferOffers(state: GameState, salt: number, options: 
       selected = [...selected.slice(0, Math.max(0, wanted - 1)), alternative];
     }
   }
-  // Porta europeia: um jogador pronto para esse salto nunca fica preso só porque
-  // o ranking normal priorizou o mercado local. A segunda consulta continua rara.
+  const outsideEurope = !isEuropeanClub(context.sourceClub);
+  const eliteProspect = hasEliteYouthInterest(state);
+  const eliteBuyer = (club: Club) => eliteProspect && eliteEuropeanClub(club)
+    && !showcaseRival(state, clubById(context.sourceClub.id), club);
+  // Reserva espaço para uma consulta europeia quando o ranking prioriza clubes locais.
   if (
     state.overall >= 72 &&
-    !isEuropeanClub(context.sourceClub) &&
+    (outsideEurope || eliteProspect) &&
     context.mode !== "loan" &&
     !options.forceDomestic &&
-    !options.forceForeign
+    !options.forceForeign &&
+    options.includeForeign !== false
   ) {
     const europeanDoors = CLUBS
       .filter((club) =>
         isEuropeanClub(club) &&
         club.id !== context.sourceClub.id &&
         !state.betrayedClubIds.includes(club.id) &&
-        candidateRole(state, club) !== "reserva" &&
-        competitiveStrength(club) <= Math.max(72, state.overall + (context.standout ? 8 : 4)) &&
+        (eliteBuyer(club) || (outsideEurope &&
+          candidateRole(state, club) !== "reserva" &&
+          competitiveStrength(club) <= Math.max(72, state.overall + (context.standout ? 8 : 4) + Math.floor(state.attention.global / 18))
+        )) &&
         (state.age < 35 || competitiveStrength(club) <= competitiveStrength(context.sourceClub) + 3)
       )
-      .sort((a, b) => candidateScore(state, a, context, salt + 12_701) - candidateScore(state, b, context, salt + 12_701));
+      .sort((a, b) => Number(eliteBuyer(b)) - Number(eliteBuyer(a))
+        || candidateScore(state, a, context, salt + 12_701) - candidateScore(state, b, context, salt + 12_701));
     const doorCount = 1 + Number(seeded(state.seed, salt + 12_733) < 0.38);
     const doors = europeanDoors.slice(0, doorCount);
     if (doors.length) {
@@ -414,6 +447,108 @@ export function generateTransferOffers(state: GameState, salt: number, options: 
     } : offer;
   });
 }
+
+/** Propostas espontâneas são resolvidas quando todos os resultados da temporada já são definitivos. */
+export function settleSeasonScouting(state: GameState): GameState {
+  const record = state.lastResult;
+  if (!record || state.attention.lastSettledSeason >= record.season
+    || state.pendingBotaoMatches.some((match) => match.season === record.season)) return state;
+
+  const { attention, awards, spotlights } = seasonScouting(state, record);
+  const newAwards = awards.filter((award) => !record.awards.includes(award));
+  const next = { ...state, attention };
+  if (newAwards.length) {
+    next.awards += newAwards.length;
+    next.awardCabinet = { ...state.awardCabinet };
+    for (const award of newAwards) next.awardCabinet[award] = (next.awardCabinet[award] ?? 0) + 1;
+    next.lastResult = { ...record, awards: [...record.awards, ...newAwards] };
+    next.history = state.history.map((item) => item.season === record.season
+      ? { ...item, awards: [...item.awards, ...newAwards] } : item);
+  }
+  if (!spotlights.length || state.retireAfterSeason || state.youthLoanDecision || state.forcedAlternativeTransfer
+    || state.pendingTransferMode === "loan" || state.forcedFreeAgentUntilSeason > state.season) return next;
+
+  const seller = clubById(state.activeLoan?.parentClubId || state.loanParentClubId || state.currentClubId);
+  const origin = clubById(record.clubId);
+  const mode = state.contractYears <= 0 ? "free-agent" : "permanent";
+  const sellingState = { ...next, currentClubId: seller.id, currentLeagueId: seller.leagueId };
+  const context = buildMarketContext(sellingState, { mode });
+  const salt = record.season * 1717;
+  const international = spotlights.some(({ route }) => route !== "domestic");
+  const allowed = (club: Club) => club.id !== seller.id && club.id !== origin.id
+    && !state.betrayedClubIds.includes(club.id)
+    && (!international || !showcaseRival(state, seller, club));
+  const candidates = CLUBS.filter((club) => allowed(club) && leagueDivision(club.leagueId) === 1);
+  const bids: TransferOffer[] = [];
+
+  function addBids(spotlight: ScoutingSpotlight, matches: (club: Club) => boolean, count: number, target: number) {
+    const chosen = candidates.filter((club) => matches(club) && !bids.some((bid) => bid.clubId === club.id))
+      .map((club) => ({
+        club,
+        score: Math.abs(club.strength - target) - clubPositionNeed(next, club) / 30
+          + seeded(next.seed, salt + CLUBS.indexOf(club) * 19) * 3,
+      }))
+      .sort((a, b) => a.score - b.score)
+      .slice(0, Math.min(count, 5 - bids.length));
+    for (const { club } of chosen) {
+      const offer = materializeOffer(sellingState, club, context, salt + bids.length * 41);
+      bids.push({
+        ...offer,
+        reason: "scouted",
+        reasonLabel: spotlight.award ?? `Vitrine: ${spotlight.competition}`,
+        reasonText: `A atuação na ${spotlight.competition} chamou a atenção do clube. ${ROLE_TEXT[offer.role]}.`,
+      });
+    }
+  }
+
+  for (const spotlight of spotlights) {
+    const isChampionsClub = (club: Club) => initialContinentalSlot(club) === "champions";
+    const isEuropeanUpgrade = (club: Club) => isEuropeanClub(club) && club.reputation >= 4 && club.strength >= 80
+      && (!isEuropeanClub(origin) || club.strength >= origin.strength + 2);
+    const eliteProspect = (club: Club) => hasEliteYouthInterest(next, record.age)
+      && eliteEuropeanClub(club) && isEuropeanUpgrade(club);
+    switch (spotlight.route) {
+      case "world-cup": {
+        const target = spotlight.award ? 89 : clamp(next.overall + 8, 83, 88);
+        addBids(spotlight, (club) => isEuropeanUpgrade(club) && club.strength <= target + 2, 3, target);
+        break;
+      }
+      case "libertadores": {
+        addBids(spotlight, eliteProspect, 1, 90);
+        const target = clamp(next.overall + 7, 80, 88);
+        addBids(spotlight, (club) => isEuropeanUpgrade(club) && club.strength <= target + 2, 2, target);
+        addBids(spotlight, (club) => club.countryId === "arabia-saudita" && club.reputation >= 4, 1, 84);
+        addBids(spotlight, (club) => clubConfederation(club) === "SOUTH_AMERICA" && club.reputation >= 4
+          && club.strength >= origin.strength + 3, 1, clamp(next.overall + 7, 79, 87));
+        break;
+      }
+      case "europa":
+      case "champions":
+        addBids(spotlight, eliteProspect, 1, 90);
+        addBids(spotlight, (club) => isChampionsClub(club) && club.strength >= Math.min(origin.strength, 88), 2,
+          clamp(Math.max(origin.strength + 3, next.overall + 5), 84, 90));
+        break;
+      case "domestic":
+        addBids(spotlight, (club) => club.countryId === origin.countryId && club.reputation >= 3
+          && club.strength >= origin.strength + 5, 2, clamp(next.overall + 5, 74, 83));
+        if (!["brasil", "argentina"].includes(origin.countryId) && origin.strength < 75) {
+          addBids(spotlight, (club) => club.countryId !== origin.countryId && clubConfederation(club) === clubConfederation(origin)
+            && club.reputation >= 3 && club.strength >= origin.strength + 5 && club.strength <= 77, 1, 74);
+        }
+        break;
+    }
+  }
+  if (!bids.length) return next;
+
+  const keep = (id: string) => allowed(clubById(id)) && !bids.some((bid) => bid.clubId === id);
+  const transferOffers = [...bids.map((bid) => bid.clubId), ...state.transferOffers.filter(keep)].slice(0, 10);
+  return {
+    ...next,
+    transferOffers,
+    transferMarketOffers: [...bids, ...state.transferMarketOffers.filter((offer) => transferOffers.includes(offer.clubId) && keep(offer.clubId))],
+  };
+}
+
 export function materializeTransferOffers(state: GameState, clubIds: string[], salt: number, options: TransferOfferOptions = {}) {
   const context = buildMarketContext(state, options);
   return Array.from(new Set(clubIds)).filter((id) => id && id !== context.sourceClub.id && !state.betrayedClubIds.includes(id))
@@ -518,10 +653,13 @@ export function completeLoanReturn(state: GameState): GameState {
     isFreeAgent: contractExpired, freeAgentSinceSeason: contractExpired ? state.season : state.freeAgentSinceSeason,
     transferOffers: [], transferMarketOffers: [], transferStatus: null, forcedClubExit: false,
     transferHistory: [...state.transferHistory, record] };
+  const scouted = state.transferMarketOffers.filter((offer) => offer.reason === "scouted" && offer.fromClubId === parent.id);
   if (contractExpired) {
-    const offers = generateTransferOffers(returned, state.season * 557, { includeForeign: true, mode: "free-agent", trigger: "contract-expired", count: 8 });
+    const ordinary = generateTransferOffers(returned, state.season * 557, { includeForeign: true, mode: "free-agent", trigger: "contract-expired", count: 8 });
+    const offers = [...scouted, ...ordinary.filter((offer) => !scouted.some((bid) => bid.clubId === offer.clubId))].slice(0, 10);
     return { ...returned, transferOffers: offers.map((offer) => offer.clubId), transferMarketOffers: offers };
   }
+  if (scouted.length) return { ...returned, transferOffers: scouted.map((offer) => offer.clubId), transferMarketOffers: scouted };
   const hadLegitimateOpenMarket = state.transferRequested || state.forcedAlternativeTransfer || (!state.forcedClubExit && (state.transferOffers.length > 0 || state.transferMarketOffers.length > 0));
   if (!hadLegitimateOpenMarket) return returned;
   const requestedCount = clamp(Math.max(state.transferOffers.length, state.transferMarketOffers.length, 5), 5, 10);

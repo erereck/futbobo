@@ -16,6 +16,7 @@ import { competitiveStrength } from "./performance";
 import { clamp, clubById, pick, seeded } from "./shared";
 import { emptyWorldPlayerUniverse, normalizeWorldPlayerUniverse } from "./world-players";
 import { applyNationalBotaoProduction } from "./botao-production";
+import { EMPTY_ATTENTION, normalizeAttention } from "./attention";
 
 export function awardPresentation(award: string): AwardPresentation {
   if (award === "Bola de Ouro") return { icon: "◉", tier: "legendary", kicker: "MAIOR PRÊMIO DO FUTEBOL", description: "Você foi eleito o melhor jogador do mundo." };
@@ -367,6 +368,7 @@ export function initialState(seedOverride?: number): GameState {
   const seed = seedOverride ?? Date.now() % 2147483647;
   return {
     version: 7,
+    attention: EMPTY_ATTENTION,
     phase: "welcome",
     seed,
     name: "",
@@ -600,6 +602,7 @@ export function normalizeSave(value: unknown): GameState {
     ...base,
     ...saved,
     version: 7,
+    attention: normalizeAttention(saved),
     phase:
       staleForcedLoanReturnMarket
         ? "career"
