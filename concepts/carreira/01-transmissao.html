@@ -1,0 +1,845 @@
+<!doctype html>
+<!--
+  FUTBOBO · CONCEPT 01 · TRANSMISSÃO — "ao vivo da sua carreira"
+
+  PASSO 1 · PLANO DE TOKENS
+    night      #0b1621  céu e canvas (cena noturna, nunca preto chapado)
+    pitch      #1d5a32  gramado sob refletor   / pitch-deep #123c22
+    plate      #f6f7f4  placa gráfica de TV (todo texto de leitura mora aqui)
+    ink        #0d1512  tinta das placas, faixa do placar
+    club       #0057a8 / #e32636  faixa do Bahia (identidade, nunca ação)
+    live       #f4c430  AO VIVO + a escolha do jogador (única cor de ação)
+  Tipo: Archivo variável. Largura 76/820 na tarja (o momento ousado), 125/700 nos números do placar,
+        100/400–600 no texto. Uma família, usada nos extremos do eixo de largura.
+  Forma: cantos retos com cortes a 45° (linguagem de grafismo esportivo), nada de cartão arredondado.
+
+  WIREFRAME DESKTOP (1440×900, sem rolagem)
+  ┌────────────────────────────────────────────────────────────────────────────┐
+  │[escudo BAH|2028|17 anos|OVR 63|MEI] [Mercado: Quer mudar de camisa? ⇄ ⇄]  ●AO VIVO│
+  │┌ficha──────┐                                            ┌ CAM 4 close ───┐ │
+  ││10 TITO BOBO│      estádio à noite: refletores,          │  retrato        │ │
+  ││Moral ▬▬ 63 │      arquibancada, bandeirão, gramado      └────────────────┘ │
+  ││Físico…     │      em perspectiva                        ┌ Objetivo ──────┐ │
+  ││Status/Trein│                                            │Comandar o jogo │ │
+  │└────────────┘                                            └────────────────┘ │
+  │┌[VISUAL NOVO][Temporada 2028]─────────────────────────┐ ┌ Enquete ───────┐ │
+  ││F│ O barbeiro desenhou o escudo do clube na sua…     │ │A ███ Assumir 54│ │
+  ││ │ Você pediu apenas para tirar dos lados…           │ │B ██  Pintar  29│ │
+  │└──────────────────────────────── faixa azul/vermelha ┘ │C █   Raspar  17│ │
+  │[1 Carreira][2 Jogador][3 Time][4 Hist][5 Est][6 Mundo]│MUNDO ▸ letreiro… ⏸│
+  └────────────────────────────────────────────────────────────────────────────┘
+  MOBILE (390×844): placar → letreiro → 4 stats → janela da cena (AO VIVO + close) →
+  tarja do capítulo sobrepondo a cena → enquete no polegar → [rolagem: objetivo, mercado,
+  ficha, situação] · câmeras fixas no rodapé.
+
+  PASSO 2 · CRÍTICA DO PLANO
+  - "Barras coloridas por stat" parecia painel SaaS → barras viram tinta sobre trilho hachurado; cor só
+    no clube e na ação.
+  - "Rótulo em caixa alta em cima de tudo" → só os elementos que na TV são de fato caixa alta (placar,
+    etiqueta da tarja, número de câmera). Todo o resto em caixa normal.
+  - "Fade-up em cada bloco" → substituído por UMA entrada de grafismo: placar limpa, tarja varre com a
+    barra de cor, enquete cresce. Escolher dispara a vinheta (stinger) nas cores do clube.
+  - "→ nas escolhas" → letra da enquete (A/B/C) faz o papel de affordance.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Transmissão · Futbobo concept 01</title>
+<meta name="theme-color" content="#0b1621">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --night: #0b1621;
+    --night-2: #12202c;
+    --pitch: #1d5a32;
+    --pitch-deep: #123c22;
+    --plate: #f6f7f4;
+    --plate-2: #e8ebe7;
+    --track: #d9dfda;
+    --ink: #0d1512;
+    --ink-2: #47544f;
+    --ink-3: #6b7772;
+    --club: #0057a8;
+    --club-2: #e32636;
+    --live: #f4c430;
+    --live-ink: #1d1600;
+    --out: cubic-bezier(.16, 1, .3, 1);
+    --shadow: 0 1px 2px rgba(0, 0, 0, .28), 0 22px 48px -22px rgba(0, 0, 0, .75);
+    --gap: 24px;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    overflow-x: clip;
+    background: var(--night);
+    color: #eef2ee;
+    font-family: "Archivo", "Arial Narrow", sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  img { display: block; }
+  :focus-visible { outline: 3px solid var(--live); outline-offset: 2px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ico { width: 1.15em; height: 1.15em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ───────── Palco ───────── */
+  .bc {
+    position: relative;
+    isolation: isolate;
+    height: 100dvh;
+    min-height: 640px;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(296px, 324px) minmax(0, 1fr) minmax(340px, 392px);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "top   top   top"
+      "ficha stage side"
+      "lower lower poll"
+      "foot  foot  foot";
+    column-gap: var(--gap);
+    row-gap: clamp(10px, 1.7vh, 18px);
+    padding: clamp(14px, 2.2vh, 24px) 28px 0;
+  }
+  .scene, .shade { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .scene { z-index: -3; }
+  .shade {
+    z-index: -2;
+    background:
+      radial-gradient(120% 70% at 50% 42%, transparent 40%, rgba(4, 9, 13, .55) 100%),
+      linear-gradient(180deg, rgba(4, 9, 13, .55) 0%, transparent 16%, transparent 52%, rgba(4, 9, 13, .78) 82%, rgba(4, 9, 13, .92) 100%);
+  }
+  .grain {
+    position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .07; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ───────── Placar (bug) + mercado + ao vivo ───────── */
+  .top { grid-area: top; display: flex; align-items: stretch; gap: 14px; min-width: 0; }
+  .bug {
+    display: flex; align-items: stretch; height: 52px; background: var(--ink); color: #fff;
+    box-shadow: var(--shadow); clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+    padding-right: 14px; flex: none;
+  }
+  .bug-crest { width: 52px; background: #fff; display: grid; place-items: center; }
+  .bug-crest img { width: 38px; height: 38px; object-fit: contain; }
+  .bug-club {
+    display: flex; align-items: center; gap: 10px; padding: 0 14px 0 12px;
+    font-stretch: 125%; font-weight: 800; font-size: 20px; letter-spacing: .02em;
+    border-right: 1px solid rgba(255, 255, 255, .12);
+  }
+  .bug-club i { width: 6px; height: 28px; background: linear-gradient(var(--club) 0 50%, var(--club-2) 50% 100%); }
+  .bug-cell { display: flex; align-items: baseline; gap: 6px; padding: 0 14px; align-self: center; border-right: 1px solid rgba(255, 255, 255, .12); line-height: 1; }
+  .bug-cell:last-of-type { border-right: 0; }
+  .bug-cell b { font-stretch: 125%; font-weight: 700; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .bug-cell small { font-stretch: 85%; font-weight: 600; font-size: 12px; color: #a9b6b0; text-transform: uppercase; letter-spacing: .06em; }
+  .bug-cell.ovr b { color: var(--live); }
+  .bug-pos {
+    align-self: center; margin-left: 2px; padding: 4px 8px 3px; background: var(--live); color: var(--live-ink);
+    font-stretch: 110%; font-weight: 800; font-size: 13px; letter-spacing: .04em;
+  }
+
+  .mkt {
+    display: flex; align-items: center; gap: 10px; height: 52px; background: var(--plate); color: var(--ink);
+    box-shadow: var(--shadow); padding-right: 8px; min-width: 0;
+    clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%);
+    margin-left: -6px;
+  }
+  .mkt-tab {
+    align-self: stretch; display: grid; place-items: center; padding: 0 16px 0 24px; background: var(--plate-2);
+    font-stretch: 80%; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-2);
+  }
+  .mkt-q { font-weight: 600; font-size: 14px; white-space: nowrap; padding-right: 4px; }
+  .key {
+    display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px;
+    border: 1.5px solid var(--ink); color: var(--ink); font-stretch: 90%; font-weight: 700; font-size: 13.5px; white-space: nowrap;
+    transition: background-color .14s ease, color .14s ease, transform .14s ease;
+  }
+  .key em { font-style: normal; font-weight: 800; font-size: 12px; padding: 1px 5px; background: var(--ink); color: #fff; }
+  .key:hover { background: var(--ink); color: #fff; }
+  .key:hover em { background: var(--live); color: var(--live-ink); }
+  .key:active { transform: scale(.98); }
+
+  .live {
+    margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px 0 12px;
+    background: var(--live); color: var(--live-ink); font-stretch: 110%; font-weight: 800; font-size: 13px; letter-spacing: .1em; text-transform: uppercase;
+    box-shadow: var(--shadow); flex: none;
+  }
+  .live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--live-ink); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+  /* ───────── Ficha do jogador ───────── */
+  .ficha { grid-area: ficha; align-self: start; background: var(--plate); color: var(--ink); box-shadow: var(--shadow); }
+  .ficha-head { display: flex; align-items: stretch; background: var(--club); color: #fff; position: relative; }
+  .ficha-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--club-2); }
+  .ficha-num {
+    width: 74px; display: grid; place-items: center; background: rgba(0, 0, 0, .18);
+    font-stretch: 125%; font-weight: 800; font-size: 38px; line-height: 1; font-variant-numeric: tabular-nums; padding-bottom: 4px;
+  }
+  .ficha-who { padding: 11px 14px 14px; flex: 1; min-width: 0; }
+  .ficha-who h2 { font-stretch: 78%; font-weight: 820; font-size: 27px; line-height: 1; letter-spacing: -.005em; }
+  .ficha-who p { font-size: 13px; color: #d4e3f3; margin-top: 4px; }
+  .ficha-flag { align-self: center; margin-right: 14px; width: 26px; height: 18px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255, 255, 255, .35); }
+
+  .stats { padding: 12px 16px 6px; display: grid; gap: clamp(6px, 1.1vh, 10px); }
+  .stat { display: grid; grid-template-columns: 1fr auto; align-items: baseline; row-gap: 4px; }
+  .stat dt { font-weight: 600; font-size: 13.5px; color: var(--ink-2); display: flex; align-items: center; gap: 7px; }
+  .stat dt em { font-style: normal; font-size: 11.5px; font-weight: 700; color: #fff; background: var(--club-2); padding: 1px 6px; }
+  .stat dd { font-stretch: 120%; font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; line-height: 1; }
+  .bar {
+    grid-column: 1 / -1; height: 7px; position: relative; overflow: hidden;
+    background: repeating-linear-gradient(-45deg, var(--track) 0 3px, #e8ece9 3px 6px);
+  }
+  .bar i { position: absolute; inset: 0; background: var(--ink); transform-origin: left; transform: scaleX(calc(var(--v) / 100)); }
+  .bar::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--plate) calc(10% - 1px) 10%); }
+
+  .status { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--track); margin-top: 8px; }
+  .status div { padding: 10px 12px 11px 16px; border-right: 1px solid var(--track); }
+  .status div:last-child { border-right: 0; }
+  .status dt { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .status dd { font-stretch: 85%; font-weight: 800; font-size: 16px; margin-top: 1px; }
+  .retire {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; min-height: 44px;
+    border-top: 1px solid var(--track); color: #b3261e; font-weight: 700; font-size: 13.5px;
+    transition: background-color .14s ease;
+  }
+  .retire span { display: inline-flex; align-items: center; gap: 8px; }
+  .retire small { font-weight: 500; color: var(--ink-3); font-size: 12px; }
+  .retire:hover { background: #fbe9e7; }
+
+  /* ───────── Coluna da direita: close + objetivo ───────── */
+  .side { grid-area: side; display: flex; flex-direction: column; gap: clamp(10px, 1.6vh, 16px); align-self: start; min-height: 0; }
+  .pip { position: relative; aspect-ratio: 16 / 9; background: #0a1118; box-shadow: var(--shadow); overflow: hidden; outline: 3px solid var(--plate); outline-offset: -3px; }
+  .pip svg.bokeh { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .pip img.cut { position: absolute; bottom: -12%; left: 50%; height: 104%; width: auto; transform: translateX(-30%); filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .55)); }
+  .pip figcaption { position: absolute; left: 0; bottom: 0; display: flex; align-items: stretch; font-size: 12px; }
+  .pip figcaption b { background: var(--live); color: var(--live-ink); padding: 5px 8px; font-stretch: 110%; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .pip figcaption span { background: var(--ink); color: #fff; padding: 5px 10px; font-weight: 600; }
+
+  .meta { background: var(--plate); color: var(--ink); box-shadow: var(--shadow); padding: 14px 16px 0; position: relative; }
+  .meta::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--live); }
+  .meta-k { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+  .meta-k b { font-stretch: 120%; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .meta h2 { font-stretch: 80%; font-weight: 820; font-size: 25px; line-height: 1.05; margin-top: 4px; }
+  .meta p { font-size: 14px; color: var(--ink-2); margin-top: 2px; }
+  .segs { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-top: 12px; }
+  .segs i { height: 9px; background: var(--track); }
+  .meta footer { display: flex; justify-content: space-between; margin: 12px -16px 0; padding: 9px 16px; background: var(--plate-2); font-size: 13px; font-weight: 700; }
+  .meta .up { color: #1d6b37; }
+  .meta .down { color: #b3261e; }
+
+  /* ───────── Tarja inferior (o capítulo) ───────── */
+  .lower { grid-area: lower; align-self: end; position: relative; overflow: hidden; box-shadow: var(--shadow); }
+  .lower-tabs { display: flex; align-items: stretch; min-height: 34px; }
+  .tag { background: var(--live); color: var(--live-ink); padding: 8px 14px 7px; font-stretch: 110%; font-weight: 800; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; }
+  .tab { background: var(--ink); color: #fff; padding: 8px 22px 7px 14px; font-weight: 600; font-size: 13.5px; clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 100%, 0 100%); }
+  .decision {
+    margin-left: auto; display: flex; align-items: center; gap: 10px; padding: 0 6px 0 22px; background: var(--ink); color: #fff; font-size: 13.5px;
+    clip-path: polygon(14px 0, 100% 0, 100% 100%, 0 100%); max-width: 62%;
+  }
+  .decision[hidden] { display: none; }
+  .decision b { color: var(--live); font-stretch: 110%; font-weight: 800; font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; flex: none; }
+  .decision span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+  .decision button { flex: none; height: 28px; padding: 0 10px; font-size: 12.5px; font-weight: 700; color: #cfd8d3; border-left: 1px solid rgba(255, 255, 255, .18); }
+  .decision button:hover { color: #fff; }
+  .lower-body { display: flex; background: var(--plate); color: var(--ink); }
+  .lower-mark { width: clamp(76px, 7vw, 96px); flex: none; background: var(--ink); display: grid; place-items: center; }
+  .lower-mark img { width: 52%; height: auto; }
+  .lower-copy { padding: clamp(14px, 2.2vh, 22px) 26px clamp(16px, 2.4vh, 24px); min-width: 0; }
+  .lower-copy h1 {
+    font-stretch: 76%; font-weight: 820; font-size: clamp(32px, 4.9vh, 52px); line-height: .98; letter-spacing: -.012em;
+    text-wrap: balance; max-width: 34ch;
+  }
+  .lower-copy p { margin-top: clamp(8px, 1.3vh, 12px); font-size: clamp(14.5px, 1.85vh, 17px); line-height: 1.45; color: var(--ink-2); max-width: 64ch; text-wrap: pretty; }
+  .lower-stripe { height: 6px; background: linear-gradient(90deg, var(--club) 0 70%, #fff 70% 72%, var(--club-2) 72% 100%); }
+  .stinger { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+  .stinger i { position: absolute; top: -10%; bottom: -10%; left: 0; width: 46%; transform: translateX(-140%) skewX(-18deg); }
+  .stinger i:nth-child(1) { background: var(--live); }
+  .stinger i:nth-child(2) { background: var(--club); }
+  .stinger i:nth-child(3) { background: var(--club-2); }
+  .stinger.run i { animation: sting .82s var(--out) both; }
+  .stinger.run i:nth-child(2) { animation-delay: .06s; }
+  .stinger.run i:nth-child(3) { animation-delay: .12s; }
+  @keyframes sting { 0% { transform: translateX(-140%) skewX(-18deg); } 100% { transform: translateX(340%) skewX(-18deg); } }
+
+  /* ───────── Enquete (as escolhas) ───────── */
+  .poll { grid-area: poll; align-self: end; background: var(--plate); color: var(--ink); box-shadow: var(--shadow); }
+  .poll-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 12px 16px 10px; border-bottom: 1px solid var(--track); }
+  .poll-head h2 { font-stretch: 80%; font-weight: 820; font-size: 22px; line-height: 1; }
+  .poll-head span { font-size: 12.5px; color: var(--ink-3); font-weight: 600; white-space: nowrap; }
+  .opts { list-style: none; }
+  .opts li + li { border-top: 1px solid var(--track); }
+  .opt {
+    position: relative; width: 100%; display: grid; grid-template-columns: 34px 1fr auto; align-items: center; column-gap: 12px;
+    text-align: left; padding: clamp(9px, 1.35vh, 12px) 16px clamp(9px, 1.35vh, 12px) 14px; min-height: 58px; isolation: isolate;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .opt::before { /* fatia da enquete */
+    content: ""; position: absolute; inset: 0; z-index: -1; background: #e4e9e5; transform-origin: left; transform: scaleX(calc(var(--v) / 100));
+    transition: transform .5s var(--out), background-color .15s ease;
+  }
+  .opt-key {
+    width: 34px; height: 34px; display: grid; place-items: center; background: var(--ink); color: #fff;
+    font-stretch: 120%; font-weight: 800; font-size: 16px; transition: background-color .15s ease, color .15s ease;
+  }
+  .opt-copy { min-width: 0; }
+  .opt-copy strong { display: block; font-stretch: 88%; font-weight: 750; font-size: 16px; line-height: 1.18; }
+  .opt-copy small { display: flex; flex-wrap: wrap; gap: 0 8px; margin-top: 3px; font-size: 12.5px; color: var(--ink-2); }
+  .opt-copy small span + span { padding-left: 8px; border-left: 1px solid #b9c2bd; }
+  .opt-pct { font-stretch: 120%; font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; line-height: 1; }
+  .opt-pct sub { font-size: 12px; vertical-align: baseline; margin-left: 1px; color: var(--ink-3); }
+  .opt:hover::before { background: #d9e0db; }
+  .opt:hover .opt-key { background: var(--live); color: var(--live-ink); }
+  .opt:active { transform: none; }
+  .opt[aria-pressed="true"] { color: #fff; }
+  .opt[aria-pressed="true"]::before { background: var(--ink); transform: scaleX(1); }
+  .opt[aria-pressed="true"] .opt-key { background: var(--live); color: var(--live-ink); }
+  .opt[aria-pressed="true"] .opt-copy small, .opt[aria-pressed="true"] .opt-pct sub { color: #b8c4be; }
+  .opt[aria-pressed="true"] .opt-copy small span + span { border-color: rgba(255, 255, 255, .25); }
+  .poll-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 16px; background: var(--plate-2); font-size: 13px; color: var(--ink-2); border-top: 1px solid var(--track); }
+  .poll-foot b { color: var(--ink); }
+
+  /* ───────── Rodapé: câmeras + letreiro ───────── */
+  .foot { grid-area: foot; display: flex; align-items: stretch; height: 52px; margin: 0 -28px; background: var(--ink); border-top: 3px solid var(--live); }
+  .cams { display: flex; flex: none; }
+  .cam {
+    display: flex; align-items: center; gap: 9px; padding: 0 16px; font-weight: 650; font-size: 14px; color: #b8c4be;
+    border-right: 1px solid rgba(255, 255, 255, .08); transition: color .14s ease, background-color .14s ease;
+  }
+  .cam .ico { display: none; }
+  .cam-n { width: 21px; height: 21px; display: grid; place-items: center; border: 1.5px solid currentColor; font-stretch: 115%; font-size: 11.5px; font-weight: 800; line-height: 1; }
+  .cam:hover { color: #fff; background: rgba(255, 255, 255, .05); }
+  .cam[aria-current="page"] { background: var(--live); color: var(--live-ink); }
+  .cam[aria-current="page"] .cam-n { background: var(--live-ink); color: var(--live); border-color: var(--live-ink); }
+  .gc { flex: 1; min-width: 0; display: flex; align-items: stretch; }
+  .gc-tab { display: grid; place-items: center; padding: 0 14px 0 18px; background: var(--club); color: #fff; font-stretch: 110%; font-weight: 800; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); padding-right: 22px; }
+  .gc-window { flex: 1; min-width: 0; overflow: hidden; display: flex; align-items: center; mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 40px), transparent 100%); }
+  .gc-track { display: flex; flex: none; animation: crawl 46s linear infinite; }
+  .gc-list { display: flex; flex: none; list-style: none; }
+  .gc-list li { display: flex; align-items: center; gap: 10px; padding: 0 22px; white-space: nowrap; font-weight: 600; font-size: 14.5px; color: #e6ece8; }
+  .gc-list li img { width: 22px; height: 22px; object-fit: contain; }
+  .gc-list li::after { content: ""; width: 7px; height: 7px; background: var(--live); transform: rotate(45deg); margin-left: 22px; }
+  @keyframes crawl { to { transform: translateX(-50%); } }
+  .gc-pause { width: 52px; flex: none; display: grid; place-items: center; color: #cfd8d3; border-left: 1px solid rgba(255, 255, 255, .1); }
+  .gc-pause:hover { color: #fff; background: rgba(255, 255, 255, .05); }
+  .gc-pause svg { width: 16px; height: 16px; fill: currentColor; }
+  .gc-pause .i-play { display: none; }
+  .paused .gc-pause .i-play { display: block; }
+  .paused .gc-pause .i-pause { display: none; }
+  .paused .gc-track, .paused .live-dot { animation-play-state: paused; }
+
+  /* ───────── Entrada orquestrada (uma só) ───────── */
+  @media (prefers-reduced-motion: no-preference) {
+    .bug { animation: wipeR .55s var(--out) .05s both; }
+    .mkt { animation: wipeR .5s var(--out) .22s both; }
+    .live { animation: pop .4s var(--out) .35s both; }
+    .ficha { animation: wipeD .6s var(--out) .3s both; }
+    .ficha .bar i { animation: grow .9s var(--out) .7s both; }
+    .side { animation: wipeL .6s var(--out) .42s both; }
+    .lower::after { content: ""; position: absolute; inset: 0; background: var(--live); z-index: 4; transform-origin: right; animation: sweep .9s var(--out) .55s both; }
+    .lower { animation: wipeR .7s var(--out) .55s both; }
+    .poll { animation: wipeL .6s var(--out) .8s both; }
+    .opt::before { animation: grow 1s var(--out) 1.05s both; }
+    .foot { animation: rise .5s var(--out) .15s both; }
+  }
+  @keyframes wipeR { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+  @keyframes wipeL { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+  @keyframes wipeD { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+  @keyframes sweep { 0% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+  @keyframes grow { from { transform: scaleX(0); } }
+  @keyframes pop { from { opacity: 0; transform: scale(.9); } }
+  @keyframes rise { from { transform: translateY(100%); } }
+  /* o bug e o mercado mantêm seus cortes diagonais depois da entrada */
+  .bug { animation-fill-mode: backwards; }
+  .mkt { animation-fill-mode: backwards; }
+  @media (prefers-reduced-motion: reduce) {
+    .gc-track { animation: none; }
+    .gc-window { overflow-x: auto; mask-image: none; }
+    .gc-list[aria-hidden="true"] { display: none; }
+    .live-dot { animation: none; }
+    .stinger { display: none; }
+    .opt::before { transition: none; }
+  }
+
+  /* ───────── Notebook / desktop baixo ───────── */
+  @media (min-width: 1200px) and (max-width: 1360px) {
+    .mkt-q { display: none; }
+    .cam { padding: 0 12px; font-size: 13.5px; }
+  }
+  @media (min-width: 1200px) and (max-height: 840px) {
+    .stats { padding-top: 10px; gap: 6px; }
+    .status div { padding-top: 8px; padding-bottom: 8px; }
+    .retire { min-height: 40px; padding-top: 8px; padding-bottom: 8px; }
+    .pip { aspect-ratio: 2 / 1; }
+    .meta { padding-top: 11px; }
+    .meta h2 { font-size: 22px; }
+    .segs { margin-top: 9px; }
+    .meta footer { margin-top: 9px; padding-top: 7px; padding-bottom: 7px; }
+    .opt { min-height: 52px; }
+  }
+  @media (min-width: 1700px) {
+    .bc { grid-template-columns: 340px minmax(0, 1fr) 430px; padding-left: 40px; padding-right: 40px; }
+    .foot { margin: 0 -40px; }
+  }
+
+  /* ───────── Celular / tablet: transmissão vertical ───────── */
+  @media (max-width: 1199px) {
+    .bc {
+      height: auto; min-height: 100dvh; overflow: visible;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: none;
+      grid-template-areas: "bug" "gc" "stats" "stage" "lower" "poll" "meta" "mkt" "id" "status";
+      row-gap: 8px;
+      padding: max(10px, env(safe-area-inset-top)) 12px calc(76px + env(safe-area-inset-bottom));
+      max-width: 680px; margin: 0 auto; position: static;
+    }
+    body { position: relative; }
+    .scene-wrap { position: absolute; left: 0; right: 0; top: 0; height: 340px; z-index: -3; overflow: hidden; }
+    .scene-wrap .shade { background: linear-gradient(180deg, rgba(4, 9, 13, .65) 0%, rgba(4, 9, 13, .2) 40%, rgba(4, 9, 13, .35) 70%, var(--night) 100%); }
+    .grain { height: 340px; }
+    .top, .ficha, .side, .foot { display: contents; }
+    .bug { grid-area: bug; height: 48px; justify-self: stretch; }
+    .bug-crest { width: 46px; } .bug-crest img { width: 32px; height: 32px; }
+    .bug-club { font-size: 0; padding: 0 4px 0 0; gap: 0; border-right: 0; } .bug-club i { width: 5px; height: 100%; }
+    .bug-cell { padding: 0 8px; gap: 4px; flex: 1; justify-content: center; } .bug-cell b { font-size: 18px; } .bug-cell small { font-size: 10.5px; }
+    .bug-cell.season small { display: none; }
+    .bug-pos { font-size: 11.5px; padding: 3px 6px 2px; margin-right: 4px; }
+    .mkt { grid-area: mkt; height: auto; flex-wrap: wrap; clip-path: none; margin: 0; padding: 0 0 12px; gap: 8px 8px; }
+    .mkt-tab { align-self: auto; padding: 8px 12px; width: 100%; justify-items: start; }
+    .mkt-q { display: block; width: 100%; padding: 2px 12px 0; font-size: 15px; }
+    .key { margin-left: 12px; height: 44px; }
+    .key + .key { margin-left: 0; }
+    .live { grid-area: stage; justify-self: start; align-self: start; margin: 10px 0 0; height: 28px; font-size: 11.5px; padding: 0 10px; }
+    .ficha-head { grid-area: id; }
+    .stats { grid-area: stats; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: 0; background: var(--plate); color: var(--ink); box-shadow: var(--shadow); }
+    .stat { padding: 7px 9px 8px; border-right: 1px solid var(--track); grid-template-columns: 1fr auto; row-gap: 5px; }
+    .stat:last-child { border-right: 0; }
+    .stat dt { font-size: 11.5px; min-width: 0; white-space: nowrap; overflow: hidden; }
+    .stat dt em { display: none; }
+    .stat dd { font-size: 15px; }
+    .bar { height: 5px; }
+    .status { grid-area: status; background: var(--plate); color: var(--ink); margin: 0; border: 0; box-shadow: var(--shadow); grid-template-columns: repeat(3, 1fr) auto; }
+    .status div { padding: 10px 10px 11px 12px; }
+    .retire { grid-area: status; display: none; }
+    .status .retire-cell { display: block; padding: 0; }
+    .status .retire-cell dd { height: 100%; }
+    .status .retire-cell .retire { display: flex; height: 100%; border: 0; padding: 0 12px; width: auto; }
+    .status .retire-cell .retire small { display: none; }
+    .ficha > .retire { display: none; }
+    .pip { grid-area: stage; justify-self: end; align-self: end; width: 46%; max-width: 230px; aspect-ratio: 16 / 10; margin-bottom: 22px; }
+    .pip figcaption span { display: none; }
+    .meta { grid-area: meta; }
+    .stage-space { grid-area: stage; height: 132px; }
+    .lower { grid-area: lower; margin-top: -30px; }
+    .lower-mark { width: 52px; }
+    .lower-copy { padding: 14px 16px 16px; }
+    .lower-copy h1 { font-size: clamp(27px, 7.6vw, 34px); max-width: none; }
+    .lower-copy p { font-size: 14.5px; }
+    .decision { position: absolute; left: 0; right: 0; top: 0; max-width: none; height: 34px; clip-path: none; padding-left: 12px; z-index: 2; }
+    .poll { grid-area: poll; }
+    .poll-head { padding: 10px 14px 8px; }
+    .poll-head h2 { font-size: 20px; }
+    .opt { grid-template-columns: 32px 1fr auto; column-gap: 10px; padding: 9px 12px; min-height: 60px; }
+    .opt-key { width: 32px; height: 32px; }
+    .opt-copy strong { font-size: 15.5px; }
+    .opt-pct { font-size: 17px; }
+    .poll-foot { display: none; }
+    .ficha-head { box-shadow: var(--shadow); }
+    .gc { grid-area: gc; height: 34px; background: var(--ink); box-shadow: var(--shadow); }
+    .gc-tab { font-size: 11.5px; padding: 0 16px 0 10px; }
+    .gc-list li { font-size: 13px; padding: 0 16px; }
+    .gc-list li img { width: 18px; height: 18px; }
+    .gc-pause { width: 40px; }
+    .cams {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; height: calc(64px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
+      display: grid; grid-template-columns: repeat(6, 1fr); background: var(--ink); border-top: 3px solid var(--live);
+    }
+    .cam { flex-direction: column; justify-content: center; gap: 4px; padding: 0 2px; font-size: 11px; font-stretch: 85%; border-right: 0; min-height: 44px; }
+    .cam .ico { display: block; width: 21px; height: 21px; }
+    .cam-n { display: none; }
+  }
+  @media (max-width: 1199px) and (max-height: 780px) {
+    .stage-space { height: 64px; }
+    .pip { display: none; }
+    .lower { margin-top: -20px; }
+    .lower-copy p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .opt { min-height: 54px; padding-top: 7px; padding-bottom: 7px; }
+  }
+  @media (max-width: 380px) {
+    .bug-cell { padding: 0 7px; }
+    .bug-club { padding: 0 8px; }
+    .stat { padding: 7px 7px 8px; }
+    .stat dt { font-size: 11px; }
+  }
+  @media (min-width: 1200px) {
+    .stage-space, .status .retire-cell { display: none; }
+    .scene-wrap { position: absolute; inset: 0; z-index: -3; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11.5l-2.2 4 2.2 4H5"/></symbol>
+  <symbol id="i-shirt" viewBox="0 0 24 24"><path d="M8.5 3.5 4 6l1.8 4 2-1V20h8.4V9l2 1L20 6l-4.5-2.5c-.6 1.5-1.9 2.4-3.5 2.4s-2.9-.9-3.5-2.4Z"/></symbol>
+  <symbol id="i-team" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19.5c0-3.2 2.4-5.6 5.5-5.6s5.5 2.4 5.5 5.6"/><path d="M15.5 5.2a3 3 0 0 1 0 5.6M17.5 14.3c1.9.7 3 2.6 3 5.2"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><circle cx="5" cy="6" r="1.4"/><circle cx="5" cy="12" r="1.4"/><circle cx="5" cy="18" r="1.4"/><path d="M9.5 6H20M9.5 12h8M9.5 18H19"/></symbol>
+  <symbol id="i-stats" viewBox="0 0 24 24"><path d="M4 20h16M6.5 20v-6M11 20V8M15.5 20v-9M20 20V5"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.5 5.1 3.5 8.5s-1.1 6.2-3.5 8.5c-2.4-2.3-3.5-5.1-3.5-8.5s1.1-6.2 3.5-8.5Z"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M5 8h13l-3.2-3.2M19 16H6l3.2 3.2"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M6.5 3.5h11M6.5 20.5h11M8 3.5c0 4.6 8 4.4 8 8.5s-8 3.9-8 8.5M16 3.5c0 4.6-8 4.4-8 8.5s8 3.9 8 8.5"/></symbol>
+</svg>
+
+<div class="bc" id="bc">
+  <!-- Cena: estádio à noite, câmera principal -->
+  <div class="scene-wrap" aria-hidden="true">
+    <svg class="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#050b11"/><stop offset=".3" stop-color="#0a1620"/><stop offset=".62" stop-color="#132431"/><stop offset="1" stop-color="#0e1b25"/>
+        </linearGradient>
+        <radialGradient id="glow" cx=".5" cy=".5" r=".5">
+          <stop offset="0" stop-color="#fff6dc" stop-opacity=".62"/><stop offset=".22" stop-color="#ffeec2" stop-opacity=".22"/><stop offset="1" stop-color="#ffeec2" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="pool" cx=".5" cy=".5" r=".5">
+          <stop offset="0" stop-color="#e9ffe4" stop-opacity=".16"/><stop offset="1" stop-color="#e9ffe4" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="shaft" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#fff4d6" stop-opacity=".1"/><stop offset="1" stop-color="#fff4d6" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="grassFar" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0f3a22"/><stop offset=".45" stop-color="#17502d"/><stop offset="1" stop-color="#1c5c33"/>
+        </linearGradient>
+        <linearGradient id="depth" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#06140d" stop-opacity=".55"/><stop offset=".5" stop-color="#06140d" stop-opacity=".12"/><stop offset="1" stop-color="#06140d" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="tierFade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#050b11" stop-opacity=".8"/><stop offset="1" stop-color="#050b11" stop-opacity=".32"/>
+        </linearGradient>
+        <pattern id="crowdA" width="15" height="12" patternUnits="userSpaceOnUse">
+          <rect width="15" height="12" fill="#18232d"/>
+          <circle cx="3.6" cy="3.2" r="2.3" fill="#2a5fa8"/><circle cx="11" cy="3.6" r="2.3" fill="#d6dbdf"/>
+          <circle cx="7.4" cy="9.2" r="2.3" fill="#b8323b"/><circle cx="14.6" cy="9" r="2.2" fill="#2c3946"/><circle cx="0.2" cy="9" r="2.2" fill="#2c3946"/>
+        </pattern>
+        <pattern id="crowdB" width="23" height="17" patternUnits="userSpaceOnUse">
+          <circle cx="6" cy="5" r="2.3" fill="#e9e3d6"/><circle cx="17" cy="12" r="2.3" fill="#1d4e93"/><circle cx="20" cy="3" r="2.2" fill="#7a4a3a"/><circle cx="9" cy="14" r="2.2" fill="#c43a42"/>
+        </pattern>
+        <pattern id="crowdC" width="37" height="29" patternUnits="userSpaceOnUse">
+          <circle cx="4" cy="22" r="2.4" fill="#0f171f"/><circle cx="19" cy="8" r="2.4" fill="#0f171f"/><circle cx="30" cy="20" r="2.4" fill="#f4c430" opacity=".55"/><circle cx="12" cy="13" r="2.4" fill="#0f171f"/><circle cx="26" cy="3" r="2.3" fill="#e9e3d6" opacity=".7"/>
+        </pattern>
+        <g id="bank">
+          <rect x="-44" y="-19" width="88" height="38" fill="#0a1219" stroke="#1d2a35" stroke-width="2"/>
+          <g fill="#fff9ea">
+            <rect x="-38" y="-14" width="14" height="10"/><rect x="-19" y="-14" width="14" height="10"/><rect x="0" y="-14" width="14" height="10"/><rect x="19" y="-14" width="14" height="10"/>
+            <rect x="-38" y="2" width="14" height="10"/><rect x="-19" y="2" width="14" height="10"/><rect x="0" y="2" width="14" height="10"/><rect x="19" y="2" width="14" height="10"/>
+          </g>
+        </g>
+        <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.1"/></filter>
+      </defs>
+
+      <rect width="1600" height="900" fill="url(#sky)"/>
+      <g transform="translate(0 -168)">
+      <!-- cobertura -->
+      <path d="M0 318 L250 266 L1350 266 L1600 318 L1600 340 L1350 290 L250 290 L0 340 Z" fill="#04080c"/>
+      <path d="M250 290 H1350" stroke="#1b2731" stroke-width="2"/>
+      <!-- arquibancada superior -->
+      <path d="M0 340 L250 290 L1350 290 L1600 340 L1600 452 L1350 418 L250 418 L0 452 Z" fill="url(#crowdA)"/>
+      <path d="M0 340 L250 290 L1350 290 L1600 340 L1600 452 L1350 418 L250 418 L0 452 Z" fill="url(#crowdB)" opacity=".55"/>
+      <path d="M0 340 L250 290 L1350 290 L1600 340 L1600 452 L1350 418 L250 418 L0 452 Z" fill="url(#crowdC)" opacity=".7"/>
+      <path d="M0 340 L250 290 L1350 290 L1600 340 L1600 452 L1350 418 L250 418 L0 452 Z" fill="url(#tierFade)"/>
+      <!-- marquise entre anéis -->
+      <path d="M0 452 L250 418 L1350 418 L1600 452 L1600 470 L1350 432 L250 432 L0 470 Z" fill="#0a1219"/>
+      <path d="M250 432 H1350" stroke="#2b3a46" stroke-width="1.5"/>
+      <!-- arquibancada inferior -->
+      <path d="M0 470 L250 432 L1350 432 L1600 470 L1600 568 L0 568 Z" fill="url(#crowdA)"/>
+      <path d="M0 470 L250 432 L1350 432 L1600 470 L1600 568 L0 568 Z" fill="url(#crowdB)" opacity=".7"/>
+      <path d="M0 470 L250 432 L1350 432 L1600 470 L1600 568 L0 568 Z" fill="url(#crowdC)" opacity=".6"/>
+      <path d="M0 470 L250 432 L1350 432 L1600 470 L1600 568 L0 568 Z" fill="#050b11" opacity=".34"/>
+      <!-- bandeirão tricolor -->
+      <g transform="translate(690 444)" opacity=".94">
+        <path d="M0 6 C40 0 80 10 120 4 C160 -2 190 8 222 4 L222 30 C190 34 160 24 120 30 C80 36 40 26 0 32 Z" fill="#1453a3"/>
+        <path d="M0 32 C40 26 80 36 120 30 C160 24 190 34 222 30 L222 56 C190 60 160 50 120 56 C80 62 40 52 0 58 Z" fill="#eef0ee"/>
+        <path d="M0 58 C40 52 80 62 120 56 C160 50 190 60 222 56 L222 82 C190 86 160 76 120 82 C80 88 40 78 0 84 Z" fill="#c4262f"/>
+        <path d="M0 6 C40 0 80 10 120 4 C160 -2 190 8 222 4 L222 82 C190 86 160 76 120 82 C80 88 40 78 0 84 Z" fill="#000" opacity=".12"/>
+      </g>
+      <!-- placas de publicidade pintadas -->
+      <g>
+        <rect x="140" y="540" width="1320" height="24" fill="#0b1520"/>
+        <g font-family="Archivo, sans-serif" font-weight="800" font-size="13" letter-spacing="2.5" text-anchor="middle">
+          <rect x="140" y="540" width="220" height="24" fill="#0f2c52"/><text x="250" y="557" fill="#e9eef4">FUTBOBO</text>
+          <rect x="360" y="540" width="220" height="24" fill="#132029"/><text x="470" y="557" fill="#f4c430">ESQUADRÃO DE AÇO</text>
+          <rect x="580" y="540" width="220" height="24" fill="#8e1f26"/><text x="690" y="557" fill="#f7e9e9">SALVADOR · BA</text>
+          <rect x="800" y="540" width="220" height="24" fill="#0f2c52"/><text x="910" y="557" fill="#e9eef4">FUTBOBO</text>
+          <rect x="1020" y="540" width="220" height="24" fill="#132029"/><text x="1130" y="557" fill="#f4c430">TEMPORADA 2028</text>
+          <rect x="1240" y="540" width="220" height="24" fill="#8e1f26"/><text x="1350" y="557" fill="#f7e9e9">BRASILEIRÃO</text>
+        </g>
+      </g>
+      <!-- gramado -->
+      <path d="M140 564 L1460 564 L2150 1100 L-550 1100 Z" fill="url(#grassFar)"/>
+      <g>
+        <path d="M330 576 L408.3 576 L-116.7 1100 L-300 1100 Z" fill="#1b5631"/>
+        <path d="M486.7 576 L565 576 L250 1100 L66.7 1100 Z" fill="#1b5631"/>
+        <path d="M643.3 576 L721.7 576 L616.7 1100 L433.3 1100 Z" fill="#1b5631"/>
+        <path d="M800 576 L878.3 576 L983.3 1100 L800 1100 Z" fill="#1b5631"/>
+        <path d="M956.7 576 L1035 576 L1350 1100 L1166.7 1100 Z" fill="#1b5631"/>
+        <path d="M1113.3 576 L1191.7 576 L1716.7 1100 L1533.3 1100 Z" fill="#1b5631"/>
+        <path d="M408.3 576 L486.7 576 L66.7 1100 L-116.7 1100 Z" fill="#20623a"/>
+        <path d="M565 576 L643.3 576 L433.3 1100 L250 1100 Z" fill="#20623a"/>
+        <path d="M721.7 576 L800 576 L800 1100 L616.7 1100 Z" fill="#20623a"/>
+        <path d="M878.3 576 L956.7 576 L1166.7 1100 L983.3 1100 Z" fill="#20623a"/>
+        <path d="M1035 576 L1113.3 576 L1533.3 1100 L1350 1100 Z" fill="#20623a"/>
+        <path d="M1191.7 576 L1270 576 L1900 1100 L1716.7 1100 Z" fill="#20623a"/>
+      </g>
+      <path d="M140 564 L1460 564 L2150 1100 L-550 1100 Z" fill="url(#depth)"/>
+      <!-- linhas de cal -->
+      <g fill="none" stroke="#e8efe6" stroke-opacity=".78" stroke-width="2.4" filter="url(#soft)">
+        <path d="M330 576 H1270"/>
+        <path d="M330 576 L-300 1100"/><path d="M1270 576 L1900 1100"/>
+        <path d="M800 576 V1100"/>
+        <ellipse cx="800" cy="748" rx="150" ry="56"/>
+        <path d="M282 616 H470 L330 760"/>
+        <path d="M1318 616 H1130 L1270 760"/>
+      </g>
+      <circle cx="800" cy="748" r="4" fill="#e8efe6" opacity=".8"/>
+      <!-- poças de luz no gramado -->
+      <ellipse cx="420" cy="690" rx="420" ry="150" fill="url(#pool)"/>
+      <ellipse cx="1180" cy="690" rx="420" ry="150" fill="url(#pool)"/>
+      <!-- jogadores -->
+      <g>
+        <g transform="translate(706 682)"><ellipse cx="0" cy="13" rx="9" ry="3" fill="#000" opacity=".35"/><rect x="-4.5" y="-6" width="9" height="16" rx="3" fill="#f2f4f6"/><rect x="-4.5" y="-6" width="9" height="5" fill="#1e58a8"/><circle cx="0" cy="-10" r="3.6" fill="#c98f6a"/></g>
+        <g transform="translate(868 752) scale(1.15)"><ellipse cx="0" cy="13" rx="9" ry="3" fill="#000" opacity=".35"/><rect x="-4.5" y="-6" width="9" height="16" rx="3" fill="#f2f4f6"/><rect x="-4.5" y="-6" width="9" height="5" fill="#1e58a8"/><circle cx="0" cy="-10" r="3.6" fill="#8a5a3c"/></g>
+        <g transform="translate(990 650) scale(.9)"><ellipse cx="0" cy="13" rx="9" ry="3" fill="#000" opacity=".35"/><rect x="-4.5" y="-6" width="9" height="16" rx="3" fill="#f2f4f6"/><rect x="-4.5" y="-6" width="9" height="5" fill="#1e58a8"/><circle cx="0" cy="-10" r="3.6" fill="#e0ad86"/></g>
+        <g transform="translate(772 630) scale(.86)"><ellipse cx="0" cy="13" rx="9" ry="3" fill="#000" opacity=".35"/><rect x="-4.5" y="-6" width="9" height="16" rx="3" fill="#2a2f35"/><circle cx="0" cy="-10" r="3.6" fill="#b47a56"/></g>
+        <g transform="translate(930 700)"><ellipse cx="0" cy="13" rx="9" ry="3" fill="#000" opacity=".35"/><rect x="-4.5" y="-6" width="9" height="16" rx="3" fill="#2a2f35"/><circle cx="0" cy="-10" r="3.6" fill="#d9a07a"/></g>
+        <g transform="translate(612 742) scale(1.12)"><ellipse cx="0" cy="13" rx="9" ry="3" fill="#000" opacity=".35"/><rect x="-4.5" y="-6" width="9" height="16" rx="3" fill="#2a2f35"/><circle cx="0" cy="-10" r="3.6" fill="#6e4430"/></g>
+        <circle cx="894" cy="716" r="3.4" fill="#ffffff"/>
+      </g>
+      <!-- refletores -->
+      <g>
+        <path d="M200 262 L60 900 L520 900 Z" fill="url(#shaft)"/>
+        <path d="M560 252 L380 900 L820 900 Z" fill="url(#shaft)" opacity=".7"/>
+        <path d="M1040 252 L780 900 L1220 900 Z" fill="url(#shaft)" opacity=".7"/>
+        <path d="M1400 262 L1080 900 L1540 900 Z" fill="url(#shaft)"/>
+        <ellipse cx="200" cy="246" rx="190" ry="120" fill="url(#glow)"/>
+        <ellipse cx="560" cy="236" rx="150" ry="96" fill="url(#glow)" opacity=".8"/>
+        <ellipse cx="1040" cy="236" rx="150" ry="96" fill="url(#glow)" opacity=".8"/>
+        <ellipse cx="1400" cy="246" rx="190" ry="120" fill="url(#glow)"/>
+        <use href="#bank" x="200" y="246"/>
+        <use href="#bank" x="560" y="236" transform="scale(1)"/>
+        <use href="#bank" x="1040" y="236"/>
+        <use href="#bank" x="1400" y="246"/>
+        <path d="M200 266 V300 M560 255 V292 M1040 255 V292 M1400 266 V300" stroke="#04080c" stroke-width="5"/>
+      </g>
+      </g>
+    </svg>
+    <div class="shade"></div>
+  </div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <!-- Placar + mercado + ao vivo -->
+  <header class="top">
+    <div class="bug" role="group" aria-label="Bahia, temporada 2028, 17 anos, OVR 63, meia ofensivo">
+      <span class="bug-crest"><img src="../../public/assets/clubs/bahia.png" alt="" width="38" height="38"></span>
+      <span class="bug-club">BAH<i></i></span>
+      <span class="bug-cell season"><small>Temp.</small><b>2028</b></span>
+      <span class="bug-cell"><b>17</b><small>anos</small></span>
+      <span class="bug-cell ovr"><small>OVR</small><b>63</b></span>
+      <span class="bug-pos">MEI</span>
+    </div>
+    <div class="mkt" role="group" aria-label="Mercado">
+      <span class="mkt-tab">Mercado</span>
+      <span class="mkt-q">Quer mudar de camisa?</span>
+      <button class="key" type="button" title="100% de chance para quem está na rotação"><svg class="ico"><use href="#i-swap"/></svg>Empréstimo <em>100%</em></button>
+      <button class="key" type="button"><svg class="ico"><use href="#i-swap"/></svg>Pedir transferência</button>
+    </div>
+    <div class="live"><i class="live-dot"></i>Ao vivo</div>
+  </header>
+
+  <!-- Ficha do jogador -->
+  <aside class="ficha" aria-label="Ficha do jogador">
+    <header class="ficha-head">
+      <span class="ficha-num">10</span>
+      <div class="ficha-who"><h2>Tito Bobo</h2><p>Meia ofensivo, destro</p></div>
+      <img class="ficha-flag" src="../../public/assets/flags/brasil.png" alt="Brasil" width="26" height="18">
+    </header>
+    <dl class="stats">
+      <div class="stat" style="--v:63"><dt>Moral</dt><dd>63</dd><span class="bar"><i></i></span></div>
+      <div class="stat" style="--v:93"><dt>Físico</dt><dd>93</dd><span class="bar"><i></i></span></div>
+      <div class="stat" style="--v:16"><dt>Prestígio</dt><dd>16</dd><span class="bar"><i></i></span></div>
+      <div class="stat" style="--v:63"><dt>Torcida <em>Querido</em></dt><dd>63</dd><span class="bar"><i></i></span></div>
+    </dl>
+    <dl class="status">
+      <div><dt>Status</dt><dd>Rotação</dd></div>
+      <div><dt>Treinador</dt><dd class="num">52%</dd></div>
+      <div><dt>Contrato</dt><dd>4 anos</dd></div>
+      <div class="retire-cell"><dt class="sr">Carreira</dt><dd><button class="retire" type="button"><span><svg class="ico"><use href="#i-hourglass"/></svg>Aposentar</span></button></dd></div>
+    </dl>
+    <button class="retire" type="button"><span><svg class="ico"><use href="#i-hourglass"/></svg>Aposentar</span><small>encerrar a carreira</small></button>
+  </aside>
+
+  <div class="stage-space" aria-hidden="true"></div>
+
+  <!-- Close + objetivo -->
+  <div class="side">
+    <figure class="pip">
+      <svg class="bokeh" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs><filter id="bk"><feGaussianBlur stdDeviation="7"/></filter><linearGradient id="pipbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0e1a25"/><stop offset="1" stop-color="#173041"/></linearGradient></defs>
+        <rect width="320" height="180" fill="url(#pipbg)"/>
+        <g filter="url(#bk)">
+          <circle cx="24" cy="40" r="15" fill="#2a5fa8" opacity=".8"/><circle cx="70" cy="30" r="12" fill="#d6dbdf" opacity=".55"/><circle cx="110" cy="56" r="16" fill="#b8323b" opacity=".7"/>
+          <circle cx="40" cy="96" r="18" fill="#d6dbdf" opacity=".45"/><circle cx="92" cy="118" r="14" fill="#2a5fa8" opacity=".7"/><circle cx="20" cy="150" r="16" fill="#b8323b" opacity=".55"/>
+          <circle cx="260" cy="28" r="14" fill="#2a5fa8" opacity=".75"/><circle cx="300" cy="72" r="18" fill="#b8323b" opacity=".6"/><circle cx="292" cy="140" r="15" fill="#d6dbdf" opacity=".5"/>
+          <circle cx="232" cy="96" r="12" fill="#f4c430" opacity=".45"/><circle cx="150" cy="22" r="10" fill="#fff4d6" opacity=".85"/><circle cx="196" cy="16" r="8" fill="#fff4d6" opacity=".7"/>
+        </g>
+      </svg>
+      <img class="cut" src="./shared/bust-cutout.svg" alt="Tito Bobo em close no aquecimento" width="240" height="280">
+      <figcaption><b>Cam 4</b><span>Aquecimento</span></figcaption>
+    </figure>
+
+    <section class="meta" aria-labelledby="meta-title">
+      <div class="meta-k"><span>Objetivo da temporada</span><span><b>0</b>/8</span></div>
+      <h2 id="meta-title">Comandar o jogo</h2>
+      <p>Somar 8 gols + assistências</p>
+      <div class="segs" role="img" aria-label="Progresso: 0 de 8"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <footer><span class="up">+7 confiança se cumprir</span><span class="down">−6 se falhar</span></footer>
+    </section>
+  </div>
+
+  <!-- Tarja inferior: o capítulo -->
+  <section class="lower" aria-labelledby="cap-title">
+    <div class="lower-tabs">
+      <span class="tag">Visual novo</span>
+      <span class="tab">Temporada 2028</span>
+      <p class="decision" id="decision" hidden><b>Decisão</b><span id="decision-text"></span><button type="button" id="undo">Desfazer</button></p>
+    </div>
+    <div class="lower-body">
+      <div class="lower-mark"><img src="../../public/favicon.svg" alt="" width="64" height="64"></div>
+      <div class="lower-copy">
+        <h1 id="cap-title">O barbeiro desenhou o escudo do clube na sua cabeça sem avisar</h1>
+        <p>Você pediu apenas para tirar dos lados. Quando se olha no espelho, existe um escudo enorme e surpreendentemente detalhado na nuca.</p>
+      </div>
+    </div>
+    <div class="lower-stripe"></div>
+    <div class="stinger" id="stinger" aria-hidden="true"><i></i><i></i><i></i></div>
+  </section>
+
+  <!-- Enquete: as escolhas -->
+  <section class="poll" aria-labelledby="poll-title">
+    <header class="poll-head"><h2 id="poll-title">O que o Tito faz?</h2><span>Enquete da transmissão</span></header>
+    <ol class="opts">
+      <li><button class="opt" type="button" style="--v:54" aria-pressed="false" data-label="Assumir o corte no próximo jogo"><span class="opt-key">A</span><span class="opt-copy"><strong>Assumir o corte no próximo jogo</strong><small><span>Torcida ↑↑</span><span>dignidade em risco</span></small></span><span class="opt-pct">54<sub>%</sub></span></button></li>
+      <li><button class="opt" type="button" style="--v:29" aria-pressed="false" data-label="Pintar por cima com uma cor ainda mais absurda"><span class="opt-key">B</span><span class="opt-copy"><strong>Pintar por cima com uma cor ainda mais absurda</strong><small><span>Imagem ↑↑</span><span>imprensa confusa</span></small></span><span class="opt-pct">29<sub>%</sub></span></button></li>
+      <li><button class="opt" type="button" style="--v:17" aria-pressed="false" data-label="Raspar tudo antes que alguém veja"><span class="opt-key">C</span><span class="opt-copy"><strong>Raspar tudo antes que alguém veja</strong><small><span>Seguro</span><span>confiança no barbeiro ↓</span></small></span><span class="opt-pct">17<sub>%</sub></span></button></li>
+    </ol>
+    <p class="poll-foot" id="poll-foot"><span>A arquibancada está com a <b>opção A</b></span><span>2.184 votos</span></p>
+  </section>
+
+  <!-- Câmeras (navegação) + letreiro do Mundo -->
+  <footer class="foot">
+    <nav class="cams" aria-label="Navegação da carreira">
+      <button class="cam" type="button" aria-current="page"><span class="cam-n">1</span><svg class="ico"><use href="#i-flag"/></svg>Carreira</button>
+      <button class="cam" type="button"><span class="cam-n">2</span><svg class="ico"><use href="#i-shirt"/></svg>Jogador</button>
+      <button class="cam" type="button"><span class="cam-n">3</span><svg class="ico"><use href="#i-team"/></svg>Time</button>
+      <button class="cam" type="button"><span class="cam-n">4</span><svg class="ico"><use href="#i-history"/></svg>Histórico</button>
+      <button class="cam" type="button"><span class="cam-n">5</span><svg class="ico"><use href="#i-stats"/></svg>Estatísticas</button>
+      <button class="cam" type="button"><span class="cam-n">6</span><svg class="ico"><use href="#i-globe"/></svg>Mundo</button>
+    </nav>
+    <div class="gc" role="region" aria-label="Notícias do Mundo">
+      <span class="gc-tab">Mundo</span>
+      <div class="gc-window">
+        <div class="gc-track">
+          <ul class="gc-list">
+            <li><img src="../../public/assets/clubs/atletico-mg.png" alt="" width="22" height="22">Atlético-MG conquista a CONMEBOL Libertadores</li>
+            <li><img src="../../public/assets/clubs/sao-paulo.png" alt="" width="22" height="22">São Paulo vence o Bahia nos pênaltis e leva a Copa do Brasil</li>
+            <li><img src="../../public/assets/clubs/flamengo.png" alt="" width="22" height="22">Flamengo termina o Brasileirão com o melhor ataque</li>
+            <li><img src="../../public/assets/clubs/palmeiras.png" alt="" width="22" height="22">Palmeiras anuncia o artilheiro uruguaio para 2028</li>
+          </ul>
+          <ul class="gc-list" aria-hidden="true">
+            <li><img src="../../public/assets/clubs/atletico-mg.png" alt="" width="22" height="22">Atlético-MG conquista a CONMEBOL Libertadores</li>
+            <li><img src="../../public/assets/clubs/sao-paulo.png" alt="" width="22" height="22">São Paulo vence o Bahia nos pênaltis e leva a Copa do Brasil</li>
+            <li><img src="../../public/assets/clubs/flamengo.png" alt="" width="22" height="22">Flamengo termina o Brasileirão com o melhor ataque</li>
+            <li><img src="../../public/assets/clubs/palmeiras.png" alt="" width="22" height="22">Palmeiras anuncia o artilheiro uruguaio para 2028</li>
+          </ul>
+        </div>
+      </div>
+      <button class="gc-pause" type="button" id="pause" aria-pressed="false" aria-label="Pausar letreiro">
+        <svg class="i-pause" viewBox="0 0 16 16"><rect x="3" y="2" width="3.6" height="12"/><rect x="9.4" y="2" width="3.6" height="12"/></svg>
+        <svg class="i-play" viewBox="0 0 16 16"><path d="M4 2.5v11l9.5-5.5z"/></svg>
+      </button>
+    </div>
+  </footer>
+
+  <p class="sr" aria-live="polite" id="announce"></p>
+</div>
+
+<script>
+  (() => {
+    const root = document.documentElement;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+    const opts = [...document.querySelectorAll(".opt")];
+    const decision = document.getElementById("decision");
+    const decisionText = document.getElementById("decision-text");
+    const stinger = document.getElementById("stinger");
+    const foot = document.getElementById("poll-foot");
+    const announce = document.getElementById("announce");
+    const pipCaption = document.querySelector(".pip figcaption span");
+    const baseVotes = opts.map((o) => Number(o.style.getPropertyValue("--v")));
+    const crowdFavorite = baseVotes.indexOf(Math.max(...baseVotes));
+    let timer = 0;
+
+    function choose(index) {
+      const btn = opts[index];
+      const already = btn.getAttribute("aria-pressed") === "true";
+      if (already) return;
+      const apply = () => {
+        opts.forEach((o, i) => o.setAttribute("aria-pressed", String(i === index)));
+        decisionText.textContent = btn.dataset.label;
+        decision.hidden = false;
+        const withCrowd = index === crowdFavorite;
+        foot.innerHTML = withCrowd
+          ? "<span>Você foi <b>com a arquibancada</b></span><span>2.185 votos</span>"
+          : "<span>Você foi <b>contra a arquibancada</b></span><span>2.185 votos</span>";
+        announce.textContent = `Escolha marcada: ${btn.dataset.label}.`;
+        pipCaption.textContent = "Reação";
+      };
+      if (reduce.matches) { apply(); return; }
+      stinger.classList.remove("run");
+      void stinger.offsetWidth;
+      stinger.classList.add("run");
+      clearTimeout(timer);
+      timer = setTimeout(apply, 280);
+    }
+
+    opts.forEach((btn, i) => btn.addEventListener("click", () => choose(i)));
+    document.getElementById("undo").addEventListener("click", () => {
+      opts.forEach((o) => o.setAttribute("aria-pressed", "false"));
+      decision.hidden = true;
+      foot.innerHTML = "<span>A arquibancada está com a <b>opção A</b></span><span>2.184 votos</span>";
+      announce.textContent = "Escolha desfeita.";
+      pipCaption.textContent = "Aquecimento";
+      opts[0].focus();
+    });
+
+    const pause = document.getElementById("pause");
+    pause.addEventListener("click", () => {
+      const paused = root.classList.toggle("paused");
+      pause.setAttribute("aria-pressed", String(paused));
+      pause.setAttribute("aria-label", paused ? "Retomar letreiro" : "Pausar letreiro");
+    });
+
+    document.querySelectorAll(".cam").forEach((cam) => cam.addEventListener("click", () => {
+      document.querySelectorAll(".cam").forEach((c) => c.removeAttribute("aria-current"));
+      cam.setAttribute("aria-current", "page");
+    }));
+  })();
+</script>
+</body>
+</html>

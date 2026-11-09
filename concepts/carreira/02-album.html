@@ -1,0 +1,883 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Futbobo · Concept 02 · Álbum</title>
+<meta name="theme-color" content="#f6c431">
+<!--
+  CONCEPT 02 · ÁLBUM — a carreira como álbum de figurinhas
+
+  PASSO 1 · plano de tokens
+    papel      #fbfbf7  (branco impresso, frio; nada de creme)
+    tinta      #161616  texto e filetes
+    azul       #0b5cad  impressão do Bahia (página do clube)
+    vermelho   #e0262f  impressão do Bahia
+    amarelo    #f6c431  capa dura do álbum (a marca vira o objeto)
+    mesa       #cfd3d0  superfície neutra atrás do álbum
+    brilho     gradiente cônico prata/ouro só na figurinha especial (meta)
+    tipo       Bricolage Grotesque (display estreito, 800) · Instrument Sans (texto)
+
+  PASSO 1 · wireframe desktop (1440×900)
+    ┌ capa amarela ────────────────────────────────────────────────┐
+    │┌ pág. 17 BAHIA (impressa) ──┐┃┌ pág. 18 CAPÍTULO 2028 ───────┐│▌Carreira
+    ││ faixa do clube + escudo    ┃│ título grande       ┌ espaço ┐││▌Jogador
+    ││ [FIGURINHA 10] ficha técn. ┃│ texto               │ cole   │││▌Time
+    ││ medidores (4)              ┃│                     └ aqui ──┘││▌Histórico
+    ││ [ESPECIAL: meta] [TROCA]   ┃│ [A] [B] [C]  figurinhas soltas││▌Estatísticas
+    ││                            ┃│ notícias da rodada            ││▌Mundo
+    │└────────────────────────────┘┃└───────────────────────────────┘│
+    └──────────────────────────────────────────────────────────────┘
+  PASSO 1 · wireframe mobile (390×844)
+    faixa Bahia · pág 17
+    [figurinha] medidores
+    capítulo 2028 + título + texto
+    [A] [B] [C]  (linhas)
+    ── abas do índice fixas no rodapé ──
+    (abaixo: especial, troca, ficha, notícias)
+
+  PASSO 2 · crítica do plano
+    - "Página esquerda = cards de stat" era genérico. Virou ficha técnica impressa com pontilhado de leitura,
+      medidores com retícula e a meta como espaço VAZIO de figurinha brilhante (ideia de jogo, não enfeite).
+    - As escolhas eram "três cards iguais": viraram figurinhas soltas, tortas, com canto descolando; ao escolher,
+      a figurinha voa para o espaço e deixa o papel-protetor para trás.
+    - Tirei o acessório: a capa não tem logo nem textura extra; só a cor da marca e a espessura das páginas.
+    - Única animação autoral: figurinhas caindo na página ao abrir. Todo o resto é feedback curto.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=Instrument+Sans:wdth,wght@75..100,400..700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #fbfbf7;
+    --paper-edge: #e7e7df;
+    --ink: #161616;
+    --ink-2: #45453f;
+    --ink-3: #6a6a62;
+    --rule: rgba(22, 22, 22, .14);
+    --blue: #0b5cad;
+    --blue-deep: #083f7a;
+    --red: #e0262f;
+    --red-deep: #b51920;
+    --yellow: #f6c431;
+    --yellow-deep: #c99a00;
+    --green: #1f8a4c;
+    --desk: #cfd3d0;
+    --ease-out: cubic-bezier(.16, 1, .3, 1);
+    --ease-in: cubic-bezier(.55, 0, .75, .2);
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --dots-light: radial-gradient(rgba(255, 255, 255, .2) 1px, transparent 1.7px) 0 0 / 6px 6px;
+    --dots-ink: radial-gradient(rgba(22, 22, 22, .16) .9px, transparent 1.5px) 0 0 / 5px 5px;
+    --foil: conic-gradient(from 200deg at 40% 55%, #eceae1, #bdb7a6, #fff3c4, #c6ced6, #f6f3ea, #a8a18d, #e3dccb, #eceae1);
+    --stk-h: clamp(186px, 27vh, 252px);
+    color-scheme: light;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; overflow-x: clip; }
+  body {
+    min-height: 100dvh;
+    background: var(--grain), radial-gradient(120% 90% at 50% 35%, #dadedb 0%, var(--desk) 55%, #bcc2bf 100%);
+    color: var(--ink);
+    font-family: "Instrument Sans", "Helvetica Neue", sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  img { display: block; }
+  .vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; border-radius: 6px; }
+
+  .display {
+    font-family: "Bricolage Grotesque", "Instrument Sans", sans-serif;
+    font-optical-sizing: auto;
+    font-stretch: 78%;
+    font-weight: 800;
+    letter-spacing: -.01em;
+  }
+  .num { font-variant-numeric: tabular-nums lining-nums; }
+
+  /* ───────────── objeto: álbum ───────────── */
+  .stage { min-height: 100dvh; }
+  .album { position: relative; }
+  .cover { display: none; }
+
+  /* ───────────── figurinha (base comum) ───────────── */
+  .sticker-face {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    padding: 5px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .gloss {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(118deg, rgba(255,255,255,0) 28%, rgba(255,255,255,.38) 42%, rgba(255,255,255,0) 56%);
+    mix-blend-mode: soft-light;
+  }
+  .peel {
+    position: absolute; right: 0; bottom: 0; width: 24px; height: 24px; pointer-events: none;
+    background: linear-gradient(to top left, var(--paper) 0 47%, rgba(0,0,0,.2) 49%, #f1f1ea 52%, #ffffff 68%, #d9d9d0 100%);
+    border-top-left-radius: 4px;
+    transform-origin: 100% 100%;
+    transition: transform .18s var(--ease-out);
+  }
+
+  /* figurinha do jogador */
+  .player { margin: 0; position: relative; rotate: var(--r, 0deg); filter: drop-shadow(0 1px 1px rgba(0,0,0,.18)) drop-shadow(0 6px 10px rgba(30,30,20,.16)); }
+  .pl-art {
+    position: relative;
+    border-radius: 3px;
+    overflow: hidden;
+    background:
+      var(--dots-light),
+      radial-gradient(90% 70% at 50% 30%, #2a7ad0 0%, var(--blue) 45%, var(--blue-deep) 100%);
+    aspect-ratio: 4 / 4.3;
+  }
+  .pl-art::before { /* faixa vermelha atravessando o fundo, como as páginas do álbum */
+    content: ""; position: absolute; inset: auto -20% 18% -20%; height: 26%;
+    background: var(--red); transform: rotate(-14deg); opacity: .92;
+  }
+  .pl-bust { position: absolute; left: 50%; bottom: -2%; width: 84%; translate: -50% 0; }
+  .pl-num {
+    position: absolute; left: 8px; top: 4px;
+    font-family: "Bricolage Grotesque", sans-serif; font-stretch: 75%; font-weight: 800;
+    font-size: clamp(34px, 5vh, 46px); line-height: 1; color: transparent;
+    -webkit-text-stroke: 2px #fff;
+  }
+  .pl-ovr {
+    position: absolute; right: 7px; top: 7px; width: 44px; height: 44px; border-radius: 50%;
+    display: grid; place-content: center; text-align: center; line-height: .9;
+    background: var(--yellow); color: var(--ink); box-shadow: 0 0 0 2px #fff;
+  }
+  .pl-ovr b { font-family: "Bricolage Grotesque", sans-serif; font-stretch: 75%; font-size: 21px; font-weight: 800; }
+  .pl-ovr small { font-size: 8.5px; font-weight: 700; letter-spacing: .04em; }
+  .pl-crest { position: absolute; right: 8px; bottom: 8px; width: 34px; height: 34px; padding: 3px; background: #fff; border-radius: 50%; }
+  .pl-name { padding: 7px 4px 2px; display: grid; gap: 1px; }
+  .pl-name strong { font-family: "Bricolage Grotesque", sans-serif; font-stretch: 75%; font-weight: 800; font-size: 21px; line-height: 1; text-transform: uppercase; letter-spacing: .01em; }
+  .pl-name span { font-size: 12px; color: var(--ink-2); }
+  .sticker-no { position: absolute; left: 10px; bottom: -19px; font-size: 11px; color: var(--ink-3); }
+
+  /* figurinhas-escolha */
+  .choice {
+    position: relative; display: block; padding: 0; border: 0; background: none; text-align: left;
+    rotate: var(--r, 0deg);
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,.2)) drop-shadow(0 7px 12px rgba(30,30,20,.18));
+    transition: translate .2s var(--ease-out), rotate .2s var(--ease-out), filter .2s var(--ease-out), opacity .2s;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .choice .sticker-face { height: 100%; }
+  .liner {
+    position: absolute; inset: 0; border-radius: 8px; display: grid; place-content: center; text-align: center;
+    background: #f2f2ec; border: 1.5px dashed rgba(22,22,22,.28);
+    font-size: 11.5px; color: var(--ink-3); padding: 12px;
+    opacity: 0;
+  }
+  .ch-band {
+    position: relative; display: grid; place-items: center;
+    flex: 0 0 47%; min-height: 60px; padding: 6px; border-radius: 3px; color: #fff; overflow: hidden;
+  }
+  .ch-band::after { content: ""; position: absolute; inset: 0; background: var(--dots-light); pointer-events: none; }
+  .ch-band::before { /* luz de estúdio atrás do pictograma, como foto de figurinha */
+    content: ""; position: absolute; inset: 12% 18%; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255,255,255,.22), rgba(255,255,255,0));
+  }
+  .band-blue { background: linear-gradient(160deg, #1a6fc4, var(--blue) 55%, var(--blue-deep)); }
+  .band-red { background: linear-gradient(160deg, #f04049, var(--red) 55%, var(--red-deep)); }
+  .band-ink { background: linear-gradient(160deg, #34342f, var(--ink) 60%); }
+  .ch-band svg { width: clamp(54px, 6.4vh, 70px); height: auto; aspect-ratio: 1; position: relative; z-index: 1; }
+  .ch-letter {
+    position: absolute; z-index: 1; right: 7px; top: 5px;
+    font-family: "Bricolage Grotesque", sans-serif; font-stretch: 75%; font-weight: 800; font-size: 30px; line-height: .9;
+    color: transparent; -webkit-text-stroke: 1.5px rgba(255,255,255,.9);
+  }
+  .ch-body { display: grid; align-content: start; gap: 5px; padding: 9px 6px 10px; }
+  .ch-body strong {
+    font-family: "Bricolage Grotesque", sans-serif; font-stretch: 82%; font-weight: 750;
+    font-size: clamp(14.5px, 1.12vw, 17px); line-height: 1.1; text-wrap: balance;
+  }
+  .ch-body small { font-size: 12px; line-height: 1.3; color: var(--ink-2); }
+  .stuck-stamp {
+    position: absolute; right: 10px; top: 52px; z-index: 3; pointer-events: none;
+    padding: 3px 8px; border: 2px solid var(--red); border-radius: 4px; color: var(--red);
+    font-family: "Bricolage Grotesque", sans-serif; font-stretch: 75%; font-weight: 800; font-size: 15px; text-transform: uppercase;
+    rotate: -12deg; opacity: 0; scale: 1.6;
+    transition: opacity .16s, scale .28s var(--ease-out);
+  }
+
+  @media (hover: hover) {
+    .choice:hover { translate: 0 -4px; rotate: calc(var(--r, 0deg) * .4); filter: drop-shadow(0 2px 2px rgba(0,0,0,.18)) drop-shadow(0 14px 18px rgba(30,30,20,.2)); }
+    .choice:hover .peel { transform: scale(1.5); }
+  }
+  .choice:active { translate: 0 -1px; transition-duration: .1s; }
+
+  /* escolhido: no desktop a figurinha sai e deixa o papel-protetor */
+  .choice.is-peeled .sticker-face { opacity: 0; }
+  .choice.is-peeled .liner { opacity: 1; }
+  .choice.is-peeled { filter: none; rotate: 0deg; translate: 0; }
+  /* no mobile ela cola ali mesmo */
+  .choice.is-stuck { rotate: 0deg; filter: drop-shadow(0 1px 0 rgba(0,0,0,.25)); }
+  .choice.is-stuck .peel { transform: scale(0); }
+  .choice.is-stuck .stuck-stamp { opacity: 1; scale: 1; }
+  .has-pick .choice:not(.is-stuck):not(.is-peeled) { opacity: .55; }
+  .has-pick .choice:not(.is-stuck):not(.is-peeled):hover { opacity: 1; }
+
+  /* ───────────── blocos ───────────── */
+  .team-head {
+    position: relative; overflow: hidden; color: #fff;
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px;
+    background: var(--dots-light), var(--blue);
+    border-radius: 4px;
+  }
+  .team-head::before { content: ""; position: absolute; right: 18%; top: -40%; width: 22%; height: 190%; background: var(--red); transform: rotate(22deg); }
+  .team-head::after { content: ""; position: absolute; right: 13%; top: -40%; width: 4%; height: 190%; background: #fff; transform: rotate(22deg); }
+  .team-head > * { position: relative; z-index: 1; }
+  .crest-badge { width: 58px; height: 58px; border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: 0 0 0 3px rgba(255,255,255,.35); }
+  .crest-badge img { width: 46px; height: 46px; }
+  .team-name h2 { margin: 0; font-size: clamp(34px, 5vh, 48px); line-height: .9; text-transform: uppercase; }
+  .team-name p { margin: 4px 0 0; font-size: 13px; opacity: .92; }
+  .page-no {
+    display: grid; place-content: center; width: 50px; height: 50px; border-radius: 50%;
+    background: var(--yellow); color: var(--ink); text-align: center; line-height: .9;
+  }
+  .page-no b { font-family: "Bricolage Grotesque", sans-serif; font-stretch: 75%; font-weight: 800; font-size: 22px; }
+  .page-no small { font-size: 9px; font-weight: 700; }
+
+  .ficha h3, .meters h3, .troca h3, .news h3, .special h3, .pack-label {
+    margin: 0; font-family: "Bricolage Grotesque", sans-serif; font-stretch: 85%; font-weight: 700; font-size: 15px; line-height: 1.2;
+  }
+  .ficha dl { margin: 8px 0 0; display: grid; gap: 0; }
+  .ficha dl > div { display: flex; align-items: baseline; gap: 6px; padding: 3.5px 0; font-size: 13.5px; }
+  .ficha dt { color: var(--ink-2); }
+  .ficha dl > div::after { content: none; }
+  .ficha .lead { flex: 1; border-bottom: 1.5px dotted rgba(22,22,22,.32); translate: 0 -3px; min-width: 12px; }
+  .ficha dd { margin: 0; font-weight: 600; }
+  .ficha dd em { font-style: normal; font-weight: 600; color: var(--green); margin-left: 4px; }
+  .retire {
+    margin-top: 10px; display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 6px 12px;
+    background: none; border: 1.5px solid var(--rule); border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--red-deep);
+    transition: background-color .15s, border-color .15s;
+  }
+  .retire svg { width: 16px; height: 16px; }
+  .retire:hover { background: #fff1f1; border-color: rgba(224,38,47,.4); }
+
+  .meters-grid { margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 9px 22px; }
+  .meter { display: grid; grid-template-columns: 1fr auto; align-items: baseline; row-gap: 4px; }
+  .meter span { font-size: 13px; color: var(--ink-2); }
+  .meter span i { font-style: normal; color: var(--ink-3); }
+  .meter b { font-family: "Bricolage Grotesque", sans-serif; font-stretch: 75%; font-weight: 800; font-size: 22px; line-height: 1; }
+  .bar {
+    grid-column: 1 / -1; position: relative; height: 10px; border-radius: 2px; overflow: hidden;
+    background: var(--dots-ink), #eeeee7;
+  }
+  .bar i { position: absolute; inset: 0 auto 0 0; width: calc(var(--v) * 1%); background: var(--c); }
+  .bar i::after { content: ""; position: absolute; inset: 0; background: var(--dots-light); }
+
+  .prev { border-top: 1.5px solid var(--rule); padding-top: 9px; }
+  .prev h3 { margin: 0; font-family: "Bricolage Grotesque", sans-serif; font-stretch: 85%; font-weight: 700; font-size: 13.5px; color: var(--ink-2); }
+  .prev ul { list-style: none; margin: 5px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-2); }
+  .prev li b { font-family: "Bricolage Grotesque", sans-serif; font-stretch: 78%; font-weight: 800; font-size: 17px; color: var(--ink); }
+  .prev p { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-3); }
+
+  .special {
+    position: relative; border-radius: 9px; padding: 14px 14px 12px;
+    background: linear-gradient(#fbfbf7, #fbfbf7) padding-box, var(--foil) border-box;
+    border: 3px dashed transparent;
+    isolation: isolate;
+  }
+  .special::before { /* área do espaço em retícula prateada */
+    content: ""; position: absolute; inset: 6px; border-radius: 6px; z-index: -1;
+    background: radial-gradient(rgba(150,145,130,.22) 1px, transparent 1.6px) 0 0 / 6px 6px, #f4f3ee;
+  }
+  .special-tag {
+    display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; color: var(--ink);
+    background: var(--foil); background-size: 220% 220%; background-position: 0% 50%;
+    transition: background-position .9s var(--ease-out);
+  }
+  .special:hover .special-tag { background-position: 100% 50%; }
+  .special h3 { margin-top: 8px; font-size: clamp(19px, 2.6vh, 23px); font-weight: 800; font-stretch: 78%; }
+  .special p { margin: 2px 0 0; font-size: 13.5px; color: var(--ink-2); }
+  .slots8 { display: flex; gap: 5px; margin-top: 10px; }
+  .slots8 i { flex: 1; height: 16px; border-radius: 3px; border: 1.5px dashed rgba(22,22,22,.3); background: #fff; }
+  .special-foot { margin-top: 8px; display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+  .special-foot .up { color: var(--green); font-weight: 650; }
+  .special-foot .down { color: var(--red-deep); font-weight: 650; }
+  .special-foot span { color: var(--ink-3); }
+
+  .troca p { margin: 2px 0 10px; font-size: 13.5px; color: var(--ink-2); }
+  .troca-actions { display: grid; gap: 8px; }
+  .stamp {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 46px; padding: 6px 8px 6px 14px;
+    background: #fff; border: 2px solid var(--ink); border-radius: 6px; text-align: left;
+    box-shadow: 3px 3px 0 var(--ink);
+    transition: translate .12s var(--ease-out), box-shadow .12s var(--ease-out);
+  }
+  .stamp strong { font-family: "Bricolage Grotesque", sans-serif; font-stretch: 82%; font-weight: 750; font-size: 15px; line-height: 1.1; }
+  .stamp em { font-style: normal; display: grid; place-content: center; min-width: 50px; height: 32px; padding: 0 8px; border-radius: 99px; background: var(--yellow); font-weight: 700; font-size: 13px; }
+  .stamp.alt em { background: none; border: 1.5px dashed rgba(22,22,22,.4); font-weight: 600; color: var(--ink-2); }
+  .stamp:hover { translate: -1px -1px; box-shadow: 4px 4px 0 var(--ink); }
+  .stamp:active { translate: 2px 2px; box-shadow: 1px 1px 0 var(--ink); }
+
+  .chap-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .chap-kicker { display: flex; align-items: baseline; gap: 10px; }
+  .chap-kicker span { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  .chap-kicker b { font-family: "Bricolage Grotesque", sans-serif; font-stretch: 75%; font-weight: 800; font-size: clamp(30px, 4.4vh, 42px); line-height: .9; color: var(--blue); }
+  .seal {
+    display: grid; place-content: center; text-align: center; width: 74px; height: 74px; border-radius: 50%;
+    background: var(--red); color: #fff; rotate: 9deg; line-height: 1; flex: none;
+    box-shadow: inset 0 0 0 3px var(--red), inset 0 0 0 5px rgba(255,255,255,.85);
+  }
+  .seal b { font-family: "Bricolage Grotesque", sans-serif; font-stretch: 75%; font-weight: 800; font-size: 17px; text-transform: uppercase; }
+  .seal small { font-size: 9.5px; font-weight: 600; opacity: .95; margin-top: 2px; }
+
+  .chap-copy h1 {
+    margin: 0; font-family: "Bricolage Grotesque", sans-serif; font-optical-sizing: auto; font-stretch: 80%; font-weight: 800;
+    font-size: clamp(27px, 4.25vh, 44px); line-height: 1.0; letter-spacing: -.015em; text-wrap: balance;
+  }
+  .chap-copy p { margin: 12px 0 0; color: var(--ink-2); max-width: 46ch; text-wrap: pretty; }
+
+  .slot {
+    position: relative; height: var(--stk-h); border-radius: 9px; border: 2px dashed rgba(22,22,22,.3);
+    background: radial-gradient(rgba(22,22,22,.07) 1px, transparent 1.6px) 0 0 / 6px 6px, #f3f3ee;
+    display: grid; place-content: center; text-align: center; padding: 12px;
+  }
+  .slot-no { font-family: "Bricolage Grotesque", sans-serif; font-stretch: 75%; font-weight: 800; font-size: 54px; line-height: .9; color: rgba(22,22,22,.14); }
+  .slot-hint { font-size: 12px; color: var(--ink-3); max-width: 16ch; margin: 6px auto 0; }
+  .slot .placed { position: absolute; inset: -2px; z-index: 2; rotate: -1.5deg; box-shadow: 0 1px 1px rgba(0,0,0,.18), 0 5px 10px rgba(30,30,20,.16); }
+  .slot.filled .slot-no, .slot.filled .slot-hint { opacity: 0; }
+
+  .pack-label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .pack-label span { font-family: "Instrument Sans", sans-serif; font-weight: 500; font-size: 12.5px; color: var(--ink-3); }
+
+  .news { border-top: 3px solid var(--ink); padding-top: 9px; }
+  .news ul { list-style: none; margin: 7px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 7px 18px; }
+  .news li { display: grid; grid-template-columns: 24px 1fr; gap: 8px; align-items: start; font-size: 12.5px; line-height: 1.3; }
+  .news img { width: 24px; height: 24px; object-fit: contain; }
+
+  .status { font-size: 12.5px; color: var(--ink-2); min-height: 1.2em; }
+
+  .tabs { list-style: none; margin: 0; padding: 0; }
+  .tab {
+    display: flex; align-items: center; gap: 8px; border: 0; text-align: left;
+    font-family: "Instrument Sans", sans-serif; font-weight: 650; font-stretch: 85%;
+  }
+  .tab svg { width: 18px; height: 18px; flex: none; }
+
+  /* ════════════════ DESKTOP: álbum aberto ════════════════ */
+  @media (min-width: 1200px) {
+    body { overflow: hidden; }
+    .stage { height: 100dvh; display: grid; place-items: center; padding: 18px 0; }
+    .album {
+      width: min(1340px, calc(100vw - 200px));
+      height: min(880px, calc(100dvh - 36px));
+      margin-right: 92px;
+    }
+    .cover {
+      display: block; position: absolute; inset: 0; border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 30%), var(--yellow);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06), inset 0 2px 0 rgba(255,255,255,.4),
+        0 2px 3px rgba(40,40,20,.25), 0 26px 50px -18px rgba(40,40,20,.5);
+    }
+    .cover::after { /* dobra da lombada na capa */
+      content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 28px; translate: -50% 0;
+      background: linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.13) 45%, rgba(255,255,255,.18) 55%, rgba(0,0,0,0));
+    }
+    .spread { position: absolute; inset: 14px 15px; display: grid; grid-template-columns: 1fr 1fr; z-index: 2; }
+    .page {
+      position: relative; min-height: 0; overflow: hidden;
+      background: var(--grain), var(--paper);
+      padding: 24px clamp(24px, 2.4vw, 36px) 22px;
+      display: flex; flex-direction: column; gap: clamp(12px, 1.9vh, 18px);
+    }
+    .page.left {
+      border-radius: 7px 2px 2px 7px;
+      box-shadow: inset -46px 0 38px -36px rgba(0,0,0,.28), -1px 0 0 var(--paper-edge), -3px 0 0 var(--paper), -4px 0 0 var(--paper-edge), -6px 0 0 var(--paper), -7px 0 0 #dcdcd3;
+    }
+    .page.right {
+      border-radius: 2px 7px 7px 2px;
+      box-shadow: inset 46px 0 38px -36px rgba(0,0,0,.32), 1px 0 0 var(--paper-edge), 3px 0 0 var(--paper), 4px 0 0 var(--paper-edge), 6px 0 0 var(--paper), 7px 0 0 #dcdcd3;
+    }
+    .page.right::after { /* canto de página levemente curvado */
+      content: ""; position: absolute; right: 0; bottom: 0; width: 46px; height: 46px; pointer-events: none;
+      background: linear-gradient(to top left, rgba(0,0,0,.08), rgba(0,0,0,0) 55%);
+    }
+
+    .team-head { padding: 14px 16px; min-height: clamp(84px, 11.5vh, 104px); }
+    .player-row { display: grid; grid-template-columns: clamp(170px, 15vw, 222px) 1fr; gap: 26px; align-items: start; }
+    .player { --r: -2.4deg; margin-top: 4px; }
+    .ficha dl > div { padding: clamp(2px, .45vh, 4px) 0; }
+    .page.left { justify-content: space-between; }
+    .bottom-row { display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; align-items: end; }
+
+    .chap-wrap { display: flex; flex-direction: column; gap: clamp(8px, 1.4vh, 14px); }
+    .chap-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 14px; row-gap: clamp(10px, 1.6vh, 16px); align-items: start; }
+    .chap-copy { grid-column: 1 / 3; }
+    .slot { grid-column: 3; }
+    .pack-label { grid-column: 1 / -1; margin-top: 4px; }
+    .choice { height: var(--stk-h); }
+    .news { margin-top: auto; }
+    .status { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
+
+    /* abas do índice saindo da borda direita */
+    .tabs {
+      position: absolute; z-index: 1; top: 64px; left: calc(100% - 28px);
+      display: grid; gap: 8px;
+    }
+    .tab {
+      width: 152px; min-height: 46px; padding: 0 10px 0 38px; border-radius: 0 10px 10px 0;
+      color: #fff; font-size: 14px;
+      box-shadow: inset 0 -2px 0 rgba(0,0,0,.12), 2px 3px 6px rgba(40,40,20,.18);
+      transition: translate .16s var(--ease-out);
+    }
+    .tab:hover { translate: 5px 0; }
+    .tab[aria-current="page"] { background: var(--paper); color: var(--ink); translate: 10px 0; box-shadow: 2px 3px 6px rgba(40,40,20,.18); }
+    .tab.t-blue { background: var(--blue); }
+    .tab.t-red { background: var(--red); }
+    .tab.t-ink { background: var(--ink); }
+    .tab.t-green { background: var(--green); }
+    .tab.t-mustard { background: #8a6a00; }
+  }
+
+  @media (min-width: 1200px) and (max-width: 1279px) {
+    .album { width: calc(100vw - 150px); margin-right: 52px; }
+    .tab { width: 112px; padding-left: 34px; font-size: 13px; }
+    .player-row { gap: 18px; }
+    .page { padding-left: 22px; padding-right: 22px; }
+  }
+
+  @media (min-width: 1200px) and (max-height: 999px) {
+    .prev { display: none; }
+  }
+  @media (min-width: 1200px) and (max-height: 820px) {
+    .ficha dl > div { font-size: 13px; padding: 1.5px 0; }
+    .retire { margin-top: 6px; min-height: 32px; }
+    .special { padding: 11px 12px 10px; }
+    .special p { font-size: 12.5px; }
+    .slots8 { margin-top: 7px; }
+    .chap-copy p { font-size: 14px; margin-top: 8px; }
+    .news li { font-size: 12px; }
+  }
+  /* desktop baixo (notebook com barra do navegador): a página rola em vez de esmagar o álbum */
+  @media (min-width: 1200px) and (max-height: 779px) {
+    body { overflow: auto; }
+    .stage { height: auto; min-height: 100dvh; }
+    .album { height: 766px; }
+  }
+
+  @media (min-width: 1600px) and (min-height: 1000px) {
+    body { font-size: 16.5px; }
+    .album { width: min(1500px, calc(100vw - 220px)); height: min(960px, calc(100dvh - 60px)); }
+    .ficha dl > div { font-size: 15px; }
+    .ficha h3, .meters h3, .troca h3, .news h3, .pack-label { font-size: 16.5px; }
+    .meter span, .prev ul, .special p, .troca p { font-size: 14.5px; }
+    .news li { font-size: 13.5px; }
+    .pl-name span { font-size: 13px; }
+  }
+
+  /* ════════════════ MOBILE / TABLET: uma página ════════════════ */
+  @media (max-width: 1199px) {
+    body { background: var(--grain), var(--paper); }
+    .stage { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+    .spread, .page, .player-row, .bottom-row, .chap-grid { display: contents; }
+    .album {
+      max-width: 640px; margin: 0 auto;
+      display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 14px; row-gap: 14px;
+      padding: 10px 16px 18px;
+      grid-template-areas:
+        "head head"
+        "stk meters"
+        "chap chap"
+        "copy copy"
+        "label label"
+        "a a" "b b" "c c"
+        "status status"
+        "special special"
+        "troca troca"
+        "ficha ficha"
+        "prev prev"
+        "news news";
+    }
+    .team-head { grid-area: head; padding: 8px 12px; gap: 10px; border-radius: 4px; }
+    .crest-badge { width: 38px; height: 38px; }
+    .crest-badge img { width: 30px; height: 30px; }
+    .team-name h2 { font-size: 26px; }
+    .team-name p { font-size: 11.5px; margin-top: 2px; }
+    .page-no { width: 40px; height: 40px; }
+    .page-no b { font-size: 17px; }
+    .page-no small { font-size: 8px; }
+
+    .player { grid-area: stk; --r: -3deg; align-self: start; }
+    .player .sticker-face { padding: 4px; }
+    .pl-num { font-size: 26px; left: 5px; top: 2px; -webkit-text-stroke-width: 1.5px; }
+    .pl-ovr { width: 30px; height: 30px; right: 4px; top: 4px; }
+    .pl-ovr b { font-size: 14px; }
+    .pl-ovr small { font-size: 6.5px; }
+    .pl-crest { width: 22px; height: 22px; right: 4px; bottom: 4px; padding: 2px; }
+    .pl-name { padding: 4px 2px 1px; }
+    .pl-name strong { font-size: 14px; }
+    .pl-name span { display: none; }
+    .sticker-no { display: none; }
+
+    .meters { grid-area: meters; align-self: center; }
+    .meters h3 { font-size: 13px; }
+    .meters-grid { gap: 6px 14px; margin-top: 5px; }
+    .meter span { font-size: 12px; }
+    .meter b { font-size: 18px; }
+    .bar { height: 7px; }
+
+    .chap-wrap { display: contents; }
+    .chap-head { grid-area: chap; }
+    .chap-copy { grid-area: copy; }
+    .slot { display: none; }
+    .pack-label { grid-area: label; }
+    .choice[data-letter="A"] { grid-area: a; }
+    .choice[data-letter="B"] { grid-area: b; }
+    .choice[data-letter="C"] { grid-area: c; }
+    .status { grid-area: status; margin-top: -6px; }
+    .special { grid-area: special; margin-top: 10px; }
+    .troca { grid-area: troca; }
+    .ficha { grid-area: ficha; }
+    .prev { grid-area: prev; }
+    .news { grid-area: news; }
+    .news ul { grid-template-columns: 1fr; }
+
+    /* capítulo no mobile */
+    .chap-head { gap: 8px; margin-top: 4px; }
+    .chap-kicker b { font-size: 26px; }
+    .chap-kicker span { font-size: 13px; }
+    .seal { width: 54px; height: 54px; }
+    .seal b { font-size: 13px; }
+    .seal small { font-size: 8px; }
+    .chap-copy h1 { font-size: clamp(24px, 6.6vw, 30px); }
+    .chap-copy p { margin-top: 6px; font-size: 14px; line-height: 1.42; }
+
+    /* figurinhas-escolha viram figurinhas deitadas */
+    .choice { --r: 0deg; }
+    .choice[data-letter="A"] { --r: -.8deg; }
+    .choice[data-letter="B"] { --r: .6deg; }
+    .choice[data-letter="C"] { --r: -.4deg; }
+    .choice .sticker-face { flex-direction: row; align-items: stretch; padding: 4px; min-height: 66px; }
+    .ch-band { width: 62px; flex: none; min-height: 0; padding: 4px; }
+    .ch-band svg { width: 34px; translate: -4px 5px; }
+    .ch-letter { font-size: 17px; right: 4px; top: 3px; -webkit-text-stroke-width: 1.1px; }
+    .ch-body { align-content: center; padding: 6px 10px 6px 12px; gap: 3px; }
+    .ch-body strong { font-size: 16px; }
+    .ch-body small { font-size: 12.5px; }
+    .stuck-stamp { top: 50%; right: 14px; translate: 0 -50%; }
+    .liner { display: none; }
+
+    .tabs {
+      position: fixed; z-index: 20; left: 0; right: 0; bottom: 0;
+      display: flex; gap: 3px; padding: 0 6px env(safe-area-inset-bottom);
+      background: var(--yellow);
+      box-shadow: 0 -1px 0 rgba(0,0,0,.08), 0 -8px 18px rgba(40,40,20,.1);
+    }
+    .tabs li { flex: 1 1 auto; display: flex; min-width: 0; }
+    .tab {
+      flex: 1; flex-direction: column; justify-content: center; gap: 3px; min-height: 58px; padding: 6px 2px 5px;
+      border-radius: 0 0 8px 8px; font-size: 11px; font-stretch: 78%; color: #fff; text-align: center;
+      align-items: center; translate: 0 -2px;
+    }
+    .tab svg { width: 17px; height: 17px; }
+    .tab[aria-current="page"] { background: var(--paper); color: var(--ink); translate: 0 0; min-height: 62px; box-shadow: 0 2px 0 var(--paper); }
+    .tab.t-blue { background: var(--blue); }
+    .tab.t-red { background: var(--red); }
+    .tab.t-ink { background: var(--ink); }
+    .tab.t-green { background: var(--green); }
+    .tab.t-mustard { background: #8a6a00; }
+    .tabs { align-items: flex-start; }
+  }
+
+  @media (max-width: 1199px) and (max-height: 760px) {
+    .album { row-gap: 10px; grid-template-columns: 80px minmax(0, 1fr); }
+    .team-head { padding: 6px 10px; }
+    .team-name h2 { font-size: 22px; }
+    .chap-copy h1 { font-size: 22px; }
+    .chap-copy p { font-size: 13px; line-height: 1.38; }
+    .seal { width: 46px; height: 46px; }
+    .seal small { display: none; }
+    .chap-kicker b { font-size: 22px; }
+    .choice .sticker-face { min-height: 60px; }
+    .ch-body strong { font-size: 15px; }
+    .ch-body small { font-size: 12px; }
+    .ch-band { width: 54px; }
+    .ch-band svg { width: 30px; }
+    .meters h3 { display: none; }
+  }
+
+  @media (min-width: 640px) and (max-width: 1199px) {
+    .album { grid-template-columns: 120px minmax(0, 1fr); }
+  }
+
+  /* ───────────── movimento: figurinhas caindo ───────────── */
+  @media (prefers-reduced-motion: no-preference) {
+    .drop { animation: drop .72s var(--ease-out) backwards; animation-delay: var(--d, 0s); }
+    @keyframes drop {
+      0% { opacity: 0; transform: translate(14px, -46px) rotate(9deg) scale(1.1); }
+      55% { opacity: 1; }
+      100% { opacity: 1; transform: none; }
+    }
+    @media (max-width: 1199px) {
+      .drop { animation-name: drop-m; animation-duration: .6s; }
+      @keyframes drop-m {
+        0% { opacity: 0; transform: translateY(-22px) rotate(-2.5deg); }
+        60% { opacity: 1; }
+        100% { opacity: 1; transform: none; }
+      }
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .choice, .stamp, .tab, .peel, .stuck-stamp, .special-tag { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <main class="album" aria-label="Álbum da carreira de Tito Bobo, temporada 2028">
+    <div class="cover" aria-hidden="true"></div>
+
+    <div class="spread">
+      <!-- ───────────── página 17: o jogador ───────────── -->
+      <section class="page left" aria-label="Página do jogador">
+        <header class="team-head">
+          <span class="crest-badge"><img src="../../public/assets/clubs/bahia.png" alt="Escudo do Bahia" width="46" height="46"></span>
+          <div class="team-name">
+            <h2 class="display">Bahia</h2>
+            <p>Salvador, Brasileirão Série A</p>
+          </div>
+          <span class="page-no" aria-label="Página 17"><b class="num">17</b><small>pág.</small></span>
+        </header>
+
+        <div class="player-row">
+          <figure class="player drop" style="--d:.06s">
+            <div class="sticker-face">
+              <div class="pl-art">
+                <img class="pl-bust" src="./shared/bust-cutout.svg" alt="Retrato de Tito Bobo com a camisa do Bahia">
+                <span class="pl-num num" aria-hidden="true">10</span>
+                <span class="pl-ovr" aria-label="OVR 63"><b class="num">63</b><small>OVR</small></span>
+                <img class="pl-crest" src="../../public/assets/clubs/bahia.png" alt="" width="34" height="34">
+              </div>
+              <figcaption class="pl-name"><strong>Tito Bobo</strong><span>Meia ofensivo, camisa 10</span></figcaption>
+              <span class="gloss" aria-hidden="true"></span>
+            </div>
+            <span class="sticker-no">Figurinha 17-1</span>
+          </figure>
+
+          <section class="ficha" aria-labelledby="ficha-t">
+            <h3 id="ficha-t">Ficha técnica</h3>
+            <dl>
+              <div><dt>Idade</dt><span class="lead" aria-hidden="true"></span><dd class="num">17 anos</dd></div>
+              <div><dt>Posição</dt><span class="lead" aria-hidden="true"></span><dd>Meia ofensivo (MEI)</dd></div>
+              <div><dt>Pé</dt><span class="lead" aria-hidden="true"></span><dd>Destro</dd></div>
+              <div><dt>País</dt><span class="lead" aria-hidden="true"></span><dd>Brasil</dd></div>
+              <div><dt>OVR</dt><span class="lead" aria-hidden="true"></span><dd class="num">63<em>+5 em 2027</em></dd></div>
+              <div><dt>No elenco</dt><span class="lead" aria-hidden="true"></span><dd>Rotação</dd></div>
+              <div><dt>Confiança do treinador</dt><span class="lead" aria-hidden="true"></span><dd class="num">52%</dd></div>
+              <div><dt>Contrato</dt><span class="lead" aria-hidden="true"></span><dd class="num">4 anos</dd></div>
+            </dl>
+            <button type="button" class="retire">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9"/></svg>
+              Aposentar
+            </button>
+          </section>
+        </div>
+
+        <section class="meters" aria-labelledby="meters-t">
+          <h3 id="meters-t">Como chega à temporada</h3>
+          <div class="meters-grid">
+            <div class="meter"><span>Moral</span><b class="num">63</b><span class="bar" style="--v:63;--c:var(--blue)"><i></i></span></div>
+            <div class="meter"><span>Físico</span><b class="num">93</b><span class="bar" style="--v:93;--c:var(--green)"><i></i></span></div>
+            <div class="meter"><span>Prestígio</span><b class="num">16</b><span class="bar" style="--v:16;--c:var(--yellow-deep)"><i></i></span></div>
+            <div class="meter"><span>Torcida <i>(querido)</i></span><b class="num">63</b><span class="bar" style="--v:63;--c:var(--red)"><i></i></span></div>
+          </div>
+        </section>
+
+        <section class="prev" aria-labelledby="prev-t">
+          <h3 id="prev-t">Na página anterior, 2027</h3>
+          <ul>
+            <li><b class="num">15</b> jogos</li>
+            <li><b class="num">1</b> gol</li>
+            <li><b class="num">2</b> assistências</li>
+            <li><b class="num">6.1</b> de nota</li>
+            <li><b class="num">58 → 63</b> de OVR</li>
+          </ul>
+          <p>8º no Brasileirão, vice da Copa do Brasil e da Libertadores. A meta ficou em branco.</p>
+        </section>
+
+        <div class="bottom-row">
+          <section class="special" aria-labelledby="special-t">
+            <span class="special-tag">Figurinha especial</span>
+            <h3 id="special-t">Comandar o jogo</h3>
+            <p>Meta do treinador: somar 8 gols + assistências. Cole quando conseguir.</p>
+            <div class="slots8" role="img" aria-label="Progresso 0 de 8"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="special-foot"><span class="num">0/8</span><b class="up num">+7 confiança</b><b class="down num">falha −6</b></div>
+          </section>
+
+          <section class="troca" aria-labelledby="troca-t">
+            <h3 id="troca-t">Troca de figurinhas</h3>
+            <p>Quer mudar de camisa?</p>
+            <div class="troca-actions">
+              <button type="button" class="stamp"><strong>Empréstimo</strong><em class="num">100%</em></button>
+              <button type="button" class="stamp alt"><strong>Pedir transferência</strong><em>ouvir</em></button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ───────────── página 18: o capítulo ───────────── -->
+      <section class="page right" aria-label="Capítulo da temporada">
+        <div class="chap-wrap">
+          <header class="chap-head">
+            <div class="chap-kicker"><span>Capítulo</span><b class="num">2028</b></div>
+            <span class="seal" aria-label="Tag do capítulo: visual novo"><b>Visual</b><b>novo</b><small>pág. 18</small></span>
+          </header>
+          <div class="chap-grid">
+            <div class="chap-copy">
+              <h1>O barbeiro desenhou o escudo do clube na sua cabeça sem avisar</h1>
+              <p>Você pediu apenas para tirar dos lados. Quando se olha no espelho, existe um escudo enorme e surpreendentemente detalhado na nuca.</p>
+            </div>
+            <div class="slot" id="slot" aria-hidden="true">
+              <span class="slot-no num">18</span>
+              <span class="slot-hint">Cole aqui a figurinha da sua escolha</span>
+            </div>
+            <p class="pack-label">Escolha uma figurinha <span>cada uma muda a história de um jeito</span></p>
+
+            <button type="button" class="choice drop" data-letter="A" aria-pressed="false" style="--r:-2.8deg;--d:.36s">
+              <span class="liner" aria-hidden="true">Papel da figurinha 18-A. Ela já está no capítulo.</span>
+              <span class="sticker-face">
+                <span class="ch-band band-blue" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 44c0-6 5-9 11-9s11 3 11 9"/><path d="M14.5 21c0-7 4.3-12 9.5-12s9.5 5 9.5 12c0 6-3.8 10.5-9.5 10.5S14.5 27 14.5 21Z" fill="rgba(255,255,255,.14)"/><path d="M20.5 18.5h7v3.8c0 2.4-1.6 4-3.5 4.8-1.9-.8-3.5-2.4-3.5-4.8z" fill="#fff" stroke="none"/><path d="M15 15c2-3 5.5-5 9-5"/></svg>
+                  <b class="ch-letter">A</b>
+                </span>
+                <span class="ch-body"><strong>Assumir o corte no próximo jogo</strong><small>Torcida ↑↑ · dignidade em risco</small></span>
+                <span class="gloss" aria-hidden="true"></span><span class="peel" aria-hidden="true"></span>
+              </span>
+              <span class="stuck-stamp" aria-hidden="true">Colada</span>
+            </button>
+
+            <button type="button" class="choice drop" data-letter="B" aria-pressed="false" style="--r:1.6deg;--d:.46s">
+              <span class="liner" aria-hidden="true">Papel da figurinha 18-B. Ela já está no capítulo.</span>
+              <span class="sticker-face">
+                <span class="ch-band band-red" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="13" y="18" width="15" height="25" rx="2.5" fill="rgba(255,255,255,.14)"/><path d="M16 18v-4h9v4M19 14v-3h3v3"/><path d="M13 27h15"/><circle cx="33" cy="11" r="1.4" fill="#fff" stroke="none"/><circle cx="37" cy="14.5" r="1.4" fill="#fff" stroke="none"/><circle cx="34" cy="17.5" r="1.4" fill="#fff" stroke="none"/><circle cx="39" cy="9" r="1.4" fill="#fff" stroke="none"/><circle cx="40" cy="18" r="1.4" fill="#fff" stroke="none"/></svg>
+                  <b class="ch-letter">B</b>
+                </span>
+                <span class="ch-body"><strong>Pintar por cima com uma cor ainda mais absurda</strong><small>Imagem ↑↑ · imprensa confusa</small></span>
+                <span class="gloss" aria-hidden="true"></span><span class="peel" aria-hidden="true"></span>
+              </span>
+              <span class="stuck-stamp" aria-hidden="true">Colada</span>
+            </button>
+
+            <button type="button" class="choice drop" data-letter="C" aria-pressed="false" style="--r:-1.2deg;--d:.56s">
+              <span class="liner" aria-hidden="true">Papel da figurinha 18-C. Ela já está no capítulo.</span>
+              <span class="sticker-face">
+                <span class="ch-band band-ink" aria-hidden="true">
+                  <svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="16" height="27" rx="6" fill="rgba(255,255,255,.14)"/><rect x="15" y="9" width="18" height="6" rx="1.5"/><path d="M18 9V5.5M22 9V5.5M26 9V5.5M30 9V5.5"/><path d="M21 24h6"/></svg>
+                  <b class="ch-letter">C</b>
+                </span>
+                <span class="ch-body"><strong>Raspar tudo antes que alguém veja</strong><small>Seguro · confiança no barbeiro ↓</small></span>
+                <span class="gloss" aria-hidden="true"></span><span class="peel" aria-hidden="true"></span>
+              </span>
+              <span class="stuck-stamp" aria-hidden="true">Colada</span>
+            </button>
+          </div>
+        </div>
+
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+
+        <footer class="news" aria-labelledby="news-t">
+          <h3 id="news-t">Notícias da rodada</h3>
+          <ul>
+            <li><img src="../../public/assets/clubs/atletico-mg.png" alt="" width="24" height="24" loading="lazy">Atlético-MG conquista a CONMEBOL Libertadores</li>
+            <li><img src="../../public/assets/clubs/sao-paulo.png" alt="" width="24" height="24" loading="lazy">São Paulo vence o Bahia nos pênaltis e leva a Copa do Brasil</li>
+            <li><img src="../../public/assets/clubs/flamengo.png" alt="" width="24" height="24" loading="lazy">Flamengo termina o Brasileirão com o melhor ataque</li>
+            <li><img src="../../public/assets/clubs/palmeiras.png" alt="" width="24" height="24" loading="lazy">Palmeiras anuncia o artilheiro uruguaio para 2028</li>
+          </ul>
+        </footer>
+      </section>
+    </div>
+
+    <!-- índice: abas do álbum -->
+    <nav aria-label="Navegação da carreira">
+      <ul class="tabs">
+        <li><button type="button" class="tab" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>Carreira</button></li>
+        <li><button type="button" class="tab t-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3c-.7 1.5-2.2 2.5-4 2.5S8.7 4.5 8 3Z"/></svg>Jogador</button></li>
+        <li><button type="button" class="tab t-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 20c.5-3.5 3-5.5 6-5.5s5.5 2 6 5.5M15 15c3 0 5 1.6 5.5 4.5"/></svg>Time</button></li>
+        <li><button type="button" class="tab t-ink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h3M4 12h3M4 19h3M10 5h10M10 12h7M10 19h9"/></svg>Histórico</button></li>
+        <li><button type="button" class="tab t-mustard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16M7 20v-7M12 20V5M17 20v-10"/></svg>Estatísticas</button></li>
+        <li><button type="button" class="tab t-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.5 5.2 3.5 8.5s-1.1 6.1-3.5 8.5c-2.4-2.4-3.5-5.2-3.5-8.5s1.1-6.1 3.5-8.5Z"/></svg>Mundo</button></li>
+      </ul>
+    </nav>
+  </main>
+</div>
+
+<script>
+  (() => {
+    const choices = [...document.querySelectorAll(".choice")];
+    const slot = document.getElementById("slot");
+    const status = document.getElementById("status");
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+    let placed = null;
+
+    const slotVisible = () => slot.offsetParent !== null && getComputedStyle(slot).display !== "none";
+
+    function reset() {
+      choices.forEach((btn) => {
+        btn.classList.remove("is-peeled", "is-stuck");
+        btn.setAttribute("aria-pressed", "false");
+      });
+      if (placed) { placed.remove(); placed = null; }
+      slot.classList.remove("filled");
+    }
+
+    function choose(btn) {
+      if (btn.getAttribute("aria-pressed") === "true") return;
+      reset();
+      document.body.classList.add("has-pick");
+      btn.setAttribute("aria-pressed", "true");
+      const letter = btn.dataset.letter;
+      const label = btn.querySelector(".ch-body strong").textContent;
+
+      if (slotVisible()) {
+        const face = btn.querySelector(".sticker-face");
+        const from = face.getBoundingClientRect();
+        const clone = face.cloneNode(true);
+        clone.classList.add("placed");
+        clone.setAttribute("aria-hidden", "true");
+        clone.querySelector(".peel")?.remove();
+        slot.appendChild(clone);
+        slot.classList.add("filled");
+        placed = clone;
+        btn.classList.add("is-peeled");
+        if (!reduce.matches) {
+          const to = clone.getBoundingClientRect();
+          const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+          const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+          const sx = from.width / to.width;
+          const r0 = getComputedStyle(btn).rotate;
+          clone.animate([
+            { transform: `translate(${dx}px, ${dy}px) scale(${sx}) rotate(${r0 === "none" ? "0deg" : r0})`, boxShadow: "0 2px 2px rgba(0,0,0,.18), 0 10px 16px rgba(30,30,20,.2)" },
+            { transform: `translate(${dx * .35}px, ${dy * .35 - 26}px) scale(1.07) rotate(6deg)`, boxShadow: "0 6px 8px rgba(0,0,0,.16), 0 26px 30px rgba(30,30,20,.22)", offset: .45 },
+            { transform: "translate(0, 0) scale(1) rotate(0deg)", boxShadow: "0 1px 1px rgba(0,0,0,.18), 0 5px 10px rgba(30,30,20,.16)" }
+          ], { duration: 640, easing: "cubic-bezier(.16, 1, .3, 1)" });
+        }
+      } else {
+        btn.classList.add("is-stuck");
+      }
+      status.textContent = `Figurinha ${letter} colada no capítulo 2028: “${label}”. No jogo, aqui viria a consequência.`;
+    }
+
+    choices.forEach((btn) => btn.addEventListener("click", () => choose(btn)));
+    document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((t) => t.removeAttribute("aria-current"));
+      tab.setAttribute("aria-current", "page");
+    }));
+  })();
+</script>
+</body>
+</html>

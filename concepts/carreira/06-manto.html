@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Manto · Futbobo</title>
+<meta name="description" content="Concept 06 da tela da Carreira: a interface veste a camisa do clube atual.">
+<meta name="theme-color" content="#0057a8">
+<link rel="icon" href="../../public/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,300..900&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--
+  CONCEPT 06 · MANTO — plano (passo 1 do processo de duas passadas)
+
+  Tese: a camisa é a identidade. Quando você muda de clube, a interface inteira troca de roupa.
+
+  Tokens (o clube manda; o resto é tinta e papel)
+    --accent      cor dominante do clube (Bahia #0057a8)     --paper  #f6f6f3   folha suíça
+    --accent-ink  texto sobre o acento (#fff)                --ink    #111111   texto e filetes
+    --num-fill / --num-stroke / --name   tinta do número e do nome nas costas
+    --fabric      estampa da camisa (cor + padrão), trocada pelo seletor
+  Tipo: Anybody (eixo de largura 50–150) para tudo que é número e manchete — nome estreito, número largo;
+        Hanken Grotesk para leitura e rótulos (caixa normal).
+
+  Desktop 1440×900                                    Mobile 390×844
+  ┌ costas da camisa (42%) ┬ folha suíça (58%) ───────┐   ┌ costas da camisa ─────┐
+  │      ╭─ gola ─╮         │ escudo Bahia   navegação  │   │  BOBO   10    escudo  │
+  │    [etiqueta]           │━━━━━━━━━━━━━━━━━━━━━━━━━━━│   │  [8 camisas →]        │
+  │       B O B O           │ 2028      Moral Físico …  │   ├ folha ────────────────┤
+  │        1 0              │ 17  63  MEI   situação    │   │ 2028 · 17 · OVR 63    │
+  │      (gigante)          │━━━━━━━━━━━━━━━━━━━━━━━━━━━│   │ 4 barras              │
+  │      FUTBOBO            │ Visual novo               │   │ título + texto        │
+  │                         │ TÍTULO DO CAPÍTULO        │   │ A ━━━━━━━━━━━━━━━━━━  │
+  │ [vista outra camisa: 8] │ A ━━━ B ━━━ C ━━━         │   │ B / C                 │
+  └─────────────────────────│ meta | mercado | mundo    │   ├ navegação fixa ───────┤
+                            └───────────────────────────┘   └───────────────────────┘
+
+  Crítica do plano (passo 2) — o que estava genérico e mudou:
+  - Barras coloridas por métrica viraram números grandes com um único filete na cor do clube: a cor é do clube, não do dado.
+  - "Escolha destacada" padrão virou a linha que veste a camisa: ao escolher, a faixa ganha a estampa do clube.
+  - Identidade em cartão virou a etiqueta costurada na gola e o patrocínio das costas (a marca Futbobo).
+  - Nada de rótulo em caixa alta espaçada: a hierarquia é feita por largura e peso do mesmo tipo.
+  - Um momento de movimento: o 10 é costurado (contorno → preenchimento). A troca de camisa é resposta, não enfeite.
+-->
+<style>
+@property --accent{syntax:"<color>";inherits:true;initial-value:#0057a8}
+@property --accent-ink{syntax:"<color>";inherits:true;initial-value:#ffffff}
+@property --num-fill{syntax:"<color>";inherits:true;initial-value:#0b4ea2}
+@property --num-stroke{syntax:"<color>";inherits:true;initial-value:#e32636}
+@property --name{syntax:"<color>";inherits:true;initial-value:#0b4ea2}
+@property --name-stroke{syntax:"<color>";inherits:true;initial-value:transparent}
+@property --collar{syntax:"<color>";inherits:true;initial-value:#0057a8}
+@property --k1{syntax:"<color>";inherits:true;initial-value:#0057a8}
+@property --k2{syntax:"<color>";inherits:true;initial-value:#e32636}
+
+:root{
+  color-scheme:light;
+  --paper:#f6f6f3;--ink:#111111;--ink-2:#3b3b3b;--ink-3:#6b6b68;--rule:#111;--hair:rgba(17,17,17,.14);
+  --accent:#0057a8;--accent-ink:#fff;
+  --num-fill:#0b4ea2;--num-stroke:#e32636;--name:#0b4ea2;--name-stroke:transparent;--collar:#0057a8;
+  --k1:#0057a8;--k2:#e32636;
+  --hoop:9.4vh;--stripe:4.6vw;
+  --display:"Anybody","Arial Narrow",sans-serif;
+  --text:"Hanken Grotesk","Segoe UI",sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+  transition:--accent .42s var(--ease),--accent-ink .42s var(--ease),--num-fill .42s var(--ease),--num-stroke .42s var(--ease),
+    --name .42s var(--ease),--name-stroke .42s var(--ease),--collar .42s var(--ease),--k1 .42s var(--ease),--k2 .42s var(--ease);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
+button,a{font:inherit;color:inherit;text-decoration:none;-webkit-tap-highlight-color:transparent}
+button{background:none;border:0;cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.icon{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-family:var(--display);font-variant-numeric:tabular-nums}
+
+.app{height:100dvh;min-height:640px;display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr)}
+
+/* ───────────── costas da camisa ───────────── */
+.shirt{
+  position:relative;overflow:hidden;isolation:isolate;min-height:0;
+  display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;justify-items:center;
+  padding:0 clamp(20px,3vw,48px) clamp(18px,2.6vh,28px);
+}
+.fabric{position:absolute;inset:0;z-index:-3;transition:opacity .42s var(--ease)}
+.fabric.off{opacity:0}
+.cloth{position:absolute;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(circle,rgba(0,0,0,.075) .7px,transparent 1.1px) 0 0/4px 4px,
+    radial-gradient(70% 45% at 28% 18%,rgba(255,255,255,.22),transparent 70%),
+    linear-gradient(104deg,transparent 30%,rgba(0,0,0,.10) 44%,transparent 56%),
+    linear-gradient(76deg,transparent 58%,rgba(255,255,255,.10) 66%,transparent 74%),
+    radial-gradient(120% 70% at 50% 120%,rgba(0,0,0,.22),transparent 60%),
+    linear-gradient(90deg,rgba(0,0,0,.16),transparent 9%,transparent 91%,rgba(0,0,0,.16));
+  mix-blend-mode:multiply}
+.cloth::after{content:"";position:absolute;inset:0;
+  background:radial-gradient(60% 40% at 30% 16%,rgba(255,255,255,.28),transparent 70%),linear-gradient(76deg,transparent 60%,rgba(255,255,255,.12) 67%,transparent 74%);
+  mix-blend-mode:screen}
+.seams{position:absolute;inset:0;z-index:-1;width:100%;height:100%;pointer-events:none}
+.collar{width:min(52%,300px);height:auto;display:block;margin-top:-1px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.18))}
+.label{
+  margin-top:clamp(8px,1.4vh,14px);padding:7px 14px 8px;text-align:center;color:#2b2b2b;
+  background:#fbfbf8;
+  background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.035) 0 1px,transparent 1px 3px);
+  box-shadow:0 1px 2px rgba(0,0,0,.25),inset 0 0 0 1px rgba(0,0,0,.06);
+  position:relative;
+}
+.label::before,.label::after{content:"";position:absolute;top:3px;bottom:3px;width:1px;background:repeating-linear-gradient(180deg,rgba(0,0,0,.35) 0 3px,transparent 3px 6px)}
+.label::before{left:4px}.label::after{right:4px}
+.label b{display:block;font-family:var(--display);font-stretch:110%;font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+.label span{display:block;font-size:10.5px;line-height:1.35;color:#4a4a48}
+.back{align-self:center;display:grid;justify-items:center;width:100%;min-height:0}
+.back-name{
+  font-family:var(--display);font-stretch:62%;font-weight:800;font-size:clamp(54px,12.5vh,124px);line-height:.9;letter-spacing:.16em;
+  color:var(--name);-webkit-text-stroke:5px var(--name-stroke);paint-order:stroke fill;margin-right:-.16em;
+}
+.back-num{width:min(100%,58vh);height:auto;display:block;overflow:visible;margin-top:clamp(0px,1vh,10px)}
+.back-num text{font-family:var(--display);font-weight:900;font-stretch:96%;font-size:330px;letter-spacing:-6px}
+.num-stroke{fill:none;stroke:var(--num-stroke);stroke-width:18;stroke-linejoin:round}
+.num-fill{fill:var(--num-fill)}
+.num-draw{fill:none;stroke:var(--num-fill);stroke-width:4;stroke-dasharray:1900;stroke-dashoffset:0;opacity:0}
+.sponsor{display:flex;align-items:center;gap:10px;margin-top:clamp(4px,1.2vh,14px);color:var(--name)}
+.sponsor img{width:clamp(22px,3.4vh,32px);height:auto;border-radius:6px}
+.sponsor span{font-family:var(--display);font-stretch:128%;font-weight:800;font-size:clamp(17px,2.9vh,27px);letter-spacing:.04em;-webkit-text-stroke:3px var(--name-stroke);paint-order:stroke fill}
+
+.wardrobe{
+  width:min(100%,520px);background:#fbfbf8;color:var(--ink);padding:10px 12px 12px;
+  box-shadow:0 1px 0 rgba(0,0,0,.05),0 10px 24px -10px rgba(0,0,0,.45),0 2px 4px rgba(0,0,0,.12);
+}
+.wardrobe-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.wardrobe-head strong{font-size:13.5px;font-weight:800}
+.wardrobe-head span{font-size:11.5px;color:var(--ink-3)}
+.kits{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.kit{height:46px;display:grid;place-items:center;position:relative;border-radius:2px;transition:background-color .15s}
+.kit img{width:30px;height:30px;object-fit:contain;transition:transform .2s var(--ease)}
+.kit:hover{background:rgba(17,17,17,.06)}
+.kit:hover img{transform:translateY(-2px)}
+.kit[aria-pressed="true"]{background:rgba(17,17,17,.06)}
+.kit[aria-pressed="true"]::after{content:"";position:absolute;left:8px;right:8px;bottom:0;height:3px;background:var(--ink)}
+
+/* ───────────── folha suíça ───────────── */
+.panel{
+  min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;
+  padding:clamp(16px,2.8vh,30px) clamp(26px,3.2vw,56px) clamp(14px,2.4vh,26px);
+  container-type:inline-size;
+}
+.top{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:clamp(10px,1.6vh,16px);border-bottom:3px solid var(--rule)}
+.club{display:flex;align-items:center;gap:12px;min-width:0}
+.club img{width:40px;height:40px;object-fit:contain}
+.club strong{display:block;font-family:var(--display);font-stretch:80%;font-weight:800;font-size:23px;line-height:1}
+.club span{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px;white-space:nowrap}
+.tabs{display:flex;gap:clamp(10px,1.5vw,22px)}
+.tab{position:relative;display:flex;align-items:center;gap:6px;padding:10px 0;font-size:14px;font-weight:600;color:var(--ink-3);white-space:nowrap}
+.tab .icon{display:none}
+.tab:hover{color:var(--ink)}
+.tab[aria-current="page"]{color:var(--ink);font-weight:800}
+.tab[aria-current="page"]::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:4px;background:var(--accent)}
+
+.hero{
+  display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:clamp(20px,3vw,48px);align-items:end;
+  padding:clamp(10px,2vh,18px) 0 clamp(10px,1.8vh,16px);border-bottom:3px solid var(--rule);
+}
+.season{display:grid;gap:clamp(6px,1.2vh,12px)}
+.season-year{font-family:var(--display);font-stretch:60%;font-weight:900;font-size:clamp(76px,13.4vh,134px);line-height:.76;letter-spacing:-.02em;margin-left:-.04em}
+.season-year small{display:block;font-family:var(--text);font-stretch:100%;font-size:12.5px;font-weight:600;letter-spacing:0;color:var(--ink-3);line-height:1;margin:0 0 6px .3em}
+.ident{display:flex;gap:clamp(14px,1.8vw,26px);align-items:baseline}
+.ident div{display:grid}
+.ident b{font-family:var(--display);font-stretch:72%;font-weight:800;font-size:clamp(26px,4vh,38px);line-height:1}
+.ident .ovr b{color:var(--accent)}
+.ident small{font-size:12px;font-weight:600;color:var(--ink-3);margin-top:2px}
+.side{display:grid;gap:clamp(10px,2vh,18px);min-width:0}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(12px,1.6vw,24px)}
+.stat{display:grid;gap:4px;min-width:0}
+.stat span{font-size:12.5px;font-weight:600;color:var(--ink-3);white-space:nowrap}
+.stat b{font-family:var(--display);font-stretch:74%;font-weight:800;font-size:clamp(32px,5.6vh,54px);line-height:.9}
+.bar{height:4px;background:rgba(17,17,17,.12);position:relative}
+.bar i{position:absolute;inset:0 auto 0 0;width:calc(var(--v)*1%);background:var(--accent)}
+.stat.low b{color:var(--ink-3)}
+.status{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:clamp(10px,1.4vw,20px);align-items:end;padding-top:clamp(8px,1.4vh,12px);border-top:1px solid var(--hair)}
+.status div{display:grid;min-width:0}
+.status span{font-size:12px;font-weight:600;color:var(--ink-3)}
+.status strong{font-size:clamp(15px,2vh,17px);font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+.retire{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:#b42318;padding:8px 0;min-height:40px}
+.retire .icon{font-size:16px}
+.retire:hover{text-decoration:underline;text-underline-offset:3px}
+
+.chapter{min-height:0;display:flex;flex-direction:column;justify-content:center;padding:clamp(10px,2.2vh,22px) 0 clamp(6px,1.2vh,12px)}
+.kicker{display:flex;gap:12px;align-items:baseline;font-size:13.5px;font-weight:600;color:var(--ink-3)}
+.kicker b{color:var(--accent);font-weight:800}
+.chapter h1{
+  margin-top:clamp(6px,1vh,10px);font-family:var(--display);font-stretch:76%;font-weight:800;
+  font-size:clamp(28px,min(5.2vh,5.4cqi),54px);line-height:.96;letter-spacing:-.012em;text-wrap:balance;max-width:24ch;
+}
+.chapter p{margin-top:clamp(6px,1.2vh,12px);font-size:clamp(14.5px,1.9vh,17.5px);line-height:1.5;color:var(--ink-2);max-width:60ch;text-wrap:pretty}
+.choices{list-style:none;margin-top:clamp(10px,2vh,20px);border-top:3px solid var(--rule)}
+.choices li{border-bottom:1px solid var(--rule)}
+.choices li:last-child{border-bottom-width:3px}
+.choice{
+  width:100%;display:grid;grid-template-columns:clamp(46px,4.4vw,70px) minmax(0,1fr) minmax(0,auto);align-items:center;gap:clamp(10px,1.4vw,22px);
+  min-height:clamp(50px,7vh,66px);padding:5px clamp(8px,1vw,14px) 6px 0;text-align:left;position:relative;isolation:isolate;
+}
+.choice::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .26s var(--ease)}
+.choice .letter{font-family:var(--display);font-stretch:118%;font-weight:900;font-size:clamp(28px,4.6vh,44px);line-height:1;color:var(--accent);padding-left:clamp(4px,.6vw,10px);transition:color .2s,transform .2s var(--ease)}
+.choice .what{font-size:clamp(16.5px,2.35vh,21px);font-weight:700;line-height:1.2;transition:color .2s}
+.choice .hint{font-size:13px;font-weight:500;color:var(--ink-3);text-align:right;max-width:200px;transition:color .2s}
+.choice:hover::before,.choice:focus-visible::before{transform:scaleX(1)}
+.choice:hover .letter,.choice:hover .what,.choice:focus-visible .letter,.choice:focus-visible .what{color:var(--accent-ink)}
+.choice:hover .hint,.choice:focus-visible .hint{color:color-mix(in srgb,var(--accent-ink) 78%,transparent)}
+.choice:hover .letter{transform:translateX(4px)}
+.choice:focus-visible{outline-offset:-3px}
+/* a escolha veste a camisa */
+.choice[aria-pressed="true"]::before{transform:scaleX(1);background:var(--mini);background-size:auto}
+.choice[aria-pressed="true"] .what{color:var(--ink);background:#fbfbf8;justify-self:start;padding:5px 10px 6px;margin-left:-10px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.choice[aria-pressed="true"] .letter{color:var(--ink);background:#fbfbf8;justify-self:start;padding:4px 8px;box-shadow:0 2px 6px rgba(0,0,0,.25);transform:none}
+.choice[aria-pressed="true"] .hint{color:var(--ink);background:#fbfbf8;padding:4px 8px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.choice[aria-pressed="true"] .hint::before{content:"Vestiu: ";font-weight:800}
+
+.foot{display:grid;grid-template-columns:minmax(0,.92fr) minmax(0,1.2fr) minmax(0,1.16fr);gap:0;padding-top:clamp(8px,1.6vh,14px)}
+.foot section{padding:0 clamp(12px,1.4vw,22px);border-left:1px solid var(--hair);min-width:0}
+.foot section:first-child,.foot .mobile-status + section{padding-left:0;border-left:0}
+.foot h2{font-size:12.5px;font-weight:600;color:var(--ink-3)}
+.foot h3{font-family:var(--display);font-stretch:76%;font-weight:800;font-size:clamp(18px,2.4vh,22px);line-height:1.05;margin-top:3px}
+.foot p{font-size:13px;line-height:1.4;color:var(--ink-2);margin-top:4px}
+.tally{display:flex;gap:3px;margin-top:7px}
+.tally i{flex:1;height:8px;background:rgba(17,17,17,.1)}
+.tally-row{display:flex;align-items:center;gap:10px}
+.tally-row .tally{flex:1}
+.tally-row b{font-family:var(--display);font-stretch:80%;font-weight:800;font-size:16px;margin-top:6px}
+.market-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.btn{min-height:36px;padding:6px 10px;font-size:13px;font-weight:700;border:2px solid var(--ink);transition:background-color .15s,color .15s}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.btn small{font-weight:600;opacity:.8}
+.news{position:relative;height:2.7em;margin-top:4px;overflow:hidden;font-size:14px;font-weight:700;line-height:1.3}
+.news span{position:absolute;inset:0;transition:transform .28s var(--ease),opacity .28s}
+.news span.in{transform:translateY(100%);opacity:0}
+.news span.out{transform:translateY(-100%);opacity:0}
+.news-ctl{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;color:var(--ink-3)}
+.news-ctl button{width:32px;height:32px;display:grid;place-items:center;border:1.5px solid var(--hair);font-size:14px;color:var(--ink)}
+.news-ctl button:hover{border-color:var(--ink)}
+.news-ctl .count{margin-right:auto;font-variant-numeric:tabular-nums}
+
+/* entrada: o 10 é costurado */
+@keyframes stitch{from{stroke-dashoffset:1900;opacity:1}75%{opacity:1}to{stroke-dashoffset:0;opacity:0}}
+@keyframes fillin{from{opacity:0}to{opacity:1}}
+.sewing .num-draw{animation:stitch 1.15s cubic-bezier(.45,.1,.3,1) both}
+.sewing .num-fill,.sewing .num-stroke{animation:fillin .35s ease-out .85s both}
+
+/* ───────────── alturas menores ───────────── */
+@media (min-width:1024px) and (max-height:820px){
+  .label span:last-child{display:none}
+  .foot p.meta-desc{display:none}
+  .chapter p{line-height:1.42}
+  .chapter h1{max-width:30ch}
+  .choice{min-height:48px}
+  .status{padding-top:6px}
+  .side{gap:8px}
+}
+@media (min-width:1024px) and (max-width:1279px){
+  .tabs{gap:10px}.tab{font-size:13px}
+  .club span{display:none}
+  .stats{gap:10px}
+  .choice .hint{max-width:170px}
+  .news{height:3.9em;font-size:13.5px}
+}
+@media (min-width:1024px) and (max-height:700px){body{overflow:auto}}
+
+/* ───────────── mobile: as costas viram cabeçalho ───────────── */
+@media (max-width:1023px){
+  :root{--hoop:22px;--stripe:30px}
+  body{overflow-x:hidden;overflow-y:auto}
+  .app{height:auto;min-height:100dvh;display:block;padding-bottom:calc(66px + env(safe-area-inset-bottom))}
+  .shirt{
+    display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto;
+    grid-template-areas:"collar collar" "back back" "kits kits";
+    padding:0 0 10px;justify-items:stretch;
+  }
+  .collar{grid-area:collar;justify-self:center;width:46%}
+  .label{display:none}
+  .back{grid-area:back;grid-template-columns:auto auto;align-items:center;justify-content:center;column-gap:14px;padding:0 16px}
+  .back-name{font-size:clamp(34px,11vw,48px);grid-row:1;writing-mode:vertical-rl;rotate:180deg;letter-spacing:.12em;margin:0;-webkit-text-stroke-width:3px}
+  .back-num{width:auto;height:clamp(90px,12.6vh,124px);margin:0}
+  .sponsor{display:none}
+  .wardrobe{grid-area:kits;width:auto;margin:6px 10px 0;padding:0 4px 0 10px;background:rgba(251,251,248,.96);display:flex;align-items:center;gap:6px}
+  .wardrobe-head{margin:0;flex:none}
+  .wardrobe-head strong{font-size:12px;line-height:1.15;width:5.6em;display:block}
+  .wardrobe-head span{display:none}
+  .kits{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+  .kits::-webkit-scrollbar{display:none}
+  .kit{flex:1 0 44px;height:44px}
+  .kit img{width:26px;height:26px}
+  .panel{display:block;padding:12px 16px 18px;container-type:normal}
+  .top{display:block;border:0;padding:0}
+  .top .club{display:none}
+  .hero{grid-template-columns:1fr;padding:0 0 9px;row-gap:8px;border-bottom-width:2px}
+  .season{grid-template-columns:auto 1fr;align-items:end;column-gap:14px}
+  .season-year{font-size:52px;line-height:.8}
+  .season-year small{font-size:11px;margin-bottom:4px}
+  .ident{justify-content:flex-end;gap:14px}
+  .ident b{font-size:26px}
+  .ident small{font-size:11px}
+  .side{gap:10px}
+  .stats{gap:10px}
+  .stat span{font-size:11.5px}
+  .stat b{font-size:26px}
+  .bar{height:3px}
+  .status{display:none}
+  .chapter{padding-top:10px;overflow:visible}
+  .kicker{font-size:12.5px}
+  .chapter h1{font-size:clamp(22px,6.5vw,28px);max-width:none;line-height:1}
+  .chapter p{font-size:14px;line-height:1.45;margin-top:6px}
+  .choices{margin-top:12px;border-top-width:2px}
+  .choices li:last-child{border-bottom-width:2px}
+  .choice{grid-template-columns:36px minmax(0,1fr);row-gap:1px;min-height:56px;padding:7px 8px 7px 0}
+  .choice .letter{font-size:26px;grid-row:1/3;padding-left:2px}
+  .choice .what{font-size:16px}
+  .choice .hint{text-align:left;max-width:none;font-size:12.5px;grid-column:2}
+  .choice[aria-pressed="true"] .hint{justify-self:start}
+  .foot{grid-template-columns:1fr;gap:0;padding-top:4px}
+  .foot section{border-left:0;border-top:1px solid var(--hair);padding:14px 0}
+  .foot section:first-child{border-top:0}
+  .mobile-status{display:grid!important}
+  .tabs{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;
+    background:var(--paper);border-top:3px solid var(--rule);padding:0 2px env(safe-area-inset-bottom);
+  }
+  .tab{flex-direction:column;justify-content:center;gap:3px;min-height:60px;padding:6px 0 7px;font-size:11px;font-weight:700}
+  .tab .icon{display:block;font-size:20px}
+  .tab[aria-current="page"]::after{top:-3px;bottom:auto;left:14%;right:14%}
+}
+@media (max-width:1023px) and (max-height:760px){
+  .back-num{height:96px}
+  .back-name{font-size:32px}
+  .season-year{font-size:44px}
+  .ident b{font-size:23px}
+  .stat b{font-size:23px}
+  .chapter h1{font-size:22px}
+  .chapter p{font-size:13.5px;line-height:1.4}
+  .choice{min-height:56px;padding:6px 6px 6px 0}
+  .choice .what{font-size:15px}
+  .choice .hint{font-size:12px}
+}
+@media (min-width:640px) and (max-width:1023px){
+  .panel{max-width:720px;margin:0 auto}
+  .foot{grid-template-columns:1fr 1fr}
+  .foot section:last-child{grid-column:1/-1}
+}
+.mobile-status{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:end}
+.mobile-status div{display:grid}
+.mobile-status span{font-size:12px;font-weight:600;color:var(--ink-3)}
+.mobile-status strong{font-size:16px;font-weight:800}
+.mobile-status .retire{grid-column:1/-1;justify-self:start}
+
+@media (prefers-reduced-motion:reduce){
+  :root{transition:none}
+  .sewing .num-draw,.sewing .num-fill,.sewing .num-stroke{animation:none}
+  .fabric,.choice::before,.news span,.kit img,.choice .letter{transition:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4.5h11.5l-2.2 4 2.2 4H5"/></symbol>
+  <symbol id="i-shirt" viewBox="0 0 24 24"><path d="M8.5 3.5 3.5 6.5l2 4 2.5-1V20.5h8V9.5l2.5 1 2-4-5-3c-.8 1.6-2 2.4-3.5 2.4S9.3 5.1 8.5 3.5Z"/></symbol>
+  <symbol id="i-team" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.4-3.6 2.8-5.8 6-5.8s5.6 2.2 6 5.8"/><circle cx="17" cy="9" r="2.5"/><path d="M16.4 13.8c2.6.2 4.3 2.2 4.6 5.2"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><circle cx="5" cy="6" r="1.4"/><circle cx="5" cy="12" r="1.4"/><circle cx="5" cy="18" r="1.4"/><path d="M5 7.4v3.2M5 13.4v3.2M10 6h10M10 12h7M10 18h9"/></symbol>
+  <symbol id="i-stats" viewBox="0 0 24 24"><path d="M4 20h16M6.5 20v-7M12 20V5M17.5 20v-10"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M3.6 12h16.8M12 3.4c2.4 2.5 3.6 5.4 3.6 8.6s-1.2 6.1-3.6 8.6c-2.4-2.5-3.6-5.4-3.6-8.6s1.2-6.1 3.6-8.6Z"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M6.5 3.5h11M6.5 20.5h11M8 3.5c0 4.5 8 5 8 8.5s-8 4-8 8.5M16 3.5c0 4.5-8 5-8 8.5s8 4 8 8.5"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5Z"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+</svg>
+
+<div class="app">
+  <!-- costas da camisa -->
+  <aside class="shirt sewing" id="shirt" aria-label="Camisa de Tito Bobo">
+    <div class="fabric" id="fabric-a"></div>
+    <div class="fabric off" id="fabric-b"></div>
+    <div class="cloth" aria-hidden="true"></div>
+    <svg class="seams" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 18 L26 0" stroke="rgba(0,0,0,.14)" stroke-width=".35" fill="none" vector-effect="non-scaling-stroke"/>
+      <path d="M100 18 L74 0" stroke="rgba(0,0,0,.14)" stroke-width=".35" fill="none" vector-effect="non-scaling-stroke"/>
+    </svg>
+
+    <svg class="collar" viewBox="0 0 300 54" aria-hidden="true">
+      <defs><pattern id="rib" width="4" height="54" patternUnits="userSpaceOnUse"><rect width="4" height="54" fill="var(--collar)"/><rect width="1.4" height="54" fill="rgba(0,0,0,.16)"/></pattern></defs>
+      <path d="M0 0H300V8C238 46 62 46 0 8Z" fill="url(#rib)"/>
+      <path d="M0 8C62 46 238 46 300 8" fill="none" stroke="rgba(0,0,0,.22)" stroke-width="1.5"/>
+      <path d="M14 13C70 43 230 43 286 13" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1" stroke-dasharray="3 3"/>
+    </svg>
+
+    <div class="label" aria-hidden="true">
+      <b>Tito Bobo</b>
+      <span>Meia ofensivo, destro</span>
+      <span>Brasil</span>
+    </div>
+
+    <div class="back">
+      <span class="back-name" aria-hidden="true">BOBO</span>
+      <svg class="back-num" viewBox="0 0 440 290" role="img" aria-label="Camisa 10">
+        <text class="num-stroke" x="220" y="262" text-anchor="middle">10</text>
+        <text class="num-fill" x="220" y="262" text-anchor="middle">10</text>
+        <text class="num-draw" x="220" y="262" text-anchor="middle">10</text>
+      </svg>
+      <div class="sponsor" aria-hidden="true"><img src="../../public/favicon.svg" alt="" width="32" height="32"><span>FUTBOBO</span></div>
+    </div>
+
+    <section class="wardrobe" aria-labelledby="wardrobe-title">
+      <div class="wardrobe-head"><strong id="wardrobe-title">Vista outra camisa</strong><span>Demonstração: a tela segue o clube atual</span></div>
+      <div class="kits" id="kits"></div>
+    </section>
+  </aside>
+
+  <!-- folha suíça -->
+  <main class="panel">
+    <header class="top">
+      <div class="club">
+        <img id="crest" src="../../public/assets/clubs/bahia.png" alt="Escudo do Bahia" width="40" height="40">
+        <div><strong id="club-name">Bahia</strong><span id="club-meta">Brasileirão Série A, Salvador</span></div>
+      </div>
+      <nav class="tabs" aria-label="Navegação da carreira">
+        <a class="tab" href="#" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg>Carreira</a>
+        <a class="tab" href="#"><svg class="icon" aria-hidden="true"><use href="#i-shirt"/></svg>Jogador</a>
+        <a class="tab" href="#"><svg class="icon" aria-hidden="true"><use href="#i-team"/></svg>Time</a>
+        <a class="tab" href="#"><svg class="icon" aria-hidden="true"><use href="#i-history"/></svg>Histórico</a>
+        <a class="tab" href="#"><svg class="icon" aria-hidden="true"><use href="#i-stats"/></svg>Estatísticas</a>
+        <a class="tab" href="#"><svg class="icon" aria-hidden="true"><use href="#i-globe"/></svg>Mundo</a>
+      </nav>
+    </header>
+
+    <section class="hero" aria-label="Temporada e condição">
+      <div class="season">
+        <p class="season-year num"><small id="season-club">Temporada no Bahia</small>2028</p>
+        <div class="ident">
+          <div><b class="num">17</b><small>anos</small></div>
+          <div class="ovr"><b class="num">63</b><small>OVR, +5</small></div>
+          <div><b>MEI</b><small>meia ofensivo</small></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="stats">
+          <div class="stat"><span>Moral</span><b class="num">63</b><span class="bar" role="img" aria-label="Moral 63 de 100"><i style="--v:63"></i></span></div>
+          <div class="stat"><span>Físico</span><b class="num">93</b><span class="bar" role="img" aria-label="Físico 93 de 100"><i style="--v:93"></i></span></div>
+          <div class="stat low"><span>Prestígio</span><b class="num">16</b><span class="bar" role="img" aria-label="Prestígio 16 de 100"><i style="--v:16"></i></span></div>
+          <div class="stat"><span>Torcida, querido</span><b class="num">63</b><span class="bar" role="img" aria-label="Torcida 63 de 100"><i style="--v:63"></i></span></div>
+        </div>
+        <div class="status">
+          <div><span>Status</span><strong>Rotação</strong></div>
+          <div><span>Treinador</span><strong>52%</strong></div>
+          <div><span>Contrato</span><strong>4 anos</strong></div>
+          <button class="retire" type="button"><svg class="icon" aria-hidden="true"><use href="#i-hourglass"/></svg>Aposentar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="chapter" aria-labelledby="chapter-title">
+      <p class="kicker"><b>Visual novo</b><span>Capítulo da temporada 2028</span></p>
+      <h1 id="chapter-title">O barbeiro desenhou o escudo do clube na sua cabeça sem avisar</h1>
+      <p>Você pediu apenas para tirar dos lados. Quando se olha no espelho, existe um escudo enorme e surpreendentemente detalhado na nuca.</p>
+      <ul class="choices" aria-label="Escolhas">
+        <li><button class="choice" type="button" aria-pressed="false"><span class="letter" aria-hidden="true">A</span><span class="what">Assumir o corte no próximo jogo</span><span class="hint">Torcida ↑↑ · dignidade em risco</span></button></li>
+        <li><button class="choice" type="button" aria-pressed="false"><span class="letter" aria-hidden="true">B</span><span class="what">Pintar por cima com uma cor ainda mais absurda</span><span class="hint">Imagem ↑↑ · imprensa confusa</span></button></li>
+        <li><button class="choice" type="button" aria-pressed="false"><span class="letter" aria-hidden="true">C</span><span class="what">Raspar tudo antes que alguém veja</span><span class="hint">Seguro · confiança no barbeiro ↓</span></button></li>
+      </ul>
+    </section>
+
+    <footer class="foot">
+      <section class="mobile-status" aria-label="Situação no elenco">
+        <div><span>Status</span><strong>Rotação</strong></div>
+        <div><span>Treinador</span><strong>52%</strong></div>
+        <div><span>Contrato</span><strong>4 anos</strong></div>
+        <button class="retire" type="button"><svg class="icon" aria-hidden="true"><use href="#i-hourglass"/></svg>Aposentar</button>
+      </section>
+      <section aria-labelledby="meta-title">
+        <h2>Meta do treinador</h2>
+        <h3 id="meta-title">Comandar o jogo</h3>
+        <p class="meta-desc">Somar 8 gols + assistências. Recompensa +7 de confiança; falha, −6.</p>
+        <div class="tally-row"><span class="tally" role="img" aria-label="Progresso: 0 de 8"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><b class="num">0/8</b></div>
+      </section>
+      <section aria-labelledby="market-title">
+        <h2>Mercado</h2>
+        <h3 id="market-title">Quer mudar de camisa?</h3>
+        <div class="market-actions">
+          <button class="btn primary" type="button">Empréstimo <small>100%</small></button>
+          <button class="btn" type="button">Pedir transferência</button>
+        </div>
+      </section>
+      <section aria-labelledby="world-title">
+        <h2 id="world-title">Mundo</h2>
+        <p class="news" id="news" aria-hidden="true"><span>Atlético-MG conquista a CONMEBOL Libertadores</span></p>
+        <ul class="sr" id="news-list">
+          <li>Atlético-MG conquista a CONMEBOL Libertadores</li>
+          <li>São Paulo vence o Bahia nos pênaltis e leva a Copa do Brasil</li>
+          <li>Flamengo termina o Brasileirão com o melhor ataque</li>
+          <li>Palmeiras anuncia o artilheiro uruguaio para 2028</li>
+        </ul>
+        <div class="news-ctl">
+          <span class="count" id="news-count">1 de 4</span>
+          <button type="button" id="news-toggle" aria-label="Pausar manchetes" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-pause"/></svg></button>
+          <button type="button" id="news-next" aria-label="Próxima manchete"><svg class="icon" aria-hidden="true"><use href="#i-next"/></svg></button>
+        </div>
+      </section>
+    </footer>
+  </main>
+</div>
+
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+  const root = document.documentElement;
+
+  /* Camisas de demonstração: cor dominante, estampa das costas, versão mínima da estampa e tinta do número. */
+  const hoops = (a, b) => `repeating-linear-gradient(180deg,${a} 0 var(--hoop),${b} var(--hoop) calc(var(--hoop)*2))`;
+  const stripes = (a, b) => `repeating-linear-gradient(90deg,${a} 0 var(--stripe),${b} var(--stripe) calc(var(--stripe)*2))`;
+  const KITS = [
+    { id: "bahia", club: "Bahia", city: "Salvador", accent: "#0057a8", ink: "#ffffff", collar: "#0057a8", k1: "#0057a8", k2: "#e32636",
+      fabric: "linear-gradient(180deg,#0057a8 0 7%,#e32636 7% 8.2%,transparent 8.2%),linear-gradient(90deg,#0057a8 0 5%,#e32636 5% 6%,transparent 6% 94%,#e32636 94% 95%,#0057a8 95%),#f7f7f3",
+      mini: "linear-gradient(90deg,#0057a8 0 33.3%,#f7f7f3 33.3% 66.6%,#e32636 66.6%)",
+      numFill: "#0b4ea2", numStroke: "#e32636", name: "#0b4ea2", nameStroke: "transparent", theme: "#0057a8" },
+    { id: "flamengo", club: "Flamengo", city: "Rio de Janeiro", accent: "#c8102e", ink: "#ffffff", collar: "#141414", k1: "#c8102e", k2: "#141414",
+      fabric: hoops("#c8102e", "#151515"), mini: "repeating-linear-gradient(180deg,#c8102e 0 9px,#151515 9px 18px)",
+      numFill: "#ffffff", numStroke: "#151515", name: "#ffffff", nameStroke: "#151515", theme: "#c8102e" },
+    { id: "palmeiras", club: "Palmeiras", city: "São Paulo", accent: "#006437", ink: "#ffffff", collar: "#f4f4f0", k1: "#006437", k2: "#f4f4f0",
+      fabric: "repeating-linear-gradient(90deg,rgba(255,255,255,.06) 0 2px,transparent 2px 28px),#006437",
+      mini: "repeating-linear-gradient(90deg,rgba(255,255,255,.12) 0 2px,transparent 2px 12px),#006437",
+      numFill: "#ffffff", numStroke: "#00482a", name: "#ffffff", nameStroke: "transparent", theme: "#006437" },
+    { id: "botafogo", club: "Botafogo", city: "Rio de Janeiro", accent: "#151515", ink: "#ffffff", collar: "#151515", k1: "#151515", k2: "#f4f4f0",
+      fabric: stripes("#151515", "#f4f4f0"), mini: "repeating-linear-gradient(90deg,#151515 0 10px,#f4f4f0 10px 20px)",
+      numFill: "#f4f4f0", numStroke: "#151515", name: "#f4f4f0", nameStroke: "#151515", theme: "#151515" },
+    { id: "corinthians", club: "Corinthians", city: "São Paulo", accent: "#151515", ink: "#ffffff", collar: "#151515", k1: "#151515", k2: "#f7f7f3",
+      fabric: "linear-gradient(90deg,#151515 0 1.4%,transparent 1.4% 98.6%,#151515 98.6%),#f7f7f3",
+      mini: "linear-gradient(90deg,#151515 0 8px,#f7f7f3 8px calc(100% - 8px),#151515 calc(100% - 8px))",
+      numFill: "#151515", numStroke: "rgba(0,0,0,0)", name: "#151515", nameStroke: "transparent", theme: "#151515" },
+    { id: "vasco", club: "Vasco", city: "Rio de Janeiro", accent: "#151515", ink: "#ffffff", collar: "#151515", k1: "#151515", k2: "#f7f7f3",
+      fabric: "linear-gradient(122deg,transparent 0 30%,#151515 30% 46%,transparent 46%),#f7f7f3",
+      mini: "linear-gradient(112deg,#f7f7f3 0 26%,#151515 26% 64%,#f7f7f3 64%)",
+      numFill: "#151515", numStroke: "#f7f7f3", name: "#151515", nameStroke: "#f7f7f3", theme: "#151515" },
+    { id: "gremio", club: "Grêmio", city: "Porto Alegre", accent: "#0d80bf", ink: "#ffffff", collar: "#151515", k1: "#0d80bf", k2: "#151515",
+      fabric: "repeating-linear-gradient(90deg,#0d80bf 0 var(--stripe),#151515 var(--stripe) calc(var(--stripe)*1.32),#f4f4f0 calc(var(--stripe)*1.32) calc(var(--stripe)*1.5),#151515 calc(var(--stripe)*1.5) calc(var(--stripe)*1.82))",
+      mini: "repeating-linear-gradient(90deg,#0d80bf 0 14px,#151515 14px 18px,#f4f4f0 18px 21px,#151515 21px 25px)",
+      numFill: "#f4f4f0", numStroke: "#151515", name: "#f4f4f0", nameStroke: "#151515", theme: "#0d80bf" },
+    { id: "internacional", club: "Internacional", city: "Porto Alegre", accent: "#e30613", ink: "#ffffff", collar: "#f4f4f0", k1: "#e30613", k2: "#f4f4f0",
+      fabric: "radial-gradient(140% 60% at 50% -20%,rgba(255,255,255,.08),transparent 60%),#d9050f",
+      mini: "#d9050f",
+      numFill: "#ffffff", numStroke: "#9a0008", name: "#ffffff", nameStroke: "transparent", theme: "#e30613" },
+  ];
+
+  const kitsEl = document.getElementById("kits");
+  kitsEl.innerHTML = KITS.map((kit, i) =>
+    `<button class="kit" type="button" data-kit="${kit.id}" aria-pressed="${i === 0}" aria-label="Vestir a camisa do ${kit.club}" title="${kit.club}">
+      <img src="../../public/assets/clubs/${kit.id}.png" alt="" width="30" height="30" loading="lazy">
+    </button>`).join("");
+
+  const fabrics = [document.getElementById("fabric-a"), document.getElementById("fabric-b")];
+  let front = 0;
+  const crest = document.getElementById("crest");
+  const clubName = document.getElementById("club-name");
+  const clubMeta = document.getElementById("club-meta");
+  const theme = document.querySelector('meta[name="theme-color"]');
+  const shirt = document.getElementById("shirt");
+
+  const wear = (kit, first = false) => {
+    const set = (k, v) => root.style.setProperty(k, v);
+    set("--accent", kit.accent); set("--accent-ink", kit.ink); set("--collar", kit.collar);
+    set("--k1", kit.k1); set("--k2", kit.k2); set("--mini", kit.mini);
+    set("--num-fill", kit.numFill); set("--num-stroke", kit.numStroke);
+    set("--name", kit.name); set("--name-stroke", kit.nameStroke);
+    if (first) { fabrics[0].style.background = kit.fabric; }
+    else {
+      const back = fabrics[1 - front];
+      back.style.background = kit.fabric;
+      back.classList.remove("off");
+      fabrics[front].classList.add("off");
+      front = 1 - front;
+    }
+    crest.src = `../../public/assets/clubs/${kit.id}.png`;
+    crest.alt = `Escudo do ${kit.club}`;
+    document.getElementById("season-club").textContent = `Temporada no ${kit.club}`;
+    clubName.textContent = kit.club;
+    clubMeta.textContent = `Brasileirão Série A, ${kit.city}`;
+    shirt.setAttribute("aria-label", `Camisa de Tito Bobo, ${kit.club}`);
+    theme.setAttribute("content", kit.theme);
+    kitsEl.querySelectorAll(".kit").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.kit === kit.id)));
+  };
+
+  wear(KITS[0], true);
+  kitsEl.addEventListener("click", (event) => {
+    const button = event.target.closest(".kit");
+    if (!button || button.getAttribute("aria-pressed") === "true") return;
+    wear(KITS.find((k) => k.id === button.dataset.kit));
+    if (!reduce.matches) {
+      shirt.classList.remove("sewing"); shirt.getBoundingClientRect(); shirt.classList.add("sewing");
+    }
+  });
+  if (reduce.matches) shirt.classList.remove("sewing");
+
+  /* escolhas: a linha veste a camisa */
+  const choices = [...document.querySelectorAll(".choice")];
+  choices.forEach((button) => button.addEventListener("click", () => {
+    choices.forEach((other) => other.setAttribute("aria-pressed", String(other === button)));
+  }));
+
+  /* manchetes do Mundo: uma por vez, com pausa */
+  const items = [...document.querySelectorAll("#news-list li")].map((li) => li.textContent);
+  const news = document.getElementById("news");
+  const count = document.getElementById("news-count");
+  const toggle = document.getElementById("news-toggle");
+  const next = document.getElementById("news-next");
+  let index = 0, timer = null;
+  const show = (to) => {
+    index = (to + items.length) % items.length;
+    const incoming = document.createElement("span");
+    incoming.textContent = items[index];
+    const previous = [...news.querySelectorAll("span")];
+    if (reduce.matches) news.replaceChildren(incoming);
+    else {
+      incoming.className = "in"; news.append(incoming); incoming.getBoundingClientRect();
+      incoming.className = ""; previous.forEach((s) => s.classList.add("out"));
+      setTimeout(() => previous.forEach((s) => s.remove()), 320);
+    }
+    count.textContent = `${index + 1} de ${items.length}`;
+  };
+  const play = () => { clearInterval(timer); timer = setInterval(() => show(index + 1), 4200); };
+  const setPaused = (paused) => {
+    toggle.setAttribute("aria-pressed", String(paused));
+    toggle.setAttribute("aria-label", paused ? "Retomar manchetes" : "Pausar manchetes");
+    toggle.querySelector("use").setAttribute("href", paused ? "#i-play" : "#i-pause");
+  };
+  toggle.addEventListener("click", () => {
+    const paused = toggle.getAttribute("aria-pressed") === "true";
+    setPaused(!paused);
+    if (paused) play(); else { clearInterval(timer); timer = null; }
+  });
+  next.addEventListener("click", () => { show(index + 1); if (timer) play(); });
+  if (reduce.matches) setPaused(true); else play();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carreira: oito caminhos</title>
+<meta name="description" content="Oito concepts de rearranjo da tela de carreira do Futbobo, em desktop e mobile.">
+<link rel="icon" href="../../public/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@200..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --wall: #e2e4e6;
+    --wall-deep: #d4d7da;
+    --paper: #f4f5f6;
+    --ink: #15181b;
+    --ink-2: #4a5157;
+    --ink-3: #737b82;
+    --rule: rgba(21, 24, 27, .14);
+    --brand: #f4c430;
+    --brand-ink: #1d1600;
+    --screen-shadow: 0 1px 1px rgba(21,24,27,.08), 0 8px 18px -6px rgba(21,24,27,.22), 0 28px 60px -24px rgba(21,24,27,.35);
+    --ease-out: cubic-bezier(.16, 1, .3, 1);
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--wall);
+    color: var(--ink);
+    font: 400 16px/1.55 "Geist", ui-sans-serif, sans-serif;
+    font-feature-settings: "ss01";
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; border-radius: 4px; }
+
+  .top {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 24px;
+    padding: 14px clamp(16px, 4vw, 48px);
+    background: color-mix(in srgb, var(--wall) 92%, transparent);
+    backdrop-filter: saturate(1.2) blur(8px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; letter-spacing: -.01em; }
+  .brand img { width: 28px; height: 28px; border-radius: 7px; }
+  .top nav { display: flex; gap: 4px; margin-left: auto; }
+  .top nav a { text-decoration: none; padding: 8px 12px; border-radius: 999px; color: var(--ink-2); font-size: 14px; font-weight: 500; }
+  .top nav a:hover { background: var(--wall-deep); color: var(--ink); }
+
+  main { padding: 0 clamp(16px, 4vw, 48px) 96px; }
+  .intro {
+    display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 48px;
+    align-items: end; padding: clamp(48px, 9vw, 120px) 0 56px; border-bottom: 1px solid var(--rule);
+  }
+  .intro h1 {
+    margin: 0; font-weight: 200; font-size: clamp(48px, 8.4vw, 132px); line-height: .9; letter-spacing: -.045em;
+    text-wrap: balance;
+  }
+  .intro h1 b { font-weight: 800; letter-spacing: -.05em; }
+  .intro p { margin: 0 0 18px; max-width: 46ch; color: var(--ink-2); font-size: 18px; text-wrap: pretty; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+  .filters button {
+    font: inherit; font-size: 14px; font-weight: 600; min-height: 40px; padding: 0 16px;
+    border-radius: 999px; border: 1px solid var(--rule); background: transparent; color: var(--ink-2); cursor: pointer;
+    transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+  }
+  .filters button:hover { border-color: var(--ink-3); color: var(--ink); }
+  .filters button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; padding: 72px 0 28px; }
+  .section-head h2 { margin: 0; font-size: clamp(28px, 3.4vw, 44px); font-weight: 750; letter-spacing: -.035em; line-height: 1; }
+  .section-head p { margin: 0; max-width: 52ch; color: var(--ink-2); text-wrap: pretty; }
+
+  /* Hoje */
+  .today { display: grid; grid-template-columns: minmax(0, 1fr) 220px minmax(0, .8fr); gap: 32px; align-items: start; }
+  .today figure { margin: 0; }
+  .today img { display: block; width: 100%; height: auto; border-radius: 6px; box-shadow: var(--screen-shadow); }
+  .today .phone img { border-radius: 22px; border: 6px solid #1f2326; }
+  .today figcaption, .frame figcaption { margin-top: 12px; font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .diagnosis { margin: 0; padding: 0; list-style: none; counter-reset: d; }
+  .diagnosis li { position: relative; padding: 0 0 16px 40px; color: var(--ink-2); text-wrap: pretty; }
+  .diagnosis li::before {
+    counter-increment: d; content: counter(d); position: absolute; left: 0; top: 0;
+    width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--ink); color: var(--ink);
+    display: grid; place-items: center; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .diagnosis strong { color: var(--ink); font-weight: 650; }
+
+  /* Concepts */
+  .concept {
+    display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: clamp(24px, 4vw, 56px);
+    padding: 56px 0; border-top: 1px solid var(--rule);
+  }
+  .concept[hidden] { display: none; }
+  .meta { position: sticky; top: 92px; align-self: start; }
+  .num { display: block; font-size: 88px; line-height: .8; font-weight: 200; letter-spacing: -.06em; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .meta h3 { margin: 18px 0 2px; font-size: 38px; line-height: 1; font-weight: 800; letter-spacing: -.04em; }
+  .sub { margin: 0 0 18px; color: var(--ink-3); font-size: 17px; font-style: italic; }
+  .thesis { margin: 0 0 14px; font-size: 17px; text-wrap: pretty; }
+  .idea { margin: 0 0 22px; color: var(--ink-2); font-size: 15px; text-wrap: pretty; }
+  .idea strong { color: var(--ink); }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; margin: 0 0 24px; font-size: 14px; }
+  .facts dt { color: var(--ink-3); }
+  .facts dd { margin: 0; font-weight: 550; }
+  .swatches { display: flex; gap: 0; }
+  .swatches i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--wall); margin-left: -6px; box-shadow: 0 0 0 1px var(--rule); }
+  .swatches i:first-child { margin-left: 0; }
+  .distance { display: inline-flex; align-items: center; gap: 4px; }
+  .distance span { width: 18px; height: 6px; border-radius: 2px; background: var(--wall-deep); box-shadow: inset 0 0 0 1px var(--rule); }
+  .distance span.on { background: var(--ink); box-shadow: none; }
+  .distance em { font-style: normal; margin-left: 8px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .actions a, .actions button {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px;
+    border-radius: 999px; font: inherit; font-size: 14px; font-weight: 650; text-decoration: none; cursor: pointer;
+    border: 1px solid var(--ink); background: transparent; color: var(--ink);
+    transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  .actions .primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+  .actions a:hover, .actions button:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .actions a:active, .actions button:active { transform: scale(.97); }
+  .actions svg { width: 16px; height: 16px; }
+
+  .screens { display: grid; grid-template-columns: minmax(0, 1fr) clamp(170px, 17vw, 230px); gap: clamp(20px, 3vw, 40px); align-items: start; }
+  .frame { margin: 0; }
+  .viewport {
+    position: relative; overflow: hidden; background: var(--wall-deep);
+    border-radius: 6px; box-shadow: var(--screen-shadow);
+    aspect-ratio: var(--w) / var(--h);
+  }
+  .frame.mobile .viewport { border-radius: 26px; border: 7px solid #1f2326; box-sizing: content-box; }
+  .viewport iframe {
+    position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0;
+    width: calc(var(--w) * 1px); height: calc(var(--h) * 1px);
+    background: #fff;
+  }
+  .viewport .shield { position: absolute; inset: 0; cursor: zoom-in; background: transparent; border: 0; padding: 0; width: 100%; }
+  .viewport .shield:focus-visible { outline-offset: -4px; }
+  .frame.mobile .viewport .shield { border-radius: 20px; }
+
+  /* Princípios */
+  .principles { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .principles th, .principles td { text-align: left; vertical-align: top; padding: 18px 16px 18px 0; border-top: 1px solid var(--rule); }
+  .principles th { width: 220px; font-weight: 700; }
+  .principles td { color: var(--ink-2); text-wrap: pretty; }
+  .sources { margin: 28px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; }
+  .sources a { color: var(--ink-2); text-underline-offset: 3px; }
+  .sources a:hover { color: var(--ink); }
+
+  /* Visualizador */
+  dialog {
+    width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0;
+    background: #1b1e21; color: #eef0f1;
+  }
+  dialog::backdrop { background: rgba(10, 12, 14, .6); }
+  dialog[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); animation: viewer-in 260ms var(--ease-out); }
+  @keyframes viewer-in { from { opacity: 0; } }
+  .viewer-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
+  .viewer-bar strong { font-weight: 650; }
+  .viewer-bar .seg { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(255,255,255,.08); margin-left: auto; }
+  .viewer-bar .seg button, .viewer-bar .close {
+    font: inherit; font-size: 14px; font-weight: 600; color: #cfd4d8; background: transparent; border: 0; border-radius: 999px;
+    min-height: 36px; padding: 0 14px; cursor: pointer;
+  }
+  .viewer-bar .seg button[aria-pressed="true"] { background: #eef0f1; color: #15181b; }
+  .viewer-bar .close { border: 1px solid rgba(255,255,255,.2); }
+  .viewer-bar .close:hover { background: rgba(255,255,255,.1); }
+  .viewer-stage { display: grid; place-items: center; overflow: auto; padding: 24px; }
+  .viewer-stage .viewport { width: 100%; max-width: calc((100dvh - 120px) * 1.6); }
+  .viewer-stage .viewport.is-mobile { width: 390px; max-width: 100%; border-radius: 34px; border: 9px solid #08090a; box-sizing: content-box; aspect-ratio: 390 / 844; max-height: calc(100dvh - 120px); width: auto; height: calc(100dvh - 120px); }
+  :focus-visible { outline-color: var(--ink); }
+  dialog :focus-visible { outline-color: #eef0f1; }
+
+  footer { padding: 40px clamp(16px, 4vw, 48px) 56px; color: var(--ink-3); font-size: 14px; border-top: 1px solid var(--rule); }
+
+  @media (max-width: 1100px) {
+    .concept { grid-template-columns: 1fr; }
+    .meta { position: static; }
+    .today { grid-template-columns: minmax(0, 1fr) 200px; }
+    .today .diagnosis { grid-column: 1 / -1; }
+  }
+  @media (max-width: 720px) {
+    .top nav { display: none; }
+    .intro { grid-template-columns: 1fr; gap: 24px; padding-top: 40px; }
+    .section-head { flex-direction: column; gap: 10px; padding-top: 56px; }
+    .today { grid-template-columns: 1fr; }
+    .today .phone { width: 62%; margin-inline: auto; }
+    .screens { grid-template-columns: 1fr; }
+    .frame.mobile { width: 64%; margin-inline: auto; }
+    .num { font-size: 64px; }
+    .principles th { width: 120px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    dialog[open], .filters button, .actions a, .actions button { animation: none; transition: none; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#"><img src="../../public/favicon.svg" alt=""> Futbobo</a>
+  <nav aria-label="Seções">
+    <a href="#hoje">Hoje</a>
+    <a href="#concepts">Concepts</a>
+    <a href="#principios">Princípios</a>
+  </nav>
+</header>
+
+<main>
+  <section class="intro">
+    <h1><b>Carreira:</b> oito caminhos</h1>
+    <div>
+      <p>Mesmo jogador, mesma temporada, mesmo capítulo do barbeiro. Muda a ideia, o arranjo e a matéria de que a tela é feita. Cada concept é um único arquivo responsivo: abra no celular para ver a versão mobile de verdade.</p>
+      <div class="filters" role="group" aria-label="Filtrar por distância da identidade atual">
+        <button type="button" aria-pressed="true" data-filter="all">Todos</button>
+        <button type="button" aria-pressed="false" data-filter="1">Perto da atual</button>
+        <button type="button" aria-pressed="false" data-filter="2">Meio do caminho</button>
+        <button type="button" aria-pressed="false" data-filter="3">Bem longe</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="hoje" aria-labelledby="hoje-title">
+    <div class="section-head">
+      <h2 id="hoje-title">Hoje</h2>
+      <p>A mesma partida, capturada em futbobo.top: temporada 2028, Bahia, 17 anos.</p>
+    </div>
+    <div class="today">
+      <figure><img src="shared/atual-desktop.jpg" alt="Tela de carreira atual no desktop: rail à esquerda, coluna de mercado, meta e arte, e o capítulo à direita." width="800" height="500"><figcaption>Desktop atual</figcaption></figure>
+      <figure class="phone"><img src="shared/atual-mobile.jpg" alt="Tela de carreira atual no celular: cabeçalho, barras, status, mercado, meta e capítulo empilhados." width="469" height="1015"><figcaption>Mobile atual</figcaption></figure>
+      <ol class="diagnosis">
+        <li><strong>Tudo tem o mesmo peso.</strong> Cabeçalho, barras, status, mercado, meta e capítulo são o mesmo cartão escuro com a mesma borda; o olho não sabe onde pousar.</li>
+        <li><strong>Os sinais de molde que as skills condenam.</strong> Rótulo em caixa alta espaçada em cima de cada bloco, "→" em todo botão, raio único, near-black tingido.</li>
+        <li><strong>A arte não diz nada.</strong> No desktop, o maior painel da tela é uma marca d'água; no mobile, ela sai. O capítulo, que é o jogo, divide atenção com o mercado.</li>
+        <li><strong>A metáfora some.</strong> O jogo tem botão, súmula, mercado, torcida e imprensa, mas a tela poderia ser de qualquer app.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="concepts" aria-labelledby="concepts-title">
+    <div class="section-head">
+      <h2 id="concepts-title">Os concepts</h2>
+      <p>Clique numa tela para abrir grande. As miniaturas são as páginas reais rodando, não imagens.</p>
+    </div>
+    <div id="concept-list"></div>
+  </section>
+
+  <section id="principios" aria-labelledby="principios-title">
+    <div class="section-head">
+      <h2 id="principios-title">De onde vêm as regras</h2>
+      <p>As skills de design mais usadas hoje, lidas na fonte, e o que cada uma pôs nestes concepts.</p>
+    </div>
+    <table class="principles">
+      <tbody>
+        <tr><th>Anthropic frontend-design</th><td>Começar pelo vocabulário do mundo do assunto. Gastar a ousadia em um lugar só. Um momento de movimento orquestrado, não fade em tudo. Plano de tokens com 4–6 cores nomeadas antes de codar. Lista de clichês a evitar: caixa alta espaçada em todo bloco, "→" em todo botão, cartões idênticos, cream + serifa + terracota, near-black com um acento ácido.</td></tr>
+        <tr><th>Anthropic, <i>Improving frontend design through skills</i></th><td>Fugir da "convergência distributiva": nada de Inter, Roboto, Open Sans, Lato. Contraste de peso extremo (200 × 900), saltos de tamanho de 3×, uma cor dominante com acento afiado. Por isso cada concept tem uma família própria.</td></tr>
+        <tr><th>Impeccable</th><td>Squint test, espaço em base 4, cor por papel, tese de movimento com tabela de durações (100–150 ms feedback, 300–500 ms transição, 500–800 ms entrada autoral), saída mais rápida que entrada, nada de animar width/height.</td></tr>
+        <tr><th>taste-skill</th><td>Uma ideia por tela, no máximo dois níveis de caixa, alvos de 44 px, um efeito por página, nada de fade-in por seção, parallax em texto ou roxo.</td></tr>
+        <tr><th>ui-ux-pro-max</th><td>Acessibilidade e toque antes de estilo. Casar o estilo com o produto pelo catálogo (Exaggerated Minimalism no Manto, Editorial Grid na Primeira Página, Dimensional Layering na Mesa, Data-Dense no Painel). Ícones em SVG, nunca emoji.</td></tr>
+        <tr><th>Vercel Web Interface Guidelines</th><td>Números tabulares, <code>:focus-visible</code>, nunca <code>transition: all</code>, loops acima de 5 s com pausa, raios concêntricos, sombras em camadas, aspas curvas e reticências, <code>prefers-reduced-motion</code> sempre.</td></tr>
+      </tbody>
+    </table>
+    <ul class="sources">
+      <li><a href="https://github.com/anthropics/skills/tree/main/skills/frontend-design">anthropics/skills · frontend-design</a></li>
+      <li><a href="https://claude.com/blog/improving-frontend-design-through-skills">claude.com/blog · frontend design</a></li>
+      <li><a href="https://github.com/pbakaus/impeccable">pbakaus/impeccable</a></li>
+      <li><a href="https://github.com/Leonxlnx/taste-skill">Leonxlnx/taste-skill</a></li>
+      <li><a href="https://github.com/nextlevelbuilder/ui-ux-pro-max-skill">nextlevelbuilder/ui-ux-pro-max-skill</a></li>
+      <li><a href="https://github.com/vercel-labs/web-interface-guidelines">vercel-labs/web-interface-guidelines</a></li>
+    </ul>
+  </section>
+</main>
+
+<footer>Concepts estáticos para decidir direção. Nada aqui está ligado ao estado real do jogo. Detalhes de cada um em <a href="BRIEF.md">BRIEF.md</a>.</footer>
+
+<dialog id="viewer" aria-labelledby="viewer-title">
+  <div class="viewer-bar">
+    <strong id="viewer-title">Concept</strong>
+    <div class="seg" role="group" aria-label="Tamanho">
+      <button type="button" data-size="desktop" aria-pressed="true">Desktop</button>
+      <button type="button" data-size="mobile" aria-pressed="false">Mobile</button>
+    </div>
+    <a class="close" id="viewer-open" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">Abrir sozinho</a>
+    <button type="button" class="close" id="viewer-close">Fechar</button>
+  </div>
+  <div class="viewer-stage"><div class="viewport" id="viewer-viewport" style="--w:1440;--h:900"><iframe id="viewer-frame" title="Concept em tamanho grande"></iframe></div></div>
+</dialog>
+
+<script>
+  const CONCEPTS = [
+    { n: "01", file: "01-transmissao.html", name: "Transmissão", sub: "ao vivo da sua carreira", distance: 2,
+      thesis: "A carreira é uma transmissão; a decisão é o momento em que o diretor corta para você.",
+      idea: "As três escolhas viram a enquete da transmissão: a torcida vota e você decide a favor ou contra ela.",
+      type: "Archivo, com o eixo de largura", swatches: ["#0b1621", "#1d5a32", "#f6f7f4", "#0057a8", "#e32636", "#f4c430"] },
+    { n: "02", file: "02-album.html", name: "Álbum", sub: "a carreira como álbum de figurinhas", distance: 3,
+      thesis: "Cada temporada é uma página do álbum; você coleciona a própria carreira.",
+      idea: "A meta vira um espaço vazio de figurinha brilhante, o mercado vira troca e escolher é colar uma figurinha.",
+      type: "Bricolage Grotesque + Instrument Sans", swatches: ["#fbfbf7", "#161616", "#0b5cad", "#e0262f", "#f6c431"] },
+    { n: "03", file: "03-mesa.html", name: "Mesa", sub: "a carreira em cima da mesa de botão", distance: 1,
+      thesis: "O Futbobo nasceu na mesa de botão: a tela é a mesa, as decisões são lances.",
+      idea: "Escolher é dar a palhetada no seu botão. Stats em contador de bolinhas, meta em fita de rotular, Mundo no radinho.",
+      type: "Barlow Condensed + Manrope (as fontes de hoje)", swatches: ["#1f6b3a", "#eef2e8", "#5a3a22", "#c9a227", "#f4c430"] },
+    { n: "04", file: "04-primeira-pagina.html", name: "Primeira Página", sub: "toda decisão vira a capa de amanhã", distance: 3,
+      thesis: "A tradição do jornal esportivo cor-de-rosa: você escolhe a manchete do dia seguinte.",
+      idea: "As escolhas são três versões da capa de amanhã; o mercado vira classificados e a meta, a coluna do treinador.",
+      type: "League Gothic + Newsreader", swatches: ["#f3cfc6", "#1a1414", "#c8102e", "#f7d038"] },
+    { n: "05", file: "05-caminho.html", name: "O Caminho", sub: "a carreira como mapa de metrô", distance: 3,
+      thesis: "Uma carreira é uma linha com estações; cada decisão é um entroncamento, cada transferência uma baldeação.",
+      idea: "As escolhas são ramais saindo da estação atual. Temporadas passadas são estações; Seleção e Europa aparecem como linhas futuras.",
+      type: "Overpass", swatches: ["#eef1ef", "#121a17", "#0057a8", "#e8ab00", "#e32636"] },
+    { n: "06", file: "06-manto.html", name: "Manto", sub: "a interface veste a camisa", distance: 2,
+      thesis: "A camisa é a identidade: quando você muda de clube, a interface inteira troca de roupa.",
+      idea: "Tema dinâmico pela camisa do clube atual. Um seletor veste a tela com oito clubes para provar a ideia.",
+      type: "Anybody + Hanken Grotesk", swatches: ["#0057a8", "#e32636", "#fafafa", "#111111"] },
+    { n: "07", file: "07-vida-de-atleta.html", name: "Vida de Atleta", sub: "a carreira chega pelo celular", distance: 3,
+      thesis: "Jogador vive no celular: a carreira chega como story, mensagem do técnico, do empresário e assunto do momento.",
+      idea: "O capítulo é um story com enquete; meta e mercado viram conversas; as quatro barras viram anéis de destaque.",
+      type: "Plus Jakarta Sans", swatches: ["#f3f4f6", "#ffffff", "#0f1419", "#f4c430", "#0057a8"] },
+    { n: "08", file: "08-painel.html", name: "Painel", sub: "a temporada como painel de embarque", distance: 1,
+      thesis: "Cada temporada é uma partida; cada escolha, um destino.",
+      idea: "As escolhas são destinos com portão; o Mundo é o painel de chegadas; a navegação é sinalização de aeroporto no amarelo da marca.",
+      type: "Barlow Semi Condensed + Public Sans", swatches: ["#1c232b", "#14181c", "#f1efe6", "#f4c430", "#67dd78"] },
+  ];
+  const DISTANCE_LABEL = { 1: "curta", 2: "média", 3: "longa" };
+
+  const list = document.getElementById("concept-list");
+  list.innerHTML = CONCEPTS.map((c) => `
+    <article class="concept" data-distance="${c.distance}" aria-labelledby="t-${c.n}">
+      <div class="meta">
+        <span class="num" aria-hidden="true">${c.n}</span>
+        <h3 id="t-${c.n}">${c.name}</h3>
+        <p class="sub">${c.sub}</p>
+        <p class="thesis">${c.thesis}</p>
+        <p class="idea"><strong>Ideia de jogo.</strong> ${c.idea}</p>
+        <dl class="facts">
+          <dt>Tipo</dt><dd>${c.type}</dd>
+          <dt>Paleta</dt><dd><span class="swatches" aria-label="Paleta">${c.swatches.map((s) => `<i style="background:${s}" title="${s}"></i>`).join("")}</span></dd>
+          <dt>Distância</dt><dd><span class="distance" aria-label="Distância da identidade atual: ${DISTANCE_LABEL[c.distance]}">${[1, 2, 3].map((i) => `<span class="${i <= c.distance ? "on" : ""}"></span>`).join("")}<em>${DISTANCE_LABEL[c.distance]}</em></span></dd>
+        </dl>
+        <div class="actions">
+          <button type="button" class="primary" data-open="${c.n}" data-size="desktop">Ver grande</button>
+          <a href="${c.file}" target="_blank" rel="noopener">Abrir sozinho</a>
+        </div>
+      </div>
+      <div class="screens">
+        <figure class="frame desktop">
+          <div class="viewport" style="--w:1440;--h:900">
+            <iframe loading="lazy" src="${c.file}" title="${c.name}, desktop 1440 por 900" tabindex="-1"></iframe>
+            <button type="button" class="shield" data-open="${c.n}" data-size="desktop" aria-label="Abrir ${c.name} grande, desktop"></button>
+          </div>
+          <figcaption>Desktop · 1440 × 900</figcaption>
+        </figure>
+        <figure class="frame mobile">
+          <div class="viewport" style="--w:390;--h:844">
+            <iframe loading="lazy" src="${c.file}" title="${c.name}, mobile 390 por 844" tabindex="-1"></iframe>
+            <button type="button" class="shield" data-open="${c.n}" data-size="mobile" aria-label="Abrir ${c.name} grande, mobile"></button>
+          </div>
+          <figcaption>Mobile · 390 × 844</figcaption>
+        </figure>
+      </div>
+    </article>`).join("");
+
+  // Miniaturas: cada iframe roda no tamanho real e é escalado para caber na moldura.
+  const fit = (viewport) => {
+    const frame = viewport.querySelector("iframe");
+    const w = Number(getComputedStyle(viewport).getPropertyValue("--w"));
+    const scale = viewport.clientWidth / w;
+    frame.style.transform = `scale(${scale})`;
+  };
+  const observer = new ResizeObserver((entries) => entries.forEach((entry) => fit(entry.target)));
+  document.querySelectorAll(".viewport").forEach((v) => observer.observe(v));
+
+  // Molduras de celular: esconde a barra de rolagem do desktop, como num aparelho real.
+  const phoneScroll = (frame) => {
+    try {
+      const doc = frame.contentDocument;
+      if (!doc || doc.getElementById("phone-scroll")) return;
+      const style = doc.createElement("style");
+      style.id = "phone-scroll";
+      style.textContent = "html{scrollbar-width:none}html::-webkit-scrollbar{display:none}";
+      doc.head.append(style);
+    } catch { /* outra origem: deixa como está */ }
+  };
+  document.querySelectorAll(".frame.mobile iframe").forEach((frame) => frame.addEventListener("load", () => phoneScroll(frame)));
+
+  // Filtro por distância.
+  document.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => {
+    const value = button.dataset.filter;
+    document.querySelectorAll("[data-filter]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+    document.querySelectorAll(".concept").forEach((article) => { article.hidden = value !== "all" && article.dataset.distance !== value; });
+  }));
+
+  // Visualizador grande.
+  const viewer = document.getElementById("viewer");
+  const viewerFrame = document.getElementById("viewer-frame");
+  const viewerViewport = document.getElementById("viewer-viewport");
+  let current = null;
+  const setSize = (size) => {
+    const mobile = size === "mobile";
+    viewerViewport.classList.toggle("is-mobile", mobile);
+    viewerViewport.style.setProperty("--w", mobile ? 390 : 1440);
+    viewerViewport.style.setProperty("--h", mobile ? 844 : 900);
+    viewer.querySelectorAll("[data-size]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.size === size)));
+    const hide = viewerFrame.contentDocument?.getElementById("phone-scroll");
+    if (mobile) phoneScroll(viewerFrame); else hide?.remove();
+    requestAnimationFrame(() => fit(viewerViewport));
+  };
+  viewerFrame.addEventListener("load", () => { if (viewerViewport.classList.contains("is-mobile")) phoneScroll(viewerFrame); });
+  const open = (n, size) => {
+    current = CONCEPTS.find((c) => c.n === n);
+    document.getElementById("viewer-title").textContent = `${current.n} · ${current.name}`;
+    document.getElementById("viewer-open").href = current.file;
+    viewerFrame.src = current.file;
+    viewer.showModal();
+    setSize(size);
+  };
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-open]");
+    if (trigger) open(trigger.dataset.open, trigger.dataset.size);
+  });
+  viewer.querySelectorAll(".seg [data-size]").forEach((b) => b.addEventListener("click", () => setSize(b.dataset.size)));
+  document.getElementById("viewer-close").addEventListener("click", () => viewer.close());
+  viewer.addEventListener("close", () => { viewerFrame.src = "about:blank"; });
+  observer.observe(viewerViewport);
+</script>
+</body>
+</html>

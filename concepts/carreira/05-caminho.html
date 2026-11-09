@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#eef1ef">
+<title>O Caminho · Futbobo</title>
+<!--
+  CONCEPT 05 · O CAMINHO — a carreira como mapa de metrô
+
+  Passo 1 · plano de tokens
+    mapa       #eef1ef  canvas frio, grade de 40 px a 5,5% de tinta
+    tinta      #121a17  texto, contornos de estação, ramais em aberto
+    bahia      #0057a8  linha do clube (estreia → agora)
+    base       #73a3d3  linha das categorias de base (mais fina, cor irmã)
+    trajeto    #e8ab00  a rota que você escolhe (amarelo da marca escurecido para fundo claro)
+    integração #e32636  só no anel do "você está aqui"
+    tipo       Overpass 400–900 (desenho herdado da sinalização viária), números tabulares
+
+  Passo 1 · wireframe desktop (1440×900)
+    ┌ F Futbobo │ Mapa da carreira ───────────── (C)Carreira (J)Jogador (T)Time (H)… ┐
+    │  Sub-12  Sub-13  Sub-14  Sub-15   Estreia                ┌ Próxima conexão ┐  │
+    │ ━━━┷━━━━━━┷━━━━━━┷━━━━━━┷━━━━━━━━━━◯━━━━━━━━┓             │ ○○○○○○○○ → +7   │  │
+    │ ┌ Estação 2028 ─────────────────┐          ┃             └────────────────┘  │
+    │ │ O barbeiro desenhou o escudo  │          ┃      ╱── (A) Assumir o corte…    │
+    │ │ do clube na sua cabeça…       │──── ◉ ━━━┫━━━━━━━━ (B) Pintar por cima…     │
+    │ │ texto                         │  você    ┃      ╲── (C) Raspar tudo…        │
+    │ └───────────────────────────────┘ está aqui        ┊ Linha Seleção  ── Europa │
+    ├ Legenda │ Situação das linhas │ Situação no elenco │ Baldeação ───────────────┤
+    └ Avisos da rede: ⚽ Atlético-MG… │ São Paulo… │ Flamengo… │ Palmeiras… ────────┘
+
+  Passo 1 · wireframe mobile (390×844)
+    [F] [Bahia 2028] ......... 17 anos  [63 MEI]
+    Moral ─○  Físico ──○  Prestígio ○  Torcida ─○
+    ┃ Base 2023–2026
+    ◯ Estreia 2027
+    ◉ ┌ Estação 2028 · capítulo ┐
+    ┃┃┃│ título / texto          │
+    ┃┃╰─(A) Assumir o corte…
+    ┃╰──(B) Pintar por cima…
+    ╰───(C) Raspar tudo…
+    [nav em balas de linha fixa no rodapé]
+
+  Passo 2 · crítica do plano (o que era genérico e mudou)
+    - "Cartão com o capítulo" era só um card: virou placa de estação (faixa da linha no topo,
+      contorno grosso de sinalização) com o anel "Você está aqui".
+    - Stats em barras de progresso comuns: viraram mini-linhas com estação no valor.
+    - Meta como card de objetivo: virou "Próxima conexão" — 8 paradas até a recompensa.
+    - Mercado como dois botões soltos: virou placa de Baldeação.
+    - Linhas desenhadas em SVG fixo quebrariam no mobile: as rotas são calculadas a partir
+      das próprias estações no DOM (45°/90° com curvas arredondadas), então o mapa se refaz
+      em qualquer largura e no celular vira um feixe de três linhas paralelas.
+    - Um único momento de movimento: a linha se desenha até hoje e os ramais brotam.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef1ef;
+    --grid: rgba(18, 26, 23, .055);
+    --ink: #121a17;
+    --ink-2: #44524c;
+    --ink-3: #6f7d77;
+    --hair: rgba(18, 26, 23, .14);
+    --paper: #ffffff;
+    --bahia: #0057a8;
+    --base: #73a3d3;
+    --path: #e8ab00;
+    --path-soft: #fff4cc;
+    --red: #e32636;
+    --s-moral: #1f78c8;
+    --s-fisico: #2f9a50;
+    --s-prestigio: #e8ab00;
+    --s-torcida: #0f8b8d;
+    --ease-out: cubic-bezier(.16, 1, .3, 1);
+    --line: 9px;
+    --pad-x: clamp(24px, 2.8vw, 48px);
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Overpass", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button { font: inherit; color: inherit; }
+  img { display: block; }
+  .num { font-variant-numeric: tabular-nums; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+  /* ───────────── Estrutura ───────────── */
+  .app {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-rows: 64px minmax(470px, 1fr) auto auto;
+  }
+
+  /* Barra superior */
+  .top {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 0 var(--pad-x);
+    background: var(--paper);
+    border-bottom: 2px solid var(--ink);
+    position: relative;
+    z-index: 5;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+  .brand img { width: 32px; height: 32px; }
+  .brand-name { font-weight: 900; font-size: 19px; letter-spacing: -.01em; }
+  .top-title { display: flex; align-items: baseline; gap: 12px; padding-left: 22px; border-left: 2px solid var(--hair); min-width: 0; }
+  .top-title strong { font-weight: 800; font-size: 17px; white-space: nowrap; }
+  .top-title span { color: var(--ink-3); font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .top-id { display: none; }
+
+  .nav { margin-left: auto; display: flex; gap: 4px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    min-height: 44px; padding: 0 12px 0 8px;
+    background: none; border: 0; border-radius: 22px; cursor: pointer;
+    font-weight: 700; font-size: 14px; color: var(--ink-2);
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .nav-item:hover { background: rgba(18, 26, 23, .06); color: var(--ink); }
+  .bullet {
+    width: 28px; height: 28px; flex: none;
+    display: grid; place-items: center;
+    border: 2.5px solid var(--ink); border-radius: 50%;
+    background: var(--paper);
+    font-weight: 900; font-size: 13px; line-height: 1; padding-top: 2px; color: var(--ink);
+  }
+  .nav-item[aria-current="page"] { color: var(--ink); }
+  .nav-item[aria-current="page"] .bullet { background: var(--path); }
+
+  /* ───────────── Mapa ───────────── */
+  .map {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 41fr) minmax(150px, 15fr) minmax(0, 44fr);
+    grid-template-rows: clamp(140px, 18.5vh, 172px) minmax(0, 1fr) clamp(64px, 9vh, 92px);
+    grid-template-areas:
+      "base  turn  conn"
+      "board hub   choices"
+      "board ghost ghost";
+    padding: 0 var(--pad-x);
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: -1px -1px;
+    overflow: hidden;
+  }
+  .net text { font-family: "Overpass", "Helvetica Neue", Arial, sans-serif; }
+  .net { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: visible; }
+  .map > :not(.net):not(.hub) { position: relative; z-index: 1; }
+
+  /* Estações anteriores */
+  .base { grid-area: base; position: relative; }
+  .stations {
+    list-style: none; margin: 0; padding: 0;
+    position: absolute; left: 6%; right: 0; bottom: 28%;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    height: 0;
+  }
+  .stn { position: relative; width: 0; height: 0; }
+  .stn-summary { display: none; }
+  .stn-btn {
+    position: absolute; left: 0; top: 0;
+    width: 44px; height: 44px; transform: translate(-50%, -50%);
+    background: none; border: 0; padding: 0; cursor: pointer;
+    border-radius: 50%;
+  }
+  .stn-mark { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+  .stn-tick .stn-mark::before {
+    content: ""; position: absolute; left: -2.5px; top: -13px;
+    width: 5px; height: 11px; background: var(--base);
+  }
+  .stn-ring .stn-mark::before {
+    content: ""; position: absolute; left: -12px; top: -12px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--paper); border: 4.5px solid var(--ink);
+    box-sizing: border-box;
+  }
+  .stn-label {
+    position: absolute; left: 4px; bottom: 18px;
+    transform: rotate(-38deg); transform-origin: left bottom;
+    white-space: nowrap; pointer-events: none;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .stn-ring .stn-label { left: 12px; bottom: 22px; }
+  .stn-name { font-weight: 800; font-size: 14.5px; letter-spacing: -.005em; }
+  .stn-year { font-weight: 600; font-size: 12.5px; color: var(--ink-3); }
+  .stn-btn:hover ~ .stn-label .stn-name,
+  .stn-btn:focus-visible ~ .stn-label .stn-name { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
+  .tip {
+    position: absolute; left: -24px; top: 26px; z-index: 20;
+    width: 236px; padding: 12px 14px 13px;
+    background: var(--paper); border: 2px solid var(--ink); border-radius: 6px;
+    box-shadow: 0 1px 0 rgba(18,26,23,.08), 0 10px 24px -8px rgba(18,26,23,.28);
+    opacity: 0; transform: translateY(4px); pointer-events: none;
+    transition: opacity .15s ease, transform .2s var(--ease-out);
+  }
+  .stn:last-child .tip { left: -150px; }
+  .stn-btn:hover ~ .tip, .stn-btn:focus-visible ~ .tip { opacity: 1; transform: none; }
+  .tip h3 { margin: 0 0 6px; font-size: 15px; font-weight: 800; display: flex; justify-content: space-between; gap: 8px; }
+  .tip h3 span { color: var(--ink-3); font-weight: 600; font-size: 13px; }
+  .tip dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13px; }
+  .tip dt { color: var(--ink-3); font-weight: 600; }
+  .tip dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .tip p { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.35; }
+
+  /* Placa da estação = capítulo */
+  .board {
+    grid-area: board;
+    align-self: start;
+    margin-top: clamp(4px, 1.5vh, 18px);
+    max-width: 640px;
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    border-radius: 8px;
+    box-shadow: 0 2px 0 rgba(18,26,23,.06), 0 18px 40px -22px rgba(18,26,23,.35);
+    overflow: hidden;
+  }
+  .board-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 9px 18px 7px;
+    background: var(--bahia); color: #fff;
+  }
+  .board-station { font-weight: 900; font-size: 17px; letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
+  .board-station .roundel { width: 22px; height: 22px; border-radius: 50%; border: 4px solid #fff; flex: none; }
+  .board-meta { font-weight: 600; font-size: 13px; opacity: .9; white-space: nowrap; }
+  .board-body { padding: clamp(14px, 2.1vh, 22px) 22px clamp(16px, 2.4vh, 24px); }
+  .board-tag { margin: 0 0 10px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
+  .svc {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px 1px; border-radius: 4px;
+    background: var(--ink); color: #fff;
+    font-weight: 800; font-size: 12px; letter-spacing: .01em; white-space: nowrap;
+  }
+  .board h1 {
+    margin: 0;
+    font-weight: 800;
+    font-size: clamp(28px, 2.85vw, 52px);
+    line-height: 1.04;
+    letter-spacing: -.022em;
+    text-wrap: balance;
+  }
+  .board-desc {
+    margin: 14px 0 0; max-width: 46ch;
+    font-size: clamp(15px, 1.08vw, 17px); line-height: 1.5; color: var(--ink-2);
+    text-wrap: pretty;
+  }
+  .board-status {
+    margin: 16px 0 0; padding-top: 12px; border-top: 2px dotted var(--hair);
+    font-size: 13.5px; font-weight: 700; color: var(--ink-2);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .board-status::before { content: ""; width: 10px; height: 10px; border-radius: 50%; border: 3px solid var(--ink); flex: none; }
+  .board-status.is-picked::before { background: var(--path); }
+
+  /* Integração atual */
+  .hub-slot { grid-area: hub; }
+  .hub {
+    position: absolute; left: 0; top: 0; z-index: 3;
+    width: 74px; height: 74px;
+    transform: translate(-9999px, -9999px);
+  }
+  .hub-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: var(--paper); border: 6px solid var(--ink);
+    display: grid; place-items: center;
+    box-shadow: 0 0 0 5px var(--bg);
+  }
+  .hub-ring img { width: 42px; height: 42px; object-fit: contain; }
+  .here {
+    position: absolute; left: 50%; top: calc(100% + 14px); transform: translateX(-50%);
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 11px 3px 8px;
+    background: var(--path); color: var(--ink);
+    border: 2.5px solid var(--ink); border-radius: 6px;
+    font-weight: 900; font-size: 13.5px; white-space: nowrap;
+    box-shadow: 0 6px 16px -10px rgba(18,26,23,.5);
+  }
+  .here::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px var(--ink); flex: none; }
+  .here::after {
+    content: ""; position: absolute; left: 50%; top: -9px; margin-left: -7px;
+    border: 7px solid transparent; border-bottom-color: var(--ink); border-top: 0;
+  }
+
+  /* Ramais = escolhas */
+  .choices {
+    grid-area: choices;
+    align-self: center;
+    display: flex; flex-direction: column; gap: clamp(10px, 2.2vh, 22px);
+    padding-left: clamp(96px, 9vw, 150px);
+  }
+  .choice {
+    position: relative;
+    display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 12px;
+    width: 100%; min-height: 64px;
+    padding: 9px 14px 10px 0;
+    background: none; border: 0; border-radius: 8px;
+    text-align: left; cursor: pointer;
+    transition: background-color .15s ease, opacity .25s ease;
+  }
+  .choice-ring {
+    position: absolute; left: -46px; top: 50%;
+    width: 30px; height: 30px; margin-top: -15px;
+    border-radius: 50%; background: var(--paper); border: 5px solid var(--ink);
+    transition: background-color .2s ease, transform .3s var(--ease-out);
+  }
+  .choice-bullet {
+    width: 34px; height: 34px; margin-top: 1px;
+    display: grid; place-items: center;
+    border-radius: 50%; background: var(--ink); color: #fff;
+    font-weight: 900; font-size: 15px; padding-top: 2px;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .choice-text { display: grid; gap: 6px; min-width: 0; }
+  .choice-text strong {
+    font-weight: 800; font-size: clamp(17px, 1.42vw, 23px); line-height: 1.12; letter-spacing: -.012em;
+    text-wrap: balance;
+  }
+  .choice-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+  .choice-hint .svc { background: transparent; color: var(--ink); border: 2px solid var(--ink); padding: 2px 7px 0; }
+  .choice:hover, .choice:focus-visible, .choice.is-hot { background: var(--path-soft); }
+  .choice:hover .choice-bullet, .choice:focus-visible .choice-bullet, .choice.is-hot .choice-bullet { background: var(--path); color: var(--ink); }
+  .choice[aria-pressed="true"] { background: var(--path-soft); }
+  .choice[aria-pressed="true"] .choice-ring { background: var(--path); transform: scale(1.12); }
+  .choice[aria-pressed="true"] .choice-bullet { background: var(--path); color: var(--ink); }
+  .choices.has-pick .choice[aria-pressed="false"] { opacity: .42; }
+  .choices.has-pick .choice[aria-pressed="false"]:hover { opacity: .8; }
+
+  /* Próxima conexão = meta */
+  .conn {
+    grid-area: conn;
+    align-self: start; justify-self: end;
+    width: min(100%, 430px);
+    margin-top: clamp(10px, 1.6vh, 18px);
+    padding: 14px 18px 14px;
+    background: var(--paper); border: 2px solid var(--ink); border-radius: 8px;
+    box-shadow: 0 12px 30px -22px rgba(18,26,23,.45);
+  }
+  .conn-k { margin: 0 0 2px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink-3); }
+  .conn-k svg { width: 18px; height: 18px; flex: none; }
+  .conn h2 { margin: 0; font-size: 21px; font-weight: 900; letter-spacing: -.015em; }
+  .conn p { margin: 2px 0 0; font-size: 14px; color: var(--ink-2); }
+  .conn-line { position: relative; display: flex; align-items: center; gap: 0; margin: 12px 0 6px; height: 24px; }
+  .conn-line::before { content: ""; position: absolute; left: 6px; right: 34px; top: 50%; height: 5px; margin-top: -2.5px; background: #d6ddd9; border-radius: 3px; }
+  .conn-stops { position: relative; display: flex; justify-content: space-between; flex: 1; padding-right: 22px; }
+  .conn-stops i { width: 13px; height: 13px; border-radius: 50%; background: var(--paper); border: 3px solid #b8c3be; }
+  .conn-end { position: relative; width: 28px; height: 28px; border-radius: 50%; border: 5px solid var(--ink); background: var(--path); flex: none; }
+  .conn-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 700; }
+  .conn-meta .gain { color: #1d7a3f; }
+  .conn-meta .loss { color: #b3261e; }
+
+  /* Linhas futuras */
+  .ghosts {
+    grid-area: ghost;
+    display: flex; align-items: center; justify-content: flex-end; gap: clamp(20px, 3vw, 48px);
+    padding-left: 36px;
+  }
+  .ghost { position: relative; display: flex; align-items: center; gap: 12px; color: var(--ink-3); }
+  @media (min-width: 768px) { .ghost[data-ghost="eur"] { flex-direction: row-reverse; text-align: right; } }
+  .ghost-ring { width: 22px; height: 22px; border-radius: 50%; border: 3px dashed #93a19a; background: var(--bg); flex: none; }
+  .ghost strong { display: block; font-weight: 800; font-size: 14px; color: var(--ink-2); }
+  .ghost small { display: block; font-size: 12.5px; font-style: italic; font-weight: 600; }
+
+  /* ───────────── Legenda ───────────── */
+  .key {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 1.38fr) minmax(0, 1fr) minmax(0, 1.5fr);
+    background: var(--paper);
+    border-top: 2px solid var(--ink);
+    position: relative; z-index: 2;
+  }
+  .key > * { padding: 14px 22px 15px; min-width: 0; }
+  .key > * + * { border-left: 1px solid var(--hair); }
+  .key-h { margin: 0 0 8px; font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
+
+  .key-id { display: flex; align-items: center; gap: 14px; padding-left: var(--pad-x); }
+  .key-id .bust { width: 58px; height: 58px; border-radius: 50%; border: 3px solid var(--ink); flex: none; }
+  .key-id .who { min-width: 0; }
+  .key-id strong { display: block; font-size: 20px; font-weight: 900; letter-spacing: -.015em; line-height: 1.1; }
+  .key-id span { display: block; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+  .ovr { margin-left: auto; text-align: right; flex: none; }
+  .ovr b { display: block; font-size: 38px; font-weight: 900; line-height: .95; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .ovr small { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 800; color: var(--ink-3); }
+  .ovr em { font-style: normal; background: var(--ink); color: #fff; border-radius: 3px; padding: 1px 5px 0; }
+
+  .lines-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; }
+  .stat { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 8px; }
+  .stat-label { font-size: 13px; font-weight: 700; }
+  .stat-label small { font-weight: 600; color: var(--ink-3); margin-left: 4px; }
+  .stat-val { font-size: 17px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .track { grid-column: 1 / -1; position: relative; height: 5px; margin: 3px 6px 4px 0; background: #d9e0dc; border-radius: 3px; }
+  .track i { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--v) * 1%); background: var(--c); border-radius: 3px; }
+  .track i::after { content: ""; position: absolute; right: -6px; top: -4px; width: 13px; height: 13px; border-radius: 50%; background: var(--paper); border: 3px solid var(--c); box-sizing: border-box; }
+
+  .roster { margin: 0; display: grid; grid-template-columns: repeat(3, auto); gap: 2px 18px; justify-content: start; }
+  .roster div { min-width: 0; }
+  .roster dt { font-size: 12.5px; color: var(--ink-3); font-weight: 600; }
+  .roster dd { margin: 0; font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .retire {
+    margin-top: 10px; display: inline-flex; align-items: center; gap: 8px;
+    min-height: 34px; padding: 4px 12px 2px 10px;
+    background: none; border: 2px solid var(--hair); border-radius: 6px;
+    font-weight: 800; font-size: 13.5px; color: #b3261e; cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease;
+  }
+  .retire:hover { border-color: #b3261e; background: #fdf0ee; }
+  .retire svg { width: 16px; height: 16px; }
+
+  .transfer { display: grid; grid-template-columns: auto 1fr; gap: 0 14px; align-items: start; padding-right: var(--pad-x) !important; }
+  .transfer-icon { width: 44px; height: 44px; border-radius: 8px; background: var(--ink); color: #fff; display: grid; place-items: center; }
+  .transfer-icon svg { width: 26px; height: 26px; }
+  .transfer h2 { margin: 0; font-size: 17px; font-weight: 900; }
+  .transfer p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+  .transfer-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  @media (min-width: 1181px) { .transfer-actions { flex-wrap: nowrap; } }
+  .t-btn {
+    min-height: 40px; padding: 6px 12px 4px; white-space: nowrap;
+    background: var(--paper); border: 2px solid var(--ink); border-radius: 6px;
+    font-weight: 800; font-size: 14px; cursor: pointer;
+    transition: background-color .15s ease, transform .12s ease;
+  }
+  .t-btn:hover { background: var(--path-soft); }
+  .t-btn:active { transform: scale(.98); }
+  .t-btn small { font-weight: 700; color: var(--ink-3); }
+  .transfer-note:empty { display: none; }
+  .transfer-note { grid-column: 1 / -1; margin: 8px 0 0 !important; font-size: 12.5px !important; font-weight: 700; color: var(--ink) !important; min-height: 1em; }
+
+  /* ───────────── Avisos ───────────── */
+  .notices {
+    display: flex; align-items: stretch;
+    background: var(--ink); color: #f3f5f2;
+    position: relative; z-index: 2;
+  }
+  .notices-label {
+    flex: none; display: flex; align-items: center; gap: 9px;
+    padding: 0 18px 0 var(--pad-x);
+    background: var(--path); color: var(--ink);
+    font-weight: 900; font-size: 14px; white-space: nowrap;
+  }
+  .notices-label svg { width: 18px; height: 18px; }
+  .notices ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); flex: 1; }
+  .notices li { display: flex; align-items: center; gap: 10px; padding: 9px 18px; min-width: 0; }
+  .notices li + li { border-left: 1px solid rgba(255,255,255,.14); }
+  .notices img { width: 26px; height: 26px; object-fit: contain; flex: none; background: #fff; border-radius: 50%; padding: 2px; }
+  .notices p { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* ───────────── Desenho das linhas ───────────── */
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
+  @keyframes rise { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translateX(-50%); } }
+  .map.is-drawing .stn-mark,
+  .map.is-drawing .choice-ring,
+  .map.is-drawing .ghost-ring { animation: pop .34s var(--ease-out) both; animation-delay: var(--d, 0ms); }
+  .map.is-drawing .hub-ring { animation: pop .42s var(--ease-out) both; animation-delay: var(--d, 0ms); }
+  .map.is-drawing .here { animation: rise .4s var(--ease-out) both; animation-delay: calc(var(--d, 0ms) + 160ms); }
+
+  .branch-fill { transition: opacity .16s ease; }
+  .is-dim { opacity: .28; transition: opacity .25s ease; }
+
+  /* ───────────── Telas intermediárias (desktop estreito) ───────────── */
+  @media (min-width: 768px) and (max-width: 1180px) {
+    .top-title span { display: none; }
+    .nav-label { display: none; }
+    .nav-item { padding: 0 8px; }
+    .key { grid-template-columns: 1fr 1fr; }
+    .key > :nth-child(3) { border-left: 0; }
+    .key > :nth-child(n+3) { border-top: 1px solid var(--hair); }
+    .notices ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .notices li:nth-child(n+3) { border-top: 1px solid rgba(255,255,255,.14); }
+    .notices li:nth-child(3) { border-left: 0; }
+  }
+  @media (min-width: 768px) and (max-height: 820px) {
+    .board-desc { margin-top: 10px; line-height: 1.42; }
+    .board-status { margin-top: 10px; padding-top: 8px; }
+    .key > * { padding-top: 10px; padding-bottom: 11px; }
+    .key-h { margin-bottom: 5px; }
+    .key-id .bust { width: 50px; height: 50px; }
+    .notices li { padding-top: 7px; padding-bottom: 7px; }
+  }
+
+  /* ───────────── Mobile ───────────── */
+  @media (max-width: 767px) {
+    body { font-size: 15px; }
+    .app { display: flex; flex-direction: column; min-height: 100dvh; padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+    .top { order: 0; height: 54px; flex: none; gap: 10px; padding: 0 14px; border-bottom-width: 2px; }
+    .brand img { width: 30px; height: 30px; }
+    .brand-name, .top-title { display: none; }
+    .brand { width: 44px; height: 44px; justify-content: center; margin-left: -7px; }
+    .retire { min-height: 44px; }
+    .t-btn { min-height: 44px; }
+    .top-id { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .top-id .crest { width: 30px; height: 30px; object-fit: contain; }
+    .top-id .club { display: grid; line-height: 1.05; }
+    .top-id .club strong { font-size: 16px; font-weight: 900; }
+    .top-id .club span { font-size: 12px; color: var(--ink-3); font-weight: 700; }
+    .top-id .age { margin-left: auto; text-align: right; line-height: 1; }
+    .top-id .age b { display: block; font-size: 22px; font-weight: 900; }
+    .top-id .age span { font-size: 11px; font-weight: 700; color: var(--ink-3); }
+    .top-id .ovr-chip { display: flex; align-items: center; gap: 6px; padding: 4px 6px 3px 9px; border: 2px solid var(--ink); border-radius: 8px; }
+    .top-id .ovr-chip b { font-size: 21px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+    .top-id .ovr-chip small { display: grid; font-size: 10.5px; font-weight: 800; line-height: 1.05; color: var(--ink-3); }
+    .top-id .ovr-chip em { font-style: normal; color: var(--ink); }
+
+    .nav {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) minmax(0,.78fr) minmax(0,1fr) minmax(0,1.32fr) minmax(0,.92fr); gap: 0;
+      padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+      background: var(--paper); border-top: 2px solid var(--ink);
+    }
+    .nav-item { flex-direction: column; justify-content: center; gap: 3px; min-height: 52px; padding: 0; border-radius: 10px; font-size: 11px; font-weight: 800; letter-spacing: -.01em; }
+    .nav-label { display: block; white-space: nowrap; }
+    .bullet { width: 24px; height: 24px; font-size: 11.5px; border-width: 2px; }
+
+    .key { display: contents; }
+    .key > * { border: 0 !important; }
+    .key-id { display: none; }
+    .key-lines { order: 1; flex: none; padding: 9px 14px 8px; background: var(--paper); border-bottom: 1px solid var(--hair) !important; }
+    .key-lines .key-h { display: none; }
+    .lines-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 12px; }
+    .stat-label { font-size: 11.5px; }
+    .stat-label small { display: none; }
+    .stat-val { font-size: 15px; }
+    .track { margin: 4px 6px 2px 0; height: 4px; }
+    .track i::after { width: 11px; height: 11px; top: -3.5px; right: -5px; border-width: 2.5px; }
+
+    .map {
+      order: 2; flex: none;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: none;
+      grid-template-areas: "base" "board" "choices" "conn" "ghost";
+      padding: 6px 0 18px;
+      background-size: 32px 32px;
+      overflow: visible;
+    }
+    .base { min-height: 0; }
+    .stations { position: static; display: block; height: auto; padding: 4px 0 2px; }
+    .stn { width: auto; height: auto; display: flex; align-items: center; min-height: 30px; padding-left: 64px; }
+    .stn-youth { display: none; }
+    .stn-summary { display: flex; }
+    .stn-btn { position: absolute; left: 30px; top: 50%; }
+    .stn-label { position: static; transform: none; gap: 8px; }
+    .stn-ring .stn-label { position: static; }
+    .stn-name { font-size: 14px; }
+    .stn-year { font-size: 12.5px; }
+    .stn-tick .stn-mark::before { left: 2px; top: -2.5px; width: 10px; height: 5px; }
+    .stn-ring .stn-mark::before { left: -10px; top: -10px; width: 20px; height: 20px; border-width: 4px; }
+    .tip { left: 64px; top: 30px; width: min(260px, calc(100vw - 84px)); }
+    .stn:last-child .tip { left: 64px; }
+
+    .board { margin: 8px 14px 0 64px; max-width: none; border-width: 2.5px; border-radius: 7px; }
+    .board-head { padding: 7px 12px 5px; }
+    .board-station { font-size: 15px; gap: 8px; }
+    .board-station .roundel { display: none; }
+    .board-meta .long { display: none; }
+    .board-meta { font-size: 12px; }
+    .board-body { padding: 11px 13px 13px; }
+    .board-tag { margin-bottom: 7px; font-size: 12px; }
+    .board h1 { font-size: clamp(21px, 6.1vw, 25px); line-height: 1.07; letter-spacing: -.018em; }
+    .board-desc { margin-top: 8px; font-size: 14px; line-height: 1.42; }
+    .board-status { display: none; }
+    .board-status.is-picked { display: flex; margin-top: 10px; padding-top: 8px; font-size: 12.5px; }
+
+    .hub-slot { display: none; }
+    .hub { width: 40px; height: 40px; }
+    .hub-ring { border-width: 4px; box-shadow: 0 0 0 3px var(--bg); }
+    .hub-ring img { width: 22px; height: 22px; }
+    .here { display: none; }
+
+    .choices { padding: 12px 14px 0 0; gap: 8px; align-self: start; }
+    .choice { margin-left: 40px; width: calc(100% - 40px); padding: 8px 10px 8px 30px; min-height: 60px; gap: 10px; grid-template-columns: 1fr; background: var(--paper); border: 2px solid var(--ink); border-radius: 8px; }
+    .choice-ring { left: -1px; width: 24px; height: 24px; margin-top: -12px; border-width: 4px; transform: translateX(-50%); }
+    .choice[aria-pressed="true"] .choice-ring { transform: translateX(-50%) scale(1.12); }
+    .choice-bullet { display: none; }
+    .choice-text { gap: 4px; }
+    .choice-text strong { font-size: 16.5px; line-height: 1.15; }
+    .choice-text strong::before { content: attr(data-letter); display: inline-grid; place-items: center; width: 21px; height: 21px; margin-right: 7px; border-radius: 50%; background: var(--ink); color: #fff; font-size: 11.5px; font-weight: 900; vertical-align: 2px; padding-top: 1px; }
+    .choice[aria-pressed="true"] .choice-text strong::before,
+    .choice:hover .choice-text strong::before { background: var(--path); color: var(--ink); }
+    .choice-hint { font-size: 12.5px; gap: 3px 6px; }
+    .choice-hint .svc { font-size: 11px; padding: 1px 6px 0; border-width: 1.5px; }
+
+    .conn { justify-self: stretch; width: auto; margin: 22px 14px 0; align-self: start; }
+    .conn h2 { font-size: 19px; }
+
+    .ghosts { flex-direction: column; align-items: stretch; gap: 10px; padding: 18px 14px 0; justify-content: flex-start; }
+
+    .key-transfer { order: 3; margin: 0 14px; padding: 14px !important; border: 2px solid var(--ink) !important; border-radius: 8px; background: var(--paper); }
+    .key-status { order: 4; margin: 12px 14px 0; padding: 14px !important; border-radius: 8px; background: var(--paper); border: 1px solid var(--hair) !important; }
+    .roster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    .notices { order: 5; flex-direction: column; margin: 18px 14px 6px; border-radius: 8px; overflow: hidden; }
+    .notices-label { padding: 9px 14px 7px; }
+    .notices ul { grid-template-columns: 1fr; }
+    .notices li { padding: 10px 14px; }
+    .notices li + li { border-left: 0; border-top: 1px solid rgba(255,255,255,.14); }
+  }
+  @media (max-width: 767px) and (max-height: 760px) {
+    .top { height: 50px; }
+    .key-lines { padding-top: 7px; padding-bottom: 6px; }
+    .stn { min-height: 26px; }
+    .board-body { padding: 9px 12px 11px; }
+    .board h1 { font-size: 20.5px; }
+    .board-desc { font-size: 13.5px; line-height: 1.38; margin-top: 6px; }
+    .choices { padding-top: 10px; gap: 7px; }
+    .choice { min-height: 56px; padding-top: 7px; padding-bottom: 7px; }
+    .choice-text strong { font-size: 15.5px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <a class="brand" href="./" aria-label="Futbobo, voltar à galeria">
+      <img src="../../public/favicon.svg" alt="" width="32" height="32">
+      <span class="brand-name">Futbobo</span>
+    </a>
+    <div class="top-title"><strong>Mapa da carreira</strong><span>Rede Bahia, temporada 2028</span></div>
+    <div class="top-id" aria-label="Bahia, temporada 2028, 17 anos, OVR 63, meia ofensivo">
+      <img class="crest" src="../../public/assets/clubs/bahia.png" alt="">
+      <span class="club"><strong>Bahia</strong><span>2028</span></span>
+      <span class="age"><b class="num">17</b><span>anos</span></span>
+      <span class="ovr-chip"><b class="num">63</b><small><span>OVR</span><em>MEI</em></small></span>
+    </div>
+    <nav class="nav" aria-label="Navegação da carreira">
+      <button class="nav-item" type="button" aria-current="page"><span class="bullet" aria-hidden="true">C</span><span class="nav-label">Carreira</span></button>
+      <button class="nav-item" type="button"><span class="bullet" aria-hidden="true">J</span><span class="nav-label">Jogador</span></button>
+      <button class="nav-item" type="button"><span class="bullet" aria-hidden="true">T</span><span class="nav-label">Time</span></button>
+      <button class="nav-item" type="button"><span class="bullet" aria-hidden="true">H</span><span class="nav-label">Histórico</span></button>
+      <button class="nav-item" type="button"><span class="bullet" aria-hidden="true">E</span><span class="nav-label">Estatísticas</span></button>
+      <button class="nav-item" type="button"><span class="bullet" aria-hidden="true">M</span><span class="nav-label">Mundo</span></button>
+    </nav>
+  </header>
+
+  <main class="map" id="map">
+    <svg class="net" id="net" aria-hidden="true"></svg>
+
+    <section class="base" aria-label="Estações já percorridas">
+      <ol class="stations">
+        <li class="stn stn-tick stn-summary">
+          <button class="stn-btn" type="button" aria-describedby="tip-base"><span class="stn-mark" data-anchor></span><span class="sr">Categorias de base, 2023 a 2026</span></button>
+          <span class="stn-label" aria-hidden="true"><span class="stn-name">Base no Bahia</span><span class="stn-year">2023–2026</span></span>
+          <div class="tip" id="tip-base" role="tooltip">
+            <h3>Categorias de base <span>12–15 anos</span></h3>
+            <dl><dt>Sub-12</dt><dd>OVR 34</dd><dt>Sub-13</dt><dd>OVR 41</dd><dt>Sub-14</dt><dd>OVR 47</dd><dt>Sub-15</dt><dd>OVR 52</dd></dl>
+          </div>
+        </li>
+        <li class="stn stn-tick stn-youth">
+          <button class="stn-btn" type="button" aria-describedby="tip-2023"><span class="stn-mark" data-anchor></span><span class="sr">Sub-12, 2023</span></button>
+          <span class="stn-label" aria-hidden="true"><span class="stn-name">Sub-12</span><span class="stn-year">2023</span></span>
+          <div class="tip" id="tip-2023" role="tooltip"><h3>Sub-12 <span>12 anos</span></h3><dl><dt>Capítulo</dt><dd>Prova na escola</dd><dt>OVR</dt><dd>34</dd></dl></div>
+        </li>
+        <li class="stn stn-tick stn-youth">
+          <button class="stn-btn" type="button" aria-describedby="tip-2024"><span class="stn-mark" data-anchor></span><span class="sr">Sub-13, 2024</span></button>
+          <span class="stn-label" aria-hidden="true"><span class="stn-name">Sub-13</span><span class="stn-year">2024</span></span>
+          <div class="tip" id="tip-2024" role="tooltip"><h3>Sub-13 <span>13 anos</span></h3><dl><dt>Capítulo</dt><dd>A bronca do treinador</dd><dt>OVR</dt><dd>41</dd></dl></div>
+        </li>
+        <li class="stn stn-tick stn-youth">
+          <button class="stn-btn" type="button" aria-describedby="tip-2025"><span class="stn-mark" data-anchor></span><span class="sr">Sub-14, 2025</span></button>
+          <span class="stn-label" aria-hidden="true"><span class="stn-name">Sub-14</span><span class="stn-year">2025</span></span>
+          <div class="tip" id="tip-2025" role="tooltip"><h3>Sub-14 <span>14 anos</span></h3><dl><dt>Capítulo</dt><dd>Olheiro na arquibancada</dd><dt>OVR</dt><dd>47</dd></dl></div>
+        </li>
+        <li class="stn stn-tick stn-youth">
+          <button class="stn-btn" type="button" aria-describedby="tip-2026"><span class="stn-mark" data-anchor></span><span class="sr">Sub-15, 2026</span></button>
+          <span class="stn-label" aria-hidden="true"><span class="stn-name">Sub-15</span><span class="stn-year">2026</span></span>
+          <div class="tip" id="tip-2026" role="tooltip"><h3>Sub-15 <span>15 anos</span></h3><dl><dt>Capítulo</dt><dd>Amistoso com o profissional</dd><dt>OVR</dt><dd>52</dd></dl></div>
+        </li>
+        <li class="stn stn-ring" id="stn-estreia">
+          <button class="stn-btn" type="button" aria-describedby="tip-2027"><span class="stn-mark" data-anchor></span><span class="sr">Estreia profissional, 2027</span></button>
+          <span class="stn-label" aria-hidden="true"><span class="stn-name">Estreia</span><span class="stn-year">2027</span></span>
+          <div class="tip" id="tip-2027" role="tooltip">
+            <h3>Estreia <span>16 anos</span></h3>
+            <dl><dt>Jogos</dt><dd>15</dd><dt>Gols</dt><dd>1</dd><dt>Assistências</dt><dd>2</dd><dt>Nota média</dt><dd>6.1</dd><dt>OVR</dt><dd>58 → 63</dd></dl>
+            <p>8º no Brasileirão, vice da Copa do Brasil e da Libertadores. A meta “Comandar o jogo” ficou pelo caminho.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section class="board" id="board" aria-labelledby="chapter-title">
+      <header class="board-head">
+        <span class="board-station"><span class="roundel" aria-hidden="true"></span>Estação 2028</span>
+        <span class="board-meta">17 anos<span class="long">, 2ª temporada profissional</span></span>
+      </header>
+      <div class="board-body">
+        <p class="board-tag"><span class="svc">Visual novo</span><span>Capítulo da temporada</span></p>
+        <h1 id="chapter-title">O barbeiro desenhou o escudo do clube na sua cabeça sem avisar</h1>
+        <p class="board-desc">Você pediu apenas para tirar dos lados. Quando se olha no espelho, existe um escudo enorme e surpreendentemente detalhado na nuca.</p>
+        <p class="board-status" id="board-status" aria-live="polite">Três ramais saem daqui. Escolha a rota.</p>
+      </div>
+    </section>
+
+    <div class="hub-slot" aria-hidden="true"></div>
+    <div class="hub" id="hub" aria-hidden="true">
+      <span class="hub-ring"><img src="../../public/assets/clubs/bahia.png" alt=""></span>
+      <span class="here">Você está aqui</span>
+    </div>
+
+    <div class="choices" id="choices" role="group" aria-labelledby="chapter-title">
+      <button class="choice" type="button" data-branch="a" aria-pressed="false">
+        <span class="choice-ring" data-dot aria-hidden="true"></span>
+        <span class="choice-bullet" aria-hidden="true">A</span>
+        <span class="choice-text">
+          <strong data-letter="A">Assumir o corte no próximo jogo</strong>
+          <span class="choice-hint"><span class="svc">Torcida ↑↑</span>dignidade em risco</span>
+        </span>
+      </button>
+      <button class="choice" type="button" data-branch="b" aria-pressed="false">
+        <span class="choice-ring" data-dot aria-hidden="true"></span>
+        <span class="choice-bullet" aria-hidden="true">B</span>
+        <span class="choice-text">
+          <strong data-letter="B">Pintar por cima com uma cor ainda mais absurda</strong>
+          <span class="choice-hint"><span class="svc">Imagem ↑↑</span>imprensa confusa</span>
+        </span>
+      </button>
+      <button class="choice" type="button" data-branch="c" aria-pressed="false">
+        <span class="choice-ring" data-dot aria-hidden="true"></span>
+        <span class="choice-bullet" aria-hidden="true">C</span>
+        <span class="choice-text">
+          <strong data-letter="C">Raspar tudo antes que alguém veja</strong>
+          <span class="choice-hint"><span class="svc">Seguro</span>confiança no barbeiro ↓</span>
+        </span>
+      </button>
+    </div>
+
+    <section class="conn" aria-labelledby="conn-title">
+      <p class="conn-k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="6" cy="12" r="3.2"/><circle cx="18" cy="12" r="3.2"/><path d="M9.2 12h5.6"/></svg>Próxima conexão, meta do treinador</p>
+      <h2 id="conn-title">Comandar o jogo</h2>
+      <p>Some 8 gols + assistências nesta temporada.</p>
+      <div class="conn-line" role="img" aria-label="Progresso: 0 de 8 paradas">
+        <span class="conn-stops"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="conn-end"></span>
+      </div>
+      <div class="conn-meta"><span class="num">0/8</span><span><span class="gain">+7 confiança</span> ao chegar, <span class="loss">−6</span> se falhar</span></div>
+    </section>
+
+    <div class="ghosts" aria-label="Linhas futuras">
+      <div class="ghost" data-ghost="sel"><span class="ghost-ring" data-dot aria-hidden="true"></span><span><strong>Linha Seleção</strong><small>abre na primeira convocação</small></span></div>
+      <div class="ghost" data-ghost="eur"><span class="ghost-ring" data-dot aria-hidden="true"></span><span><strong>Linha Europa</strong><small>abre com uma transferência para fora</small></span></div>
+    </div>
+  </main>
+
+  <section class="key" aria-label="Legenda do mapa">
+    <div class="key-id">
+      <img class="bust" src="./shared/bust.svg" alt="">
+      <div class="who">
+        <strong>Tito Bobo</strong>
+        <span>Meia ofensivo</span>
+        <span>Camisa 10, destro</span>
+      </div>
+      <div class="ovr"><b>63</b><small>OVR <em>MEI</em></small></div>
+    </div>
+
+    <div class="key-lines">
+      <p class="key-h">Situação das linhas</p>
+      <div class="lines-grid">
+        <div class="stat"><span class="stat-label">Moral</span><span class="stat-val">63</span><span class="track" style="--v:63;--c:var(--s-moral)"><i></i></span></div>
+        <div class="stat"><span class="stat-label">Físico</span><span class="stat-val">93</span><span class="track" style="--v:93;--c:var(--s-fisico)"><i></i></span></div>
+        <div class="stat"><span class="stat-label">Prestígio</span><span class="stat-val">16</span><span class="track" style="--v:16;--c:var(--s-prestigio)"><i></i></span></div>
+        <div class="stat"><span class="stat-label">Torcida<small>Querido</small></span><span class="stat-val">63</span><span class="track" style="--v:63;--c:var(--s-torcida)"><i></i></span></div>
+      </div>
+    </div>
+
+    <div class="key-status">
+      <p class="key-h">Situação no elenco</p>
+      <dl class="roster">
+        <div><dt>Status</dt><dd>Rotação</dd></div>
+        <div><dt>Treinador</dt><dd>52%</dd></div>
+        <div><dt>Contrato</dt><dd>4 anos</dd></div>
+      </dl>
+      <button class="retire" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12M6 21h12M7 3c0 5 10 6 10 9s-10 4-10 9M17 3c0 5-10 6-10 9"/></svg>Aposentar</button>
+    </div>
+
+    <div class="key-transfer transfer">
+      <span class="transfer-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg></span>
+      <div>
+        <h2>Baldeação</h2>
+        <p>Quer mudar de camisa?</p>
+      </div>
+      <div class="transfer-actions">
+        <button class="t-btn" type="button" data-transfer="Empréstimo pedido. A troca de linha sai na próxima janela.">Empréstimo <small>(100%)</small></button>
+        <button class="t-btn" type="button" data-transfer="Pedido de transferência enviado ao clube.">Pedir transferência</button>
+      </div>
+      <p class="transfer-note" id="transfer-note" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <footer class="notices" aria-label="Avisos da rede">
+    <span class="notices-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5M12 17.4v.1"/></svg>Avisos da rede</span>
+    <ul>
+      <li><img src="../../public/assets/clubs/atletico-mg.png" alt=""><p>Atlético-MG conquista a CONMEBOL Libertadores</p></li>
+      <li><img src="../../public/assets/clubs/sao-paulo.png" alt=""><p>São Paulo vence o Bahia nos pênaltis e leva a Copa do Brasil</p></li>
+      <li><img src="../../public/assets/clubs/flamengo.png" alt=""><p>Flamengo termina o Brasileirão com o melhor ataque</p></li>
+      <li><img src="../../public/assets/clubs/palmeiras.png" alt=""><p>Palmeiras anuncia o artilheiro uruguaio para 2028</p></li>
+    </ul>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const map = document.getElementById("map");
+  const svg = document.getElementById("net");
+  const hub = document.getElementById("hub");
+  const board = document.getElementById("board");
+  const choices = [...document.querySelectorAll(".choice")];
+  const status = document.getElementById("board-status");
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const mobileQuery = matchMedia("(max-width: 767px)");
+  const C = {
+    ink: "#121a17", bg: "#eef1ef", paper: "#ffffff",
+    bahia: "#0057a8", base: "#73a3d3", path: "#e8ab00", ghost: "#93a19a",
+  };
+  let firstDraw = true;
+  let picked = null;
+  let branchPaths = {};
+  let uid = 0;
+
+  const make = (tag, attrs = {}, parent) => {
+    const node = document.createElementNS(NS, tag);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+    if (parent) parent.appendChild(node);
+    return node;
+  };
+
+  const centerOf = (element) => {
+    const r = element.getBoundingClientRect();
+    const m = map.getBoundingClientRect();
+    return [r.left + r.width / 2 - m.left, r.top + r.height / 2 - m.top];
+  };
+
+  // Polilinha 45°/90° com cantos arredondados (curva quadrática no vértice).
+  function rounded(points, radius) {
+    const pts = points.filter((p, i) => i === 0 || Math.hypot(p[0] - points[i - 1][0], p[1] - points[i - 1][1]) > .5);
+    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 1; i < pts.length - 1; i += 1) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+      const d1 = Math.hypot(x1 - x0, y1 - y0), d2 = Math.hypot(x2 - x1, y2 - y1);
+      const r = Math.min(radius, d1 / 2, d2 / 2);
+      const ax = x1 - (x1 - x0) / d1 * r, ay = y1 - (y1 - y0) / d1 * r;
+      const bx = x1 + (x2 - x1) / d2 * r, by = y1 + (y2 - y1) / d2 * r;
+      d += ` L${ax.toFixed(1)},${ay.toFixed(1)} Q${x1.toFixed(1)},${y1.toFixed(1)} ${bx.toFixed(1)},${by.toFixed(1)}`;
+    }
+    const last = pts[pts.length - 1];
+    return d + ` L${last[0].toFixed(1)},${last[1].toFixed(1)}`;
+  }
+
+  function lengthOf(d) {
+    const probe = make("path", { d }, svg);
+    const length = probe.getTotalLength();
+    probe.remove();
+    return length;
+  }
+
+  function revealMask(defs, d, anim) {
+    const id = `reveal-${++uid}`;
+    const mask = make("mask", { id, maskUnits: "userSpaceOnUse", x: -200, y: -200, width: 99999, height: 99999 }, defs);
+    const length = lengthOf(d);
+    const reveal = make("path", { d, fill: "none", stroke: "#fff", "stroke-width": 46, "stroke-linecap": "butt", "stroke-linejoin": "round" }, mask);
+    reveal.style.strokeDasharray = `${length} ${length + 60}`;
+    reveal.style.strokeDashoffset = `${length}`;
+    reveal.style.animation = `draw ${anim.dur}ms ${anim.ease || "linear"} ${anim.delay}ms forwards`;
+    return `url(#${id})`;
+  }
+
+  function route(defs, cls, d, layers, anim) {
+    const group = make("g", { class: cls }, svg);
+    if (anim) group.setAttribute("mask", revealMask(defs, d, anim));
+    const nodes = layers.map((layer) => make("path", { d, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round", ...layer }, group));
+    return { group, nodes };
+  }
+
+  function branchPoints(from, to, mobile, index) {
+    const [hx, hy] = from, [tx, ty] = to;
+    if (mobile) {
+      // Feixe de três linhas paralelas descendo pela calha esquerda; cada uma vira para a sua estação.
+      const offset = [12, 0, -12][index];
+      const drop = 26;
+      if (offset === 0) return [[hx, hy], [hx, ty], [tx, ty]];
+      return [[hx, hy], [hx, hy + drop], [hx + offset, hy + drop + Math.abs(offset)], [hx + offset, ty], [tx, ty]];
+    }
+    const dy = ty - hy;
+    if (Math.abs(dy) < 2) return [[hx, hy], [tx, hy]];
+    let stub = 44;
+    const room = tx - 26 - hx - Math.abs(dy);
+    if (room < stub) stub = Math.max(10, room);
+    if (room < 10) return [[hx, hy], [hx + 24, hy], [hx + 24, ty], [tx, ty]];
+    return [[hx, hy], [hx + stub, hy], [hx + stub + Math.abs(dy), ty], [tx, ty]];
+  }
+
+  function layout() {
+    const mobile = mobileQuery.matches;
+    const animate = firstDraw && !reduceMotion.matches;
+    const W = map.clientWidth, H = map.clientHeight;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.replaceChildren();
+    const defs = make("defs", {}, svg);
+    branchPaths = {};
+
+    const marks = [...map.querySelectorAll(".stn")].filter((li) => getComputedStyle(li).display !== "none").map((li) => li.querySelector("[data-anchor]"));
+    const estreia = document.querySelector("#stn-estreia [data-anchor]");
+    const [ex, ey] = centerOf(estreia);
+    const dots = choices.map((choice) => centerOf(choice.querySelector("[data-dot]")));
+
+    // Posição da integração atual.
+    let hx, hy;
+    if (mobile) {
+      hx = ex;
+      const b = board.getBoundingClientRect(), m = map.getBoundingClientRect();
+      hy = b.top - m.top + 17;
+    } else {
+      const slot = map.querySelector(".hub-slot").getBoundingClientRect();
+      const m = map.getBoundingClientRect();
+      hx = slot.left - m.left + slot.width * .42;
+      hy = dots[1][1];
+    }
+    hub.style.transform = `translate(${hx.toFixed(1)}px, ${hy.toFixed(1)}px) translate(-50%, -50%)`;
+
+    const speed = 1.75; // px por ms
+    let clock = 140;
+    const width = mobile ? 7 : 9;
+
+    // Linha da base (mais fina, cor irmã do clube).
+    const firstMark = centerOf(marks[0]);
+    const baseStart = mobile ? [ex, Math.max(0, firstMark[1] - 22)] : [-12, ey];
+    const baseD = rounded([baseStart, [ex, ey]], 0);
+    const baseLen = lengthOf(baseD);
+    route(defs, "route base", baseD, [
+      { stroke: C.bg, "stroke-width": width + 2 },
+      { stroke: C.base, "stroke-width": width - 3 },
+    ], animate && { dur: baseLen / speed, delay: clock });
+    if (animate) {
+      marks.forEach((mark) => {
+        const [mx, my] = centerOf(mark);
+        const distance = mobile ? my - baseStart[1] : mx - baseStart[0];
+        mark.style.setProperty("--d", `${Math.round(clock + Math.max(0, distance) / speed - 40)}ms`);
+      });
+    }
+    clock += baseLen / speed;
+
+    // Linha do Bahia: estreia → curva → integração atual.
+    const mainPts = mobile ? [[ex, ey], [hx, hy]] : [[ex, ey], [hx, ey], [hx, hy]];
+    const mainD = rounded(mainPts, 46);
+    const mainLen = lengthOf(mainD);
+    route(defs, "route main", mainD, [
+      { stroke: C.bg, "stroke-width": width + 6 },
+      { stroke: C.bahia, "stroke-width": width + 1 },
+    ], animate && { dur: mainLen / speed, delay: clock });
+    clock += mainLen / speed;
+    if (animate) hub.querySelector(".hub-ring").parentElement.style.setProperty("--d", `${Math.round(clock - 60)}ms`);
+
+    // Acesso da placa até a integração (só desktop).
+    if (!mobile) {
+      const b = board.getBoundingClientRect(), m = map.getBoundingClientRect();
+      const bx = b.right - m.left, top = b.top - m.top, bottom = b.bottom - m.top;
+      if (hy > top + 30 && hy < bottom - 12) {
+        make("path", { d: `M${bx + 1},${hy} H${hx - 40}`, stroke: C.ink, "stroke-width": 3, "stroke-dasharray": "1 7", "stroke-linecap": "round", fill: "none", class: "access" }, svg);
+      }
+    }
+
+    // Ramais: em aberto (contorno de tinta, miolo vazio) → amarelos ao passar ou escolher.
+    // Camadas na ordem de todos os ramais juntos: o entroncamento fica limpo.
+    const branchLayers = [
+      { stroke: C.bg, "stroke-width": width + 7 },
+      { stroke: C.ink, "stroke-width": width + 2 },
+      { stroke: C.paper, "stroke-width": width - 4 },
+      { stroke: C.path, "stroke-width": width - 1, class: "branch-fill", opacity: 0 },
+    ];
+    const layerGroups = branchLayers.map(() => make("g", { class: "branch-layer" }, svg));
+    choices.forEach((choice, index) => {
+      const key = choice.dataset.branch;
+      const pts = branchPoints([hx, hy], dots[index], mobile, index);
+      const d = rounded(pts, mobile ? 11 : 30);
+      const len = lengthOf(d);
+      const mask = animate ? revealMask(defs, d, { dur: len / 1.1, delay: clock + index * 70, ease: "cubic-bezier(.16,1,.3,1)" }) : null;
+      const nodes = branchLayers.map((layer, li) => {
+        const node = make("path", { d, fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round", ...layer }, layerGroups[li]);
+        if (mask) node.setAttribute("mask", mask);
+        return node;
+      });
+      branchPaths[key] = { d, nodes, fill: nodes[3] };
+      if (animate) choice.querySelector(".choice-ring").style.setProperty("--d", `${Math.round(clock + index * 70 + len / 1.6)}ms`);
+    });
+    const branchEnd = clock + 460;
+
+    // Linhas futuras, tracejadas e esmaecidas (só no mapa grande).
+    if (!mobile) {
+      const ghostStyle = [{ stroke: C.ghost, "stroke-width": 5, "stroke-dasharray": "1 10", opacity: .9 }];
+      const sel = map.querySelector('[data-ghost="sel"] [data-dot]');
+      const eur = map.querySelector('[data-ghost="eur"] [data-dot]');
+      if (sel && eur) {
+        const [sx, sy] = centerOf(sel);
+        const [qx, qy] = centerOf(eur);
+        const g1 = route(defs, "route ghost", rounded([[sx - 70, H + 12], [sx - 70, sy + 26], [sx - 44, sy], [sx, sy]], 18), ghostStyle, false);
+        const g2 = route(defs, "route ghost", rounded([[W + 12, qy], [qx, qy]], 0), ghostStyle, false);
+        if (animate) {
+          [g1.group, g2.group].forEach((g) => {
+            g.style.opacity = 0;
+            g.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, delay: branchEnd, fill: "forwards", easing: "ease-out" });
+          });
+          map.querySelectorAll(".ghost-ring").forEach((ring) => ring.style.setProperty("--d", `${Math.round(branchEnd + 80)}ms`));
+        }
+      }
+    }
+
+    // Nome das linhas, como nos mapas de verdade (só no mapa grande).
+    if (!mobile) {
+      lineTag(Math.max(16, firstMark[0] - 70), ey + 20, "Linha Base", C.base, C.ink, animate ? 260 : 0);
+      lineTag(hx + 16, ey + (hy - ey) * .52, "Linha Bahia", C.bahia, "#fff", animate ? clock - 120 : 0);
+    }
+
+    if (animate) {
+      map.classList.add("is-drawing");
+      firstDraw = false;
+      setTimeout(() => map.classList.remove("is-drawing"), branchEnd + 900);
+    } else {
+      firstDraw = false;
+    }
+    paintBranches();
+    if (picked) runTrain(picked, true);
+  }
+
+  function lineTag(x, y, label, fill, ink, delay) {
+    const g = make("g", { class: "line-tag" }, svg);
+    const text = make("text", { x: x + 9, y: y + 4.5, fill: ink, "font-size": 12, "font-weight": 800 }, g);
+    text.textContent = label;
+    const w = text.getComputedTextLength() + 18;
+    const rect = make("rect", { x, y: y - 10, width: w, height: 21, rx: 10.5, fill }, g);
+    g.insertBefore(rect, text);
+    if (delay) {
+      g.style.opacity = 0;
+      g.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay, fill: "forwards", easing: "ease-out" });
+    }
+  }
+
+  function paintBranches(hot) {
+    choices.forEach((choice) => {
+      const key = choice.dataset.branch;
+      const entry = branchPaths[key];
+      if (!entry) return;
+      const lit = key === picked || key === hot;
+      entry.fill.setAttribute("opacity", lit ? 1 : 0);
+      const dim = Boolean(picked) && key !== picked && key !== hot;
+      entry.nodes.slice(0, 3).forEach((node) => node.classList.toggle("is-dim", dim));
+    });
+  }
+
+  function runTrain(key, instant = false) {
+    const entry = branchPaths[key];
+    if (!entry) return;
+    svg.querySelectorAll(".train").forEach((node) => node.remove());
+    const train = make("circle", { r: mobileQuery.matches ? 6 : 8, fill: C.path, stroke: C.ink, "stroke-width": 3.5, class: "train" }, svg);
+    if (instant || reduceMotion.matches) {
+      const probe = make("path", { d: entry.d }, svg);
+      const p = probe.getPointAtLength(probe.getTotalLength());
+      probe.remove();
+      train.setAttribute("cx", p.x); train.setAttribute("cy", p.y);
+      return;
+    }
+    const motion = make("animateMotion", {
+      dur: "0.75s", begin: "indefinite", fill: "freeze", path: entry.d,
+      calcMode: "spline", keyPoints: "0;1", keyTimes: "0;1", keySplines: "0.16 1 0.3 1",
+    }, train);
+    motion.beginElement();
+  }
+
+  choices.forEach((choice) => {
+    const key = choice.dataset.branch;
+    choice.addEventListener("pointerenter", () => paintBranches(key));
+    choice.addEventListener("pointerleave", () => paintBranches());
+    choice.addEventListener("focus", () => paintBranches(key));
+    choice.addEventListener("blur", () => paintBranches());
+    choice.addEventListener("click", () => pick(key));
+  });
+
+  function pick(key, instant = false) {
+    const choice = choices.find((c) => c.dataset.branch === key);
+    if (!choice) return;
+    picked = key;
+    choices.forEach((c) => c.setAttribute("aria-pressed", String(c === choice)));
+    document.getElementById("choices").classList.add("has-pick");
+    paintBranches(key);
+    runTrain(key, instant);
+    const label = choice.querySelector("strong").textContent;
+    status.textContent = `Rota ${key.toUpperCase()} escolhida: ${label}. O trem segue para a consequência.`;
+    status.classList.add("is-picked");
+    history.replaceState(null, "", `#rota-${key}`);
+  }
+
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      document.querySelectorAll(".nav-item").forEach((other) => other.removeAttribute("aria-current"));
+      item.setAttribute("aria-current", "page");
+    });
+  });
+
+  document.querySelectorAll("[data-transfer]").forEach((button) => {
+    button.addEventListener("click", () => {
+      document.getElementById("transfer-note").textContent = button.dataset.transfer;
+    });
+  });
+
+  let frame = 0;
+  let ready = false;
+  const relayout = () => { if (!ready) return; cancelAnimationFrame(frame); frame = requestAnimationFrame(layout); };
+  new ResizeObserver(relayout).observe(map);
+  mobileQuery.addEventListener("change", relayout);
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
+    ready = true;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const deep = /^#rota-([abc])$/.exec(location.hash);
+      if (deep) firstDraw = false; // link direto para uma rota: mapa pronto, sem a abertura
+      layout();
+      if (deep) pick(deep[1], true);
+    }));
+  });
+})();
+</script>
+</body>
+</html>

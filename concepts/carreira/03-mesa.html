@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mesa · Futbobo</title>
+<meta name="description" content="Concept 03 da tela da Carreira: a carreira em cima da mesa de botão.">
+<meta name="theme-color" content="#2b1a0f">
+<link rel="icon" href="../../public/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!--
+  CONCEPT 03 · MESA — plano (passo 1 do processo de duas passadas)
+
+  Tese: o Futbobo nasceu na mesa de botão. A tela é a mesa vista de cima, à noite, sob um único abajur.
+  Tudo o que hoje é "cartão" vira objeto com matéria própria: feltro, madeira, acrílico, latão, fita de rotular.
+
+  Tokens
+    --table   #3a2416  nogueira da mesa (fundo)       --felt  #1f6b3a  feltro do campo
+    --wood    #7a5131  moldura e estojo               --chalk #eef2e8  linhas de giz
+    --brass   #c9a227  plaquetas e varetas            --pick  #f4c430  palheta = ação/seleção (amarelo da marca)
+    --paper   #f5f6f1  carta do capítulo (branco frio, não creme)
+  Tipo: Barlow Condensed (placar, carta, fita) + Manrope (texto) — a dupla atual da marca.
+
+  Desktop 1440×900                                       Mobile 390×844
+  ┌estojo─┬ placar de mesa ········ ábaco (4 barras) ┐   ┌ placar ─────────────┐
+  │FUTBOBO│┌ moldura ─────────────────────────────────┐│   │ ábaco (1 linha)     │
+  │▢ Carr.││ feltro  ┌carta┐   (seu    ◉A etiqueta   ││   ├ feltro ─────────────┤
+  │▢ Jog. ││         │cap. │   botão)    ◉B etiqueta ││   │ carta do capítulo   │
+  │▢ Time ││         └─────┘     ◎       ◉C etiqueta ││   │ ── ◎ seu botão ──   │
+  │▢ Hist.│└──────────────────────────────────────────┘│   │ ◉A / ◉B / ◉C        │
+  │▢ Est. │ plaquetas | meta (fita+pinos) | mercado | 📻 │   ├ estojo (nav fixa)   │
+  │▢ Mundo│                                              │   └─────────────────────┘
+  └───────┴──────────────────────────────────────────────┘
+
+  Crítica do plano (passo 2) — o que estava genérico e mudou:
+  - "Painel de stats" virou ábaco de bolinhas: a barra continua lida em dezenas, o número exato fica ao lado.
+  - Navegação em lista com ícone virou estojo de botões com divisórias de feltro: cada aba é um botão guardado.
+  - Escolhas como linhas com seta viraram botões de galalite no campo de ataque; escolher é dar a palhetada.
+  - Rótulos em caixa alta só onde a matéria pede (fita de rotular em relevo e carimbo); o resto em caixa normal.
+  - Um único movimento autoral: os objetos pousam na mesa em sequência; depois, só a palhetada responde ao clique.
+-->
+<style>
+:root{
+  color-scheme: dark;
+  --table:#3a2416; --table-deep:#1e120a;
+  --wood:#7a5131; --wood-light:#a5733f; --wood-dark:#5a3a22;
+  --felt:#1f6b3a; --felt-lit:#2a8549; --felt-deep:#14502a;
+  --chalk:rgba(238,242,232,.86);
+  --brass:#c9a227;
+  --pick:#f4c430; --pick-deep:#d9a512;
+  --paper:#f5f6f1; --ink:#17201b; --ink-soft:#56615a;
+  --tape:#141414; --tape-red:#b3202a;
+  --bahia:#0057a8; --bahia-red:#e32636;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --text:"Manrope","Segoe UI",sans-serif;
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --slide:cubic-bezier(.12,.72,.22,1);
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='260'%3E%3Cfilter id='g' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0032 0.12' numOctaves='4' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.13 0 0 0 0 0.07 0 0 0 0 0.03 2.6 0 0 0 -1.15'/%3E%3C/filter%3E%3Crect width='900' height='260' filter='url(%23g)'/%3E%3C/svg%3E");
+  --grain-v:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='900'%3E%3Cfilter id='g' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.12 0.0032' numOctaves='4' seed='5'/%3E%3CfeColorMatrix values='0 0 0 0 0.13 0 0 0 0 0.07 0 0 0 0 0.03 2.6 0 0 0 -1.15'/%3E%3C/filter%3E%3Crect width='260' height='900' filter='url(%23g)'/%3E%3C/svg%3E");
+  --fibre:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 0 0 0 -0.32'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  --paper-fibre:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.22 0.42 0 0 0 -0.17'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  --fluff:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.7 0 0 0 -0.36'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--text);color:var(--chalk);
+  background-color:var(--table);
+  background-image:
+    radial-gradient(90% 75% at 52% 42%, rgba(255,205,140,.16), transparent 62%),
+    radial-gradient(150% 130% at 50% 45%, transparent 48%, rgba(8,4,2,.72)),
+    var(--grain);
+  background-size:auto,auto,1100px 320px;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button,a{font:inherit;color:inherit;text-decoration:none;-webkit-tap-highlight-color:transparent}
+button{background:none;border:0;cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--pick);outline-offset:3px;border-radius:6px}
+.sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.icon{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ─────────── estrutura da mesa ─────────── */
+.table{
+  height:100dvh;min-height:620px;
+  display:grid;
+  grid-template-columns:clamp(150px,13.5vw,206px) minmax(0,1fr);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  grid-template-areas:"nav top" "nav field" "nav bottom";
+  gap:clamp(10px,1.5vh,16px) clamp(14px,1.5vw,24px);
+  padding:clamp(12px,2vh,22px) clamp(16px,2vw,30px);
+}
+
+/* fita de rotular em relevo */
+.dymo{
+  display:inline-block;font-family:var(--display);font-weight:700;text-transform:uppercase;
+  letter-spacing:.16em;font-size:13px;line-height:1;color:#f1f1ec;white-space:nowrap;
+  background:var(--tape);
+  background-image:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,0) 45%,rgba(0,0,0,.28));
+  padding:.42em .75em .36em;border-radius:2px;
+  text-shadow:0 1px 0 rgba(255,255,255,.28),0 -1px 0 rgba(0,0,0,.75);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 1px 1px rgba(0,0,0,.6),0 3px 5px -1px rgba(0,0,0,.45);
+}
+.dymo.red{background-color:var(--tape-red)}
+
+/* ─────────── estojo (navegação) ─────────── */
+.estojo{
+  grid-area:nav;display:flex;flex-direction:column;gap:10px;min-height:0;
+  padding:12px 11px 14px;border-radius:12px;
+  background-color:var(--wood);
+  background-image:linear-gradient(90deg,rgba(255,220,170,.12),rgba(0,0,0,.18)),var(--grain-v);
+  background-size:auto,300px 1000px;
+  box-shadow:inset 0 1px 0 rgba(255,225,180,.35),inset 0 -2px 0 rgba(0,0,0,.4),inset 2px 0 0 rgba(255,225,180,.12),
+    0 2px 0 #2a170b,0 14px 26px -8px rgba(0,0,0,.75),0 40px 70px -30px rgba(0,0,0,.7);
+}
+.lid{
+  display:grid;gap:8px;justify-items:start;padding:10px 10px 12px;border-radius:7px;
+  background:rgba(30,16,7,.3);box-shadow:inset 0 2px 5px rgba(0,0,0,.45),inset 0 -1px 0 rgba(255,225,180,.15);
+}
+.brand{display:flex;align-items:center;gap:8px}
+.brand img{width:30px;height:30px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.5)}
+.brand span{font-family:var(--display);font-weight:900;font-size:21px;letter-spacing:.06em;color:#2b1709;
+  text-shadow:0 1px 0 rgba(255,215,160,.35),0 -1px 0 rgba(0,0,0,.35)}
+.owner{font-size:12px;line-height:1.35;color:#f6e8d2;opacity:.82}
+.owner b{display:block;font-family:var(--display);font-size:17px;font-weight:700;letter-spacing:.01em;opacity:1;color:#fff4e2}
+.slots{list-style:none;display:flex;flex-direction:column;gap:7px;flex:1;min-height:0}
+.slots li{flex:1;min-height:0;max-height:86px;display:flex}
+.slot{
+  flex:1;display:flex;align-items:center;gap:11px;padding:6px 10px;border-radius:7px;min-height:44px;
+  background-color:var(--felt-deep);background-image:var(--fluff);background-size:160px;
+  box-shadow:inset 0 3px 7px rgba(0,0,0,.6),inset 0 -1px 0 rgba(255,255,255,.06),0 1px 0 rgba(255,225,180,.22);
+  font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.02em;color:#dfe9df;
+  transition:background-color .18s var(--ease-out),color .18s var(--ease-out);
+}
+.slot:hover{background-color:#196034;color:#fff}
+.mini{
+  width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:17px;color:#f1f4ee;
+  background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.45),transparent 38%),radial-gradient(circle at 60% 70%,#2f4c3b,#1b2c22);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.14),inset 0 -2px 3px rgba(0,0,0,.4),0 2px 0 rgba(0,0,0,.45),0 4px 7px rgba(0,0,0,.45);
+}
+.slot[aria-current="page"]{color:#fff6d8;background-color:#1d6438;box-shadow:inset 0 3px 7px rgba(0,0,0,.55),inset 0 0 0 1px rgba(244,196,48,.45),0 1px 0 rgba(255,225,180,.22)}
+.slot[aria-current="page"] .mini{color:#2a1d02;background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.75),transparent 40%),radial-gradient(circle at 60% 70%,var(--pick),var(--pick-deep))}
+.pick-slot{
+  flex:.8;min-height:52px;max-height:120px;border-radius:7px;display:grid;place-items:center;position:relative;
+  background-color:#123f22;background-image:var(--fluff);background-size:160px;
+  box-shadow:inset 0 3px 8px rgba(0,0,0,.65),0 1px 0 rgba(255,225,180,.22);
+}
+.pick-slot svg{width:34px;height:38px;rotate:-24deg;filter:drop-shadow(0 3px 2px rgba(0,0,0,.55))}
+.pick-slot small{position:absolute;left:10px;bottom:6px;font-size:10.5px;font-weight:700;color:#cfe0d1;opacity:.55}
+
+/* ─────────── topo: placar de mesa + ábaco ─────────── */
+.top{grid-area:top;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;min-width:0}
+.placar{
+  display:flex;align-items:flex-end;gap:12px;padding:16px 16px 12px;border-radius:10px;position:relative;
+  background-color:var(--wood-dark);
+  background-image:linear-gradient(180deg,rgba(255,220,170,.14),rgba(0,0,0,.22)),var(--grain);
+  background-size:auto,900px 260px;
+  box-shadow:inset 0 1px 0 rgba(255,225,180,.3),inset 0 -2px 0 rgba(0,0,0,.45),0 2px 0 #24140a,0 12px 22px -8px rgba(0,0,0,.7);
+}
+.placar h2{position:absolute;left:16px;top:-9px}
+.club{display:flex;align-items:center;gap:10px;padding-right:4px}
+.club img{width:clamp(40px,5.4vh,52px);height:auto;filter:drop-shadow(0 3px 3px rgba(0,0,0,.55))}
+.flip{display:grid;justify-items:center;gap:5px}
+.flip small{font-size:11px;font-weight:600;color:#f3e2c7;opacity:.8}
+.plate{
+  position:relative;display:grid;place-items:center;min-width:1.9em;padding:.16em .32em .08em;
+  font-family:var(--display);font-weight:800;font-size:clamp(28px,4.2vh,42px);line-height:1;color:#14181a;
+  font-variant-numeric:tabular-nums;border-radius:5px;
+  background:linear-gradient(#fbfbf7 0 49.5%,#e6e7df 50.5% 100%);
+  box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 rgba(0,0,0,.16),0 2px 0 #b9bab0,0 3px 0 #8e8f86,0 8px 12px -4px rgba(0,0,0,.65);
+}
+.plate::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.3);box-shadow:0 1px 0 rgba(255,255,255,.65)}
+.plate::after{content:"";position:absolute;top:-7px;left:50%;width:28px;margin-left:-14px;height:10px;
+  background:radial-gradient(circle at 4px 5px,#e6e6df 0 2.2px,#55554f 2.8px 4px,transparent 4.4px) left/9px 10px no-repeat,
+    radial-gradient(circle at 4px 5px,#e6e6df 0 2.2px,#55554f 2.8px 4px,transparent 4.4px) right/9px 10px no-repeat}
+.plate.name{font-size:clamp(22px,3.1vh,30px);letter-spacing:.06em;padding:.3em .5em .2em}
+.plate.hot{color:#0b4ea2}
+.plate.unit{font-size:clamp(24px,3.4vh,34px)}
+
+.abaco{
+  display:grid;grid-template-columns:auto 1fr auto;column-gap:12px;row-gap:5px;align-items:center;
+  padding:12px 16px;border-radius:10px;min-width:min(470px,44%);
+  background-color:var(--wood-dark);
+  background-image:linear-gradient(180deg,rgba(255,220,170,.12),rgba(0,0,0,.24)),var(--grain);
+  background-size:auto,900px 260px;
+  box-shadow:inset 0 1px 0 rgba(255,225,180,.3),inset 0 -2px 0 rgba(0,0,0,.45),0 2px 0 #24140a,0 12px 22px -8px rgba(0,0,0,.7);
+}
+.rod{display:contents}
+.rod-label{font-size:12.5px;font-weight:700;color:#f6e7cf;white-space:nowrap}
+.rod-label em{font-style:normal;font-weight:600;opacity:.66;margin-left:4px}
+.beads{
+  position:relative;display:flex;align-items:center;gap:2px;height:18px;padding:0 6px;border-radius:4px;
+  background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.18));box-shadow:inset 0 1px 3px rgba(0,0,0,.6),0 1px 0 rgba(255,225,180,.15);
+}
+.beads::before{content:"";position:absolute;left:3px;right:3px;top:50%;height:2px;margin-top:-1px;background:linear-gradient(#f3dc8a,#9c7a1c);border-radius:2px}
+.beads i{position:relative;width:15px;height:14px;border-radius:48%;flex:none;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.75),transparent 34%),radial-gradient(circle at 50% 60%,var(--c) 40%,color-mix(in srgb,var(--c) 60%,#000) 100%);
+  box-shadow:0 1px 1px rgba(0,0,0,.55)}
+.beads i.off{--c:#e7dcc4;opacity:.92}
+.beads .gap{flex:1}
+.rod b{font-family:var(--display);font-weight:800;font-size:22px;line-height:1;color:#fff8ea;font-variant-numeric:tabular-nums;text-align:right;min-width:2ch}
+
+/* ─────────── campo ─────────── */
+.board{
+  grid-area:field;min-height:0;padding:clamp(9px,1.1vw,15px);border-radius:12px;
+  background-color:var(--wood-light);
+  background-image:linear-gradient(180deg,rgba(255,236,200,.22),rgba(0,0,0,.12)),var(--grain);
+  background-size:auto,1100px 300px;
+  box-shadow:inset 0 1px 0 rgba(255,240,210,.55),inset 0 -2px 0 rgba(0,0,0,.35),inset 0 0 0 1px rgba(60,30,10,.35),
+    0 2px 0 #3a2213,0 20px 40px -14px rgba(0,0,0,.8),0 60px 90px -40px rgba(0,0,0,.65);
+}
+.pitch{
+  position:relative;height:100%;border-radius:5px;overflow:hidden;isolation:isolate;
+  background-color:var(--felt);
+  background-image:
+    radial-gradient(62% 72% at 50% 44%,rgba(120,220,140,.16),transparent 70%),
+    radial-gradient(130% 120% at 50% 50%,transparent 55%,rgba(0,20,6,.5)),
+    var(--fluff),var(--fibre);
+  background-size:auto,auto,160px,180px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),inset 0 10px 18px rgba(0,0,0,.42),inset 0 -3px 8px rgba(0,0,0,.25);
+}
+.lines{position:absolute;inset:clamp(16px,2.2vw,26px);border:2.5px solid var(--chalk);filter:url(#chalk);pointer-events:none;z-index:0}
+.lines i{position:absolute;border:2.5px solid var(--chalk)}
+.lines .half{left:50%;top:-2.5px;bottom:-2.5px;width:0;border-width:0 0 0 2.5px;margin-left:-1.25px}
+.lines .circle{left:50%;top:50%;width:min(31%,46vh);aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%)}
+.lines .dot{left:50%;top:50%;width:7px;height:7px;border-radius:50%;background:var(--chalk);border:0;transform:translate(-50%,-50%)}
+.lines .pa{top:50%;height:58%;width:15%;transform:translateY(-50%)}
+.lines .ga{top:50%;height:27%;width:5.5%;transform:translateY(-50%)}
+.lines .arc{top:50%;height:22%;aspect-ratio:1;border-radius:50%;transform:translateY(-50%);clip-path:inset(0 0 0 50%)}
+.lines .l{left:-2.5px;border-left:0}.lines .r{right:-2.5px;border-right:0}
+.lines .arc.l{left:calc(15% - 11%*.5);clip-path:inset(0 0 0 54%)}
+.lines .arc.r{right:calc(15% - 11%*.5);left:auto;clip-path:inset(0 54% 0 0)}
+.goal{position:absolute;top:50%;height:18%;width:clamp(12px,1.3vw,18px);transform:translateY(-50%);z-index:0;
+  border:2px solid rgba(240,240,232,.9);
+  background:repeating-linear-gradient(45deg,rgba(255,255,255,.35) 0 1px,transparent 1px 5px),repeating-linear-gradient(-45deg,rgba(255,255,255,.35) 0 1px,transparent 1px 5px),rgba(0,0,0,.25)}
+.goal.l{left:calc(clamp(16px,2.2vw,26px) - clamp(12px,1.3vw,18px));border-right:0}
+.goal.r{right:calc(clamp(16px,2.2vw,26px) - clamp(12px,1.3vw,18px));border-left:0}
+
+.play{
+  position:relative;z-index:1;height:100%;
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;
+  padding:clamp(28px,4vh,44px) clamp(40px,4.4vw,70px);gap:clamp(12px,1.6vw,26px);
+  container-type:inline-size;
+}
+
+/* carta do capítulo */
+.card{
+  justify-self:end;width:min(100%,540px);rotate:-1.4deg;
+  position:relative;color:var(--ink);border-radius:14px;padding:clamp(16px,2.4vh,24px) clamp(18px,1.8vw,26px) clamp(16px,2.2vh,22px);
+  background-color:var(--paper);background-image:var(--paper-fibre);background-size:220px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06),inset 0 0 0 7px var(--paper),inset 0 0 0 8.5px rgba(0,87,168,.3),
+    0 1px 1px rgba(0,0,0,.35),0 7px 12px -4px rgba(0,0,0,.5),0 24px 40px -18px rgba(0,0,0,.7);
+}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:clamp(10px,1.6vh,16px)}
+.card-ico{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:20px;color:#fff;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),transparent 45%),var(--bahia);box-shadow:inset 0 -2px 3px rgba(0,0,0,.25)}
+.card-season{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:.02em;color:var(--ink-soft)}
+.stamp{
+  margin-left:auto;font-family:var(--display);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--bahia-red);border:2.5px solid currentColor;border-radius:5px;padding:4px 9px 3px;rotate:-4deg;
+  mix-blend-mode:multiply;opacity:.9;
+  -webkit-mask:radial-gradient(circle at 30% 40%,#000 0 55%,rgba(0,0,0,.72) 75%);
+  mask:radial-gradient(circle at 30% 40%,#000 0 55%,rgba(0,0,0,.72) 75%);
+}
+.card h1{
+  font-family:var(--display);font-weight:800;font-size:clamp(26px,min(2.9vw,4.8vh),44px);line-height:1;letter-spacing:-.005em;
+  text-wrap:balance;color:#101612;
+}
+.card p{margin-top:clamp(8px,1.5vh,14px);font-size:clamp(14px,min(1.15vw,2vh),17px);line-height:1.5;color:#334039;text-wrap:pretty;max-width:46ch}
+.card-foot{margin-top:clamp(10px,1.8vh,16px);padding-top:10px;border-top:1.5px dashed rgba(23,32,27,.25);display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft)}
+.card-foot svg{width:18px;height:18px;flex:none}
+
+/* o seu botão */
+.center{display:grid;justify-items:center;gap:14px;position:relative}
+.mover{position:relative;width:var(--me);height:var(--me);--me:clamp(96px,min(9.4vw,15vh),132px)}
+.me{
+  position:absolute;inset:0;border-radius:50%;padding:9%;
+  background:conic-gradient(from -30deg,#f4f5f0 0 33%,var(--bahia) 0 66%,var(--bahia-red) 0 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),inset 0 -3px 5px rgba(0,0,0,.35),
+    0 2px 0 rgba(0,0,0,.35),0 7px 10px -2px rgba(0,0,0,.5),0 18px 28px -10px rgba(0,0,0,.6);
+}
+.me img{width:100%;height:100%;border-radius:50%;display:block;box-shadow:0 0 0 2px rgba(0,0,0,.25),inset 0 0 0 1px #000}
+.me::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:radial-gradient(60% 45% at 34% 22%,rgba(255,255,255,.55),rgba(255,255,255,0) 70%),
+    radial-gradient(80% 60% at 70% 95%,rgba(255,255,255,.12),transparent 60%)}
+.me-num{position:absolute;right:-4%;bottom:-2%;width:34%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;z-index:2;
+  font-family:var(--display);font-weight:900;font-size:clamp(14px,1.3vw,19px);color:#1d1503;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.7),transparent 40%),var(--pick);
+  box-shadow:0 2px 3px rgba(0,0,0,.5),inset 0 -1px 2px rgba(0,0,0,.25)}
+.pick{position:absolute;left:50%;top:50%;width:40px;height:44px;margin:-22px 0 0 -20px;opacity:0;pointer-events:none;z-index:-1;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5))}
+.me-tag{rotate:1.5deg}
+
+/* botões-escolha */
+.choices{display:grid;gap:clamp(10px,2.2vh,22px);justify-self:start;width:100%;max-width:520px}
+.choices legend{margin-bottom:2px}
+.choice{
+  display:flex;align-items:center;gap:14px;text-align:left;width:fit-content;max-width:100%;
+  --disc:clamp(62px,min(6vw,10vh),88px);
+}
+.choice:nth-child(2){margin-left:clamp(18px,3.2vw,52px)}
+.choice:nth-child(3){margin-left:clamp(4px,.8vw,12px)}
+.disc{
+  width:var(--disc);height:var(--disc);flex:none;border-radius:50%;position:relative;display:grid;place-items:center;
+  font-size:calc(var(--disc)*.38);color:rgba(255,255,255,.95);
+  background:
+    radial-gradient(55% 40% at 34% 24%,rgba(255,255,255,.6),rgba(255,255,255,0) 72%),
+    radial-gradient(40% 60% at 72% 70%,var(--m3),transparent 70%),
+    radial-gradient(50% 35% at 30% 75%,var(--m2),transparent 70%),
+    conic-gradient(from 120deg,var(--m1),var(--m2),var(--m1),var(--m3),var(--m1));
+  box-shadow:inset 0 0 0 calc(var(--disc)*.07) rgba(0,0,0,.12),inset 0 0 0 calc(var(--disc)*.075 + 1.5px) rgba(255,255,255,.22),
+    inset 0 -3px 5px rgba(0,0,0,.35),0 2px 0 rgba(0,0,0,.35),0 6px 9px -2px rgba(0,0,0,.5),0 16px 24px -10px rgba(0,0,0,.55);
+  transition:transform .16s var(--ease-out),box-shadow .16s var(--ease-out);
+}
+.disc .icon{filter:drop-shadow(0 1px 0 rgba(0,0,0,.35))}
+.disc b{position:absolute;top:-6px;left:-6px;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  font-family:var(--display);font-weight:800;font-size:15px;color:#fff;background:#141414;box-shadow:0 2px 3px rgba(0,0,0,.5)}
+.choice[data-choice="a"] .disc{--m1:#0a56a3;--m2:#3d84cf;--m3:#063a72}
+.choice[data-choice="b"] .disc{--m1:#c3222d;--m2:#ef5a4a;--m3:#7d1219}
+.choice[data-choice="c"] .disc{--m1:#e9e3d2;--m2:#fffaf0;--m3:#b9b19d;color:#2a2a24}
+.choice[data-choice="c"] .disc .icon{filter:none}
+.tag{
+  position:relative;display:grid;gap:4px;padding:10px 14px 11px;border-radius:5px;color:var(--ink);
+  background-color:var(--paper);background-image:var(--paper-fibre);background-size:220px;
+  box-shadow:0 1px 1px rgba(0,0,0,.35),0 6px 10px -5px rgba(0,0,0,.55);
+  transition:transform .16s var(--ease-out),box-shadow .16s var(--ease-out);
+}
+.choice:nth-child(1) .tag{rotate:-.8deg}.choice:nth-child(2) .tag{rotate:.7deg}.choice:nth-child(3) .tag{rotate:-.4deg}
+.tag strong{font-family:var(--display);font-weight:700;font-size:clamp(18px,min(1.62vw,2.8vh),24px);line-height:1.08;color:#111814;text-wrap:balance}
+.tag small{font-size:13px;font-weight:600;color:var(--ink-soft);line-height:1.3}
+.choice:hover .disc{transform:translateY(-3px)}
+.choice:hover .disc,.choice:focus-visible .disc{box-shadow:inset 0 0 0 calc(var(--disc)*.07) rgba(0,0,0,.12),inset 0 0 0 calc(var(--disc)*.075 + 1.5px) rgba(255,255,255,.22),inset 0 -3px 5px rgba(0,0,0,.35),0 2px 0 rgba(0,0,0,.3),0 12px 14px -4px rgba(0,0,0,.45),0 26px 34px -12px rgba(0,0,0,.55)}
+.choice:hover .tag{transform:translateY(-2px)}
+.choice:active .disc{transform:translateY(0) scale(.97);transition-duration:.08s}
+.choice:focus-visible{outline:none}
+.choice:focus-visible .tag{outline:3px solid var(--pick);outline-offset:3px}
+.choice[aria-pressed="true"] .disc{box-shadow:0 0 0 4px var(--pick),0 0 0 6px rgba(0,0,0,.35),inset 0 -3px 5px rgba(0,0,0,.35),0 14px 22px -8px rgba(0,0,0,.6)}
+.chosen{position:absolute;right:-10px;top:-12px;rotate:3deg;font-size:11px;opacity:0;transform:scale(.9);transition:opacity .2s,transform .2s var(--ease-out)}
+.choice[aria-pressed="true"] .chosen{opacity:1;transform:none}
+.choice.dim{opacity:.74}
+.choice.dim:hover{opacity:1}
+
+/* ─────────── rodapé da mesa ─────────── */
+.bottom{grid-area:bottom;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1fr) minmax(0,.84fr) minmax(0,1.3fr);gap:clamp(12px,1.3vw,20px);align-items:stretch;min-width:0}
+.wood-obj{
+  position:relative;border-radius:10px;padding:12px 14px;min-width:0;
+  background-color:var(--wood);
+  background-image:linear-gradient(180deg,rgba(255,220,170,.14),rgba(0,0,0,.2)),var(--grain);background-size:auto,900px 260px;
+  box-shadow:inset 0 1px 0 rgba(255,225,180,.32),inset 0 -2px 0 rgba(0,0,0,.42),0 2px 0 #26150a,0 12px 22px -8px rgba(0,0,0,.7);
+}
+.plaques{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.plaque{
+  border-radius:4px;padding:7px 10px 6px;position:relative;min-width:0;
+  background:linear-gradient(180deg,#f2d77a,#c9a227 46%,#a8841a 54%,#d8b955),repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0 1px,transparent 1px 3px);
+  background-blend-mode:overlay;
+  box-shadow:inset 0 1px 0 rgba(255,250,220,.7),inset 0 -1px 0 rgba(80,55,0,.5),0 2px 3px rgba(0,0,0,.5);
+  color:#3b2805;text-shadow:0 1px 0 rgba(255,244,200,.55);
+}
+.plaque::before,.plaque::after{content:"";position:absolute;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#fff6cc,#8a6a10 70%);box-shadow:0 0 0 1px rgba(60,40,0,.35)}
+.plaque::before{left:4px}.plaque::after{right:4px}
+.plaque span{display:block;font-size:10.5px;font-weight:700;opacity:.78;padding-left:4px}
+.plaque strong{display:block;font-family:var(--display);font-weight:800;font-size:clamp(15px,min(1.42vw,2.4vh),21px);line-height:1.05;padding-left:4px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.retire{display:flex;align-items:center;justify-content:center;gap:6px;border-radius:4px;min-height:40px;
+  background:rgba(25,12,5,.32);box-shadow:inset 0 2px 4px rgba(0,0,0,.5),0 1px 0 rgba(255,225,180,.15)}
+.retire .icon{font-size:18px;color:#f6e7cf}
+.retire:hover .dymo{transform:translateY(-1px)}
+
+.meta h2{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.meta p{margin-top:8px;font-size:12.5px;line-height:1.4;color:#f8ead4}
+.meta p b{font-weight:800}
+.pegs{margin-top:8px;display:flex;align-items:center;gap:8px}
+.holes{display:flex;gap:7px;padding:5px 9px;border-radius:12px;background:rgba(20,10,4,.3);box-shadow:inset 0 1px 3px rgba(0,0,0,.55)}
+.holes i{width:9px;height:9px;border-radius:50%;background:radial-gradient(circle at 50% 40%,#0c0603 50%,#3a2414);box-shadow:0 1px 0 rgba(255,225,180,.25)}
+.pegs b{font-family:var(--display);font-weight:800;font-size:18px;color:#fff6e4;font-variant-numeric:tabular-nums}
+.peg{width:22px;height:7px;border-radius:4px;background:linear-gradient(180deg,#fbe9a6,#c9a227 50%,#7d6111);box-shadow:0 2px 2px rgba(0,0,0,.5);rotate:-18deg;margin-left:auto}
+
+.market{
+  background-color:#b8925c;
+  background-image:var(--paper-fibre),linear-gradient(180deg,rgba(255,240,210,.25),rgba(0,0,0,.08));
+  background-size:220px,auto;rotate:.8deg;color:#2a1c0b;
+  box-shadow:0 1px 1px rgba(0,0,0,.4),0 10px 18px -8px rgba(0,0,0,.7);
+}
+.market::before{content:"";position:absolute;top:-8px;left:50%;width:70px;height:18px;margin-left:-35px;rotate:-2deg;
+  background:rgba(236,226,196,.62);box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.market h2{font-family:var(--display);font-weight:700;font-size:17px;line-height:1.1}
+.market h2 small{display:block;font-family:var(--text);font-weight:600;font-size:11.5px;color:#5b4423;margin-bottom:3px}
+.market-actions{margin-top:9px;display:flex;flex-wrap:wrap;gap:8px}
+.tape-btn{font-size:12.5px;padding:.6em .8em .54em;min-height:34px;transition:transform .12s var(--ease-out),box-shadow .12s}
+.tape-btn b{font-weight:800;color:var(--pick)}
+.tape-btn:hover{transform:translateY(-1px)}
+.tape-btn:active{transform:translateY(1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 1px 1px rgba(0,0,0,.6)}
+
+/* rádio de pilha */
+.radio{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border-radius:14px;min-width:0;
+  background:radial-gradient(120% 90% at 30% 0%,#3b2e24,#1b140f 70%);
+  box-shadow:inset 0 1px 0 rgba(255,230,200,.18),inset 0 0 0 1px rgba(0,0,0,.6),0 2px 0 #0d0805,0 14px 24px -8px rgba(0,0,0,.8);
+  position:relative;
+}
+.radio::before{content:"";position:absolute;inset:5px;border-radius:10px;border:1px dashed rgba(255,226,190,.22);pointer-events:none}
+.grille{width:clamp(40px,3.6vw,56px);align-self:stretch;border-radius:8px;
+  background:radial-gradient(circle,#15110e 1.5px,transparent 1.9px) 0 0/6px 6px,linear-gradient(135deg,#d9dcdc,#8e9496 45%,#e8ebeb 60%,#7c8285);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.12)}
+.dial{position:relative;min-width:0;border-radius:6px;padding:7px 10px 8px;overflow:hidden;
+  background:linear-gradient(180deg,#f7d98a,#e6b24c 60%,#cf9332);color:#2b1606;
+  box-shadow:inset 0 2px 4px rgba(90,40,0,.55),inset 0 0 0 1px rgba(0,0,0,.4)}
+.scale{display:flex;justify-content:space-between;font-family:var(--display);font-weight:600;font-size:10px;letter-spacing:.04em;opacity:.7;border-bottom:1px solid rgba(43,22,6,.45);padding-bottom:2px}
+.needle{position:absolute;top:3px;height:19px;left:22%;width:2px;border-radius:1px;background:#b3141e;box-shadow:0 0 0 .5px rgba(0,0,0,.25);transition:left .5s var(--ease-out)}
+.station{margin-top:5px;display:flex;gap:6px;align-items:baseline;min-width:0;font-size:10.5px;font-weight:800;opacity:.75}
+.headline{position:relative;height:3.42em;margin-top:2px;overflow:hidden;font-family:var(--display);font-weight:700;font-size:clamp(14px,min(1.12vw,2vh),17px);line-height:1.14;text-wrap:balance}
+.headline span{position:absolute;inset:0;display:block;transition:transform .28s var(--ease-out),opacity .28s}
+.headline span.out{transform:translateY(-100%);opacity:0}
+.headline span.in{transform:translateY(100%);opacity:0}
+.knobs{display:grid;gap:6px}
+.knob{width:44px;height:44px;display:grid;place-items:center;border-radius:50%}
+.knob i{width:32px;height:32px;border-radius:50%;position:relative;display:block;
+  background:radial-gradient(circle at 40% 35%,#6a6a66,#262624 62%) center/62% 62% no-repeat,repeating-conic-gradient(#1e1e1c 0 7deg,#4b4b47 7deg 14deg);
+  box-shadow:0 2px 3px rgba(0,0,0,.6),inset 0 0 0 1px rgba(0,0,0,.6);transition:transform .3s var(--ease-out)}
+.knob i::after{content:"";position:absolute;left:50%;top:5px;width:2px;height:8px;margin-left:-1px;border-radius:2px;background:var(--pick)}
+.knob[aria-pressed="true"] i{transform:rotate(-120deg)}
+.knob-next:active i{transform:rotate(40deg)}
+
+/* ─────────── entrada: os objetos pousam na mesa ─────────── */
+@keyframes land{from{opacity:0;transform:translateY(-14px) scale(1.06)}to{opacity:1;transform:none}}
+@keyframes land-soft{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.landing .estojo,.landing .placar,.landing .abaco,.landing .board,.landing .wood-obj,.landing .radio{animation:land-soft .5s var(--ease-out) both}
+.landing .card{animation:land .6s var(--ease-out) .28s both}
+.landing .mover{animation:land .55s var(--ease-out) .5s both}
+.landing .choice{animation:land .5s var(--ease-out) both}
+.landing .choice:nth-child(1){animation-delay:.62s}.landing .choice:nth-child(2){animation-delay:.72s}.landing .choice:nth-child(3){animation-delay:.82s}
+.landing .placar{animation-delay:.08s}.landing .abaco{animation-delay:.14s}.landing .board{animation-delay:.04s}
+.landing .bottom>*:nth-child(1){animation-delay:.18s}.landing .bottom>*:nth-child(2){animation-delay:.22s}.landing .bottom>*:nth-child(3){animation-delay:.26s}.landing .bottom>*:nth-child(4){animation-delay:.3s}
+
+/* ─────────── telas intermediárias ─────────── */
+@media (min-width:1024px) and (max-width:1279px){
+  .bottom{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1fr)}
+  .radio{grid-column:1/-1;padding:7px 10px;border-radius:12px}
+  .radio::before{inset:4px;border-radius:9px}
+  .grille{width:72px;height:30px;align-self:center}
+  .dial{display:flex;align-items:center;gap:12px;padding:6px 12px}
+  .dial .scale,.needle{display:none}
+  .station{margin:0;flex:none}
+  .headline{flex:1;height:1.25em;margin:0;white-space:nowrap}
+  .headline span{overflow:hidden;text-overflow:ellipsis}
+  .knobs{grid-auto-flow:column}
+  .owner{display:none}
+  .slot{font-size:15px;gap:8px;padding:6px 8px}
+  .mini{width:28px;height:28px;font-size:14px}
+  .abaco{row-gap:2px;padding:9px 12px;column-gap:9px}
+  .rod-label{font-size:11.5px}.rod b{font-size:18px}
+  .beads{height:15px}.beads i{width:12px;height:11px}
+  .plate{font-size:28px}.plate.name{font-size:21px}.plate.unit{font-size:23px}
+  .club img{width:40px}
+  .wood-obj{padding:10px 11px}
+  .plaques{gap:6px}
+  .plaque{padding:4px 8px 4px}
+  .plaque span{font-size:10px}
+  .dymo{font-size:11.5px}
+  .meta p{font-size:12px;margin-top:6px}
+  .pegs{margin-top:6px}
+  .market h2{font-size:16px}
+  .market-actions{margin-top:7px;gap:6px}
+  .play{padding:18px 26px;gap:12px}
+  .card{padding:14px 16px 14px}
+  .card-head{margin-bottom:8px}
+  .card-ico{width:30px;height:30px;font-size:16px}
+  .card-season{font-size:14px}
+  .stamp{font-size:12px;padding:3px 7px 2px}
+  .card h1{font-size:clamp(22px,2.5vw,30px)}
+  .card p{font-size:13.5px;line-height:1.45}
+  .card-foot{display:none}
+  .mover{--me:86px}
+  .choices{gap:10px}
+  .choice{--disc:54px;gap:10px}
+  .choice:nth-child(2){margin-left:18px}
+  .tag{padding:8px 11px 9px}
+  .tag strong{font-size:16.5px}
+  .tag small{font-size:12px}
+  .disc b{width:21px;height:21px;font-size:12.5px;top:-4px;left:-4px}
+}
+@media (min-width:1024px) and (max-height:820px){
+  .lid .owner{display:none}
+  .card-foot{display:none}
+  .plaque{padding:5px 9px 4px}
+}
+@media (min-width:1024px) and (max-height:700px){ body{overflow:auto} }
+
+/* ─────────── mobile: a mesa em pé ─────────── */
+@media (max-width:1023px){
+  body{overflow-x:hidden;overflow-y:auto;background-size:auto,auto,700px 220px}
+  .table{
+    height:auto;min-height:100dvh;display:flex;flex-direction:column;gap:10px;
+    padding:max(10px,env(safe-area-inset-top)) 10px calc(84px + env(safe-area-inset-bottom));
+  }
+  .top{flex-direction:column;align-items:stretch;gap:8px}
+  .placar{padding:12px 10px 9px;gap:8px;justify-content:space-between}
+  .placar h2{left:10px}
+  .club img{width:38px}
+  .plate{font-size:27px}.plate.unit{font-size:22px}
+  .plate.name{display:none}
+  .flip small{font-size:10.5px}
+  .abaco{min-width:0;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-flow:row;column-gap:8px;row-gap:3px;padding:9px 10px}
+  .rod{display:grid;grid-template-columns:1fr auto;align-items:baseline;row-gap:4px}
+  .rod-label{font-size:11.5px}.rod-label em{display:none}
+  .rod b{font-size:17px}
+  .beads{grid-column:1/-1;height:12px;padding:0 3px;gap:1px;order:3}
+  .beads i{width:calc((100% - 12px)/10);height:9px;max-width:11px}
+  .beads .gap{display:none}
+  .board{padding:8px;border-radius:10px}
+  .lines{inset:10px}
+  .lines .half,.lines .circle,.lines .dot,.goal{display:none}
+  .lines .pa{top:-2.5px;left:50%;width:62%;height:9%;transform:translateX(-50%);border-top:0}
+  .lines .ga{top:-2.5px;left:50%;width:30%;height:3.6%;transform:translateX(-50%);border-top:0}
+  .lines .pa.r,.lines .ga.r{top:auto;bottom:-2.5px;border-top:2.5px solid var(--chalk);border-bottom:0}
+  .lines .arc{display:none}
+  .play{display:flex;flex-direction:column;align-items:stretch;padding:26px 18px 30px;gap:0}
+  .card{justify-self:auto;width:100%;max-width:560px;margin:0 auto;rotate:-.7deg;padding:15px 16px 14px;border-radius:12px}
+  .card-head{margin-bottom:9px;gap:8px}
+  .card-ico{width:30px;height:30px;font-size:16px}
+  .card-season{font-size:14px}
+  .stamp{font-size:12px;padding:3px 7px 2px}
+  .card h1{font-size:clamp(21px,6.2vw,27px)}
+  .card p{font-size:14px;line-height:1.45;margin-top:7px}
+  .card-foot{display:none}
+  .card{z-index:3}
+  .choices{position:relative;z-index:1}
+  .center{grid-template-columns:auto auto;align-items:center;justify-content:center;gap:12px;padding:10px 0 12px;z-index:2}
+  .center::before{content:"";position:absolute;left:-28px;right:-28px;top:50%;height:2.5px;background:var(--chalk);filter:url(#chalk);z-index:-1}
+  .center::after{content:"";position:absolute;left:50%;top:50%;width:112px;aspect-ratio:1;border:2.5px solid var(--chalk);border-radius:50%;transform:translate(-50%,-50%);filter:url(#chalk);z-index:-1}
+  .mover{--me:64px}
+  .me-num{font-size:12px}
+  .me-tag{font-size:11px}
+  .choices{max-width:560px;margin:0 auto;gap:9px;justify-self:auto}
+  .choice{width:100%;gap:11px;--disc:52px}
+  .choice:nth-child(2),.choice:nth-child(3){margin-left:0}
+  .choice .tag{flex:1;padding:8px 12px 9px;rotate:0deg!important}
+  .tag strong{font-size:17.5px}
+  .tag small{font-size:12px}
+  .disc b{width:21px;height:21px;font-size:13px;top:-4px;left:-4px}
+  .bottom{display:flex;flex-direction:column;gap:10px}
+  .bottom .radio{order:-1}
+  .market{rotate:0deg}
+  .estojo{
+    position:fixed;left:0;right:0;bottom:0;z-index:20;flex-direction:row;border-radius:14px 14px 0 0;
+    padding:7px 8px calc(7px + env(safe-area-inset-bottom));gap:0;
+    box-shadow:inset 0 1px 0 rgba(255,225,180,.35),0 -10px 24px rgba(0,0,0,.55);
+  }
+  .lid,.pick-slot{display:none}
+  .slots{flex-direction:row;gap:5px;width:100%}
+  .slots li{flex:1;max-height:none}
+  .slot{flex-direction:column;justify-content:center;gap:3px;padding:6px 2px 5px;min-height:58px;font-size:11.5px;font-family:var(--text);font-weight:700;letter-spacing:0;text-align:center}
+  .mini{width:28px;height:28px;font-size:14px}
+}
+@media (max-width:1023px) and (min-width:640px){
+  .table{max-width:760px;margin:0 auto}
+  .placar{justify-content:flex-start;gap:16px}
+  .plate.name{display:grid}
+  .abaco{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .bottom{display:grid;grid-template-columns:1fr 1fr}
+  .bottom .radio{grid-column:1/-1}
+}
+@media (max-width:1023px) and (max-height:760px){
+  .placar{padding:10px 10px 7px}
+  .plate{font-size:23px}.plate.unit{font-size:19px}
+  .flip small{font-size:10px}
+  .club img{width:32px}
+  .play{padding:20px 14px 22px}
+  .card{padding:12px 13px}
+  .card-head{margin-bottom:6px}
+  .card h1{font-size:20px}
+  .card p{font-size:13px;line-height:1.4}
+  .center{padding:6px 0 8px}
+  .mover{--me:52px}
+  .center::after{width:92px}
+  .choices{gap:7px}
+  .choice{--disc:46px}
+  .tag{padding:6px 10px 7px}
+  .tag strong{font-size:16px}
+  .tag small{font-size:11.5px}
+  .slot{min-height:52px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .landing *{animation:none!important}
+  .headline span{transition:none}
+  *{transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="chalk" x="-2%" y="-2%" width="104%" height="104%">
+    <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="3" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4.5h11.5l-2.2 4 2.2 4H5"/></symbol>
+  <symbol id="i-shirt" viewBox="0 0 24 24"><path d="M8.5 3.5 3.5 6.5l2 4 2.5-1V20.5h8V9.5l2.5 1 2-4-5-3c-.8 1.6-2 2.4-3.5 2.4S9.3 5.1 8.5 3.5Z"/></symbol>
+  <symbol id="i-team" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.4-3.6 2.8-5.8 6-5.8s5.6 2.2 6 5.8"/><circle cx="17" cy="9" r="2.5"/><path d="M16.4 13.8c2.6.2 4.3 2.2 4.6 5.2"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><circle cx="5" cy="6" r="1.4"/><circle cx="5" cy="12" r="1.4"/><circle cx="5" cy="18" r="1.4"/><path d="M5 7.4v3.2M5 13.4v3.2M10 6h10M10 12h7M10 18h9"/></symbol>
+  <symbol id="i-stats" viewBox="0 0 24 24"><path d="M4 20h16M6.5 20v-7M12 20V5M17.5 20v-10"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M3.6 12h16.8M12 3.4c2.4 2.5 3.6 5.4 3.6 8.6s-1.2 6.1-3.6 8.6c-2.4-2.5-3.6-5.4-3.6-8.6s1.2-6.1 3.6-8.6Z"/></symbol>
+  <symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M6.5 3.5h11M6.5 20.5h11M8 3.5c0 4.5 8 5 8 8.5s-8 4-8 8.5M16 3.5c0 4.5-8 5-8 8.5s8 4 8 8.5"/></symbol>
+  <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6.2" cy="6.5" r="2.8"/><circle cx="6.2" cy="17.5" r="2.8"/><path d="M8.6 8.1 20 17.2M8.6 15.9 20 6.8"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.2 19 6v5.3c0 4.6-2.9 8-7 9.5-4.1-1.5-7-4.9-7-9.5V6Z"/><path d="M12 7.5v8.5M8.5 11h7"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3.4s6 6.4 6 10.6a6 6 0 0 1-12 0c0-4.2 6-10.6 6-10.6Z"/><path d="M9.2 14.6a2.9 2.9 0 0 0 2.4 2.7"/></symbol>
+  <symbol id="i-razor" viewBox="0 0 24 24"><rect x="3.2" y="8" width="17.6" height="8" rx="1.6"/><path d="M8 12h8"/><path d="M3.2 10.5h1.6M3.2 13.5h1.6M19.2 10.5h1.6M19.2 13.5h1.6"/></symbol>
+  <symbol id="i-palheta" viewBox="0 0 40 44"><path d="M20 42C12 34 3 22 3 12 3 6 9 2 20 2s17 4 17 10c0 10-9 22-17 30Z" fill="#f4c430" stroke="#9a7406" stroke-width="1.5"/><path d="M9 11c3-4 9-5.5 16-4.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.5" stroke-linecap="round"/></symbol>
+</svg>
+
+<div class="table landing" id="table">
+
+  <!-- estojo de botões = navegação -->
+  <nav class="estojo" aria-label="Navegação da carreira">
+    <div class="lid">
+      <div class="brand"><img src="../../public/favicon.svg" alt="" width="30" height="30"><span>FUTBOBO</span></div>
+      <p class="owner"><b>Tito Bobo</b>Meia ofensivo do Bahia, destro</p>
+    </div>
+    <ul class="slots">
+      <li><a class="slot" href="#" aria-current="page"><span class="mini"><svg class="icon"><use href="#i-flag"/></svg></span>Carreira</a></li>
+      <li><a class="slot" href="#"><span class="mini"><svg class="icon"><use href="#i-shirt"/></svg></span>Jogador</a></li>
+      <li><a class="slot" href="#"><span class="mini"><svg class="icon"><use href="#i-team"/></svg></span>Time</a></li>
+      <li><a class="slot" href="#"><span class="mini"><svg class="icon"><use href="#i-history"/></svg></span>Histórico</a></li>
+      <li><a class="slot" href="#"><span class="mini"><svg class="icon"><use href="#i-stats"/></svg></span>Estatísticas</a></li>
+      <li><a class="slot" href="#"><span class="mini"><svg class="icon"><use href="#i-globe"/></svg></span>Mundo</a></li>
+    </ul>
+    <div class="pick-slot" aria-hidden="true"><svg viewBox="0 0 40 44"><use href="#i-palheta"/></svg><small>palheta</small></div>
+  </nav>
+
+  <!-- placar de mesa + ábaco -->
+  <div class="top">
+    <section class="placar" aria-labelledby="placar-title">
+      <h2 id="placar-title" class="dymo">Placar da carreira</h2>
+      <div class="club"><img src="../../public/assets/clubs/bahia.png" alt="Escudo do Bahia" width="52" height="52"><span class="plate name">BAHIA</span></div>
+      <div class="flip"><span class="plate unit">2028</span><small>temporada</small></div>
+      <div class="flip"><span class="plate">17</span><small>anos</small></div>
+      <div class="flip"><span class="plate hot">63</span><small>OVR</small></div>
+      <div class="flip"><span class="plate unit">MEI</span><small>posição</small></div>
+    </section>
+
+    <section class="abaco" aria-label="Condição do jogador">
+      <div class="rod" style="--c:#2f7fd0"><span class="rod-label">Moral</span><span class="beads" role="img" aria-label="Moral 63 de 100" data-v="63"></span><b>63</b></div>
+      <div class="rod" style="--c:#3fae5a"><span class="rod-label">Físico</span><span class="beads" role="img" aria-label="Físico 93 de 100" data-v="93"></span><b>93</b></div>
+      <div class="rod" style="--c:#f0b72a"><span class="rod-label">Prestígio</span><span class="beads" role="img" aria-label="Prestígio 16 de 100" data-v="16"></span><b>16</b></div>
+      <div class="rod" style="--c:#d8423a"><span class="rod-label">Torcida<em>querido</em></span><span class="beads" role="img" aria-label="Torcida 63 de 100, humor: querido" data-v="63"></span><b>63</b></div>
+    </section>
+  </div>
+
+  <!-- o campo -->
+  <main class="board">
+    <div class="pitch">
+      <div class="lines" aria-hidden="true">
+        <i class="half"></i><i class="circle"></i><i class="dot"></i>
+        <i class="pa l"></i><i class="ga l"></i><i class="arc l"></i>
+        <i class="pa r"></i><i class="ga r"></i><i class="arc r"></i>
+      </div>
+      <span class="goal l" aria-hidden="true"></span><span class="goal r" aria-hidden="true"></span>
+
+      <div class="play">
+        <article class="card" aria-labelledby="chapter-title">
+          <header class="card-head">
+            <span class="card-ico" aria-hidden="true"><svg class="icon"><use href="#i-scissors"/></svg></span>
+            <span class="card-season">Temporada 2028</span>
+            <span class="stamp">Visual novo</span>
+          </header>
+          <h1 id="chapter-title">O barbeiro desenhou o escudo do clube na sua cabeça sem avisar</h1>
+          <p>Você pediu apenas para tirar dos lados. Quando se olha no espelho, existe um escudo enorme e surpreendentemente detalhado na nuca.</p>
+          <p class="card-foot"><svg viewBox="0 0 40 44" aria-hidden="true"><use href="#i-palheta"/></svg>Dê a palhetada em um dos três botões do ataque.</p>
+        </article>
+
+        <div class="center">
+          <div class="mover" id="mover">
+            <svg class="pick" id="pick" viewBox="0 0 40 44" aria-hidden="true"><use href="#i-palheta"/></svg>
+            <div class="me" role="img" aria-label="Seu botão: Tito Bobo, camisa 10">
+              <img src="./shared/bust.svg" alt="" width="120" height="120">
+              <span class="me-num" aria-hidden="true">10</span>
+            </div>
+          </div>
+          <span class="dymo me-tag" aria-hidden="true">Tito Bobo</span>
+        </div>
+
+        <div class="choices" role="group" aria-label="Escolha o lance">
+          <button class="choice" type="button" data-choice="a" aria-pressed="false">
+            <span class="disc" aria-hidden="true"><svg class="icon"><use href="#i-shield"/></svg><b>A</b></span>
+            <span class="tag"><strong>Assumir o corte no próximo jogo</strong><small>Torcida ↑↑ · dignidade em risco</small><span class="chosen dymo red" aria-hidden="true">Lance escolhido</span></span>
+          </button>
+          <button class="choice" type="button" data-choice="b" aria-pressed="false">
+            <span class="disc" aria-hidden="true"><svg class="icon"><use href="#i-drop"/></svg><b>B</b></span>
+            <span class="tag"><strong>Pintar por cima com uma cor ainda mais absurda</strong><small>Imagem ↑↑ · imprensa confusa</small><span class="chosen dymo red" aria-hidden="true">Lance escolhido</span></span>
+          </button>
+          <button class="choice" type="button" data-choice="c" aria-pressed="false">
+            <span class="disc" aria-hidden="true"><svg class="icon"><use href="#i-razor"/></svg><b>C</b></span>
+            <span class="tag"><strong>Raspar tudo antes que alguém veja</strong><small>Seguro · confiança no barbeiro ↓</small><span class="chosen dymo red" aria-hidden="true">Lance escolhido</span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- borda de baixo da mesa -->
+  <div class="bottom">
+    <section class="wood-obj plaques" aria-label="Situação no elenco">
+      <div class="plaque"><span>Status</span><strong>Rotação</strong></div>
+      <div class="plaque"><span>Treinador</span><strong>52%</strong></div>
+      <div class="plaque"><span>Contrato</span><strong>4 anos</strong></div>
+      <button class="retire" type="button"><svg class="icon" aria-hidden="true"><use href="#i-hourglass"/></svg><span class="dymo red">Aposentar</span></button>
+    </section>
+
+    <section class="wood-obj meta" aria-labelledby="meta-title">
+      <h2 id="meta-title"><span class="dymo red">Meta do treinador</span><span class="dymo">Comandar o jogo</span></h2>
+      <p>Somar <b>8 gols + assistências</b>. Recompensa +7 de confiança; falha, −6.</p>
+      <div class="pegs">
+        <span class="holes" role="img" aria-label="Progresso: 0 de 8"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <b>0/8</b><span class="peg" aria-hidden="true"></span>
+      </div>
+    </section>
+
+    <section class="wood-obj market" aria-labelledby="market-title">
+      <h2 id="market-title"><small>Mercado</small>Quer mudar de camisa?</h2>
+      <div class="market-actions">
+        <button class="dymo tape-btn" type="button">Empréstimo <b>100%</b></button>
+        <button class="dymo red tape-btn" type="button">Pedir transferência</button>
+      </div>
+    </section>
+
+    <section class="radio" aria-labelledby="radio-title">
+      <span class="grille" aria-hidden="true"></span>
+      <div class="dial">
+        <div class="scale" aria-hidden="true"><span>53</span><span>60</span><span>70</span><span>80</span><span>100</span><span>120</span><span>160</span></div>
+        <span class="needle" id="needle" aria-hidden="true"></span>
+        <p class="station"><span id="radio-title">Rádio Mundo</span><span id="radio-count" aria-hidden="true">1/4</span></p>
+        <p class="headline" id="headline" aria-hidden="true"><span>Atlético-MG conquista a CONMEBOL Libertadores</span></p>
+        <ul class="sr">
+          <li>Atlético-MG conquista a CONMEBOL Libertadores</li>
+          <li>São Paulo vence o Bahia nos pênaltis e leva a Copa do Brasil</li>
+          <li>Flamengo termina o Brasileirão com o melhor ataque</li>
+          <li>Palmeiras anuncia o artilheiro uruguaio para 2028</li>
+        </ul>
+      </div>
+      <div class="knobs">
+        <button class="knob" id="radio-toggle" type="button" aria-pressed="false" aria-label="Pausar o rádio"><i></i></button>
+        <button class="knob knob-next" id="radio-next" type="button" aria-label="Próxima manchete"><i></i></button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+  const stacked = matchMedia("(max-width: 1023px)");
+  const table = document.getElementById("table");
+
+  /* ábaco: bolinhas cheias à esquerda, o resto encostado à direita */
+  document.querySelectorAll(".beads").forEach((rod) => {
+    const tens = Math.round(Number(rod.dataset.v) / 10);
+    let html = "";
+    for (let i = 0; i < tens; i++) html += "<i></i>";
+    html += '<span class="gap"></span>';
+    for (let i = tens; i < 10; i++) html += '<i class="off"></i>';
+    rod.innerHTML = html;
+  });
+
+  setTimeout(() => table.classList.remove("landing"), 1600);
+
+  /* palhetada */
+  const mover = document.getElementById("mover");
+  const pick = document.getElementById("pick");
+  const choices = [...document.querySelectorAll(".choice")];
+  let rest = { x: 0, y: 0 };
+  let moving = null;
+
+  const place = (x, y) => { rest = { x, y }; mover.style.transform = `translate(${x}px, ${y}px)`; };
+
+  choices.forEach((button) => button.addEventListener("click", () => {
+    const disc = button.querySelector(".disc");
+    const mark = () => {
+      choices.forEach((other) => {
+        other.setAttribute("aria-pressed", String(other === button));
+        other.classList.toggle("dim", other !== button);
+      });
+    };
+    if (reduce.matches) { mark(); return; }
+
+    moving?.cancel();
+    const m = mover.getBoundingClientRect();
+    const ox = m.left + m.width / 2 - rest.x, oy = m.top + m.height / 2 - rest.y;
+    const d = disc.getBoundingClientRect();
+    const dx = d.left + d.width / 2 - ox, dy = d.top + d.height / 2 - oy;
+    const dist = Math.hypot(dx, dy) || 1;
+    const ux = dx / dist, uy = dy / dist;
+    const travel = Math.max(0, dist - (m.width + d.width) / 2 + 1);
+    const end = { x: ux * travel, y: uy * travel };
+
+    /* a palheta encosta por trás e empurra */
+    const r = m.width / 2;
+    const angle = Math.atan2(uy, ux) * 180 / Math.PI + 90;
+    const back = (k) => `translate(${-ux * (r + k)}px, ${-uy * (r + k)}px) rotate(${angle}deg)`;
+    pick.animate([
+      { opacity: 0, transform: back(34) },
+      { opacity: 1, transform: back(26), offset: .45 },
+      { opacity: 1, transform: back(6), offset: .75 },
+      { opacity: 0, transform: back(10) }
+    ], { duration: 260, easing: "cubic-bezier(.3,0,.2,1)" });
+
+    /* na mesa em pé os botões ficam empilhados: o seu toca o alvo e volta ao círculo central */
+    const rebound = stacked.matches;
+    const knock = () => disc.animate([
+      { transform: "translate(0,0)" },
+      { transform: `translate(${ux * 7}px, ${uy * 7}px)` },
+      { transform: "translate(0,0)" }
+    ], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
+
+    moving = mover.animate(rebound ? [
+      { transform: `translate(${rest.x}px, ${rest.y}px)` },
+      { transform: `translate(${rest.x - ux * 4}px, ${rest.y - uy * 4}px)`, offset: .1 },
+      { transform: `translate(${end.x}px, ${end.y}px)`, offset: .5, easing: "cubic-bezier(.3,.6,.3,1)" },
+      { transform: "translate(0px, 0px)" }
+    ] : [
+      { transform: `translate(${rest.x}px, ${rest.y}px)` },
+      { transform: `translate(${rest.x - ux * 4}px, ${rest.y - uy * 4}px)`, offset: .18 },
+      { transform: `translate(${end.x}px, ${end.y}px)` }
+    ], { duration: rebound ? 900 : 640, delay: 150, easing: "cubic-bezier(.12,.72,.22,1)", fill: "forwards" });
+
+    if (rebound) setTimeout(() => { knock(); mark(); }, 150 + 450);
+
+    moving.onfinish = () => {
+      if (rebound) place(0, 0); else place(end.x, end.y);
+      moving.cancel(); moving = null;
+      if (!rebound) { knock(); mark(); }
+    };
+  }));
+
+  addEventListener("resize", () => { moving?.cancel(); moving = null; place(0, 0); });
+
+  /* rádio do mundo */
+  const headlines = [...document.querySelectorAll(".radio .sr li")].map((li) => li.textContent);
+  const line = document.getElementById("headline");
+  const needle = document.getElementById("needle");
+  const count = document.getElementById("radio-count");
+  const toggle = document.getElementById("radio-toggle");
+  const next = document.getElementById("radio-next");
+  const stations = [22, 48, 66, 84];
+  let index = 0, timer = null;
+
+  const show = (to) => {
+    index = (to + headlines.length) % headlines.length;
+    const incoming = document.createElement("span");
+    incoming.textContent = headlines[index];
+    const previous = [...line.querySelectorAll("span")];
+    if (reduce.matches) { line.replaceChildren(incoming); }
+    else {
+      incoming.className = "in";
+      line.append(incoming);
+      incoming.getBoundingClientRect();
+      incoming.className = "";
+      previous.forEach((span) => span.classList.add("out"));
+      setTimeout(() => previous.forEach((span) => span.remove()), 320);
+    }
+    needle.style.left = stations[index] + "%";
+    count.textContent = `${index + 1}/${headlines.length}`;
+  };
+  const play = () => { clearInterval(timer); timer = setInterval(() => show(index + 1), 4200); };
+  const stop = () => { clearInterval(timer); timer = null; };
+
+  toggle.addEventListener("click", () => {
+    const paused = toggle.getAttribute("aria-pressed") === "true";
+    toggle.setAttribute("aria-pressed", String(!paused));
+    toggle.setAttribute("aria-label", paused ? "Pausar o rádio" : "Ligar o rádio");
+    paused ? play() : stop();
+  });
+  next.addEventListener("click", () => { show(index + 1); if (timer) play(); });
+
+  if (reduce.matches) { toggle.setAttribute("aria-pressed", "true"); toggle.setAttribute("aria-label", "Ligar o rádio"); }
+  else play();
+})();
+</script>
+</body>
+</html>
