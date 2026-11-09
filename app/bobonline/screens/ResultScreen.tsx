@@ -4,17 +4,22 @@
 // esquerda, a história neutra (do resultado canônico), os números da mesa, os gols
 // com replay e as saídas (revanche e série no X1; a chave no torneio).
 
-import { useEffect, useState } from "react";
-import BotaoMatchStats from "../../botao/BotaoMatchStats";
+import { useEffect, useState, type CSSProperties } from "react";
 import GoalReplay from "../../botao/GoalReplay";
 import TeamCrest from "../../botao/TeamCrest";
 import { mirrorResult } from "../../botao/match-codec";
 import type { BotaoMatchResult } from "../../botao/types";
 import type { DuelHandle, RoomClientState } from "../room/room-api";
 import { describeOnlineResult, formatGoalMinute, isMatchGoal, resultFromBracket, resultHeadline, scoreLine } from "../result-copy";
-import { bracketMatchOf, nicknameOf, opponentLabel, roomClient } from "../use-room";
+import { BOB_RULE_PRESETS } from "../teams/match-setup";
+import { roundName } from "../tournament/bracket";
+import { FORMAT_LABEL, bracketMatchOf, nicknameOf, opponentLabel, roomClient } from "../use-room";
 import { T } from "../protocol";
 import "../../botao/botao.css";
+import { Band, Colophon, Dock, DockSpacer, Page, Spread, paper, teamInks } from "./paper";
+
+/** O carimbo do placar. */
+const FINAL_WHISTLE = "APITO FINAL";
 
 export default function ResultScreen({
   state,
@@ -97,90 +102,145 @@ export default function ResultScreen({
     setSawMine(false);
   }
 
+  const shown = local ? (mySide === "cpu" ? mirrorResult(local) : local) : null;
+  const statRows: Array<[string, number, number]> = shown
+    ? [
+      ["Toques dados", shown.stats.user.flicks, shown.stats.cpu.flicks],
+      ["Encostou na bola", shown.stats.user.touches, shown.stats.cpu.touches],
+      ["Na trave", shown.stats.user.posts, shown.stats.cpu.posts],
+    ]
+    : [];
+  const stage = tournament && match && snapshot?.bracket ? roundName(snapshot.bracket.size, match.round) : FORMAT_LABEL.x1;
+  const rulesLabel = snapshot ? BOB_RULE_PRESETS[snapshot.settings.rules].label : null;
+  const theirAsk = !tournament && !backInLobby && Boolean(rematch?.theirs && !rematch.mine);
+  const dockNote = tournament ? null : backInLobby ? (
+    <p className="bob-dock-note bob-info" role="status">{opponentNick} voltou para a sala.</p>
+  ) : rematch?.theirs && !rematch.mine ? (
+    <p className="bob-dock-note bob-rematch-ask" role="status">{opponentNick} quer revanche!</p>
+  ) : rematch?.mine ? (
+    <p className="bob-dock-note bob-rematch-ask" role="status">Esperando {opponentNick} aceitar…</p>
+  ) : declined ? (
+    <p className="bob-dock-note bob-info" role="status">{opponentNick} não quis revanche agora.</p>
+  ) : null;
+
   return (
-    <section className="bob-result" aria-labelledby="bob-result-title" data-testid="bob-result">
-      <header className="bob-result-hero" data-won={won ? "true" : "false"}>
-        <span className="bob-eyebrow">APITO FINAL</span>
-        <h1 id="bob-result-title">{resultHeadline({ won, walkover, opponent: opponentName })}</h1>
-        <div className="bob-result-score">
-          <div><TeamCrest team={myTeam} size={56} /><strong>{myTeam.shortName}</strong><small>Você</small></div>
-          <b aria-label={`Placar ${scoreLine(mine, theirs, pens)}`}>
-            {mine}<i>×</i>{theirs}
-          </b>
-          <div><TeamCrest team={theirTeam} size={56} /><strong>{theirTeam.shortName}</strong><small>{opponentNick}</small></div>
-        </div>
-        {pens && <p className="bob-result-pens">Pênaltis · {pens.mine} × {pens.theirs}</p>}
-        <p className="bob-result-story">{describeOnlineResult(canonical, setup, walkover)}</p>
-      </header>
+    <Spread className="bob-result" aria-labelledby="bob-result-title" data-testid="bob-result" style={teamInks(myTeam.primary, myTeam.secondary)}>
+      <Page side="left" label="Placar final" className="bob-result-left">
+        <Band ink="club" titleId="bob-result-title" title={resultHeadline({ won, walkover, opponent: opponentName })} subtitle={rulesLabel ? `${stage} · ${rulesLabel}` : stage} />
 
-      {local && <BotaoMatchStats result={mySide === "cpu" ? mirrorResult(local) : local} />}
-
-      {local && (
-        <section className="bob-goals" aria-label="Gols da partida">
-          {goals.length ? goals.map(({ entry, index }) => {
-            const replayIndex = local.replays?.findIndex((item) => item.timelineIndex === index) ?? -1;
-            const team = entry.side === "user" ? setup.userTeam : setup.cpuTeam;
-            return (
-              <div key={index} className={entry.side === mySide ? "is-mine" : undefined}>
-                <span><b>{team.shortName}</b><small>{entry.text} · {formatGoalMinute(entry, setup.rules)}</small></span>
-                {replayIndex >= 0 && (
-                  <button type="button" className="bob-ghost-button" onClick={() => setReplay(replay === replayIndex ? null : replayIndex)}>
-                    {replay === replayIndex ? "Fechar" : "Ver replay"}
-                  </button>
-                )}
-              </div>
-            );
-          }) : <p>Nenhum gol antes dos pênaltis.</p>}
-          {/* Espelhado: o convidado vê o próprio time subindo, como na partida. */}
-          {activeReplay && <GoalReplay replay={activeReplay} setup={setup} label="Replay do gol" mirrored={mySide === "cpu"} />}
+        <section className={`${paper.board} bob-result-board`} aria-label="Placar final">
+          <div className={paper.versus}>
+            <figure className={paper.side}>
+              <span className={paper.crest}><TeamCrest team={myTeam} size={88} /></span>
+              <figcaption>{myTeam.shortName}</figcaption>
+              <small>Você</small>
+            </figure>
+            <p className={paper.score} aria-label={`Placar ${scoreLine(mine, theirs, pens)}`}>
+              <b className={paper.num}>{mine}</b><span>×</span><b className={paper.num}>{theirs}</b>
+            </p>
+            <figure className={paper.side}>
+              <span className={paper.crest}><TeamCrest team={theirTeam} size={88} /></span>
+              <figcaption>{theirTeam.shortName}</figcaption>
+              <small>{opponentNick}</small>
+            </figure>
+          </div>
+          {pens && <p className="bob-result-pens">Pênaltis · <span className={paper.num}>{pens.mine} × {pens.theirs}</span></p>}
+          {/* O carimbo do apito: verde na vitória. */}
+          <strong className={paper.verdict} data-win={won ? "" : undefined} aria-hidden="true">{FINAL_WHISTLE}</strong>
         </section>
-      )}
 
-      {tournament ? (
-        <div className="bob-result-actions">
-          <button type="button" className="primary-button" data-testid="bob-see-bracket" onClick={onSeeBracket}>
-            {tournamentOver ? "Ver o campeão" : "Ver chave"} <span>→</span>
-          </button>
-        </div>
-      ) : (
-        <div className="bob-result-actions">
-          {series && <p className="bob-series">Série: Você {seriesMine} × {seriesTheirs} {opponentNick}</p>}
-          {backInLobby ? (
-            <p className="bob-info" role="status">{opponentNick} voltou para a sala.</p>
-          ) : rematch?.theirs && !rematch.mine ? (
-            <div className="bob-rematch-ask" role="status">
-              <p>{opponentNick} quer revanche!</p>
-              <div>
-                <button type="button" className="primary-button" data-testid="bob-rematch-accept" onClick={() => askRematch(true)}>Aceitar revanche</button>
-                <button type="button" className="secondary-button" onClick={() => askRematch(false)}>Agora não</button>
+        <p className={`${paper.recap} bob-result-story`}>{describeOnlineResult(canonical, setup, walkover)}</p>
+        {shown && (
+          <section className={paper.table} aria-labelledby="bob-result-table">
+            <h2 id="bob-result-table" className="bob-section-title">Números da mesa</h2>
+            <div className={paper.tableHead} aria-hidden="true"><span>{myTeam.abbr}</span><span>{theirTeam.abbr}</span></div>
+            <dl>
+              {statRows.map(([label, a, b]) => (
+                <div key={label} className={`${paper.tableRow} bob-stat-row`} style={{ "--mine": `${(a / Math.max(1, a + b)) * 100}%` } as CSSProperties}>
+                  <dd className={paper.num} data-lead={a >= b ? "" : undefined}>{a}</dd>
+                  <dt>{label}</dt>
+                  <dd className={paper.num} data-lead={b >= a ? "" : undefined}>{b}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+      </Page>
+
+      <Page side="right" label="Gols e revanche" className="bob-result-right">
+        {local && (
+          <section className="bob-goals" aria-labelledby="bob-result-goals">
+            <h2 id="bob-result-goals" className="bob-section-title">Gols da partida</h2>
+            {goals.length ? (
+              <ol className={paper.goals}>
+                {goals.map(({ entry, index }) => {
+                  const replayIndex = local.replays?.findIndex((item) => item.timelineIndex === index) ?? -1;
+                  const team = entry.side === "user" ? setup.userTeam : setup.cpuTeam;
+                  return (
+                    <li key={index} className={`${paper.goal} bob-goal`} data-side={entry.side === mySide ? "user" : "cpu"}>
+                      <span className={`${paper.minute} ${paper.num}`}>{formatGoalMinute(entry, setup.rules)}</span>
+                      <span className={paper.goalCopy}><b>{entry.text}</b><small>{team.shortName}</small></span>
+                      {replayIndex >= 0 && (
+                        <button type="button" className={paper.replayButton} aria-pressed={replay === replayIndex} onClick={() => setReplay(replay === replayIndex ? null : replayIndex)}>
+                          {replay === replayIndex ? "Fechar" : "Ver replay"}
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : <p className="bob-hint">Nenhum gol antes dos pênaltis.</p>}
+            {/* Espelhado: o convidado vê o próprio time subindo, como na partida. */}
+            {activeReplay && (
+              <div className={paper.replayFrame}>
+                <GoalReplay replay={activeReplay} setup={setup} label="Replay do gol" mirrored={mySide === "cpu"} />
               </div>
-            </div>
-          ) : rematch?.mine ? (
-            <div className="bob-rematch-ask" role="status">
-              <p>Esperando {opponentNick} aceitar…</p>
-              <div><button type="button" className="secondary-button" onClick={() => askRematch(false)}>Cancelar</button></div>
-            </div>
-          ) : (
-            <>
-              {declined && <p className="bob-info" role="status">{opponentNick} não quis revanche agora.</p>}
+            )}
+          </section>
+        )}
+
+        {series && !tournament && <p className="bob-series">Série: Você <span className={paper.num}>{seriesMine} × {seriesTheirs}</span> {opponentNick}</p>}
+        {/* W.O. sem números da mesa: o carimbo ocupa a página. */}
+        {!shown && walkover && <p className="bob-wo-stamp" aria-hidden="true">{walkover === "double" ? "Sorteio" : "W.O."}</p>}
+
+        {tournament ? (
+          <Dock className="bob-result-actions">
+            <button type="button" className="primary-button" data-testid="bob-see-bracket" onClick={onSeeBracket}>
+              {tournamentOver ? "Ver o campeão" : "Ver chave"}
+            </button>
+          </Dock>
+        ) : (
+          <Dock className="bob-result-actions" double={theirAsk || dockNote !== null}>
+            {/* O recado da revanche vai junto dos botões: no celular, no rodapé amarelo. */}
+            {dockNote}
+            {backInLobby ? null : rematch?.theirs && !rematch.mine ? (
+              <>
+                <button type="button" className="primary-button bob-rematch-accept" data-testid="bob-rematch-accept" onClick={() => askRematch(true)}>Aceitar revanche</button>
+                <button type="button" className="secondary-button" onClick={() => askRematch(false)}>Agora não</button>
+              </>
+            ) : rematch?.mine ? (
+              <button type="button" className="secondary-button" onClick={() => askRematch(false)}>Cancelar</button>
+            ) : (
               <button type="button" className="primary-button" data-testid="bob-rematch" onClick={() => askRematch(true)}>Revanche</button>
-            </>
-          )}
-          <button
-            type="button"
-            className="secondary-button"
-            data-testid="bob-back-lobby"
-            onClick={() => {
-              // Sempre, mesmo com a sala já no lobby (o outro voltou primeiro): é aqui que o meu pronto volta
-              // junto, e quem voltou para jogar de novo não precisa tocar em "Estou pronto" outra vez.
-              roomClient()?.backToLobby();
-              onBackToLobby();
-            }}
-          >
-            Voltar à sala
-          </button>
-        </div>
-      )}
-    </section>
+            )}
+            <button
+              type="button"
+              className="secondary-button"
+              data-testid="bob-back-lobby"
+              onClick={() => {
+                // Sempre, mesmo com a sala já no lobby (o outro voltou primeiro): é aqui que o meu pronto volta
+                // junto, e quem voltou para jogar de novo não precisa tocar em "Estou pronto" outra vez.
+                roomClient()?.backToLobby();
+                onBackToLobby();
+              }}
+            >
+              Voltar à sala
+            </button>
+          </Dock>
+        )}
+        <Colophon />
+        <DockSpacer double={theirAsk || dockNote !== null} />
+      </Page>
+    </Spread>
   );
 }

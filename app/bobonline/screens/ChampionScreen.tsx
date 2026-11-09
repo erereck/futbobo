@@ -2,7 +2,7 @@
 
 // Campeão do torneio (§1.9): o escudo grande, o caminho até a taça e o vice.
 
-import BobCrest from "../teams/BobCrest";
+import { Colophon, Dock, DockSpacer, Page, Seal, Spread, TeamSticker, paper } from "./paper";
 import { championOf, loserOf, matchIdFor, matchById, roundName } from "../tournament/bracket";
 import type { RoomClientState } from "../room/room-api";
 import type { BracketMatch } from "../types";
@@ -35,30 +35,39 @@ export default function ChampionScreen({ state, onHome }: { state: RoomClientSta
     .sort((a, b) => a.round - b.round);
 
   return (
-    <section className="bob-champion" aria-labelledby="bob-champion-title" data-testid="bob-champion">
-      <span className="bob-eyebrow">CAMPEÃO</span>
-      {team && <BobCrest team={team} size={132} cpu={isCpuEntrant(champion)} />}
-      <h1 id="bob-champion-title">{mine ? "Você é campeão do Bobonline!" : `Campeão do torneio: ${team?.name ?? nicknameOf(state, champion)}`}</h1>
-      {!isCpuEntrant(champion) && !mine && <p className="bob-champion-who">{nicknameOf(state, champion)}</p>}
+    <Spread className="bob-champion" aria-labelledby="bob-champion-title" data-testid="bob-champion">
+      <Page side="left" label="Campeão" className="bob-champion-left">
+        <div className="bob-champion-hero">
+          {team && <TeamSticker team={team} cpu={isCpuEntrant(champion)} tilt="-3deg" />}
+          <Seal text="Campeão" tone="green" />
+        </div>
+        <h1 id="bob-champion-title">{mine ? "Você é campeão do Bobonline!" : `Campeão do torneio: ${team?.name ?? nicknameOf(state, champion)}`}</h1>
+        {!isCpuEntrant(champion) && !mine && <p className="bob-champion-who">{nicknameOf(state, champion)}</p>}
+      </Page>
 
-      <ol className="bob-champion-path" aria-label="Caminho até a taça">
-        {path.map((match) => (
-          <li key={match.id}>
-            <span>{roundName(bracket.size, match.round)}</span>
-            <strong>{pathLine(state, match, champion)}</strong>
-          </li>
-        ))}
-      </ol>
-      {vice && <p className="bob-champion-vice">Vice: {viceTeam?.name ?? nicknameOf(state, vice)}</p>}
+      <Page side="right" label="Caminho até a taça" className="bob-champion-right">
+        <h2 className={`${paper.pageTitle} bob-champion-path-title`}>Caminho até a taça</h2>
+        <ol className="bob-champion-path" aria-label="Caminho até a taça">
+          {path.map((match) => (
+            <li key={match.id}>
+              <span>{roundName(bracket.size, match.round)}</span>
+              <strong className={paper.num}>{pathLine(state, match, champion)}</strong>
+            </li>
+          ))}
+        </ol>
+        {vice && <p className="bob-champion-vice">Vice: {viceTeam?.name ?? nicknameOf(state, vice)}</p>}
 
-      <div className="bob-result-actions">
-        {state.isHost && (
-          <button type="button" className="primary-button" data-testid="bob-new-tournament" onClick={() => roomClient()?.hostNewTournament()}>
-            Novo torneio com a mesma sala
-          </button>
-        )}
-        <button type="button" className="secondary-button" data-testid="bob-home" onClick={onHome}>Voltar ao início</button>
-      </div>
-    </section>
+        <Dock className="bob-result-actions" double={state.isHost}>
+          {state.isHost && (
+            <button type="button" className="primary-button" data-testid="bob-new-tournament" onClick={() => roomClient()?.hostNewTournament()}>
+              Novo torneio com a mesma sala
+            </button>
+          )}
+          <button type="button" className={state.isHost ? "secondary-button" : "primary-button"} data-testid="bob-home" onClick={onHome}>Voltar ao início</button>
+        </Dock>
+        <Colophon />
+        <DockSpacer double={state.isHost} />
+      </Page>
+    </Spread>
   );
 }

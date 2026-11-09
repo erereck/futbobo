@@ -9,12 +9,13 @@ import { useId, useRef, useState, useSyncExternalStore } from "react";
 import BobCrest from "../teams/BobCrest";
 import { LIMITS, cleanNickname } from "../teams/model";
 import { T } from "../protocol";
-import { extractLinkHost, extractRoomCode } from "../net/codes";
+import { extractLinkHost, extractRoomCode, formatRoomCode } from "../net/codes";
 import type { JoinError, RoomClientState, SearchState } from "../room/room-api";
 import type { BobTeam, RoomFormat } from "../types";
 import { useNow } from "../use-now";
 import { isNativeAndroid } from "../wake-lock";
 import { RETRYABLE_ERRORS, joinErrorText, searchBarAt, searchCopy, versionDetail, type SearchBarAnchor } from "../use-room";
+import { BackButton, Band, Colophon, Dock, DockSpacer, Ficha, Page, Spread, TeamSticker } from "./paper";
 
 export type JoinDraft = {
   code: string;
@@ -132,113 +133,135 @@ export default function JoinRoomScreen({
   // Uma ação principal só: depois de um erro de rede, o mesmo botão de entrar repete a busca. Com
   // outro código no campo ele volta a ser "Entrar" (é uma busca nova, não a mesma de novo).
   const retry = networkError && failedCode !== null && extractRoomCode(draft.code) === failedCode;
+  const typedCode = extractRoomCode(draft.code);
 
   return (
-    <section className="bob-form-screen" aria-labelledby={`${baseId}-title`} aria-busy={searching || undefined}>
-      <button type="button" className="bob-back" onClick={onBack}>← Voltar</button>
-      <header className="bob-screen-head">
-        <span>ENTRAR</span>
-        <h1 id={`${baseId}-title`}>Entrar na sala</h1>
-      </header>
-
-      <div className="bob-field" data-invalid={codeError ? "true" : undefined}>
-        <label htmlFor={`${baseId}-code`}>Código da sala</label>
-        <input
-          id={`${baseId}-code`}
-          className="bob-code-input"
-          data-testid="bob-join-code"
-          value={draft.code}
-          autoComplete="off"
-          autoCapitalize="characters"
-          spellCheck={false}
-          placeholder="K7M·PX3"
-          onChange={(event) => onDraft({ code: event.target.value.toUpperCase() })}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") submit();
-          }}
-        />
-        {codeError && <span className="bob-field-error">{codeError}</span>}
-      </div>
-
-      <div className="bob-field" data-invalid={nameError ? "true" : undefined}>
-        <label htmlFor={`${baseId}-nick`}>Seu nome <small>{LIMITS.nickname[0]} a {LIMITS.nickname[1]} letras</small></label>
-        <input
-          ref={nickRef}
-          id={`${baseId}-nick`}
-          value={nickname}
-          maxLength={LIMITS.nickname[1]}
-          autoComplete="nickname"
-          onChange={(event) => onDraft({ nickname: event.target.value })}
-        />
-        {nameError && <span className="bob-field-error">{nameError}</span>}
-      </div>
-
-      <div className="bob-playing-with">
-        <BobCrest team={team} size={40} />
-        <p>Você entra com: <b>{team.name}</b> · {nickname}</p>
-        <div className="bob-playing-with-actions">
-          <button type="button" className="bob-ghost-button" onClick={onPickTeam}>Trocar time</button>
-          <button type="button" className="bob-ghost-button" onClick={() => nickRef.current?.focus()}>Editar nome</button>
+    <Spread className="bob-form-screen bob-join" aria-labelledby={`${baseId}-title`} aria-busy={searching || undefined}>
+      <Page side="left" label="Seu ingresso" className="bob-form-ficha">
+        <Band ink="blue" level={2} title="Seu ingresso" />
+        <div className="bob-ficha-body">
+          <div className="bob-ficha-team">
+            <TeamSticker team={team} subtitle={nickname.trim() || profileNickname} />
+            <button type="button" className="bob-ghost-button" onClick={onPickTeam}>Trocar time</button>
+          </div>
+          <Ficha
+            rows={[
+              { label: "Código", value: typedCode ? formatRoomCode(typedCode) : "—" },
+              { label: "Seu nome", value: nickname.trim() || "—" },
+              { label: "Time", value: team.shortName },
+            ]}
+          />
         </div>
-      </div>
+      </Page>
 
-      {androidWeb && (
-        <p className="bob-info">Tem o app do Futbobo? Abra o app e digite o código para jogar com o seu time salvo.</p>
-      )}
+      <Page side="right" label="Entrar na sala" className="bob-form-page">
+        <BackButton onClick={onBack} />
+        <h1 id={`${baseId}-title`} className="bob-question">Entrar na sala</h1>
 
-      {showPassword && (
-        <div className="bob-field" data-invalid={error === "senha-errada" ? "true" : undefined}>
-          <label htmlFor={`${baseId}-pass`}>Senha</label>
+        <div className="bob-field bob-code-field" data-invalid={codeError ? "true" : undefined}>
+          <label htmlFor={`${baseId}-code`}>Código da sala</label>
           <input
-            id={`${baseId}-pass`}
-            value={draft.password}
-            maxLength={12}
+            id={`${baseId}-code`}
+            className="bob-code-input"
+            data-testid="bob-join-code"
+            value={draft.code}
             autoComplete="off"
-            onChange={(event) => onDraft({ password: event.target.value })}
+            autoCapitalize="characters"
+            spellCheck={false}
+            placeholder="K7M·PX3"
+            onChange={(event) => onDraft({ code: event.target.value.toUpperCase() })}
             onKeyDown={(event) => {
               if (event.key === "Enter") submit();
             }}
           />
-          {(error === "senha" || error === "senha-errada") && <span className="bob-field-error">{joinErrorText(error)}</span>}
+          {codeError && <span className="bob-field-error">{codeError}</span>}
         </div>
-      )}
 
-      {searching && <SearchProgress startedAt={startedAt} search={search} loading={clientLoading} code={searchCode} joinStage={joinStage} onCancel={onCancel} />}
-
-      {!searching && linkTooNew && !error && (
-        <div className="bob-error-card" role="alert">
-          <p>{joinErrorText("versao-nova")}</p>
-          <button type="button" className="secondary-button" onClick={onUpdate}>{updateLabel()}</button>
+        <div className="bob-field" data-invalid={nameError ? "true" : undefined}>
+          <label htmlFor={`${baseId}-nick`}>Seu nome <small>{LIMITS.nickname[0]} a {LIMITS.nickname[1]} letras</small></label>
+          <input
+            ref={nickRef}
+            id={`${baseId}-nick`}
+            value={nickname}
+            maxLength={LIMITS.nickname[1]}
+            autoComplete="nickname"
+            onChange={(event) => onDraft({ nickname: event.target.value })}
+          />
+          {nameError && <span className="bob-field-error">{nameError}</span>}
         </div>
-      )}
 
-      {!searching && error && error !== "senha" && error !== "senha-errada" && (
-        <div className="bob-error-card" role="alert" data-testid="bob-join-error">
-          {error === "versao" && incompatible ? (
-            <>
-              <p>
-                {incompatible.who === "them"
-                  ? `O Futbobo de ${incompatible.nickname ?? "quem está na sala"} está desatualizado. Peça para atualizar.`
-                  : "Seu Futbobo está desatualizado para esta sala."}
-              </p>
-              <small>{versionDetail(incompatible.mine, incompatible.theirs)}</small>
-            </>
-          ) : (
-            <p>{joinErrorText(error, errorFormat)}</p>
-          )}
-          {networkError && clockNote && <p className="bob-error-note">{clockNote}</p>}
-          {updateNeeded && <button type="button" className="secondary-button" onClick={onUpdate}>{updateLabel()}</button>}
-          {error === "iniciada" && canSpectate && <button type="button" className="secondary-button" data-testid="bob-spectate" onClick={spectate}>Assistir</button>}
-          {networkError && <button type="button" className="bob-ghost-button" data-testid="bob-diagnostics" onClick={onDiagnostics}>Testar conexão</button>}
+        <div className="bob-playing-with">
+          <BobCrest team={team} size={40} />
+          <p>Você entra com: <b>{team.name}</b> · {nickname}</p>
+          <div className="bob-playing-with-actions">
+            <button type="button" className="bob-ghost-button" onClick={onPickTeam}>Trocar time</button>
+            <button type="button" className="bob-ghost-button" onClick={() => nickRef.current?.focus()}>Editar nome</button>
+          </div>
         </div>
-      )}
 
-      <button type="button" className="primary-button bob-submit" data-testid="bob-join-submit" disabled={searching} onClick={submit}>
-        {retry ? "Tentar de novo" : <>Entrar <span>→</span></>}
-      </button>
-    </section>
+        {androidWeb && (
+          <p className="bob-info">Tem o app do Futbobo? Abra o app e digite o código para jogar com o seu time salvo.</p>
+        )}
+
+        {showPassword && (
+          <div className="bob-field" data-invalid={error === "senha-errada" ? "true" : undefined}>
+            <label htmlFor={`${baseId}-pass`}>Senha</label>
+            <input
+              id={`${baseId}-pass`}
+              value={draft.password}
+              maxLength={12}
+              autoComplete="off"
+              onChange={(event) => onDraft({ password: event.target.value })}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") submit();
+              }}
+            />
+            {(error === "senha" || error === "senha-errada") && <span className="bob-field-error">{joinErrorText(error)}</span>}
+          </div>
+        )}
+
+        {searching && <SearchProgress startedAt={startedAt} search={search} loading={clientLoading} code={searchCode} joinStage={joinStage} onCancel={onCancel} />}
+
+        {!searching && linkTooNew && !error && (
+          <div className="bob-error-card" role="alert">
+            <p>{joinErrorText("versao-nova")}</p>
+            <button type="button" className="secondary-button" onClick={onUpdate}>{updateLabel()}</button>
+          </div>
+        )}
+
+        {!searching && error && error !== "senha" && error !== "senha-errada" && (
+          <div className="bob-error-card" role="alert" data-testid="bob-join-error">
+            {error === "versao" && incompatible ? (
+              <>
+                <p>
+                  {incompatible.who === "them"
+                    ? `O Futbobo de ${incompatible.nickname ?? "quem está na sala"} está desatualizado. Peça para atualizar.`
+                    : "Seu Futbobo está desatualizado para esta sala."}
+                </p>
+                <small>{versionDetail(incompatible.mine, incompatible.theirs)}</small>
+              </>
+            ) : (
+              <p>{joinErrorText(error, errorFormat)}</p>
+            )}
+            {networkError && clockNote && <p className="bob-error-note">{clockNote}</p>}
+            {updateNeeded && <button type="button" className="secondary-button" onClick={onUpdate}>{updateLabel()}</button>}
+            {error === "iniciada" && canSpectate && <button type="button" className="secondary-button" data-testid="bob-spectate" onClick={spectate}>Assistir</button>}
+            {networkError && <button type="button" className="bob-ghost-button" data-testid="bob-diagnostics" onClick={onDiagnostics}>Testar conexão</button>}
+          </div>
+        )}
+
+        <Dock>
+          <button type="button" className="primary-button bob-submit" data-testid="bob-join-submit" disabled={searching} onClick={submit}>
+            {retry ? "Tentar de novo" : "Entrar"}
+          </button>
+        </Dock>
+        <Colophon />
+        <DockSpacer />
+      </Page>
+    </Spread>
   );
 }
+
 
 /**
  * A busca: o texto do passo em que ela está e a barra até o prazo do controlador (só este pedaço

@@ -13,6 +13,7 @@ const careerSourceFiles = [
   "../app/components/career/album/intro/IntroParts.tsx",
   "../app/components/career/album/menu/HomeSpread.tsx",
   "../app/components/career/album/menu/MenuSpreads.tsx",
+  "../app/components/career/album/SummarySpread.tsx",
   "../app/components/career/CareerExtraStats.tsx",
   "../app/components/career/CareerReworkPanels.tsx",
   "../app/components/career/CareerTimeline.tsx",
@@ -603,11 +604,12 @@ test("registra o Hall da Fama local e resume a carreira por clube", async () => 
   );
   assert.match(page, /Voltar ao ranking/);
   assert.match(page, /clubCareerSummary/);
-  assert.match(page, /ARQUIVO POR CLUBE/);
-  assert.match(page, /club-archive-tabs/);
-  assert.match(page, /club-season-ledger/);
-  assert.match(page, /PRÊMIOS INDIVIDUAIS/);
-  assert.match(page, /final-individual-awards/);
+  // A última página do álbum (SummarySpread) guarda o arquivo por clube, o ledger e os prêmios.
+  assert.match(page, /Arquivo por clube/);
+  assert.match(page, /className=\{styles\.clubs\}/);
+  assert.match(page, /className=\{styles\.ledger\}/);
+  assert.match(page, /Prêmios individuais/);
+  assert.match(page, /props\.awards\.map/);
   assert.match(page, /HALL DA FAMA LOCAL/);
   assert.match(styles, /\.career-club-summary/);
   assert.match(styles, /\.final-awards-list/);
@@ -642,7 +644,7 @@ test("reserva espaço real para os escudos no Hall da Fama mobile", async () => 
     styles,
     /\.hall-ranking > article > \.club-badge \{ justify-self: center; \}/,
   );
-  assert.match(page, /className="hall-score"/);
+  assert.match(page, /<ol className=\{styles\.hall\}>/);
   assert.doesNotMatch(styles, /\.hall-ranking > article > span \{/);
   assert.match(
     styles,
@@ -760,7 +762,7 @@ test("classifica para supercopas e recopás e exibe uma galeria completa de tít
   assert.match(page, /function TrophyGallery/);
   assert.match(page, /ÚLTIMAS VOLTAS OLÍMPICAS/);
   assert.match(page, /Sala de troféus/);
-  assert.match(page, /<TrophyGallery state=\{displayGame\} final/);
+  assert.match(page, /titles=\{shareTitleHighlights\}/);
   assert.match(page, /Taças da temporada/);
   assert.match(styles, /\.trophy-gallery-hero/);
   assert.match(styles, /\.recent-titles/);
@@ -1946,8 +1948,8 @@ test("compartilha a carreira como pôster rico com fallback local", async () => 
   assert.match(page, /canvas\.height = 1350/);
   assert.match(page, /navigator\.canShare\?\.\(\{ files: \[file\] \}\)/);
   assert.match(page, /Bola de Ouro · \$\{worldXi\}× World XI/);
-  assert.match(page, /Compartilhar pôster da carreira/);
-  assert.match(page, /share-honours/);
+  assert.match(page, /Compartilhar pôster/);
+  assert.match(page, /Bolas de Ouro/);
   assert.match(premium, /\.share-honours/);
 });
 
@@ -1969,12 +1971,13 @@ test("fecha a rodada de polimento com controles semânticos e leitura acessível
   assert.doesNotMatch(page, /role="button"/);
   assert.doesNotMatch(page, /Nenhuma seleção encontrada/);
   assert.match(page, /type="button"[\s\S]*hall-career-link/);
-  assert.match(page, /aria-busy=\{shareBusy\}/);
+  // O pôster agora sai da última página do álbum (SummarySpread).
+  assert.match(page, /aria-busy=\{props\.shareBusy\}/);
   assert.match(page, /Montando o pôster da carreira/);
   assert.match(premium, /v88 — final craft pass/);
   assert.match(premium, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(botao, /v88 — matchday interaction polish/);
-  assert.match(worldCup, /v88 — tournament broadcast polish/);
+  assert.match(worldCup, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
 test("registra W.O. ao atualizar ou fechar uma partida iniciada", async () => {
@@ -2046,7 +2049,7 @@ test("cria origens persistentes que mudam a carreira e abrem capitulos proprios"
   assert.match(page, /function resolveStoryDecision/);
   assert.match(page, /DYNAMIC_STORY_EVENT_ID/);
   assert.match(page, /Esta decisão vira parte permanente da história/);
-  assert.match(page, /A HISTÓRIA POR TRÁS DA CARREIRA/);
+  assert.match(page, /game\.storyLog\.map/);
   assert.match(stories, /"academy-destroyer"/);
   assert.match(stories, /"humble-roots"/);
   assert.match(stories, /"football-bloodline"/);
@@ -2724,7 +2727,7 @@ test("abre um X1 local real e reorganiza o menu por tipo de gameplay", async () 
   assert.match(match, /const activeSide = localMatch \? state\.turn : "user"/);
   assert.match(match, /if \(localMatch\) return;/);
   assert.match(match, /hideUserMarker: localMatch/);
-  assert.match(match, /TOQUE NA TELA/);
+  assert.match(match, /toque na tela/);
   assert.match(versus, /controlMode="local"/);
   assert.match(versus, /localControl: true/);
   assert.match(versus, /Relâmpago/);

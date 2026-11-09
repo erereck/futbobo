@@ -7,15 +7,18 @@
 // Quem abre o editor: com `onEdit`, a página (tela "editor" do Bobonline, com o
 // histórico do botão voltar do Android); sem `onEdit`, esta tela mesmo, por dentro.
 
-import { useEffect, useId, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useEffect, useId, useState, type KeyboardEvent } from "react";
 import { claimBack } from "../screen-history";
 import { BOB_MAX_TEAMS, type BobTeam } from "../types";
-import BobCrest from "./BobCrest";
+import { BackButton, Band, ClubCard, Page, Spread, TeamSticker, paper } from "../screens/paper";
 import { LIMITS, cleanNickname } from "./model";
 import TeamCodeSheet, { TeamsToastHost } from "./TeamCodeSheet";
 import TeamEditor from "./TeamEditor";
 import { createTeam, setActiveTeam, setNickname, showTeamsToast, takeFirstRunNotice, useBobProfile, useBobTeams } from "./team-storage";
 import "./teams.css";
+
+/** Cada figurinha colada um pouco torta. */
+const TILTS = ["-1.6deg", "1deg", "-.6deg", "1.4deg", "-1.1deg", ".7deg"];
 
 export type TeamsScreenProps = {
   mode: "manage" | "pick";
@@ -88,81 +91,88 @@ export default function TeamsScreen({ mode, onBack, onPicked, onEdit, stageNotic
   }
 
   return (
-    <section className="bob-teams" aria-labelledby={`${baseId}-titulo`} aria-busy={ready ? undefined : true}>
-      <div className="bob-editor-bar">
-        <button type="button" className="bob-back" onClick={onBack}>‹ Voltar</button>
-      </div>
+    <Spread className="bob-teams" aria-labelledby={`${baseId}-titulo`} aria-busy={ready ? undefined : true}>
+      <Page side="left" label="Vestiário" className="bob-teams-left">
+        <BackButton onClick={onBack} />
+        <Band ink="red" titleId={`${baseId}-titulo`} title="Meus times" subtitle="Até 6 times salvos neste aparelho. O time em uso vai para a sala." />
 
-      <header className="bob-screen-head">
-        <span>VESTIÁRIO</span>
-        <h1 id={`${baseId}-titulo`}>Meus times</h1>
-        <p>Até 6 times salvos neste aparelho. O time em uso vai para a sala.</p>
-      </header>
+        <div className="bob-field bob-teams-nickname" data-invalid={nameError ? "true" : undefined}>
+          <label htmlFor={nicknameId}>Seu nome<small>{LIMITS.nickname[0]}–{LIMITS.nickname[1]} letras</small></label>
+          <input
+            id={nicknameId}
+            value={nameDraft ?? profile.nickname}
+            maxLength={LIMITS.nickname[1]}
+            autoComplete="nickname"
+            enterKeyHint="done"
+            disabled={!ready}
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? `${nicknameId}-erro` : undefined}
+            onChange={(event) => {
+              setNameDraft(event.target.value);
+              setNameError(null);
+            }}
+            onBlur={(event) => commitNickname(event.target.value)}
+            onKeyDown={handleNicknameKeys}
+          />
+          {nameError && <small id={`${nicknameId}-erro`} className="bob-field-error">{nameError}</small>}
+        </div>
 
-      <div className="bob-field bob-teams-nickname" data-invalid={nameError ? "true" : undefined}>
-        <label htmlFor={nicknameId}>Seu nome<small>{LIMITS.nickname[0]}–{LIMITS.nickname[1]} letras</small></label>
-        <input
-          id={nicknameId}
-          value={nameDraft ?? profile.nickname}
-          maxLength={LIMITS.nickname[1]}
-          autoComplete="nickname"
-          enterKeyHint="done"
-          disabled={!ready}
-          aria-invalid={nameError ? true : undefined}
-          aria-describedby={nameError ? `${nicknameId}-erro` : undefined}
-          onChange={(event) => {
-            setNameDraft(event.target.value);
-            setNameError(null);
-          }}
-          onBlur={(event) => commitNickname(event.target.value)}
-          onKeyDown={handleNicknameKeys}
-        />
-        {nameError && <small id={`${nicknameId}-erro`} className="bob-field-error">{nameError}</small>}
-      </div>
+        {/* O time em uso, grande: a figurinha que vai para a sala. */}
+        {ready && (
+          <figure className="bob-teams-active">
+            <TeamSticker team={active} subtitle={`${active.abbr} · ${active.shortName}`} />
+            <figcaption><em className="bob-team-tag">Em uso</em></figcaption>
+          </figure>
+        )}
+      </Page>
 
-      {mode === "pick" && <p className="bob-teams-pick">Toque no time que vai para a sala.</p>}
+      <Page side="right" label="Times salvos" className="bob-teams-right">
+        <h2 className="bob-section-title">Times salvos <small className={paper.num}>{teams.length} de {BOB_MAX_TEAMS}</small></h2>
+        {mode === "pick" && <p className="bob-teams-pick">Toque no time que vai para a sala.</p>}
 
-      {ready && (
-        <ul className="bob-team-list">
-          {teams.map((team) => {
-            const isActive = team.id === active.id;
-            const rowStyle = { "--bob-team-primary": team.primary, "--bob-team-secondary": team.secondary } as CSSProperties;
-            return (
-              <li key={team.id} className="bob-team-item">
-                <button
-                  type="button"
-                  className={`bob-team-row${isActive ? " is-active" : ""}`}
-                  style={rowStyle}
-                  aria-current={isActive ? "true" : undefined}
-                  aria-label={`${mode === "pick" ? "Usar" : "Editar"} ${team.name}${isActive ? ", time em uso" : ""}`}
-                  onClick={() => (mode === "pick" ? pick(team) : openEditor(team.id))}
-                >
-                  <BobCrest team={team} size={46} />
-                  <span className="bob-team-row-text">
-                    <strong>{team.name}</strong>
-                    <small>
-                      {isActive && <em className="bob-team-tag">EM USO</em>}
-                      <b>{team.abbr}</b> · {team.shortName} · 5 jogadores
-                    </small>
-                  </span>
-                  {mode === "pick" ? <i className="bob-team-radio" aria-hidden="true" /> : <i aria-hidden="true">›</i>}
-                </button>
-                {mode === "pick" && (
-                  <button type="button" className="bob-team-edit" aria-label={`Editar ${team.name}`} onClick={() => openEditor(team.id)}>
-                    Editar
+        {ready && (
+          <ul className="bob-team-list">
+            {teams.map((team, index) => {
+              const isActive = team.id === active.id;
+              return (
+                <li key={team.id} className="bob-team-item">
+                  <button
+                    type="button"
+                    className={`bob-team-row${isActive ? " is-active" : ""}`}
+                    aria-current={isActive ? "true" : undefined}
+                    aria-label={`${mode === "pick" ? "Usar" : "Editar"} ${team.name}${isActive ? ", time em uso" : ""}`}
+                    onClick={() => (mode === "pick" ? pick(team) : openEditor(team.id))}
+                  >
+                    <ClubCard team={team} note={`${team.abbr} · ${team.shortName}`} tilt={TILTS[index % TILTS.length]}>
+                      {isActive && <em className="bob-team-tag">Em uso</em>}
+                      {mode === "pick" && <i className="bob-team-radio" aria-hidden="true" />}
+                    </ClubCard>
                   </button>
-                )}
+                  {mode === "pick" && (
+                    <button type="button" className="bob-team-edit" aria-label={`Editar ${team.name}`} onClick={() => openEditor(team.id)}>
+                      Editar
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+            {!full && (
+              <li className="bob-team-item bob-team-new">
+                {/* O espaço vazio do álbum: onde o próximo time vai ser colado. */}
+                <button type="button" className={paper.emptySlot} onClick={newRandomTeam}>
+                  <span className={paper.slotPlus} aria-hidden="true">+</span>
+                  <span>Novo time aleatório</span>
+                </button>
               </li>
-            );
-          })}
-        </ul>
-      )}
+            )}
+          </ul>
+        )}
 
-      <div className="bob-teams-actions">
-        <button type="button" className="secondary-button" disabled={!ready || full} onClick={newRandomTeam}>Novo time aleatório</button>
-        <button type="button" className="secondary-button" disabled={!ready || full} onClick={() => setImporting(true)}>Importar código</button>
-      </div>
-      {full && <p className="bob-teams-limit">Limite de 6 times. Exclua um para criar outro.</p>}
+        <div className="bob-teams-actions">
+          <button type="button" className="secondary-button" disabled={!ready || full} onClick={() => setImporting(true)}>Importar código</button>
+        </div>
+        {full && <p className="bob-teams-limit">Limite de 6 times. Exclua um para criar outro.</p>}
+      </Page>
 
       {importing && (
         <TeamCodeSheet
@@ -175,6 +185,6 @@ export default function TeamsScreen({ mode, onBack, onPicked, onEdit, stageNotic
         />
       )}
       <TeamsToastHost />
-    </section>
+    </Spread>
   );
 }

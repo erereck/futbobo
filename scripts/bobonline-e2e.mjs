@@ -666,7 +666,7 @@ async function ownTurnOf(peer, timeout = 60000) {
 /** "SEU TEMPO" da BotaoMatch (segundos da mira, o número grande da faixa), quando aparece. */
 function idleSeconds(peer) {
   return peer.eval(`(() => {
-    const strip = [...document.querySelectorAll(".botao-inactivity-countdown:not(.botao-kick-limit)")].find((el) => /SEU TEMPO/.test(el.textContent));
+    const strip = [...document.querySelectorAll(".botao-inactivity-countdown:not(.botao-kick-limit)")].find((el) => /seu tempo/i.test(el.textContent));
     const value = Number(strip?.querySelector("strong")?.textContent);
     return strip && Number.isFinite(value) ? value : null;
   })()`);
@@ -677,7 +677,7 @@ async function scenarioReloadAim() {
   await playTurns([A, B], 2);
   // Só A pilota até a vez de B abrir; B fica parado até o "SEU TEMPO" (os últimos 3 dos 7 s) e recarrega aí.
   await pilot(A, 41);
-  await B.waitFor(`/SEU TEMPO/.test(document.body.innerText)`, "SEU TEMPO de B (a vez de B, parado)", 90000);
+  await B.waitFor(`/seu tempo/i.test(document.body.innerText)`, "SEU TEMPO de B (a vez de B, parado)", 90000);
   await stopPilot(A);
   const idleBefore = await idleSeconds(B);
   assert(idleBefore !== null, "SEU TEMPO sem número em B");
@@ -687,7 +687,7 @@ async function scenarioReloadAim() {
   await B.waitFor(`/Voltando em/.test(document.body.innerText)`, "contagem de volta em B", 20000);
   await B.waitFor(`!/Voltando em/.test(document.body.innerText)`, "fim da contagem de volta", 15000);
   // A mira reabre com o tempo que sobrou (piso de 3 s, §5.5): o "SEU TEMPO" aparece logo; 7 s cheios o esconderiam por 4 s.
-  await B.waitFor(`/SEU TEMPO/.test(document.body.innerText)`, "SEU TEMPO logo na volta (o tempo da mira foi recarregado?)", 1500);
+  await B.waitFor(`/seu tempo/i.test(document.body.innerText)`, "SEU TEMPO logo na volta (o tempo da mira foi recarregado?)", 1500);
   const idleAfter = await idleSeconds(B);
   assert(idleAfter !== null && idleAfter <= Math.max(idleBefore, 3), `o tempo da mira foi recarregado: antes ${idleBefore}, depois ${idleAfter}`);
   // B toca já (sobrou pouco tempo) e os dois seguem.

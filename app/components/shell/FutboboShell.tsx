@@ -118,7 +118,7 @@ function OfferArt() {
           <span className={styles.offerFace}><i className={styles.offerBall} /></span>
         </span>
       </div>
-      <span className={styles.offerTag}>NOVO · 3D</span>
+      <span className={styles.offerTag}>Novo · 3D</span>
     </div>
   );
 }
@@ -149,7 +149,7 @@ function Botao3dOfferDialog({ onAnswer }: { onAnswer: (enable: boolean) => void 
       <OfferArt />
       <div className={styles.offerBody}>
         <header>
-          <span>FUTEBOL DE BOTÃO</span>
+          <span>Futebol de botão</span>
           <h2 id="botao3d-offer-title">Novidade: Modo 3D</h2>
           <p id="botao3d-offer-lead">Troque a mesa clássica por um estádio 3D com jogadores animados. Quer ativar agora?</p>
         </header>

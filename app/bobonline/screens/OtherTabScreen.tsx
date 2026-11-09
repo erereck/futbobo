@@ -5,6 +5,7 @@
 // a vez (ou outro aparelho com a mesma identidade entrou na sala).
 
 import Link from "next/link";
+import { PaperScreen } from "./paper";
 
 export default function OtherTabScreen({
   mode,
@@ -16,8 +17,8 @@ export default function OtherTabScreen({
   onUseHere: () => void;
 }) {
   return (
-    <section className="bob-other-tab" aria-labelledby="bob-other-tab-title" data-testid="bob-other-tab">
-      <span className="bob-eyebrow">OUTRA ABA</span>
+    <PaperScreen className="bob-other-tab" aria-labelledby="bob-other-tab-title" data-testid="bob-other-tab">
+      <p className="bob-kicker">Outra aba</p>
       <h1 id="bob-other-tab-title">
         {mode === "blocked" ? "O Bobonline já está aberto em outra aba." : "O Bobonline foi aberto em outra aba."}
       </h1>
@@ -27,6 +28,6 @@ export default function OtherTabScreen({
         )}
         <Link className="secondary-button bob-link-button" href="/">Voltar ao início</Link>
       </div>
-    </section>
+    </PaperScreen>
   );
 }

@@ -14,6 +14,7 @@ import { LIMITS, cleanNickname } from "../teams/model";
 import type { BobTeam, CpuLevel, RoomFormat, RulesPresetId } from "../types";
 import { CPU_LEVEL_LABEL, RETRYABLE_ERRORS, joinErrorText } from "../use-room";
 import type { JoinError } from "../room/room-api";
+import { BackButton, Band, Colophon, Dock, DockSpacer, Ficha, Page, Spread, TeamSticker } from "./paper";
 
 export type CreateDraft = {
   format: RoomFormat;
@@ -36,7 +37,7 @@ export const DEFAULT_CREATE_DRAFT: CreateDraft = {
   nickname: null,
 };
 
-const FORMATS: Array<{ id: RoomFormat; label: string; detail: string }> = [
+export const FORMATS: Array<{ id: RoomFormat; label: string; detail: string }> = [
   { id: "x1", label: "X1", detail: "Você contra um amigo. Depois dá para pedir revanche." },
   { id: "t4", label: "Torneio de 4", detail: "Semifinal e final. Vaga livre pode virar time da CPU." },
   { id: "t8", label: "Torneio de 8", detail: "Quartas, semifinal e final." },
@@ -101,102 +102,131 @@ export default function CreateRoomScreen({
     onSubmit(clean);
   }
 
+
+  const format = FORMATS.find((item) => item.id === draft.format) ?? FORMATS[0];
+  const preset = BOB_RULE_PRESETS[draft.rules];
+
   return (
-    <section className="bob-form-screen" aria-labelledby={`${baseId}-title`} aria-busy={busy || undefined}>
-      <button type="button" className="bob-back" onClick={onBack}>← Voltar</button>
-      <header className="bob-screen-head">
-        <span>NOVA SALA</span>
-        <h1 id={`${baseId}-title`}>Criar sala</h1>
-      </header>
-
-      <div className="bob-field" data-invalid={nameError ? "true" : undefined}>
-        <label htmlFor={`${baseId}-nick`}>Seu nome <small>{LIMITS.nickname[0]} a {LIMITS.nickname[1]} letras</small></label>
-        <input
-          id={`${baseId}-nick`}
-          value={nickname}
-          maxLength={LIMITS.nickname[1]}
-          autoComplete="nickname"
-          onChange={(event) => onDraft({ nickname: event.target.value })}
-          onKeyDown={(event) => {
-            // Enter segurado repete; o Enter que confirma a sugestão do teclado (IME) não envia.
-            if (event.key !== "Enter" || event.repeat || event.nativeEvent.isComposing) return;
-            event.preventDefault();
-            submit();
-          }}
-        />
-        {nameError && <span className="bob-field-error">{nameError}</span>}
-      </div>
-
-      <div className="bob-playing-with">
-        <BobCrest team={team} size={40} />
-        <p>Você joga com: <b>{team.name}</b></p>
-        <button type="button" className="bob-ghost-button" onClick={onPickTeam}>Trocar time</button>
-      </div>
-
-      <fieldset className="bob-choice">
-        <legend>Formato</legend>
-        <div className="bob-format-grid">
-          {FORMATS.map((format) => (
-            <button key={format.id} type="button" className="bob-format-card" data-testid={`bob-format-${format.id}`} aria-pressed={draft.format === format.id} onClick={() => onDraft({ format: format.id })}>
-              <strong>{format.label}</strong>
-              <small>{format.detail}</small>
-            </button>
-          ))}
+    <Spread className="bob-form-screen bob-create" aria-labelledby={`${baseId}-title`} aria-busy={busy || undefined}>
+      <Page side="left" label="Ficha da sala" className="bob-form-ficha">
+        <Band ink="blue" level={2} title="Ficha da sala" />
+        <div className="bob-ficha-body">
+          <div className="bob-ficha-team">
+            <TeamSticker team={team} subtitle={nickname.trim() || profileNickname} />
+            <button type="button" className="bob-ghost-button" onClick={onPickTeam}>Trocar time</button>
+          </div>
+          <Ficha
+            rows={[
+              { label: "Formato", value: format.label },
+              { label: "Regras", value: `${preset.label} · ${preset.detail}` },
+              ...(tournament ? [
+                { label: "CPU", value: CPU_LEVEL_LABEL[draft.cpuLevel] },
+                { label: "Vagas livres", value: draft.fillWithCpu ? "Viram CPU" : "Ficam livres" },
+              ] : []),
+              { label: "Espectadores", value: draft.allowSpectators ? "Podem assistir" : "Não" },
+              { label: "Senha", value: draft.password ? "Com senha" : "Sala aberta" },
+            ]}
+          />
         </div>
-      </fieldset>
+      </Page>
 
-      <fieldset className="bob-choice">
-        <legend>Regras</legend>
-        <div className="bob-chips">
-          {RULES.map((id) => (
-            <button key={id} type="button" aria-pressed={draft.rules === id} data-testid={`bob-rules-${id}`} onClick={() => onDraft({ rules: id })}>
-              <strong>{BOB_RULE_PRESETS[id].label}</strong>
-              <small>{BOB_RULE_PRESETS[id].detail}</small>
-            </button>
-          ))}
+      <Page side="right" label="Criar sala" className="bob-form-page">
+        <BackButton onClick={onBack} />
+        <h1 id={`${baseId}-title`} className="bob-question">Criar sala</h1>
+
+        <div className="bob-playing-with">
+          <BobCrest team={team} size={40} />
+          <p>Você joga com: <b>{team.name}</b></p>
+          <button type="button" className="bob-ghost-button" onClick={onPickTeam}>Trocar time</button>
         </div>
-      </fieldset>
 
-      {tournament && (
+        <div className="bob-field" data-invalid={nameError ? "true" : undefined}>
+          <label htmlFor={`${baseId}-nick`}>Seu nome <small>{LIMITS.nickname[0]} a {LIMITS.nickname[1]} letras</small></label>
+          <input
+            id={`${baseId}-nick`}
+            value={nickname}
+            maxLength={LIMITS.nickname[1]}
+            autoComplete="nickname"
+            onChange={(event) => onDraft({ nickname: event.target.value })}
+            onKeyDown={(event) => {
+              // Enter segurado repete; o Enter que confirma a sugestão do teclado (IME) não envia.
+              if (event.key !== "Enter" || event.repeat || event.nativeEvent.isComposing) return;
+              event.preventDefault();
+              submit();
+            }}
+          />
+          {nameError && <span className="bob-field-error">{nameError}</span>}
+        </div>
+
         <fieldset className="bob-choice">
-          <legend>Nível da CPU</legend>
-          <div className="bob-chips bob-chips-compact">
-            {LEVELS.map((level) => (
-              <button key={level} type="button" aria-pressed={draft.cpuLevel === level} onClick={() => onDraft({ cpuLevel: level })}>
-                <strong>{CPU_LEVEL_LABEL[level]}</strong>
+          <legend>Formato</legend>
+          <div className="bob-format-grid">
+            {FORMATS.map((item) => (
+              <button key={item.id} type="button" className="bob-format-card" data-testid={`bob-format-${item.id}`} aria-pressed={draft.format === item.id} onClick={() => onDraft({ format: item.id })}>
+                <strong>{item.label}</strong>
+                <small>{item.detail}</small>
               </button>
             ))}
           </div>
-          <Switch label="Completar vagas com CPU" checked={draft.fillWithCpu} onChange={(value) => onDraft({ fillWithCpu: value })} testId="bob-fill-cpu" />
         </fieldset>
-      )}
 
-      <details className="bob-more" open={extrasOpen} onToggle={(event) => setExtrasOpen(event.currentTarget.open)}>
-        <summary>Mais opções</summary>
-        <Switch label="Permitir espectadores" checked={draft.allowSpectators} onChange={(value) => onDraft({ allowSpectators: value })} />
-        <div className="bob-field">
-          <label htmlFor={`${baseId}-pass`}>Senha da sala (opcional) <small>até {PASSWORD_MAX}</small></label>
-          <input
-            id={`${baseId}-pass`}
-            value={draft.password}
-            maxLength={PASSWORD_MAX}
-            autoComplete="off"
-            placeholder="Deixe vazio para sala aberta"
-            onChange={(event) => onDraft({ password: event.target.value })}
-          />
-        </div>
-      </details>
+        <fieldset className="bob-choice">
+          <legend>Regras</legend>
+          <div className="bob-chips">
+            {RULES.map((id) => (
+              <button key={id} type="button" aria-pressed={draft.rules === id} data-testid={`bob-rules-${id}`} onClick={() => onDraft({ rules: id })}>
+                <strong>{BOB_RULE_PRESETS[id].label}</strong>
+                <small>{BOB_RULE_PRESETS[id].detail}</small>
+              </button>
+            ))}
+          </div>
+        </fieldset>
 
-      {error && (
-        <div className="bob-error-card" role="alert">
-          <p>{joinErrorText(error)}</p>
-          {networkError && <button type="button" className="bob-ghost-button" data-testid="bob-diagnostics" onClick={onDiagnostics}>Testar conexão</button>}
-        </div>
-      )}
+        {tournament && (
+          <fieldset className="bob-choice">
+            <legend>Nível da CPU</legend>
+            <div className="bob-chips bob-chips-compact">
+              {LEVELS.map((level) => (
+                <button key={level} type="button" aria-pressed={draft.cpuLevel === level} onClick={() => onDraft({ cpuLevel: level })}>
+                  <strong>{CPU_LEVEL_LABEL[level]}</strong>
+                </button>
+              ))}
+            </div>
+            <Switch label="Completar vagas com CPU" checked={draft.fillWithCpu} onChange={(value) => onDraft({ fillWithCpu: value })} testId="bob-fill-cpu" />
+          </fieldset>
+        )}
 
-      <button type="button" className="primary-button bob-submit" data-testid="bob-create-submit" disabled={busy} onClick={submit}>
-        {busy ? "Abrindo a sala…" : networkError ? "Tentar de novo" : "Abrir sala"}
-      </button>
-    </section>
+        <details className="bob-more" open={extrasOpen} onToggle={(event) => setExtrasOpen(event.currentTarget.open)}>
+          <summary>Mais opções</summary>
+          <Switch label="Permitir espectadores" checked={draft.allowSpectators} onChange={(value) => onDraft({ allowSpectators: value })} />
+          <div className="bob-field">
+            <label htmlFor={`${baseId}-pass`}>Senha da sala (opcional) <small>até {PASSWORD_MAX}</small></label>
+            <input
+              id={`${baseId}-pass`}
+              value={draft.password}
+              maxLength={PASSWORD_MAX}
+              autoComplete="off"
+              placeholder="Deixe vazio para sala aberta"
+              onChange={(event) => onDraft({ password: event.target.value })}
+            />
+          </div>
+        </details>
+
+        {error && (
+          <div className="bob-error-card" role="alert">
+            <p>{joinErrorText(error)}</p>
+            {networkError && <button type="button" className="bob-ghost-button" data-testid="bob-diagnostics" onClick={onDiagnostics}>Testar conexão</button>}
+          </div>
+        )}
+
+        <Dock>
+          <button type="button" className="primary-button bob-submit" data-testid="bob-create-submit" disabled={busy} onClick={submit}>
+            {busy ? "Abrindo a sala…" : networkError ? "Tentar de novo" : "Abrir sala"}
+          </button>
+        </Dock>
+        <Colophon />
+        <DockSpacer />
+      </Page>
+    </Spread>
   );
 }

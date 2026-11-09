@@ -124,12 +124,26 @@ export default function DiagnosticsSheet({ lastError, onClose }: {
   const running = !report && !broken && !loadFailed;
 
   return (
-    <BobSheet labelledBy={titleId} className="bob-diag-sheet" onClose={onClose}>
-      <header className="bob-sheet-head">
-        <h2 id={titleId}>Testar conexão</h2>
-        <button type="button" className="icon-button" aria-label="Fechar" onClick={onClose}>×</button>
-      </header>
-
+    <BobSheet
+      labelledBy={titleId}
+      className="bob-diag-sheet"
+      title="Testar conexão"
+      closeLabel="Fechar"
+      onClose={onClose}
+      footer={(
+        <div className="bob-confirm-actions">
+          {loadFailed ? (
+            // O mesmo import() cairia na falha guardada do pedaço: "Testar de novo" não resolveria.
+            <button type="button" className="secondary-button" data-testid="bob-diag-reload" onClick={() => window.location.reload()}>Recarregar</button>
+          ) : (
+            <button type="button" className="secondary-button" data-testid="bob-diag-again" disabled={running} onClick={again}>Testar de novo</button>
+          )}
+          <button type="button" className="primary-button" data-testid="bob-diag-copy" disabled={!report} onClick={() => void copy()} aria-live="polite">
+            {copied ? "Copiado" : "Copiar diagnóstico"}
+          </button>
+        </div>
+      )}
+    >
       {checks.length === 0 && running && (
         <p className="bob-hint" role="status"><span className="bob-spinner" aria-hidden="true" />Preparando o teste…</p>
       )}
@@ -164,18 +178,6 @@ export default function DiagnosticsSheet({ lastError, onClose }: {
           <textarea id={`${titleId}-texto`} ref={fallbackRef} readOnly rows={6} value={manual} spellCheck={false} onFocus={(event) => event.currentTarget.select()} />
         </div>
       )}
-
-      <div className="bob-confirm-actions">
-        {loadFailed ? (
-          // O mesmo import() cairia na falha guardada do pedaço: "Testar de novo" não resolveria.
-          <button type="button" className="secondary-button" data-testid="bob-diag-reload" onClick={() => window.location.reload()}>Recarregar</button>
-        ) : (
-          <button type="button" className="secondary-button" data-testid="bob-diag-again" disabled={running} onClick={again}>Testar de novo</button>
-        )}
-        <button type="button" className="primary-button" data-testid="bob-diag-copy" disabled={!report} onClick={() => void copy()} aria-live="polite">
-          {copied ? "Copiado" : "Copiar diagnóstico"}
-        </button>
-      </div>
     </BobSheet>
   );
 }

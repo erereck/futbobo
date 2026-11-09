@@ -90,7 +90,7 @@ function ReachSheet({ game, onClose }: { game: GameState; onClose: () => void })
 }
 
 /** Aba Jogador: a ficha do jogador no álbum — figurinha, ficha técnica, atributos, função em campo e prontuário. */
-export default function PlayerTab({ game, club, showAppearance, onEditAppearance, positionChange }: { game: GameState; club: Club; showAppearance: boolean; onEditAppearance: () => void; positionChange: PositionChangeControls }) {
+export default function PlayerTab({ game, club, showAppearance, onEditAppearance, positionChange }: { game: GameState; club: Club; showAppearance: boolean; onEditAppearance: () => void; positionChange?: PositionChangeControls }) {
   const [reachOpen, setReachOpen] = useState(false);
   const position = positionByKey(game.position);
   const country = countryById(game.nationality);
@@ -176,6 +176,8 @@ export default function PlayerTab({ game, club, showAppearance, onEditAppearance
               <p>{position.name}. Quanto mais velho e mais longe da função atual, maior o risco de o treinador recusar.</p>
             </div>
           </div>
+          {/* Sem controles (carreira arquivada no Hall): só leitura. */}
+          {positionChange && (<>
           <Stamp
             className={styles.roleToggle}
             disabled={cooldown}
@@ -218,6 +220,7 @@ export default function PlayerTab({ game, club, showAppearance, onEditAppearance
               </div>
             </div>
           )}
+          </>)}
         </section>
         </div>
       </AlbumPage>

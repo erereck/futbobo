@@ -541,7 +541,7 @@ test("erro da busca: uma ação principal só, \"Testar conexão\" nos erros de 
   const join = read("app/bobonline/screens/JoinRoomScreen.tsx");
   // "Tentar de novo" é o próprio botão de entrar (o cartão não repete o botão: r-sim, recomendação 4).
   assert.doesNotMatch(join, />Tentar de novo<\/button>/);
-  assert.match(join, /\{retry \? "Tentar de novo" : <>Entrar <span>→<\/span><\/>\}/);
+  assert.match(join, /\{retry \? "Tentar de novo" : "Entrar"\}/);
   assert.match(join, /networkError && <button type="button" className="bob-ghost-button" data-testid="bob-diagnostics" onClick=\{onDiagnostics\}>Testar conexão<\/button>/);
   assert.match(join, /networkError && clockNote && <p className="bob-error-note">\{clockNote\}<\/p>/);
   const create = read("app/bobonline/screens/CreateRoomScreen.tsx");

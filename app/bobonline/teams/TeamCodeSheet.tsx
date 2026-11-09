@@ -1,10 +1,12 @@
 "use client";
 
 // Folhas do vestiário: exportar/importar o código do time, a confirmação de
-// ações sem volta e o aviso curto (toast) das telas de time.
+// ações sem volta e o aviso curto (toast) das telas de time. O papel é o da folha
+// solta do álbum (screens/paper.tsx).
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { SheetPaper, paper, type SheetInk } from "../screens/paper";
 import type { BobTeam } from "../types";
 import { exportTeamCode } from "./codes";
 import { importTeam, showTeamsToast, useTeamsToast, type ImportResult } from "./team-storage";
@@ -29,12 +31,18 @@ export function BodyPortal({ children }: { children: ReactNode }) {
 }
 
 /** Base das folhas: fundo que fecha no toque, Esc fecha, foco entra na folha. */
-function Sheet({ labelledBy, className, role = "dialog", onClose, children }: {
+function Sheet({ labelledBy, className, role = "dialog", ink = "red", kicker, title, closeLabel = "Fechar", footer, onClose, children }: {
   labelledBy: string;
   className?: string;
   role?: "dialog" | "alertdialog";
+  ink?: SheetInk;
+  kicker?: ReactNode;
+  title: ReactNode;
+  /** Com rótulo: o "×" na faixa. */
+  closeLabel?: string | null;
+  footer?: ReactNode;
   onClose: () => void;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   const sheetRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -50,19 +58,21 @@ function Sheet({ labelledBy, className, role = "dialog", onClose, children }: {
   }
   return (
     <BodyPortal>
-      <div className="modal-backdrop bob-sheet-backdrop" role="presentation" onMouseDown={onClose} onKeyDown={handleKeys}>
-        <section
-          ref={sheetRef}
-          className={`bob-sheet${className ? ` ${className}` : ""}`}
-          role={role}
-          aria-modal="true"
-          aria-labelledby={labelledBy}
-          tabIndex={-1}
-          onMouseDown={(event) => event.stopPropagation()}
-        >
-          {children}
-        </section>
-      </div>
+      <SheetPaper
+        ink={ink}
+        titleId={labelledBy}
+        kicker={kicker}
+        title={title}
+        role={role}
+        className={className}
+        sheetRef={sheetRef}
+        onClose={onClose}
+        closeLabel={closeLabel}
+        onKeyDown={handleKeys}
+        footer={footer}
+      >
+        {children}
+      </SheetPaper>
     </BodyPortal>
   );
 }
@@ -78,13 +88,22 @@ export function ConfirmSheet({ title, detail, confirmLabel, cancelLabel = "Cance
 }) {
   const titleId = useId();
   return (
-    <Sheet labelledBy={titleId} className="bob-confirm" role="alertdialog" onClose={onCancel}>
-      <h2 id={titleId}>{title}</h2>
-      {detail && <p>{detail}</p>}
-      <div className="bob-confirm-actions">
-        <button type="button" className="secondary-button" onClick={onCancel}>{cancelLabel}</button>
-        <button type="button" className={danger ? "bob-danger-button" : "primary-button"} onClick={onConfirm}>{confirmLabel}</button>
-      </div>
+    <Sheet
+      labelledBy={titleId}
+      className="bob-confirm"
+      role="alertdialog"
+      ink={danger ? "red" : "blue"}
+      title={title}
+      closeLabel={null}
+      onClose={onCancel}
+      footer={(
+        <div className="bob-confirm-actions">
+          <button type="button" className="secondary-button" onClick={onCancel}>{cancelLabel}</button>
+          <button type="button" className={danger ? "bob-danger-button" : "primary-button"} onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      )}
+    >
+      {detail && <p className="bob-sheet-lead">{detail}</p>}
     </Sheet>
   );
 }
@@ -94,7 +113,7 @@ export function TeamsToastHost() {
   const toast = useTeamsToast();
   return (
     <BodyPortal>
-      <div className="bob-teams-toast-region" role="status" aria-live="polite">
+      <div className={`bob-teams-toast-region ${paper.tokens}`} role="status" aria-live="polite">
         {toast && <p key={toast.id} className="bob-teams-toast">{toast.text}</p>}
       </div>
     </BodyPortal>
@@ -152,11 +171,19 @@ function ExportBody({ team, onClose }: { team: BobTeam; onClose: () => void }) {
   }
 
   return (
-    <Sheet labelledBy={titleId} className="bob-code-sheet" onClose={onClose}>
-      <header className="bob-sheet-head">
-        <div><span>VESTIÁRIO</span><h2 id={titleId}>Código do time</h2></div>
-        <button type="button" className="icon-button" aria-label="Fechar" onClick={onClose}>×</button>
-      </header>
+    <Sheet
+      labelledBy={titleId}
+      className="bob-code-sheet"
+      kicker={team.name}
+      title="Código do time"
+      onClose={onClose}
+      footer={(
+        <div className="bob-code-actions">
+          {canShare && <button type="button" className="secondary-button" disabled={!text} onClick={share}>Compartilhar</button>}
+          <button type="button" className="primary-button" disabled={!text} onClick={copy}>Copiar código</button>
+        </div>
+      )}
+    >
       <div className="bob-field">
         <label htmlFor={fieldId}>Código do time</label>
         <textarea
@@ -171,11 +198,7 @@ function ExportBody({ team, onClose }: { team: BobTeam; onClose: () => void }) {
         />
       </div>
       {holdHint && <p className="bob-sheet-hint">Toque e segure para copiar.</p>}
-      <div className="bob-code-actions">
-        <button type="button" className="primary-button" disabled={!text} onClick={copy}>Copiar código</button>
-        {canShare && <button type="button" className="secondary-button" disabled={!text} onClick={share}>Compartilhar</button>}
-      </div>
-      <p className="bob-sheet-help">Cole este código em outro aparelho em Meus times → Importar código.</p>
+      <p className="bob-sheet-help">Em outro aparelho, cole em Meus times, no Importar código.</p>
     </Sheet>
   );
 }
@@ -205,11 +228,20 @@ function ImportBody({ onClose, onImported }: { onClose: () => void; onImported: 
   }
 
   return (
-    <Sheet labelledBy={titleId} className="bob-code-sheet" onClose={onClose}>
-      <header className="bob-sheet-head">
-        <div><span>VESTIÁRIO</span><h2 id={titleId}>Importar código</h2></div>
-        <button type="button" className="icon-button" aria-label="Fechar" onClick={onClose}>×</button>
-      </header>
+    <Sheet
+      labelledBy={titleId}
+      className="bob-code-sheet"
+      kicker="Meus times"
+      title="Importar código"
+      onClose={onClose}
+      footer={(
+        <div className="bob-code-actions">
+          <button type="button" className="primary-button" disabled={busy} aria-busy={busy || undefined} onClick={submit}>
+            {busy ? "Importando…" : "Importar"}
+          </button>
+        </div>
+      )}
+    >
       <div className="bob-field" data-invalid={error ? "true" : undefined}>
         <label htmlFor={fieldId}>Cole o código do time</label>
         <textarea
@@ -229,11 +261,6 @@ function ImportBody({ onClose, onImported }: { onClose: () => void; onImported: 
           }}
         />
         {error && <small id={`${fieldId}-erro`} className="bob-field-error">{error}</small>}
-      </div>
-      <div className="bob-code-actions">
-        <button type="button" className="primary-button" disabled={busy} aria-busy={busy || undefined} onClick={submit}>
-          {busy ? "Importando…" : "Importar"}
-        </button>
       </div>
     </Sheet>
   );

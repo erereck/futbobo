@@ -23,6 +23,8 @@ Concept de origem: `concepts/carreira/02-album.html`.
 | `intro/CreationSpread.tsx`, `intro/IntroParts.tsx`, `intro/intro.module.css` | introdução | ficha do atleta: a figurinha se monta à esquerda (cores do país até entrar num clube) e uma pergunta por vez à direita (nome, posição no campo de botão, camisa e pé, visual/país/história, clube da base) |
 | `intro/BaseSpreads.tsx` | introdução | base: escolha Simular/Jogar, anos da base colados um por um e o primeiro contrato (propostas iguais às da janela de transferências). O Scorebobo da base fica na própria tela |
 | `menu/HomeSpread.tsx`, `menu/menu.module.css` | menu | primeira folha: Rumo ao Estrelato com a figurinha da última carreira (continuar num toque), outras carreiras e o espaço vazio da nova; índice com os outros modos e o resto do álbum |
+| `SummarySpread.tsx`, `summary.module.css` | fim de carreira | última página: figurinha final, legado, números, caminho e pôster; taças, prêmios, história, arquivo por clube e Hall. Também é a capa do `HallCareerViewer` (`../HallCareerViewer.tsx`), que abre a carreira arquivada com as mesmas abas, só para ver |
+| `useDockLift.ts` | casca | `--dock-lift`: o rodapé fixo (dock, abas, folhas) sobe até a área visível quando o navegador deixa o layout maior que a tela |
 | `menu/MenuSpreads.tsx`, `menu/pages.module.css` | menu | Hall da Fama (1º do álbum + ranking), Conquistas (figurinhas numeradas por raridade), folha de excluir carreira e `PaperScreen`, a folha solta sobre a mesa de Configurações, Instalar, Novidades e Outros jogos |
 
 Cada aba calcula o que precisa a partir de `game` (GameState); o `CareerGame` só passa estado e ações.
@@ -57,5 +59,10 @@ A faixa de cabeçalho de cada aba (`InkBand`) usa a cor dela.
   Nada de overflow horizontal em 360 px.
 - Jogo idêntico: só apresentação muda. Mesmos textos de consequência, mesmas regras, mesmos botões.
 - Sem abas do índice (menu, introdução), `AlbumShell centered` põe o álbum no meio da mesa.
+- Fora desta pasta, no mesmo papel: a partida de botão (bloco "v97 — Álbum" no fim de `app/botao/botao.css`, preso em
+  `.botao-root`: placar como ingresso, a vez de quem na fita amarela, carimbos, pausas em papel; a mesa e o 3D não mudam),
+  a base jogada (`.paper` em `../CareerMinigames.module.css`; o minigame do Scorebobo abre com o visual dele),
+  o aviso do Android (`app/AndroidInstallDialog.tsx`, folha solta) e o convite do Modo 3D (`FutboboShell.module.css`).
+- Celular: cada tela tenta caber inteira, sem rolar. Listas longas (conquistas, arquivo da carreira) podem rolar.
 - O menu continua disparando a carreira pela tela antiga de boas-vindas do `CareerGame` (`.career-new-tile`, `.career-load-tile`);
   ela fica invisível sob o papel (`FutboboShell.module.css`). O índice das carreiras guarda `number` e `appearance` para a figurinha do menu.

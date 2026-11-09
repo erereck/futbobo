@@ -1837,7 +1837,7 @@ export default function BotaoMatch({
         <div className="botao-hud-top">
           {showcase ? (
             <span className="botao-showcase-live">
-              <i aria-hidden="true" /> AO VIVO
+              <i aria-hidden="true" /> Ao vivo
             </span>
           ) : null}
           <span className="botao-competition">
@@ -1851,7 +1851,7 @@ export default function BotaoMatch({
                 ? "Pênalti por demora"
                 : "Pênaltis"
               : state.finalShotGrace
-                ? "ÚLTIMO LANCE · 00:00"
+                ? "Último lance · 00:00"
                 : `${paused ? "Pausado" : periodName(state)} · ${formatClock(shownClock)}`}
           </span>
         </div>
@@ -1874,7 +1874,7 @@ export default function BotaoMatch({
         </div>
         {penalties && state.penaltyReason === "inactivity" ? (
           <div className="botao-inactivity-penalty-strip">
-            PÊNALTI PARA {online ? teamOf(penalties.turn).shortName : setup.cpuTeam.shortName}
+            Pênalti para o {online ? teamOf(penalties.turn).shortName : setup.cpuTeam.shortName}
           </div>
         ) : penalties ? (
           <div className="botao-penalty-track">
@@ -1919,9 +1919,9 @@ export default function BotaoMatch({
             >
               {localMatch ? (
                 <>
-                  X1 LOCAL ·{" "}
-                  <span className="botao-pointer-desktop">UM MOUSE</span>
-                  <span className="botao-pointer-touch">TOQUE NA TELA</span>
+                  X1 local ·{" "}
+                  <span className="botao-pointer-desktop">um mouse</span>
+                  <span className="botao-pointer-touch">toque na tela</span>
                 </>
               ) : (
                 `${userFormation.name} · ${userFormation.shape}`
@@ -1938,12 +1938,12 @@ export default function BotaoMatch({
               </span>
             ) : player ? (
               <span className="botao-chip botao-chip-you">
-                VC #{player.number} · {roleLabel}
+                Você · #{player.number} · {roleLabel}
               </span>
             ) : null}
             {state.playerGoals > 0 || state.playerAssists > 0 ? (
               <span className="botao-chip botao-chip-stat">
-                {state.playerGoals}G {state.playerAssists}A
+                {state.playerGoals} {state.playerGoals === 1 ? "gol" : "gols"} · {state.playerAssists} {state.playerAssists === 1 ? "assist." : "assists."}
               </span>
             ) : null}
           </div>
@@ -1957,7 +1957,7 @@ export default function BotaoMatch({
           aria-label="Comemoração contra ex-clube"
         >
           <div className="botao-former-club-card">
-            <small>LEI DO EX · {formerClubGoalPrompt.goalNumber}º GOL</small>
+            <small>Lei do ex · {formerClubGoalPrompt.goalNumber}º gol</small>
             <strong>Gol contra o {setup.formerClub.shortName}</strong>
             <p>
               Você passou por esse clube. O estádio está olhando para a sua
@@ -1969,7 +1969,7 @@ export default function BotaoMatch({
                 className="botao-former-celebrate"
                 onClick={() => chooseFormerClubCelebration("celebrate")}
               >
-                <b>🔥 Comemorar</b>
+                <b>Comemorar</b>
                 <span>Assume a camisa atual e aceita a reação.</span>
               </button>
               <button
@@ -1977,7 +1977,7 @@ export default function BotaoMatch({
                 className="botao-former-respect"
                 onClick={() => chooseFormerClubCelebration("respect")}
               >
-                <b>🤝 Não comemorar</b>
+                <b>Não comemorar</b>
                 <span>Respeita sua história com o ex-clube.</span>
               </button>
             </div>
@@ -2036,7 +2036,7 @@ export default function BotaoMatch({
           >
             <TeamCrest team={goalCaption.side === "user" ? setup.userTeam : setup.cpuTeam} size={30} />
             <span>
-              <small>{goalCaption.ownGoal ? "GOL CONTRA" : "GOL"} · {goalCaption.minute}{goalCaption.signature ? ` · ${goalCaption.signature}` : null}</small>
+              <small>{goalCaption.ownGoal ? "Gol contra" : "Gol"} · {goalCaption.minute}{goalCaption.signature ? ` · ${goalCaption.signature}` : null}</small>
               <strong>{goalCaption.scorer}</strong>
             </span>
             <b>{state.score[leftSide]}<i>×</i>{state.score[rightSide]}</b>
@@ -2054,7 +2054,7 @@ export default function BotaoMatch({
             aria-live="assertive"
           >
             <div>
-              <small>{setup.managerMode ? "SEM ENROLAR" : "SEU TEMPO"}</small>
+              <small>{setup.managerMode ? "Sem enrolar" : "Seu tempo"}</small>
               <span>{setup.managerMode ? "chute antes do zero ou é pênalti para o adversário" : "Chute antes do zero para evitar pênalti ao adversário"}</span>
             </div>
             <strong>{shownIdleCountdown}</strong>
@@ -2066,7 +2066,7 @@ export default function BotaoMatch({
             <span className="botao-pause-mark" aria-hidden="true">
               II
             </span>
-            <small>INTERVALO TÉCNICO</small>
+            <small>Intervalo técnico</small>
             <strong>Partida pausada</strong>
             <p>
               {localMatch
@@ -2078,7 +2078,7 @@ export default function BotaoMatch({
               className="botao-primary"
               onClick={togglePause}
             >
-              Retomar partida <span aria-hidden="true">▶</span>
+              Retomar partida
             </button>
           </div>
         ) : null}
@@ -2281,7 +2281,7 @@ export default function BotaoMatch({
           </p>
         ) : state.finalShotGrace ? (
           <p className="botao-turn botao-turn-active botao-turn-final-shot">
-            00:00 · ÚLTIMO LANCE — solte e deixe a bola decidir
+            00:00 · último lance: solte e deixe a bola decidir
           </p>
         ) : yourTurn ? (
           <p className="botao-turn botao-turn-active">
@@ -2355,29 +2355,33 @@ export default function BotaoMatch({
               selectedRef.current = null;
             }}
           >
-            {desktopLandscape ? "Campo em pé" : "Virar campo"} ↻
+            {desktopLandscape ? "Campo em pé" : "Virar campo"}
           </button>
           {view3dReady ? (
             <button
               type="button"
               className="botao-ghost botao-camera-reset"
               title={!setup.managerMode ? "Atalho: C" : undefined}
+              aria-label="Centralizar câmera"
               onClick={() => view3dRef.current?.resetCamera()}
             >
-              Centralizar câmera
+              <span className="botao-label-wide">Centralizar câmera</span>
+              <span className="botao-label-short" aria-hidden="true">Câmera</span>
             </button>
           ) : null}
           <button
             type="button"
             className="botao-ghost botao-mobile-size-toggle"
             aria-pressed={compactMobileTable}
+            aria-label={compactMobileTable ? "Ampliar mesa" : "Encolher mesa"}
             onClick={() => setCompactMobileTable((current) => !current)}
           >
-            {compactMobileTable ? "Ampliar mesa" : "Encolher mesa"}
+            <span className="botao-label-wide">{compactMobileTable ? "Ampliar mesa" : "Encolher mesa"}</span>
+            <span className="botao-label-short" aria-hidden="true">{compactMobileTable ? "Ampliar" : "Encolher"}</span>
           </button>
         </div>
         {/* Online não tem pausa. */}
-        {!setup.managerMode && <span className="botao-key-hint">{online ? "ATALHOS: M SOM" : "ATALHOS: P PAUSA · M SOM"}{view3dReady ? " · C CÂMERA" : ""}</span>}
+        {!setup.managerMode && <span className="botao-key-hint">{online ? "Atalhos: M som" : "Atalhos: P pausa · M som"}{view3dReady ? " · C câmera" : ""}</span>}
         {view3dReady ? (
           <span className="botao-3d-hint">
             <span className="botao-pointer-desktop">Botão direito gira o campo · roda aproxima</span>

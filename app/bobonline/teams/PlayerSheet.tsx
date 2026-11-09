@@ -10,6 +10,7 @@ import PlayerAppearanceEditor from "../../PlayerAppearanceEditor";
 import type { BobPlayer, BobTeam } from "../types";
 import { newSeed, randomBobPlayer } from "./generator";
 import { LIMITS, cleanText, textLength } from "./model";
+import { SheetPaper, paper } from "../screens/paper";
 import { BodyPortal } from "./TeamCodeSheet";
 import "./teams.css";
 
@@ -111,29 +112,30 @@ export default function PlayerSheet({
         />
       </div>
       {numberError && <small id={`${numberId}-erro`} className="bob-field-error bob-psheet-number-error">{numberError}</small>}
-      <div className="bob-psheet-buttons">
-        <button type="button" className="secondary-button" onClick={reroll}>Sortear jogador</button>
-        <button type="button" className="primary-button" onClick={done}>Pronto <span>✓</span></button>
-      </div>
     </div>
   );
 
   return (
     <BodyPortal>
-      <div className="modal-backdrop appearance-editor-backdrop bob-sheet-backdrop" role="presentation" onMouseDown={onClose} onKeyDown={handleKeys}>
-        <section
-          ref={sheetRef}
-          className="appearance-editor-sheet bob-psheet"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={titleId}
-          tabIndex={-1}
-          onMouseDown={(event) => event.stopPropagation()}
-        >
-          <header>
-            <div><span>VESTIÁRIO · #{Number.isFinite(player.number) ? player.number : "?"}</span><h2 id={titleId}>Personalizar jogador</h2></div>
-            <button type="button" className="icon-button" aria-label="Fechar editor" onClick={onClose}>×</button>
-          </header>
+      <SheetPaper
+        ink="red"
+        size="wide"
+        titleId={titleId}
+        kicker={`${cleanText(team.name, LIMITS.teamName[1]) || "Vestiário"} · camisa ${Number.isFinite(player.number) ? player.number : "?"}`}
+        title="Personalizar jogador"
+        className="bob-psheet"
+        sheetRef={sheetRef}
+        onClose={onClose}
+        closeLabel="Fechar editor"
+        onKeyDown={handleKeys}
+        footer={(
+          <div className="bob-psheet-buttons">
+            <button type="button" className="secondary-button" onClick={reroll}>Sortear jogador</button>
+            <button type="button" className="primary-button" onClick={done}>Pronto</button>
+          </div>
+        )}
+      >
+        <div className={paper.editorScope}>
           <PlayerAppearanceEditor
             compact
             value={player.appearance}
@@ -145,8 +147,8 @@ export default function PlayerSheet({
             kitPattern={team.kitPattern}
             previewExtras={extras}
           />
-        </section>
-      </div>
+        </div>
+      </SheetPaper>
     </BodyPortal>
   );
 }

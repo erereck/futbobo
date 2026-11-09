@@ -24,12 +24,12 @@ import type { BotaoMatchResult, BotaoMatchSetup } from "../../botao/types";
 import { PLAYER_STORIES, playerStoryById } from "../../player-stories";
 import type { PlayerStoryId } from "../../player-stories";
 import type { AppSettings, AwardNomination, CareerHallEntry, ChallengeResult, CompetitionId, CompetitionResult, CustomClubDefinition, GameState, InstallPromptEvent, MonteCarloReport, PendingBotaoMatch, Phase, SeasonRecord, SeasonResult, SocialPost, TransferOffer } from "../../career/model";
-import { BALLON_DOR_EXCLUDED_TROPHIES, BOTAO_IN_PROGRESS_KEY, CHALLENGE_RESULTS_KEY, CHALLENGE_SAVE_KEY, HALL_OF_FAME_KEY, ORIGINAL_CLUB_PRESENTATION, SAVE_KEY, SETTINGS_KEY, applyCustomClubDefinitions, archivedCareerState, awardFinalists, awardPresentation, awardTierWeight, careerHallEntry, createCareerRivals, createPlayerAttributes, dailyChallenge, fictionalAwardWinner, initialState, normalizeSave, randomPlayerName, selectCareerTraits, shiftPlayerAttributes } from "../../career/state";
+import { BALLON_DOR_EXCLUDED_TROPHIES, BOTAO_IN_PROGRESS_KEY, CHALLENGE_RESULTS_KEY, CHALLENGE_SAVE_KEY, HALL_OF_FAME_KEY, ORIGINAL_CLUB_PRESENTATION, SAVE_KEY, SETTINGS_KEY, applyCustomClubDefinitions, archivedCareerState, awardFinalists, awardTierWeight, careerHallEntry, createCareerRivals, createPlayerAttributes, dailyChallenge, fictionalAwardWinner, initialState, normalizeSave, randomPlayerName, selectCareerTraits, shiftPlayerAttributes } from "../../career/state";
 import { clamp, clubById, pick, seeded } from "../../career/shared";
 import { eventForState, runMonteCarloCareers, simulateSeason } from "../../career/simulation";
 import { PLAYABLE_ACADEMY_COUNTRIES, academyRouteCopy, continentalNationalTournament, continentalSlotAfterSeason, defaultAcademyCountry, hasLocalAcademyRoute, initialContinentalSlot, isEuropeanClub, positionByKey, randomAcademyClubs, sortedCountries } from "../../career/academy";
-import { POSITION_FIELD_SPOTS, fanMood, formatFollowers, formatMoney, mergeEffects, publicImageProfile, seasonAverageRating, simulatedWorldCupStats, worldCupStatsForSeason } from "../../career/performance";
-import { BrandMark, ClubBadge, CompetitionBadge, Metric, NationBadge, TROPHY_PRESENTATIONS, TrophyGallery } from "./CareerPrimitives";
+import { POSITION_FIELD_SPOTS, fanMood, formatFollowers, mergeEffects, publicImageProfile, simulatedWorldCupStats, worldCupStatsForSeason } from "../../career/performance";
+import { BrandMark, ClubBadge, Metric, NationBadge, TROPHY_PRESENTATIONS } from "./CareerPrimitives";
 import { applyEffect, applyStoryOrigin, createYouthJourney, selectNextEvent, storyClubCandidate } from "../../career/events";
 import { buildFormerClubConference, buildPressConference, buildTransferPresentation } from "../../career/press-conferences";
 import { isCycleShopDue, purchaseCycleShopItem } from "../../career/cycle-shop";
@@ -39,6 +39,7 @@ import { exportCareerStorageSnapshot, importCareerStorageSnapshot } from "../../
 import { compactBotaoMatchResult, compactGameForPersistence } from "../../career/save-compaction";
 import { applyNationalBotaoProduction } from "../../career/botao-production";
 import CreationSpread from "./album/intro/CreationSpread";
+import SummarySpread from "./album/SummarySpread";
 import { FirstContractSpread, YouthChoiceSpread, YouthSimSpread } from "./album/intro/BaseSpreads";
 import PressConferenceDialog from "./PressConferenceDialog";
 import CycleShopDialog from "./CycleShopDialog";
@@ -2295,9 +2296,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
 
   const shellPhase = hallPreview ? "summary" : game.phase;
   // A carreira (decisão, abas, consequência, fim de temporada e mercado) é o álbum: página que rola, sem a casca antiga.
-  // A introdução (criação, base simulada e primeiro contrato) também; só o Scorebobo da base fica na própria tela.
-  const youthPlayOnScreen = game.phase === "youth" && (youthMode === "play" || (!youthMode && youthPlayRequested));
-  const albumHost = !hallPreview && (ALBUM_PHASES.has(game.phase) || (INTRO_PHASES.has(game.phase) && !youthPlayOnScreen));
+  // A introdução (criação, base e primeiro contrato) também; o minigame do Scorebobo abre por cima, na tela dele.
+  const albumHost = Boolean(hallPreview) || game.phase === "summary" || ALBUM_PHASES.has(game.phase) || INTRO_PHASES.has(game.phase);
   const shellClass = `app-shell app-shell-${shellPhase}${shellPhase === "welcome" ? " app-shell-welcome" : ""}${albumHost ? ` ${albumHostClass}` : ""}`;
 
   if (monteCarloReport) {
@@ -3149,172 +3149,36 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       )}
 
       {(game.phase === "summary" || hallPreview) && (
-        <section className="summary-screen screen-enter">
-          {hallPreview && (
-            <div className="summary-preview-bar">
-              <button type="button" onClick={closeHallCareer}>← Voltar ao ranking</button>
-              <div><small>CARREIRA ARQUIVADA</small><strong>Você está revendo a história de {displayGame.name}</strong></div>
-            </div>
-          )}
-          {hallPreviewLegacy && (
-            <div className="summary-legacy-warning">
-              Este registro é anterior ao arquivo completo. Números gerais foram recuperados, mas alguns detalhes de prêmios e clubes não existiam no save antigo.
-            </div>
-          )}
-          {displayGame.challengeId && (
-            <section className="challenge-summary-banner">
-              <div><span>DESAFIO FUTBOBO CONCLUÍDO</span><strong>{displayGame.challengeId}</strong><small>Mesmo ponto de partida. Este foi o seu caminho.</small></div>
-              <b>{displayGame.legacyPoints}<small>PONTOS</small></b>
-            </section>
-          )}
-          <div className="summary-confetti" aria-hidden="true">✦ · ★ · ✦ · ★ · ✦</div>
-          <span className="eyebrow">CARREIRA FINALIZADA</span>
-          <h1>Uma história que só você viveu.</h1>
-          <div className="share-card">
-            <div className="share-brand"><BrandMark size="sm" /><strong>FUTBOBO</strong><small>MINHA CARREIRA</small></div>
-            <div className="share-player"><ClubBadge club={currentClub} size="lg" /><div><span>{displayGame.archetype}</span><h2>{displayGame.name}</h2><p>#{displayGame.number} · {position.name} · {nationCountry.abbr}</p></div><strong>{Math.max(displayGame.overall, ...displayGame.history.map((item) => item.overall), 0)}<small>PICO OVR</small></strong></div>
-            <div className="share-numbers"><Metric label="Jogos" value={displayGame.stats.appearances} /><Metric label={displayGame.position === "GOL" ? "Sem sofrer" : "Gols"} value={displayGame.position === "GOL" ? displayGame.stats.cleanSheets : displayGame.stats.goals} /><Metric label={displayGame.position === "GOL" ? "Sofridos" : "Assistências"} value={displayGame.position === "GOL" ? displayGame.stats.goalsConceded : displayGame.stats.assists} /><Metric label="Taças" value={displayGame.trophies + displayGame.nationalTrophies} tone="gold" /></div>
-            <div className="share-legacy-line"><span>LEGADO {displayGame.legacyPoints}</span><strong>{legacyStanding.label}</strong><span>{displayGame.unlockedAchievements.length}/{ACHIEVEMENTS.length} CONQUISTAS</span></div>
-            <div className="share-honours">
-              <article><span><FutboboIcon name="medal" /></span><div><small>BOLA DE OURO</small><strong>{displayGame.awardCabinet["Bola de Ouro"] ?? 0}</strong></div></article>
-              <article><span><FutboboIcon name="player" /></span><div><small>WORLD XI</small><strong>{displayGame.awardCabinet["FIFPRO World XI"] ?? 0}</strong></div></article>
-              <article><span><FutboboIcon name="trophy" /></span><div><small>PRÊMIOS</small><strong>{totalIndividualAwards}</strong></div></article>
-            </div>
-            <div className="share-trophies">
-              {shareTitleHighlights.map((entry) => (
-                <span key={entry.shortLabel}>{entry.shortLabel} {entry.count}</span>
-              ))}
-              {displayGame.trophies + displayGame.nationalTrophies === 0 && <span>EM BUSCA DA PRIMEIRA TAÇA</span>}
-            </div>
-            <div className="share-path"><span>12</span><div />{Array.from(new Set(displayGame.history.map((item) => item.clubId))).map((clubId) => <ClubBadge key={clubId} club={clubById(clubId)} size="sm" />)}<div /><span>{displayGame.age}</span></div>
-            <small className="share-url">futbobo.top</small>
-          </div>
-          <TrophyGallery state={displayGame} final />
-          <section className={`final-player-story story-${playerStoryById(displayGame.playerStoryId).tone}`}>
-            <header><b>{playerStoryById(displayGame.playerStoryId).icon}</b><div><span>A HISTÓRIA POR TRÁS DA CARREIRA</span><strong>{playerStoryById(displayGame.playerStoryId).title}</strong></div><em>{displayGame.storyLog.length} capítulo{displayGame.storyLog.length === 1 ? "" : "s"} vivido{displayGame.storyLog.length === 1 ? "" : "s"}</em></header>
-            <p>{playerStoryById(displayGame.playerStoryId).description}</p>
-            {displayGame.storyLog.length > 0 && (
-              <div>
-                {displayGame.storyLog.map((entry) => (
-                  <article key={`${entry.season}-${entry.chapter}`}><span>{entry.season}</span><div><small>CAPÍTULO {entry.chapter}</small><strong>{entry.title}</strong><p>{entry.choice} — {entry.result}</p></div></article>
-                ))}
-              </div>
-            )}
-          </section>
-          <section className="final-public-life">
-            <div className="summary-section-heading"><span>FORA DAS QUATRO LINHAS</span><strong>A marca que você deixou no mundo</strong></div>
-            <div className="final-public-grid">
-              <Metric label="Seguidores" value={formatFollowers(displayGame.followers)} tone="gold" />
-              <Metric label="Imagem" value={publicImage.label} tone="green" />
-              <Metric label="Patrocínios" value={displayGame.sponsorHistory.length + (displayGame.activeSponsor ? 1 : 0)} />
-              <Metric label="Impacto social" value={displayGame.charityReputation} />
-            </div>
-            {displayGame.activeSponsor && <article><div className="sponsor-wordmark small">{displayGame.activeSponsor.brand}</div><div><small>PARCERIA NA APOSENTADORIA</small><strong>{formatMoney(displayGame.activeSponsor.annualValue)}/ano</strong></div></article>}
-          </section>
-          <section className="final-individual-awards">
-            <div className="summary-section-heading final-awards-heading">
-              <div><span>PRÊMIOS INDIVIDUAIS</span><strong>Sua galeria de glórias</strong></div>
-              <b>{totalIndividualAwards}<small>PRÊMIOS</small></b>
-            </div>
-            {awardEntries.length > 0 ? (
-              <div className="final-awards-list">
-                {awardEntries.map(([award, count]) => {
-                  const presentation = awardPresentation(award);
-                  return (
-                    <article className={`award-${presentation.tier}`} key={award}>
-                      <span>{presentation.icon}</span>
-                      <div><small>{presentation.kicker}</small><strong>{award}</strong><p>{presentation.description}</p></div>
-                      <b>{count}<small>×</small></b>
-                    </article>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="final-awards-empty"><span><FutboboIcon name="medal" /></span><strong>Uma carreira sem prêmio não é uma carreira sem história.</strong><p>Seu legado foi construído de outras formas.</p></div>
-            )}
-          </section>
-          <section className="career-club-summary">
-            <div className="summary-section-heading club-archive-heading"><div><span>ARQUIVO POR CLUBE</span><strong>Reviva cada camisa da carreira</strong></div><b>{clubCareerSummary.length}<small>CLUBES</small></b></div>
-            {selectedClubCareer ? (
-              <div className="club-archive-layout">
-                <nav className="club-archive-tabs" aria-label="Escolher clube da carreira">
-                  {clubCareerSummary.map((entry) => {
-                    const club = clubById(entry.clubId);
-                    const selected = entry.clubId === selectedClubCareer.clubId;
-                    return (
-                      <button type="button" className={selected ? "selected" : ""} aria-pressed={selected} onClick={() => setSummaryClubId(entry.clubId)} key={entry.clubId}>
-                        <ClubBadge club={club} size="sm" />
-                        <span><strong>{club.shortName}</strong><small>{entry.firstSeason === entry.lastSeason ? entry.firstSeason : `${entry.firstSeason}–${entry.lastSeason}`} · {entry.seasons} temp.</small></span>
-                        <b>{entry.trophies}<small>TAÇAS</small></b>
-                      </button>
-                    );
-                  })}
-                </nav>
-                <article className="club-archive-dossier">
-                  {(() => {
-                    const club = clubById(selectedClubCareer.clubId);
-                    const selectedTitles = selectedClubCareer.records.flatMap((record) => record.competitions.filter((competition) => competition.champion).map((competition) => ({ ...competition, season: record.season, leagueId: record.leagueId || club.leagueId })));
-                    const selectedAwards = selectedClubCareer.records.flatMap((record) => record.awards.map((award) => ({ award, season: record.season })));
-                    return <>
-                      <header>
-                        <ClubBadge club={club} size="lg" />
-                        <div><span>{leagueById(club.leagueId).name}</span><h3>{club.name}</h3><p>{selectedClubCareer.firstSeason === selectedClubCareer.lastSeason ? selectedClubCareer.firstSeason : `${selectedClubCareer.firstSeason}–${selectedClubCareer.lastSeason}`} · {selectedClubCareer.seasons} temporada{selectedClubCareer.seasons > 1 ? "s" : ""}</p></div>
-                        <b>{selectedClubCareer.peakOverall}<small>PICO OVR</small></b>
-                      </header>
-                      <div className="club-archive-metrics">
-                        <Metric label="Jogos" value={selectedClubCareer.appearances} />
-                        <Metric label={displayGame.position === "GOL" ? "Sem sofrer" : "Gols"} value={displayGame.position === "GOL" ? selectedClubCareer.cleanSheets : selectedClubCareer.goals} tone="green" />
-                        <Metric label="Assistências" value={selectedClubCareer.assists} />
-                        <Metric label="Taças" value={selectedClubCareer.trophies} tone="gold" />
-                        <Metric label="Prêmios" value={selectedClubCareer.awards} />
-                        <Metric label="Evolução" value={`${selectedClubCareer.entryOverall}→${selectedClubCareer.exitOverall}`} />
-                      </div>
-                      {(selectedTitles.length > 0 || selectedAwards.length > 0) && <div className="club-archive-honours">
-                        {selectedTitles.map((title) => <span key={`${title.season}-${title.id}`}><CompetitionBadge competition={title} leagueId={title.leagueId} /><b>{title.name}</b><small>{title.season}</small></span>)}
-                        {selectedAwards.slice(0, 8).map((entry, index) => <span className="individual" key={`${entry.season}-${entry.award}-${index}`}><i>{awardPresentation(entry.award).icon}</i><b>{entry.award}</b><small>{entry.season}</small></span>)}
-                      </div>}
-                      <section className="club-season-ledger">
-                        <header><span>TEMPORADA POR TEMPORADA</span><small>O arquivo completo desta passagem</small></header>
-                        <div>
-                          {[...selectedClubCareer.records].reverse().map((record) => {
-                            const titles = record.competitions.filter((competition) => competition.champion);
-                            return <article key={`${record.season}-${record.clubId}`}>
-                              <time>{record.season}<small>{record.age} ANOS</small></time>
-                              <div><strong>{record.appearances} jogos · {record.position === "GOL" ? `${record.cleanSheets} sem sofrer` : `${record.goals} gols · ${record.assists} assist.`}</strong><small>{ROLE_LABELS[record.squadRole]} · nota {(record.averageRating ?? seasonAverageRating(record.performanceScore ?? 0, displayGame.seed, record.season)).toFixed(1)}</small>{record.eventTitle && <p>{record.eventTitle}</p>}</div>
-                              <span className="club-season-ovr">{record.overall}<small>OVR</small></span>
-                              {(titles.length > 0 || record.awards.length > 0) && <footer>{titles.map((title) => <CompetitionBadge key={title.id} competition={title} leagueId={record.leagueId || club.leagueId} />)}{record.awards.slice(0, 3).map((award, index) => <em key={`${award}-${index}`} title={award}>{awardPresentation(award).icon}</em>)}</footer>}
-                            </article>;
-                          })}
-                        </div>
-                      </section>
-                    </>;
-                  })()}
-                </article>
-              </div>
-            ) : <div className="empty-panel">Nenhuma temporada profissional foi registrada.</div>}
-          </section>
-          <section className="final-hall-of-fame">
-            <div className="summary-section-heading"><span>HALL DA FAMA</span><strong>As maiores carreiras deste aparelho</strong></div>
-            <div className="hall-ranking">
-              {hallOfFame.slice(0, 10).map((entry, index) => (
-                <button
-                  type="button"
-                  className={`${entry.id === `${displayGame.seed}-${displayGame.name}-${displayGame.history.length}` ? "current-career " : ""}hall-career-link`}
-                  key={entry.id}
-                  aria-label={`Ver carreira completa de ${entry.name}`}
-                  onClick={() => openHallCareer(entry)}
-                >
-                  <b>#{index + 1}</b>
-                  <ClubBadge club={clubById(entry.finalClubId)} size="sm" />
-                  <div><strong>{entry.name}</strong><small>{entry.legacyLabel} · {entry.trophies} taças · {entry.ballonDor}× Bola de Ouro</small></div>
-                  <span className="hall-score">{entry.legacyPoints}<small>PTS</small></span>
-                </button>
-              ))}
-            </div>
-            {hallOfFame.length === 0 && <div className="empty-panel"><strong>O primeiro nome ainda será gravado aqui.</strong><span>Conclua uma carreira para inaugurar o Hall da Fama deste aparelho.</span></div>}
-          </section>
-          <div className="summary-actions"><button className="primary-button" disabled={shareBusy} aria-busy={shareBusy} onClick={shareCareer}>{shareBusy ? "Criando seu pôster..." : "Compartilhar pôster da carreira"} <span>{shareBusy ? "●" : "↗"}</span></button><button className="secondary-button" onClick={displayGame.challengeId ? startChallenge : startNew}>{displayGame.challengeId ? "Tentar o mesmo desafio novamente" : "Jogar novamente"}</button></div>
-        </section>
+        <AlbumShell club={currentClub} tab={null} onTab={changeTab} showTabs={false} label="Fim de carreira">
+          <SummarySpread
+            game={displayGame}
+            club={currentClub}
+            appearance={appSettings.characterButtonsEnabled !== false ? { ...displayGame.playerAppearance, kitPattern: teamKitPattern(displayGame.seed, currentClub.id) } : null}
+            positionName={position.name}
+            nation={nationCountry}
+            legacyLabel={legacyStanding.label}
+            publicImageLabel={publicImage.label}
+            followers={formatFollowers(displayGame.followers)}
+            sponsorCount={displayGame.sponsorHistory.length + (displayGame.activeSponsor ? 1 : 0)}
+            titles={shareTitleHighlights}
+            awards={awardEntries}
+            totalAwards={totalIndividualAwards}
+            achievements={`${displayGame.unlockedAchievements.length}/${ACHIEVEMENTS.length}`}
+            story={playerStoryById(displayGame.playerStoryId)}
+            clubCareers={clubCareerSummary}
+            selectedClub={selectedClubCareer}
+            onSelectClub={setSummaryClubId}
+            hall={hallOfFame}
+            currentHallId={`${displayGame.seed}-${displayGame.name}-${displayGame.history.length}`}
+            onOpenHall={openHallCareer}
+            hallPreview={Boolean(hallPreview)}
+            legacyWarning={Boolean(hallPreviewLegacy)}
+            onCloseHall={closeHallCareer}
+            shareBusy={shareBusy}
+            onShare={shareCareer}
+            onPlayAgain={displayGame.challengeId ? startChallenge : startNew}
+          />
+        </AlbumShell>
       )}
     </main>
   );

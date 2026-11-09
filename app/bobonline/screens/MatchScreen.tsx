@@ -15,6 +15,7 @@ import type { BotaoMatchResult } from "../../botao/types";
 import type { DuelHandle } from "../room/room-api";
 import type { BobView } from "../view-pref";
 import "../../botao/botao.css";
+import { paper } from "./paper";
 
 export default function MatchScreen({
   duel,
@@ -57,7 +58,7 @@ export default function MatchScreen({
 
   if (!factory) {
     return (
-      <main className="bob-match-loading" aria-busy={!failed || undefined}>
+      <main className={`bob-match-loading ${paper.tokens}`} aria-busy={!failed || undefined}>
         {failed ? (
           <div className="bob-error-card" role="alert">
             <p>Não deu para carregar a partida. Confira a internet.</p>
@@ -97,7 +98,7 @@ export default function MatchScreen({
         onFinish={onFinish}
       />
       {!watching && leaveHint && (
-        <aside className="bob-leave-hint" role="note" data-testid="bob-leave-hint">
+        <aside className={`bob-leave-hint ${paper.tokens}`} role="note" data-testid="bob-leave-hint">
           <p>Sair do app pausa a partida. Fora por 1:30 no total = W.O.</p>
           <button type="button" className="primary-button" onClick={onHintSeen}>Entendi</button>
         </aside>

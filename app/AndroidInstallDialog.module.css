@@ -1,0 +1,22 @@
+/* Aviso do app Android dentro da folha solta do álbum. */
+.benefits { display: grid; gap: 0; }
+.benefits li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1.5px solid var(--rule);
+}
+.benefits svg {
+  width: 36px;
+  height: 36px;
+  padding: 7px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--yellow);
+}
+.benefits span { display: grid; gap: 1px; }
+.benefits strong { font-family: var(--font-display); font-stretch: 82%; font-weight: 750; font-size: 17px; line-height: 1.15; }
+.benefits small { font-size: 13px; color: var(--ink-2); }
+.note { display: block; font-size: 12.5px; color: var(--ink-3); text-wrap: pretty; }

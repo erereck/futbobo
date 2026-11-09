@@ -3192,3 +3192,398 @@
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   v97 — Álbum. A mesa e o jogo ficam iguais; em volta dela, papel impresso
+   sobre a mesa do álbum: placar como ingresso com faixa de tinta, a vez de
+   quem na fita amarela, botões como carimbos e as pausas como papel.
+   Tudo preso em .botao-root (o laboratório /botao mantém o próprio lobby).
+   ═══════════════════════════════════════════════════════════════════════ */
+.botao-root {
+  --bg: #cfd3d0;
+  --surface: #fbfbf7;
+  --surface-2: #f3f3ee;
+  --surface-3: #e9e9e1;
+  --line: rgba(22, 22, 22, 0.14);
+  --line-strong: rgba(22, 22, 22, 0.28);
+  --text: #161616;
+  --muted: #45453f;
+  --muted-2: #66665e;
+  --gold: #f6c431;
+  --red: #e0262f;
+  --green: #1f8a4c;
+  --blue: #0b5cad;
+  --display: var(--font-bricolage), "Barlow Condensed", "Arial Narrow", sans-serif;
+  --sans: var(--font-instrument), "Manrope", "Helvetica Neue", sans-serif;
+  --album-ink: #161616;
+  --album-ink-2: #45453f;
+  --album-ink-3: #66665e;
+  --album-paper: #fbfbf7;
+  --album-paper-2: #f3f3ee;
+  --album-rule: rgba(22, 22, 22, 0.14);
+  --album-rule-strong: rgba(22, 22, 22, 0.28);
+  --album-yellow: #f6c431;
+  --album-red: #e0262f;
+  --album-red-deep: #b51920;
+  --album-green: #1f8a4c;
+  --album-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --album-dots: radial-gradient(rgba(22, 22, 22, 0.16) 0.9px, transparent 1.5px) 0 0 / 5px 5px;
+  --album-dots-light: radial-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 1.7px) 0 0 / 6px 6px;
+  --album-paper-shadow: 0 1px 0 #e4e4dc, 0 2px 3px rgba(40, 40, 20, 0.2), 0 18px 34px -20px rgba(20, 20, 10, 0.45);
+  color-scheme: light;
+  color: var(--album-ink);
+  background: var(--album-grain), radial-gradient(120% 90% at 50% 35%, #dadedb 0%, #cfd3d0 55%, #bcc2bf 100%);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+/* fora do álbum o resto do app é escuro: a página inteira vira mesa enquanto a partida estiver na tela */
+html:has(.botao-root),
+body:has(.botao-root) { background: #cfd3d0; }
+
+/* ───────────── placar: ingresso de papel com a faixa de tinta ───────────── */
+.botao-root .botao-hud {
+  overflow: hidden;
+  border: 0;
+  border-radius: 6px;
+  background: var(--album-grain), var(--album-paper);
+  box-shadow: var(--album-paper-shadow);
+}
+.botao-root .botao-hud::before { content: none; }
+.botao-root .botao-hud-top {
+  margin: -12px -12px 0;
+  padding: 9px 12px;
+  background: var(--album-dots-light), var(--album-ink);
+  color: #fff;
+  font: 650 13px/1.2 var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.botao-root .botao-competition { color: #fff; }
+.botao-root .botao-period {
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: var(--album-yellow);
+  color: var(--album-ink);
+  font: 750 13px/1.2 var(--sans);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.botao-root .botao-period-urgent { background: var(--album-red); color: #fff; }
+.botao-root .botao-period-final-shot { background: var(--album-red); color: #fff; }
+.botao-root .botao-showcase-live { color: #fff; text-transform: none; letter-spacing: 0; }
+.botao-root .botao-time-progress {
+  height: 8px;
+  border-radius: 2px;
+  background: var(--album-dots), #eeeee7;
+}
+.botao-root .botao-time-progress > span { background: var(--album-ink); }
+.botao-root .botao-team strong {
+  color: var(--album-ink);
+  font: 800 18px/1.05 var(--display);
+  font-stretch: 78%;
+}
+.botao-root .botao-score {
+  color: var(--album-ink);
+  font: 800 44px/0.85 var(--display);
+  font-stretch: 75%;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.botao-root .botao-score span { color: var(--album-ink-3); font-size: 18px; }
+.botao-root-landscape .botao-team {
+  border: 1.5px solid var(--album-rule);
+  border-radius: 6px;
+  background: #fff;
+}
+.botao-root-landscape .botao-score { border-block-color: var(--album-rule); }
+.botao-root .botao-chip {
+  padding: 4px 8px;
+  border: 1.5px solid var(--album-rule);
+  border-radius: 4px;
+  background: var(--album-paper-2);
+  color: var(--album-ink-2);
+  font: 600 12px/1.2 var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.botao-root .botao-chip-you { border-color: var(--album-ink); background: var(--album-yellow); color: var(--album-ink); }
+.botao-root .botao-chip-stat { border-color: var(--album-green); color: var(--album-green); background: #fff; }
+.botao-root .botao-chip-local { color: var(--album-ink-2); }
+.botao-root .botao-local-turn-chip { border-color: var(--album-ink); background: #fff; color: var(--album-ink); }
+
+/* pênaltis: trilho de cobranças impresso */
+.botao-root .botao-penalty-row { color: var(--album-ink); }
+.botao-root .botao-penalty-row > span { font: 700 13px var(--sans); letter-spacing: 0; color: var(--album-ink-2); }
+.botao-root .botao-penalty-row > b { color: var(--album-ink); font-family: var(--display); font-stretch: 75%; font-weight: 800; font-size: 22px; }
+.botao-root .botao-penalty-dots i { border: 1.5px dashed var(--album-rule-strong); background: #fff; }
+.botao-root .botao-penalty-dots i.hit { border: 0; background: var(--album-green); }
+.botao-root .botao-penalty-dots i.miss { border: 0; background: var(--album-red); }
+.botao-root .botao-inactivity-penalty-strip {
+  border-radius: 4px;
+  background: var(--album-dots-light), var(--album-red);
+  color: #fff;
+  font: 750 14px/1.2 var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ───────────── a mesa ───────────── */
+.botao-root .botao-table-wrapper {
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 0 0 5px #fff, 0 1px 2px 5px rgba(40, 40, 20, 0.18), 0 22px 40px -16px rgba(20, 20, 10, 0.5);
+}
+
+/* avisos por cima da mesa (gol, erro, informação) */
+.botao-root .botao-flash { font-family: var(--display); font-stretch: 78%; letter-spacing: 0; }
+.botao-root .botao-flash-goal { background: rgba(246, 196, 49, 0.9); color: var(--album-ink); box-shadow: 0 0 0 2px var(--album-ink), 4px 4px 0 var(--album-ink); backdrop-filter: none; }
+.botao-root .botao-flash-bad { background: rgba(224, 38, 47, 0.9); color: #fff; backdrop-filter: none; }
+.botao-root .botao-flash-info { border: 0; background: rgba(251, 251, 247, 0.92); color: var(--album-ink); box-shadow: var(--album-paper-shadow); backdrop-filter: none; }
+
+/* contagem da regra dos segundos: faixa vermelha impressa */
+.botao-root .botao-inactivity-countdown {
+  border: 0;
+  border-radius: 6px;
+  background: var(--album-dots-light), var(--album-red);
+  color: #fff;
+  box-shadow: 0 2px 3px rgba(40, 40, 20, 0.25);
+  backdrop-filter: none;
+}
+.botao-root .botao-inactivity-countdown small { color: #fff; font: 750 13px/1.1 var(--sans); letter-spacing: 0; text-transform: none; opacity: 1; }
+.botao-root .botao-inactivity-countdown span { color: rgba(255, 255, 255, 0.92); }
+.botao-root .botao-inactivity-countdown strong { color: #fff; font-family: var(--display); font-stretch: 75%; }
+.botao-root .botao-kick-limit { background: var(--album-dots), var(--album-yellow); color: var(--album-ink); }
+.botao-root .botao-kick-limit small,
+.botao-root .botao-kick-limit span,
+.botao-root .botao-kick-limit strong { color: var(--album-ink); }
+
+/* intervalo, pênaltis e pausa: papel por cima da mesa */
+.botao-root .botao-overlay,
+.botao-root .botao-pause-overlay {
+  background: rgba(251, 251, 247, 0.94);
+  color: var(--album-ink);
+  backdrop-filter: none;
+}
+.botao-root .botao-overlay {
+  border: 0;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.botao-root .botao-overlay strong,
+.botao-root .botao-pause-overlay strong {
+  color: var(--album-ink);
+  font: 800 clamp(28px, 4.4vw, 38px)/1 var(--display);
+  font-stretch: 78%;
+  letter-spacing: -0.01em;
+}
+.botao-root .botao-overlay p,
+.botao-root .botao-pause-overlay p { color: var(--album-ink-2); font-size: 14px; }
+.botao-root .botao-overlay p b { color: var(--album-ink); }
+.botao-root .botao-pause-overlay small {
+  color: var(--album-ink-2);
+  font: 600 14px/1.2 var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.botao-root .botao-pause-mark {
+  border: 2px solid var(--album-ink);
+  border-radius: 50%;
+  background: var(--album-yellow);
+  color: var(--album-ink);
+  box-shadow: 3px 3px 0 var(--album-ink);
+}
+/* no 3D a pausa é "modo foto": a cena segue visível, só o recado fica em papel embaixo */
+.botao-root-3d .botao-pause-overlay { background: linear-gradient(to top, rgba(251, 251, 247, 0.96) 0 34%, rgba(251, 251, 247, 0) 62%); }
+
+/* ───────────── carimbos (botões) ───────────── */
+.botao-root .botao-primary,
+.botao-root .botao-ghost,
+.botao-root .botao-option {
+  border: 2px solid var(--album-ink);
+  border-radius: 6px;
+  color: var(--album-ink);
+  font: 750 16px/1 var(--display);
+  font-stretch: 82%;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: 3px 3px 0 var(--album-ink);
+  transition: translate 0.12s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.12s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.12s;
+}
+.botao-root .botao-primary { background: var(--album-yellow); }
+.botao-root .botao-ghost,
+.botao-root .botao-option { background: #fff; }
+.botao-root .botao-option[aria-pressed="true"] { background: var(--album-yellow); color: var(--album-ink); }
+.botao-root .botao-option small { color: var(--album-ink-3); }
+@media (hover: hover) {
+  .botao-root .botao-primary:not(:disabled):hover,
+  .botao-root .botao-ghost:not(:disabled):hover,
+  .botao-root .botao-option:not(:disabled):hover { translate: -1px -1px; box-shadow: 4px 4px 0 var(--album-ink); border-color: var(--album-ink); }
+}
+.botao-root .botao-primary:not(:disabled):active,
+.botao-root .botao-ghost:not(:disabled):active,
+.botao-root .botao-option:not(:disabled):active { translate: 2px 2px; box-shadow: 1px 1px 0 var(--album-ink); }
+.botao-root .botao-ghost[aria-pressed="true"] { background: var(--album-paper-2); }
+.botao-root .botao-pause-toggle { border-color: var(--album-ink); color: var(--album-ink); }
+.botao-root .botao-pause-toggle > span { color: var(--album-ink); }
+.botao-root .botao-pause-toggle[aria-pressed="true"] { background: var(--album-yellow); color: var(--album-ink); }
+
+/* ───────────── rodapé: a vez de quem, na fita amarela ───────────── */
+.botao-root .botao-controls {
+  border: 0;
+  border-radius: 6px;
+  background: var(--album-grain), var(--album-paper);
+  box-shadow: var(--album-paper-shadow);
+}
+.botao-root .botao-turn {
+  border: 1.5px solid var(--album-rule);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--album-ink);
+  font: 750 17px/1.15 var(--display);
+  font-stretch: 80%;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.botao-root .botao-turn-active,
+.botao-root .botao-turn-first-touch {
+  border-color: var(--album-ink);
+  background: var(--album-dots), var(--album-yellow);
+  color: var(--album-ink);
+}
+.botao-root .botao-turn-final-shot { border-color: var(--album-red-deep); background: var(--album-red); color: #fff; }
+.botao-root .botao-turn-paused { border-color: var(--album-rule-strong); background: var(--album-paper-2); color: var(--album-ink); }
+.botao-root .botao-turn-local-user b,
+.botao-root .botao-turn-local-cpu b { color: var(--album-ink); }
+.botao-root .botao-controls-meta,
+.botao-root .botao-controls-meta > span { color: var(--album-ink-3); font: 600 13px/1.2 var(--sans); letter-spacing: 0; text-transform: none; }
+.botao-root .botao-key-hint,
+.botao-root .botao-3d-hint { color: var(--album-ink-3); font: 500 12px/1.3 var(--sans); letter-spacing: 0; text-transform: none; }
+
+/* ───────────── Lei do Ex: papel ───────────── */
+.botao-root .botao-former-club-decision { background: rgba(32, 32, 24, 0.52); backdrop-filter: none; }
+.botao-root .botao-former-club-card {
+  border: 0;
+  border-radius: 6px;
+  background: var(--album-grain), var(--album-paper);
+  color: var(--album-ink);
+  box-shadow: var(--album-paper-shadow);
+}
+.botao-root .botao-former-club-card small { color: var(--album-ink-2); font: 650 13px/1.2 var(--sans); letter-spacing: 0; text-transform: none; }
+.botao-root .botao-former-club-card strong { color: var(--album-ink); font-family: var(--display); font-stretch: 78%; font-weight: 800; }
+.botao-root .botao-former-club-card p { color: var(--album-ink-2); }
+.botao-root .botao-former-club-actions button {
+  border: 2px solid var(--album-ink);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--album-ink);
+  box-shadow: 3px 3px 0 var(--album-ink);
+}
+.botao-root .botao-former-club-actions .botao-former-celebrate { background: var(--album-yellow); }
+.botao-root .botao-former-club-actions button b { color: var(--album-ink); font-family: var(--display); font-stretch: 80%; }
+.botao-root .botao-former-club-actions button span { color: var(--album-ink-2); }
+
+/* ───────────── 3D ───────────── */
+.botao-root .botao-3d-loading,
+.botao-root .botao-3d-notice {
+  border: 0;
+  border-radius: 6px;
+  background: rgba(251, 251, 247, 0.95);
+  color: var(--album-ink);
+  box-shadow: var(--album-paper-shadow);
+  backdrop-filter: none;
+}
+.botao-root .botao-3d-notice b { color: var(--album-ink); }
+.botao-root .botao-3d-notice span { color: var(--album-ink-2); }
+/* tarja do gol no 3D: figurinha com a faixa na cor do clube */
+.botao-root .botao-goal-caption {
+  border: 0;
+  border-left: 8px solid var(--caption-color);
+  border-radius: 6px;
+  background: var(--album-grain), var(--album-paper);
+  color: var(--album-ink);
+  box-shadow: var(--album-paper-shadow);
+}
+.botao-root .botao-goal-caption small { color: var(--album-ink-2); font: 650 12px/1.2 var(--sans); letter-spacing: 0; filter: none; }
+.botao-root .botao-goal-caption strong { color: var(--album-ink); font-weight: 800; font-stretch: 78%; font-size: 21px; }
+.botao-root .botao-goal-caption > b { background: var(--album-ink); color: #fff; border-radius: 4px; }
+.botao-root .botao-goal-caption > b i { color: rgba(255, 255, 255, 0.6); }
+.botao-root-3d-lite .botao-flash-goal { background: rgba(246, 196, 49, 0.94); }
+.botao-root-3d-lite .botao-flash-bad { background: rgba(224, 38, 47, 0.92); }
+.botao-root-3d-lite .botao-flash-info { background: rgba(251, 251, 247, 0.95); }
+
+/* ───────────── Bobonline: faixas da rede, ordem dos batedores, desistência ───────────── */
+.botao-root .botao-online-banner {
+  border: 0;
+  border-radius: 4px;
+  background: var(--album-dots-light), var(--album-ink);
+  color: #fff;
+  font-family: var(--sans);
+  letter-spacing: 0;
+  text-transform: none;
+  backdrop-filter: none;
+}
+.botao-root .botao-online-banner-unstable,
+.botao-root .botao-online-banner-countdown { color: var(--album-yellow); }
+.botao-root .botao-online-notice {
+  border: 0;
+  border-radius: 6px;
+  background: rgba(251, 251, 247, 0.95);
+  color: var(--album-ink);
+  box-shadow: var(--album-paper-shadow);
+  backdrop-filter: none;
+}
+.botao-root .botao-chip-spectator,
+.botao-root .botao-chip-opponent-idle { border-color: var(--album-rule-strong); background: #fff; color: var(--album-ink-2); }
+.botao-root .botao-order-overlay { background: rgba(32, 32, 24, 0.52); backdrop-filter: none; }
+.botao-root .botao-order-sheet {
+  border: 0;
+  border-radius: 6px;
+  background: var(--album-grain), var(--album-paper);
+  color: var(--album-ink);
+  box-shadow: var(--album-paper-shadow);
+}
+.botao-root .botao-order-sheet > strong { color: var(--album-ink); font-family: var(--display); font-stretch: 78%; font-weight: 800; }
+.botao-root .botao-order-timer,
+.botao-root .botao-order-wait { color: var(--album-ink-2); letter-spacing: 0; text-transform: none; }
+.botao-root .botao-order-row { border-color: var(--album-rule); background: #fff; color: var(--album-ink); }
+.botao-root .botao-order-number,
+.botao-root .botao-order-name { color: var(--album-ink); }
+.botao-root .botao-order-divider { color: var(--album-ink-3); letter-spacing: 0; text-transform: none; }
+.botao-root .botao-order-divider::before,
+.botao-root .botao-order-divider::after { background: var(--album-rule-strong); }
+.botao-root .botao-order-up { border: 1.5px solid var(--album-ink); background: #fff; color: var(--album-ink); }
+.botao-root .botao-order-actions { background: var(--album-paper); border-top: 1.5px dashed var(--album-rule-strong); }
+.botao-root .botao-order-actions button { border: 2px solid var(--album-ink); border-radius: 6px; background: #fff; color: var(--album-ink); box-shadow: 3px 3px 0 var(--album-ink); }
+.botao-root .botao-order-actions .botao-order-default,
+.botao-root .botao-order-actions .botao-primary { background: var(--album-yellow); }
+
+/* ───────────── celular: papel em vez de mesa, mesmas medidas ───────────── */
+@media (max-width: 540px) {
+  .botao-root { background: var(--album-grain), var(--album-paper); }
+  .botao-root .botao-hud-top { margin: -7px -9px 0; padding: 6px 9px; font-size: 12px; }
+  .botao-root .botao-period { font-size: 12px; padding: 2px 8px; }
+  .botao-root .botao-hud,
+  .botao-root .botao-controls { box-shadow: 0 1px 0 #e4e4dc, 0 1px 3px rgba(40, 40, 20, 0.18); }
+  .botao-root .botao-team strong { font-size: 16px; }
+  .botao-root .botao-score { font-size: 34px; }
+  .botao-root .botao-chip { font-size: 11px; padding: 3px 7px; }
+  .botao-root .botao-table-wrapper { box-shadow: 0 0 0 3px #fff, 0 1px 3px 3px rgba(40, 40, 20, 0.18); }
+  .botao-root .botao-turn { font-size: 15px; }
+  .botao-root .botao-controls-meta .botao-ghost { font-size: 13px; padding: 4px 10px; box-shadow: 2px 2px 0 var(--album-ink); }
+  .botao-root .botao-controls-meta > span { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .botao-root .botao-primary, .botao-root .botao-ghost, .botao-root .botao-option { transition: none; }
+}
+
+/* O X1 tinha azul próprio para as fichas da vez: no álbum a vez é tinta e papel (vence o x1.css). */
+.botao-root.botao-root-local .botao-chip-local { color: var(--album-ink-2); }
+.botao-root.botao-root-local .botao-local-turn-chip { border-color: var(--album-ink); background: #fff; color: var(--album-ink); }
+.botao-root.botao-root-local .botao-turn-local b { color: var(--album-ink); }
+
+/* Rótulos curtos no celular: os carimbos do rodapé cabem numa linha, sem rolar de lado. */
+.botao-root .botao-label-short { display: none; }
+@media (max-width: 540px) {
+  .botao-root .botao-label-wide { display: none; }
+  .botao-root .botao-label-short { display: inline; }
+  .botao-root .botao-controls-meta > span { display: none; }
+  .botao-root .botao-controls-meta { justify-content: center; }
+}

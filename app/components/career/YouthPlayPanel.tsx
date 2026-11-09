@@ -36,6 +36,8 @@ import {
 } from "../../career/youth-play";
 import type { CareerChallengeProps } from "../../scorebobo/CareerChallenge";
 import styles from "./CareerMinigames.module.css";
+import { albumStyles } from "./album/AlbumShell";
+import { clubInks } from "./album/inks";
 
 /**
  * Sem rede (ou um deploy novo trocou os arquivos): o minigame não abre e nenhuma chance é gasta.
@@ -174,12 +176,12 @@ export default function YouthPlayPanel({ game, setGame, club, badge, brand, perf
     const bonus = play.bonus ?? 0;
     const average = play.years.length ? totalStars / play.years.length : 0;
     return (
-      <section className={`${styles.youthPage} screen-enter`} aria-labelledby="youth-summary-kicker youth-summary-title">
+      <section className={`${styles.youthPage} ${styles.paper} ${albumStyles.tokens} albumMounted screen-enter`} style={clubInks(club.primary, club.secondary)} aria-labelledby="youth-summary-kicker youth-summary-title">
         {brand}
         <header className={styles.youthHeader}>
           {badge}
           <div>
-            <small id="youth-summary-kicker">FIM DAS CATEGORIAS DE BASE</small>
+            <small id="youth-summary-kicker">Fim das categorias de base</small>
             <strong id="youth-summary-title" ref={summaryTitleRef} tabIndex={-1}>{club.shortName}</strong>
             <p>Formado na base · dos 12 aos {lastAge} · {totalStars}★ em {play.years.length} anos · média {average.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</p>
           </div>
@@ -194,7 +196,7 @@ export default function YouthPlayPanel({ game, setGame, club, badge, brand, perf
             const event = game.youthYears[index];
             return (
               <li key={`${index}-${year.levelId}`} className={styles.year} data-state={year.skipped ? "skipped" : "done"}>
-                <span className={styles.age}>{ageOf(index)}<small>ANOS</small></span>
+                <span className={styles.age}>{ageOf(index)}<small>anos</small></span>
                 <div className={styles.yearCopy}>
                   <strong>{scoreboboTrackName(year.levelId)}</strong>
                   <small>{year.skipped ? "Simulado · conta 0★" : event?.title ?? chanceLine(year)}</small>
@@ -214,17 +216,17 @@ export default function YouthPlayPanel({ game, setGame, club, badge, brand, perf
   return (
     <>
       {/* Com o minigame aberto a lista sai do teclado: um "Seguir" escondido passaria o ano no meio da jogada. */}
-      <section className={`${styles.youthPage} screen-enter`} aria-labelledby="youth-play-kicker youth-play-title" inert={open ? true : undefined}>
+      <section className={`${styles.youthPage} ${styles.paper} ${albumStyles.tokens} albumMounted screen-enter`} style={clubInks(club.primary, club.secondary)} aria-labelledby="youth-play-kicker youth-play-title" inert={open ? true : undefined}>
         {brand}
         <header className={styles.youthHeader}>
           {badge}
           <div>
-            <small id="youth-play-kicker">JOGANDO A BASE · SCOREBOBO</small>
+            <small id="youth-play-kicker">Jogando a base · Scorebobo</small>
             <strong id="youth-play-title">{club.shortName}</strong>
             <p>Dos 12 aos {lastAge}. Um minigame por ano, 3 chances, vale a melhor. A média das estrelas vira até +3 de potencial máximo.</p>
           </div>
         </header>
-        <div className={styles.tally}><span>ESTRELAS NA BASE</span><strong>{totalStars}<small> de {play.years.length * 3}</small></strong></div>
+        <div className={styles.tally}><span>Estrelas na base</span><strong>{totalStars}<small> de {play.years.length * 3}</small></strong></div>
         <ol ref={listRef} className={styles.years}>
           {play.years.map((year, index) => {
             const state = index < play.current ? "done" : index === play.current ? "current" : "next";
@@ -232,13 +234,13 @@ export default function YouthPlayPanel({ game, setGame, club, badge, brand, perf
             const done = isYouthYearDone(year);
             return (
               <li key={`${index}-${year.levelId}`} className={styles.year} data-state={state} aria-current={state === "current" ? "step" : undefined}>
-                <span className={styles.age}>{ageOf(index)}<small>ANOS</small></span>
+                <span className={styles.age}>{ageOf(index)}<small>anos</small></span>
                 <div className={styles.yearCopy}>
                   <strong>{scoreboboTrackName(year.levelId)}</strong>
                   <small>{state === "done" ? event?.title ?? chanceLine(year) : chanceLine(year)}</small>
                   {state === "done" && event?.text ? <p>{event.text}</p> : null}
                 </div>
-                {state === "next" ? <span className={styles.lock}>{index === play.years.length - 1 ? "FINAL" : ""}</span> : <Stars value={youthYearStars(year)} />}
+                {state === "next" ? <span className={styles.lock}>{index === play.years.length - 1 ? "final" : ""}</span> : <Stars value={youthYearStars(year)} />}
                 {state === "current" && (
                   <div className={styles.yearActions}>
                     {!done && (

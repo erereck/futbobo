@@ -12,6 +12,8 @@ import { roundName } from "../tournament/bracket";
 import { useNow } from "../use-now";
 import type { RoomClientState } from "../room/room-api";
 import { bracketMatchOf, nicknameOf, readyCheckKey, roomClient } from "../use-room";
+import FutboboIcon from "../../components/FutboboIcon";
+import { paper } from "./paper";
 
 /** "Pronto?" já anunciados nesta página (por checagem: sala, sorteio, partida e prazo), os mais novos. */
 const announced = new Set<string>();
@@ -49,12 +51,12 @@ export default function NextMatchBanner({ state, quiet = false }: { state: RoomC
   const pressed = match.readyBy.includes(state.me);
 
   return (
-    <div className="bob-next-banner" role="status" data-testid="bob-next-banner">
+    <div className={`bob-next-banner ${paper.tokens}`} role="status" data-testid="bob-next-banner">
       <p>
         Próxima partida ({roundName(bracket.size, match.round)}) contra {opponent} <Countdown deadline={next.readyDeadlineLocal} />
       </p>
       {pressed ? (
-        <span>Pronto ✓</span>
+        <span><FutboboIcon name="check" /> Pronto</span>
       ) : (
         <button type="button" data-testid="bob-banner-ready" onClick={() => roomClient()?.readyForMatch(next.bracketId)}>Estou pronto</button>
       )}
@@ -90,11 +92,11 @@ export function RoomToasts({ toasts, matchOpen }: { toasts: RoomClientState["toa
   }, [shownKey, overflowKey]);
 
   return (
-    <div className="bob-toasts" role="status" aria-live="polite" data-match={matchOpen ? "true" : undefined}>
+    <div className={`bob-toasts ${paper.tokens}`} role="status" aria-live="polite" data-match={matchOpen ? "true" : undefined}>
       {shown.map((toast) => (
         <p key={toast.id} className="bob-toast">
           <span>{toast.text}</span>
-          <button type="button" aria-label="Fechar aviso" onClick={() => roomClient()?.dismissToast(toast.id)}>×</button>
+          <button type="button" aria-label="Fechar aviso" onClick={() => roomClient()?.dismissToast(toast.id)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg></button>
         </p>
       ))}
     </div>

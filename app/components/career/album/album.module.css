@@ -82,6 +82,8 @@
 :global(body:has(.albumMounted)) {
   background: var(--paper, #fbfbf7);
 }
+/* o globals.css dá 18 px de respiro ao body entre 541 e 899 px; o álbum ocupa a tela inteira */
+:global(body:has(.albumMounted)) { padding: 0; }
 
 .root :where(button) { font: inherit; color: inherit; cursor: pointer; }
 .root :where(button:disabled) { cursor: not-allowed; }
@@ -328,4 +330,18 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tab { transition: none; }
+}
+
+/* Aviso rápido do jogo (pôster salvo, etc.) enquanto o álbum está na tela: fita amarela carimbada. */
+:global(body:has(.albumMounted) .toast) {
+  border: 2px solid #161616;
+  border-radius: 6px;
+  background: #f6c431;
+  color: #161616;
+  box-shadow: 3px 3px 0 #161616;
+  font-family: var(--font-display);
+  font-stretch: 82%;
+  font-weight: 750;
+  font-size: 16px;
+  letter-spacing: 0;
 }
