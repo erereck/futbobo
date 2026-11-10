@@ -1,7 +1,7 @@
 {
-  "name": "Futbobo — Simulador de Carreira de Jogador",
+  "name": "Futbobo · Simulador de carreira de jogador",
   "short_name": "Futbobo",
-  "description": "Crie um jogador aos 12 anos e construa uma carreira mundial em 36 ligas e 139 seleções.",
+  "description": "Crie um jogador aos 12 anos e construa uma carreira mundial em 51 ligas e 139 seleções.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

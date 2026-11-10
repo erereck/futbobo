@@ -2353,9 +2353,9 @@ export default function BotaoMatch({
             className={`botao-turn ${localMatch || penalties.turn === "user" ? "botao-turn-active" : ""}`}
           >
             {localMatch
-              ? `${activeLocalName} · ${penalties.round}ª cobrança — arraste e solte no tempo do goleiro`
+              ? `${activeLocalName} · ${penalties.round}ª cobrança · arraste e solte no tempo do goleiro`
               : penalties.turn === "user"
-                ? `${penalties.round}ª cobrança · bate ${penaltyShooter(state).label} — arraste e solte no tempo do goleiro`
+                ? `${penalties.round}ª cobrança · bate ${penaltyShooter(state).label} · arraste e solte no tempo do goleiro`
                 : `${penalties.round}ª cobrança · ${setup.cpuTeam.shortName} ${penaltyShooter(state).label} vai bater`}
           </p>
         ) : awaitingFirstTouch && (state.phase === "aim" || state.phase === "kickoff") ? (
@@ -2375,7 +2375,7 @@ export default function BotaoMatch({
           </p>
         ) : yourTurn ? (
           <p className="botao-turn botao-turn-active">
-            Sua vez — arraste um botão para trás e solte
+            Sua vez: arraste um botão para trás e solte
           </p>
         ) : state.phase === "resolving" ? (
           <p className="botao-turn">Bola rolando…</p>

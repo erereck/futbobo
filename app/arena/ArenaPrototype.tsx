@@ -605,7 +605,7 @@ export default function ArenaPrototype() {
             <div className={styles.centerOverlay}>
               <div className={styles.overlayEyebrow}>FINAL SIGNAL</div>
               <h2>{state.score[0] === state.score[1] ? "DRAW" : state.score[0] > state.score[1] ? "ERI WINS" : "VOID WINS"}</h2>
-              <div className={styles.finalScore}>{state.score[0]} — {state.score[1]}</div>
+              <div className={styles.finalScore}>{state.score[0]} × {state.score[1]}</div>
               <button type="button" className={styles.launchButton} onClick={rematch}>RUN IT BACK</button>
             </div>
           )}

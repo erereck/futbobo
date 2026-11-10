@@ -48,11 +48,11 @@ const instrumentSans = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL("https://futbobo.top/"),
   title: {
-    default: "Futbobo — Simulador de Carreira de Jogador de Futebol",
+    default: "Futbobo: simulador de carreira de jogador de futebol",
     template: "%s | Futbobo",
   },
   description:
-    "Crie seu jogador aos 12 anos, dispute 36 ligas e 139 seleções, jogue finais no futebol de botão e construa uma carreira única. Grátis no navegador.",
+    "Crie seu jogador aos 12 anos, dispute 51 ligas e 139 seleções, jogue finais no futebol de botão e cole a carreira inteira num álbum de figurinhas. Grátis no navegador.",
   applicationName: "Futbobo",
   authors: [{ name: "EriLab", url: "https://futbobo.top/" }],
   creator: "EriLab",
@@ -91,20 +91,20 @@ export const metadata: Metadata = {
   },
   manifest: `${publicAssetRoot}/manifest.webmanifest`,
   openGraph: {
-    title: "Futbobo — Simulador de Carreira de Jogador de Futebol",
+    title: "Futbobo: simulador de carreira de jogador de futebol",
     description:
-      "Dos 12 anos à aposentadoria: 637 clubes, 36 ligas, 139 seleções, decisões, transferências e finais jogáveis no futebol de botão.",
+      "Do primeiro contrato à última figurinha: 984 clubes, 51 ligas, 139 seleções, decisões, transferências e finais no futebol de botão.",
     type: "website",
     url: "https://futbobo.top/",
     siteName: "Futbobo",
     locale: "pt_BR",
-    images: [{ url: `${publicAssetRoot}/og-v6.png`, width: 1200, height: 630, alt: "Futbobo — Sua carreira, seu legado" }],
+    images: [{ url: `${publicAssetRoot}/og-v7.png`, width: 1200, height: 630, alt: "Página do álbum do Futbobo com a logo e três figurinhas de jogadores" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Futbobo — Simulador de Carreira de Jogador de Futebol",
+    title: "Futbobo: simulador de carreira de jogador de futebol",
     description: "Crie seu jogador, construa uma carreira mundial e jogue as maiores finais no futebol de botão.",
-    images: [`${publicAssetRoot}/og-v6.png`],
+    images: [`${publicAssetRoot}/og-v7.png`],
   },
 };
 
@@ -114,9 +114,9 @@ const structuredData = {
   name: "Futbobo",
   alternateName: "Futbobo: Sua carreira, seu legado",
   url: "https://futbobo.top/",
-  image: "https://futbobo.top/og-v6.png",
+  image: "https://futbobo.top/og-v7.png",
   description:
-    "Simulador brasileiro de carreira de jogador de futebol, dos 12 anos à aposentadoria, com 637 clubes, 36 ligas, 139 seleções e partidas jogáveis de futebol de botão.",
+    "Simulador brasileiro de carreira de jogador de futebol, dos 12 anos à aposentadoria, com 984 clubes, 51 ligas, 139 seleções e partidas jogáveis de futebol de botão.",
   genre: ["Esporte", "Simulação", "RPG"],
   gamePlatform: ["Navegador", "Android", "Windows"],
   operatingSystem: ["Web", "Android", "Windows"],

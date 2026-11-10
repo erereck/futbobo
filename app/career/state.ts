@@ -569,6 +569,20 @@ function normalizeSpecialTraining(value: unknown): SpecialTraining | null {
   };
 }
 
+/** v97: "Seleção do X — Posição" passou a ser "Seleção do X · Posição"; saves antigos usam o nome novo. */
+function renameSavedAward(award: string) {
+  return award.replace(" — ", " · ");
+}
+
+function renameSavedAwardCabinet(cabinet: Record<string, number>) {
+  const renamed: Record<string, number> = {};
+  for (const [award, count] of Object.entries(cabinet)) {
+    const name = renameSavedAward(award);
+    renamed[name] = (renamed[name] ?? 0) + count;
+  }
+  return renamed;
+}
+
 export function normalizeSave(value: unknown): GameState {
   const base = initialState();
   if (!value || typeof value !== "object") return base;
@@ -799,7 +813,7 @@ export function normalizeSave(value: unknown): GameState {
       cafChampions: saved.trophyCabinet?.cafChampions ?? 0,
       campeonesCup: saved.trophyCabinet?.campeonesCup ?? 0,
     },
-    awardCabinet: { ...base.awardCabinet, ...saved.awardCabinet },
+    awardCabinet: renameSavedAwardCabinet({ ...base.awardCabinet, ...saved.awardCabinet }),
     history: (saved.history ?? []).map((record) => applyNationalBotaoProduction({
       appearances: record.appearances ?? 0,
       goals: record.goals ?? 0,
@@ -821,7 +835,7 @@ export function normalizeSave(value: unknown): GameState {
         ...competition,
         name: canonicalCompetitionName(competition.id, competition.name),
       })),
-      awards: record.awards ?? [],
+      awards: (record.awards ?? []).map(renameSavedAward),
       awardNominations: record.awardNominations ?? (record.awards ?? [])
         .filter((award) => awardPresentation(award).tier !== "regular")
         .map((award) => ({ award, won: true, winner: saved.name || "Você" })),
@@ -846,7 +860,7 @@ export function normalizeSave(value: unknown): GameState {
         ...competition,
         name: canonicalCompetitionName(competition.id, competition.name),
       })),
-      awards: saved.lastResult.awards ?? [],
+      awards: (saved.lastResult.awards ?? []).map(renameSavedAward),
       awardNominations: saved.lastResult.awardNominations ?? (saved.lastResult.awards ?? [])
         .filter((award) => awardPresentation(award).tier !== "regular")
         .map((award) => ({ award, won: true, winner: saved.name || "Você" })),

@@ -104,7 +104,7 @@ export default function GoalReplay({
         <span><i style={{ width: `${progress}%` }} /></span>
         <button type="button" onClick={restart}>↻</button>
       </div>
-      <small>Os dois toques anteriores e o gol foram reconstruídos apenas com coordenadas — sem vídeo e sem tempo de espera.</small>
+      <small>Os dois toques anteriores e o gol foram reconstruídos apenas com coordenadas, sem vídeo e sem tempo de espera.</small>
     </section>
   );
 }

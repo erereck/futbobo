@@ -403,7 +403,7 @@ test("exporta uma página estática pronta para o GitHub Pages", async () => {
   assert.match(html, /Futbobo/);
   assert.match(html, /Sua carreira, seu legado/i);
   assert.match(html, /manifest\.webmanifest/);
-  assert.match(html, /og-v6\.png/);
+  assert.match(html, /og-v7\.png/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
@@ -2687,10 +2687,10 @@ test("publica metadados completos para buscadores no dominio oficial", async () 
     "utf8",
   );
 
-  assert.match(layout, /Simulador de Carreira de Jogador de Futebol/);
+  assert.match(layout, /simulador de carreira de jogador de futebol/);
   assert.match(layout, /"@type": "VideoGame"/);
   assert.match(layout, /alternates:[\s\S]*canonical: "\/"/);
-  assert.match(layout, /637 clubes, 36 ligas, 139 seleções/);
+  assert.match(layout, /984 clubes, 51 ligas, 139 seleções/);
   assert.match(robots, /https:\/\/futbobo\.top\/sitemap\.xml/);
   assert.match(sitemap, /https:\/\/futbobo\.top\/copa\//);
   assert.match(sitemap, /https:\/\/futbobo\.top\/botao\//);

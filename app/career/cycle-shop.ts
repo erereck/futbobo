@@ -122,7 +122,7 @@ export function purchaseCycleShopItem(state: GameState, itemId: CycleShopItemId,
         discipline: clamp(state.discipline - 18),
         mediaRelation: clamp(state.mediaRelation - 8),
       };
-      feedback = "O acordo ficou escondido. O título nacional está garantido — e a escolha fica na sua história.";
+      feedback = "O acordo ficou escondido. O título nacional está garantido, e a escolha fica na sua história.";
       toast = "O esquema ficou escondido";
     } else {
       const returnSeason = state.season + 5;
@@ -151,7 +151,7 @@ export function purchaseCycleShopItem(state: GameState, itemId: CycleShopItemId,
         newsFeed: [`${state.season}: tentativa de corrupção descoberta; ${state.name} foi banido do futebol por 5 anos.`, ...state.newsFeed].slice(0, 16),
       };
       feedback = "O pagamento deixou rastros. A punição tirou cinco temporadas da sua carreira.";
-      toast = "Esquema descoberto — banimento de 5 anos";
+      toast = "Esquema descoberto: banimento de 5 anos";
       forcedClose = true;
     }
   }

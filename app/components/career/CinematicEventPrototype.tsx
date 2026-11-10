@@ -293,7 +293,7 @@ export default function CinematicEventPrototype() {
       </section>
 
       <footer className={styles.prototypeFooter}>
-        <div><span>{club.shortName}</span><b>{player.name}</b><small>save local {player.name === FALLBACK_PLAYER.name ? "não encontrado — usando personagem de demonstração" : "carregado"}</small></div>
+        <div><span>{club.shortName}</span><b>{player.name}</b><small>save local {player.name === FALLBACK_PLAYER.name ? "não encontrado, usando personagem de demonstração" : "carregado"}</small></div>
         <button onClick={goNext} type="button">Próximo corte <span>→</span></button>
       </footer>
     </main>

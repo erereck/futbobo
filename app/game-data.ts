@@ -1317,7 +1317,7 @@ export const PRO_EVENTS: GameEvent[] = [
   ]},
   { id: "rookie-locker", icon: "☰", tag: "VESTIÁRIO", title: "O elenco testa o novato", description: "Sua roupa aparece amarrada no alto do vestiário. Todo mundo espera sua reação.", maxAge: 21, oneTime: true, choices: [
     { label: "Entrar na brincadeira", hint: "Grupo ↑", result: "A resenha vira seu primeiro passe para dentro do grupo.", effect: { morale: 7, reputation: 1 } },
-    { label: "Impor respeito", hint: "Liderança ↑ · clima ↓", result: "O recado foi entendido — talvez alto demais.", effect: { leadership: 5, morale: -3 } },
+    { label: "Impor respeito", hint: "Liderança ↑ · clima ↓", result: "O recado foi entendido, talvez alto demais.", effect: { leadership: 5, morale: -3 } },
   ]},
   { id: "bench", icon: "▰", tag: "TÉCNICO", title: "Três jogos no banco", description: "A promessa era de minutos, mas seu nome não sai da reserva.", maxOvr: 76, choices: [
     { label: "Pedir uma conversa", hint: "Chance de minutos", result: "O técnico não prometeu nada, mas anotou seu nome.", effect: { reputation: 1, minutes: 7 } },
@@ -1331,7 +1331,7 @@ export const PRO_EVENTS: GameEvent[] = [
   { id: "derby", icon: "⚔", tag: "CLÁSSICO", title: "A cidade para por noventa minutos", description: "Clássico lotado. Uma boa atuação muda a forma como a torcida olha para você.", minOvr: 64, needsRivalry: true, choices: [
     { label: "Jogar para o time", hint: "Seguro · reputação ↑", result: "Sem firula: você foi útil em cada bola.", effect: { reputation: 4, morale: 3 } },
     { label: "Buscar o lance do jogo", hint: "Alto risco · alto retorno", result: "A arquibancada levantou antes mesmo da bola chegar.", effect: { ovr: 1, reputation: 7, fitness: -5, injuryRisk: 4 } },
-    { label: "Provocar o rival", hint: "Torcida ↑ · disciplina ↓", result: "Seu nome ecoa no estádio — dos dois lados.", effect: { reputation: 8, morale: 5, fitness: -3, discipline: -10 } },
+    { label: "Provocar o rival", hint: "Torcida ↑ · disciplina ↓", result: "Seu nome ecoa no estádio, dos dois lados.", effect: { reputation: 8, morale: 5, fitness: -3, discipline: -10 } },
   ]},
   { id: "bad-interview", icon: "●", tag: "MÍDIA", title: "Microfone depois do erro", description: "A derrota passou pelos seus pés e a primeira pergunta vem sem carinho.", choices: [
     { label: "Assumir a culpa", hint: "Respeito ↑", result: "A resposta dói agora e rende respeito depois.", effect: { morale: -4, reputation: 5, leadership: 3 } },
@@ -1493,7 +1493,7 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Manter quem veio com você", hint: "Lealdade · torcida ↑", result: "A carreira segue com menos holofote e mais confiança.", effect: { morale: 7, fans: 5, leadership: 3 } },
   ]},
   { id: "documentary", icon: "▶", tag: "MÍDIA", title: "Uma série quer filmar sua temporada", description: "Câmeras no treino, em casa e no vestiário podem transformar você em personagem nacional.", minOvr: 76, choices: [
-    { label: "Abrir todas as portas", hint: "Fama ↑↑ · privacidade ↓", result: "O país conhece sua rotina — e começa a opinar sobre ela.", effect: { reputation: 13, money: 8, morale: -6, fans: 5 } },
+    { label: "Abrir todas as portas", hint: "Fama ↑↑ · privacidade ↓", result: "O país conhece sua rotina e começa a opinar sobre ela.", effect: { reputation: 13, money: 8, morale: -6, fans: 5 } },
     { label: "Mostrar só o campo", hint: "Reputação ↑ · foco", result: "A série encontra drama no futebol, não na sua casa.", effect: { reputation: 6, morale: 3 } },
     { label: "Recusar", hint: "Foco ↑ · dinheiro ↓", result: "As câmeras vão embora e o treino volta a ser só treino.", effect: { fitness: 5, potential: 1 } },
   ]},
@@ -1537,13 +1537,13 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Prometer o título", hint: "38% · impacto enorme", result: "Você coloca a própria palavra no centro da temporada.", effect: {}, luck: { chance: 38, successText: "A promessa vira combustível e o grupo acredita até o último minuto.", failureText: "A sequência desmorona e suas palavras voltam como cobrança.", successEffect: { titleBoost: 24, leadership: 14, fans: 12, morale: 13 }, failureEffect: { titleBoost: -13, leadership: -6, fans: -14, morale: -16, reputation: -7 } } },
     { label: "Pedir trabalho, não promessa", hint: "Liderança ↑ · seguro", result: "O discurso não vira manchete, mas organiza o vestiário.", effect: { leadership: 7, morale: 6, titleBoost: 5 } },
   ]},
-  { id: "solo-training-camp", icon: "⌁", tag: "ENTRETEMPORADA", title: "Trinta dias longe do clube", description: "Uma equipe particular oferece um ciclo secreto de treino. Você voltaria diferente — para melhor ou pior.", minAge: 19, maxAge: 28, oneTime: true, choices: [
+  { id: "solo-training-camp", icon: "⌁", tag: "ENTRETEMPORADA", title: "Trinta dias longe do clube", description: "Uma equipe particular oferece um ciclo secreto de treino. Você voltaria diferente, para melhor ou pior.", minAge: 19, maxAge: 28, oneTime: true, choices: [
     { label: "Sumir por um mês e apostar", hint: "48% · salto ou regressão", result: "Você troca as férias por um laboratório de futebol.", effect: { money: -6, morale: -4 }, luck: { chance: 48, successText: "O método destrava movimentos e decisões que pareciam inalcançáveis.", failureText: "A carga é errada, o corpo chega pesado e os fundamentos perdem naturalidade.", successEffect: { ovr: 4, potential: 2, fitness: 8 }, failureEffect: { ovr: -4, potential: -2, fitness: -14, morale: -10 } } },
     { label: "Treinar com o clube", hint: "Condição ↑ · sem surpresa", result: "Você escolhe estrutura conhecida e progresso controlado.", effect: { fitness: 10, morale: 3 } },
   ]},
   { id: "short-vacation", icon: "⌛", tag: "CALENDÁRIO", title: "Doze dias até a reapresentação", description: "A temporada foi longa e o próximo ano já bate na porta.", choices: [
     { label: "Descansar de verdade", hint: "Físico ↑↑ · OVR estável", result: "Você desliga o telefone e deixa o corpo respirar.", effect: { fitness: 16, morale: 8 } },
-    { label: "Treinar nas férias", hint: "OVR ↑ · desgaste", result: "Você volta na frente — mas sem ter parado.", effect: { ovr: 1, fitness: -8, potential: 1 } },
+    { label: "Treinar nas férias", hint: "OVR ↑ · desgaste", result: "Você volta na frente, mas sem ter parado.", effect: { ovr: 1, fitness: -8, potential: 1 } },
     { label: "Viajar com o elenco", hint: "Grupo ↑ · físico ↑", result: "A amizade também sustenta temporadas difíceis.", effect: { morale: 10, fitness: 6, leadership: 3 } },
   ]},
   { id: "new-language", icon: "☰", tag: "EUROPA", title: "Uma língua nova todos os dias", description: "As instruções do treinador ainda soam estranhas. O elenco espera você se virar sozinho.", needsAbroad: true, oneTime: true, choices: [
@@ -1552,7 +1552,7 @@ export const PRO_EVENTS: GameEvent[] = [
   ]},
   { id: "cold-weather", icon: "❄", tag: "EUROPA", title: "O inverno que o corpo não conhecia", description: "Treinar sob zero graus é uma novidade que ninguém avisou.", needsAbroad: true, choices: [
     { label: "Ajustar a rotina ao clima", hint: "Adaptação ↑ · físico ↑", result: "Aquecimento mais longo, roupas certas, corpo protegido.", effect: { adaptation: 10, fitness: 5 } },
-    { label: "Treinar igual sempre treinou", hint: "Risco de lesão", result: "O orgulho ignora o termômetro — o corpo cobra depois.", effect: { fitness: -8, injuryRisk: 6 } },
+    { label: "Treinar igual sempre treinou", hint: "Risco de lesão", result: "O orgulho ignora o termômetro, e o corpo cobra depois.", effect: { fitness: -8, injuryRisk: 6 } },
   ]},
   { id: "bench-abroad", icon: "▰", tag: "EUROPA", title: "O banco também tem sotaque", description: "A concorrência por posição na Europa é outro nível. Seu nome não sai da lista de reservas.", needsAbroad: true, maxOvr: 84, choices: [
     { label: "Insistir no dia a dia", hint: "Chance de minutos", result: "Cada treino vira uma audição silenciosa.", effect: { reputation: 1, minutes: 6, fitness: -4 } },

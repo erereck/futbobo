@@ -10,7 +10,7 @@ const CAREER_DRAMA_EVENT_OVERRIDES: Record<string, GameEvent> = {
     description: "Nos bastidores de uma premiação, uma celebridade que você só conhecia pela tela reconhece você primeiro. A assessoria dela já está com o celular aberto e pergunta se pode postar a foto nos dois perfis.",
     minAge: 18, oneTime: true, rareChance: 0.003, choices: [
       { label: "Postar sem transformar em campanha", hint: "+10 milhões de seguidores · exposição mundial", result: "A foto sobe sem texto publicitário, sem collab combinada e sem explicação. Isso basta: em poucas horas, gente que nunca viu um jogo seu começa a descobrir quem você é.", effect: { followers: 10_000_000, socialSentiment: 14, mediaRelation: 8, reputation: 5 } },
-      { label: "Guardar a foto só para vocês", hint: "Equilíbrio pessoal ↑ · nenhum viral", result: "A conversa continua longe das câmeras. No dia seguinte, ninguém sabe que vocês se encontraram — e, pela primeira vez em muito tempo, isso parece um luxo.", effect: { lifeBalance: 9, morale: 7 } },
+      { label: "Guardar a foto só para vocês", hint: "Equilíbrio pessoal ↑ · nenhum viral", result: "A conversa continua longe das câmeras. No dia seguinte, ninguém sabe que vocês se encontraram. Pela primeira vez em muito tempo, isso parece um luxo.", effect: { lifeBalance: 9, morale: 7 } },
     ],
   },
   "drama-teenage-spotlight": {
@@ -25,16 +25,16 @@ const CAREER_DRAMA_EVENT_OVERRIDES: Record<string, GameEvent> = {
     id: "drama-south-american-derby-heat", icon: "⚔", tag: "REGIÃO", title: "O clássico começou no túnel",
     description: "Antes de a bola rolar, um adversário passa por você e repete uma frase que você deu numa entrevista meses atrás. No gramado, papel picado cobre a linha lateral e o estádio parece estar esperando a primeira faísca.",
     needsConfederation: "SOUTH_AMERICA", choices: [
-      { label: "Responder só quando a bola estiver rolando", hint: "Frieza ↑ · OVR ↑", result: "Você não devolve uma palavra. Depois do primeiro desarme limpo, olha para ele por meio segundo — o suficiente para os dois entenderem.", effect: { ovr: 1, leadership: 4, morale: 3 } },
+      { label: "Responder só quando a bola estiver rolando", hint: "Frieza ↑ · OVR ↑", result: "Você não devolve uma palavra. Depois do primeiro desarme limpo, olha para ele por meio segundo, o suficiente para os dois entenderem.", effect: { ovr: 1, leadership: 4, morale: 3 } },
       { label: "Entrar no jogo psicológico também", hint: "Torcida ↑↑ · disciplina em risco", result: "Cada dividida ganha uma conversa curta, cada lateral vira disputa territorial. A arquibancada compra sua postura, mas o árbitro passa a acompanhar vocês dois de perto.", effect: { fans: 11, reputation: 5, discipline: -5, fitness: -5 } },
     ],
   },
   "drama-european-tactical-demand": {
     id: "drama-european-tactical-demand", icon: "◫", tag: "REGIÃO", title: "O técnico pausa o vídeo por causa de dois passos seus",
-    description: "Na análise da manhã, ele congela um lance em que você está pouco mais de dois metros fora do corredor de pressão. O adversário nem criou perigo — para a comissão, esse não é o ponto.",
+    description: "Na análise da manhã, ele congela um lance em que você está pouco mais de dois metros fora do corredor de pressão. O adversário nem criou perigo, mas para a comissão esse não é o ponto.",
     needsConfederation: "EUROPE", choices: [
       { label: "Pedir para rever a jogada quadro a quadro", hint: "Adaptação ↑↑ · potencial ↑", result: "A reunião que deveria durar vinte minutos vira quase uma hora. Você sai sabendo exatamente por que aqueles dois passos mudavam o resto do campo.", effect: { adaptation: 12, potential: 2, morale: -1 } },
-      { label: "Manter sua leitura mais intuitiva", hint: "OVR ↑ · adaptação lenta", result: "Você entende a cobrança, mas não quer jogar olhando para linhas imaginárias o tempo inteiro. A técnica continua resolvendo muita coisa — só não todas.", effect: { ovr: 1, adaptation: -3 } },
+      { label: "Manter sua leitura mais intuitiva", hint: "OVR ↑ · adaptação lenta", result: "Você entende a cobrança, mas não quer jogar olhando para linhas imaginárias o tempo inteiro. A técnica continua resolvendo muita coisa, só não todas.", effect: { ovr: 1, adaptation: -3 } },
     ],
   },
   "drama-promising-prospect-impatience": {
@@ -74,9 +74,9 @@ const CAREER_DRAMA_EVENT_OVERRIDES: Record<string, GameEvent> = {
 export const CAREER_DRAMA_EXTRA_EVENTS: GameEvent[] = [
   {
     id: "drama-training-ground-fight", icon: "!", tag: "VESTIÁRIO", title: "O treino terminou com vocês dois no chão",
-    description: "Uma entrada atrasada vira empurrão. O empurrão vira soco. Quando três companheiros conseguem separar vocês, já existem três versões diferentes sobre quem começou — e uma câmera de celular apontada da arquibancada.", minAge: 19, oneTime: true, choices: [
+    description: "Uma entrada atrasada vira empurrão. O empurrão vira soco. Quando três companheiros conseguem separar vocês, já existem três versões diferentes sobre quem começou, e uma câmera de celular apontada da arquibancada.", minAge: 19, oneTime: true, choices: [
       { label: "Assumir minha parte antes que contem por mim", hint: "Disciplina ↑ · reputação ↓", result: "Você entra na sala do treinador antes de ser chamado. Não inventa desculpa para a entrada nem para o soco. A punição vem, mas ninguém precisa arrancar a verdade de você.", effect: { discipline: 7, reputation: -3, morale: -4, leadership: 5 } },
-      { label: "Resolver com ele e manter a diretoria fora disso", hint: "52% · pacto de vestiário ou vídeo vazado", result: "Vocês apertam as mãos longe da comissão e combinam que o assunto morreu ali. A partir daí, tudo depende de o assunto realmente ter ficado ali.", effect: {}, luck: { chance: 52, successText: "Ninguém de fora vê o vídeo. No treino seguinte, vocês marcam um ao outro como se nada tivesse acontecido — e a relação, estranhamente, fica mais honesta.", failureText: "O vídeo aparece sem contexto nas redes. A diretoria descobre a briga pelo mesmo clipe que a torcida, e o problema deixa de ser só o soco.", successEffect: { morale: 9, leadership: 4, rivalRespect: 5 }, failureEffect: { reputation: -10, morale: -9, discipline: -8, mediaRelation: -6, socialSentiment: -7 } } },
+      { label: "Resolver com ele e manter a diretoria fora disso", hint: "52% · pacto de vestiário ou vídeo vazado", result: "Vocês apertam as mãos longe da comissão e combinam que o assunto morreu ali. A partir daí, tudo depende de o assunto realmente ter ficado ali.", effect: {}, luck: { chance: 52, successText: "Ninguém de fora vê o vídeo. No treino seguinte, vocês marcam um ao outro como se nada tivesse acontecido. E a relação, estranhamente, fica mais honesta.", failureText: "O vídeo aparece sem contexto nas redes. A diretoria descobre a briga pelo mesmo clipe que a torcida, e o problema deixa de ser só o soco.", successEffect: { morale: 9, leadership: 4, rivalRespect: 5 }, failureEffect: { reputation: -10, morale: -9, discipline: -8, mediaRelation: -6, socialSentiment: -7 } } },
     ],
   },
   {
@@ -134,7 +134,7 @@ export const CAREER_DRAMA_EXTRA_EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: "drama-deepfake-voice-note", icon: "!", tag: "IMPRENSA", title: "Um áudio perfeito da sua voz está circulando — e você nunca disse aquilo",
+    id: "drama-deepfake-voice-note", icon: "!", tag: "IMPRENSA", title: "Um áudio perfeito da sua voz está circulando, e você nunca disse aquilo",
     description: "O arquivo tem sua voz, sua cadência e até uma risada no final. Nele, você chama o treinador de ultrapassado e dois companheiros de acomodados. A perícia do clube encontra sinais de manipulação; a internet encontra o botão de compartilhar.", minAge: 19, oneTime: true, choices: [
       { label: "Abrir uma live curta e negar com a minha própria voz", hint: "Público ↑ · exposição ↑", result: "Você fala por menos de dois minutos, sem discurso de assessoria, e termina reproduzindo lado a lado um trecho verdadeiro e o falso.", effect: { followers: 110_000, mediaRelation: 7, reputation: 5, socialSentiment: 5 } },
       { label: "Deixar o clube e a perícia resolverem", hint: "Controle ↑ · resposta mais lenta", result: "Você evita transformar um arquivo falso em debate diário. O laudo demora mais que um post, mas chega com detalhes que não cabem numa manchete.", effect: { lifeBalance: 6, morale: 4, mediaRelation: 4 } },
@@ -161,7 +161,7 @@ export const CAREER_DRAMA_EXTRA_EVENTS: GameEvent[] = [
     description: "O técnico congela uma imagem do primeiro tempo e passa quase dez minutos desenhando setas ao redor de você. Ninguém mais aparece no quadro. O jogo ainda está acontecendo.", minAge: 19, oneTime: true, choices: [
       { label: "Ouvir até o fim e pedir o vídeo depois", hint: "Adaptação ↑↑ · moral ↓", result: "Você segura a irritação, anota mentalmente cada correção e, depois do jogo, pede a sequência completa para entender onde a jogada começou a morrer.", effect: { adaptation: 9, potential: 1, morale: -4 } },
       { label: "Conversar com o técnico em particular", hint: "Liderança ↑ · relação preservada", result: "Você não discute no intervalo. Mais tarde, explica que aceita a correção, mas não quer que uma leitura coletiva seja resumida a um único rosto.", effect: { leadership: 6, morale: 3, mediaRelation: 1 } },
-      { label: "Dizer ali que o erro não foi só meu", hint: "42% · respeito ou confronto", result: "Você aponta duas movimentações anteriores ao lance e pede que a análise comece cinco segundos antes.", effect: {}, luck: { chance: 42, successText: "O técnico volta o vídeo, percebe o encadeamento e muda a correção. O grupo entende que você não estava fugindo da responsabilidade — estava pedindo precisão.", failureText: "O técnico entende como desafio à autoridade em pleno intervalo. A conversa termina, mas o clima não.", successEffect: { leadership: 8, adaptation: 6, morale: 5 }, failureEffect: { minutes: -6, morale: -9, reputation: -3 } } },
+      { label: "Dizer ali que o erro não foi só meu", hint: "42% · respeito ou confronto", result: "Você aponta duas movimentações anteriores ao lance e pede que a análise comece cinco segundos antes.", effect: {}, luck: { chance: 42, successText: "O técnico volta o vídeo, percebe o encadeamento e muda a correção. O grupo entende que você não estava fugindo da responsabilidade: estava pedindo precisão.", failureText: "O técnico entende como desafio à autoridade em pleno intervalo. A conversa termina, mas o clima não.", successEffect: { leadership: 8, adaptation: 6, morale: 5 }, failureEffect: { minutes: -6, morale: -9, reputation: -3 } } },
     ],
   },
   {
@@ -169,7 +169,7 @@ export const CAREER_DRAMA_EXTRA_EVENTS: GameEvent[] = [
     description: "Ele diz que desligou as redes, mas as mensagens continuam chegando por outros números. Depois de alguns segundos em silêncio, admite que não quer aparecer no CT no dia seguinte.", minAge: 20, oneTime: true, choices: [
       { label: "Ir até a casa dele", hint: "Grupo ↑↑↑ · descanso ↓", result: "Você pega o carro, leva comida e passa horas falando de qualquer coisa menos do pênalti. Quando o assunto finalmente aparece, já perdeu parte do peso.", effect: { leadership: 10, morale: 8, fitness: -7, lifeBalance: -2 } },
       { label: "Ficar na ligação até ele dormir", hint: "Grupo ↑↑ · físico ↓", result: "A conversa atravessa madrugada, futebol, família e silêncio. Você não resolve a vida dele; garante apenas que ele não passe aquela noite sozinho.", effect: { leadership: 8, morale: 6, fitness: -4 } },
-      { label: "Mandar uma mensagem e dormir", hint: "Foco próprio ↑ · relação esfria", result: "Você escreve que está disponível no treino e coloca o celular no modo avião. É uma escolha defensável — e ele percebe a distância.", effect: { fitness: 5, morale: -2, leadership: -3 } },
+      { label: "Mandar uma mensagem e dormir", hint: "Foco próprio ↑ · relação esfria", result: "Você escreve que está disponível no treino e coloca o celular no modo avião. É uma escolha defensável, e ele percebe a distância.", effect: { fitness: 5, morale: -2, leadership: -3 } },
     ],
   },
   {
@@ -183,14 +183,14 @@ export const CAREER_DRAMA_EXTRA_EVENTS: GameEvent[] = [
     id: "drama-statue-too-early", icon: "♜", tag: "TORCIDA", title: "A torcida começou uma vaquinha para erguer sua estátua",
     description: "Você ainda está no auge e já existem renders de bronze circulando nas redes. O projeto tem localização, orçamento e uma pose que você nunca fez em campo.", minAge: 22, maxAge: 27, minOvr: 82, oneTime: true, choices: [
       { label: "Pedir que o dinheiro vá para a base", hint: "Caridade ↑↑↑ · legado ↑", result: "Você agradece a homenagem e pede para trocarem bronze por bolsas, chuteiras e transporte para a categoria de base. A vaquinha cresce depois da mudança.", effect: { charity: 14, reputation: 10, fans: 10, leadership: 5 } },
-      { label: "Aceitar e escolher a pose", hint: "Torcida ↑↑ · ego em exposição", result: "Você entra na brincadeira, veta o primeiro render e escolhe uma comemoração real da carreira. A estátua passa a parecer menos monumento e mais meme caro — o que ajuda.", effect: { fans: 13, followers: 220_000, morale: 8, reputation: -2 } },
+      { label: "Aceitar e escolher a pose", hint: "Torcida ↑↑ · ego em exposição", result: "Você entra na brincadeira, veta o primeiro render e escolhe uma comemoração real da carreira. A estátua passa a parecer menos monumento e mais meme caro, o que ajuda.", effect: { fans: 13, followers: 220_000, morale: 8, reputation: -2 } },
       { label: "Pedir para esperarem sua aposentadoria", hint: "Reputação ↑ · prudência", result: "Você diz que ainda pretende fazer coisas que possam mudar a pose. A frase vira faixa no estádio na rodada seguinte.", effect: { reputation: 7, morale: 5, fans: 6 } },
     ],
   },
   {
     id: "drama-tactical-leak-coverup", icon: "●", tag: "VESTIÁRIO", title: "O novato te conta que foi ele quem vazou o treino fechado",
     description: "Ele filmou dez segundos para mandar a um amigo. O amigo postou. Agora a comissão procura o responsável e o garoto te procura primeiro, visivelmente apavorado.", minAge: 23, oneTime: true, choices: [
-      { label: "Dar uma noite para ele confessar sozinho", hint: "53% · amadurecimento ou problema dobrado", result: "Você diz que não vai mentir por ele, mas também não vai entregá-lo antes de amanhã.", effect: {}, luck: { chance: 53, successText: "Ele aparece cedo, assume o erro e aceita a multa. A comissão descobre que você sabia — e entende por que deu a ele a chance de falar primeiro.", failureText: "Ele trava e não confessa. Quando a autoria aparece por outro caminho, a comissão descobre também que você sabia desde a noite anterior.", successEffect: { leadership: 10, morale: 5, discipline: 3 }, failureEffect: { reputation: -6, discipline: -6, leadership: -5, morale: -7 } } },
+      { label: "Dar uma noite para ele confessar sozinho", hint: "53% · amadurecimento ou problema dobrado", result: "Você diz que não vai mentir por ele, mas também não vai entregá-lo antes de amanhã.", effect: {}, luck: { chance: 53, successText: "Ele aparece cedo, assume o erro e aceita a multa. A comissão descobre que você sabia e entende por que deu a ele a chance de falar primeiro.", failureText: "Ele trava e não confessa. Quando a autoria aparece por outro caminho, a comissão descobre também que você sabia desde a noite anterior.", successEffect: { leadership: 10, morale: 5, discipline: 3 }, failureEffect: { reputation: -6, discipline: -6, leadership: -5, morale: -7 } } },
       { label: "Levar o caso ao treinador imediatamente", hint: "Disciplina ↑↑ · relação com novato ↓", result: "Você entra com ele na sala e não deixa que o garoto seja descoberto por investigação. A confiança pessoal sofre; o problema institucional termina rápido.", effect: { discipline: 8, leadership: 5, morale: -3 } },
       { label: "Resolver dentro do elenco e apagar o rastro", hint: "Grupo ↑ · risco ético", result: "O vídeo desaparece das contas próximas ao garoto e ninguém entrega um nome. A comissão encerra o caso sem resposta oficial.", effect: { morale: 7, leadership: 3, discipline: -7 } },
     ],
@@ -215,7 +215,7 @@ export const CAREER_DRAMA_EXTRA_EVENTS: GameEvent[] = [
     id: "drama-ridiculous-sponsor-commercial", icon: "▶", tag: "PATROCÍNIO", title: "O comercial é tão ruim que talvez dê a volta e fique bom",
     description: "O roteiro coloca você de uniforme prateado, dizendo 'energia de campeão' para uma câmera que depois receberá uma explosão em CGI. Ninguém no set parece ter coragem de admitir que a cena é péssima.", minOvr: 72, oneTime: true, choices: [
       { label: "Fazer a pior fala com 100% de convicção", hint: "50% · meme querido ou meme cruel", result: "Você decide que, se vai existir para sempre na internet, pelo menos não vai parecer envergonhado de estar ali.", effect: {}, luck: { chance: 50, successText: "A atuação exagerada vira o melhor elemento do comercial. A frase ganha remixes, camisas e uma segunda vida que ninguém do marketing planejou.", failureText: "O vídeo viraliza pelo motivo errado. A marca ganha alcance; você ganha meses ouvindo a própria frase em toda entrevista.", successEffect: { followers: 520_000, money: 8, socialSentiment: 13, morale: 7 }, failureEffect: { followers: 410_000, money: 8, socialSentiment: -8, morale: -7, mediaRelation: 2 } } },
-      { label: "Pedir um roteiro menos humilhante", hint: "Imagem ↑ · dinheiro menor", result: "Você aceita gravar, mas corta explosão, uniforme prateado e metade dos slogans. O comercial fica esquecível — o que, desta vez, é vitória.", effect: { reputation: 4, money: 4, lifeBalance: 3 } },
+      { label: "Pedir um roteiro menos humilhante", hint: "Imagem ↑ · dinheiro menor", result: "Você aceita gravar, mas corta explosão, uniforme prateado e metade dos slogans. O comercial fica esquecível, o que desta vez é vitória.", effect: { reputation: 4, money: 4, lifeBalance: 3 } },
     ],
   },
   {
@@ -247,7 +247,7 @@ export const CAREER_DRAMA_EXTRA_EVENTS: GameEvent[] = [
     description: "O atual capitão não fez nada grave. Mesmo assim, a campanha cresce depois de uma sequência sua de grandes jogos, e jornalistas começam a perguntar se você 'aceitaria assumir'.", minAge: 23, needsSquadRoles: ["titular", "estrela"], oneTime: true, choices: [
       { label: "Defender o capitão atual publicamente", hint: "Liderança ↑↑ · torcida pode discordar", result: "Você corta a pergunta antes que vire disputa: diz que liderança não se mede por enquete e que a braçadeira já tem dono.", effect: { leadership: 10, morale: 7, reputation: 5, fans: -2 } },
       { label: "Não entrar na campanha", hint: "Neutro · especulação continua", result: "Você se recusa a comentar a hierarquia do vestiário em coletiva. O silêncio evita uma frase ruim, mas não encerra o assunto.", effect: { morale: 3, mediaRelation: -1 } },
-      { label: "Dizer que aceitaria se o grupo quisesse", hint: "46% · postura madura ou guerra silenciosa", result: "Você tenta responder de forma institucional. A frase é curta o bastante para caber em qualquer manchete.", effect: {}, luck: { chance: 46, successText: "O capitão te procura e diz que entendeu exatamente o que você quis dizer. A conversa fortalece a liderança dos dois.", failureText: "A frase chega ao vestiário como 'ele quer a braçadeira'. O atual capitão não confronta você — o que deixa o clima ainda pior.", successEffect: { leadership: 9, morale: 6, rivalRespect: 5 }, failureEffect: { morale: -9, leadership: -4, reputation: 3 } } },
+      { label: "Dizer que aceitaria se o grupo quisesse", hint: "46% · postura madura ou guerra silenciosa", result: "Você tenta responder de forma institucional. A frase é curta o bastante para caber em qualquer manchete.", effect: {}, luck: { chance: 46, successText: "O capitão te procura e diz que entendeu exatamente o que você quis dizer. A conversa fortalece a liderança dos dois.", failureText: "A frase chega ao vestiário como 'ele quer a braçadeira'. O atual capitão não confronta você, o que deixa o clima ainda pior.", successEffect: { leadership: 9, morale: 6, rivalRespect: 5 }, failureEffect: { morale: -9, leadership: -4, reputation: 3 } } },
     ],
   },
   {

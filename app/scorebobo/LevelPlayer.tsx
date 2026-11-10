@@ -693,13 +693,13 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
         const kickers = kickersRef.current;
         const plan = state.plan;
         let toastText = "DOMINOU!";
-        let sub = `Com ${name} — desenhe a próxima`;
+        let sub = `Com ${name}: desenhe a próxima`;
         if (actor?.pose === "header") {
           toastText = "CABECEIE!";
-          sub = `${name} subiu — desenhe a cabeçada até o gol`;
+          sub = `${name} subiu: desenhe a cabeçada até o gol`;
         } else if (actor?.pose === "volley") {
           toastText = "DE PRIMEIRA!";
-          sub = `${name} pega no ar — desenhe o voleio`;
+          sub = `${name} pega no ar: desenhe o voleio`;
         } else if (kickers.length >= 2 && kickers[kickers.length - 2] === event.actor) {
           toastText = "TABELA!";
           sub = `A bola voltou para ${name}`;

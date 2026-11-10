@@ -654,7 +654,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
               </h1>
               <p>
                 Decida o rumo da temporada, monte os cinco e responda no
-                jogo-chave. A carreira tem o mesmo ritmo do modo jogador — agora
+                jogo-chave. A carreira tem o mesmo ritmo do modo jogador, agora
                 vista do banco.
               </p>
             </div>
@@ -1494,7 +1494,7 @@ export default function ManagerGame({ onExit }: { onExit?: () => void }) {
                 <small>CLUBES</small>
                 <strong>Clubes em evidência</strong>
                 <p>
-                  Tradição, momento e liga — o índice interno não é exibido.
+                  Tradição, momento e liga. O índice interno não é exibido.
                 </p>
               </header>
               <article className={worldStyles.playerBoard}>

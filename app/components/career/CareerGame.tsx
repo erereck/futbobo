@@ -1175,10 +1175,10 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           ? worldFinalWon
             ? "CAMPEÃO"
             : nextWorldStage
-              ? `Classificado — ${nextWorldStage}`
+              ? `Classificado · ${nextWorldStage}`
               : match.stageName === "Final"
                 ? "Vice"
-                : `Eliminado — ${match.stageName}`
+                : `Eliminado · ${match.stageName}`
           : outcome.stage;
         const titleResolved = !match.worldCampaign || !nextWorldStage;
         const titleDelta = titleResolved ? Number(resolvedChampion) - Number(match.rngChampion) : 0;
@@ -1342,7 +1342,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         const stageAfterMatch = wonTournament
           ? "CAMPEÃO"
           : wonRound
-            ? `Classificado — ${nextStageName}`
+            ? `Classificado · ${nextStageName}`
             : match.stageName === "Final"
               ? "Vice"
               : match.stageName.replace(" de final", "");
@@ -1642,7 +1642,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         season: current.lastResult?.season ?? current.season - 1,
         source: "press",
         author: pressSource,
-        text: `“${answer.label}” — ${current.name}, ${pressMoment}.`,
+        text: `“${answer.label}”, disse ${current.name} ${pressMoment}.`,
         likes: Math.max(500, Math.round((current.followers + 10_000) * (0.02 + seeded(current.seed, conference.questionIndex + current.season) * 0.04))),
         tone: answer.tone === "bold" ? "positive" : "neutral",
       };
@@ -1922,7 +1922,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         transferMarketOffers: richOffers,
       };
     });
-    setToast(game.forcedFreeAgentUntilSeason > game.season + 1 ? "Mais um ano cumprido longe dos clubes" : "Nova temporada, novas propostas — sem jogos registrados");
+    setToast(game.forcedFreeAgentUntilSeason > game.season + 1 ? "Mais um ano cumprido longe dos clubes" : "Nova temporada, novas propostas, sem jogos registrados");
     vibrate();
   }
 
@@ -2070,7 +2070,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       `⚽ ${displayGame.name} encerrou a carreira no FUTBOBO`,
       `${position.name} · ${nationCountry.name} · pico de ${peakOverall} OVR`,
       `${displayGame.stats.appearances} jogos · ${productionLine}`,
-      `🏆 ${totalTitles} títulos — ${titleLine}`,
+      `🏆 ${totalTitles} títulos: ${titleLine}`,
       `🥇 ${ballonDor}× Bola de Ouro · ${worldXi}× World XI · ${totalIndividualAwards} prêmios individuais`,
       `🏟️ ${clubLine || currentClub.shortName}`,
       `⭐ ${legacyStanding.label} · ${displayGame.legacyPoints} pontos de legado`,
