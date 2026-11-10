@@ -1,0 +1,274 @@
+/* Aba Time (vermelho): a página do time no álbum — campo impresso, cinco figurinhas, banco. */
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 1.8vh, 18px);
+  flex: 1 0 auto;
+  min-height: 0;
+}
+
+.avg {
+  display: grid;
+  place-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--yellow);
+  color: var(--ink);
+  text-align: center;
+  line-height: .9;
+  flex: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .35);
+}
+.avg b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 23px; font-variant-numeric: tabular-nums; }
+.avg small { font-size: 8px; font-weight: 700; }
+
+/* clube e seleção: duas capas */
+.covers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cover {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 8px 12px 8px 8px;
+  border: 2px solid var(--rule-strong);
+  border-radius: 8px;
+  background: var(--paper-2);
+  text-align: left;
+  transition: translate .12s var(--ease-out), box-shadow .12s var(--ease-out), background-color .12s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.cover:not(:disabled):not([aria-pressed="true"]):hover { border-color: var(--ink); }
+.cover[aria-pressed="true"] { background: #fff; border-color: var(--ink); box-shadow: 3px 3px 0 var(--ink); translate: -1px -1px; }
+.cover:disabled { opacity: .5; }
+.coverBadge { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px var(--rule); }
+.coverBadge :global(.club-badge), .coverBadge :global(.nation-badge) { width: 30px; height: 30px; box-shadow: none; }
+.coverCopy { display: grid; min-width: 0; }
+.coverCopy small { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coverCopy strong { font-family: var(--font-display); font-stretch: 80%; font-weight: 800; font-size: 18px; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coverOvr { display: grid; justify-items: end; line-height: .95; }
+.coverOvr b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 22px; font-variant-numeric: tabular-nums; }
+.coverOvr small { font-size: 9px; font-weight: 700; color: var(--ink-3); }
+
+/* ───────────── campo impresso ───────────── */
+.pitch {
+  container-type: size;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 430px;
+  border-radius: 10px;
+  background:
+    var(--dots-light),
+    repeating-linear-gradient(180deg, #2e8b4c 0 10%, #287c43 10% 20%);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .14), 0 10px 18px -8px rgba(20, 50, 30, .45);
+}
+.lines { position: absolute; inset: 12px; border: 2px solid rgba(255, 255, 255, .72); border-radius: 4px; pointer-events: none; }
+.lines i { position: absolute; display: block; border: 2px solid rgba(255, 255, 255, .72); }
+.mid { left: -2px; right: -2px; top: 50%; height: 0; border-width: 2px 0 0 !important; }
+.circle { left: 50%; top: 50%; width: 22%; aspect-ratio: 1; border-radius: 50%; translate: -50% -50%; }
+.boxTop { left: 28%; right: 28%; top: -2px; height: 13%; border-top-width: 0 !important; }
+.boxBottom { left: 28%; right: 28%; bottom: -2px; height: 13%; border-bottom-width: 0 !important; }
+.formation {
+  position: absolute;
+  left: 22px;
+  top: 18px;
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: rgba(255, 255, 255, .85);
+}
+
+/* diamante 1-2-1-1: zagueiro atrás, laterais abertos, meio e centroavante na linha central */
+.pitch .onPitch {
+  position: absolute;
+  z-index: 1;
+  width: min(19cqw, 21cqh, 112px);
+  translate: -50% -50%;
+}
+.pitch .onPitch:nth-of-type(1) { left: 50%; top: 84%; }
+.pitch .onPitch:nth-of-type(2) { left: 20%; top: 58%; }
+.pitch .onPitch:nth-of-type(3) { left: 80%; top: 58%; }
+.pitch .onPitch:nth-of-type(4) { left: 50%; top: 44%; }
+.pitch .onPitch:nth-of-type(5) { left: 50%; top: 15%; }
+
+/* ───────────── figurinha de jogador do time ───────────── */
+.sticker {
+  container-type: inline-size;
+  position: relative;
+  margin: 0;
+  rotate: var(--tilt, 0deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .2)) drop-shadow(0 6px 9px rgba(20, 30, 20, .2));
+}
+.face { position: relative; display: flex; flex-direction: column; padding: 4px; border-radius: 7px; overflow: hidden; background: #fff; }
+.sticker[data-you] .face { background: var(--foil); padding: 4px; }
+.art {
+  position: relative;
+  aspect-ratio: 4 / 4.3;
+  border-radius: 3px;
+  overflow: hidden;
+  background:
+    var(--dots-light),
+    radial-gradient(90% 70% at 50% 30%, var(--club-soft, var(--club)) 0%, var(--club) 45%, var(--club-deep) 100%);
+}
+.art::before {
+  content: "";
+  position: absolute;
+  inset: auto -20% 18% -20%;
+  height: 26%;
+  background: var(--club-2);
+  transform: rotate(-14deg);
+  opacity: .9;
+}
+.bust { position: absolute; left: 50%; bottom: -4%; width: 92%; height: auto; aspect-ratio: 1; translate: -50% 0; }
+.pos {
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: clamp(15px, 19cqw, 30px);
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.4px #fff;
+}
+.ovr {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  display: grid;
+  place-items: center;
+  width: clamp(24px, 28cqw, 42px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--yellow);
+  color: var(--ink);
+  box-shadow: 0 0 0 2px #fff;
+}
+.ovr b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: clamp(11px, 13cqw, 19px); line-height: 1; font-variant-numeric: tabular-nums; }
+.badge {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: clamp(18px, 22cqw, 32px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+}
+.badge :global(.club-badge), .badge :global(.nation-badge) { width: 78%; height: 78%; box-shadow: none; }
+.caption { display: grid; gap: 1px; padding: 5px 3px 2px; background: #fff; border-radius: 0 0 4px 4px; }
+.sticker[data-you] .caption { margin-top: 3px; padding: 4px 4px 3px; }
+.caption strong {
+  font-family: var(--font-display);
+  font-stretch: 76%;
+  font-weight: 800;
+  font-size: clamp(11px, 12.5cqw, 17px);
+  line-height: 1.05;
+  text-transform: uppercase;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-wrap: balance;
+}
+.caption span { font-size: 12px; color: var(--ink-2); }
+.gloss {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .38) 42%, rgba(255, 255, 255, 0) 56%);
+  mix-blend-mode: soft-light;
+}
+.youTag {
+  position: absolute;
+  left: -6px;
+  top: -9px;
+  z-index: 2;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: uppercase;
+  rotate: -8deg;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .25);
+}
+
+/* ───────────── página do banco ───────────── */
+.benchHead { display: grid; gap: 4px; }
+.benchHead h2 {
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: clamp(28px, 4vh, 38px);
+  line-height: .95;
+  color: var(--red);
+}
+.bench { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: start; padding: 6px 4px 0; }
+.emptySlot {
+  display: grid;
+  place-content: center;
+  aspect-ratio: 4 / 5.2;
+  border-radius: 8px;
+  border: 2px dashed var(--rule-strong);
+  background: var(--dots-slot), var(--paper-2);
+}
+.emptySlot b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 44px; color: rgba(22, 22, 22, .14); }
+.roster { display: grid; gap: 8px; }
+.roster ol { display: grid; border-top: 3px solid var(--ink); }
+.roster li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 40px; padding: 4px 0; border-bottom: 1.5px solid var(--rule); font-size: 13.5px; }
+.roster li[data-you] { background: linear-gradient(90deg, rgba(246, 196, 49, .28), rgba(246, 196, 49, 0) 70%); }
+.roster li b { display: grid; place-items: center; height: 26px; border-radius: 4px; color: var(--club-ink); background: var(--dots-light), var(--club); font-family: var(--font-display); font-stretch: 78%; font-weight: 800; font-size: 14px; }
+.roster li strong { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.roster li strong em { font-style: normal; font-weight: 700; color: var(--red-deep); margin-left: 6px; font-size: 12px; }
+.roster li span { color: var(--ink-3); font-size: 12.5px; white-space: nowrap; }
+.roster li i { font-style: normal; font-family: var(--font-display); font-stretch: 78%; font-weight: 800; font-size: 18px; min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; }
+.summary { display: grid; gap: 8px; margin-top: auto; }
+.note { font-size: 12.5px; color: var(--ink-3); text-wrap: pretty; }
+
+@media (min-width: 1024px) and (max-height: 820px) {
+  .bench { max-width: 470px; }
+}
+
+/* ════════════════ celular ════════════════ */
+@media (max-width: 1023px) {
+  .inner { gap: 14px; }
+  .avg { width: 42px; height: 42px; }
+  .avg b { font-size: 18px; }
+  .avg small { font-size: 7px; }
+  .covers { gap: 8px; }
+  .cover { gap: 8px; padding: 6px 10px 6px 6px; min-height: 56px; }
+  .coverBadge { width: 34px; height: 34px; }
+  .coverBadge :global(.club-badge), .coverBadge :global(.nation-badge) { width: 26px; height: 26px; }
+  .coverCopy strong { font-size: 16px; }
+  .coverOvr small { display: none; }
+  .coverOvr b { font-size: 19px; }
+  .pitch { flex: none; min-height: 0; aspect-ratio: 4 / 4.9; }
+  .lines { inset: 9px; }
+  .formation { left: 16px; top: 13px; font-size: 11px; }
+  .pitch .onPitch { width: min(22cqw, 21cqh, 104px); }
+  .pitch .onPitch:nth-of-type(2) { left: 19%; }
+  .pitch .onPitch:nth-of-type(3) { left: 81%; }
+  .benchHead h2 { font-size: 26px; }
+  .bench { gap: 12px; padding: 4px 2px 0; }
+  .caption span { font-size: 11px; }
+  .summary { margin-top: 6px; }
+}
+
+@media (max-width: 380px) {
+  .coverCopy small { font-size: 10.5px; }
+  .coverCopy strong { font-size: 15px; }
+  .bench { gap: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover { transition: none; }
+}

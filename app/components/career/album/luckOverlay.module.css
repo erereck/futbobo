@@ -1,0 +1,75 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: rgba(22, 22, 22, .42);
+  animation: fadeIn .18s ease-out both;
+}
+.card {
+  width: min(380px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 26px 22px 22px;
+  border-radius: 12px;
+  text-align: center;
+  color: var(--ink, #161616);
+  background: var(--grain, none), var(--paper, #fbfbf7);
+  box-shadow: 0 2px 3px rgba(40, 40, 20, .25), 0 26px 50px -18px rgba(40, 40, 20, .5);
+}
+.kicker { font-size: 14px; font-weight: 600; color: var(--ink-2, #45453f); }
+.card h2 {
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1;
+}
+.card p { color: var(--ink-2, #45453f); max-width: 32ch; text-wrap: balance; }
+.chance { font-size: 13px; color: var(--ink-3, #66665e); }
+.chance b { color: var(--ink, #161616); }
+
+.flip { width: 132px; height: 132px; perspective: 600px; margin: 6px 0 4px; }
+.coin {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: spin .55s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+.front,
+.back {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 5px solid #fff;
+  backface-visibility: hidden;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .2), 0 8px 14px rgba(30, 30, 20, .2);
+}
+.front { background: var(--dots-light, none), linear-gradient(160deg, #34342f, #161616 60%); }
+.front svg { width: 76px; height: 76px; }
+.back {
+  transform: rotateY(180deg);
+  background: var(--dots-light, none), var(--yellow, #f6c431);
+}
+.back b {
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 44px;
+  color: #161616;
+}
+
+@keyframes spin { to { transform: rotateY(360deg); } }
+@keyframes fadeIn { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop { animation: none; }
+  .coin { animation: none; }
+}

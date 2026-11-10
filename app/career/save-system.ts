@@ -1,5 +1,6 @@
 import type { GameState } from "./model";
 import type { ManagerState } from "./manager-model";
+import type { PlayerAppearance } from "../player-appearance";
 import { SAVE_KEY } from "./state";
 
 export type CareerMode = "player" | "manager";
@@ -18,6 +19,9 @@ export type CareerSaveMeta = {
   phase: string;
   achievementsEligible: boolean;
   pin?: { salt: string; hash: string };
+  /** Figurinha da carreira no menu (camisa e visual do jogador). */
+  number?: number;
+  appearance?: PlayerAppearance;
 };
 
 export type GlobalAchievementUnlock = {
@@ -95,6 +99,8 @@ function metaFromState(state: CareerState, current: CareerSaveMeta): CareerSaveM
     position: playerState.position || current.position,
     overall: playerState.overall || current.overall,
     phase: playerState.phase,
+    number: playerState.number || current.number,
+    appearance: playerState.playerAppearance ?? current.appearance,
   };
 }
 
@@ -291,16 +297,25 @@ export function bootstrapCareerStorage() {
     }
   }
 
-  for (const meta of index) {
+  // Saves de antes da figurinha no menu ganham camisa e visual na primeira leitura.
+  let backfilled = false;
+  for (const [position, meta] of index.entries()) {
     const raw = localStorage.getItem(slotKey(meta.id));
     if (!raw) continue;
     try {
       const state = JSON.parse(raw) as unknown;
-      if (isUsableState(state) && !("mode" in state)) syncAchievements(state, meta, true);
+      if (isUsableState(state) && !("mode" in state)) {
+        syncAchievements(state, meta, true);
+        if (!meta.appearance && state.playerAppearance) {
+          index[position] = { ...meta, number: state.number || meta.number, appearance: state.playerAppearance };
+          backfilled = true;
+        }
+      }
     } catch {
       // Slot corrompido não impede a leitura dos outros.
     }
   }
+  if (backfilled) writeIndex(index);
 }
 
 export function readCareerSlotState(id: string) {

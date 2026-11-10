@@ -1,0 +1,125 @@
+/* Fim de carreira: a última página do álbum. */
+
+.num { font-variant-numeric: tabular-nums lining-nums; }
+.note { font-size: 13.5px; color: var(--ink-3); text-wrap: pretty; }
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  min-height: 44px;
+  margin: -8px 0 -4px -6px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.back svg { width: 18px; height: 18px; }
+
+.points { display: grid; justify-items: end; line-height: 1; }
+.points b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 34px; }
+.points small { font-size: 12px; }
+
+.hero { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); align-items: center; gap: clamp(18px, 2.2vw, 30px); }
+.sticker { width: 100%; max-width: 230px; margin: 0 auto; }
+.heroInfo { display: grid; gap: 10px; }
+.legacy { display: grid; font-size: 14px; color: var(--ink-2); }
+.legacy b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 48px; line-height: .9; color: var(--ink); }
+.legacy span { margin-top: 4px; font-family: var(--font-display); font-stretch: 80%; font-weight: 750; font-size: 19px; color: var(--ink); }
+
+.numbers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink); border-bottom: 1.5px solid var(--rule); }
+.numbers li { display: grid; justify-items: center; padding: 10px 4px; text-align: center; }
+.numbers li + li { border-left: 1.5px dashed var(--rule); }
+.numbers b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: clamp(30px, 4.4vh, 42px); line-height: 1; }
+.numbers span { font-size: 12.5px; color: var(--ink-3); }
+
+.path { display: grid; gap: 8px; }
+.pathRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.pathRow > span.num { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 20px; }
+.pathRow > i { flex: 1 1 18px; min-width: 18px; border-bottom: 2px dotted var(--rule-strong); }
+.pathCrest { display: grid; place-items: center; }
+
+.dock { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-top: auto; padding-top: 6px; }
+.dock > button { justify-content: center; text-align: center; }
+.dockSpacer { display: none; }
+
+.block { display: grid; gap: 8px; }
+.story { display: grid; }
+.story li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1.5px solid var(--rule); }
+.story b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 20px; }
+.story span { display: grid; gap: 2px; }
+.story strong { font-family: var(--font-display); font-stretch: 82%; font-weight: 750; font-size: 16px; line-height: 1.15; }
+.story small { font-size: 13px; color: var(--ink-2); }
+
+.clubs { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.clubs button,
+.hall button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--rule);
+  border-radius: 6px;
+  background: #fff;
+  text-align: left;
+}
+.clubs span,
+.hall span { display: grid; min-width: 0; }
+.clubs strong,
+.hall strong { font-family: var(--font-display); font-stretch: 80%; font-weight: 800; font-size: 16px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clubs small,
+.hall small { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.clubs em,
+.hall em { font-style: normal; font-size: 12.5px; font-weight: 650; color: var(--ink-2); white-space: nowrap; }
+.clubs button[aria-pressed="true"] { border-color: var(--ink); background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
+@media (hover: hover) {
+  .clubs button:hover,
+  .hall button:hover { border-color: var(--ink); }
+}
+
+.dossier { display: grid; gap: 10px; padding: 12px 14px; border: 1.5px dashed var(--rule-strong); border-left: 6px solid var(--club-ink-local, var(--ink)); border-radius: 8px; background: var(--dots-slot), var(--paper-2); }
+.ledger { display: grid; }
+.ledger li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 0; border-top: 1.5px solid var(--rule); }
+.ledger b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 18px; }
+.ledger span { display: grid; gap: 1px; min-width: 0; }
+.ledger strong { font-weight: 650; font-size: 14px; }
+.ledger small { font-size: 12.5px; color: var(--ink-3); }
+.ledger em { font-style: normal; font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 20px; }
+
+.hall { display: grid; gap: 6px; }
+.hall button { grid-template-columns: 28px auto minmax(0, 1fr) auto; }
+.hall button > b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 22px; text-align: center; }
+.hall li:first-child button > b { color: var(--yellow-deep); }
+.hall button[data-current] { border-color: var(--ink); background: var(--yellow); }
+.hall em { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 20px; color: var(--ink); }
+
+@media (max-width: 1023px) {
+  .hero { grid-template-columns: 118px minmax(0, 1fr); gap: 14px; }
+  .sticker { max-width: 100%; }
+  .legacy b { font-size: 38px; }
+  .legacy span { font-size: 16px; }
+  .numbers b { font-size: 30px; }
+  .numbers span { font-size: 11.5px; }
+  .right { margin-top: 6px; }
+  .dock {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: var(--dock-lift, 0px);
+    margin: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--yellow);
+    box-shadow: 0 -1px 0 rgba(0, 0, 0, .08), 0 -8px 18px rgba(40, 40, 20, .1);
+  }
+  .dock > button { min-height: 48px; padding-inline: 10px; }
+  .dock > button strong { font-size: 15px; }
+  .dockSpacer { display: block; height: 20px; }
+}

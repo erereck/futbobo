@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useSyncExternalStore } from "react";
-import { CLUBS, type Club } from "../game-data";
+import { useMemo, useState, useSyncExternalStore, type ChangeEvent, type CSSProperties } from "react";
+import { CLUBS, leagueById, type Club } from "../game-data";
 import { randomPlayerAppearance, visualRosterForMatch } from "../player-appearance";
 import { botaoTeamFromClub, formatGoalMinute, isMatchGoal } from "../botao/adapter";
 import BotaoMatch from "../botao/BotaoMatch";
@@ -10,6 +10,11 @@ import GoalReplay from "../botao/GoalReplay";
 import TeamCrest from "../botao/TeamCrest";
 import { ensureContrastingKits } from "../botao/kits";
 import { DEFAULT_BOTAO_RULES, type BotaoMatchResult, type BotaoMatchSetup, type BotaoRules } from "../botao/types";
+import FutboboIcon from "../components/FutboboIcon";
+import { ClubBadge } from "../components/career/CareerPrimitives";
+import AlbumShell, { AlbumPage } from "../components/career/album/AlbumShell";
+import { darken, lighten, luminance } from "../components/career/album/inks";
+import { BlockTitle, Ficha, InkBand, Stamp, albumPrimitives } from "../components/career/album/primitives";
 import "../botao/botao.css";
 import "./x1.css";
 
@@ -53,6 +58,103 @@ const subscribeToSettings = () => () => undefined;
 function chooseDifferentClub(clubs: Club[], excludedId: string) {
   const pool = clubs.filter((club) => club.id !== excludedId);
   return pool[Math.floor(Math.random() * pool.length)] ?? clubs[0];
+}
+
+/* ───────────── álbum: peças do X1 ───────────── */
+
+/** Tinta do X1 no índice do álbum. */
+const X1_INK = { primary: "#e0262f", secondary: "#161616" };
+
+/** Cores da figurinha do clube: a faixa usa a cor mais escura, a listra a outra. */
+function stickerInks(club: Club): CSSProperties {
+  const band = luminance(club.primary) > 0.6 && luminance(club.secondary) < 0.6 ? club.secondary : club.primary;
+  const stripe = band === club.primary ? club.secondary : club.primary;
+  return {
+    "--x1-club": band,
+    "--x1-club-deep": darken(band, 0.28),
+    "--x1-club-soft": lighten(band, 0.16),
+    "--x1-stripe": luminance(stripe) > 0.85 && luminance(band) < 0.45 ? "#ffffff" : stripe,
+  } as CSSProperties;
+}
+
+function clock(seconds: number) {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+/** As regras escolhidas, na ficha da mesa. */
+function rulesRows(rules: BotaoRules) {
+  return [
+    { label: "Gols para vencer", value: rules.goalLimit ? rules.goalLimit : "sem limite" },
+    { label: "Tempo", value: rules.halves > 1 ? `${rules.halves} × ${clock(rules.halfSeconds)}` : clock(rules.halfSeconds) },
+    { label: "Prorrogação", value: rules.extraHalves ? clock(rules.extraSeconds) : "não tem" },
+    { label: "Pênaltis", value: rules.penalties ? `${rules.penaltyRounds} cobranças` : "não tem" },
+  ];
+}
+
+function Dice() {
+  return (
+    <svg className="x1-dice-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="3.5" />
+      <circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+/** Um lado do confronto: a figurinha do clube e os dois jeitos de trocar (lista e sorteio). */
+function ClubPick({
+  id,
+  player,
+  role,
+  club,
+  value,
+  clubs,
+  tilt,
+  onChange,
+  onRandom,
+}: {
+  id: string;
+  player: string;
+  role: string;
+  club: Club;
+  value: string;
+  clubs: Club[];
+  tilt: string;
+  onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
+  onRandom: () => void;
+}) {
+  return (
+    <article className="x1-player-card" aria-labelledby={`${id}-title`}>
+      <h2 className="x1-player-tag" id={`${id}-title`}>
+        {player} <small>{role}</small>
+      </h2>
+      <figure key={club.id} className="x1-club-sticker" style={{ ...stickerInks(club), "--r": tilt } as CSSProperties}>
+        <span className="x1-club-band">
+          <span className="x1-club-crest"><ClubBadge club={club} size="md" /></span>
+        </span>
+        <figcaption>
+          <strong>{club.shortName}</strong>
+          <small>{leagueById(club.leagueId).name}</small>
+        </figcaption>
+      </figure>
+      <div className="x1-club-controls">
+        <label className="x1-club-select">
+          <span aria-hidden="true">Trocar</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>
+          <select aria-label={`Clube do ${player}`} value={value} onChange={onChange}>
+            {clubs.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+          </select>
+        </label>
+        <button type="button" className="x1-dice" onClick={onRandom} aria-label="Sortear clube">
+          <Dice />
+          <span>Sortear</span>
+        </button>
+      </div>
+    </article>
+  );
 }
 
 export default function LocalVersusPage() {
@@ -137,95 +239,161 @@ export default function LocalVersusPage() {
     const matchGoals = result.timeline
       .map((entry, timelineIndex) => ({ entry, timelineIndex }))
       .filter(({ entry }) => isMatchGoal(entry));
+    const statRows: Array<[string, number, number]> = [
+      ["Toques", result.stats.user.flicks, result.stats.cpu.flicks],
+      ["Na bola", result.stats.user.touches, result.stats.cpu.touches],
+      ["Na trave", result.stats.user.posts, result.stats.cpu.posts],
+    ];
     return (
-      <main className="x1-shell x1-result-shell">
-        <header className="x1-brand"><Link href="/">FUTBOBO</Link><span>X1 LOCAL</span></header>
-        <section className="x1-result-hero">
-          <span>APITO FINAL</span>
-          <h1>{winner ? `${winner} venceu` : "Empate na mesa"}</h1>
-          <div className="x1-result-score">
-            <div><TeamCrest team={setup.userTeam} size={62} /><strong>{playerNames.user}</strong><small>{setup.userTeam.shortName}</small></div>
-            <b>{result.goalsFor}<i>×</i>{result.goalsAgainst}</b>
-            <div><TeamCrest team={setup.cpuTeam} size={62} /><strong>{playerNames.cpu}</strong><small>{setup.cpuTeam.shortName}</small></div>
-          </div>
-          {result.decision === "penalties" && <p>Pênaltis · {result.penaltyFor} × {result.penaltyAgainst}</p>}
-        </section>
-        <section className="x1-result-details">
-          <header><span>RELATÓRIO DA MESA</span><strong>{result.turns} toques no total</strong></header>
-          <div className="x1-stat-grid">
-            {([
-              ["Toques", result.stats.user.flicks, result.stats.cpu.flicks],
-              ["Na bola", result.stats.user.touches, result.stats.cpu.touches],
-              ["Na trave", result.stats.user.posts, result.stats.cpu.posts],
-            ] as Array<[string, number, number]>).map(([label, first, second]) => (
-              <article key={label}><b>{first}</b><span>{label}</span><b>{second}</b></article>
-            ))}
-          </div>
-          <div className="x1-goal-list">
-            {matchGoals.length ? matchGoals.map(({ entry, timelineIndex }) => {
-              const replayIndex = result.replays?.findIndex((replay) => replay.timelineIndex === timelineIndex) ?? -1;
-              return (
-                <div key={timelineIndex}>
-                  <span><b>{entry.side === "user" ? playerNames.user : playerNames.cpu}</b><small>{entry.text} · {formatGoalMinute(entry, setup.rules)}</small></span>
-                  {replayIndex >= 0 && <button type="button" onClick={() => setActiveReplay(activeReplay === replayIndex ? null : replayIndex)}>{activeReplay === replayIndex ? "Fechar" : "Replay"}</button>}
+      <AlbumShell club={X1_INK} tab={null} onTab={() => undefined} showTabs={false} centered label="X1 Local">
+        <AlbumPage side="left" label="Apito final" className="x1-page x1-result-left">
+          <div className="x1-result-band"><InkBand ink="red" title="Apito final" subtitle="X1 Local" /></div>
+          <section className="x1-board" aria-labelledby="x1-result-title">
+            <div className="x1-result-score">
+              <figure className="x1-side">
+                <span className="x1-crest"><TeamCrest team={setup.userTeam} size={76} /></span>
+                <figcaption><strong>{playerNames.user}</strong><small>{setup.userTeam.shortName}</small></figcaption>
+              </figure>
+              <p className="x1-score" aria-label={`${result.goalsFor} a ${result.goalsAgainst}`}>
+                <b>{result.goalsFor}</b><span>×</span><b>{result.goalsAgainst}</b>
+              </p>
+              <figure className="x1-side">
+                <span className="x1-crest"><TeamCrest team={setup.cpuTeam} size={76} /></span>
+                <figcaption><strong>{playerNames.cpu}</strong><small>{setup.cpuTeam.shortName}</small></figcaption>
+              </figure>
+            </div>
+            {result.decision === "penalties" && <p className="x1-pens">Pênaltis · {result.penaltyFor} × {result.penaltyAgainst}</p>}
+            <h1 id="x1-result-title" className="x1-verdict" data-draw={winner ? undefined : ""}>{winner ? `${winner} venceu` : "Empate na mesa"}</h1>
+          </section>
+          <section className="x1-result-details" aria-labelledby="x1-table-title">
+            <BlockTitle id="x1-table-title" note={`${result.turns} toques no total`}>Relatório da mesa</BlockTitle>
+            <div className="x1-table-head" aria-hidden="true"><span>{playerNames.user}</span><span>{playerNames.cpu}</span></div>
+            <dl className="x1-stat-grid">
+              {statRows.map(([label, first, second]) => (
+                <div key={label} className="x1-stat-row" style={{ "--first": `${(first / Math.max(1, first + second)) * 100}%` } as CSSProperties}>
+                  <dd data-lead={first >= second ? "" : undefined}>{first}</dd>
+                  <dt>{label}</dt>
+                  <dd data-lead={second >= first ? "" : undefined}>{second}</dd>
                 </div>
-              );
-            }) : <p>Nenhum gol antes dos pênaltis.</p>}
+              ))}
+            </dl>
+          </section>
+          <div className="x1-result-actions">
+            <div className="x1-dock"><Stamp variant="primary" onClick={startMatch}>Revanche</Stamp></div>
+            <div className="x1-secondary">
+              <Stamp onClick={() => setScreen("lobby")}>Trocar times</Stamp>
+              <Link className={albumPrimitives.stamp} data-variant="default" href="/"><strong>Menu principal</strong></Link>
+            </div>
           </div>
-          {activeReplay !== null && result.replays?.[activeReplay] && (
-            <GoalReplay replay={result.replays[activeReplay]} setup={setup} label="Replay do gol" />
-          )}
-        </section>
-        <div className="x1-result-actions"><button type="button" onClick={startMatch}>Revanche</button><button type="button" onClick={() => setScreen("lobby")}>Trocar times</button><Link href="/">Menu principal</Link></div>
-      </main>
+        </AlbumPage>
+
+        <AlbumPage side="right" label="Gols da partida" className="x1-page x1-goals-page">
+          <BlockTitle as="h2">Gols da partida</BlockTitle>
+          {matchGoals.length ? (
+            <ol className="x1-goal-list">
+              {matchGoals.map(({ entry, timelineIndex }) => {
+                const replayIndex = result.replays?.findIndex((replay) => replay.timelineIndex === timelineIndex) ?? -1;
+                const replay = replayIndex >= 0 && activeReplay === replayIndex ? result.replays?.[replayIndex] : undefined;
+                return (
+                  <li key={timelineIndex} className="x1-goal" data-side={entry.side}>
+                    <span className="x1-goal-minute">{formatGoalMinute(entry, setup.rules)}</span>
+                    <span className="x1-goal-copy">
+                      <b>{entry.side === "user" ? playerNames.user : playerNames.cpu}</b>
+                      <small>{entry.text}</small>
+                    </span>
+                    {replayIndex >= 0 && (
+                      <button type="button" className="x1-replay-button" aria-pressed={activeReplay === replayIndex} onClick={() => setActiveReplay(activeReplay === replayIndex ? null : replayIndex)}>
+                        {activeReplay === replayIndex ? "Fechar" : "Replay"}
+                      </button>
+                    )}
+                    {replay && (
+                      <div className="x1-replay-frame">
+                        <GoalReplay replay={replay} setup={setup} label="Replay do gol" />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          ) : <p className="x1-note">Nenhum gol antes dos pênaltis.</p>}
+          <div className="x1-dock-spacer" aria-hidden="true" />
+        </AlbumPage>
+      </AlbumShell>
     );
   }
 
   return (
-    <main className="x1-shell x1-lobby-shell">
-      <header className="x1-brand"><Link href="/">FUTBOBO</Link><span>X1 LOCAL</span></header>
-      <section className="x1-intro">
-        <div><span>DUELO DE SOFÁ</span><h1>Dois jogadores.<br /><span className="x1-pointer-desktop">Um mouse.</span><span className="x1-pointer-touch">Uma tela.</span></h1><p>Cada pessoa faz um toque e passa <span className="x1-pointer-desktop">o mouse</span><span className="x1-pointer-touch">o aparelho</span>. Sem CPU, sem carreira e sem desculpa para a derrota.</p></div>
-        <aside><b>01</b><span>Jogue seu toque</span><b>02</b><span className="x1-pointer-desktop">Passe o mouse</span><span className="x1-pointer-touch">Passe o aparelho</span><b>03</b><span>Repita até o apito</span></aside>
-      </section>
-      <section className="x1-versus-builder">
-        <article className="x1-player-card x1-player-one">
-          <span>JOGADOR 1 · COMEÇA</span>
-          <TeamCrest team={botaoTeamFromClub(firstClub)} size={78} />
-          <label>Clube<select value={firstClubId} onChange={(event) => {
-            const id = event.target.value;
-            setFirstClubId(id);
-            if (id === secondClubId) setSecondClubId(chooseDifferentClub(clubs, id).id);
-          }}>{clubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}</select></label>
-          <button type="button" onClick={() => setFirstClubId(chooseDifferentClub(clubs, secondClubId).id)}>Sortear clube</button>
-        </article>
-        <div className="x1-versus-mark"><small><span className="x1-pointer-desktop">UM MOUSE</span><span className="x1-pointer-touch">UMA TELA</span></small><strong>×</strong><span>TURNOS</span></div>
-        <article className="x1-player-card x1-player-two">
-          <span>JOGADOR 2 · RESPONDE</span>
-          <TeamCrest team={botaoTeamFromClub(secondClub)} size={78} />
-          <label>Clube<select value={secondClubId} onChange={(event) => {
-            const id = event.target.value;
-            setSecondClubId(id);
-            if (id === firstClubId) setFirstClubId(chooseDifferentClub(clubs, id).id);
-          }}>{clubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}</select></label>
-          <button type="button" onClick={() => setSecondClubId(chooseDifferentClub(clubs, firstClubId).id)}>Sortear clube</button>
-        </article>
-      </section>
-      <section className="x1-rule-presets" aria-labelledby="x1-rule-preset-title">
-        <header><span>FORMATO DA PARTIDA</span><strong id="x1-rule-preset-title">Escolha o ritmo</strong></header>
-        <div>
-          {X1_RULE_PRESETS.map((preset) => (
-            <button key={preset.id} type="button" aria-pressed={rulePresetId === preset.id} onClick={() => setRulePresetId(preset.id)}>
-              <strong>{preset.label}</strong><small>{preset.id === "settings" ? (matchSettings.rules.goalLimit ? `${matchSettings.rules.goalLimit} gols · ${matchSettings.rules.halfSeconds}s` : `${matchSettings.rules.halfSeconds}s · sem limite`) : preset.detail}</small>
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className="x1-launch-strip">
-        <div><span>REGRAS DESTE X1</span><strong>{selectedRules.goalLimit ? `Primeiro a ${selectedRules.goalLimit} gols` : `${selectedRules.halfSeconds}s de jogo`} · pênaltis ligados</strong></div>
-        <button type="button" onClick={startMatch}>Começar o X1 <span>→</span></button>
-      </section>
-      <Link className="x1-back" href="/">← Voltar ao menu principal</Link>
-    </main>
+    <AlbumShell club={X1_INK} tab={null} onTab={() => undefined} showTabs={false} centered label="X1 Local">
+      <AlbumPage side="left" label="O confronto" className="x1-page x1-lobby-left">
+        <Link className="x1-back" href="/"><FutboboIcon name="arrow-left" /> Menu</Link>
+        <InkBand
+          ink="red"
+          title="X1 Local"
+          subtitle={<>Dois jogadores. <span className="x1-pointer-desktop">Um mouse.</span><span className="x1-pointer-touch">Uma tela.</span></>}
+        />
+        <section className="x1-versus-builder" aria-label="Os dois clubes">
+          <ClubPick
+            id="x1-player-one"
+            player="Jogador 1"
+            role="começa"
+            club={firstClub}
+            value={firstClubId}
+            clubs={clubs}
+            tilt="-1.4deg"
+            onChange={(event) => {
+              const id = event.target.value;
+              setFirstClubId(id);
+              if (id === secondClubId) setSecondClubId(chooseDifferentClub(clubs, id).id);
+            }}
+            onRandom={() => setFirstClubId(chooseDifferentClub(clubs, secondClubId).id)}
+          />
+          <span className="x1-versus-mark" aria-hidden="true">×</span>
+          <ClubPick
+            id="x1-player-two"
+            player="Jogador 2"
+            role="responde"
+            club={secondClub}
+            value={secondClubId}
+            clubs={clubs}
+            tilt="1.2deg"
+            onChange={(event) => {
+              const id = event.target.value;
+              setSecondClubId(id);
+              if (id === firstClubId) setFirstClubId(chooseDifferentClub(clubs, id).id);
+            }}
+            onRandom={() => setSecondClubId(chooseDifferentClub(clubs, firstClubId).id)}
+          />
+        </section>
+      </AlbumPage>
+
+      <AlbumPage side="right" label="A partida" className="x1-page x1-lobby-right">
+        <section className="x1-rule-presets" aria-labelledby="x1-rule-preset-title">
+          <h2 className="x1-page-title" id="x1-rule-preset-title">Escolha o ritmo</h2>
+          <div className="x1-presets">
+            {X1_RULE_PRESETS.map((preset) => (
+              <button key={preset.id} type="button" className="x1-preset" aria-pressed={rulePresetId === preset.id} onClick={() => setRulePresetId(preset.id)}>
+                <strong>{preset.label}</strong><small>{preset.id === "settings" ? (matchSettings.rules.goalLimit ? `${matchSettings.rules.goalLimit} gols · ${matchSettings.rules.halfSeconds}s` : `${matchSettings.rules.halfSeconds}s · sem limite`) : preset.detail}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+        <section className="x1-launch-strip" aria-labelledby="x1-rules-title">
+          <BlockTitle id="x1-rules-title">Regras deste X1</BlockTitle>
+          <Ficha className="x1-rules-ficha" rows={rulesRows(selectedRules)} />
+          <p className="x1-rules-line">{selectedRules.goalLimit ? `Primeiro a ${selectedRules.goalLimit} gols` : `${selectedRules.halfSeconds}s de jogo`} · pênaltis ligados</p>
+        </section>
+        <section className="x1-how" aria-labelledby="x1-how-title">
+          <BlockTitle id="x1-how-title">Como se joga</BlockTitle>
+          <ol>
+            <li><b>1</b><span>Jogue seu toque</span></li>
+            <li><b>2</b><span className="x1-pointer-desktop">Passe o mouse</span><span className="x1-pointer-touch">Passe o aparelho</span></li>
+            <li><b>3</b><span>Repita até o apito</span></li>
+          </ol>
+          <p className="x1-note">Sem CPU, sem carreira e sem desculpa para a derrota.</p>
+        </section>
+        <div className="x1-dock"><Stamp variant="primary" onClick={startMatch}>Começar o X1</Stamp></div>
+        <div className="x1-dock-spacer" aria-hidden="true" />
+      </AlbumPage>
+    </AlbumShell>
   );
 }

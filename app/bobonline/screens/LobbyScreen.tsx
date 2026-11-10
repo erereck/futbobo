@@ -7,9 +7,13 @@
 // o "Começar" de quem manda ou o "Estou pronto" de quem chegou. A minha vaga mostra a minha
 // sinalização de verdade ("Reconectando…" quando os relays calaram: o anfitrião fica invisível
 // para quem procura), e as dos outros a rota do link, discreta ("direto · 40 ms").
+//
+// No álbum: o ingresso da sala com o código à esquerda (e, para quem manda, as regras logo abaixo);
+// à direita as vagas viram figurinhas coladas conforme a turma chega. No celular, começar/pronto vai
+// para o rodapé amarelo, as regras abrem num toque e, no torneio, as figurinhas deitam para caber.
 
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import BobCrest from "../teams/BobCrest";
 import { ConfirmSheet } from "../teams/TeamCodeSheet";
 import { BOB_RULE_PRESETS } from "../teams/match-setup";
 import { showTeamsToast } from "../teams/team-storage";
@@ -20,9 +24,12 @@ import { copyText, openWhatsApp, shareRoomLink } from "../share";
 import type { CpuLevel, RoomMember, RulesPresetId } from "../types";
 import { CPU_LEVEL_LABEL, memberConnection, playersOf, roomClient, settingsLine, spectatorsOf } from "../use-room";
 import { Switch } from "./CreateRoomScreen";
+import { ClubCard, Colophon, Dock, DockSpacer, Page, Spread, paper } from "./paper";
 
 const RULES: RulesPresetId[] = ["flash", "classic", "marathon"];
 const LEVELS: CpuLevel[] = [2, 3, 4];
+/** Cada figurinha colada um pouco torta. */
+const TILTS = ["-1.4deg", ".9deg", "-.5deg", "1.3deg"];
 
 /** "Falta 1 jogador", "Esperando Fulano ficar pronto"…: por que o botão de começar está apagado. */
 export function startBlockedReason(players: RoomMember[], hostId: string): string | null {
@@ -55,6 +62,8 @@ export default function LobbyScreen({
   const [fallback, setFallback] = useState<{ text: string; focus: boolean } | null>(null);
   const [kick, setKick] = useState<RoomMember | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
+  /** Celular: as regras ficam fechadas (o ingresso já diz quais são); no desktop estão sempre na página. */
+  const [rulesOpen, setRulesOpen] = useState(false);
   const fallbackRef = useRef<HTMLInputElement>(null);
   const snapshot = state.snapshot;
 
@@ -102,124 +111,165 @@ export default function LobbyScreen({
     else setStartError(null);
   }
 
+  const teamActions = (
+    <div className="bob-lobby-actions">
+      <button type="button" className="secondary-button" onClick={onTeams}>Trocar time</button>
+      <button type="button" className="secondary-button" data-testid="bob-leave" onClick={onLeave}>Sair da sala</button>
+      {/* Celular: o caminho ao menu vem para esta fileira (o pé da página sai para a sala caber na tela). */}
+      <Link className="bob-colophon-menu bob-lobby-menu" href="/">Menu</Link>
+    </div>
+  );
+
   return (
-    <section className="bob-lobby" aria-labelledby={`${baseId}-title`}>
-      <header className="bob-lobby-head">
-        <span className="bob-eyebrow" id={`${baseId}-title`}>SALA</span>
-        <strong className="bob-room-code" aria-label={spelledCode(code)} data-testid="bob-room-code">{formatRoomCode(code)}</strong>
-        <p>{settingsLine(settings)}</p>
-      </header>
-
-      <div className="bob-share">
-        <button type="button" className={`${alone ? "primary-button" : "secondary-button"} bob-share-main`} data-testid="bob-share-whatsapp" onClick={sendWhatsApp}>Mandar no WhatsApp</button>
-        <button type="button" className="secondary-button" data-testid="bob-share-link" onClick={() => void share()}>Compartilhar link</button>
-        <button type="button" className="secondary-button" data-testid="bob-copy-code" onClick={() => void copyCode()}>Copiar código</button>
-      </div>
-      {fallback && (
-        <div className="bob-field bob-copy-fallback">
-          <label htmlFor={`${baseId}-fallback`}>Toque e segure para copiar.</label>
-          <input id={`${baseId}-fallback`} ref={fallbackRef} readOnly value={fallback.text} onFocus={(event) => event.currentTarget.select()} />
+    <Spread className="bob-lobby" aria-labelledby={`${baseId}-title`} data-alone={alone ? "" : undefined}>
+      <Page side="left" label="Ingresso da sala" className="bob-lobby-left">
+        {/* O ingresso da sala: o código grande é o que a pessoa dita ou mostra. */}
+        <div className={`${paper.ticket} bob-lobby-ticket`}>
+          <div className={paper.ticketPaper}>
+            <div className={`${paper.ticketMain} bob-lobby-head`}>
+              <p className={paper.ticketKicker} id={`${baseId}-title`}>Sala</p>
+              <strong className="bob-room-code" aria-label={spelledCode(code)} data-testid="bob-room-code">{formatRoomCode(code)}</strong>
+              <p className={paper.ticketFoot}>{settingsLine(settings)}</p>
+            </div>
+            <div className={paper.stub} aria-hidden="true"><b>Bobonline</b></div>
+          </div>
         </div>
-      )}
-      {/* Uma dica só, desde o começo (a de antes só vinha depois de mandar): a sala só é achada com esta tela aberta. */}
-      {alone && <p className="bob-hint" data-testid="bob-alone-hint">Deixe esta tela aberta até seu amigo entrar.</p>}
 
-      <ol className="bob-slots" aria-label="Vagas da sala">
-        {Array.from({ length: capacity }, (_, index) => {
-          const member = players[index];
-          if (!member) {
+        <div className="bob-share">
+          <button type="button" className={`${alone ? "primary-button" : "secondary-button"} bob-share-main`} data-testid="bob-share-whatsapp" onClick={sendWhatsApp}>Mandar no WhatsApp</button>
+          <button type="button" className="secondary-button" data-testid="bob-share-link" onClick={() => void share()}>Compartilhar link</button>
+          <button type="button" className="secondary-button" data-testid="bob-copy-code" onClick={() => void copyCode()}>Copiar código</button>
+        </div>
+        {fallback && (
+          <div className="bob-field bob-copy-fallback">
+            <label htmlFor={`${baseId}-fallback`}>Toque e segure para copiar.</label>
+            <input id={`${baseId}-fallback`} ref={fallbackRef} readOnly value={fallback.text} onFocus={(event) => event.currentTarget.select()} />
+          </div>
+        )}
+        {/* Uma dica só, desde o começo (a de antes só vinha depois de mandar): a sala só é achada com esta tela aberta. */}
+        {alone && <p className="bob-hint" data-testid="bob-alone-hint">Deixe esta tela aberta até seu amigo entrar.</p>}
+
+        {spectators.length > 0 && (
+          <div className="bob-spectators">
+            <span>Assistindo ({spectators.length})</span>
+            <p>{spectators.map((member) => member.nickname).join(" · ")}</p>
+          </div>
+        )}
+
+        {/* As regras ao lado do ingresso que as imprime (a página das vagas fica com o começar). */}
+        {isHost && (
+          <div className="bob-host-rules">
+            <button
+              type="button"
+              className="bob-rules-toggle"
+              aria-expanded={rulesOpen}
+              aria-controls={`${baseId}-rules`}
+              onClick={() => setRulesOpen((open) => !open)}
+            >
+              {tournament ? "Mudar regras e CPU" : "Mudar regras"}
+            </button>
+            <div className="bob-lobby-rules" id={`${baseId}-rules`} data-open={rulesOpen ? "" : undefined}>
+              <fieldset className="bob-choice">
+                <legend>Regras</legend>
+                <div className="bob-chips">
+                  {RULES.map((id) => (
+                    <button key={id} type="button" aria-pressed={settings.rules === id} onClick={() => roomClient()?.hostSetSettings({ rules: id })}>
+                      <strong>{BOB_RULE_PRESETS[id].label}</strong>
+                      <small>{BOB_RULE_PRESETS[id].detail}</small>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              {tournament && (
+                <fieldset className="bob-choice bob-cpu-choice">
+                  <legend>Nível da CPU</legend>
+                  <div className="bob-chips bob-chips-compact">
+                    {LEVELS.map((level) => (
+                      <button key={level} type="button" aria-pressed={settings.cpuLevel === level} onClick={() => roomClient()?.hostSetSettings({ cpuLevel: level })}>
+                        <strong>{CPU_LEVEL_LABEL[level]}</strong>
+                      </button>
+                    ))}
+                  </div>
+                  <Switch label="Completar vagas com CPU" checked={settings.fillWithCpu} onChange={(value) => roomClient()?.hostSetSettings({ fillWithCpu: value })} testId="bob-fill-cpu" />
+                </fieldset>
+              )}
+            </div>
+          </div>
+        )}
+      </Page>
+
+      <Page side="right" label="Vagas" className="bob-lobby-right">
+        <h2 className="bob-section-title">Vagas <small className={paper.num}>{players.length} de {capacity}</small></h2>
+        <ol className="bob-slots" aria-label="Vagas da sala" data-size={capacity}>
+          {Array.from({ length: capacity }, (_, index) => {
+            const member = players[index];
+            if (!member) {
+              // Celular, torneio: as vagas livres viram uma só ("5 vagas livres"), em vez de cinco iguais.
+              const free = capacity - players.length;
+              const first = index === players.length;
+              return (
+                <li key={`free-${index}`} className="bob-slot bob-slot-free" data-first={first ? "" : undefined}>
+                  <span className="bob-slot-free-mark" aria-hidden="true" />
+                  <span className="bob-slot-free-one">Vaga livre{tournament && settings.fillWithCpu ? " · vira CPU ao começar" : ""}</span>
+                  {first && free > 1 && <span className="bob-slot-free-all">{free} vagas livres{tournament && settings.fillWithCpu ? " · viram CPU ao começar" : ""}</span>}
+                </li>
+              );
+            }
+            const team = state.teams[member.teamHash];
+            const hostRow = member.playerId === snapshot.hostId;
+            const connection = memberConnection(state, member);
             return (
-              <li key={`free-${index}`} className="bob-slot bob-slot-free">
-                <span className="bob-slot-free-mark" aria-hidden="true" />
-                <span>Vaga livre{tournament && settings.fillWithCpu ? " · vira CPU ao começar" : ""}</span>
+              <li key={member.playerId} className="bob-slot" data-testid="bob-slot" data-me={member.playerId === state.me ? "" : undefined}>
+                <ClubCard team={team ?? null} title={team?.name ?? "Time chegando…"} note={member.nickname} tilt={TILTS[index % TILTS.length]}>
+                  <span className="bob-badges">
+                    {hostRow && <em className="bob-badge bob-badge-host">Anfitrião</em>}
+                    {member.playerId === state.me && <em className="bob-badge bob-badge-me">Você</em>}
+                    {!hostRow && (member.ready ? <em className="bob-badge bob-badge-ready">Pronto</em> : <em className="bob-badge">Preparando</em>)}
+                  </span>
+                  <span className="bob-conn" data-state={connection.tone} data-testid="bob-conn"><i aria-hidden="true" />{connection.text}</span>
+                </ClubCard>
+                {isHost && member.playerId !== state.me && (
+                  <button type="button" className="bob-ghost-button bob-kick" aria-label={`Remover ${member.nickname}`} onClick={() => setKick(member)}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg>
+                    <span>Remover</span>
+                  </button>
+                )}
               </li>
             );
-          }
-          const team = state.teams[member.teamHash];
-          const hostRow = member.playerId === snapshot.hostId;
-          const connection = memberConnection(state, member);
-          return (
-            <li key={member.playerId} className="bob-slot" data-testid="bob-slot" style={team ? { ["--bob-team-primary" as string]: team.primary } : undefined}>
-              {team ? <BobCrest team={team} size={40} /> : <span className="bob-crest-blank" aria-hidden="true" />}
-              <span className="bob-slot-text">
-                <strong>{team?.name ?? "Time chegando…"}</strong>
-                <small>{member.nickname}</small>
-                <span className="bob-badges">
-                  {hostRow && <em className="bob-badge bob-badge-host">ANFITRIÃO</em>}
-                  {member.playerId === state.me && <em className="bob-badge bob-badge-me">VOCÊ</em>}
-                  {!hostRow && (member.ready ? <em className="bob-badge bob-badge-ready">PRONTO</em> : <em className="bob-badge">PREPARANDO</em>)}
-                </span>
-              </span>
-              <span className="bob-conn" data-state={connection.tone} data-testid="bob-conn"><i aria-hidden="true" />{connection.text}</span>
-              {isHost && member.playerId !== state.me && (
-                <button type="button" className="bob-ghost-button bob-kick" onClick={() => setKick(member)}>Remover</button>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+          })}
+        </ol>
 
-      {spectators.length > 0 && (
-        <div className="bob-spectators">
-          <span>Assistindo ({spectators.length})</span>
-          <p>{spectators.map((member) => member.nickname).join(" · ")}</p>
-        </div>
-      )}
-
-      {isHost ? (
-        <div className="bob-host-panel">
-          <fieldset className="bob-choice">
-            <legend>Regras</legend>
-            <div className="bob-chips">
-              {RULES.map((id) => (
-                <button key={id} type="button" aria-pressed={settings.rules === id} onClick={() => roomClient()?.hostSetSettings({ rules: id })}>
-                  <strong>{BOB_RULE_PRESETS[id].label}</strong>
-                  <small>{BOB_RULE_PRESETS[id].detail}</small>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          {tournament && (
-            <fieldset className="bob-choice">
-              <legend>Nível da CPU</legend>
-              <div className="bob-chips bob-chips-compact">
-                {LEVELS.map((level) => (
-                  <button key={level} type="button" aria-pressed={settings.cpuLevel === level} onClick={() => roomClient()?.hostSetSettings({ cpuLevel: level })}>
-                    <strong>{CPU_LEVEL_LABEL[level]}</strong>
-                  </button>
-                ))}
-              </div>
-              <Switch label="Completar vagas com CPU" checked={settings.fillWithCpu} onChange={(value) => roomClient()?.hostSetSettings({ fillWithCpu: value })} testId="bob-fill-cpu" />
-            </fieldset>
-          )}
-          <button type="button" className={`${alone ? "secondary-button" : "primary-button"} bob-submit`} data-testid="bob-start" disabled={blocked !== null} onClick={start}>
-            {tournament ? "Começar torneio" : "Começar partida"} <span>→</span>
-          </button>
-          {startHint && <p className="bob-hint" role="status">{startHint}</p>}
-          <div className="bob-lobby-actions">
-            <button type="button" className="secondary-button" onClick={onTeams}>Trocar time</button>
-            <button type="button" className="secondary-button" data-testid="bob-leave" onClick={onLeave}>Sair da sala</button>
+        {isHost ? (
+          <div className="bob-host-panel">
+            <Dock className="bob-lobby-dock">
+              <button type="button" className={`${alone ? "secondary-button" : "primary-button"} bob-submit`} data-testid="bob-start" disabled={blocked !== null} onClick={start}>
+                {tournament ? "Começar torneio" : "Começar partida"}
+              </button>
+            </Dock>
+            {startHint && <p className="bob-hint" role="status">{startHint}</p>}
+            {teamActions}
           </div>
-        </div>
-      ) : (
-        <div className="bob-guest-panel">
-          <button
-            type="button"
-            className={me?.ready ? "secondary-button bob-ready-on" : "primary-button"}
-            data-testid="bob-ready"
-            aria-pressed={me?.ready ?? false}
-            disabled={!me || me.role !== "player"}
-            onClick={() => roomClient()?.setReady(!me?.ready)}
-          >
-            {me?.ready ? "Não estou pronto" : "Estou pronto"}
-          </button>
-          <p className="bob-hint" role="status">Esperando o anfitrião começar…</p>
-          <div className="bob-lobby-actions">
-            <button type="button" className="secondary-button" onClick={onTeams}>Trocar time</button>
-            <button type="button" className="secondary-button" data-testid="bob-leave" onClick={onLeave}>Sair da sala</button>
+        ) : (
+          <div className="bob-guest-panel">
+            <Dock className="bob-lobby-dock">
+              <button
+                type="button"
+                className={me?.ready ? "secondary-button bob-ready-on" : "primary-button"}
+                data-testid="bob-ready"
+                aria-pressed={me?.ready ?? false}
+                disabled={!me || me.role !== "player"}
+                onClick={() => roomClient()?.setReady(!me?.ready)}
+              >
+                {me?.ready ? "Não estou pronto" : "Estou pronto"}
+              </button>
+            </Dock>
+            <p className="bob-hint" role="status">Esperando o anfitrião começar…</p>
+            {teamActions}
           </div>
-        </div>
-      )}
+        )}
+        <Colophon />
+        <DockSpacer />
+      </Page>
 
       {kick && (
         <ConfirmSheet
@@ -233,6 +283,6 @@ export default function LobbyScreen({
           onCancel={() => setKick(null)}
         />
       )}
-    </section>
+    </Spread>
   );
 }

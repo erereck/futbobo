@@ -434,3 +434,185 @@
 @keyframes veil-pulse {
   50% { opacity: 0.55; }
 }
+
+/* ═════════════ Álbum: a base jogada em papel ═════════════
+   Só com .paper (a base); o Treino especial da QUADRA usa as mesmas classes dentro da folha e não muda.
+   O minigame do Scorebobo abre por cima, na tela dele, com o visual de sempre. */
+.youthPage.paper {
+  gap: 14px;
+  color: var(--ink);
+  font-family: var(--font-text);
+  background: var(--grain), var(--paper);
+}
+.youthPage.paper > :global(.brand-mini) { display: none; }
+.paper .youthHeader {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  margin-top: 0;
+  padding: 12px 14px;
+  border-radius: 4px;
+  color: var(--club-ink);
+  background: var(--dots-light), var(--club);
+}
+.paper .youthHeader::before {
+  content: "";
+  position: absolute;
+  top: -40%;
+  right: 14%;
+  z-index: -1;
+  width: 20%;
+  height: 190%;
+  transform: rotate(22deg);
+  background: var(--club-2);
+}
+.paper .youthHeader > :first-child {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .35);
+}
+.paper .youthHeader > :first-child :global(.club-badge) { width: 46px; height: 46px; box-shadow: none; }
+.paper .youthHeader small { color: var(--club-ink); font-size: 13px; font-weight: 600; letter-spacing: 0; opacity: .92; }
+.paper .youthHeader strong {
+  margin-top: 2px;
+  font: 800 34px/.92 var(--font-display);
+  font-stretch: 76%;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.paper .youthHeader strong:focus-visible { outline-color: var(--club-ink); }
+.paper .youthHeader p { margin-top: 4px; color: var(--club-ink); font-size: 13px; opacity: .92; max-width: 46ch; }
+
+.paper .tally,
+.paper .bonus {
+  border: 0;
+  border-bottom: 1.5px solid var(--rule);
+  border-radius: 0;
+  background: none;
+  padding: 4px 2px 10px;
+}
+.paper .tally span { color: var(--ink-2); font-size: 14px; font-weight: 600; letter-spacing: 0; }
+.paper .tally strong,
+.paper .bonus strong { color: var(--ink); font-family: var(--font-display); font-stretch: 75%; font-weight: 800; }
+.paper .tally small { color: var(--ink-3); }
+.paper .bonus span { color: var(--ink-2); }
+.paper .bonus p { color: var(--ink-2); }
+.paper .bonus[data-bonus="0"] strong { color: var(--ink-3); }
+
+/* cada ano é uma figurinha da página */
+.paper .year {
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .16)) drop-shadow(0 4px 8px rgba(30, 30, 20, .12));
+}
+.paper .year[data-state="next"] { opacity: 1; filter: none; border: 2px dashed var(--rule-strong); background: var(--dots-slot), var(--paper-2); }
+.paper .year[data-state="current"] { outline: 2px solid var(--ink); outline-offset: 0; box-shadow: 4px 4px 0 var(--ink); filter: none; }
+.paper .year[data-state="skipped"] { opacity: .75; }
+.paper .age {
+  border: 0;
+  border-radius: 4px;
+  color: var(--club-ink);
+  background: var(--dots-light), var(--club);
+  font-family: var(--font-display);
+  font-stretch: 75%;
+}
+.paper .year[data-state="next"] .age { color: var(--ink-3); background: transparent; }
+.paper .age small { color: inherit; font-size: 10px; font-weight: 600; letter-spacing: 0; text-transform: lowercase; opacity: .9; }
+.paper .yearCopy strong { color: var(--ink); font-family: var(--font-display); font-stretch: 80%; font-weight: 750; font-size: 18px; letter-spacing: 0; }
+.paper .yearCopy small,
+.paper .yearCopy p { color: var(--ink-2); }
+.paper .lock { color: var(--ink-3); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: lowercase; }
+.paper .starOn { color: var(--yellow-deep); text-shadow: none; }
+.paper .starOff { color: rgba(22, 22, 22, .18); }
+
+/* carimbos */
+.paper .play,
+.paper .ghost,
+.paper .danger,
+.paper .footer :global(.primary-button) {
+  min-height: 48px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  color: var(--ink);
+  font: 750 17px/1 var(--font-display);
+  font-stretch: 82%;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: 3px 3px 0 var(--ink);
+  filter: none;
+}
+.paper .play,
+.paper .footer :global(.primary-button) { background: var(--yellow); }
+.paper .ghost { background: #fff; }
+.paper .ghost:hover { border-color: var(--ink); color: var(--ink); }
+.paper .danger { border-color: var(--red-deep); background: #fff; color: var(--red-deep); box-shadow: 3px 3px 0 var(--red-deep); }
+.paper .play:active,
+.paper .ghost:active,
+.paper .danger:active { translate: 2px 2px; box-shadow: 1px 1px 0 var(--ink); }
+.paper .footer :global(.primary-button) b { display: none; }
+.paper .confirm {
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: 8px;
+  background: var(--dots-slot), var(--paper-2);
+  color: var(--ink);
+}
+.paper .confirm strong { font-family: var(--font-display); font-stretch: 80%; font-weight: 800; font-size: 19px; }
+.paper .confirm p { color: var(--ink-2); }
+
+@media (max-width: 540px) {
+  .paper .youthHeader strong { font-size: 28px; }
+  .paper .youthHeader > :first-child { width: 46px; height: 46px; }
+  .paper .youthHeader > :first-child :global(.club-badge) { width: 36px; height: 36px; }
+}
+
+@media (max-width: 540px) {
+  .paper .youthHeader p { font-size: 12px; }
+  .youthPage.paper { gap: 10px; }
+}
+
+/* ═════════════ espera do minigame em papel ═════════════
+   "Preparando o campo…" e o aviso de erro abrem antes do Scorebobo, que agora também é do álbum. */
+.veil {
+  background: var(--grain, none), #fbfbf7;
+  color: #45453f;
+}
+.veil p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 34ch;
+  font: 600 14px/1.45 var(--font-text, var(--sans));
+  letter-spacing: 0;
+  text-transform: none;
+}
+.veil p:only-child::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f6c431;
+  border: 2px solid #161616;
+}
+.veil .play,
+.veil .ghost {
+  min-width: 180px;
+  min-height: 46px;
+  border: 2px solid #161616;
+  border-radius: 6px;
+  box-shadow: 3px 3px 0 #161616;
+  color: #161616;
+  font: 750 15px/1.1 var(--font-display, var(--display));
+  font-stretch: 82%;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.veil .play { background: #f6c431; }
+.veil .ghost { background: #fff; }

@@ -686,6 +686,7 @@ export function drawPlayerBust(
   secondary: string,
   radius: number,
   contentOffsetY = 0,
+  options: { cutout?: boolean } = {},
 ) {
   const appearance = normalizePlayerAppearance(appearanceValue);
   const skin = appearance.customSkinColor ?? SKIN_COLORS[appearance.skin];
@@ -697,8 +698,19 @@ export function drawPlayerBust(
   const capped = appearance.headwear === 3 || appearance.headwear === 4;
 
   ctx.save();
-  ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.clip();
-  ctx.fillStyle = shade(primary, -24); ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+  if (options.cutout) {
+    // Figurinha do álbum: sem disco nem fundo; a cabeça fica livre e os ombros ganham curva.
+    // A parte de cima termina no topo da camisa (y 7): passar disso deixava a faixa clara do ombro
+    // aparecer de ponta a ponta, como uma linha no queixo. A emenda fica só no miolo dos ombros.
+    ctx.beginPath();
+    ctx.rect(-40 * scale, -40 * scale, 80 * scale, 47 * scale);
+    ctx.rect(-13 * scale, 6.5 * scale, 26 * scale, 1 * scale);
+    ctx.roundRect(-22 * scale, 7 * scale, 44 * scale, 40 * scale, [9 * scale, 9 * scale, 0, 0]);
+    ctx.clip();
+  } else {
+    ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = shade(primary, -24); ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
+  }
   ctx.translate(0, contentOffsetY);
   drawKit(ctx, appearance.kitPattern, primary, secondary, scale);
   ctx.fillStyle = shade(skin, -12); ctx.fillRect(-4 * scale, 4 * scale, 8 * scale, 8 * scale);

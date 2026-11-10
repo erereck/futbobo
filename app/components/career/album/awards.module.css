@@ -1,0 +1,121 @@
+/* Noite de premiação no papel: envelopes de indicação e figurinhas de prêmio. */
+
+.num { font-variant-numeric: tabular-nums lining-nums; }
+
+/* medalha redonda: folha dourada no prêmio máximo, amarelo na elite, papel no resto */
+.medal {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+}
+.medal svg { width: 22px; height: 22px; }
+[data-tier="elite"] .medal { background: var(--yellow); }
+[data-tier="legendary"] .medal { background: radial-gradient(circle at 35% 30%, #fffbe6, #ffe08a 26%, #d9a03a 64%, #8a5a16); }
+
+/* ───────────── envelope de indicação ───────────── */
+.envelope {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 26px 16px 16px;
+  border-radius: 10px;
+  background: #fffdf6;
+  box-shadow: 0 0 0 1.5px var(--rule-strong, rgba(22, 22, 22, .3)), 0 10px 18px -12px rgba(40, 40, 20, .35);
+}
+/* a aba do envelope desenhada no topo */
+.envelope::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 22px;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(to bottom right, transparent 49.5%, rgba(22, 22, 22, .08) 50%) left / 50% 100% no-repeat,
+    linear-gradient(to bottom left, transparent 49.5%, rgba(22, 22, 22, .08) 50%) right / 50% 100% no-repeat;
+  pointer-events: none;
+}
+.envelope[data-open] { padding-top: 16px; }
+.envelope[data-open]::before { display: none; }
+.envelopeHead { position: relative; display: flex; align-items: center; gap: 12px; }
+.envelopeHead div { display: grid; gap: 1px; min-width: 0; }
+.envelopeHead small { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.envelopeHead strong { font-family: var(--font-display); font-stretch: 78%; font-weight: 800; font-size: 24px; line-height: 1.05; }
+
+.finalists { display: grid; }
+.finalists li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  border-bottom: 1.5px dashed var(--rule);
+}
+.finalists b { font-family: var(--font-display); font-stretch: 78%; font-weight: 800; font-size: 20px; color: var(--ink-3); }
+.finalists span { overflow: hidden; font-size: 15px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.finalists li[data-you] span { justify-self: start; font-weight: 750; box-shadow: inset 0 -.38em 0 rgba(246, 196, 49, .75); }
+.finalists em {
+  padding: 1px 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  background: var(--yellow);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  rotate: -2deg;
+}
+.note { font-size: 13.5px; color: var(--ink-2); }
+
+.reveal { display: grid; gap: 4px; animation: revealIn .5s cubic-bezier(.2, .8, .2, 1) both; }
+.reveal > small { font-size: 13px; font-weight: 600; color: var(--ink-3); }
+.reveal > strong { justify-self: start; font-family: var(--font-display); font-stretch: 76%; font-weight: 800; font-size: 34px; line-height: 1; margin-bottom: 8px; }
+.envelope[data-tier] .reveal > strong { box-shadow: inset 0 -.32em 0 rgba(246, 196, 49, .7); }
+.nearMiss { display: grid; gap: 3px; padding: 10px 12px; border-left: 4px solid var(--ink-3); background: rgba(22, 22, 22, .04); border-radius: 0 6px 6px 0; }
+.nearMiss strong { font-size: 15px; font-weight: 700; }
+.nearMiss p { font-size: 13.5px; color: var(--ink-2); }
+
+/* ───────────── figurinha de prêmio ───────────── */
+.sticker {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .14), 0 8px 14px -8px rgba(40, 40, 20, .3);
+  rotate: -.4deg;
+}
+.sticker[data-tier="legendary"] { border: 3px solid transparent; background: linear-gradient(#fff, #fff) padding-box, var(--foil) border-box; }
+.stickerCopy { display: grid; gap: 2px; min-width: 0; padding-right: 92px; }
+.stickerCopy small { font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.stickerCopy strong { font-family: var(--font-display); font-stretch: 78%; font-weight: 800; font-size: 21px; line-height: 1.08; }
+.stickerCopy p { font-size: 13px; color: var(--ink-2); }
+/* carimbo de borracha no canto */
+.stamp {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 3px 8px;
+  border: 2px solid var(--green-deep);
+  border-radius: 5px;
+  color: var(--green-deep);
+  font-size: 12px;
+  font-weight: 750;
+  rotate: 6deg;
+  opacity: .9;
+}
+.sticker[data-tier="legendary"] .stamp { border-color: var(--red-deep); color: var(--red-deep); }
+
+@keyframes revealIn { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .reveal { animation: none; } }
+
+@media (max-width: 520px) {
+  .stickerCopy { padding-right: 0; padding-top: 22px; }
+  .stamp { top: 10px; right: 10px; }
+}

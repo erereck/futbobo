@@ -1,0 +1,371 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Decisão no futebol de botão dentro do álbum: o ingresso antes da partida
+   e o placar carimbado depois dela.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.num { font-variant-numeric: tabular-nums lining-nums; }
+.page { gap: clamp(14px, 2vh, 20px); }
+
+@media (min-width: 1024px) {
+  /* a figurinha centralizada na página, como capa do capítulo */
+  /* a curva da página (::after) também tem margem automática: a sobra divide em cima e embaixo */
+  .centered > :first-child { margin-top: auto; }
+  /* o ingresso fica no meio do espaço entre a faixa e os botões */
+  .ticket:has(+ .dock) { margin-block: auto; }
+  .ticket + .dock { margin-top: 0; }
+  .centered .playerRow { grid-template-columns: clamp(180px, 16vw, 236px) minmax(0, 1fr); }
+}
+
+/* ───────────── times lado a lado ───────────── */
+.versus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+.side { display: grid; justify-items: center; gap: 8px; margin: 0; min-width: 0; text-align: center; }
+.side figcaption {
+  max-width: 100%;
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: clamp(19px, 2.6vh, 24px);
+  line-height: 1;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.crest :global(.botao-crest) {
+  border-width: 3px;
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-size: 26px;
+  text-shadow: none;
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .12), 0 6px 12px -6px rgba(30, 30, 20, .45);
+}
+.vs {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 46px;
+  line-height: 1;
+  color: var(--ink-3);
+}
+
+/* ───────────── ingresso (antes da partida) ───────────── */
+.ticket {
+  rotate: -1deg;
+  filter: drop-shadow(0 1px 0 var(--paper-edge)) drop-shadow(0 8px 12px rgba(40, 40, 20, .22));
+}
+.ticketPaper {
+  --cut: 78px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--cut);
+  border-radius: 8px;
+  background: #fff;
+  -webkit-mask:
+    radial-gradient(circle 11px at calc(100% - var(--cut)) 0, #0000 98%, #000) top / 100% 51% no-repeat,
+    radial-gradient(circle 11px at calc(100% - var(--cut)) 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
+  mask:
+    radial-gradient(circle 11px at calc(100% - var(--cut)) 0, #0000 98%, #000) top / 100% 51% no-repeat,
+    radial-gradient(circle 11px at calc(100% - var(--cut)) 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
+}
+.ticketMain {
+  display: grid;
+  gap: 16px;
+  padding: 16px 18px 14px;
+  border-top: 7px solid var(--club);
+  border-radius: 8px 0 0 8px;
+  background: var(--dots-slot), #fff;
+}
+.ticketKicker { font-size: 13px; font-weight: 650; color: var(--ink-2); }
+.ticketFoot {
+  padding-top: 10px;
+  border-top: 1.5px dashed var(--rule-strong);
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.stub {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-left: 2px dashed rgba(255, 255, 255, .55);
+  border-radius: 0 8px 8px 0;
+  background: var(--dots-light), var(--club);
+  color: var(--club-ink);
+}
+.stub b {
+  writing-mode: vertical-rl;
+  rotate: 180deg;
+  font-family: var(--font-display);
+  font-stretch: 76%;
+  font-weight: 800;
+  font-size: 26px;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+.stub span { font-weight: 700; font-size: 13px; }
+
+/* ───────────── sua figurinha ───────────── */
+.playerRow { display: grid; grid-template-columns: clamp(150px, 13vw, 196px) minmax(0, 1fr); gap: 24px; align-items: center; }
+.bench {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1.5px solid var(--rule);
+  background: #fff;
+}
+.bench p { font-size: 14.5px; color: var(--ink-2); }
+.benchStamp {
+  justify-self: start;
+  rotate: -3deg;
+  padding: 2px 10px;
+  border: 3px solid var(--red);
+  border-radius: 6px;
+  color: var(--red);
+  font-family: var(--font-display);
+  font-stretch: 76%;
+  font-weight: 800;
+  font-size: 23px;
+  text-transform: uppercase;
+}
+
+/* ───────────── placar (depois da partida) ───────────── */
+.board {
+  position: relative;
+  padding: 18px 16px 30px;
+  border-top: 7px solid var(--club);
+  border-radius: 8px;
+  background: var(--dots-slot), #fff;
+  box-shadow: 0 1px 0 var(--paper-edge), 0 8px 14px -10px rgba(40, 40, 20, .4);
+}
+.score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-stretch: 76%;
+  font-weight: 800;
+}
+.score b { font-size: clamp(58px, 8vh, 84px); line-height: .9; }
+.score span { font-size: 32px; color: var(--ink-3); }
+.verdict {
+  position: absolute;
+  right: 16px;
+  bottom: -18px;
+  padding: 4px 14px 2px;
+  rotate: -6deg;
+  border: 3px solid var(--red);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .9);
+  color: var(--red);
+  font-family: var(--font-display);
+  font-stretch: 76%;
+  font-weight: 800;
+  font-size: clamp(27px, 3.6vh, 36px);
+  line-height: 1.05;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4px currentColor;
+  animation: stampIn .5s .25s var(--ease-out) both;
+}
+.verdict[data-win] { color: var(--green); border-color: var(--green); }
+.walkover {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border: 2px dashed var(--red);
+  border-radius: 8px;
+  background: rgba(224, 38, 47, .05);
+}
+.walkover h3 { font-family: var(--font-display); font-stretch: 82%; font-weight: 800; font-size: 20px; color: var(--red-deep); }
+.walkover p { font-size: 14px; color: var(--ink-2); }
+.recap {
+  margin-top: 8px;
+  padding-left: 12px;
+  border-left: 4px solid var(--club);
+  font-size: 15px;
+  color: var(--ink-2);
+  max-width: 56ch;
+}
+.youRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px; }
+.motm {
+  rotate: 4deg;
+  padding: 10px 14px;
+  border: 1.5px solid var(--yellow-deep);
+  border-radius: 99px;
+  background: var(--foil);
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 17px;
+  white-space: nowrap;
+}
+
+/* ───────────── gols e replay ───────────── */
+.goals { display: grid; gap: 8px; }
+.goal {
+  display: grid;
+  grid-template-columns: minmax(60px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 8px 10px 8px 12px;
+  border: 1.5px solid var(--rule);
+  border-left: 6px solid var(--ink-3);
+  border-radius: 6px;
+  background: #fff;
+}
+.goal[data-side="user"] { border-left-color: var(--club); }
+.goal[data-you] { background: color-mix(in srgb, var(--club) 9%, #fff); }
+.goal[data-before] { opacity: .6; }
+.minute {
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 21px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.goalCopy { display: grid; gap: 2px; min-width: 0; }
+.goalCopy b { font-weight: 650; line-height: 1.3; }
+.goalCopy small { color: var(--ink-3); font-size: 12.5px; }
+.replayButton {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 2px 2px 0 var(--ink);
+  font-weight: 650;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: translate .12s var(--ease-out), box-shadow .12s var(--ease-out);
+}
+.replayButton:hover { translate: -1px -1px; box-shadow: 3px 3px 0 var(--ink); }
+.replayButton[aria-pressed="true"] { background: var(--yellow); }
+.empty { color: var(--ink-3); font-size: 14.5px; }
+
+.replayFrame {
+  position: relative;
+  padding: 12px 12px 10px;
+  rotate: .5deg;
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 1px 0 var(--paper-edge), 0 8px 14px -8px rgba(40, 40, 20, .4);
+}
+.replayFrame::before {
+  content: "";
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  width: 84px;
+  height: 22px;
+  translate: -50% 0;
+  rotate: -3deg;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .2) 0 2px, transparent 2px 7px), rgba(234, 224, 186, .82);
+  box-shadow: 0 1px 2px rgba(40, 40, 20, .2);
+}
+.replayFrame :global(.goal-replay) { margin: 0; padding: 0; border: 0; gap: 8px; color: var(--ink); }
+.replayFrame :global(.goal-replay > header span) { display: none; }
+.replayFrame :global(.goal-replay > header strong) { font-family: var(--font-display); font-stretch: 82%; font-weight: 750; font-size: 17px; }
+.replayFrame :global(.goal-replay > header em) { color: var(--ink-3); font-size: 12px; }
+.replayFrame { scroll-margin: 24px; }
+.replayFrame :global(.goal-replay-canvas) { width: min(100%, 280px); border: 0; border-radius: 3px; }
+.replayFrame :global(.goal-replay-controls button) {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+}
+.replayFrame :global(.goal-replay-controls > span) { height: 6px; background: var(--paper-2); }
+.replayFrame :global(.goal-replay-controls i) { background: var(--club); }
+.replayFrame :global(.goal-replay > small) { color: var(--ink-3); font-size: 12px; }
+
+/* ───────────── números da mesa ───────────── */
+.table { display: grid; gap: 6px; }
+.tableHead { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
+.table dl { margin: 0; display: grid; }
+.tableRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 52px;
+  align-items: center;
+  padding: 6px 0 16px;
+}
+.tableRow::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--club) 0 var(--mine), transparent var(--mine) calc(var(--mine) + 3px), var(--ink-3) calc(var(--mine) + 3px) 100%);
+}
+.tableRow dt { text-align: center; font-size: 13.5px; color: var(--ink-2); }
+.tableRow dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 23px;
+  color: var(--ink-3);
+}
+.tableRow dd:last-child { text-align: right; }
+.tableRow dd[data-lead] { color: var(--ink); }
+
+/* ───────────── ações ───────────── */
+.dock { display: grid; gap: 10px; margin-top: auto; padding-top: 6px; }
+.dock > button { justify-content: center; text-align: center; }
+.dockSpacer { display: none; }
+
+@media (max-width: 1023px) {
+  .ticketPaper { --cut: 62px; }
+  .ticketMain { padding: 14px 14px 12px; gap: 12px; }
+  .crest :global(.botao-crest) { width: 66px !important; height: 66px !important; font-size: 20px; }
+  .vs { font-size: 36px; }
+  .stub b { font-size: 21px; }
+  .playerRow { grid-template-columns: 116px minmax(0, 1fr); gap: 16px; }
+  .score b { font-size: 60px; }
+  .verdict { font-size: 27px; }
+  .youRow { grid-template-columns: 1fr; justify-items: start; }
+  .goal { grid-template-columns: minmax(48px, auto) minmax(0, 1fr); }
+  .goal .replayButton { grid-column: 1 / -1; justify-self: start; }
+  .dock {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: var(--dock-lift, 0px);
+    margin: 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: var(--yellow);
+    box-shadow: 0 -1px 0 rgba(0, 0, 0, .08), 0 -8px 18px rgba(40, 40, 20, .1);
+  }
+  .dockSpacer { display: block; height: 40px; }
+  .dockSpacer[data-double] { height: 96px; }
+}
+
+@media (max-width: 380px) {
+  .crest :global(.botao-crest) { width: 56px !important; height: 56px !important; }
+  .side figcaption { font-size: 17px; }
+}
+
+@keyframes stampIn {
+  from { opacity: 0; scale: 1.7; rotate: -14deg; }
+  60% { opacity: 1; scale: .94; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verdict { animation: none; }
+  .replayButton { transition: none; }
+}

@@ -20,6 +20,7 @@ import {
   roomClient,
   teamOf,
 } from "../use-room";
+import { Band, Colophon, Page, Spread, paper, teamInks } from "./paper";
 
 type Chip = { text: string; tone: "wait" | "ready" | "live" | "done" | "wo" };
 
@@ -98,7 +99,8 @@ function SideRow({ state, match, side }: { state: RoomClientState; match: Bracke
     <div className={`bob-bracket-row${winner ? " is-winner" : ""}${entry.entrantId === state.me ? " is-me" : ""}`}>
       {/* O selo CPU vai ao lado do nome: no escudo de 26 px ele cobriria o desenho inteiro. */}
       {team ? <BobCrest team={team} size={26} /> : <span className="bob-crest-blank" aria-hidden="true" />}
-      <span>{team?.shortName ?? nicknameOf(state, entry.entrantId)}{cpu && <em className="bob-cpu-tag">CPU</em>}</span>
+      {/* Nome que não cabe ganha reticências; o selo CPU fica inteiro ao lado. */}
+      <span className="bob-bracket-team"><span>{team?.shortName ?? nicknameOf(state, entry.entrantId)}</span>{cpu && <em className="bob-cpu-tag">CPU</em>}</span>
       <b>{sideScore(state, match, side)}</b>
     </div>
   );
@@ -122,6 +124,8 @@ function waitingFor(state: RoomClientState, bracket: Bracket, match: BracketMatc
   return `Esperando o vencedor de ${sideName(state, feeder.home)} × ${sideName(state, feeder.away)}`;
 }
 
+
+/** A minha próxima partida como ingresso: os dois escudos, o "pronto?" e a fase no canhoto. */
 function NextMatchCard({ state, bracket, match, now }: { state: RoomClientState; bracket: Bracket; match: BracketMatch; now: number }) {
   const me = state.me;
   const mySide = match.home?.entrantId === me ? "home" : "away";
@@ -132,6 +136,7 @@ function NextMatchCard({ state, bracket, match, now }: { state: RoomClientState;
   const deadline = local?.readyDeadlineLocal ?? (match.readyDeadline === null ? null : toLocal(match.readyDeadline));
   const hold = local?.holdUntilLocal ?? (match.holdUntil === null ? null : toLocal(match.holdUntil));
   const pressed = match.readyBy.includes(me);
+  const theirTeam = opponent ? teamOf(state, opponent.entrantId) : null;
   let body: ReactNode;
 
   if (!opponent) {
@@ -142,7 +147,11 @@ function NextMatchCard({ state, bracket, match, now }: { state: RoomClientState;
     const level = state.snapshot ? CPU_LEVEL_LABEL[state.snapshot.settings.cpuLevel] : "";
     body = (
       <>
-        <p className="bob-next-vs">{round} · {myTeam?.shortName ?? "Seu time"} × {sideName(state, opponent)}</p>
+        <p className="bob-next-vs">
+          <span>{myTeam ? <BobCrest team={myTeam} size={34} /> : <span className="bob-crest-blank" aria-hidden="true" />}{myTeam?.shortName ?? "Seu time"}</span>
+          <i aria-hidden="true">×</i>
+          <span>{theirTeam ? <BobCrest team={theirTeam} size={34} cpu={cpu} /> : <span className="bob-crest-blank" aria-hidden="true" />}{sideName(state, opponent)}</span>
+        </p>
         {cpu && <p>Contra a CPU ({level}) · joga no seu aparelho</p>}
         {match.status === "ready-check" && (
           <div className="bob-next-ready">
@@ -163,9 +172,14 @@ function NextMatchCard({ state, bracket, match, now }: { state: RoomClientState;
   }
 
   return (
-    <section className="bob-next-card" aria-label="Sua próxima partida" data-testid="bob-next-card">
-      <span className="bob-eyebrow">SUA PRÓXIMA PARTIDA</span>
-      {body}
+    <section className={`${paper.ticket} bob-next-card`} aria-label="Sua próxima partida" data-testid="bob-next-card" data-status={match.status}>
+      <div className={paper.ticketPaper} style={myTeam ? teamInks(myTeam.primary, myTeam.secondary) : undefined}>
+        <div className={paper.ticketMain}>
+          <p className={paper.ticketKicker}>Sua próxima partida</p>
+          {body}
+        </div>
+        <div className={paper.stub} aria-hidden="true"><b>{round}</b></div>
+      </div>
     </section>
   );
 }
@@ -190,62 +204,72 @@ export default function BracketScreen({
   const live = bracket.matches.filter((match) => match.status === "playing" && match.home?.entrantId !== me && match.away?.entrantId !== me);
   const rounds = Array.from({ length: bracket.rounds }, (_, index) => index + 1);
   const championTeam = champion ? teamOf(state, champion) : null;
+  const preset = BOB_RULE_PRESETS[snapshot.settings.rules];
 
   return (
-    <section className="bob-bracket" aria-labelledby="bob-bracket-title">
-      <header className="bob-screen-head">
-        <span>TORNEIO</span>
+    <Spread className="bob-bracket" aria-labelledby="bob-bracket-title" data-rounds={bracket.rounds}>
+      <Page side="left" label="Sua campanha" className="bob-bracket-left">
         {/* A chave pode sair menor que o formato (sem CPU e com poucas pessoas): o título segue a chave. */}
-        <h1 id="bob-bracket-title">{snapshot.settings.format === "x1" ? FORMAT_LABEL.x1 : `Torneio de ${bracket.size}`}</h1>
-      </header>
+        <Band
+          ink="green"
+          titleId="bob-bracket-title"
+          title={snapshot.settings.format === "x1" ? FORMAT_LABEL.x1 : `Torneio de ${bracket.size}`}
+          subtitle={`${preset.label} · ${preset.detail}`}
+        />
 
-      {next && <NextMatchCard state={state} bracket={bracket} match={next} now={now} />}
-      {fell && (
-        <p className="bob-info" role="status">
-          {fell.round === bracket.rounds
-            ? `Vice-campeão! ${championTeam?.shortName ?? (winnerOf(fell) ? sideName(state, { entrantId: winnerOf(fell) as string }) : "O adversário")} levou a final.`
-            : `Você caiu ${roundPhrase(bracket.size, fell.round)}. Dá para assistir as outras partidas.`}
-        </p>
-      )}
+        {next && <NextMatchCard state={state} bracket={bracket} match={next} now={now} />}
+        {fell && (
+          <p className="bob-info" role="status">
+            {fell.round === bracket.rounds
+              ? `Vice-campeão! ${championTeam?.shortName ?? (winnerOf(fell) ? sideName(state, { entrantId: winnerOf(fell) as string }) : "O adversário")} levou a final.`
+              : `Você caiu ${roundPhrase(bracket.size, fell.round)}. Dá para assistir as outras partidas.`}
+          </p>
+        )}
 
-      <div className="bob-bracket-scroll" role="region" aria-label="Chave do torneio" tabIndex={0}>
-        {rounds.map((round) => (
-          <div className="bob-bracket-col" key={round}>
-            <h2>{roundName(bracket.size, round)}</h2>
-            <div className="bob-bracket-col-list">
-              {bracket.matches
-                .filter((match) => match.round === round)
-                .sort((a, b) => a.index - b.index)
-                .map((match) => <MatchCard key={match.id} state={state} match={match} now={now} />)}
+        {live.length > 0 && (
+          <section className="bob-live" aria-labelledby="bob-live-title">
+            <h2 id="bob-live-title" className="bob-section-title">Ao vivo agora</h2>
+            {live.map((match) => {
+              const chip = matchChip(state, match, now);
+              const canWatch = match.kind === "duel" || match.kind === "cpu-human";
+              return (
+                <article key={match.id} className="bob-live-card">
+                  <div>
+                    <strong>{sideName(state, match.home)} × {sideName(state, match.away)}</strong>
+                    <small>{roundName(bracket.size, match.round)} · {chip.text}</small>
+                  </div>
+                  {canWatch && (
+                    <button type="button" className="secondary-button" data-testid="bob-watch" onClick={() => roomClient()?.spectate(match.id)}>Assistir</button>
+                  )}
+                </article>
+              );
+            })}
+          </section>
+        )}
+      </Page>
+
+      <Page side="right" label="Chave do torneio" className="bob-bracket-right">
+        <h2 className={`${paper.pageTitle} bob-bracket-title`}>Chave</h2>
+        <div className="bob-bracket-scroll" role="region" aria-label="Chave do torneio" tabIndex={0}>
+          {rounds.map((round) => (
+            <div className="bob-bracket-col" key={round}>
+              <h2>{roundName(bracket.size, round)}</h2>
+              <div className="bob-bracket-col-list">
+                {bracket.matches
+                  .filter((match) => match.round === round)
+                  .sort((a, b) => a.index - b.index)
+                  .map((match) => <MatchCard key={match.id} state={state} match={match} now={now} />)}
+              </div>
             </div>
+          ))}
+        </div>
+
+        <Colophon>
+          <div className="bob-footer-actions">
+            <button type="button" className="secondary-button" data-testid="bob-leave" onClick={onLeave}>Sair da sala</button>
           </div>
-        ))}
-      </div>
-
-      {live.length > 0 && (
-        <section className="bob-live" aria-labelledby="bob-live-title">
-          <h2 id="bob-live-title">Ao vivo agora</h2>
-          {live.map((match) => {
-            const chip = matchChip(state, match, now);
-            const canWatch = match.kind === "duel" || match.kind === "cpu-human";
-            return (
-              <article key={match.id} className="bob-live-card">
-                <div>
-                  <strong>{sideName(state, match.home)} × {sideName(state, match.away)}</strong>
-                  <small>{roundName(bracket.size, match.round)} · {chip.text}</small>
-                </div>
-                {canWatch && (
-                  <button type="button" className="secondary-button" data-testid="bob-watch" onClick={() => roomClient()?.spectate(match.id)}>Assistir</button>
-                )}
-              </article>
-            );
-          })}
-        </section>
-      )}
-
-      <div className="bob-footer-actions">
-        <button type="button" className="secondary-button" data-testid="bob-leave" onClick={onLeave}>Sair da sala</button>
-      </div>
-    </section>
+        </Colophon>
+      </Page>
+    </Spread>
   );
 }

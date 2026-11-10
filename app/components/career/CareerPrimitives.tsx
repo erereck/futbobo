@@ -1,12 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { CSSProperties } from "react";
 import type { Club, Country } from "../../game-data";
 import { VERIFIED_CLUB_ASSET_IDS } from "../../verified-club-assets";
 import type { CompetitionResult, GameState, TrophyCabinet } from "../../career/model";
-import { awardFinalists, awardPresentation } from "../../career/state";
 import { clamp, clubById } from "../../career/shared";
 import FutboboIcon from "../FutboboIcon";
 
@@ -223,83 +222,6 @@ export function Metric({ label, value, tone = "default" }: { label: string; valu
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
-  );
-}
-
-export function AwardReveal({ award }: { award: string }) {
-  const presentation = awardPresentation(award);
-  return (
-    <article className={`award-reveal-card award-${presentation.tier}`}>
-      <span className="award-reveal-icon">{presentation.icon}</span>
-      <div>
-        <small>{presentation.kicker}</small>
-        <strong>{award}</strong>
-        <p>{presentation.description}</p>
-      </div>
-      <b>{presentation.tier === "legendary" ? "MELHOR DO MUNDO" : "CONQUISTADO"}</b>
-    </article>
-  );
-}
-
-export function AwardCeremony({
-  award,
-  playerName,
-  seed,
-  season,
-  won,
-  winner,
-  finalists: providedFinalists,
-}: {
-  award: string;
-  playerName: string;
-  seed: number;
-  season: number;
-  won: boolean;
-  winner: string;
-  finalists?: string[];
-}) {
-  const [revealed, setRevealed] = useState(false);
-  const presentation = awardPresentation(award);
-  const finalists = useMemo(
-    () => providedFinalists?.length === 3 ? providedFinalists : awardFinalists(playerName, award, seed, season),
-    [providedFinalists, playerName, award, seed, season],
-  );
-  const revealedWinner = won ? playerName : winner;
-
-  return (
-    <article className={`award-ceremony award-${presentation.tier} ${revealed ? "revealed" : ""}`}>
-      <div className="award-ceremony-top">
-        <span>{presentation.icon}</span>
-        <div><small>OS TRÊS FINALISTAS</small><strong>{award}</strong></div>
-      </div>
-      {!revealed ? (
-        <>
-          <div className="award-finalists">
-            {finalists.map((name, index) => (
-              <div className={name === playerName ? "is-player" : ""} key={name}>
-                <b>0{index + 1}</b><span>{name}</span>{name === playerName && <small>VOCÊ</small>}
-              </div>
-            ))}
-          </div>
-          <p>O envelope está nas mãos do apresentador.</p>
-          <button type="button" onClick={() => setRevealed(true)}>Revelar vencedor <span>→</span></button>
-        </>
-      ) : (
-        <div className="award-winner-reveal">
-          <small>O VENCEDOR É...</small>
-          <strong>{revealedWinner}</strong>
-          {won ? (
-            <AwardReveal award={award} />
-          ) : (
-            <div className="award-near-miss">
-              <span>TOP 3 DO MUNDO</span>
-              <strong>Você chegou à final</strong>
-              <p>Seu nome esteve no envelope até o último instante. Desta vez, {revealedWinner} levou o prêmio.</p>
-            </div>
-          )}
-        </div>
-      )}
-    </article>
   );
 }
 

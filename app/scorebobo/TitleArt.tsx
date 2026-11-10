@@ -1,8 +1,9 @@
 "use client";
 
-// Arte da tela de abertura, sem three.js: a prancheta tática em perspectiva
-// com uma jogada desenhada em loop (passe, domínio, chute colocado no ângulo)
-// e os mini-mapas das fases. Tudo SVG + CSS, calculado uma vez no módulo.
+// Arte da tela de abertura, sem three.js: o pôster da prancheta (o campo
+// impresso visto de cima, com os botões da mesa e uma jogada desenhada em loop:
+// passe, domínio, chute colocado no ângulo) e os mini-mapas das figurinhas das
+// fases. Tudo SVG + CSS, calculado uma vez no módulo.
 
 import { memo, useEffect, useRef } from "react";
 import { PITCH, type ScoreLevel } from "./types";
@@ -96,7 +97,23 @@ function PitchLines() {
   );
 }
 
-/** A prancheta em perspectiva com a jogada em loop. */
+/** Um botão da mesa visto de cima: a cor do time, a borda de tinta e o aro do botão. */
+function Button({ x, y, r, className }: { x: number; y: number; r: number; className?: string }) {
+  return (
+    <g className={className}>
+      <circle cx={x} cy={y} r={r} />
+      <circle cx={x} cy={y} r={r * 0.62} className={styles.boardRim} />
+    </g>
+  );
+}
+
+/**
+ * O pôster da prancheta: o campo impresso visto de cima, com a jogada em loop.
+ * A jogada mora no `viewBox` (um quadrado em volta dela) e o SVG ocupa o
+ * pôster inteiro: com `xMaxYMid meet` ela encosta à direita na altura toda, e
+ * o resto do campo (fora do `viewBox`, com `overflow: visible`) segue pela
+ * esquerda, embaixo dos rótulos do nome.
+ */
 export const TitleBackdrop = memo(function TitleBackdrop({ home, away, still }: { home: string; away: string; still: boolean }) {
   const svgRef = useRef<SVGSVGElement>(null);
   useEffect(() => {
@@ -113,108 +130,84 @@ export const TitleBackdrop = memo(function TitleBackdrop({ home, away, still }: 
 
   const stripes = Array.from({ length: 12 }, (_, index) => index);
   return (
-    <div className={styles.backdrop} aria-hidden="true">
-      <div className={styles.sky} />
-      <div className={styles.floodLeft} />
-      <div className={styles.floodRight} />
-      <div className={styles.crowdBand} />
-      <div className={styles.boardWrap}>
-        <svg ref={svgRef} className={styles.board} viewBox="0 18 680 330" preserveAspectRatio="xMidYMin meet">
-          <defs>
-            <linearGradient id="sbBoardGrass" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#123a24" />
-              <stop offset="1" stopColor="#0a2416" />
-            </linearGradient>
-            <radialGradient id="sbGoalGlow" cx="0.5" cy="0.5" r="0.5">
-              <stop offset="0" stopColor="#d6ff5c" stopOpacity="0.9" />
-              <stop offset="1" stopColor="#d6ff5c" stopOpacity="0" />
-            </radialGradient>
-            <filter id="sbGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-          <rect x="-40" y="0" width="760" height="430" fill="url(#sbBoardGrass)" />
-          {stripes.map((index) => (
-            <rect key={index} x="-40" y={GOAL_Y + index * 52.5} width="760" height="26" fill="rgba(255,255,255,0.025)" />
-          ))}
-          <PitchLines />
+    <svg ref={svgRef} className={styles.board} viewBox="200 22 300 296" preserveAspectRatio="xMaxYMid meet" aria-hidden="true">
+      <rect x="-1200" y="-300" width="2200" height="1000" className={styles.boardGrass} />
+      {stripes.map((index) => (
+        <rect key={index} x="-1200" y={GOAL_Y + index * 52.5 - 52.5} width="2200" height="26" className={styles.boardStripe} />
+      ))}
+      <PitchLines />
 
-          {/* Gol: rede e o brilho do gol que acende quando a bola entra. */}
-          <rect x={340 - PITCH.goalHalfWidth * 10} y={GOAL_Y - 22} width={PITCH.goalHalfWidth * 20} height="22" className={styles.boardNet} />
-          <ellipse cx={CORNER.x + 8} cy={GOAL_Y - 8} rx="70" ry="30" fill="url(#sbGoalGlow)" opacity="0">
-            <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values="0;0;1;0.25;0" keyTimes={`0;${at(KICK_B[1])};${at(KICK_B[1] + 0.12)};${at(KICK_B[1] + 1.2)};1`} />
-          </ellipse>
-          <circle cx={CORNER.x} cy={CORNER.y - 6} r="10" fill="none" stroke="#d6ff5c" strokeWidth="3" opacity="0">
-            <animate attributeName="r" dur={`${CYCLE}s`} repeatCount="indefinite" values="8;8;80;80" keyTimes={`0;${at(KICK_B[1])};${at(KICK_B[1] + 0.9)};1`} />
-            <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values="0;0;0.9;0;0" keyTimes={`0;${at(KICK_B[1])};${at(KICK_B[1] + 0.05)};${at(KICK_B[1] + 0.9)};1`} />
-          </circle>
+      {/* Gol: rede, e a marca amarela que acende quando a bola entra. */}
+      <rect x={340 - PITCH.goalHalfWidth * 10} y={GOAL_Y - 22} width={PITCH.goalHalfWidth * 20} height="22" className={styles.boardNet} />
+      <ellipse cx={CORNER.x + 6} cy={GOAL_Y - 9} rx="34" ry="15" className={styles.boardGoalMark} opacity="0">
+        <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values="0;0;1;0.6;0" keyTimes={`0;${at(KICK_B[1])};${at(KICK_B[1] + 0.12)};${at(KICK_B[1] + 1.2)};1`} />
+      </ellipse>
+      <circle cx={CORNER.x} cy={CORNER.y - 6} r="10" className={styles.boardBurst} opacity="0">
+        <animate attributeName="r" dur={`${CYCLE}s`} repeatCount="indefinite" values="8;8;64;64" keyTimes={`0;${at(KICK_B[1])};${at(KICK_B[1] + 0.9)};1`} />
+        <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values="0;0;0.9;0;0" keyTimes={`0;${at(KICK_B[1])};${at(KICK_B[1] + 0.05)};${at(KICK_B[1] + 0.9)};1`} />
+      </circle>
 
-          {/* Zagueiros e goleiro (que pula atrasado). */}
-          <g className={styles.boardAway} style={{ fill: away }}>
-            <circle cx={toBoard(1.5, 35).x} cy={toBoard(1.5, 35).y} r="10" />
-            <circle cx={toBoard(7.5, 44).x} cy={toBoard(7.5, 44).y} r="10" />
-            <circle cx={toBoard(-9, 42).x} cy={toBoard(-9, 42).y} r="10" />
-            <circle cx={KEEPER.x} cy={KEEPER.y} r="10" className={styles.boardKeeper}>
-              <animate attributeName="cx" dur={`${CYCLE}s`} repeatCount="indefinite" values={`${KEEPER.x};${KEEPER.x};${CORNER.x + 14};${CORNER.x + 14};${KEEPER.x}`} keyTimes={`0;${at(KICK_B[0] + 0.12)};${at(KICK_B[1] + 0.05)};${at(FADE[0])};1`} />
+      {/* Zagueiros e goleiro (que pula atrasado). */}
+      <g className={styles.boardAway} style={{ fill: away }}>
+        <Button {...toBoard(1.5, 35)} r={10} />
+        <Button {...toBoard(7.5, 44)} r={10} />
+        <Button {...toBoard(-9, 42)} r={10} />
+        <circle cx={KEEPER.x} cy={KEEPER.y} r="10" className={styles.boardKeeper}>
+          <animate attributeName="cx" dur={`${CYCLE}s`} repeatCount="indefinite" values={`${KEEPER.x};${KEEPER.x};${CORNER.x + 14};${CORNER.x + 14};${KEEPER.x}`} keyTimes={`0;${at(KICK_B[0] + 0.12)};${at(KICK_B[1] + 0.05)};${at(FADE[0])};1`} />
+        </circle>
+      </g>
+
+      {/* Os nossos: o herói e o companheiro que vai receber. */}
+      <g className={styles.boardHome} style={{ fill: home }}>
+        <Button {...HERO} r={11} />
+        <Button {...MATE} r={11} />
+      </g>
+      <circle cx={HERO.x} cy={HERO.y} r="18" className={styles.boardHeroRing} />
+      <circle cx={MATE.x} cy={MATE.y} r="18" className={styles.boardMateRing} opacity="0">
+        <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes={`0;${at(KICK_A[1])};${at(KICK_A[1] + 0.1)};${at(KICK_B[0])};${at(KICK_B[0] + 0.2)};1`} />
+      </circle>
+
+      {/* O traço: pontinhos que acendem por onde o dedo passa. */}
+      <g>
+        {[...PASS_DOTS, ...SHOT_DOTS].map((dot, index) => {
+          const timeline = dotTimeline(dot.appear);
+          return (
+            <circle key={index} cx={dot.x.toFixed(1)} cy={dot.y.toFixed(1)} r="3.8" className={styles.boardDot} opacity="0">
+              <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values={timeline.values} keyTimes={timeline.keyTimes} />
             </circle>
-          </g>
+          );
+        })}
+      </g>
+      <path id="sbPass" d={pathOf(PASS)} fill="none" />
+      <path id="sbShot" d={pathOf(SHOT)} fill="none" />
 
-          {/* Os nossos: o herói e o companheiro que vai receber. */}
-          <g className={styles.boardHome} style={{ fill: home }}>
-            <circle cx={HERO.x} cy={HERO.y} r="11" />
-            <circle cx={MATE.x} cy={MATE.y} r="11" />
-          </g>
-          <circle cx={HERO.x} cy={HERO.y} r="17" className={styles.boardHeroRing} />
-          <circle cx={MATE.x} cy={MATE.y} r="17" className={styles.boardMateRing} opacity="0">
-            <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes={`0;${at(KICK_A[1])};${at(KICK_A[1] + 0.1)};${at(KICK_B[0])};${at(KICK_B[0] + 0.2)};1`} />
-          </circle>
+      {/* A bola: passe, para no pé do companheiro, chute colocado. */}
+      <g className={styles.boardBall}>
+        <circle r="6.5" />
+        <animateMotion dur={`${CYCLE}s`} repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes={`0;${at(KICK_A[0])};${at(KICK_A[1])};1`} calcMode="linear">
+          <mpath href="#sbPass" />
+        </animateMotion>
+        <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values="1;1;0;0;1" keyTimes={`0;${at(KICK_A[1])};${at(KICK_A[1] + 0.01)};${at(CYCLE - 0.05)};1`} />
+      </g>
+      <g className={styles.boardBall} opacity="0">
+        <circle r="6.5" />
+        <animateMotion dur={`${CYCLE}s`} repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes={`0;${at(KICK_B[0])};${at(KICK_B[1])};1`} calcMode="spline" keySplines="0 0 1 1;0.3 0 0.6 1;0 0 1 1">
+          <mpath href="#sbShot" />
+        </animateMotion>
+        <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes={`0;${at(KICK_A[1])};${at(KICK_A[1] + 0.01)};${at(FADE[0])};${at(FADE[1])};1`} />
+      </g>
 
-          {/* O traço: pontinhos que acendem por onde o dedo passa. */}
-          <g filter="url(#sbGlow)">
-            {[...PASS_DOTS, ...SHOT_DOTS].map((dot, index) => {
-              const timeline = dotTimeline(dot.appear);
-              return (
-                <circle key={index} cx={dot.x.toFixed(1)} cy={dot.y.toFixed(1)} r="3.6" className={styles.boardDot} opacity="0">
-                  <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values={timeline.values} keyTimes={timeline.keyTimes} />
-                </circle>
-              );
-            })}
-          </g>
-          <path id="sbPass" d={pathOf(PASS)} fill="none" />
-          <path id="sbShot" d={pathOf(SHOT)} fill="none" />
-
-          {/* A bola: passe, para no pé do companheiro, chute colocado. */}
-          <g className={styles.boardBall}>
-            <circle r="6.5" />
-            <animateMotion dur={`${CYCLE}s`} repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes={`0;${at(KICK_A[0])};${at(KICK_A[1])};1`} calcMode="linear">
-              <mpath href="#sbPass" />
-            </animateMotion>
-            <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values="1;1;0;0;1" keyTimes={`0;${at(KICK_A[1])};${at(KICK_A[1] + 0.01)};${at(CYCLE - 0.05)};1`} />
-          </g>
-          <g className={styles.boardBall} opacity="0">
-            <circle r="6.5" />
-            <animateMotion dur={`${CYCLE}s`} repeatCount="indefinite" keyPoints="0;0;1;1" keyTimes={`0;${at(KICK_B[0])};${at(KICK_B[1])};1`} calcMode="spline" keySplines="0 0 1 1;0.3 0 0.6 1;0 0 1 1">
-              <mpath href="#sbShot" />
-            </animateMotion>
-            <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes={`0;${at(KICK_A[1])};${at(KICK_A[1] + 0.01)};${at(FADE[0])};${at(FADE[1])};1`} />
-          </g>
-
-          {/* A mão desenhando. */}
-          {[{ id: "#sbPass", hand: HAND_A }, { id: "#sbShot", hand: HAND_B }].map(({ id, hand }) => (
-            <g key={id} opacity="0">
-              <animateMotion dur={`${CYCLE}s`} repeatCount="indefinite" keyPoints={hand.keyPoints} keyTimes={hand.keyTimes} calcMode="linear">
-                <mpath href={id} />
-              </animateMotion>
-              <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values={hand.opacityValues} keyTimes={hand.opacityTimes} />
-              <path d={HAND_PATH} transform="translate(-27 -3) scale(0.95)" className={styles.boardHand} />
-            </g>
-          ))}
-        </svg>
-      </div>
-      <div className={styles.freeze} />
-      <div className={styles.fog} />
-    </div>
+      {/* A mão desenhando. */}
+      {[{ id: "#sbPass", hand: HAND_A }, { id: "#sbShot", hand: HAND_B }].map(({ id, hand }) => (
+        <g key={id} opacity="0">
+          <animateMotion dur={`${CYCLE}s`} repeatCount="indefinite" keyPoints={hand.keyPoints} keyTimes={hand.keyTimes} calcMode="linear">
+            <mpath href={id} />
+          </animateMotion>
+          <animate attributeName="opacity" dur={`${CYCLE}s`} repeatCount="indefinite" values={hand.opacityValues} keyTimes={hand.opacityTimes} />
+          <path d={HAND_PATH} transform="translate(-27 -3) scale(0.95)" className={styles.boardHand} />
+        </g>
+      ))}
+    </svg>
   );
 });
 

@@ -1,0 +1,210 @@
+/* Páginas do menu: Hall da Fama, Conquistas e as folhas soltas (Configurações, Instalar, Novidades, Outros jogos). */
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  min-height: 44px;
+  margin: -8px 0 -4px -6px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.back svg { width: 18px; height: 18px; }
+@media (hover: hover) { .back:hover { background: var(--paper-2); color: var(--ink); } }
+
+.pageTitle {
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: clamp(40px, 5.6vh, 56px);
+  line-height: .88;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--ink);
+}
+.note { font-size: 13.5px; color: var(--ink-3); text-wrap: pretty; }
+.sheetText { font-size: 16px; color: var(--ink); text-wrap: pretty; }
+
+/* ───────────── Hall da Fama ───────────── */
+.legend { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(18px, 2.2vw, 30px); align-items: center; flex: 1; }
+.legendSticker { max-width: clamp(170px, 27vh, 240px); margin: 0 auto; }
+.legendInfo { display: grid; gap: 12px; }
+.legendRank { font-size: 14px; color: var(--ink-2); }
+.legendRank b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 34px; line-height: 1; color: var(--ink); margin-right: 4px; }
+.emptyBlock { flex: 1; display: grid; justify-items: center; align-content: center; gap: 16px; text-align: center; }
+.emptyHall { max-width: 200px; }
+.emptyHall svg { width: 44px; height: 44px; color: var(--ink-3); }
+.emptyBlock p { max-width: 36ch; }
+
+.rank { display: grid; }
+.rank button {
+  display: grid;
+  grid-template-columns: 40px 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 4px;
+  border: 0;
+  border-bottom: 1.5px solid var(--rule);
+  background: none;
+  text-align: left;
+}
+@media (hover: hover) { .rank button:hover strong { color: var(--blue-deep); } }
+.rankEmpty { display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1.5px solid var(--rule); }
+.rankEmpty .rankNo { color: rgba(22, 22, 22, .25); }
+.rankEmpty span { height: 44px; border: 2px dashed var(--rule-strong); border-radius: 8px; background: var(--dots-slot), var(--paper-2); }
+.rankNo { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 30px; line-height: 1; text-align: center; }
+.rank li:first-child .rankNo { color: var(--yellow-deep); }
+.rankCrest { display: grid; place-items: center; }
+.rankCrest :global(.club-badge) { width: 36px; height: 36px; box-shadow: none; }
+.rankText { display: grid; gap: 1px; min-width: 0; }
+.rankText strong { font-family: var(--font-display); font-stretch: 80%; font-weight: 800; font-size: 20px; line-height: 1.1; }
+.rankText small { font-size: 12.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rankScore { display: grid; justify-items: end; text-align: right; }
+.rankScore b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 26px; line-height: 1; }
+.rankScore small { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+
+/* ───────────── Conquistas ───────────── */
+.progress { position: relative; height: 14px; border-radius: 3px; overflow: hidden; background: var(--dots-ink), #eeeee7; }
+.progress i { position: absolute; inset: 0 auto 0 0; width: calc(var(--v) * 1%); background: var(--foil); box-shadow: inset 0 0 0 1.5px var(--yellow-deep); }
+.rarity { display: inline-flex; align-items: center; gap: 8px; text-transform: capitalize; }
+.rarity::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: var(--rarity); }
+.recent { display: grid; gap: 6px; }
+.recent button {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  padding: 9px 2px;
+  border: 0;
+  border-bottom: 1.5px solid var(--rule);
+  background: none;
+  text-align: left;
+}
+.recent strong { font-family: var(--font-display); font-stretch: 82%; font-weight: 750; font-size: 17px; line-height: 1.15; }
+.recent small { font-size: 12.5px; color: var(--ink-3); }
+
+.stickers { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 18px 14px; padding: 6px 2px 12px; }
+.ach {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 4px 4px 7px;
+  border: 2px dashed var(--rule-strong);
+  border-radius: 8px;
+  background: var(--dots-slot), var(--paper-2);
+  color: var(--ink-3);
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.achArt {
+  display: grid;
+  place-content: center;
+  aspect-ratio: 4 / 3;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 34px;
+  line-height: 1;
+  color: rgba(22, 22, 22, .3);
+}
+.ach strong { padding: 4px 3px 0; font-family: var(--font-display); font-stretch: 80%; font-weight: 750; font-size: 14.5px; line-height: 1.1; overflow-wrap: break-word; }
+.ach small { padding: 0 3px; font-size: 11.5px; text-transform: capitalize; }
+/* colada: papel branco, faixa na cor da raridade */
+.ach[data-on] {
+  border: 0;
+  padding: 5px 5px 8px;
+  background: #fff;
+  color: var(--ink);
+  rotate: var(--r, 0deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .16)) drop-shadow(0 5px 9px rgba(30, 30, 20, .14));
+}
+.ach[data-on] .achArt { color: #fff; background: var(--dots-light), var(--rarity); }
+.ach[data-on][data-rarity="lendário"] .achArt { background: var(--foil); color: var(--ink); }
+.ach[data-on] small { color: var(--ink-3); }
+@media (hover: hover) {
+  .ach:hover { border-color: var(--ink); }
+  .ach[data-on]:hover { translate: 0 -3px; rotate: 0deg; }
+}
+.ach { transition: translate .18s var(--ease-out), rotate .18s var(--ease-out); }
+
+.unlock { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; background: var(--paper-2); border: 1.5px solid var(--rule); }
+.unlock span { display: grid; }
+.unlock strong { font-family: var(--font-display); font-stretch: 82%; font-weight: 800; font-size: 19px; }
+.unlock small { font-size: 13px; color: var(--ink-3); }
+
+/* ───────────── folha solta sobre a mesa ───────────── */
+.desk {
+  color-scheme: light;
+  min-height: 100dvh;
+  padding: 34px 20px 48px;
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  background: var(--grain), radial-gradient(120% 90% at 50% 35%, #dadedb 0%, var(--desk) 55%, #bcc2bf 100%);
+}
+.desk :where(button) { font: inherit; color: inherit; cursor: pointer; }
+.desk :where(h1, h2, h3, p, ul, ol) { margin: 0; }
+.desk :where(ul, ol) { padding: 0; list-style: none; }
+.desk :focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; border-radius: 6px; }
+.paper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 30px clamp(18px, 3.4vw, 44px) 36px;
+  border-radius: 6px;
+  background: var(--grain), var(--paper);
+  box-shadow: 0 1px 0 var(--paper-edge), 0 2px 3px rgba(40, 40, 20, .22), 0 34px 60px -22px rgba(20, 20, 10, .45);
+}
+.tape {
+  position: absolute;
+  z-index: 3;
+  top: -13px;
+  width: 104px;
+  height: 27px;
+  pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .2) 0 2px, transparent 2px 7px), rgba(234, 224, 186, .82);
+  box-shadow: 0 1px 2px rgba(40, 40, 20, .2);
+  clip-path: polygon(0 10%, 5% 0, 30% 6%, 62% 0, 96% 5%, 100% 0, 98% 52%, 100% 100%, 94% 93%, 60% 100%, 28% 94%, 4% 100%, 0 92%, 3% 50%);
+}
+.tape[data-side="left"] { left: 34px; rotate: -6deg; }
+.tape[data-side="right"] { right: 34px; rotate: 5deg; }
+
+.other { display: grid; gap: 14px; }
+.otherHead { display: grid; gap: 6px; padding-bottom: 12px; border-bottom: 3px solid var(--ink); }
+.otherHead h2 { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: clamp(40px, 6vw, 62px); line-height: .9; }
+.otherHead p { color: var(--ink-2); }
+.otherNo { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 26px; line-height: 1; }
+
+@media (max-width: 1023px) {
+  .back { margin: -4px 0 -6px -6px; }
+  .legend { grid-template-columns: minmax(118px, 40%) minmax(0, 1fr); gap: 16px; }
+  .legendSticker { max-width: 100%; }
+  .rank button { grid-template-columns: 30px 34px minmax(0, 1fr) auto; gap: 10px; }
+  .rankNo { font-size: 24px; }
+  .rankCrest :global(.club-badge) { width: 30px; height: 30px; }
+  .rankText strong { font-size: 17px; }
+  .stickers { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
+  .achArt { font-size: 28px; }
+  .ach strong { font-size: 13px; }
+}
+@media (max-width: 720px) {
+  .desk { padding: 0; background: var(--grain), var(--paper); }
+  .paper { width: 100%; min-height: 100dvh; padding: max(14px, env(safe-area-inset-top)) 16px 40px; border-radius: 0; box-shadow: none; background: none; }
+  .tape { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ach { transition: none; }
+}

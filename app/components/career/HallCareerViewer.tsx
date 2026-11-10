@@ -3,19 +3,19 @@
 import { Component, useMemo, useState, type ErrorInfo, type ReactNode } from "react";
 import { countryById } from "../../game-data";
 import type { CareerHallEntry, GameState } from "../../career/model";
-import { ROLE_LABELS } from "../../career-systems";
 import { archivedCareerState, initialState } from "../../career/state";
 import { clubById } from "../../career/shared";
-import { fanMood } from "../../career/performance";
 import { positionByKey } from "../../career/academy";
-import CareerTimeline from "./CareerTimeline";
-import CareerExtraStats from "./CareerExtraStats";
-import CareerWorld from "./CareerWorld";
-import { CareerStatisticsArchive, PlayerReworkPanels } from "./CareerReworkPanels";
-import { BrandMark, ClubBadge, Metric, NationBadge, Progress, TrophyGallery } from "./CareerPrimitives";
+import { ClubBadge } from "./CareerPrimitives";
 import FutboboIcon from "../FutboboIcon";
-
-type ArchiveTab = "career" | "profile" | "history" | "stats" | "world";
+import AlbumShell, { AlbumPage, type AlbumTabId } from "./album/AlbumShell";
+import { BlockTitle, Ficha, InkBand, PlayerSticker, Stamp } from "./album/primitives";
+import PlayerTab from "./album/tabs/PlayerTab";
+import TeamTab from "./album/tabs/TeamTab";
+import HistoryTab from "./album/tabs/HistoryTab";
+import StatsTab from "./album/tabs/StatsTab";
+import WorldTab from "./album/tabs/WorldTab";
+import styles from "./album/summary.module.css";
 
 type HallCareerViewerProps = {
   entry: CareerHallEntry;
@@ -39,6 +39,7 @@ function safeNumber(value: unknown, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+/** Uma aba que quebra num save antigo vira um recado na página; o resto do arquivo segue aberto. */
 class ArchivePanelBoundary extends Component<ArchivePanelBoundaryProps, { failed: boolean }> {
   state = { failed: false };
 
@@ -53,10 +54,10 @@ class ArchivePanelBoundary extends Component<ArchivePanelBoundaryProps, { failed
   render() {
     if (this.state.failed) {
       return (
-        <div className="empty-panel">
-          <strong>{this.props.label} indisponível neste arquivo.</strong>
-          <span>O restante da carreira continua acessível e o card final ainda pode ser gerado.</span>
-        </div>
+        <AlbumPage side="left" label={this.props.label}>
+          <BlockTitle>{this.props.label} indisponível neste arquivo</BlockTitle>
+          <p className={styles.note}>O restante da carreira continua aberto, e a última página ainda pode ser gerada.</p>
+        </AlbumPage>
       );
     }
     return this.props.children;
@@ -67,6 +68,7 @@ type ArchiveRootBoundaryProps = HallCareerViewerProps & {
   children: ReactNode;
 };
 
+/** Modo de segurança: se o arquivo inteiro falhar, os números do Hall continuam visíveis. */
 class ArchiveRootBoundary extends Component<ArchiveRootBoundaryProps, { error: string }> {
   state = { error: "" };
 
@@ -81,36 +83,28 @@ class ArchiveRootBoundary extends Component<ArchiveRootBoundaryProps, { error: s
   render() {
     if (!this.state.error) return this.props.children;
     const { entry, onBack, onGenerateCard } = this.props;
+    const club = clubById(safeText(entry.finalClubId, ""));
     return (
-      <main className="app-shell app-shell-career hall-archive-viewer">
-        <div className="ambient ambient-one" />
-        <div className="ambient ambient-two" />
-        <div className="summary-preview-bar">
-          <button type="button" onClick={onBack}>← Voltar ao Hall da Fama</button>
-          <div><small>MODO DE SEGURANÇA</small><strong>{safeText(entry.name, "Carreira arquivada")}</strong></div>
-          <button type="button" className="primary-button" onClick={onGenerateCard}>Gerar card <span>→</span></button>
-        </div>
-        <section className="career-shell career-phase-career screen-enter">
-          <div className="panel-screen screen-enter">
-            <section className="legacy-hero">
-              <span>ARQUIVO RECUPERADO · SOMENTE VISUALIZAÇÃO</span>
-              <strong style={{ color: "#f4c430" }}>{safeNumber(entry.legacyPoints)}</strong>
-              <h2>{safeText(entry.legacyLabel, "Carreira encerrada")}</h2>
-              <p>Um dado incompatível tentou derrubar o visualizador, mas a carreira foi mantida acessível em modo de segurança.</p>
-            </section>
-            <div className="legacy-grid">
-              <div className="metric"><span>Temporadas</span><strong>{safeNumber(entry.seasons)}</strong></div>
-              <div className="metric metric-gold"><span>Pico OVR</span><strong>{safeNumber(entry.peakOverall)}</strong></div>
-              <div className="metric"><span>Taças</span><strong>{safeNumber(entry.trophies)}</strong></div>
-              <div className="metric"><span>Bolas de Ouro</span><strong>{safeNumber(entry.ballonDor)}</strong></div>
-            </div>
-            <div className="empty-panel">
-              <strong>Erro contido: {safeText(this.state.error, "falha de renderização")}</strong>
-              <span>Esse texto identifica o campo ou componente problemático sem mandar o Futbobo inteiro para o setealém.</span>
-            </div>
-          </div>
-        </section>
-      </main>
+      <AlbumShell club={club} tab={null} onTab={() => undefined} showTabs={false} centered label="Arquivo recuperado">
+        <AlbumPage side="left" label="Arquivo recuperado">
+          <button type="button" className={styles.back} onClick={onBack}><FutboboIcon name="arrow-left" /> Voltar ao Hall da Fama</button>
+          <InkBand ink="club" title={safeText(entry.name, "Carreira arquivada")} subtitle="Arquivo recuperado, só para ver" crest={{ club }} />
+          <Ficha
+            rows={[
+              { label: "Legado", value: `${safeNumber(entry.legacyPoints)} · ${safeText(entry.legacyLabel, "Carreira encerrada")}` },
+              { label: "Temporadas", value: safeNumber(entry.seasons) },
+              { label: "Pico OVR", value: safeNumber(entry.peakOverall) },
+              { label: "Taças", value: safeNumber(entry.trophies) },
+              { label: "Bolas de Ouro", value: safeNumber(entry.ballonDor) },
+            ]}
+          />
+          <Stamp variant="primary" onClick={onGenerateCard}>Abrir a última página</Stamp>
+        </AlbumPage>
+        <AlbumPage side="right" label="O que aconteceu">
+          <BlockTitle>Erro contido</BlockTitle>
+          <p className={styles.note}>{safeText(this.state.error, "falha de renderização")}. Um dado incompatível tentou derrubar o arquivo, e a carreira continua acessível em modo de segurança.</p>
+        </AlbumPage>
+      </AlbumShell>
     );
   }
 }
@@ -145,6 +139,10 @@ function emergencyArchiveState(entry: CareerHallEntry): GameState {
   };
 }
 
+/**
+ * A carreira arquivada no Hall da Fama vira o próprio álbum dela: capa com a figurinha final e as
+ * mesmas abas da carreira (Jogador, Time, Histórico, Estatísticas, Mundo), só para ver.
+ */
 function HallCareerViewerContent({ entry, onBack, onGenerateCard }: HallCareerViewerProps) {
   const archive = useMemo(() => {
     try {
@@ -160,139 +158,113 @@ function HallCareerViewerContent({ entry, onBack, onGenerateCard }: HallCareerVi
     }
   }, [entry]);
   const state = archive.state;
-  const [activeTab, setActiveTab] = useState<ArchiveTab>("career");
+  const [tab, setTab] = useState<AlbumTabId>("event");
   const history = (Array.isArray(state.history) ? state.history : []).filter(Boolean);
   const newsFeed = (Array.isArray(state.newsFeed) ? state.newsFeed : []).map((headline) => safeText(headline, "Registro arquivado"));
-  const currentClubId = safeText(state.currentClubId || state.academyClubId || entry.finalClubId, "");
-  const currentClub = clubById(currentClubId);
-  const nationality = safeText(state.nationality || entry.nationality, "brasil");
-  const nation = countryById(nationality);
+  const currentClub = clubById(safeText(state.currentClubId || state.academyClubId || entry.finalClubId, ""));
+  const nation = countryById(safeText(state.nationality || entry.nationality, "brasil"));
   const position = positionByKey(state.position);
-  const supporterMood = fanMood(safeNumber(state.fanSupport, 50));
   const peakOverall = Math.max(safeNumber(state.overall), ...history.map((record) => safeNumber(record?.overall)), safeNumber(entry.peakOverall), 0);
   const totalTitles = safeNumber(state.trophies) + safeNumber(state.nationalTrophies);
-  const clubs = new Set(history.map((record) => safeText(record?.clubId, "")).filter(Boolean)).size || 1;
+  const clubs = Array.from(new Set(history.map((record) => safeText(record?.clubId, "")).filter(Boolean)));
   const stats = state.stats && typeof state.stats === "object" ? state.stats : initialState().stats;
+  const goalkeeper = state.position === "GOL";
   const playerName = safeText(state.name, safeText(entry.name, "Jogador"));
-  const playerPosition = safeText(state.position, safeText(entry.position, "MEI"));
   const legacyLabel = safeText(entry.legacyLabel, "Carreira encerrada");
-  const roleLabel = ROLE_LABELS[state.squadRole] ?? safeText(state.squadRole, "Arquivo");
+  const numbers = [
+    { label: "jogos", value: safeNumber(stats.appearances) },
+    { label: goalkeeper ? "sem sofrer" : "gols", value: safeNumber(goalkeeper ? stats.cleanSheets : stats.goals) },
+    { label: goalkeeper ? "sofridos" : "assistências", value: safeNumber(goalkeeper ? stats.goalsConceded : stats.assists) },
+    { label: totalTitles === 1 ? "taça" : "taças", value: totalTitles },
+  ];
 
   return (
-    <main className="app-shell app-shell-career hall-archive-viewer">
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
-
-      <div className="summary-preview-bar">
-        <button type="button" onClick={onBack}>← Voltar ao Hall da Fama</button>
-        <div><small>MODO DE VISUALIZAÇÃO</small><strong>Carreira encerrada de {playerName}</strong></div>
-        <button type="button" className="primary-button" onClick={onGenerateCard}>Gerar card <span>→</span></button>
-      </div>
-
-      {archive.legacyArchive && (
-        <div className="summary-legacy-warning">
-          Este registro precisou do modo de compatibilidade. O Futbobo recuperou todos os dados disponíveis sem deixar um campo antigo derrubar a carreira inteira.
-        </div>
-      )}
-
-      <section className={`career-shell career-phase-career career-tab-${activeTab} screen-enter`}>
-        <header className="career-header">
-          <div className="club-identity"><ClubBadge club={currentClub} size="sm" /><span><small>{safeNumber(state.season)}</small><strong>{currentClub.shortName}</strong></span></div>
-          <div className="career-age"><strong>{safeNumber(state.age)}</strong><span>ANOS</span></div>
-          <div className="player-identity"><span><small>PICO</small><strong>{peakOverall}</strong></span><div className="mini-avatar">{playerPosition}</div></div>
-        </header>
-
-        <div className="career-bars career-bars-four">
-          <Progress label="Moral" value={safeNumber(state.morale)} color="#2ca8ff" />
-          <Progress label="Físico" value={safeNumber(state.fitness)} color={safeNumber(state.fitness) < 55 ? "#ff5a4e" : "#63e36b"} />
-          <Progress label="Prestígio" value={safeNumber(state.reputation)} color="#ffc72c" />
-          <Progress label={supporterMood.label} value={safeNumber(state.fanSupport)} color={supporterMood.color} />
-        </div>
-
-        <div className="career-status-strip retirement-open">
-          <span><small>STATUS</small><strong>APOSENTADO</strong></span>
-          <span><small>ÚLTIMO PAPEL</small><strong>{roleLabel}</strong></span>
-          <span><small>ÚLTIMO CLUBE</small><strong>{currentClub.shortName}</strong></span>
-          <button className="retirement-trigger" type="button" onClick={onGenerateCard}><small>CARREIRA</small><strong><FutboboIcon name="trophy" /> Gerar card</strong></button>
-        </div>
-
-        {activeTab === "career" && (
-          <div className="panel-screen screen-enter">
-            <section className="legacy-hero">
-              <span>CARREIRA ENCERRADA · SOMENTE VISUALIZAÇÃO</span>
-              <strong style={{ color: "#f4c430" }}>{safeNumber(entry.legacyPoints)}</strong>
-              <h2>{legacyLabel}</h2>
-              <p>Este é o estado arquivado quando a carreira terminou. Não existe avanço de temporada, evento novo, transferência ou qualquer ação que altere o save.</p>
-            </section>
-
-            <div className="legacy-grid">
-              <Metric label="Temporadas" value={history.length || safeNumber(entry.seasons)} />
-              <Metric label="Clubes" value={clubs} />
-              <Metric label="Pico OVR" value={peakOverall} tone="gold" />
-              <Metric label="Legado" value={safeNumber(state.legacyPoints, safeNumber(entry.legacyPoints))} tone="green" />
-            </div>
-
-            <div className="career-total-card">
-              <span>TOTAIS DA CARREIRA</span>
-              <div>
-                <Metric label="Jogos" value={safeNumber(stats.appearances)} />
-                <Metric label={state.position === "GOL" ? "Sem sofrer" : "Gols"} value={state.position === "GOL" ? safeNumber(stats.cleanSheets) : safeNumber(stats.goals)} />
-                <Metric label={state.position === "GOL" ? "Sofridos" : "Assistências"} value={state.position === "GOL" ? safeNumber(stats.goalsConceded) : safeNumber(stats.assists)} />
-                <Metric label="Taças" value={totalTitles} tone="gold" />
+    <AlbumShell club={currentClub} tab={tab} onTab={setTab} showTabs label={`Carreira arquivada de ${playerName}`}>
+      {tab === "event" && (
+        <>
+          <AlbumPage side="left" label="Carreira arquivada" className={styles.left}>
+            <button type="button" className={styles.back} onClick={onBack}><FutboboIcon name="arrow-left" /> Voltar ao Hall da Fama</button>
+            {archive.legacyArchive && (
+              <p className={styles.note}>Registro anterior ao arquivo completo: os números gerais voltaram, alguns detalhes não existiam no save antigo.</p>
+            )}
+            <InkBand ink="club" title={playerName} subtitle={`${legacyLabel} · carreira arquivada`} crest={{ club: currentClub }} />
+            <div className={styles.hero}>
+              <PlayerSticker
+                className={styles.sticker}
+                name={playerName}
+                number={safeNumber(state.number, 10)}
+                overall={peakOverall}
+                subtitle={`${position.name} · ${nation.name}`}
+                club={currentClub}
+                appearance={state.playerAppearance ?? null}
+                tilt="-2.6deg"
+              />
+              <div className={styles.heroInfo}>
+                <p className={styles.legacy}><b className={styles.num}>{safeNumber(entry.legacyPoints)}</b> de legado<span>{legacyLabel}</span></p>
+                <Ficha
+                  rows={[
+                    { label: "Temporadas", value: safeNumber(entry.seasons, history.length) },
+                    { label: "Clubes", value: clubs.length || 1 },
+                    { label: "Bolas de Ouro", value: safeNumber(entry.ballonDor) },
+                    { label: "Prêmios", value: safeNumber(entry.awards) },
+                  ]}
+                />
               </div>
             </div>
-
-            <ArchivePanelBoundary label="Sala de troféus"><TrophyGallery state={state} /></ArchivePanelBoundary>
-            <ArchivePanelBoundary label="Estatísticas extras"><CareerExtraStats state={state} /></ArchivePanelBoundary>
-
-            <div className="news-card">
-              <span>ÚLTIMAS MANCHETES DA CARREIRA</span>
-              {newsFeed.length
-                ? newsFeed.slice(0, 8).map((headline, index) => <article key={`${headline}-${index}`}><small>{index === 0 ? "FINAL" : "ARQUIVO"}</small><strong>{headline}</strong></article>)
-                : <p>Nenhuma manchete foi arquivada nesta carreira.</p>}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "profile" && (
-          <div className="panel-screen screen-enter">
-            <div className="profile-hero">
-              <div className="academy-avatar"><span>{safeNumber(state.number)}</span><small>{playerPosition}</small></div>
-              <div><span>{safeText(state.archetype, "Jogador")}</span><h2>{playerName}</h2><p>{position.style} · {safeText(state.foot, "Direita")}</p><small><NationBadge country={nation} size="sm" /> {nation.name}</small></div>
-            </div>
-            <ArchivePanelBoundary label="Perfil do jogador"><PlayerReworkPanels state={state} /></ArchivePanelBoundary>
-            <ArchivePanelBoundary label="Estatísticas extras"><CareerExtraStats state={state} /></ArchivePanelBoundary>
-          </div>
-        )}
-
-        {activeTab === "history" && (
-          <ArchivePanelBoundary label="Histórico temporada a temporada"><CareerTimeline state={state} archived /></ArchivePanelBoundary>
-        )}
-
-        {activeTab === "stats" && (
-          <div className="panel-screen screen-enter">
-            <ArchivePanelBoundary label="Arquivo estatístico"><CareerStatisticsArchive state={state} /></ArchivePanelBoundary>
-            <ArchivePanelBoundary label="Estatísticas extras"><CareerExtraStats state={state} /></ArchivePanelBoundary>
-          </div>
-        )}
-
-        {activeTab === "world" && (
-          <ArchivePanelBoundary label="Mundo da carreira"><CareerWorld state={state} /></ArchivePanelBoundary>
-        )}
-
-        <nav className="bottom-nav" aria-label="Navegação da carreira arquivada">
-          <div className="desktop-career-nav-brand" aria-hidden="true">
-            <BrandMark size="sm" />
-            <span><small>ARQUIVO DO JOGADOR</small><strong>{playerName}</strong><em>{position.name} · carreira encerrada</em></span>
-          </div>
-          <button aria-pressed={activeTab === "career"} className={activeTab === "career" ? "selected" : ""} onClick={() => setActiveTab("career")}><span><FutboboIcon name="career" /></span>Carreira</button>
-          <button aria-pressed={activeTab === "profile"} className={activeTab === "profile" ? "selected" : ""} onClick={() => setActiveTab("profile")}><span><FutboboIcon name="player" /></span>Jogador</button>
-          <button aria-pressed={activeTab === "history"} className={activeTab === "history" ? "selected" : ""} onClick={() => setActiveTab("history")}><span><FutboboIcon name="history" /></span>Histórico</button>
-          <button aria-pressed={activeTab === "stats"} className={activeTab === "stats" ? "selected" : ""} onClick={() => setActiveTab("stats")}><span><FutboboIcon name="stats" /></span>Estatísticas</button>
-          <button aria-pressed={activeTab === "world"} className={activeTab === "world" ? "selected" : ""} onClick={() => setActiveTab("world")}><span><FutboboIcon name="globe" /></span>Mundo</button>
-        </nav>
-      </section>
-    </main>
+            <ul className={styles.numbers}>
+              {numbers.map((item) => <li key={item.label}><b className={styles.num}>{item.value}</b><span>{item.label}</span></li>)}
+            </ul>
+            <Stamp variant="primary" onClick={onGenerateCard}>Abrir a última página e o pôster</Stamp>
+          </AlbumPage>
+          <AlbumPage side="right" label="Manchetes e temporadas" className={styles.right}>
+            <section className={styles.block}>
+              <BlockTitle>Temporada por temporada</BlockTitle>
+              {history.length > 0 ? (
+                <ol className={styles.ledger}>
+                  {[...history].reverse().map((record) => (
+                    <li key={`${record.season}-${record.clubId}`}>
+                      <b className={styles.num}>{safeNumber(record.season)}</b>
+                      <span>
+                        <strong>{safeText(clubById(safeText(record.clubId, "")).shortName, "Clube")} · {safeNumber(record.appearances)} jogos</strong>
+                        <small>{record.position === "GOL" ? `${safeNumber(record.cleanSheets)} sem sofrer` : `${safeNumber(record.goals)} gols · ${safeNumber(record.assists)} assist.`}</small>
+                      </span>
+                      <em className={styles.num}>{safeNumber(record.overall)}</em>
+                    </li>
+                  ))}
+                </ol>
+              ) : <p className={styles.note}>Nenhuma temporada profissional foi registrada.</p>}
+            </section>
+            {newsFeed.length > 0 && (
+              <section className={styles.block}>
+                <BlockTitle>Manchetes da carreira</BlockTitle>
+                <ol className={styles.story}>
+                  {newsFeed.slice(0, 8).map((headline, index) => (
+                    <li key={`${index}-${headline}`}><b className={styles.num}>{index + 1}</b><span><strong>{headline}</strong></span></li>
+                  ))}
+                </ol>
+              </section>
+            )}
+            {clubs.length > 0 && (
+              <section className={styles.path} aria-label="Caminho da carreira">
+                <BlockTitle>Caminho</BlockTitle>
+                <div className={styles.pathRow}>
+                  {clubs.map((clubId) => <span className={styles.pathCrest} key={clubId}><ClubBadge club={clubById(clubId)} size="sm" /></span>)}
+                </div>
+              </section>
+            )}
+          </AlbumPage>
+        </>
+      )}
+      {tab === "profile" && (
+        <ArchivePanelBoundary label="Jogador">
+          <PlayerTab game={state} club={currentClub} showAppearance={false} onEditAppearance={() => undefined} />
+        </ArchivePanelBoundary>
+      )}
+      {tab === "team" && <ArchivePanelBoundary label="Time"><TeamTab game={state} club={currentClub} /></ArchivePanelBoundary>}
+      {tab === "history" && <ArchivePanelBoundary label="Histórico"><HistoryTab game={state} club={currentClub} /></ArchivePanelBoundary>}
+      {tab === "stats" && <ArchivePanelBoundary label="Estatísticas"><StatsTab game={state} club={currentClub} /></ArchivePanelBoundary>}
+      {tab === "world" && <ArchivePanelBoundary label="Mundo"><WorldTab game={state} club={currentClub} /></ArchivePanelBoundary>}
+    </AlbumShell>
   );
 }
 

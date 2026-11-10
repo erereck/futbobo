@@ -1,0 +1,409 @@
+/* Aba Histórico: a carreira como coleção de figurinhas, uma por temporada. */
+
+.num { font-variant-numeric: tabular-nums lining-nums; }
+
+/* ───────────── resumo ───────────── */
+.totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 3px solid var(--ink);
+  border-bottom: 1.5px solid var(--rule);
+}
+.totals > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px 12px;
+  border-left: 1.5px dotted var(--rule-strong);
+}
+.totals > div:first-child { border-left: 0; padding-left: 0; }
+.totals dt { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
+.totals dd {
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: clamp(30px, 4.6vh, 44px);
+  line-height: .95;
+}
+
+/* ───────────── camisas da carreira ───────────── */
+.shirts { display: grid; gap: 10px; }
+.shirts ol { display: grid; gap: 0; position: relative; }
+.shirts ol::before {
+  content: "";
+  position: absolute;
+  left: 23px;
+  top: 22px;
+  bottom: 22px;
+  border-left: 2px dashed var(--rule-strong);
+}
+.shirt {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.shirtCrest {
+  position: relative;
+  z-index: 1;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--dots-light), var(--club);
+  box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px var(--club-2);
+}
+.shirtCrest :global(.club-badge) { width: 34px; height: 34px; box-shadow: none; }
+.shirtCopy { display: grid; min-width: 0; line-height: 1.2; }
+.shirtCopy strong {
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shirtCopy small { font-size: 12.5px; color: var(--ink-2); }
+.shirtTitles {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: var(--foil);
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: inset 0 0 0 1px rgba(22, 22, 22, .12);
+}
+.shirtTitles svg { width: 15px; height: 15px; }
+.nowTag {
+  font-style: normal;
+  padding: 3px 9px;
+  border: 2px solid var(--club);
+  border-radius: 5px;
+  color: var(--club);
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: 13px;
+  text-transform: uppercase;
+  rotate: -4deg;
+  background: var(--paper);
+}
+.shirt[data-current] .shirtCopy strong { color: var(--ink); }
+
+.nationLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1.5px solid var(--rule);
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.nationLine strong { color: var(--ink); font-weight: 650; }
+.nationLine :global(.nation-badge) { flex: none; }
+
+/* ───────────── coleção ───────────── */
+.gridHead { display: flex; justify-content: space-between; align-items: baseline; }
+.gridHead h2 { font-size: 20px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(156px, 1fr));
+  gap: 18px 14px;
+  align-items: start;
+  padding: 4px 2px 10px;
+}
+
+.season { position: relative; rotate: var(--tilt, 0deg); }
+.face {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .16)) drop-shadow(0 6px 10px rgba(30, 30, 20, .14));
+  transition: translate .18s var(--ease-out);
+}
+/* Ano com título: a figurinha vira brilhante. */
+.season[data-shiny] .face {
+  padding: 3px;
+  background: linear-gradient(#fff, #fff) padding-box, var(--foil) border-box;
+  border: 5px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(150, 140, 110, .35);
+}
+@media (hover: hover) {
+  .season:hover .face { translate: 0 -3px; }
+}
+.gloss {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .38) 42%, rgba(255, 255, 255, 0) 56%);
+  mix-blend-mode: soft-light;
+}
+.band {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  min-height: 62px;
+  padding: 6px 8px 7px;
+  border-radius: 3px;
+  overflow: hidden;
+  color: var(--club-ink);
+  background: var(--dots-light), var(--club);
+}
+/* listras do clube atrás do escudo, longe do ano */
+.band::before,
+.band::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  height: 190%;
+  transform: rotate(22deg);
+  z-index: -1;
+}
+.band::before { right: 16%; width: 20%; background: var(--club-2); opacity: .92; }
+.band::after { right: 10%; width: 4%; background: #fff; opacity: .9; }
+.year {
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 30px;
+  line-height: .85;
+  letter-spacing: -.01em;
+}
+.crest {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .35);
+}
+.crest :global(.club-badge) { width: 28px; height: 28px; box-shadow: none; }
+.ovr {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  line-height: .85;
+  background: var(--yellow);
+  color: var(--ink);
+  box-shadow: 0 0 0 2px #fff;
+}
+.ovr b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 16px; }
+.ovr small { font-size: 6.5px; font-weight: 700; letter-spacing: .04em; }
+.band .crest { margin-top: 30px; }
+
+.body { display: grid; gap: 7px; padding: 8px 4px 6px; }
+.who { font-size: 12px; color: var(--ink-2); line-height: 1.25; }
+.who strong {
+  display: block;
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.line {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1.5px dotted var(--rule-strong);
+  padding-top: 6px;
+}
+.line > div { display: grid; justify-items: start; gap: 1px; min-width: 0; }
+.line > .wide { grid-column: span 2; }
+.line dt { order: 2; font-size: 10.5px; color: var(--ink-3); white-space: nowrap; }
+.line dd {
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: 19px;
+  line-height: 1;
+}
+.line dd[data-tone="high"] { color: var(--green-deep); }
+.line dd[data-tone="low"] { color: var(--red-deep); }
+.highlights { display: grid; gap: 4px; padding-top: 6px; border-top: 1.5px dotted var(--rule-strong); }
+.highlights li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 5px;
+  font-size: 11.5px;
+  line-height: 1.25;
+  color: var(--ink-2);
+}
+.highlights li svg { width: 15px; height: 15px; margin-top: -1px; }
+.highlights li[data-kind="title"] { color: var(--ink); font-weight: 650; }
+.highlights li[data-kind="title"] svg { color: var(--yellow-deep); }
+.highlights li[data-kind="award"] svg { color: var(--mustard); }
+.flag { width: 16px; height: 12px; overflow: hidden; display: grid; place-items: center; margin-top: 1px; }
+.flag :global(.nation-badge) { width: 16px; height: 12px; border-radius: 2px; box-shadow: none; border-width: 1px; }
+
+.movedStamp {
+  position: absolute;
+  z-index: 2;
+  left: -7px;
+  top: 8px;
+  padding: 2px 7px;
+  border: 2px solid var(--red);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .88);
+  color: var(--red);
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 12.5px;
+  text-transform: uppercase;
+  rotate: -9deg;
+  pointer-events: none;
+}
+
+/* a página aberta: espaço ainda sem figurinha */
+.openSlot {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 100%;
+  padding: 12px 10px 12px;
+  border: 2px dashed var(--rule-strong);
+  border-radius: 9px;
+  background: var(--dots-slot), var(--paper-2);
+  overflow: hidden;
+}
+.slotYear {
+  position: absolute;
+  right: 6px;
+  bottom: -8px;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 54px;
+  line-height: 1;
+  color: rgba(22, 22, 22, .1);
+  pointer-events: none;
+}
+.slotNow {
+  justify-self: start;
+  padding: 2px 9px;
+  border-radius: 99px;
+  background: var(--club);
+  color: var(--club-ink);
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 13px;
+}
+.slotClub { display: flex; align-items: center; gap: 8px; margin-top: 4px; min-width: 0; }
+.slotClub :global(.club-badge) { width: 30px; height: 30px; box-shadow: none; flex: none; }
+.slotClub strong {
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slotMeta { font-size: 12.5px; color: var(--ink-2); }
+.slotHint { font-size: 11.5px; color: var(--ink-3); position: relative; }
+
+/* ════════════════ DESKTOP ════════════════ */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); }
+  .totals dd { font-size: 32px; }
+}
+
+/* ════════════════ MOBILE ════════════════ */
+@media (max-width: 1023px) {
+  .totals > div { padding: 8px 8px 10px; }
+  .totals dt { font-size: 11px; }
+  .totals dd { font-size: 30px; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; padding-inline: 0; }
+  .shirtCopy strong { font-size: 17px; }
+}
+
+@media (max-width: 380px) {
+  .totals dt { font-size: 10.5px; }
+  .totals dd { font-size: 26px; }
+  .totals > div { padding-inline: 6px; }
+  .grid { gap: 14px 10px; }
+  .year { font-size: 26px; }
+  .line dd { font-size: 17px; }
+  .line dt { font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .face { transition: none; }
+}
+
+/* ───────────── marcos ───────────── */
+.milestones { display: grid; gap: 8px; }
+.milestones ol { display: grid; }
+.milestones li {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1.5px dotted var(--rule-strong);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.milestones li:last-child { border-bottom: 0; }
+.milestones time {
+  justify-self: start;
+  padding: 1px 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 99px;
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--ink);
+}
+.milestones strong { display: block; font-weight: 650; color: var(--ink); }
+
+/* próximos anos: espaços vazios esperando figurinha */
+.futureSlot {
+  align-self: stretch;
+  display: grid;
+  place-items: end start;
+  min-height: 168px;
+  padding: 10px 12px;
+  border: 2px dashed var(--rule);
+  border-radius: 9px;
+  background: var(--dots-slot), transparent;
+}
+.futureSlot span {
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 34px;
+  line-height: 1;
+  color: rgba(22, 22, 22, .1);
+}
+@media (max-width: 1023px) {
+  .futureSlot { min-height: 120px; }
+  .futureSlot[data-extra] { display: none; }
+}

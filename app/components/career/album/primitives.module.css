@@ -1,0 +1,407 @@
+/* Peças do álbum: figurinha, faixa, ficha técnica, medidores, carimbos, selo e espaços. */
+
+.display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-stretch: 78%;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+.num { font-variant-numeric: tabular-nums lining-nums; }
+
+/* ───────────── faixa impressa (clube ou seção) ───────────── */
+.band {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: clamp(78px, 11vh, 102px);
+  padding: 12px 16px;
+  border-radius: 4px;
+  color: var(--band-ink, var(--club-ink));
+  background: var(--dots-light), var(--band-bg, var(--club));
+}
+.band::before,
+.band::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  height: 190%;
+  transform: rotate(22deg);
+  z-index: -1;
+}
+.band::before { right: 18%; width: 22%; background: var(--band-stripe, var(--club-2)); }
+.band::after { right: 13%; width: 4%; background: var(--band-line, #fff); opacity: .95; }
+.band[data-plain] { grid-template-columns: minmax(0, 1fr) auto; }
+.bandCrest {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .35);
+}
+.bandCrest :global(.club-badge),
+.bandCrest :global(.nation-badge) { width: 46px; height: 46px; box-shadow: none; }
+.bandName { min-width: 0; }
+.bandName h2 {
+  font-family: var(--font-display);
+  font-stretch: 76%;
+  font-weight: 800;
+  font-size: clamp(32px, 4.6vh, 48px);
+  line-height: .9;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.bandName p { margin-top: 4px; font-size: 13px; opacity: .92; max-width: 34ch; }
+.pageNo {
+  display: grid;
+  place-content: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--yellow);
+  color: var(--ink);
+  text-align: center;
+  line-height: .9;
+  flex: none;
+}
+.pageNo b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 22px; }
+.pageNo small { font-size: 9px; font-weight: 700; }
+
+/* ───────────── figurinha (base) ───────────── */
+.sticker {
+  container-type: inline-size;
+  position: relative;
+  margin: 0;
+  rotate: var(--tilt, 0deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .18)) drop-shadow(0 6px 10px rgba(30, 30, 20, .16));
+}
+.face {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  padding: 5px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.gloss {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .38) 42%, rgba(255, 255, 255, 0) 56%);
+  mix-blend-mode: soft-light;
+}
+.peel {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+  background: linear-gradient(to top left, var(--paper) 0 47%, rgba(0, 0, 0, .2) 49%, #f1f1ea 52%, #ffffff 68%, #d9d9d0 100%);
+  border-top-left-radius: 4px;
+  transform-origin: 100% 100%;
+  transition: transform .18s var(--ease-out);
+}
+
+/* figurinha do jogador */
+.plArt {
+  position: relative;
+  border-radius: 3px;
+  overflow: hidden;
+  aspect-ratio: 4 / 4.3;
+  background:
+    var(--dots-light),
+    radial-gradient(90% 70% at 50% 30%, var(--club-soft, var(--club)) 0%, var(--club) 45%, var(--club-deep) 100%);
+}
+.plArt::before {
+  content: "";
+  position: absolute;
+  inset: auto -20% 18% -20%;
+  height: 26%;
+  background: var(--club-2);
+  transform: rotate(-14deg);
+  opacity: .92;
+}
+.plBust {
+  position: absolute;
+  left: 50%;
+  bottom: -4%;
+  width: 88%;
+  height: auto;
+  aspect-ratio: 1;
+  translate: -50% 0;
+}
+.plNoPortrait {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 96px;
+  line-height: 1;
+  color: var(--club-ink);
+  opacity: .9;
+}
+.plNum {
+  position: absolute;
+  left: 8px;
+  top: 4px;
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: clamp(34px, 5vh, 46px);
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 2px #fff;
+}
+.plOvr {
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  line-height: .9;
+  background: var(--yellow);
+  color: var(--ink);
+  box-shadow: 0 0 0 2px #fff;
+}
+.plOvr b { font-family: var(--font-display); font-stretch: 75%; font-size: 21px; font-weight: 800; }
+.plOvr small { font-size: 8.5px; font-weight: 700; letter-spacing: .04em; }
+.plCrest {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 34px;
+  height: 34px;
+  padding: 3px;
+  background: #fff;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.plCrest :global(.club-badge) { width: 26px; height: 26px; box-shadow: none; }
+.plCrest :global(.nation-badge) { width: 26px; height: 26px; border: 0; border-radius: 50%; box-shadow: none; }
+.plName { padding: 7px 4px 2px; display: grid; gap: 1px; }
+.plName strong {
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: 21px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: .01em;
+  overflow-wrap: anywhere;
+}
+.plName span { font-size: 12px; color: var(--ink-2); }
+/* A figurinha se ajusta à largura que ganhou (pacote no celular, página no desktop). */
+@container (max-width: 150px) {
+  .face { padding: 4px; }
+  .plNum { font-size: 26px; left: 5px; top: 2px; -webkit-text-stroke-width: 1.5px; }
+  .plOvr { width: 30px; height: 30px; right: 4px; top: 4px; }
+  .plOvr b { font-size: 14px; }
+  .plOvr small { font-size: 6.5px; }
+  .plCrest { width: 22px; height: 22px; right: 4px; bottom: 4px; padding: 2px; }
+  .plCrest :global(.club-badge),
+  .plCrest :global(.nation-badge) { width: 18px; height: 18px; }
+  .plName { padding: 4px 2px 1px; }
+  .plName strong { font-size: 14px; }
+  .plName span { display: none; }
+  .plNoPortrait { font-size: 48px; }
+}
+
+/* ───────────── títulos de bloco (sem caixa alta espaçada) ───────────── */
+.blockTitle {
+  font-family: var(--font-display);
+  font-stretch: 85%;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.blockTitle small {
+  margin-left: 8px;
+  font-family: var(--font-text);
+  font-stretch: 100%;
+  font-weight: 500;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* ───────────── ficha técnica ───────────── */
+.ficha { display: grid; }
+.fichaRow { display: flex; align-items: baseline; gap: 6px; padding: clamp(2px, .45vh, 4px) 0; font-size: 13.5px; }
+.fichaRow dt { color: var(--ink-2); white-space: nowrap; }
+.lead { flex: 1; border-bottom: 1.5px dotted rgba(22, 22, 22, .32); translate: 0 -3px; min-width: 12px; }
+.fichaRow dd { font-weight: 600; text-align: right; }
+.fichaRow dd em { font-style: normal; font-weight: 600; margin-left: 4px; }
+.up { color: var(--green); }
+.down { color: var(--red-deep); }
+
+/* ───────────── medidores ───────────── */
+.meters { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 22px; }
+.meter { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; row-gap: 4px; }
+.meter > span { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meter > span i { font-style: normal; color: var(--ink-3); }
+.meter > b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 22px; line-height: 1; }
+.bar {
+  grid-column: 1 / -1;
+  position: relative;
+  height: 10px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--dots-ink), #eeeee7;
+}
+.bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--v) * 1%);
+  background: var(--c);
+  transition: width .6s var(--ease-out);
+}
+.bar i::after { content: ""; position: absolute; inset: 0; background: var(--dots-light); }
+.delta {
+  margin-left: 6px;
+  font-family: var(--font-text);
+  font-stretch: 90%;
+  font-size: 12px;
+  font-weight: 700;
+  vertical-align: 2px;
+}
+
+/* ───────────── carimbos (botões impressos) ───────────── */
+.stamp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 46px;
+  padding: 6px 8px 6px 14px;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  text-align: left;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: translate .12s var(--ease-out), box-shadow .12s var(--ease-out), background-color .12s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.stamp strong {
+  font-family: var(--font-display);
+  font-stretch: 82%;
+  font-weight: 750;
+  font-size: 15px;
+  line-height: 1.1;
+}
+.stamp em {
+  font-style: normal;
+  display: grid;
+  place-content: center;
+  min-width: 50px;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 99px;
+  background: var(--yellow);
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.stamp[data-variant="primary"] { background: var(--yellow); justify-content: center; padding: 8px 18px; min-height: 52px; }
+.stamp[data-variant="primary"] strong { font-size: 18px; }
+.stamp[data-variant="danger"] { border-color: var(--red-deep); box-shadow: 3px 3px 0 var(--red-deep); color: var(--red-deep); }
+.stamp:not(:disabled):hover { translate: -1px -1px; box-shadow: 4px 4px 0 var(--ink); }
+.stamp[data-variant="danger"]:not(:disabled):hover { box-shadow: 4px 4px 0 var(--red-deep); }
+.stamp:not(:disabled):active { translate: 2px 2px; box-shadow: 1px 1px 0 var(--ink); }
+.stamp:disabled { opacity: .45; box-shadow: 2px 2px 0 var(--rule-strong); border-color: var(--rule-strong); }
+
+/* ───────────── selo redondo ───────────── */
+.seal {
+  display: grid;
+  place-content: center;
+  text-align: center;
+  width: 74px;
+  height: 74px;
+  padding: 6px;
+  border-radius: 50%;
+  background: var(--seal, var(--red));
+  color: #fff;
+  rotate: 9deg;
+  line-height: 1;
+  flex: none;
+  box-shadow: inset 0 0 0 3px var(--seal, var(--red)), inset 0 0 0 5px rgba(255, 255, 255, .85);
+}
+.seal b {
+  font-family: var(--font-display);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: calc(15px * var(--seal-scale, 1));
+  line-height: 1.02;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ───────────── espaço especial (meta) ───────────── */
+.special {
+  position: relative;
+  border-radius: 9px;
+  padding: 14px 14px 12px;
+  background: linear-gradient(var(--paper), var(--paper)) padding-box, var(--foil) border-box;
+  border: 3px dashed transparent;
+  isolation: isolate;
+}
+.special::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 6px;
+  z-index: -1;
+  background: radial-gradient(rgba(150, 145, 130, .22) 1px, transparent 1.6px) 0 0 / 6px 6px, #f4f3ee;
+}
+.special h3 {
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  font-size: clamp(19px, 2.6vh, 23px);
+  line-height: 1.05;
+}
+.special p { margin-top: 3px; font-size: 13.5px; color: var(--ink-2); }
+.slots { display: flex; gap: 5px; margin-top: 10px; }
+.slots i { flex: 1; height: 16px; border-radius: 3px; border: 1.5px dashed rgba(22, 22, 22, .3); background: #fff; }
+.slots i[data-on] { border-style: solid; border-color: var(--yellow-deep); background: var(--foil); }
+.specialFoot { margin-top: 8px; display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+.specialFoot span { color: var(--ink-3); }
+.specialFoot b { font-weight: 650; }
+
+@media (max-width: 1023px) {
+  .band { min-height: 0; padding: 8px 12px; gap: 10px; }
+  .bandCrest { width: 40px; height: 40px; }
+  .bandCrest :global(.club-badge), .bandCrest :global(.nation-badge) { width: 31px; height: 31px; }
+  .bandName h2 { font-size: 26px; }
+  .bandName p { font-size: 11.5px; margin-top: 2px; max-width: 26ch; text-wrap: balance; }
+  .pageNo { width: 40px; height: 40px; }
+  .pageNo b { font-size: 17px; }
+  .pageNo small { font-size: 8px; }
+  .meters { gap: 6px 14px; }
+  .meter > span { font-size: 12px; }
+  .meterLabel i { display: none; }
+  .meter > b { font-size: 18px; }
+  .bar { height: 7px; }
+  .seal { width: 54px; height: 54px; }
+  .seal b { font-size: calc(12px * var(--seal-scale, 1)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .peel, .stamp, .bar i { transition: none; }
+}

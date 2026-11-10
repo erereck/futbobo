@@ -71,6 +71,7 @@ import JoinRoomScreen, { EMPTY_JOIN_DRAFT, type JoinDraft } from "./screens/Join
 import LobbyScreen from "./screens/LobbyScreen";
 import NextMatchBanner, { RoomToasts } from "./screens/NextMatchBanner";
 import OtherTabScreen from "./screens/OtherTabScreen";
+import { BOB_INK, PaperScreen, paper, useDockLift } from "./screens/paper";
 import "./bobonline.css";
 
 // A mesa (BotaoMatch, motor, desenho) só baixa quando a sala existe: a home do Bobonline fica leve no celular.
@@ -168,20 +169,15 @@ class ScreensBoundary extends Component<{ children: ReactNode }, { failed: boole
   render() {
     if (!this.state.failed) return this.props.children;
     return (
-      <main className="bob-shell" data-screen="error">
-        <header className="bob-brand">
-          <Link href="/">FUTBOBO</Link>
-          <span>BOBONLINE</span>
-        </header>
-        <section className="bob-other-tab" aria-labelledby="bob-error-title" data-testid="bob-error">
-          <span className="bob-eyebrow">ALGO DEU ERRADO</span>
+      <main className={`bob-shell ${paper.root} albumMounted`} data-screen="error" data-centered="" style={BOB_INK}>
+        <PaperScreen className="bob-other-tab" aria-labelledby="bob-error-title" data-testid="bob-error">
           <h1 id="bob-error-title">A tela do Bobonline travou.</h1>
           <p className="bob-hint">Se você estava numa sala, ela continua aberta: tente de novo para voltar a ela.</p>
           <div className="bob-cta">
             <button type="button" className="primary-button" onClick={() => this.setState({ failed: false })}>Tentar de novo</button>
             <Link className="secondary-button bob-link-button" href="/">Voltar ao início</Link>
           </div>
-        </section>
+        </PaperScreen>
       </main>
     );
   }
@@ -241,6 +237,8 @@ function BobonlineScreens() {
   const connecting = room.loading || state?.phase === "connecting";
   const roomError = room.failure ?? (state?.phase === "error" ? state.error : null);
   const view = effectiveView(storedView);
+  // Celular: o rodapé amarelo das telas acompanha a área visível (barra do navegador, teclado).
+  useDockLift();
   // O relógio do aparelho só é medido na busca do net.json: antes dela, nada a dizer.
   const clockNote = netConfig ? clockSkewText(netClockOffsetMs()) : null;
 
@@ -616,7 +614,7 @@ function BobonlineScreens() {
   if ((screen === "match" || screen === "spectate") && duel && state) {
     return (
       <>
-        <Suspense fallback={<main className="bob-match-loading" aria-busy="true"><p><span className="bob-spinner" aria-hidden="true" />Preparando a partida…</p></main>}>
+        <Suspense fallback={<main className={`bob-match-loading ${paper.tokens}`} aria-busy="true"><p><span className="bob-spinner" aria-hidden="true" />Preparando a partida…</p></main>}>
           <MatchScreen
             key={duel.matchId}
             duel={duel}
@@ -639,11 +637,8 @@ function BobonlineScreens() {
   }
 
   return (
-    <main className="bob-shell" data-screen={screen}>
-      <header className="bob-brand">
-        <Link href="/">FUTBOBO</Link>
-        <span>BOBONLINE</span>
-      </header>
+    // A mesa do álbum (paper.root): o álbum aberto no desktop, a página de papel no celular.
+    <main className={`bob-shell ${paper.root} albumMounted`} data-screen={screen} data-centered="" style={BOB_INK}>
       {inRoom && (
         // A faixa da próxima partida gruda no topo; os avisos da sala saem logo abaixo dela (ou da marca).
         <div className="bob-top-stack">

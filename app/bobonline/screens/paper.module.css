@@ -1,0 +1,99 @@
+/* Bobonline no álbum: as peças do álbum da carreira por composição de CSS.
+   O Bobonline não importa JS de components/career (teste da rota: o pacote não leva a carreira);
+   o CSS do álbum vem por `composes`, que só carrega estilo. O que é só do Bobonline mora em
+   bobonline.css e teams.css, com os mesmos tokens. */
+
+/* ───────────── casca: mesa, capa e páginas ───────────── */
+.tokens { composes: tokens from "../../components/career/album/album.module.css"; }
+.root { composes: root from "../../components/career/album/album.module.css"; }
+.album { composes: album from "../../components/career/album/album.module.css"; }
+.cover { composes: cover from "../../components/career/album/album.module.css"; }
+.spread { composes: spread from "../../components/career/album/album.module.css"; }
+.page { composes: page from "../../components/career/album/album.module.css"; }
+
+/* folha solta sobre a mesa (telas de uma coluna) */
+.desk { composes: desk from "../../components/career/album/menu/pages.module.css"; }
+.paper { composes: paper from "../../components/career/album/menu/pages.module.css"; }
+.paperTape { composes: tape from "../../components/career/album/menu/pages.module.css"; }
+.back { composes: back from "../../components/career/album/menu/pages.module.css"; }
+.pageTitle { composes: pageTitle from "../../components/career/album/menu/pages.module.css"; }
+
+/* ───────────── impressos ───────────── */
+.num { composes: num from "../../components/career/album/primitives.module.css"; }
+.band { composes: band from "../../components/career/album/primitives.module.css"; }
+.bandCrest { composes: bandCrest from "../../components/career/album/primitives.module.css"; }
+.bandName { composes: bandName from "../../components/career/album/primitives.module.css"; }
+/* o título da tela é h1 (a faixa do álbum estiliza h2) */
+.bandName h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-stretch: 76%;
+  font-weight: 800;
+  font-size: clamp(32px, 4.6vh, 48px);
+  line-height: .9;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.blockTitle { composes: blockTitle from "../../components/career/album/primitives.module.css"; }
+.ficha { composes: ficha from "../../components/career/album/primitives.module.css"; }
+.fichaRow { composes: fichaRow from "../../components/career/album/primitives.module.css"; }
+.lead { composes: lead from "../../components/career/album/primitives.module.css"; }
+.seal { composes: seal from "../../components/career/album/primitives.module.css"; }
+
+/* figurinha (a do jogador, aqui com o escudo do time no lugar do retrato) */
+.sticker { composes: sticker from "../../components/career/album/primitives.module.css"; }
+.face { composes: face from "../../components/career/album/primitives.module.css"; }
+.plArt { composes: plArt from "../../components/career/album/primitives.module.css"; }
+.plBust { composes: plBust from "../../components/career/album/primitives.module.css"; }
+.plNum { composes: plNum from "../../components/career/album/primitives.module.css"; }
+.plName { composes: plName from "../../components/career/album/primitives.module.css"; }
+.gloss { composes: gloss from "../../components/career/album/primitives.module.css"; }
+
+/* figurinha de clube (faixa nas cores, escudo no disco branco) e o espaço vazio */
+.clubSticker { composes: clubSticker from "../../components/career/album/intro/intro.module.css"; }
+.clubBand { composes: clubBand from "../../components/career/album/intro/intro.module.css"; }
+.clubCrest { composes: clubCrest from "../../components/career/album/intro/intro.module.css"; }
+.emptySlot { composes: emptySlot from "../../components/career/album/menu/menu.module.css"; }
+.slotPlus { composes: slotPlus from "../../components/career/album/menu/menu.module.css"; }
+.masthead { composes: masthead from "../../components/career/album/menu/menu.module.css"; }
+.tocChip { composes: tocChip from "../../components/career/album/menu/menu.module.css"; }
+.linkButton { composes: linkButton from "../../components/career/album/menu/menu.module.css"; }
+
+/* placar carimbado, ingresso, gols e números da mesa (as telas do botão da carreira) */
+.board { composes: board from "../../components/career/album/botaoSpreads.module.css"; }
+.versus { composes: versus from "../../components/career/album/botaoSpreads.module.css"; }
+.side { composes: side from "../../components/career/album/botaoSpreads.module.css"; }
+.crest { composes: crest from "../../components/career/album/botaoSpreads.module.css"; }
+.score { composes: score from "../../components/career/album/botaoSpreads.module.css"; }
+.verdict { composes: verdict from "../../components/career/album/botaoSpreads.module.css"; }
+.recap { composes: recap from "../../components/career/album/botaoSpreads.module.css"; }
+.goals { composes: goals from "../../components/career/album/botaoSpreads.module.css"; }
+.goal { composes: goal from "../../components/career/album/botaoSpreads.module.css"; }
+.minute { composes: minute from "../../components/career/album/botaoSpreads.module.css"; }
+.goalCopy { composes: goalCopy from "../../components/career/album/botaoSpreads.module.css"; }
+.replayButton { composes: replayButton from "../../components/career/album/botaoSpreads.module.css"; }
+.replayFrame { composes: replayFrame from "../../components/career/album/botaoSpreads.module.css"; }
+.table { composes: table from "../../components/career/album/botaoSpreads.module.css"; }
+.tableHead { composes: tableHead from "../../components/career/album/botaoSpreads.module.css"; }
+.tableRow { composes: tableRow from "../../components/career/album/botaoSpreads.module.css"; }
+.ticket { composes: ticket from "../../components/career/album/botaoSpreads.module.css"; }
+.ticketPaper { composes: ticketPaper from "../../components/career/album/botaoSpreads.module.css"; }
+.ticketMain { composes: ticketMain from "../../components/career/album/botaoSpreads.module.css"; }
+.ticketKicker { composes: ticketKicker from "../../components/career/album/botaoSpreads.module.css"; }
+.ticketFoot { composes: ticketFoot from "../../components/career/album/botaoSpreads.module.css"; }
+.stub { composes: stub from "../../components/career/album/botaoSpreads.module.css"; }
+
+/* ───────────── folha solta (pop-up) ───────────── */
+.sheetBackdrop {
+  composes: tokens from "../../components/career/album/album.module.css";
+  composes: backdrop from "../../components/career/album/sheets/sheets.module.css";
+}
+.sheet { composes: sheet from "../../components/career/album/sheets/sheets.module.css"; }
+.tape { composes: tape from "../../components/career/album/sheets/sheets.module.css"; }
+.sheetBand { composes: band from "../../components/career/album/sheets/sheets.module.css"; }
+.bandText { composes: bandText from "../../components/career/album/sheets/sheets.module.css"; }
+.kicker { composes: kicker from "../../components/career/album/sheets/sheets.module.css"; }
+.close { composes: close from "../../components/career/album/sheets/sheets.module.css"; }
+.sheetBody { composes: body from "../../components/career/album/sheets/sheets.module.css"; }
+.sheetFooter { composes: footer from "../../components/career/album/sheets/sheets.module.css"; }
+.editorScope { composes: editorScope from "../../components/career/album/sheets/sheets.module.css"; }

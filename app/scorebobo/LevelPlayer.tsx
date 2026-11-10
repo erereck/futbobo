@@ -22,14 +22,17 @@ import type { GameState, KickPlan, Outcome, Phase, ScoreboboGameApi, ScoreboboVi
 import type { ScoreboboViewOptions } from "./three/view";
 import { primeScoreboboAudio, playUiSound, ScoreboboAudio } from "./audio";
 import { recordStars, type StarCount, type TeamInfo } from "./storage";
+import albumCss from "../components/career/album/album.module.css";
 import {
   AimHint,
   AttemptBalls,
+  BallIcon,
   Confetti,
   describeRule,
   formatClock,
   IconButton,
   IntroCard,
+  levelLabel,
   ObjectiveChip,
   OutcomeBanner,
   PassCounter,
@@ -38,6 +41,7 @@ import {
   RecenterButton,
   ReplayTag,
   ScoreBug,
+  sentenceKicker,
   SoundGlyph,
   StarDefs,
   Toast,
@@ -240,7 +244,8 @@ type TurnDrag = { pointerId: number; x: number; y: number; t: number; lastX: num
  * não monta uma string `rgba()` nova a cada pedaço do traço.
  */
 const TRAIL_LEVELS = 255;
-const TRAIL_GLOW = Array.from({ length: TRAIL_LEVELS + 1 }, (_, level) => `rgba(214, 255, 92, ${level / TRAIL_LEVELS})`);
+// Halo do dedo na fita amarela do álbum (o miolo segue branco).
+const TRAIL_GLOW = Array.from({ length: TRAIL_LEVELS + 1 }, (_, level) => `rgba(246, 196, 49, ${level / TRAIL_LEVELS})`);
 const TRAIL_CORE = Array.from({ length: TRAIL_LEVELS + 1 }, (_, level) => `rgba(255, 255, 255, ${level / TRAIL_LEVELS})`);
 const trailColor = (table: string[], alpha: number) => table[Math.round(Math.max(0, Math.min(1, alpha)) * TRAIL_LEVELS)];
 
@@ -1577,7 +1582,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   return (
     <div
       ref={rootRef}
-      className={`${styles.stage} ${hud?.slow ? styles.stageSlow : ""} ${showAim ? styles.stageFrozen : ""} ${drawing ? styles.stageDrawing : ""} ${paused ? styles.stagePaused : ""}`}
+      className={`${albumCss.tokens} ${styles.stage} ${hud?.slow ? styles.stageSlow : ""} ${showAim ? styles.stageFrozen : ""} ${drawing ? styles.stageDrawing : ""} ${paused ? styles.stagePaused : ""}`}
       tabIndex={-1}
       style={stageStyle}
     >
@@ -1676,7 +1681,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
             <div className={styles.bottom}>
               {drawing
                 ? <LivePlanChip store={planStore} directOnly={goalOnly} />
-                : <AimHint key={hint.key} text={hint.tone === "error" ? hint.text : infoHint} tone={hint.tone} tag={level.tutorial && !tutorialDone ? "TUTORIAL" : undefined} extra={turnHint} />}
+                : <AimHint key={hint.key} text={hint.tone === "error" ? hint.text : infoHint} tone={hint.tone} tag={level.tutorial && !tutorialDone ? "Tutorial" : undefined} extra={turnHint} />}
               {turned && !drawing && <RecenterButton onClick={recenter} />}
             </div>
           )}
@@ -1685,17 +1690,25 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
 
       {status === "loading" && (
         <div className={styles.loading} role="status">
-          <div className={styles.loadingBall} aria-hidden="true" />
-          <span className={styles.loadingKicker}>{career?.kicker ?? <>FASE {String(levelIndex + 1).padStart(2, "0")}</>}</span>
-          <strong>{level.name}</strong>
-          <small>{level.situation}</small>
-          <em>Montando o estádio…</em>
+          <div className={styles.loadingSheet}>
+            <span className={styles.loadingBand}>
+              <span className={styles.loadingKicker}>{career ? sentenceKicker(career.kicker) : levelLabel(levelIndex)}</span>
+              <strong>{level.name}</strong>
+            </span>
+            <small>{level.situation}</small>
+            <span className={styles.loadingFoot}>
+              <BallIcon className={styles.loadingBall} />
+              <em>Montando o estádio…</em>
+            </span>
+          </div>
         </div>
       )}
 
       {status === "failed" && (
         <div className={styles.overlay} role="alertdialog" aria-labelledby="sb-fail-title">
           <div className={styles.menuCard}>
+            <i className={styles.tape} data-side="left" aria-hidden="true" />
+            <i className={styles.tape} data-side="right" aria-hidden="true" />
             <h2 id="sb-fail-title">O 3D parou de responder</h2>
             <p>{career ? "O minigame só existe em 3D. Feche outros apps pesados e tente de novo." : "O Scorebobo só existe no Modo 3D. Recarregue a página ou feche outros apps pesados e tente de novo."}</p>
             <div className={styles.menuActions}>
@@ -1711,12 +1724,13 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
       {paused && (!results || rewatch) && (
         <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="sb-pause-title">
           <div className={styles.menuCard}>
-            <span className={styles.menuKicker}>PAUSA</span>
-            <h2 id="sb-pause-title">{level.name}</h2>
+            <i className={styles.tape} data-side="left" aria-hidden="true" />
+            <i className={styles.tape} data-side="right" aria-hidden="true" />
+            <span className={styles.menuKicker} aria-hidden="true">Pausa</span>
+            <h2 id="sb-pause-title"><span className={styles.vh}>Pausa: </span>{level.name}</h2>
             <p>{level.objective}</p>
             <div className={styles.menuActions}>
               <button type="button" className={styles.primaryButton} onClick={resume} autoFocus>
-                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4l10 6-10 6z" fill="currentColor" /></svg>
                 Continuar
               </button>
               {!career && <button type="button" className={styles.secondaryButton} onClick={restart}>Recomeçar</button>}

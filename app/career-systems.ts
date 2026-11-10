@@ -70,7 +70,13 @@ export function createContract(
     40_000,
     Math.round((salaryBase * negotiationFactor) / 5_000) * 5_000,
   );
-  const years = age >= 35 ? 1 : 2 + (seedValue % 4);
+  // A duração também é negociada clube a clube: cada proposta sai com 2 a 5
+  // anos. Antes vinha só da semente, e todas as propostas da mesma janela
+  // (como o primeiro contrato) repetiam o mesmo número.
+  let yearsHash = Math.imul(salaryHash ^ (salaryHash >>> 15), 0x2c1b3c6d);
+  yearsHash = Math.imul(yearsHash ^ (yearsHash >>> 12), 0x297a2d39);
+  yearsHash ^= yearsHash >>> 15;
+  const years = age >= 35 ? 1 : 2 + ((yearsHash >>> 0) % 4);
   return { years, annualSalary };
 }
 

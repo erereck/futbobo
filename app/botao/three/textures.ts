@@ -867,13 +867,14 @@ export function createKitTextures(args: {
   pattern: number;
   primary: string;
   secondary: string;
-  number: number;
+  /** `null`: camisa sem número (o retrato 3D das figurinhas do álbum). */
+  number: number | null;
 }): KitTextures {
   return { torso: canvasTexture(paintKitAtlas(args)) };
 }
 
 /** Atlas 3×2 da camisa (192×192), na ordem do BoxGeometry. */
-function paintKitAtlas(args: { pattern: number; primary: string; secondary: string; number: number }) {
+function paintKitAtlas(args: { pattern: number; primary: string; secondary: string; number: number | null }) {
   const { pattern, primary, secondary } = args;
   const width = 64;
   const height = 96;
@@ -921,7 +922,7 @@ function paintKitAtlas(args: { pattern: number; primary: string; secondary: stri
   front.ctx.textAlign = "center";
   front.ctx.textBaseline = "middle";
   front.ctx.fillStyle = ink;
-  front.ctx.fillText(String(args.number), width * 0.3, height * 0.29);
+  if (args.number !== null) front.ctx.fillText(String(args.number), width * 0.3, height * 0.29);
 
   const back = paint("back");
   back.ctx.font = "900 50px ui-sans-serif, system-ui, sans-serif";
@@ -929,9 +930,11 @@ function paintKitAtlas(args: { pattern: number; primary: string; secondary: stri
   back.ctx.textBaseline = "middle";
   back.ctx.lineWidth = 4;
   back.ctx.strokeStyle = outline;
-  back.ctx.strokeText(String(args.number), width / 2, height * 0.5);
-  back.ctx.fillStyle = ink;
-  back.ctx.fillText(String(args.number), width / 2, height * 0.5);
+  if (args.number !== null) {
+    back.ctx.strokeText(String(args.number), width / 2, height * 0.5);
+    back.ctx.fillStyle = ink;
+    back.ctx.fillText(String(args.number), width / 2, height * 0.5);
+  }
 
   const left = paint("left", 32, height);
   const right = paint("right", 32, height);

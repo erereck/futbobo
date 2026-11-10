@@ -107,11 +107,11 @@ export function TutorialOverlay({ ref }: { ref?: Ref<TutorialHandle> }) {
           <path
             d="M22.5 31.5V9.5a5 5 0 0 1 10 0v15.2l2.4-.6a4.6 4.6 0 0 1 5.6 3.1l.4 1.3 2-.5a4.6 4.6 0 0 1 5.6 3.3l.3 1.3 1.6-.3a4.6 4.6 0 0 1 5.4 3.9l.9 7.5c1 8.6-4.6 15.3-13.4 16.6l-5 .7c-5.6.8-10.4-1.2-13.4-6l-8.8-14a4.6 4.6 0 0 1 7.2-5.6z"
             fill="#fff"
-            stroke="#0b1116"
+            stroke="#161616"
             strokeWidth="2.6"
             strokeLinejoin="round"
           />
-          <path d="M32.5 25v8M41 29.5v5M49.5 34v4.5" stroke="#0b1116" strokeWidth="2.2" strokeLinecap="round" opacity="0.35" />
+          <path d="M32.5 25v8M41 29.5v5M49.5 34v4.5" stroke="#161616" strokeWidth="2.2" strokeLinecap="round" opacity="0.35" />
         </svg>
       </div>
     </div>

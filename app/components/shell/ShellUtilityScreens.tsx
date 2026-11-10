@@ -261,7 +261,6 @@ export function SettingsScreen() {
   return (
     <section className={styles.utilityScreen}>
       <header className={styles.hero}>
-        <span>CONFIGURAÇÕES</span>
         <h2>Seu Futbobo.</h2>
         <p>Só o que muda a experiência. O resto fica fora do caminho.</p>
       </header>
@@ -708,7 +707,6 @@ export function InstallScreen() {
   return (
     <section className={styles.utilityScreen}>
       <header className={styles.hero}>
-        <span>INSTALAR</span>
         <h2>Futbobo no seu aparelho.</h2>
         <p>Escolha a versão certa. Sem tutorial de quinze parágrafos.</p>
       </header>
@@ -769,6 +767,29 @@ const UPDATES = [
   {
     version: FUTBOBO_VERSION,
     date: "AGORA",
+    title: "Álbum Digital",
+    lead: "O Futbobo virou um álbum de figurinhas, do menu à última página da carreira.",
+    items: [
+      "A carreira inteira virou um álbum de figurinhas: mesa de decisão, abas, temporada e mercado",
+      "Menu e criação do jogador como a primeira página do álbum, com a ficha do atleta",
+      "Partidas de botão, Copa do Mundo, X1, Bobonline e Scorebobo no mesmo papel",
+      "Celular sem arrastar: cada tela tenta caber inteira, com a ação principal sempre à vista",
+      "Modo 3D do botão com bonecos animados, comemorações em close e modo desempenho",
+      "No Modo 3D, as figurinhas também mostram o seu jogador em 3D",
+      "Bobonline: o botão online com amigos, times próprios, salas e torneios",
+      "Scorebobo: desenhe a jogada em 12 fases e jogue a base da carreira nele",
+      "Treino especial grátis na QUADRA e gala da Bola de Ouro com festa do título",
+      "Atenção do mercado: copas, Libertadores, Europa League e Copa do Mundo atraem propostas",
+      "Seleção principal só para quem joga a primeira divisão",
+      "Chute que desvia antes de entrar vale assistência, até em gol contra",
+      "Lei do Ex: o jogo para até você escolher, e não comemorar tem o gesto de respeito",
+      "Primeiro contrato com prazos diferentes em cada clube, de 2 a 5 anos",
+      "Pôster da carreira e noite de premiação refeitos, logo nova e Bobobike em Outros jogos",
+    ],
+  },
+  {
+    version: "v96",
+    date: "ANTERIOR",
     title: "Novos Caminhos",
     lead: "Quatro divisões no Brasil e na Inglaterra abrem novas histórias para sua carreira.",
     items: [
@@ -835,7 +856,6 @@ export function NewsScreen() {
   return (
     <section className={styles.utilityScreen}>
       <header className={styles.hero}>
-        <span>NOVIDADES</span>
         <h2>O que mudou.</h2>
         <p>
           Sem parede de patch note. Só as coisas que você vai perceber jogando.

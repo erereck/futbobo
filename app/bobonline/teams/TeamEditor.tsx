@@ -7,9 +7,10 @@
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { CELEBRATION_OPTIONS, KIT_PATTERN_NAMES } from "../../player-appearance";
-import { PlayerAppearancePortrait } from "../../PlayerAppearanceEditor";
+import FutboboIcon from "../../components/FutboboIcon";
 import { claimBack } from "../screen-history";
 import type { BobPlayer, BobTeam } from "../types";
+import { BackButton, Band, Dock, DockSpacer, PaperScreen, Page, PlayerBust, Spread, paper, teamInks } from "../screens/paper";
 import BobCrest from "./BobCrest";
 import { CREST_SHAPE_NAMES, kitSvg } from "./crest";
 import { newSeed, randomBobTeam } from "./generator";
@@ -20,6 +21,8 @@ import { getBobStoreSnapshot, removeTeam, saveTeam, setActiveTeam, showTeamsToas
 import "./teams.css";
 
 const AUTOSAVE_MS = 400;
+/** As figurinhas do elenco coladas um pouco tortas. */
+const ROSTER_TILTS = ["-1.8deg", "1.2deg", "-.6deg", "1.6deg", "-1.2deg"];
 
 /** 12 cores de atalho (o seletor nativo ao lado escolhe qualquer outra). */
 const PRESET_COLORS: ReadonlyArray<{ hex: string; name: string }> = [
@@ -38,6 +41,14 @@ const PRESET_COLORS: ReadonlyArray<{ hex: string; name: string }> = [
 ];
 
 type ColorSlot = "primary" | "secondary";
+/** Celular: uma parte do editor por vez (no desktop as duas páginas mostram tudo e as abas somem). */
+type Pane = "nome" | "cores" | "uniforme" | "elenco";
+const PANES: ReadonlyArray<{ id: Pane; label: string }> = [
+  { id: "nome", label: "Nome" },
+  { id: "cores", label: "Cores" },
+  { id: "uniforme", label: "Uniforme" },
+  { id: "elenco", label: "Elenco" },
+];
 type Confirm = "shuffle" | "delete" | "leave" | null;
 type Sheet = { kind: "player"; index: number } | { kind: "export"; team: BobTeam } | null;
 
@@ -77,6 +88,7 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
   // Sigla e nome curto acompanham o nome até o usuário mexer neles.
   const [manual, setManual] = useState<{ abbr: boolean; shortName: boolean } | null>(null);
   const [colorSlot, setColorSlot] = useState<ColorSlot>("primary");
+  const [pane, setPane] = useState<Pane>("nome");
   const [sheet, setSheet] = useState<Sheet>(null);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const baseId = useId();
@@ -120,10 +132,11 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
 
   if (!team) {
     return (
-      <section className="bob-editor">
-        <div className="bob-editor-bar"><button type="button" className="bob-back" onClick={onBack}>‹ Voltar</button></div>
-        <header className="bob-screen-head"><span>VESTIÁRIO</span><h1>Editar time</h1><p>Esse time não está mais salvo neste aparelho.</p></header>
-      </section>
+      <PaperScreen className="bob-editor bob-other-tab">
+        <BackButton onClick={onBack} />
+        <h1>Editar time</h1>
+        <p className="bob-hint">Esse time não está mais salvo neste aparelho.</p>
+      </PaperScreen>
     );
   }
 
@@ -213,48 +226,60 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
   }
 
   const firstIssue = issues[0];
-  const chip = !valid && firstIssue
+  // A aba com o que falta corrigir ganha a marca vermelha (o selo diz o campo, a aba diz onde ele está).
+  const invalidPane: Pane | null = firstIssue ? (firstIssue.field.startsWith("players") ? "elenco" : "nome") : null;
+  const chip =!valid && firstIssue
     ? { state: "invalid", text: `Não salvo: corrija ${issueLabel(firstIssue, current)}` }
     : pending
       ? { state: "saving", text: "Salvando…" }
       : saveFailed
         ? { state: "failed", text: "Não salvo: o aparelho recusou a gravação" }
-        : { state: "saved", text: "Salvo no aparelho ✓" };
+        : { state: "saved", text: "Salvo no aparelho" };
   const color = colorSlot === "primary" ? current.primary : current.secondary;
   const customColor = !PRESET_COLORS.some((preset) => preset.hex === color);
   const lastTeam = teams.length <= 1;
-  const heroStyle = { "--bob-primary": current.primary, "--bob-secondary": current.secondary } as CSSProperties;
   const nameId = `${baseId}-nome`;
   const shortId = `${baseId}-curto`;
   const abbrId = `${baseId}-sigla`;
 
+  // A faixa mostra o time como vai para o placar: nome curto grande, sigla e nome completo embaixo.
+  const shownName = cleanText(current.shortName, LIMITS.shortName[1]) || cleanText(current.name, LIMITS.teamName[1]) || "Seu time";
+
   return (
-    <section className="bob-editor" aria-labelledby={`${baseId}-titulo`}>
-      <div className="bob-editor-bar">
-        <button type="button" className="bob-back" onClick={leave}>‹ Voltar</button>
-        <span className="bob-save-chip" data-state={chip.state} role="status">{chip.text}</span>
-      </div>
-
-      <header className="bob-screen-head">
-        <span>VESTIÁRIO</span>
-        <h1 id={`${baseId}-titulo`}>Editar time</h1>
-      </header>
-
-      {stageNotice && <p className="bob-editor-notice" role="note">{stageNotice}</p>}
-
-      <div className="bob-editor-hero" style={heroStyle}>
-        <BobCrest team={current} size={76} />
-        <div>
-          <strong>{cleanText(current.name, LIMITS.teamName[1]) || "Seu time"}</strong>
-          <small>{current.abbr || "—"} · {cleanText(current.shortName, LIMITS.shortName[1]) || "—"}</small>
-          {isActive && <em className="bob-team-tag">EM USO</em>}
+    <Spread className="bob-editor" aria-labelledby={`${baseId}-titulo`} data-show={pane} style={teamInks(current.primary, current.secondary)}>
+      <Page side="left" label="Identidade do time" className="bob-editor-left">
+        <div className="bob-editor-bar">
+          <BackButton onClick={leave} />
+          <span className="bob-save-chip" data-state={chip.state} role="status">
+            {chip.state === "saved" && <FutboboIcon name="check" />}
+            {chip.text}
+          </span>
         </div>
-        <KitThumb pattern={current.kitPattern} primary={current.primary} secondary={current.secondary} size={52} />
-      </div>
 
-      <div className="bob-editor-body">
-        <section className="bob-editor-section" aria-labelledby={`${baseId}-identidade`}>
-          <h2 id={`${baseId}-identidade`}>Identidade</h2>
+        {/* A faixa do clube ao vivo: nome, sigla, cores e escudo como vão para o placar. */}
+        <Band
+          ink="club"
+          titleId={`${baseId}-titulo`}
+          title={<><span className="bob-vh">Editar time: </span>{shownName}</>}
+          subtitle={<>{current.abbr || "—"} · {cleanText(current.name, LIMITS.teamName[1]) || "—"}{isActive && <em className="bob-team-tag">Em uso</em>}</>}
+          crest={<BobCrest team={current} size={46} />}
+          aside={<span className="bob-editor-kit"><KitThumb pattern={current.kitPattern} primary={current.primary} secondary={current.secondary} size={52} /></span>}
+          className="bob-editor-hero"
+        />
+
+        {/* Celular: as partes do time em abas, uma por vez (no desktop as duas páginas mostram tudo). */}
+        <div className="bob-editor-tabs" role="group" aria-label="Parte do time">
+          {PANES.map((item) => (
+            <button key={item.id} type="button" aria-pressed={pane === item.id} data-invalid={invalidPane === item.id ? "true" : undefined} onClick={() => setPane(item.id)}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {stageNotice && <p className="bob-editor-notice" role="note">{stageNotice}</p>}
+
+        <section className="bob-editor-section" data-pane="nome" aria-labelledby={`${baseId}-identidade`}>
+          <h2 id={`${baseId}-identidade`} className="bob-section-title">Identidade</h2>
           <div className="bob-editor-grid">
             <Field label="Nome do time" htmlFor={nameId} error={issueFor("name")} counter={`${Array.from(current.name).length}/${LIMITS.teamName[1]}`}>
               <input
@@ -298,123 +323,136 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
               </Field>
             </div>
             <p className="bob-editor-hint">{autoAbbr || autoShort ? "Nome curto e sigla acompanham o nome até você mudar." : "O nome curto aparece no placar."}</p>
-
-            <div className="bob-editor-block">
-              <div className="bob-block-title"><span>Cores</span></div>
-              <div className="bob-color-tabs" role="group" aria-label="Qual cor editar">
-                <button type="button" aria-pressed={colorSlot === "primary"} onClick={() => setColorSlot("primary")}>
-                  <i style={{ background: current.primary }} />
-                  <span><small>Cor </small>principal</span>
-                </button>
-                <button type="button" aria-pressed={colorSlot === "secondary"} onClick={() => setColorSlot("secondary")}>
-                  <i style={{ background: current.secondary }} />
-                  <span><small>Cor </small>secundária</span>
-                </button>
-                <button
-                  type="button"
-                  className="bob-color-swap"
-                  aria-label="Trocar a cor principal com a secundária"
-                  title="Trocar as cores"
-                  onClick={() => update({ ...current, primary: current.secondary, secondary: current.primary })}
-                >
-                  ⇄
-                </button>
-              </div>
-              <div className="bob-swatches" role="group" aria-label={colorSlot === "primary" ? "Cor principal" : "Cor secundária"}>
-                {PRESET_COLORS.map((preset) => (
-                  <button
-                    type="button"
-                    key={preset.hex}
-                    aria-label={preset.name}
-                    title={preset.name}
-                    aria-pressed={color === preset.hex}
-                    style={{ "--bob-swatch": preset.hex } as CSSProperties}
-                    onClick={() => setColor(colorSlot, preset.hex)}
-                  />
-                ))}
-                <label className="bob-swatch-custom" data-active={customColor ? "true" : undefined}>
-                  <input
-                    type="color"
-                    value={color}
-                    aria-label={colorSlot === "primary" ? "Cor principal: outra cor" : "Cor secundária: outra cor"}
-                    onChange={(event) => setColor(colorSlot, event.target.value)}
-                  />
-                  <i aria-hidden="true" style={customColor ? { background: color } : undefined} />
-                  <span aria-hidden="true">{customColor ? `Outra cor · ${color.toUpperCase()}` : "Outra cor…"}</span>
-                </label>
-              </div>
-            </div>
-
-            <div className="bob-editor-block">
-              <div className="bob-block-title"><span>Uniforme</span><b>{KIT_PATTERN_NAMES[current.kitPattern] ?? KIT_PATTERN_NAMES[0]}</b></div>
-              <div className="bob-kit-grid" role="group" aria-label="Uniforme">
-                {KIT_PATTERN_NAMES.map((name, pattern) => (
-                  <button type="button" key={name} aria-label={name} title={name} aria-pressed={current.kitPattern === pattern} onClick={() => setKitPattern(pattern)}>
-                    <KitThumb pattern={pattern} primary={current.primary} secondary={current.secondary} />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="bob-editor-block">
-              <div className="bob-block-title"><span>Escudo</span></div>
-              <div className="bob-shape-grid" role="group" aria-label="Escudo">
-                {CREST_SHAPE_NAMES.map((name, shape) => (
-                  <button type="button" key={name} aria-pressed={current.crest === shape} onClick={() => update({ ...current, crest: shape as BobTeam["crest"] })}>
-                    <BobCrest team={{ ...current, crest: shape as BobTeam["crest"] }} size={38} />
-                    <span>{name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </section>
 
-        <div className="bob-editor-side">
-          <section className="bob-editor-section" aria-labelledby={`${baseId}-elenco`}>
-            <h2 id={`${baseId}-elenco`}>Elenco <small>5 jogadores · toque para personalizar</small></h2>
-            <ul className="bob-roster">
-              {current.players.map((player, index) => {
-                const playerIssue = issues.find((issue) => issue.field.startsWith(`players.${index}.`));
-                const celebration = CELEBRATION_OPTIONS[player.appearance.celebration ?? 0]?.name ?? CELEBRATION_OPTIONS[0].name;
-                const name = cleanText(player.name, LIMITS.playerName[1]) || "Sem nome";
-                return (
-                  <li key={player.id}>
-                    <button
-                      type="button"
-                      className="bob-player-card"
-                      data-invalid={playerIssue ? "true" : undefined}
-                      aria-label={`Personalizar ${name}, camisa ${Number.isFinite(player.number) ? player.number : "sem número"}`}
-                      onClick={() => setSheet({ kind: "player", index })}
-                    >
-                      <PlayerAppearancePortrait appearance={player.appearance} primary={current.primary} secondary={current.secondary} size={54} frame="compact" label={`Rosto de ${name}`} />
-                      <span>
-                        <strong><b>#{Number.isFinite(player.number) ? player.number : "?"}</b> {name}</strong>
-                        <small>{playerIssue ? playerIssue.message : `Comemoração: ${celebration}`}</small>
-                      </span>
-                      <i aria-hidden="true">›</i>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-
-          <div className="bob-editor-actions">
-            {isActive ? (
-              <p className="bob-editor-inuse"><em className="bob-team-tag">EM USO</em> Este é o time que vai para a sala.</p>
-            ) : (
-              <button type="button" className="primary-button" onClick={useThisTeam}>Usar este time <span>✓</span></button>
-            )}
-            <button type="button" className="secondary-button" onClick={() => setSheet({ kind: "export", team: flush() })}>Exportar código</button>
-            <button type="button" className="secondary-button" onClick={() => setConfirm("shuffle")}>Sortear time inteiro</button>
-            <button type="button" className="bob-danger-button" disabled={lastTeam} aria-describedby={lastTeam ? `${baseId}-ultimo` : undefined} onClick={() => setConfirm("delete")}>
-              Excluir time
+        <section className="bob-editor-block" data-pane="cores" aria-labelledby={`${baseId}-cores`}>
+          <div className="bob-block-title"><h2 id={`${baseId}-cores`}>Cores</h2></div>
+          <div className="bob-color-tabs" role="group" aria-label="Qual cor editar">
+            <button type="button" aria-pressed={colorSlot === "primary"} onClick={() => setColorSlot("primary")}>
+              <i style={{ background: current.primary }} />
+              <span><small>Cor </small>principal</span>
             </button>
-            {lastTeam && <small id={`${baseId}-ultimo`} className="bob-editor-hint">Você precisa de pelo menos um time.</small>}
+            <button type="button" aria-pressed={colorSlot === "secondary"} onClick={() => setColorSlot("secondary")}>
+              <i style={{ background: current.secondary }} />
+              <span><small>Cor </small>secundária</span>
+            </button>
+            <button
+              type="button"
+              className="bob-color-swap"
+              aria-label="Trocar a cor principal com a secundária"
+              title="Trocar as cores"
+              onClick={() => update({ ...current, primary: current.secondary, secondary: current.primary })}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h13m-4-4 4 4-4 4M19 16H6m4-4-4 4 4 4" /></svg>
+            </button>
           </div>
+          <div className="bob-swatches" role="group" aria-label={colorSlot === "primary" ? "Cor principal" : "Cor secundária"}>
+            {PRESET_COLORS.map((preset) => (
+              <button
+                type="button"
+                key={preset.hex}
+                aria-label={preset.name}
+                title={preset.name}
+                aria-pressed={color === preset.hex}
+                style={{ "--bob-swatch": preset.hex } as CSSProperties}
+                onClick={() => setColor(colorSlot, preset.hex)}
+              />
+            ))}
+            <label className="bob-swatch-custom" data-active={customColor ? "true" : undefined}>
+              <input
+                type="color"
+                value={color}
+                aria-label={colorSlot === "primary" ? "Cor principal: outra cor" : "Cor secundária: outra cor"}
+                onChange={(event) => setColor(colorSlot, event.target.value)}
+              />
+              <i aria-hidden="true" style={customColor ? { background: color } : undefined} />
+              <span aria-hidden="true">{customColor ? `Outra cor · ${color.toUpperCase()}` : "Outra cor…"}</span>
+            </label>
+          </div>
+        </section>
+      </Page>
+
+      <Page side="right" label="Uniforme, escudo e elenco" className="bob-editor-right">
+        <section className="bob-editor-block" data-pane="uniforme" aria-labelledby={`${baseId}-uniforme`}>
+          <div className="bob-block-title"><h2 id={`${baseId}-uniforme`}>Uniforme</h2><b>{KIT_PATTERN_NAMES[current.kitPattern] ?? KIT_PATTERN_NAMES[0]}</b></div>
+          <div className="bob-kit-grid" role="group" aria-label="Uniforme">
+            {KIT_PATTERN_NAMES.map((name, pattern) => (
+              <button type="button" key={name} aria-label={name} title={name} aria-pressed={current.kitPattern === pattern} onClick={() => setKitPattern(pattern)}>
+                <KitThumb pattern={pattern} primary={current.primary} secondary={current.secondary} />
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="bob-editor-block" data-pane="uniforme" aria-labelledby={`${baseId}-escudo`}>
+          <div className="bob-block-title"><h2 id={`${baseId}-escudo`}>Escudo</h2></div>
+          <div className="bob-shape-grid" role="group" aria-label="Escudo">
+            {CREST_SHAPE_NAMES.map((name, shape) => (
+              <button type="button" key={name} aria-pressed={current.crest === shape} onClick={() => update({ ...current, crest: shape as BobTeam["crest"] })}>
+                <BobCrest team={{ ...current, crest: shape as BobTeam["crest"] }} size={38} />
+                <span>{name}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="bob-editor-block" data-pane="elenco" aria-labelledby={`${baseId}-elenco`}>
+          <div className="bob-block-title"><h2 id={`${baseId}-elenco`}>Elenco</h2><b>toque para personalizar</b></div>
+          <ul className="bob-roster">
+            {current.players.map((player, index) => {
+              const playerIssue = issues.find((issue) => issue.field.startsWith(`players.${index}.`));
+              const celebration = CELEBRATION_OPTIONS[player.appearance.celebration ?? 0]?.name ?? CELEBRATION_OPTIONS[0].name;
+              const name = cleanText(player.name, LIMITS.playerName[1]) || "Sem nome";
+              const number = Number.isFinite(player.number) ? player.number : "?";
+              return (
+                <li key={player.id}>
+                  <button
+                    type="button"
+                    className="bob-player-card"
+                    data-invalid={playerIssue ? "true" : undefined}
+                    aria-label={`Personalizar ${name}, camisa ${Number.isFinite(player.number) ? player.number : "sem número"}`}
+                    onClick={() => setSheet({ kind: "player", index })}
+                  >
+                    <span className={`${paper.sticker} bob-player-sticker`} style={{ "--tilt": ROSTER_TILTS[index % ROSTER_TILTS.length] } as CSSProperties}>
+                      <span className={paper.face}>
+                        <span className={paper.plArt}>
+                          <PlayerBust className={paper.plBust} appearance={player.appearance} primary={current.primary} secondary={current.secondary} />
+                          <span className={`${paper.plNum} ${paper.num}`} aria-hidden="true">{number}</span>
+                        </span>
+                        <span className={paper.plName}>
+                          <strong>{name}</strong>
+                          <span>{celebration}</span>
+                        </span>
+                        <span className={paper.gloss} aria-hidden="true" />
+                      </span>
+                    </span>
+                    {playerIssue && <small className="bob-player-issue">{playerIssue.message}</small>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        {/* As ações do time ficam na aba Nome; o "Usar este time" (rodapé amarelo) vale em todas. */}
+        <div className="bob-editor-actions" data-pane={isActive ? "nome" : undefined}>
+          {isActive ? (
+            <p className="bob-editor-inuse"><em className="bob-team-tag">Em uso</em> Este é o time que vai para a sala.</p>
+          ) : (
+            <Dock className="bob-editor-dock">
+              <button type="button" className="primary-button" onClick={useThisTeam}>Usar este time</button>
+            </Dock>
+          )}
+          <button type="button" className="secondary-button" data-pane="nome" onClick={() => setSheet({ kind: "export", team: flush() })}>Exportar código</button>
+          <button type="button" className="secondary-button" data-pane="nome" onClick={() => setConfirm("shuffle")}>Sortear time inteiro</button>
+          <button type="button" className="bob-danger-button" data-pane="nome" disabled={lastTeam} aria-describedby={lastTeam ? `${baseId}-ultimo` : undefined} onClick={() => setConfirm("delete")}>
+            Excluir time
+          </button>
+          {lastTeam && <small id={`${baseId}-ultimo`} className="bob-editor-hint" data-pane="nome">Você precisa de pelo menos um time.</small>}
         </div>
-      </div>
+        {!isActive && <DockSpacer />}
+      </Page>
 
       {sheet?.kind === "player" && (
         <PlayerSheet team={current} index={sheet.index} onChange={(player) => setPlayer(sheet.index, player)} onClose={() => setSheet(null)} />
@@ -454,6 +492,6 @@ export default function TeamEditor({ teamId, onBack, stageNotice }: { teamId: st
         />
       )}
       <TeamsToastHost />
-    </section>
+    </Spread>
   );
 }

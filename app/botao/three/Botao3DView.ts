@@ -1385,7 +1385,7 @@ export class Botao3DView {
   }
 
   /** Monta a festa do gol a partir das posições que estão na tela agora. */
-  private startGoalShow(state: BotaoMatchState, side: BotaoSide, ownGoal: boolean, scorerOverride: string | null) {
+  private startGoalShow(state: BotaoMatchState, side: BotaoSide, ownGoal: boolean, scorerOverride: string | null, restrained = false) {
     const lastTouch = scorerOverride ?? state.touches.at(-1)?.bodyId ?? null;
     const actors = this.actors(state);
     const total = state.score.user + state.score.cpu;
@@ -1409,12 +1409,25 @@ export class Botao3DView {
       signature: this.signatureCelebration(state),
       signatureFor,
       aspect: this.camera.aspect,
+      restrained,
     });
     this.goalShowStarted = true;
     this.showReleased = false;
     this.reactions.clear();
     // Câmera lenta só no instante em que a bola entra.
     if (!this.options.reducedMotion) this.slowMo = 0;
+  }
+
+  /**
+   * Lei do Ex, "não comemorar": a festa do gol recomeça contida, das mesmas
+   * posições (a partida ficou congelada até a escolha). Quem marcou fica parado,
+   * mãos abertas e cabeça baixa; sem a chuva de papel em volta dele.
+   */
+  restrainGoalCelebration(state: BotaoMatchState) {
+    const goal = state.lastGoal;
+    if (!this.goalShowStarted || !goal || goal.ownGoal) return;
+    this.rain = null;
+    this.startGoalShow(state, goal.side, false, null, true);
   }
 
   /**

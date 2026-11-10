@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import {
   COUNTRIES,
   POSITIONS,
@@ -23,6 +23,17 @@ import {
   randomPlayerAppearance,
   visualRosterForMatch,
 } from "../player-appearance";
+import FutboboIcon from "../components/FutboboIcon";
+import AlbumShell, { AlbumPage } from "../components/career/album/AlbumShell";
+import { clubInks } from "../components/career/album/inks";
+import {
+  BlockTitle,
+  Ficha,
+  InkBand,
+  Seal,
+  Stamp,
+} from "../components/career/album/primitives";
+import AlbumSheet from "../components/career/album/sheets/AlbumSheet";
 import "../botao/botao.css";
 import "./world-cup.css";
 
@@ -237,8 +248,307 @@ function campaignTotals(campaign: CupCampaign) {
   );
 }
 
+/** Semente de cada campanha nova (lida só no clique de começar). */
+function freshCupSeed() {
+  return Date.now() % 2_000_000_000;
+}
+
 function flagPath(countryId: string) {
   return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/assets/flags/${countryId}.png`;
+}
+
+/* ───────────── álbum: peças da Copa ───────────── */
+
+/** Onde cada botão fica no campo impresso (5 colunas × 6 linhas, ataque no alto). */
+const FIELD_SPOTS: Record<PositionKey, CSSProperties> = {
+  PE: { gridColumn: 1, gridRow: 1 },
+  CA: { gridColumn: 3, gridRow: 1 },
+  PD: { gridColumn: 5, gridRow: 1 },
+  MEI: { gridColumn: 3, gridRow: 2 },
+  ME: { gridColumn: 1, gridRow: 3 },
+  MC: { gridColumn: 3, gridRow: 3 },
+  MD: { gridColumn: 5, gridRow: 3 },
+  VOL: { gridColumn: 3, gridRow: 4 },
+  LE: { gridColumn: 1, gridRow: 5 },
+  ZAG: { gridColumn: 3, gridRow: 5 },
+  LD: { gridColumn: 5, gridRow: 5 },
+  GOL: { gridColumn: 3, gridRow: 6 },
+};
+
+const OUTCOME_MARK = { win: "V", draw: "E", loss: "D" } as const;
+const OUTCOME_LABEL = { win: "Vitória", draw: "Empate", loss: "Derrota" } as const;
+
+function inksOf(country: Country) {
+  return { primary: country.primary, secondary: country.secondary };
+}
+
+function clock(seconds: number) {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+/** As regras que a próxima partida vai usar, como na ficha da mesa da carreira. */
+function rulesRows(rules: BotaoRules) {
+  return [
+    {
+      label: "Gols para vencer",
+      value: rules.goalLimit ? rules.goalLimit : "sem limite",
+    },
+    {
+      label: "Tempo",
+      value:
+        rules.halves > 1
+          ? `${rules.halves} × ${clock(rules.halfSeconds)}`
+          : clock(rules.halfSeconds),
+    },
+    {
+      label: "Prorrogação",
+      value: rules.extraHalves ? clock(rules.extraSeconds) : "não tem",
+    },
+    {
+      label: "Pênaltis",
+      value: rules.penalties ? `${rules.penaltyRounds} cobranças` : "não tem",
+    },
+  ];
+}
+
+function BackLink() {
+  return (
+    <Link className="world-cup-back" href="/">
+      <FutboboIcon name="arrow-left" /> Menu
+    </Link>
+  );
+}
+
+/** Bandeira impressa com borda branca, como escudo de figurinha. */
+function Flag({
+  country,
+  size = "md",
+}: {
+  country: Country;
+  size?: "sm" | "md" | "lg";
+}) {
+  return (
+    <span className="world-cup-flag" data-size={size}>
+      <Image
+        src={flagPath(country.id)}
+        alt=""
+        width={160}
+        height={107}
+        loading={size === "lg" ? "eager" : "lazy"}
+        unoptimized
+      />
+    </span>
+  );
+}
+
+/** A figurinha da seleção: a bandeira é a arte, o nome vem no rodapé. */
+function NationSticker({
+  country,
+  tilt = "-2.4deg",
+  className,
+}: {
+  country: Country;
+  tilt?: string;
+  className?: string;
+}) {
+  return (
+    <figure
+      className={`world-cup-sticker ${className ?? ""}`}
+      style={
+        {
+          ...clubInks(country.primary, country.secondary),
+          "--tilt": tilt,
+        } as CSSProperties
+      }
+    >
+      <span className="world-cup-sticker-art">
+        <Image
+          src={flagPath(country.id)}
+          alt=""
+          width={160}
+          height={107}
+          loading="eager"
+          unoptimized
+        />
+      </span>
+      <figcaption>
+        <strong>{country.name}</strong>
+        <small>{country.abbr}</small>
+      </figcaption>
+    </figure>
+  );
+}
+
+/** Campo de botão impresso: cada posição é um botão de mesa. */
+function PositionPitch({
+  position,
+  onPick,
+  labelledBy,
+}: {
+  position: PositionKey;
+  onPick: (position: PositionKey) => void;
+  labelledBy: string;
+}) {
+  return (
+    <div className="world-cup-pitch" role="group" aria-labelledby={labelledBy}>
+      <svg
+        className="world-cup-pitch-lines"
+        viewBox="0 0 100 120"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <rect x="3" y="3" width="94" height="114" />
+        <path d="M3 60h94M30 117V99h40v18M40 117v-7h20v7M30 3v18h40V3" />
+        <circle cx="50" cy="60" r="11" />
+      </svg>
+      {POSITIONS.map((entry) => (
+        <button
+          type="button"
+          key={entry.key}
+          className="world-cup-spot"
+          style={FIELD_SPOTS[entry.key]}
+          data-lane={FIELD_SPOTS[entry.key].gridColumn === 3 ? "center" : "side"}
+          aria-pressed={position === entry.key}
+          aria-label={entry.name}
+          onClick={() => onPick(entry.key)}
+        >
+          <b>{entry.key}</b>
+          <small>{entry.name}</small>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+type RouteEntry = {
+  key: string;
+  stage: string;
+  opponent: Country | null;
+  result?: BotaoMatchResult;
+  state: "win" | "draw" | "loss" | "current" | "future";
+  number: number;
+};
+
+/** As oito partidas possíveis: as já sorteadas e os mata-matas que ainda esperam adversário. */
+function routeEntries(campaign: CupCampaign): RouteEntry[] {
+  const drawn: RouteEntry[] = campaign.games.map((game, index) => ({
+    key: `${game.stage}-${game.opponentId}`,
+    stage: game.stage,
+    opponent: countryById(game.opponentId),
+    result: game.result,
+    state: game.result
+      ? game.result.outcome
+      : index === campaign.currentIndex
+        ? "current"
+        : "future",
+    number: index + 1,
+  }));
+  const waiting: RouteEntry[] = KNOCKOUT_STAGES.slice(
+    Math.max(0, campaign.games.length - 3),
+  ).map((stage, index) => ({
+    key: stage,
+    stage,
+    opponent: null,
+    state: "future",
+    number: campaign.games.length + index + 1,
+  }));
+  return [...drawn, ...waiting];
+}
+
+/** A tabela da campanha: fase de grupos e o caminho do mata-mata até a final. */
+function CupRoute({
+  campaign,
+  points,
+  goalDifference,
+}: {
+  campaign: CupCampaign;
+  points: number;
+  goalDifference: number;
+}) {
+  const entries = routeEntries(campaign);
+  const blocks = [
+    {
+      id: "grupos",
+      title: "Fase de grupos",
+      note: `${points} ${points === 1 ? "ponto" : "pontos"} · saldo ${goalDifference > 0 ? "+" : ""}${goalDifference}`,
+      items: entries.filter((entry) => entry.stage.startsWith("Grupo")),
+    },
+    {
+      id: "mata-mata",
+      title: "Mata-mata",
+      note: "16 avos à final",
+      items: entries.filter((entry) => !entry.stage.startsWith("Grupo")),
+    },
+  ];
+  return (
+    <div className="world-cup-route">
+      {blocks.map((block) => (
+        <section
+          key={block.id}
+          className="world-cup-route-block"
+          data-block={block.id}
+          aria-labelledby={`world-cup-route-${block.id}`}
+        >
+          <BlockTitle id={`world-cup-route-${block.id}`} note={block.note}>
+            {block.title}
+          </BlockTitle>
+          <ol className="world-cup-route-list">
+            {block.items.map((entry) => (
+              <li
+                key={entry.key}
+                className="world-cup-step"
+                data-state={entry.state}
+              >
+                <span className="world-cup-step-mark">
+                  {entry.result ? (
+                    <>
+                      <span aria-hidden="true">
+                        {OUTCOME_MARK[entry.result.outcome]}
+                      </span>
+                      <span className="world-cup-vh">
+                        {OUTCOME_LABEL[entry.result.outcome]}
+                      </span>
+                    </>
+                  ) : (
+                    entry.number
+                  )}
+                </span>
+                {entry.opponent ? (
+                  <Flag country={entry.opponent} size="sm" />
+                ) : (
+                  <span
+                    className="world-cup-flag world-cup-flag-slot"
+                    data-size="sm"
+                    aria-hidden="true"
+                  />
+                )}
+                <span className="world-cup-step-text">
+                  <small>{entry.stage.replace(/^Grupo · /, "")}</small>
+                  {entry.opponent ? (
+                    <>
+                      <strong>{entry.opponent.name}</strong>
+                      <em className="world-cup-step-abbr" aria-hidden="true">
+                        {entry.opponent.abbr}
+                      </em>
+                    </>
+                  ) : (
+                    <strong className="world-cup-blank">
+                      <span className="world-cup-vh">Adversário a definir</span>
+                    </strong>
+                  )}
+                </span>
+                <b className="world-cup-step-score">
+                  {entry.result
+                    ? `${entry.result.goalsFor} × ${entry.result.goalsAgainst}`
+                    : "—"}
+                </b>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ))}
+    </div>
+  );
 }
 
 export default function WorldCupModePage() {
@@ -249,6 +559,8 @@ export default function WorldCupModePage() {
   const [position, setPosition] = useState<PositionKey>("MEI");
   const [campaign, setCampaign] = useState<CupCampaign | null>(null);
   const [setup, setSetup] = useState<BotaoMatchSetup | null>(null);
+  // Celular: a lista de seleções abre numa folha solta.
+  const [nationPicker, setNationPicker] = useState(false);
 
   const selectedCountry = countryById(countryId);
   const filteredCountries = countries.filter((country) =>
@@ -260,7 +572,7 @@ export default function WorldCupModePage() {
   const totals = campaign ? campaignTotals(campaign) : null;
 
   function beginCup() {
-    const seed = Date.now() % 2_000_000_000;
+    const seed = freshCupSeed();
     const participants = tournamentField(selectedCountry, seed);
     const opponents = groupOpponents(selectedCountry, participants, seed);
     setCampaign({
@@ -392,338 +704,473 @@ export default function WorldCupModePage() {
   }
 
   if (screen === "setup") {
+    const positionName =
+      POSITIONS.find((entry) => entry.key === position)?.name ?? position;
     return (
-      <main className="world-cup-shell world-cup-setup">
-        <header className="world-cup-brand">
-          <Link href="/">← FUTBOBO</Link>
-          <span>MODO INDEPENDENTE</span>
-        </header>
-        <section className="world-cup-hero">
-          <span>COPA DO MUNDO · FUTEBOL DE BOTÃO</span>
-          <h1>
-            Uma Copa inteira.
-            <br />
-            Uma taça.
-          </h1>
-          <p>
-            Comece na fase de grupos e jogue cada partida até a final. Nada
-            altera sua carreira: aqui só existe o próximo jogo.
-          </p>
-        </section>
-        <section className="world-cup-config">
-          <div className="world-cup-config-heading">
-            <span>01</span>
-            <div>
-              <small>SUA CAMISA</small>
-              <h2>Escolha a Seleção</h2>
+      <AlbumShell
+        club={inksOf(selectedCountry)}
+        tab={null}
+        onTab={() => undefined}
+        showTabs={false}
+        centered
+        label="Copa do Mundo"
+      >
+        <AlbumPage
+          side="left"
+          label="Sua Copa"
+          className="world-cup-page world-cup-setup-left"
+        >
+          <BackLink />
+          <InkBand
+            ink="green"
+            title="Copa do Mundo"
+            subtitle="Uma Copa inteira. Uma taça."
+            crest={{ country: selectedCountry }}
+          />
+          <button
+            type="button"
+            className="world-cup-choice"
+            onClick={() => setNationPicker(true)}
+          >
+            <Flag country={selectedCountry} size="sm" />
+            <span>
+              <small>Sua seleção</small>
+              <strong>{selectedCountry.name}</strong>
+            </span>
+            <em>Trocar</em>
+          </button>
+          <section
+            className="world-cup-role"
+            aria-labelledby="world-cup-role-title"
+          >
+            <BlockTitle as="h2" id="world-cup-role-title">
+              Onde você joga?
+            </BlockTitle>
+            <div className="world-cup-role-body">
+              <PositionPitch
+                position={position}
+                onPick={setPosition}
+                labelledBy="world-cup-role-title"
+              />
+              <div className="world-cup-role-side">
+                <NationSticker
+                  key={selectedCountry.id}
+                  country={selectedCountry}
+                  className="world-cup-setup-sticker"
+                />
+                <Ficha
+                  rows={[
+                    { label: "Posição", value: positionName },
+                    { label: "Torneio", value: "48 seleções" },
+                    { label: "Grupos", value: "3 jogos" },
+                    { label: "Mata-mata", value: "até 5 jogos" },
+                  ]}
+                />
+                <p className="world-cup-note">
+                  Nada altera sua carreira: aqui só existe o próximo jogo.
+                </p>
+              </div>
             </div>
+          </section>
+          <div className="world-cup-dock">
+            <Stamp variant="primary" onClick={beginCup}>
+              Começar a Copa do Mundo
+            </Stamp>
           </div>
-          <label className="world-cup-search">
-            <span>BUSCAR SELEÇÃO</span>
+          <div className="world-cup-dock-spacer" aria-hidden="true" />
+        </AlbumPage>
+
+        <AlbumPage
+          side="right"
+          label="Seleções"
+          className="world-cup-page world-cup-nations-page"
+        >
+          <header className="world-cup-nations-head">
+            <h2 className="world-cup-page-title">Escolha a seleção</h2>
             <input
+              className="world-cup-search-input"
+              type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Brasil, Japão, Marrocos..."
+              aria-label="Buscar seleção"
             />
-          </label>
-          <div className="world-cup-country-grid">
-            {filteredCountries.map((country) => (
-              <button
-                key={country.id}
-                type="button"
-                aria-pressed={countryId === country.id}
-                onClick={() => setCountryId(country.id)}
-              >
-                <Image
-                  src={flagPath(country.id)}
-                  alt=""
-                  width={42}
-                  height={30}
-                  unoptimized
-                />
-                <span>
-                  <strong>{country.name}</strong>
-                  <small>{country.abbr}</small>
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-        <section className="world-cup-config world-cup-role-config">
-          <div className="world-cup-config-heading">
-            <span>02</span>
-            <div>
-              <small>SEU BOTÃO</small>
-              <h2>Onde você joga?</h2>
-            </div>
-          </div>
-          <div className="world-cup-position-grid">
-            {POSITIONS.map((entry) => (
-              <button
-                type="button"
-                key={entry.key}
-                aria-pressed={position === entry.key}
-                onClick={() => setPosition(entry.key)}
-              >
-                <b>{entry.key}</b>
-                <small>{entry.name}</small>
-              </button>
-            ))}
-          </div>
-          <button
-            className="world-cup-primary"
-            type="button"
-            onClick={beginCup}
+          </header>
+          {filteredCountries.length ? (
+            <ul className="world-cup-nations">
+              {filteredCountries.map((country, index) => (
+                <li key={country.id}>
+                  <button
+                    type="button"
+                    className="world-cup-nation"
+                    aria-pressed={countryId === country.id}
+                    onClick={() => setCountryId(country.id)}
+                    style={
+                      {
+                        "--r": `${[-1.2, 0.7, -0.4, 1][index % 4]}deg`,
+                      } as CSSProperties
+                    }
+                  >
+                    <span className="world-cup-nation-art">
+                      <Image
+                        src={flagPath(country.id)}
+                        alt=""
+                        width={84}
+                        height={56}
+                        unoptimized
+                      />
+                    </span>
+                    <strong>{country.name}</strong>
+                    <small>{country.abbr}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="world-cup-note">Nenhuma seleção com esse nome.</p>
+          )}
+        </AlbumPage>
+
+        {nationPicker && (
+          <AlbumSheet
+            ink="green"
+            club={inksOf(selectedCountry)}
+            titleId="world-cup-nation-title"
+            title="Escolha a seleção"
+            onDismiss={() => setNationPicker(false)}
           >
-            Começar a Copa do Mundo <span>→</span>
-          </button>
-          <p className="world-cup-fineprint">
-            48 seleções geradas · 3 jogos de grupo · mata-mata desde os 16 avos
-            · campanha separada do modo carreira
-          </p>
-        </section>
-      </main>
+            <input
+              className="world-cup-search-input"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Brasil, Japão, Marrocos..."
+              aria-label="Buscar seleção"
+            />
+            {filteredCountries.length ? (
+              <ul className="world-cup-pick">
+                {filteredCountries.map((country) => (
+                  <li key={country.id}>
+                    <button
+                      type="button"
+                      aria-pressed={countryId === country.id}
+                      onClick={() => {
+                        setCountryId(country.id);
+                        setNationPicker(false);
+                      }}
+                    >
+                      <Flag country={country} size="sm" />
+                      <strong>{country.name}</strong>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="world-cup-note">Nenhuma seleção com esse nome.</p>
+            )}
+          </AlbumSheet>
+        )}
+      </AlbumShell>
     );
   }
 
   if (!campaign || !currentGame || !totals) return null;
   const nation = countryById(campaign.countryId);
   const opponent = countryById(currentGame.opponentId);
+  const goalDifference = totals.goalsFor - totals.goalsAgainst;
+  const route = (
+    <>
+      <header className="world-cup-route-head">
+        <h2 className="world-cup-page-title">Caminho da taça</h2>
+        <p>{campaign.currentIndex + 1} de até 8 partidas</p>
+      </header>
+      <CupRoute
+        campaign={campaign}
+        points={totals.points}
+        goalDifference={goalDifference}
+      />
+    </>
+  );
 
   if (screen === "result" && currentGame.result) {
-    const won = currentGame.result.outcome === "win";
-    const draw = currentGame.result.outcome === "draw";
+    const outcome = currentGame.result.outcome;
     return (
-      <main className="world-cup-shell world-cup-result">
-        <header className="world-cup-brand">
-          <span>COPA DO MUNDO</span>
-          <b>{currentGame.stage}</b>
-        </header>
-        <section
-          className={`world-cup-result-hero ${won ? "won" : draw ? "draw" : "lost"}`}
+      <AlbumShell
+        club={inksOf(nation)}
+        tab={null}
+        onTab={() => undefined}
+        showTabs={false}
+        centered
+        label="Copa do Mundo"
+      >
+        <AlbumPage
+          side="left"
+          label="Placar final"
+          className="world-cup-page world-cup-result-left"
         >
-          <small>{won ? "VITÓRIA" : draw ? "EMPATE" : "DERROTA"}</small>
-          <div>
-            <span>{nation.abbr}</span>
-            <strong>
-              {currentGame.result.goalsFor} × {currentGame.result.goalsAgainst}
+          <InkBand
+            ink="club"
+            crest={{ country: nation }}
+            title={currentGame.stage}
+            subtitle="Copa do Mundo"
+          />
+          <section className="world-cup-board" aria-label="Placar final">
+            <div className="world-cup-versus">
+              <figure className="world-cup-side">
+                <Flag country={nation} size="lg" />
+                <figcaption>{nation.abbr}</figcaption>
+              </figure>
+              <p
+                className="world-cup-score"
+                aria-label={`${currentGame.result.goalsFor} a ${currentGame.result.goalsAgainst}`}
+              >
+                <b>{currentGame.result.goalsFor}</b>
+                <span>×</span>
+                <b>{currentGame.result.goalsAgainst}</b>
+              </p>
+              <figure className="world-cup-side">
+                <Flag country={opponent} size="lg" />
+                <figcaption>{opponent.abbr}</figcaption>
+              </figure>
+            </div>
+            <p className="world-cup-board-names">
+              {nation.name} × {opponent.name}
+            </p>
+            <strong className="world-cup-verdict" data-outcome={outcome}>
+              {OUTCOME_LABEL[outcome]}
             </strong>
-            <span>{opponent.abbr}</span>
+          </section>
+          <section
+            className="world-cup-summary"
+            aria-labelledby="world-cup-summary-title"
+          >
+            <BlockTitle id="world-cup-summary-title">Sua partida</BlockTitle>
+            <Ficha
+              rows={[
+                { label: "Gols seus", value: currentGame.result.playerGoals },
+                {
+                  label: "Assistências",
+                  value: currentGame.result.playerAssists,
+                },
+                { label: "Toques", value: currentGame.result.turns },
+                {
+                  label: "Campanha",
+                  value: `${totals.wins}V ${totals.draws}E ${totals.losses}D`,
+                },
+              ]}
+            />
+          </section>
+          <div className="world-cup-dock">
+            <Stamp variant="primary" onClick={advanceTournament}>
+              {currentGame.stage === "Final"
+                ? "Ver desfecho"
+                : "Continuar a Copa"}
+            </Stamp>
           </div>
-          <p>
-            {nation.name} × {opponent.name}
-          </p>
-        </section>
-        <section className="world-cup-match-summary">
-          <div>
-            <small>GOLS SEUS</small>
-            <strong>{currentGame.result.playerGoals}</strong>
-          </div>
-          <div>
-            <small>ASSISTÊNCIAS</small>
-            <strong>{currentGame.result.playerAssists}</strong>
-          </div>
-          <div>
-            <small>TOQUES</small>
-            <strong>{currentGame.result.turns}</strong>
-          </div>
-          <div>
-            <small>CAMPANHA</small>
-            <strong>
-              {totals.wins}V {totals.draws}E {totals.losses}D
-            </strong>
-          </div>
-        </section>
-        <button
-          className="world-cup-primary"
-          type="button"
-          onClick={advanceTournament}
+        </AlbumPage>
+        <AlbumPage
+          side="right"
+          label="Caminho da taça"
+          className={`world-cup-page world-cup-route-page world-cup-result-route world-cup-phase-${currentGame.stage.startsWith("Grupo") ? "grupos" : "mata-mata"}`}
         >
-          {currentGame.stage === "Final" ? "Ver desfecho" : "Continuar a Copa"}
-          <span>→</span>
-        </button>
-      </main>
+          {route}
+          <div className="world-cup-dock-spacer" aria-hidden="true" />
+        </AlbumPage>
+      </AlbumShell>
     );
   }
 
   if (screen === "finished") {
     return (
-      <main className="world-cup-shell world-cup-finished">
-        <header className="world-cup-brand">
-          <Link href="/">← FUTBOBO</Link>
-          <span>COPA ENCERRADA</span>
-        </header>
-        <section
-          className={`world-cup-finish-hero ${campaign.champion ? "champion" : "eliminated"}`}
+      <AlbumShell
+        club={inksOf(nation)}
+        tab={null}
+        onTab={() => undefined}
+        showTabs={false}
+        centered
+        label="Copa encerrada"
+      >
+        <AlbumPage
+          side="left"
+          label="Fim da Copa"
+          className="world-cup-page world-cup-finish-left"
         >
-          <Image
-            src={flagPath(nation.id)}
-            alt=""
-            width={96}
-            height={68}
-            unoptimized
-          />
-          <span>
-            {campaign.champion ? "CAMPEÃO DO MUNDO" : "FIM DA CAMPANHA"}
-          </span>
-          <h1>
-            {campaign.champion ? "A taça é sua." : `${nation.name} se despede.`}
-          </h1>
-          <p>
-            {totals.played} jogos · {totals.wins} vitórias · {totals.goalsFor}{" "}
-            gols marcados · {totals.goalsAgainst} sofridos
-          </p>
-        </section>
-        <div className="world-cup-finish-actions">
-          <button
-            className="world-cup-primary"
-            type="button"
-            onClick={beginCup}
+          <BackLink />
+          <div className="world-cup-desk-only">
+            <InkBand
+              ink="club"
+              crest={{ country: nation }}
+              title={nation.name}
+              subtitle="Copa do Mundo"
+            />
+          </div>
+          <section
+            className="world-cup-finale"
+            data-champion={campaign.champion ? "" : undefined}
+            aria-labelledby="world-cup-finale-title"
           >
-            Jogar outra com {nation.name}
-            <span>↻</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setCampaign(null);
-              setScreen("setup");
-            }}
-          >
-            Trocar de Seleção
-          </button>
-          <Link href="/">Voltar ao Futbobo</Link>
-        </div>
-      </main>
+            <div className="world-cup-finale-art">
+              <NationSticker
+                country={nation}
+                tilt="-3deg"
+                className="world-cup-finale-sticker"
+              />
+              <span className="world-cup-finale-seal">
+                <Seal
+                  text={
+                    campaign.champion ? "Campeão do mundo" : "Fim da campanha"
+                  }
+                  tone={campaign.champion ? "green" : "ink"}
+                />
+              </span>
+            </div>
+            <div className="world-cup-finale-info">
+              <h1 id="world-cup-finale-title">
+                {campaign.champion
+                  ? "A taça é sua."
+                  : `${nation.name} se despede.`}
+              </h1>
+              <Ficha
+                rows={[
+                  { label: "Jogos", value: totals.played },
+                  { label: "Vitórias", value: totals.wins },
+                  { label: "Gols marcados", value: totals.goalsFor },
+                  { label: "Gols sofridos", value: totals.goalsAgainst },
+                ]}
+              />
+              <div className="world-cup-finale-actions">
+                <div className="world-cup-dock">
+                  <Stamp variant="primary" onClick={beginCup}>
+                    Jogar outra com {nation.name}
+                  </Stamp>
+                </div>
+                <Stamp
+                  onClick={() => {
+                    setCampaign(null);
+                    setScreen("setup");
+                  }}
+                >
+                  Trocar de seleção
+                </Stamp>
+              </div>
+            </div>
+          </section>
+        </AlbumPage>
+        <AlbumPage
+          side="right"
+          label="Caminho da taça"
+          className="world-cup-page world-cup-route-page"
+        >
+          {route}
+          <div className="world-cup-dock-spacer" aria-hidden="true" />
+        </AlbumPage>
+      </AlbumShell>
     );
   }
 
   return (
-    <main className="world-cup-shell world-cup-hub">
-      <header className="world-cup-brand">
-        <Link href="/">← FUTBOBO</Link>
-        <span>COPA DO MUNDO</span>
-      </header>
-      <section className="world-cup-score-rail">
-        <div className="world-cup-nation">
-          <Image
-            src={flagPath(nation.id)}
-            alt=""
-            width={70}
-            height={48}
-            unoptimized
-          />
-          <span>
-            <small>SUA SELEÇÃO</small>
-            <strong>{nation.name}</strong>
-          </span>
-        </div>
-        <div className="world-cup-live-metrics">
-          <span>
-            <small>J</small>
-            <b>{totals.played}</b>
-          </span>
-          <span>
-            <small>PTS</small>
-            <b>{totals.points}</b>
-          </span>
-          <span>
-            <small>SG</small>
-            <b>{totals.goalsFor - totals.goalsAgainst}</b>
-          </span>
-        </div>
-      </section>
-      <section className="world-cup-next-match">
-        <small>PRÓXIMO JOGO · {currentGame.stage}</small>
-        <div>
-          <span>
-            <Image
-              src={flagPath(nation.id)}
-              alt=""
-              width={58}
-              height={40}
-              unoptimized
-            />
-            <strong>{nation.abbr}</strong>
-          </span>
-          <b>×</b>
-          <span>
-            <Image
-              src={flagPath(opponent.id)}
-              alt=""
-              width={58}
-              height={40}
-              unoptimized
-            />
-            <strong>{opponent.abbr}</strong>
-          </span>
-        </div>
-        <h1>
-          {nation.name} contra {opponent.name}
-        </h1>
-        <button
-          className="world-cup-primary"
-          type="button"
-          onClick={playCurrentGame}
+    <AlbumShell
+      club={inksOf(nation)}
+      tab={null}
+      onTab={() => undefined}
+      showTabs={false}
+      centered
+      label="Copa do Mundo"
+    >
+      <AlbumPage
+        side="left"
+        label="Próximo jogo"
+        className="world-cup-page world-cup-hub-left"
+      >
+        <BackLink />
+        <InkBand
+          ink="club"
+          crest={{ country: nation }}
+          title={nation.name}
+          subtitle="Copa do Mundo"
+          aside={
+            <dl className="world-cup-plate">
+              <div>
+                <dt>
+                  <span aria-hidden="true">J</span>
+                  <span className="world-cup-vh">Jogos</span>
+                </dt>
+                <dd>{totals.played}</dd>
+              </div>
+              <div>
+                <dt>
+                  <span aria-hidden="true">Pts</span>
+                  <span className="world-cup-vh">Pontos</span>
+                </dt>
+                <dd>{totals.points}</dd>
+              </div>
+              <div>
+                <dt>
+                  <span aria-hidden="true">SG</span>
+                  <span className="world-cup-vh">Saldo de gols</span>
+                </dt>
+                <dd>{goalDifference}</dd>
+              </div>
+            </dl>
+          }
+        />
+        <section
+          className="world-cup-ticket"
+          aria-labelledby="world-cup-next-title"
         >
-          Jogar partida <span>→</span>
-        </button>
-      </section>
-      <section className="world-cup-route">
-        <div className="world-cup-route-heading">
-          <small>TRILHA DA COPA</small>
-          <strong>{campaign.currentIndex + 1} de até 8 partidas</strong>
-        </div>
-        <div className="world-cup-route-list">
-          {campaign.games.map((game, index) => {
-            const gameOpponent = countryById(game.opponentId);
-            const state = game.result
-              ? game.result.outcome
-              : index === campaign.currentIndex
-                ? "current"
-                : "future";
-            return (
-              <article
-                key={`${game.stage}-${game.opponentId}`}
-                className={`world-cup-route-game ${state}`}
-              >
-                <span>
-                  {game.result
-                    ? game.result.outcome === "win"
-                      ? "V"
-                      : game.result.outcome === "draw"
-                        ? "E"
-                        : "D"
-                    : index + 1}
+          <div className="world-cup-ticket-paper">
+            <div className="world-cup-ticket-main">
+              <p className="world-cup-ticket-kicker">
+                Próximo jogo · {currentGame.stage}
+              </p>
+              <div className="world-cup-versus">
+                <figure className="world-cup-side">
+                  <Flag country={nation} size="lg" />
+                  <figcaption>{nation.abbr}</figcaption>
+                </figure>
+                <span className="world-cup-vs" aria-hidden="true">
+                  ×
                 </span>
-                <div>
-                  <small>{game.stage}</small>
-                  <strong>{gameOpponent.name}</strong>
-                </div>
-                {game.result ? (
-                  <b>
-                    {game.result.goalsFor} × {game.result.goalsAgainst}
-                  </b>
-                ) : (
-                  <b>—</b>
-                )}
-              </article>
-            );
-          })}
-          {KNOCKOUT_STAGES.slice(Math.max(0, campaign.games.length - 3)).map(
-            (stage) => (
-              <article key={stage} className="world-cup-route-game future">
-                <span>·</span>
-                <div>
-                  <small>MATA-MATA</small>
-                  <strong>{stage}</strong>
-                </div>
-                <b>—</b>
-              </article>
-            ),
-          )}
+                <figure className="world-cup-side">
+                  <Flag country={opponent} size="lg" />
+                  <figcaption>{opponent.abbr}</figcaption>
+                </figure>
+              </div>
+              <h1 id="world-cup-next-title" className="world-cup-ticket-title">
+                {nation.name} contra {opponent.name}
+              </h1>
+            </div>
+            <div className="world-cup-ticket-stub" aria-hidden="true">
+              <b>Copa</b>
+              <span>Jogo {campaign.currentIndex + 1}</span>
+            </div>
+          </div>
+        </section>
+        <section
+          className="world-cup-rules"
+          aria-labelledby="world-cup-rules-title"
+        >
+          <BlockTitle id="world-cup-rules-title">Regras da mesa</BlockTitle>
+          <Ficha
+            rows={rulesRows(
+              currentCupRules(currentGame.stage.startsWith("Grupo")),
+            )}
+          />
+        </section>
+        <div className="world-cup-dock">
+          <Stamp variant="primary" onClick={playCurrentGame}>
+            Jogar partida
+          </Stamp>
         </div>
-      </section>
-    </main>
+      </AlbumPage>
+      <AlbumPage
+        side="right"
+        label="Caminho da taça"
+        className="world-cup-page world-cup-route-page"
+      >
+        {route}
+        <div className="world-cup-dock-spacer" aria-hidden="true" />
+      </AlbumPage>
+    </AlbumShell>
   );
 }

@@ -6,27 +6,32 @@
   position: fixed;
   inset: 0;
   z-index: 300;
-  /* Enquanto o adversário sai dos clubes, a carreira não aparece por trás. */
-  background: radial-gradient(ellipse at 50% 30%, #12202c, #04070b 70%);
+  /* Enquanto o adversário sai dos clubes, a carreira não aparece por trás: a mesa do álbum. */
+  background: var(--grain), radial-gradient(120% 90% at 50% 35%, #dadedb 0%, var(--desk, #cfd3d0) 55%, #bcc2bf 100%);
 }
 
-/* Rótulo da carreira ("BASE · 13 ANOS") no lugar do número, no chip do objetivo. */
+/* Rótulo da carreira no lugar do número, no tíquete do objetivo: uma parte por linha ("Base" / "13 anos"). */
 .root [data-sb-career="kicker"] {
-  max-width: 96px;
-  padding: 4px 8px;
-  font-size: 10px;
-  line-height: 1.15;
-  letter-spacing: 0.06em;
-  text-align: center;
-  /* "TREINO ESPECIAL · 1 DE 2" quebra em linhas parecidas, sem um "2" sozinho embaixo. */
-  text-wrap: balance;
-}
-
-/* "Chance 1 de 3", discreto, logo abaixo do objetivo. */
-.root [data-sb-career="note"] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1px;
   padding: 5px 9px;
-  color: rgba(244, 247, 251, 0.78);
-  font: 800 10px/1 var(--display-font);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  font: 700 11.5px/1.1 var(--font-text);
+  font-stretch: 100%;
+  text-align: center;
+}
+.root [data-sb-career="kicker"] span { white-space: nowrap; }
+.root [data-sb-career="kicker"] span + span { font-weight: 600; opacity: 0.9; }
+
+/* "Chance 1 de 3": fita amarela pequena logo abaixo do objetivo. */
+.root [data-sb-career="note"] {
+  padding: 4px 9px 5px;
+  border-radius: 2px;
+  background: var(--dots-ink), var(--yellow);
+  box-shadow: 0 2px 3px rgba(40, 40, 20, 0.26);
+  color: var(--ink);
+  font: 650 12.5px/1.1 var(--font-text);
+  rotate: -1.5deg;
 }
