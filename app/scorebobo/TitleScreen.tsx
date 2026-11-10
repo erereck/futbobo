@@ -235,7 +235,7 @@ export function TitleScreen({ levels, progress, profile, away, hasWebgl, perform
             <ol className={styles.steps} aria-label="Como jogar">
               <li><b>1</b><span><strong>O tempo congela</strong>Encoste o dedo ou o mouse na bola</span></li>
               <li><b>2</b><span><strong>Desenhe a jogada</strong>Até um companheiro, no espaço ou no gol</span></li>
-              <li><b>3</b><span><strong>Solte</strong>A bola vai perto do traço — não igual</span></li>
+              <li><b>3</b><span><strong>Solte</strong>A bola vai perto do traço, não igual</span></li>
             </ol>
 
             <footer className={styles.footer}>

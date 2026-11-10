@@ -317,7 +317,7 @@ export default function BotaoStandalonePage() {
     <main className="botao-lobby">
       <h1>Futebol de botão</h1>
       <p className="botao-lobby-lead">
-        Cinco botões de cada lado, um toque por vez. Você é um dos botões — e a
+        Cinco botões de cada lado, um toque por vez. Você é um dos botões, e a
         posição da sua carreira decide onde você começa. A cada gol os dois
         times trocam de formação.
       </p>
@@ -396,7 +396,7 @@ export default function BotaoStandalonePage() {
         </div>
         <div className="botao-field-row">
           <label htmlFor="botao-opponent">
-            Adversário — {clubSubtitle(opponent)}
+            Adversário · {clubSubtitle(opponent)}
           </label>
           <select
             id="botao-opponent"

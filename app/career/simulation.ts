@@ -542,7 +542,7 @@ export function simulateSeason(
   if (position.zone === "defesa" && appearances >= 28 && nextOverall >= 80 && leaguePosition <= 6) awards.push("Melhor Defensor");
   if (position.zone === "meio" && appearances >= 26 && goals + assists >= 16 && performanceScore >= 72 && awardRoll > 0.32) awards.push(`Melhor Meio-Campista do ${leagueLabel}`);
   if (position.zone === "ataque" && appearances >= 26 && goals >= 20 && performanceScore >= 74 && awardRoll > 0.3) awards.push(`Melhor Atacante do ${leagueLabel}`);
-  if (nextOverall >= 82 && appearances >= 28 && awardRoll > 0.45) awards.push(`Seleção do ${leagueLabel} — ${position.name}`);
+  if (nextOverall >= 82 && appearances >= 28 && awardRoll > 0.45) awards.push(`Seleção do ${leagueLabel} · ${position.name}`);
   if (nextOverall >= 86 && appearances >= 30 && leaguePosition <= 3 && awardRoll > 0.58) awards.push(`Craque do ${leagueLabel}`);
   if (performanceScore >= 84 && nextOverall >= 84 && appearances >= 28 && awardRoll > 0.36) awards.push(`Jogador do Ano do ${leagueLabel}`);
   if (affected.age <= 23 && playsContinental === "libertadores" && nextOverall >= 82 && seeded(state.seed, state.season * 89) > 0.5) awards.push("Melhor Jovem da América");

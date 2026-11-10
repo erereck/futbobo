@@ -400,7 +400,7 @@ export function buildNationalitySwitchEvent(from: Country, to: Country): GameEve
     icon: "↔",
     tag: "SELEÇÃO",
     title: `A Seleção de ${to.name} quer você`,
-    description: `Uma federação vizinha enxergou seu potencial antes da sua consolidação na Seleção principal de ${from.name}. A escolha é sua — e não terá volta.`,
+    description: `Uma federação vizinha enxergou seu potencial antes da sua consolidação na Seleção principal de ${from.name}. A escolha é sua, e não terá volta.`,
     choices: [
       {
         label: `Vestir a camisa de ${to.name}`,
@@ -572,7 +572,7 @@ export function buildStoryFollowup(
       key: "career-crossroad",
       title: `${context.club.shortName} quer que você represente uma nova era`,
       description: context.performanceScore >= 75
-        ? "O clube oferece protagonismo fora de campo também. Aceitar pode aprofundar sua ligação — e tornar uma futura saída muito mais dolorosa."
+        ? "O clube oferece protagonismo fora de campo também. Aceitar pode aprofundar sua ligação e tornar uma futura saída muito mais dolorosa."
         : "Mesmo após um ano irregular, o clube acredita que sua história pode reconectar elenco e torcida.",
       choices: [
         { label: "Assumir o papel de rosto do projeto", hint: "Torcida e liderança ↑↑ · pressão ↑", result: "Sua imagem passa a ocupar muros, campanhas e conversas sobre o futuro.", effect: { fans: 11, leadership: 9, morale: -4, reputation: 5 }, flag: "rosto-da-nova-era" },
@@ -737,7 +737,7 @@ export function buildStorySeasonDecision(
     },
     "neighborhood-idol": {
       title: "O campo onde você começou pode desaparecer",
-      description: "O terreno será vendido se a comunidade não levantar dinheiro e atenção. Seu nome pode salvar o lugar — mas o projeto exige presença real.",
+      description: "O terreno será vendido se a comunidade não levantar dinheiro e atenção. Seu nome pode salvar o lugar, mas o projeto exige presença real.",
       choices: [
         { label: "Comprar e reformar o campo", hint: "Dinheiro ↓↓↓ · legado ↑↑↑", result: "As luzes acendem de novo. Uma placa pequena leva seu nome; o campo continua sendo do bairro.", effect: { money: -25, charity: 18, fans: 12, leadership: 8 }, flag: "salvou-o-campo" },
         { label: "Mobilizar patrocinadores e torcida", hint: "Imagem e alcance ↑ · desgaste", result: "A campanha bate a meta sem depender apenas do seu bolso.", effect: { followers: 190_000, charity: 12, mediaRelation: 7, fitness: -5 }, flag: "campanha-pelo-campo" },

@@ -240,7 +240,7 @@ export function TurnText({ d }: Props) {
           : state.phase === "aim" || state.phase === "kickoff"
             ? localTurnSide
               ? state.finalShotGrace
-                ? "00:00 · ÚLTIMO LANCE — solte e deixe a bola decidir"
+                ? "00:00 · ÚLTIMO LANCE: solte e deixe a bola decidir"
                 : "Sua vez: arraste e solte um botão"
               : remoteAiming
                 ? `${names[state.turn]} está mirando…`

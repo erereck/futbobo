@@ -263,7 +263,7 @@ const MANAGER_DECISIONS: ManagerDecision[] = [
         label: "Prometer a vitória",
         hint: "Aumente a expectativa e mobilize o clube.",
         consequence:
-          "Sua fala virou manchete. Uma vitória terá peso extra — e uma derrota também.",
+          "Sua fala virou manchete. Uma vitória terá peso extra, e uma derrota também.",
         trust: -3,
         reputation: 3,
         budget: 0,

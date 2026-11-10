@@ -124,7 +124,7 @@ export const BACKSTAGE_EVENTS: GameEvent[] = [
     { label: "Entrar de cabeça na brincadeira", hint: "Moral ↑↑ · grupo ↑", result: "Você aposta tudo na próxima pegadinha, mesmo sabendo que pode virar alvo depois.", effect: { morale: 8, leadership: 2 } },
     { label: "Observar de longe, rindo baixinho", hint: "Seguro", result: "Você prefere curtir o clima sem se meter diretamente na disputa.", effect: { morale: 3 } },
   ]},
-  { id: "backstage-votacao-do-hino-do-vestiario", icon: "♪", tag: "VESTIÁRIO", title: "O elenco vota a música oficial da concentração", description: "Antes de cada jogo importante, o grupo decide junto qual canção toca no vestiário — e a disputa às vezes esquenta mais que a escalação.", minAge: 18, choices: [
+  { id: "backstage-votacao-do-hino-do-vestiario", icon: "♪", tag: "VESTIÁRIO", title: "O elenco vota a música oficial da concentração", description: "Antes de cada jogo importante, o grupo decide junto qual canção toca no vestiário, e a disputa às vezes esquenta mais que a escalação.", minAge: 18, choices: [
     { label: "Defender sua escolha com convicção", hint: "Grupo ↑ · moral ↑", result: "Você briga pela sua música como se fosse questão de honra.", effect: { morale: 5, leadership: 2 } },
     { label: "Ceder ao gosto da maioria", hint: "Grupo ↑↑", result: "Você prefere manter a paz e aceitar a vontade coletiva.", effect: { morale: 4, leadership: 3 } },
   ]},

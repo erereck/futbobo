@@ -131,7 +131,7 @@ export const CAREER_DRAMA_EVENTS: GameEvent[] = [
     { label: "Tratar como se fosse decisivo", hint: "Seleção ↑ · físico ↓", result: "Você decide jogar sério mesmo sem nada valendo oficialmente.", effect: { nationalBoost: 8, fitness: -5, reputation: 3 } },
     { label: "Poupar o corpo para o clube", hint: "Fitness ↑ · Seleção ↓", result: "Você entende o amistoso como uma folga disfarçada.", effect: { fitness: 8, nationalBoost: -3 } },
   ]},
-  { id: "drama-veteran-uncapped-frustration", icon: "SEL", tag: "SELEÇÃO", title: "Anos de bom futebol e nenhuma convocação", description: "Você já é referência no seu clube, mas a Seleção nunca ligou — e talvez essa seja sua última chance.", maxAge: 29, minOvr: 76, oneTime: true, choices: [
+  { id: "drama-veteran-uncapped-frustration", icon: "SEL", tag: "SELEÇÃO", title: "Anos de bom futebol e nenhuma convocação", description: "Você já é referência no seu clube, mas a Seleção nunca ligou. Talvez essa seja sua última chance.", maxAge: 29, minOvr: 76, oneTime: true, choices: [
     { label: "Fazer campanha pública por uma chance", hint: "40% · convocação surpresa ou desgaste desnecessário", result: "Você usa entrevistas para deixar claro que está pronto.", effect: {}, luck: { chance: 40, successText: "A comissão técnica finalmente reconhece o momento e a convocação enfim chega.", failureText: "A insistência pública soa como reclamação e afasta ainda mais o técnico.", successEffect: { nationalBoost: 18, reputation: 10, nationalCall: true }, failureEffect: { reputation: -8, morale: -10, nationalBoost: -4 } } },
     { label: "Aceitar que talvez nunca chegue", hint: "Moral ↑ · foco no clube", result: "Você decide construir seu legado só com a camisa do clube.", effect: { morale: 5, leadership: 3 } },
   ]},

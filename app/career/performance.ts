@@ -238,7 +238,7 @@ export function publicImageProfile(state: GameState) {
   if (score >= 82) return { label: "Ícone global", color: "#ffc72c", description: "Seu nome atravessou o futebol e virou uma marca mundial." };
   if (score >= 68) return { label: "Queridinho do público", color: "#63e36b", description: "Torcedores, imprensa e marcas enxergam valor no que você representa." };
   if (score >= 52) return { label: "Figura em ascensão", color: "#2ca8ff", description: "Sua imagem cresce, mas cada postagem ainda pode mudar a narrativa." };
-  if (score >= 36) return { label: "Imagem polarizada", color: "#ff8c5a", description: "Você chama atenção — e divide opiniões quase na mesma medida." };
+  if (score >= 36) return { label: "Imagem polarizada", color: "#ff8c5a", description: "Você chama atenção e divide opiniões quase na mesma medida." };
   return { label: "Crise de imagem", color: "#ff5a4e", description: "Patrocinadores e imprensa acompanham cada passo com desconfiança." };
 }
 
