@@ -9,8 +9,10 @@
 import Link from "next/link";
 import { useEffect, useRef, type CSSProperties, type HTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import FutboboIcon from "../../components/FutboboIcon";
-import { drawPlayerBust, type PlayerAppearance } from "../../player-appearance";
+import { paintStickerBust, useSticker3d } from "../../botao/three/sticker-portrait";
+import type { PlayerAppearance } from "../../player-appearance";
 import BobCrest from "../teams/BobCrest";
+import { useViewPref } from "../view-pref";
 import type { BobTeam } from "../types";
 import paper from "./paper.module.css";
 
@@ -277,19 +279,15 @@ export function ClubCard({ team, title, note, tilt, cpu = false, className, chil
   );
 }
 
-/** Busto do jogador recortado, no traço da mesa (cópia do StickerBust do álbum). */
+/** Busto do jogador recortado, no traço da mesa (como o StickerBust do álbum: 3D quando o Bobonline está no 3D). */
 export function PlayerBust({ appearance, primary, secondary, className }: { appearance: PlayerAppearance; primary: string; secondary: string; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const use3d = useSticker3d(useViewPref() === "3d");
   useEffect(() => {
     const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.save();
-    context.translate(canvas.width / 2, canvas.height * 0.47);
-    drawPlayerBust(context, appearance, primary, secondary, canvas.width * 0.43, 0, { cutout: true });
-    context.restore();
-  }, [appearance, primary, secondary]);
+    if (!canvas) return;
+    return paintStickerBust(canvas, { appearance, primary, secondary }, use3d);
+  }, [appearance, primary, secondary, use3d]);
   return <canvas ref={canvasRef} className={className} width={240} height={240} aria-hidden="true" />;
 }
 

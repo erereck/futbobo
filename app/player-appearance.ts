@@ -700,8 +700,11 @@ export function drawPlayerBust(
   ctx.save();
   if (options.cutout) {
     // Figurinha do álbum: sem disco nem fundo; a cabeça fica livre e os ombros ganham curva.
+    // A parte de cima termina no topo da camisa (y 7): passar disso deixava a faixa clara do ombro
+    // aparecer de ponta a ponta, como uma linha no queixo. A emenda fica só no miolo dos ombros.
     ctx.beginPath();
-    ctx.rect(-40 * scale, -40 * scale, 80 * scale, 47.5 * scale);
+    ctx.rect(-40 * scale, -40 * scale, 80 * scale, 47 * scale);
+    ctx.rect(-13 * scale, 6.5 * scale, 26 * scale, 1 * scale);
     ctx.roundRect(-22 * scale, 7 * scale, 44 * scale, 40 * scale, [9 * scale, 9 * scale, 0, 0]);
     ctx.clip();
   } else {

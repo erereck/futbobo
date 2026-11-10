@@ -17,6 +17,7 @@ import AndroidInstallDialog from "../../AndroidInstallDialog";
 import PlayerAppearanceEditor from "../../PlayerAppearanceEditor";
 import { drawPlayerBust, teamKitPattern, visualRosterForMatch } from "../../player-appearance";
 import { VERIFIED_CLUB_ASSET_IDS } from "../../verified-club-assets";
+import { renderStickerPortrait, sticker3dEnabled } from "../../botao/three/sticker-portrait";
 import { checkForAndroidUpdate, isAndroidDevice, isNativeAndroid, openAndroidDownload } from "../../android-app";
 import type { AndroidRelease } from "../../android-app";
 import { buildFinalSetup, buildNationalMatchSetup, describeFinal, finalOutcome, nationalMatchRole, pickClubWorldOpponent, pickNationalOpponent, ratingsFromAttributes, walkoverBotaoResult } from "../../botao/adapter";
@@ -2247,10 +2248,18 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       ctx.fill();
       ctx.globalAlpha = 1;
       if (appearance) {
-        ctx.save();
-        ctx.translate(270, 330 + 380 * .5);
-        drawPlayerBust(ctx, appearance, currentClub.primary, currentClub.secondary, 352 * .43, 0, { cutout: true });
-        ctx.restore();
+        // No Modo 3D (sem o modo desempenho) o pôster usa o mesmo boneco 3D das figurinhas.
+        const portrait = sticker3dEnabled()
+          ? await renderStickerPortrait(appearance, currentClub.primary, currentClub.secondary, { number: displayGame.number, size: 352 })
+          : null;
+        if (portrait) {
+          ctx.drawImage(portrait, 270 - 176, 330 + 380 * .5 - 352 * .47, 352, 352);
+        } else {
+          ctx.save();
+          ctx.translate(270, 330 + 380 * .5);
+          drawPlayerBust(ctx, appearance, currentClub.primary, currentClub.secondary, 352 * .43, 0, { cutout: true });
+          ctx.restore();
+        }
       }
       ctx.restore();
       setFont("display", 800, appearance ? 64 : 150);

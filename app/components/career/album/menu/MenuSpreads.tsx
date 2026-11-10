@@ -232,6 +232,7 @@ export function OtherGames() {
     { href: "https://erereck.github.io/gamebobo", title: "Gamebobo", tag: "Simulador", text: "Crie jogos, evolua seu estúdio e tente dominar gerações inteiras." },
     { href: "https://erereck.github.io/pokebobo", title: "Pokebobo", tag: "Pokémon", text: "Monte sua carreira de treinador e avance cidade por cidade." },
     { href: "https://mmmweb.vercel.app", title: "Muito, Muito Minimalista", tag: "Minimalista", text: "Abra o MMM Web e jogue direto pelo navegador." },
+    { href: "https://erereck.github.io/bobobike/", title: "Bobobike", tag: "Obby infinito", text: "Encare pistas procedurais de BMX, scooter ou patinete e bata seu recorde de distância." },
   ];
   return (
     <section className={pageStyles.other}>
@@ -242,7 +243,7 @@ export function OtherGames() {
       <ul className={styles.toc}>
         {games.map((game, index) => (
           <li key={game.href}>
-            <a className={styles.tocRow} href={game.href} target="_blank" rel="noreferrer" data-ink={["blue", "red", "green"][index]}>
+            <a className={styles.tocRow} href={game.href} target="_blank" rel="noreferrer" data-ink={["blue", "red", "green", "mustard"][index]}>
               <span className={styles.tocChip} aria-hidden="true" style={{ "--tilt": "-3deg" } as CSSProperties}><b className={pageStyles.otherNo}>{index + 1}</b></span>
               <span className={styles.tocMain}>
                 <span className={styles.tocLine}><strong>{game.title}</strong><i aria-hidden="true" /><em>{game.tag}</em></span>

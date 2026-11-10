@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from "react";
 import type { Club, Country } from "../../../game-data";
 import type { PlayerAppearance } from "../../../player-appearance";
-import { drawPlayerBust } from "../../../player-appearance";
+import { paintStickerBust, useSticker3d } from "../../../botao/three/sticker-portrait";
 import { ClubBadge, NationBadge } from "../CareerPrimitives";
 import styles from "./primitives.module.css";
 
@@ -66,19 +66,19 @@ export function InkBand({ ink, title, subtitle, crest, aside }: { ink: AlbumInk;
 
 /* ───────────── figurinha do jogador ───────────── */
 
-/** Busto do personagem recortado (sem o disco), desenhado no mesmo traço da mesa. */
-export function StickerBust({ appearance, primary, secondary, className }: { appearance: PlayerAppearance; primary: string; secondary: string; className?: string }) {
+/**
+ * Busto do personagem recortado (sem o disco), desenhado no mesmo traço da mesa.
+ * Com o Modo 3D ligado (e sem o modo desempenho) vira o boneco 3D da partida,
+ * no mesmo enquadramento; até o retrato ficar pronto, fica o 2D.
+ */
+export function StickerBust({ appearance, primary, secondary, number, className }: { appearance: PlayerAppearance; primary: string; secondary: string; number?: number; className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const use3d = useSticker3d();
   useEffect(() => {
     const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.save();
-    context.translate(canvas.width / 2, canvas.height * 0.47);
-    drawPlayerBust(context, appearance, primary, secondary, canvas.width * 0.43, 0, { cutout: true });
-    context.restore();
-  }, [appearance, primary, secondary]);
+    if (!canvas) return;
+    return paintStickerBust(canvas, { appearance, primary, secondary, number }, use3d);
+  }, [appearance, primary, secondary, number, use3d]);
   return <canvas ref={canvasRef} className={className} width={320} height={320} aria-hidden="true" />;
 }
 
@@ -118,7 +118,7 @@ export function PlayerSticker({
       <div className={styles.face}>
         <div className={styles.plArt}>
           {appearance
-            ? <StickerBust className={styles.plBust} appearance={appearance} primary={colors.primary} secondary={colors.secondary} />
+            ? <StickerBust className={styles.plBust} appearance={appearance} primary={colors.primary} secondary={colors.secondary} number={number} />
             : <span className={styles.plNoPortrait} aria-hidden="true">{number}</span>}
           {appearance && <span className={`${styles.plNum} ${styles.num}`} aria-hidden="true">{number}</span>}
           {overall !== null && <span className={styles.plOvr} aria-label={`OVR ${overall}`}><b className={styles.num}>{overall}</b><small>OVR</small></span>}

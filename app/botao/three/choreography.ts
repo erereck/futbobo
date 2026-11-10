@@ -113,6 +113,12 @@ const SCORER_SPEED = 230;
 /** Corrida máxima de quem marcou até a festa (~0,6s): o golpe final tem que caber no plano. */
 const RUN_LIMIT = 125;
 const TEAMMATE_SPEED = 185;
+/** Lei do Ex sem comemorar: a festa contida (não é comemoração do criador nem entra em sorteio). */
+export const RESPECT_KIND = "respect";
+/** Os companheiros chegam andando (abaixo de ~55 o boneco anda; aqui, quase trotando). */
+const RESPECT_WALK = 68;
+/** Quanto cada companheiro anda, no máximo, até a roda contida. */
+const RESPECT_REACH = 110;
 
 /** Ponto a no máximo `limit` de `from`, na direção de `to`. */
 function limitFrom(from: Point, to: Point, limit: number): Point {
@@ -254,6 +260,8 @@ export class Choreographer {
     signatureFor?: (actorId: string) => GoalCelebration | null;
     /** Largura ÷ altura da tela; sem ela, a última que a câmera recebeu (ou 16/9). O Kamehameha mira diferente em pé. */
     aspect?: number;
+    /** Lei do Ex, "não comemorar": quem marcou não festeja (vale só para gol que não é contra). */
+    restrained?: boolean;
   }) {
     this.stop();
     const field = args.actors.filter((actor) => !actor.keeper && actor.side);
@@ -267,6 +275,10 @@ export class Choreographer {
     const goalZ = args.side === "user" ? -HALF_H : HALF_H;
     const inward = args.side === "user" ? 1 : -1;
     const sx = Math.abs(scorer.x) > 18 ? Math.sign(scorer.x) : hash(`${args.seed}|side`) % 2 ? 1 : -1;
+    if (args.restrained && !args.ownGoalId) {
+      this.startRespect(scorer, team, rivals, goalZ, args.cameraYaw);
+      return;
+    }
     const signature = args.ownGoalId
       ? null
       : args.signatureFor ? args.signatureFor(scorer.id) : scorer.isUser ? args.signature ?? null : null;
@@ -479,6 +491,60 @@ export class Choreographer {
       const steps: Step[] = [{ kind: "wait", duration: inTheWay ? 0.05 : 0.2 + index * 0.12, state: "sad", action: "handsOnHead", face: { point: { x: 0, z: goalZ } } }];
       if (inTheWay || action !== "kneelSad") steps.push({ kind: "run", to: walk, speed: inTheWay ? 120 : 34, action: "handsOnHips" });
       steps.push({ kind: "hold", state: "sad", action, face: { point: { x: 0, z: goalZ } } });
+      this.add(rival, steps);
+    });
+
+    this.zoom = 2.75;
+    this.pitch = 0.86;
+  }
+
+  /**
+   * Lei do Ex, "não comemorar": quem marcou freia onde está, vira para a câmera e
+   * fica de mãos abertas na altura do ombro, cabeça baixa (ação "respect"), sem
+   * corrida nem pulo. Os companheiros chegam andando por trás dele e aplaudem; o
+   * ex-clube lamenta onde está. A câmera faz o caminho do gol (rede e close).
+   */
+  private startRespect(scorer: Actor, team: Actor[], rivals: Actor[], goalZ: number, cameraYaw: number) {
+    this.kindValue = RESPECT_KIND;
+    // Sem festa em volta dele: a vista não solta brilhos nem efeitos do time (lado null).
+    this.sideValue = null;
+    const face = { yaw: cameraYaw };
+    this.add(scorer, [
+      { kind: "wait", duration: 0.3, state: "idle", action: null, face },
+      { kind: "hold", state: "idle", action: "respect", face },
+    ]);
+    this.focusId = scorer.id;
+    this.beamYaw = cameraYaw;
+    this.beamSide = 1;
+
+    const at: Point = { x: scorer.x, z: scorer.z };
+    const away = cameraYaw + Math.PI;
+    const mates = team.filter((actor) => actor.id !== scorer.id)
+      .sort((a, b) => Math.hypot(a.x - at.x, a.z - at.z) - Math.hypot(b.x - at.x, b.z - at.z));
+    mates.forEach((mate, index) => {
+      const angle = away + (index - (mates.length - 1) / 2) * 0.62;
+      const radius = 26 + (index % 2) * 7;
+      const ring = clampToField({ x: at.x + Math.sin(angle) * radius, z: at.z + Math.cos(angle) * radius });
+      this.add(mate, [
+        { kind: "wait", duration: 0.2 + index * 0.1, state: "idle", action: null, face: { actor: scorer.id } },
+        { kind: "run", to: limitFrom(mate, ring, RESPECT_REACH), speed: RESPECT_WALK - index * 3, action: null },
+        { kind: "hold", state: "idle", action: "applaud", face: { actor: scorer.id } },
+      ]);
+    });
+
+    const sadActions: FigureAction[] = ["handsOnHead", "handsOnHips", "kneelSad", "kickGround", "handsOnHips"];
+    const goal = { point: { x: 0, z: goalZ } };
+    rivals.forEach((rival, index) => {
+      const steps: Step[] = [{ kind: "wait", duration: 0.2 + index * 0.12, state: "sad", action: "handsOnHead", face: goal }];
+      const dx = rival.x - at.x;
+      const dz = rival.z - at.z;
+      const distance = Math.hypot(dx, dz);
+      // Colado em quem marcou: dá uns passos para o lado, devagar (a roda contida é pequena).
+      if (distance < 40) {
+        const out = distance > 0.001 ? { x: dx / distance, z: dz / distance } : { x: 1, z: 0 };
+        steps.push({ kind: "run", to: clampToField({ x: at.x + out.x * 48, z: at.z + out.z * 48 }), speed: 40, action: "handsOnHips" });
+      }
+      steps.push({ kind: "hold", state: "sad", action: sadActions[(hash(rival.id) + index) % sadActions.length], face: goal });
       this.add(rival, steps);
     });
 
@@ -802,7 +868,7 @@ export class Choreographer {
     if (aspect !== undefined && aspect > 0 && Number.isFinite(aspect)) this.lastAspect = aspect;
     if (!this.active) return null;
     // Gol: primeiro a rede estufando, depois o chicote até quem marcou.
-    const netShot = this.kindValue !== null && GOAL_SHOT_KINDS.has(this.kindValue);
+    const netShot = this.kindValue !== null && (GOAL_SHOT_KINDS.has(this.kindValue) || this.kindValue === RESPECT_KIND);
     if (netShot && this.lastBall && this.elapsed < NET_SHOT_SECONDS) {
       return {
         x: this.lastBall.x * 0.9,

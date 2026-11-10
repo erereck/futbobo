@@ -54,6 +54,7 @@ import {
   type BotaoEvent,
   type BotaoMatchState,
 } from "./engine";
+import { applyCareerDeflectionAssist, startShotTouchLog, type ShotTouchLog } from "./career-assist";
 import { formationById, slotRoleLabel } from "./formations";
 import TeamCrest from "./TeamCrest";
 import {
@@ -92,6 +93,8 @@ const FINISH_DELAY_MS = 1800;
 const GOAL_PAUSE_3D_MS = 2400;
 const PENALTY_PAUSE_3D_MS = 1600;
 const FINISH_DELAY_3D_MS = 2500;
+/** Lei do Ex, "não comemorar": a pausa do gol estica um pouco para o gesto de respeito aparecer. */
+const RESPECT_EXTRA_MS = 600;
 const USER_DECISION_SECONDS = 7;
 const USER_WARNING_SECONDS = 3;
 const REPLAY_SAMPLE_MS = 80;
@@ -238,6 +241,12 @@ export default function BotaoMatch({
   const goalReplaysRef = useRef<BotaoGoalReplay[]>([]);
   const formerClubCelebrationsRef = useRef<Array<"celebrate" | "respect">>([]);
   const formerClubPromptRef = useRef(false);
+  /** O gol na tela é de "não comemorar" (Lei do Ex): a pausa e a festa do 3D mudam. */
+  const respectGoalRef = useRef(false);
+  /** Com a escolha da Lei do Ex aberta, a mesa 2D desenha só o quadro do gol e para. */
+  const promptFrameDrawnRef = useRef(false);
+  /** Quem encostou na bola no toque em andamento (assistência no desvio da carreira). */
+  const shotLogRef = useRef<ShotTouchLog | null>(null);
   const replayShotStartedAtRef = useRef(0);
   const replayLastSampleRef = useRef(0);
   const replayWasResolvingRef = useRef(false);
@@ -320,7 +329,13 @@ export default function BotaoMatch({
     minute: string;
     /** Bobonline: nome da comemoração longa do autor (Kamehameha, Super Saiyajin). */
     signature?: string | null;
+    /** Carreira: o seu chute desviou no adversário e entrou (gol contra com a sua assistência). */
+    assist?: string | null;
+    /** Lei do Ex: escolheu não comemorar. */
+    respect?: boolean;
   } | null>(null);
+  /** Lei do Ex no 2D: a figurinha "sem comemorar" (nome do ex-clube) enquanto dura a pausa do gol. */
+  const [respectNote, setRespectNote] = useState<string | null>(null);
   const [compactMobileTable, setCompactMobileTable] = useState(false);
   const [paused, setPaused] = useState(false);
   const [awaitingFirstTouch, setAwaitingFirstTouch] = useState(firstTouchReady);
@@ -437,6 +452,8 @@ export default function BotaoMatch({
     (choice: "celebrate" | "respect") => {
       formerClubCelebrationsRef.current.push(choice);
       formerClubPromptRef.current = false;
+      // A pausa do gol só começa agora (o efeito do gol espera a escolha) e já sabe qual foi.
+      respectGoalRef.current = choice === "respect";
       setFormerClubGoalPrompt(null);
       const clubName = setup.formerClub?.shortName ?? "ex-clube";
       if (choice === "celebrate") {
@@ -448,7 +465,17 @@ export default function BotaoMatch({
         setAnnouncement(
           `Você segurou a comemoração contra o ${clubName} em respeito à sua história no clube.`,
         );
-        showFlash("SEM COMEMORAR", "info", 1050);
+        const current = matchRef.current;
+        const view = view3dRef.current;
+        if (view && current) {
+          // 3D: a festa recomeça contida (o quadro ficou parado no gol): mãos abertas, cabeça baixa.
+          view.restrainGoalCelebration(current);
+          setGoalCaption((caption) => (caption ? { ...caption, respect: true } : caption));
+          showFlash("SEM COMEMORAR", "info", 1050);
+        } else {
+          // 2D: no lugar do aviso, a figurinha com as mãos abertas fica até a saída de bola.
+          setRespectNote(clubName);
+        }
       }
       bump();
     },
@@ -647,6 +674,10 @@ export default function BotaoMatch({
       traceRef.current?.events(events, machine);
       if (events.length > 0) view3dRef.current?.handleEvents(events, machine);
       for (const event of events) {
+        if (event.type === "touch") {
+          const log = shotLogRef.current;
+          if (log && log.turns === machine.turns) log.touchers.push(event.bodyId);
+        }
         if (event.type === "hit") {
           const now = performance.now();
           if (event.strength > 0.14 && now - lastHitRef.current > 70) {
@@ -748,12 +779,18 @@ export default function BotaoMatch({
             });
           }
           const mine = event.side === persp;
+          // Carreira: o seu chute desviou num adversário e entrou. Gol contra, assistência sua.
+          const careerAssist = !online && !localMatch ? applyCareerDeflectionAssist(machine, event, shotLogRef.current) : null;
+          // Lei do Ex: a escolha abre já e a partida fica congelada até ela (nem a moldura treme).
+          const formerClubPrompt = !localMatch && !online && mine && event.byUser && Boolean(setup.formerClub);
+          respectGoalRef.current = false;
+          setRespectNote(null);
           vibrate([0, 60, 40, 120]);
           playBotaoSound(mine || persp === "neutral" ? "goal" : "concede");
           goalFlashRef.current = 1;
           goalFlashSideRef.current = event.side;
           // No 3D quem treme é a câmera; sacudir a moldura junto pareceria defeito.
-          if (!view3dRef.current) {
+          if (!view3dRef.current && !formerClubPrompt) {
             setShaking(true);
             window.setTimeout(() => setShaking(false), 560);
           }
@@ -762,7 +799,7 @@ export default function BotaoMatch({
           const text = call
             ? call.text
             : event.ownGoal
-              ? "GOL CONTRA"
+              ? careerAssist ? "GOL\u00a0CONTRA\u00a0· SUA\u00a0ASSISTÊNCIA" : "GOL CONTRA"
               : localMatch
                 ? `GOL · ${playerNames[event.side].toLocaleUpperCase("pt-BR")}`
                 : mine
@@ -784,13 +821,14 @@ export default function BotaoMatch({
               ownGoal: event.ownGoal,
               minute: formatClock(elapsedSeconds),
               signature: call?.caption ?? null,
+              assist: careerAssist,
             });
           }
           // O placar falado começa pelo time de quem está na tela (o convidado vê a mesa girada).
           setAnnouncement(
-            `${text} ${event.scorer}. Placar ${machine.score[mirrored ? "cpu" : "user"]} a ${machine.score[mirrored ? "user" : "cpu"]}.`,
+            `${careerAssist ? "GOL CONTRA" : text} ${event.scorer}.${careerAssist ? ` Assistência de ${careerAssist}.` : ""} Placar ${machine.score[mirrored ? "cpu" : "user"]} a ${machine.score[mirrored ? "user" : "cpu"]}.`,
           );
-          if (!localMatch && mine && event.byUser && setup.formerClub) {
+          if (formerClubPrompt) {
             formerClubPromptRef.current = true;
             setFormerClubGoalPrompt({
               goalNumber: formerClubCelebrationsRef.current.length + 1,
@@ -902,7 +940,8 @@ export default function BotaoMatch({
         }
       }
 
-      const pausedNow = pausedRef.current || awaitingFirstTouchRef.current;
+      // A escolha da Lei do Ex congela tudo como a pausa: relógio, 7 s, física, rastro, replay e o brilho do gol.
+      const pausedNow = pausedRef.current || awaitingFirstTouchRef.current || formerClubPromptRef.current;
 
       // Relógio da partida e regra disciplinar usam o mesmo tempo ativo. Se a
       // partida estiver pausada, nenhum dos dois avança.
@@ -1031,6 +1070,10 @@ export default function BotaoMatch({
         // Drama do pênalti da CPU (3D): o tempo dele só anda com o jogo andando.
         if (cpuPenaltyWindupRef.current) cpuPenaltyWindupRef.current.elapsedMs += elapsed * 1000;
 
+        // Toque novo: anota quem encosta na bola nele (assistência no desvio da carreira).
+        if (!driver && state.phase === "resolving" && shotLogRef.current?.turns !== state.turns) {
+          shotLogRef.current = startShotTouchLog(state);
+        }
         if (driver) {
           // A física online é do driver.
         } else if (state.phase === "resolving") {
@@ -1114,6 +1157,19 @@ export default function BotaoMatch({
       };
       // Bobonline: mira do adversário, mesa girada, clarão pela perspectiva, drama e pistas vêm do driver.
       driver?.decorate(renderView);
+      // Lei do Ex: com a escolha na tela a mesa fica no quadro do gol. O 2D desenha esse quadro uma
+      // vez; o 3D nem desenha (com dt 0 a tremida da câmera continuaria sorteando) e retoma de onde parou.
+      if (formerClubPromptRef.current) {
+        const drawn = promptFrameDrawnRef.current;
+        promptFrameDrawnRef.current = true;
+        if (view3dInstance || drawn) {
+          render3dBudgetRef.current = 0;
+          render3dElapsedRef.current = 0;
+          return;
+        }
+      } else {
+        promptFrameDrawnRef.current = false;
+      }
       if (view3dInstance) {
         // Celular de 90/120 Hz não precisa desenhar o 3D duas vezes por quadro de 60.
         // Com intervalo, escolha de pênaltis, trocas ou o aviso do ex-clube cobrindo
@@ -1203,6 +1259,8 @@ export default function BotaoMatch({
     if (driverRef.current) return;
     if (!state || state.phase !== "goal" || timersRef.current.goal !== null)
       return;
+    // Lei do Ex: a partida fica congelada na escolha; a pausa do gol (e a festa) começa depois dela.
+    if (formerClubPromptRef.current) return;
     const resumeGoal = () => {
       if (pausedRef.current || formerClubPromptRef.current || (!setup.managerMode && document.hidden)) {
         goalResumeAtRef.current = null;
@@ -1213,6 +1271,8 @@ export default function BotaoMatch({
       timersRef.current.goal = null;
       const current = matchRef.current;
       if (!current) return;
+      respectGoalRef.current = false;
+      setRespectNote(null);
       handleEvents(resumeAfterGoal(current));
       if (current.phase !== "finished") setGoalCaption(null);
       if (current.phase !== "finished") {
@@ -1225,11 +1285,14 @@ export default function BotaoMatch({
       }
     };
     // No 3D a comemoração longa escolhida (Kamehameha, Super Saiyajin) ganha a extensão dela; o 2D segue igual.
+    // "Não comemorar" (Lei do Ex) troca a festa pelo gesto de respeito, um pouco mais longo, nos dois.
     const goalView = view3dRef.current;
-    const goalPause = goalView ? GOAL_PAUSE_3D_MS + goalView.celebrationExtensionMs(state) : GOAL_PAUSE_MS;
+    const goalPause = respectGoalRef.current
+      ? (goalView ? GOAL_PAUSE_3D_MS : GOAL_PAUSE_MS) + RESPECT_EXTRA_MS
+      : goalView ? GOAL_PAUSE_3D_MS + goalView.celebrationExtensionMs(state) : GOAL_PAUSE_MS;
     goalResumeAtRef.current = performance.now() + goalPause;
     timersRef.current.goal = window.setTimeout(resumeGoal, goalPause);
-  }, [signature, handleEvents, showFlash, paused, setup.managerMode]);
+  }, [signature, handleEvents, showFlash, paused, setup.managerMode, formerClubGoalPrompt]);
 
   // -------------------------------------------------------------- vez da CPU
   useEffect(() => {
@@ -1374,10 +1437,15 @@ export default function BotaoMatch({
       traceRef.current?.finish(state);
       onFinishRef.current(result);
     };
-    // No 3D um jogo que acaba num gol com comemoração longa espera a extensão dela.
-    const finishExtension = view3dRef.current && result.decision === "goal-limit"
-      ? view3dRef.current.celebrationExtensionMs(state)
-      : 0;
+    // No 3D um jogo que acaba num gol com comemoração longa espera a extensão dela
+    // (e o gesto de respeito da Lei do Ex, no 2D e no 3D).
+    const finishExtension = result.decision !== "goal-limit"
+      ? 0
+      : respectGoalRef.current
+        ? RESPECT_EXTRA_MS
+        : view3dRef.current
+          ? view3dRef.current.celebrationExtensionMs(state)
+          : 0;
     timersRef.current.finish = window.setTimeout(finishWhenVisible, (view3dRef.current ? FINISH_DELAY_3D_MS : FINISH_DELAY_MS) + finishExtension);
   }, [signature, showFlash, localMatch, formerClubGoalPrompt, setup.managerMode]);
 
@@ -2036,7 +2104,7 @@ export default function BotaoMatch({
           >
             <TeamCrest team={goalCaption.side === "user" ? setup.userTeam : setup.cpuTeam} size={30} />
             <span>
-              <small>{goalCaption.ownGoal ? "Gol contra" : "Gol"} · {goalCaption.minute}{goalCaption.signature ? ` · ${goalCaption.signature}` : null}</small>
+              <small>{goalCaption.ownGoal ? "Gol contra" : "Gol"} · {goalCaption.minute}{goalCaption.signature ? ` · ${goalCaption.signature}` : null}{goalCaption.respect ? " · sem comemorar" : null}{goalCaption.assist ? ` · assistência de ${goalCaption.assist}` : null}</small>
               <strong>{goalCaption.scorer}</strong>
             </span>
             <b>{state.score[leftSide]}<i>×</i>{state.score[rightSide]}</b>
@@ -2045,6 +2113,28 @@ export default function BotaoMatch({
         {flash ? (
           <div className={`botao-flash botao-flash-${flash.tone}`}>
             {flash.text}
+          </div>
+        ) : null}
+        {respectNote && !view3dReady ? (
+          // Lei do Ex no 2D: sem boneco para fazer o gesto, a figurinha faz (mãos abertas, "foi sem querer").
+          <div className="botao-respect-note" role="status">
+            <svg className="botao-respect-hands" viewBox="0 0 60 38" aria-hidden="true">
+              {/* Mão direita de frente, palma para fora: o polegar aponta para o meio. A esquerda é o espelho. */}
+              <g id="botao-respect-hand" fill="#fff" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round">
+                <rect x="20.2" y="14" width="3.2" height="10" rx="1.6" transform="rotate(28 21.8 19)" />
+                <rect x="4.5" y="8.5" width="3.2" height="12" rx="1.6" />
+                <rect x="8.2" y="5" width="3.4" height="16" rx="1.7" />
+                <rect x="11.9" y="3.5" width="3.4" height="17" rx="1.7" />
+                <rect x="15.6" y="5.5" width="3.4" height="15" rx="1.7" />
+                <rect x="4.2" y="15" width="15" height="14" rx="4.5" />
+                <path d="M7 29.5v5h9.6v-5" />
+              </g>
+              <use href="#botao-respect-hand" transform="matrix(-1 0 0 1 60 0)" />
+            </svg>
+            <span>
+              <b>Sem comemorar</b>
+              <small>Respeito ao {respectNote}</small>
+            </span>
           </div>
         ) : null}
         {!localMatch && !paused && shownIdleCountdown !== null ? (

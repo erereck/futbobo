@@ -3591,3 +3591,79 @@ body:has(.botao-root) { background: #cfd3d0; }
 /* v97 — Álbum: a vez de quem fica no meio da fita, e o contador de toques no centro do painel */
 .botao-root .botao-turn { align-content: center; text-align: center; }
 .botao-root .botao-controls-meta > span { text-align: center; }
+
+/* v97 — Álbum: Lei do Ex no 2D. "Não comemorar" vira uma figurinha colada na mesa, com as mãos abertas. */
+.botao-root .botao-respect-note {
+  position: absolute;
+  z-index: 11;
+  top: 42%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* left 50% encolheria a figurinha para meia mesa: largura do conteúdo, até a largura da mesa */
+  width: max-content;
+  max-width: calc(100% - 32px);
+  padding: 12px 18px 12px 14px;
+  border: 2px solid var(--album-ink);
+  border-radius: 6px;
+  background: var(--album-grain), var(--album-paper);
+  color: var(--album-ink);
+  box-shadow: 4px 4px 0 var(--album-ink);
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(-2deg);
+  animation: botao-respect-in 380ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+/* fita adesiva prendendo a figurinha */
+.botao-root .botao-respect-note::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 52px;
+  height: 17px;
+  background: rgba(246, 196, 49, 0.82);
+  box-shadow: 0 1px 1px rgba(40, 40, 20, 0.16);
+  transform: translateX(-50%) rotate(3deg);
+}
+.botao-root .botao-respect-hands {
+  flex: none;
+  width: 58px;
+  height: 37px;
+  color: var(--album-ink);
+  overflow: visible;
+  animation: botao-respect-pat 1.5s ease-in-out 420ms 2;
+}
+.botao-root .botao-respect-note > span { display: grid; gap: 2px; min-width: 0; }
+.botao-root .botao-respect-note b {
+  color: var(--album-ink);
+  font: 800 22px/1 var(--display);
+  font-stretch: 78%;
+  letter-spacing: -0.01em;
+}
+.botao-root .botao-respect-note small {
+  overflow: hidden;
+  color: var(--album-ink-2);
+  font: 600 13px/1.2 var(--sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@keyframes botao-respect-in {
+  from { opacity: 0; transform: translate(-50%, -50%) rotate(-7deg) scale(1.12); }
+  to { opacity: 1; transform: translate(-50%, -50%) rotate(-2deg) scale(1); }
+}
+/* as palmas baixam devagar e voltam: "calma, foi sem querer" */
+@keyframes botao-respect-pat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+@media (max-width: 540px) {
+  .botao-root .botao-respect-note { gap: 10px; padding: 10px 14px 10px 12px; }
+  .botao-root .botao-respect-hands { width: 48px; height: 31px; }
+  .botao-root .botao-respect-note b { font-size: 19px; }
+  .botao-root .botao-respect-note small { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .botao-root .botao-respect-note,
+  .botao-root .botao-respect-hands { animation: none; }
+}

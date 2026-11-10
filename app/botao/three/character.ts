@@ -915,6 +915,11 @@ const ARM_GUN_BLOW: Arm = [-1.6, -1.04, 0, -1.3];
 const ARM_SHAKE: Arm = [0.04, -0.38, 0.21, -0.4];
 /** Inclinado encarando o goleiro: braços soltos, um pouco à frente. */
 const ARM_FOCUS_READY: Arm = [-0.25, 0, 0.18, -0.35];
+/**
+ * Lei do Ex, sem comemorar: cotovelo baixo e perto do corpo, antebraço quase em pé e a mão aberta
+ * entre o peito e o ombro, à frente e por fora do tronco (mão em ~8,8; 11,3; 5,9 no tronco).
+ */
+const ARM_RESPECT: Arm = [-0.48, 0.29, 0.41, -1.87];
 
 function putL(out: Pose, a: Arm, b: Arm = a, k = 0) {
   out.shLX = mix(a[0], b[0], k);
@@ -1072,7 +1077,9 @@ export type FigureAction =
   | "cupEar"
   | "fingerGuns"
   | "penaltyFocus"
-  | "keeperTaunt";
+  | "keeperTaunt"
+  // Lei do Ex: gol no ex-clube sem comemorar (fora das comemorações do criador).
+  | "respect";
 
 /** Tiques de quem está parado esperando a vez (internos). */
 type FidgetId = "lookAround" | "stretch" | "legSwing" | "fixSock" | "bounceToes" | "tapBoot" | "neckRoll";
@@ -2358,6 +2365,32 @@ const ACTIONS: Record<ActionId, ActionDef> = {
       o.bodyY = b.bodyY + 0.55 * Math.abs(wave) * k;
       o.torsoX = b.torsoX - 0.12 * k;
       o.neckX = b.neckX + 0.06 * k;
+    },
+  },
+  // ------------------------------------------------ Lei do Ex (partida)
+  respect: {
+    duration: 0,
+    body: "full",
+    mood: null,
+    look: 0,
+    sample(t, o) {
+      // Gol no ex-clube sem comemorar: parado, as duas mãos abertas entre o peito e o ombro, palmas
+      // para fora ("desculpa"), cabeça baixa e um "não" curto. Nada de corrida nem pulo.
+      stand(o, t);
+      const k = smooth(t / 0.42);
+      putL(o, ARM_REST, ARM_RESPECT, k);
+      putR(o, ARM_REST, ARM_RESPECT, k);
+      // As palmas baixam um pouco e voltam, devagar ("calma, foi sem querer").
+      const pat = (0.5 - 0.5 * Math.cos(TAU * 0.7 * Math.max(0, t - 0.5))) * smooth((t - 0.45) / 0.3);
+      o.elL += 0.14 * pat;
+      o.elR += 0.14 * pat;
+      const no = Math.sin(TAU * 1.5 * Math.max(0, t - 0.35)) * seg(t, 0.35, 0.55) * (1 - seg(t, 1.25, 1.6));
+      o.neckX = 0.3 * smooth(t / 0.5);
+      o.neckY = 0.16 * no;
+      o.torsoX += 0.05 * k;
+      o.hipLZ = 0.05;
+      o.hipRZ = -0.05;
+      o.kneeL = o.kneeR = 0.05;
     },
   },
   // -------------------------------------------------------------- tiques

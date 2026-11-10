@@ -101,10 +101,7 @@ export default function HomeSpread({
       <AlbumPage side="left" label="Rumo ao Estrelato" className={styles.homeLeft}>
         <header className={styles.masthead}>
           <BrandMark size="md" />
-          <div>
-            <h1>Futbobo</h1>
-            <p>Faça sua história.</p>
-          </div>
+          <h1>Futbobo</h1>
         </header>
 
         <section className={styles.career} aria-labelledby="home-career-title">
@@ -227,7 +224,7 @@ export default function HomeSpread({
 
         <footer className={styles.colophon}>
           <span>{CLUBS.length} clubes · 12 posições · {LEAGUES.length} ligas · {COUNTRIES.length} seleções</span>
-          <b>{FUTBOBO_VERSION} · {FUTBOBO_VERSION_NAME.charAt(0)}{FUTBOBO_VERSION_NAME.slice(1).toLocaleLowerCase("pt-BR")}</b>
+          <b><small className={styles.credit}>EriLab™ / Erick Luiz</small>{FUTBOBO_VERSION} · {FUTBOBO_VERSION_NAME}</b>
         </footer>
       </AlbumPage>
       {children}

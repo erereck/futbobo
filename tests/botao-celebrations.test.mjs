@@ -1143,3 +1143,107 @@ test("sons novos: rampas válidas, durações certas, mudo não toca", () => {
     else delete globalThis.window;
   }
 });
+
+// ------------------------------------------------------------------ Lei do Ex: não comemorar
+
+const RESPECT_MATES = ["user-0", "user-1", "user-3", "user-4"];
+const PARTY_ACTIONS = new Set(["fistPump", "jumpCheer", "highFive", "airplane", "kneeSlide", "siuu", "backflip", "pointSky", "kamehameha", "superSaiyan"]);
+
+test("Lei do Ex: \"respect\" fica fora das comemorações do criador (CELEBRATION_OPTIONS e sorteios iguais)", () => {
+  assert.equal(choreo.RESPECT_KIND, "respect");
+  assert.equal(goalCelebrationOf("respect"), null);
+  assert.ok(!CELEBRATION_OPTIONS.some((option) => option.id === "respect"));
+  assert.ok(!BOBONLINE_VARIADA.includes("respect") && !SIGNATURE_ONLY.includes("respect"));
+  assert.deepEqual({ ...FIGURE_ACTION_INFO.respect }, { duration: 0, body: "full" });
+});
+
+test("Lei do Ex: quem marcou não corre nem pula; fica de frente para a câmera com as mãos abertas", () => {
+  for (const cameraYaw of [0, Math.PI / 2, 2.4]) {
+    // A assinatura escolhida (ou o sorteio) não vale: "não comemorar" ganha.
+    for (const signature of [null, "kamehameha", "kneeSlide"]) {
+      const args = goalArgs({ cameraYaw, signature, restrained: true });
+      const start = args.actors.find((actor) => actor.id === "user-2");
+      const { c, frames } = playGoal(args, { seconds: 3.4 });
+      assert.equal(c.kind, "respect");
+      assert.equal(c.focus, "user-2");
+      assert.equal(c.side, null, "sem brilhos de festa em volta dele");
+      for (const frame of frames) {
+        const scorer = frame.directives.get("user-2");
+        assert.ok(Math.hypot(scorer.x - start.x, scorer.z - start.z) < 1e-6, "quem marcou não sai do lugar");
+        assert.notEqual(scorer.intent.state, "run");
+        assert.ok(!PARTY_ACTIONS.has(scorer.intent.action), `ação ${scorer.intent.action}`);
+        for (const id of RESPECT_MATES) {
+          const intent = frame.directives.get(id).intent;
+          assert.ok(!PARTY_ACTIONS.has(intent.action), `${id}: ${intent.action}`);
+          assert.ok(intent.speed <= 68 + 1e-9, `${id} correndo a ${intent.speed}`);
+        }
+        for (const [id, directive] of frame.directives) {
+          assert.ok(finite(directive.x) && finite(directive.z), `${id}: posição não finita`);
+          if (id.startsWith("cpu")) assert.equal(directive.intent.state, "sad");
+        }
+      }
+      const last = frames.at(-1).directives.get("user-2");
+      assert.equal(last.intent.action, "respect");
+      assert.ok(Math.abs(last.intent.faceYaw - cameraYaw) < 1e-9, `faceYaw ${last.intent.faceYaw}`);
+      assert.ok(RESPECT_MATES.some((id) => frames.at(-1).directives.get(id).intent.action === "applaud"), "os companheiros aplaudem");
+      // Câmera: a rede estufando primeiro, depois o close parado nele.
+      assert.ok(Math.abs(frames[0].shot.x - args.ball.x * 0.9) < 1e-9 && frames[0].shot.z === args.ball.z);
+      const close = frames.at(-1).shot;
+      assert.ok(Math.hypot(close.x - start.x, close.z - start.z) < 1e-6);
+      assert.ok(Math.abs(close.zoom - 2.75) < 1e-6);
+    }
+  }
+});
+
+test("Lei do Ex: \"não comemorar\" não vale para gol contra (segue o aviãozinho de sempre)", () => {
+  const plain = new Choreographer();
+  plain.startGoal(goalArgs({ scorerId: null, ownGoalId: "cpu-1" }));
+  const restrained = new Choreographer();
+  restrained.startGoal(goalArgs({ scorerId: null, ownGoalId: "cpu-1", restrained: true }));
+  assert.equal(restrained.kind, "airplane");
+  assert.equal(restrained.side, plain.side);
+  for (let frame = 0; frame < 90; frame += 1) {
+    const a = plain.update(DT, { x: 6, z: -228 });
+    const b = restrained.update(DT, { x: 6, z: -228 });
+    for (const [id, directive] of a) assert.deepEqual(b.get(id), directive, id);
+  }
+});
+
+test("Lei do Ex: mãos abertas na altura do ombro, à frente e afastadas; cabeça baixa; pés no chão", () => {
+  for (const seed of [figureSeedRight, 7]) {
+    const figure = makeFigure(seed);
+    const rest = makeFigure(seed);
+    for (let frame = 0; frame < 30; frame += 1) rest.update(DT, idleIntent({ state: "idle", action: null, faceYaw: 0 }));
+    rest.root.updateMatrixWorld(true);
+    const bones = (fig) => fig.skinnedMesh.skeleton.bones;
+    const ankleY = (fig, index) => new THREE.Vector3().setFromMatrixPosition(bones(fig)[index].matrixWorld).y;
+    const restAnkle = (ankleY(rest, 10) + ankleY(rest, 11)) / 2;
+    const restHand = rest.handAnchor("left").getWorldPosition(new THREE.Vector3());
+    const left = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    let t = 0;
+    let samples = 0;
+    for (let frame = 0; frame < 150; frame += 1) {
+      figure.update(DT, idleIntent({ state: "idle", action: "respect", faceYaw: 0 }));
+      t += DT;
+      if (frame % 5 === 0) checkFigureFinite(figure, `respect@${t.toFixed(2)}`);
+      if (t < 0.8) continue;
+      figure.root.updateMatrixWorld(true);
+      figure.handAnchor("left").getWorldPosition(left);
+      figure.handAnchor("right").getWorldPosition(right);
+      samples += 1;
+      // Olhando para +z: as duas palmas na altura do ombro, na frente do corpo, uma de cada lado da cabeça.
+      for (const [label, hand] of [["esquerda", left], ["direita", right]]) {
+        assert.ok(hand.y > FIGURE_HEIGHT * 0.66 && hand.y < FIGURE_HEIGHT * 0.86, `${label} a ${(hand.y / FIGURE_HEIGHT).toFixed(2)} da altura`);
+        assert.ok(hand.z > 3.5, `${label} em z ${hand.z}`);
+        assert.ok(hand.y > restHand.y + 11, `mãos erguidas, não soltas (${hand.y.toFixed(1)} contra ${restHand.y.toFixed(1)})`);
+      }
+      assert.ok(Math.abs(left.x - right.x) > 14, `mãos a ${Math.abs(left.x - right.x)}`);
+      assert.ok(Math.abs(left.y - right.y) < 0.5 && Math.abs(left.z - right.z) < 0.5, "gesto simétrico");
+      assert.ok(bones(figure)[1].rotation.x > 0.2, `cabeça baixa (${bones(figure)[1].rotation.x})`);
+      const feet = (ankleY(figure, 10) + ankleY(figure, 11)) / 2;
+      assert.ok(Math.abs(feet - restAnkle) < 1, `seed ${seed}: pé a ${feet - restAnkle} do chão em ${t.toFixed(2)}`);
+    }
+    assert.ok(samples > 60);
+  }
+});

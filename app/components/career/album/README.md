@@ -71,6 +71,10 @@ A faixa de cabeçalho de cada aba (`InkBand`) usa a cor dela.
 - Pôster de compartilhar (`makePoster` em `../CareerGame.tsx`): página do álbum em 1080×1350 — capa amarela, faixa do clube,
   figurinha com o busto (`drawPlayerBust`), ficha da carreira, taças em carimbos e a logo. As fontes saem dos tokens
   `--font-display`/`--font-text` lidos da página; escudo só do próprio site, para o canvas não ficar sujo.
+- Figurinhas em 3D: com o Modo 3D ligado e o modo desempenho desligado, `StickerBust` (e o `PlayerBust` do Bobonline)
+  troca o busto 2D pelo boneco 3D da partida, feito num único renderizador fora da tela
+  (`app/botao/three/sticker-portrait.ts` + `sticker-portrait-studio.ts`, carregado sob demanda, cache de 48 retratos).
+  O 2D aparece na hora e o 3D entra no mesmo canvas, sem mexer o layout. O pôster usa `renderStickerPortrait`.
 - A base da página (html/body em `globals.css`/`premium.css`), a cor da barra do navegador e a do app instalado são papel:
   nada pisca escuro antes do álbum montar. Esperas ("Abrindo a base…") usam `.waitPage`.
 - Celular: cada tela tenta caber inteira, sem rolar. Listas longas (conquistas, arquivo da carreira) podem rolar.
