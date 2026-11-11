@@ -234,7 +234,7 @@ export function OtherGames() {
     { href: "https://mmmweb.vercel.app", title: "Muito, Muito Minimalista", tag: "Minimalista", text: "Abra o MMM Web e jogue direto pelo navegador." },
     { href: "https://erereck.github.io/bobobike/", title: "Bobobike", tag: "Obby infinito", text: "Encare pistas procedurais de BMX, scooter ou patinete e bata seu recorde de distância." },
     { href: "https://erereck.github.io/boboforces", title: "Boboforces", tag: "FPS", text: "FPS de arena em desenvolvimento, com bots e partidas rápidas." },
-    { href: "https://bobobox.vercel.app", title: "Bobobox", tag: "Party game", text: "Abra na TV e reúna a galera para jogar minigames usando os celulares." },
+    { href: "https://bobobox-eta.vercel.app", title: "Bobobox", tag: "Party game", text: "Abra na TV e reúna a galera para jogar minigames usando os celulares." },
   ];
   return (
     <section className={pageStyles.other}>
