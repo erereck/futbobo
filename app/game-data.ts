@@ -1,5 +1,6 @@
 import { ENGLISH_LOWER_CLUBS } from "./english-2026-clubs";
 import { BRAZIL_LOWER_CLUBS } from "./brazil-2026-clubs";
+import { RUSSIA_UKRAINE_CLUBS } from "./russia-ukraine-2026-clubs";
 
 export type PositionKey =
   | "GOL"
@@ -217,6 +218,7 @@ export const COUNTRIES: Country[] = [
   { id: "polonia", name: "Polônia", demonym: "polonês", abbr: "POL", confederation: "EUROPE", strength: 3, primary: "#dc143c", secondary: "#ffffff" },
   { id: "servia", name: "Sérvia", demonym: "sérvio", abbr: "SER", confederation: "EUROPE", strength: 3, primary: "#c6363c", secondary: "#0c4076" },
   { id: "turquia", name: "Turquia", demonym: "turco", abbr: "TUR", confederation: "EUROPE", strength: 3, primary: "#e30a17", secondary: "#ffffff" },
+  { id: "russia", name: "Rússia", demonym: "russo", abbr: "RUS", confederation: "EUROPE", strength: 3, primary: "#ffffff", secondary: "#0039a6" },
   { id: "ucrania", name: "Ucrânia", demonym: "ucraniano", abbr: "UCR", confederation: "EUROPE", strength: 3, primary: "#0057b7", secondary: "#ffd700" },
   { id: "republica-tcheca", name: "República Tcheca", demonym: "tcheco", abbr: "TCH", confederation: "EUROPE", strength: 3, primary: "#d7141a", secondary: "#11457e" },
   { id: "escocia", name: "Escócia", demonym: "escocês", abbr: "ESC", confederation: "EUROPE", strength: 3, primary: "#0065bd", secondary: "#ffffff" },
@@ -343,6 +345,9 @@ export const LEAGUES: League[] = [
   { id: "eredivisie", countryId: "holanda", name: "Eredivisie", cupName: "KNVB Beker", prestige: 3, championsPlaces: 2, europaPlaces: 4, conferencePlaces: 5 },
   { id: "proleague", countryId: "belgica", name: "Pro League", cupName: "Beker van België", prestige: 2, championsPlaces: 1, europaPlaces: 2, conferencePlaces: 4 },
   { id: "superlig", countryId: "turquia", name: "Süper Lig", cupName: "Türkiye Kupası", prestige: 2, championsPlaces: 1, europaPlaces: 2, conferencePlaces: 3 },
+  // Rússia: clubes seguem suspensos dos torneios da UEFA em 2026/27.
+  { id: "russian-premier-league", countryId: "russia", name: "Premier League Russa", cupName: "Copa da Rússia", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "ukrainian-premier-league", countryId: "ucrania", name: "Premier League Ucraniana", cupName: "Copa da Ucrânia", prestige: 2, championsPlaces: 1, europaPlaces: 2, conferencePlaces: 4 },
   { id: "austria-bundesliga", countryId: "austria", name: "Bundesliga", cupName: "ÖFB-Cup", prestige: 2, championsPlaces: 1, europaPlaces: 1, conferencePlaces: 2 },
   { id: "swiss-super-league", countryId: "suica", name: "Super League", cupName: "Schweizer Cup", prestige: 2, championsPlaces: 1, europaPlaces: 1, conferencePlaces: 2 },
   { id: "danish-superliga", countryId: "dinamarca", name: "Superliga Dinamarquesa", cupName: "DBU Pokalen", prestige: 2, championsPlaces: 1, europaPlaces: 3, conferencePlaces: 5 },
@@ -1262,6 +1267,7 @@ export const CLUBS: Club[] = [
   ...KOREA_CLUBS,
   ...CHINA_CLUBS,
   ...EUROPE_CLUBS,
+  ...RUSSIA_UKRAINE_CLUBS,
   ...ARGENTINA_CLUBS,
   ...URUGUAY_CLUBS,
   ...CHILE_CLUBS,
