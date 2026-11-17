@@ -271,6 +271,8 @@ export function isEuropeanClub(club: Club) {
 }
 
 export function initialContinentalSlot(club: Club): ContinentalSlot | null {
+  // Suspensão de clubes russos nas competições da UEFA em 2026/27.
+  if (club.countryId === "russia") return null;
   if (club.leagueId === "brasileirao-b" || club.leagueId === "championship" || club.leagueId === "brasileirao-c" || club.leagueId === "brasileirao-d" || club.leagueId === "league-one" || club.leagueId === "league-two") return null;
   const confederation = clubConfederation(club);
   if (confederation === "SOUTH_AMERICA") return club.reputation >= 4 ? "libertadores" : club.reputation >= 3 ? "sudamericana" : null;
@@ -292,6 +294,7 @@ export function continentalSlotAfterSeason(
   cupChampion: boolean,
   leaguePosition: number,
 ): ContinentalSlot | null {
+  if (club.countryId === "russia") return null;
   if (league.id === "brasileirao-c" || league.id === "brasileirao-d") return cupChampion ? "libertadores" : null;
   if (league.id === "league-one" || league.id === "league-two") return cupChampion ? "europa" : null;
   const isSecondDivision = league.id === "brasileirao-b" || league.id === "championship";

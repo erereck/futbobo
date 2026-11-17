@@ -310,7 +310,10 @@ function pickWinner(
   excludedClubIds: Set<string>,
 ) {
   const confederationPool = CLUBS.filter((club) =>
-    !excludedClubIds.has(club.id) && clubConfederation(club) === config.confederation
+    !excludedClubIds.has(club.id) &&
+    clubConfederation(club) === config.confederation &&
+    // Não gerar campeões russos em competições da UEFA durante a suspensão.
+    (config.confederation !== "EUROPE" || club.countryId !== "russia")
   );
   const available = config.id === "conference-league"
     ? confederationPool.filter((club) =>
