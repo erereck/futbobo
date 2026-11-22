@@ -14,6 +14,7 @@ load.extensions[".ts"] = (module, filename) => {
 const { clubPickerGroups } = load("../app/career/club-picker.ts");
 const { CLUBS, LEAGUES, COUNTRIES } = load("../app/game-data.ts");
 const { initialContinentalSlot, continentalSlotAfterSeason } = load("../app/career/academy.ts");
+const { VERIFIED_CLUB_ASSET_IDS } = load("../app/verified-club-assets.ts");
 load("../app/career/second-divisions.ts").installSecondDivisions();
 const leagues = (groups) => groups.flatMap((group) => group.leagues);
 const clubs = (groups) => leagues(groups).flatMap((league) => league.clubs);
@@ -74,4 +75,26 @@ test("clubes russos não se classificam para torneios da UEFA", () => {
   const ukrainianClub = CLUBS.find((club) => club.id === "shakhtar-donetsk");
   const ukrainianLeague = LEAGUES.find((item) => item.id === "ukrainian-premier-league");
   assert.equal(continentalSlotAfterSeason(ukrainianClub, ukrainianLeague, true, false, 1), "champions");
+});
+
+test("clubes e ligas da Rússia e da Ucrânia têm escudos PNG cadastrados", () => {
+  const assetRoot = new URL("../public/assets/", import.meta.url);
+  const manifest = JSON.parse(readFileSync(new URL("football-assets.json", assetRoot), "utf8"));
+  const pngSignature = Buffer.from("89504e470d0a1a0a", "hex");
+
+  for (const leagueId of ["russian-premier-league", "ukrainian-premier-league"]) {
+    assert.ok(manifest.competitions[`league:${leagueId}`]?.source, leagueId);
+    const paths = [`competitions/leagues/${leagueId}.png`];
+
+    for (const club of CLUBS.filter((entry) => entry.leagueId === leagueId)) {
+      assert.equal(manifest.clubs[club.id]?.providerName, club.name);
+      assert.ok(VERIFIED_CLUB_ASSET_IDS.has(club.id), club.id);
+      paths.push(`clubs/${club.id}.png`);
+    }
+
+    for (const path of paths) {
+      const image = readFileSync(new URL(path, assetRoot));
+      assert.deepEqual(image.subarray(0, pngSignature.length), pngSignature, path);
+    }
+  }
 });

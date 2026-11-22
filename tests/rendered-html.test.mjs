@@ -907,7 +907,10 @@ test("impede ficar no clube depois de um pedido de transferência aceito", async
 
 test("expande o mercado para ligas e clubes das Américas", async () => {
   const data = (await Promise.all([
-    "../app/game-data.ts", "../app/brazil-2026-clubs.ts", "../app/english-2026-clubs.ts",
+    "../app/game-data.ts",
+    "../app/brazil-2026-clubs.ts",
+    "../app/english-2026-clubs.ts",
+    "../app/russia-ukraine-2026-clubs.ts",
   ].map((path) => readFile(new URL(path, import.meta.url), "utf8")))).join("\n");
 
   for (const leagueId of [

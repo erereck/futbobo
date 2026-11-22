@@ -1,5 +1,6 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import sharp from "sharp";
 
 const ROOT = process.cwd();
 const DATA_FILE = path.join(ROOT, "app", "game-data.ts");
@@ -344,6 +345,8 @@ const EXTERNAL_COMPETITION_ASSETS = {
   "league:league-two": { path: path.join("leagues", "league-two.png"), providerName: "EFL League Two", source: "https://assets.football-logos.cc/logos/england/700x700/efl-league-two.e37d5ec5.png" },
   "league:brasileirao-c": { path: path.join("leagues", "brasileirao-c.png"), providerName: "Brasileirão Série C", source: "https://assets.football-logos.cc/logos/brazil/700x700/brazilian-serie-c.81968f68.png" },
   "league:brasileirao-d": { path: path.join("leagues", "brasileirao-d.png"), providerName: "Brasileirão Série D", source: "https://assets.football-logos.cc/logos/brazil/700x700/brazilian-serie-d.869d9825.png" },
+  "league:russian-premier-league": { path: path.join("leagues", "russian-premier-league.png"), providerName: "Russian Premier League", source: "https://heritage.premierliga.ru/favicon/android-chrome-192x192.png" },
+  "league:ukrainian-premier-league": { path: path.join("leagues", "ukrainian-premier-league.png"), providerName: "Ukrainian Premier League", source: "https://upl.ua/images/upl_logo.png" },
   afcChampions: {
     path: "afcChampions.png",
     providerName: "AFC Champions League Elite",
@@ -359,6 +362,41 @@ const EXTERNAL_COMPETITION_ASSETS = {
     providerName: "Turkcell Super Kupa 2025",
     source: "https://upload.wikimedia.org/wikipedia/commons/2/2c/Turkcell-super-kupa-2025-koyu.jpg",
   },
+};
+
+const RUSSIA_UKRAINE_CLUB_ASSETS = {
+  "zenit-spb": "https://heritage.premierliga.ru/netcat_files/6/6/3_new_1.svg",
+  "krasnodar-ru": "https://heritage.premierliga.ru/netcat_files/6/6/584_1.svg",
+  "spartak-moscow": "https://heritage.premierliga.ru/netcat_files/6/6/1.svg",
+  "cska-moscow": "https://heritage.premierliga.ru/netcat_files/6/6/2.svg",
+  "dynamo-moscow": "https://heritage.premierliga.ru/netcat_files/6/6/dynamo_big_0.svg",
+  "lokomotiv-moscow": "https://heritage.premierliga.ru/netcat_files/6/6/5.svg",
+  "baltika-kaliningrad": "https://heritage.premierliga.ru/netcat_files/6/6/logo.svg",
+  "rubin-kazan": "https://heritage.premierliga.ru/netcat_files/6/6/4.svg",
+  "rodina-moscow": "https://heritage.premierliga.ru/netcat_files/6/6/club_rod_color_main_1_.svg",
+  "akhmat-grozny": "https://heritage.premierliga.ru/netcat_files/6/6/702.svg",
+  "rostov-ru": "https://heritage.premierliga.ru/netcat_files/6/6/11.svg",
+  "krylya-sovetov": "https://heritage.premierliga.ru/netcat_files/6/6/10.svg",
+  "akron-tolyatti": "https://heritage.premierliga.ru/netcat_files/90/64/807_0.svg",
+  "orenburg-ru": "https://heritage.premierliga.ru/netcat_files/6/6/504_new_1.svg",
+  "dynamo-makhachkala": "https://heritage.premierliga.ru/netcat_files/6/6/125_1.svg",
+  "fakel-voronezh": "https://heritage.premierliga.ru/netcat_files/6/6/Fakel_Logo_RGB_0.svg",
+  "shakhtar-donetsk": "https://upl.ua/uploads/1611/fMDO1b8zb6sMeeGDfV1bAKdJ2aQOgU1C.png",
+  "polissya-zhytomyr": "https://upl.ua/uploads/2407/JHwLLcfZdR8tIV1IreDQR9ZFbHgkkLqk.png",
+  "dynamo-kyiv": "https://upl.ua/uploads/2507/M2UkQxtEVWCT7XYedPmC7Gay7EJo7dG5.png",
+  "kharkiv-ua": "https://upl.ua/uploads/2606/meGPAp1fX8JS2W9XM_T66tNoZ1JvvIpO.png",
+  "karpaty-lviv": "https://upl.ua/uploads/2306/mpbOyupJlai6xwtN3kYTCNLwWs9-D1aV.png",
+  "lnz-cherkasy": "https://upl.ua/uploads/2306/nRhjQV77UW6NOGfGDv97PKgjn-Y-idb_.png",
+  "zorya-luhansk": "https://upl.ua/uploads/2302/33o6ntOLp_iVUKYHr2DigOuTjeXp34iH.png",
+  "bukovyna-chernivtsi": "https://upl.ua/uploads/2506/Ah-h_mEc57-oD7wr0hJHZOzeuTC3FFLD.png",
+  "kolos-kovalivka": "https://upl.ua/uploads/2008/PYYClJ2ba6Rwe4YAQ3d767GNeZBj1fHu.png",
+  "epicentr-kamianets": "https://upl.ua/uploads/2507/eKUMtne7woyuc_U_fYw1qVltNLApToLJ.png",
+  "chornomorets-odesa": "https://upl.ua/uploads/1611/2gohsLQhqNZedAdq9hAcU6mPV2uqmQ9K.png",
+  "livyi-bereh-kyiv": "https://upl.ua/uploads/2408/vvNsJkwoYH9dLIY1-dLRD0Dqpd3X4EmM.png",
+  "veres-rivne": "https://upl.ua/uploads/2107/8vALRF-nW80WW9IpEQ-orW6uTxShQVzM.png",
+  "obolon-kyiv": "https://upl.ua/uploads/2307/jp9YtQumoBmnBr-CyS9qG84Z2T0uJDBM.png",
+  "kudrivka": "https://upl.ua/uploads/2408/5-MgyAUluq3Td6cz8tto9XKAJd1VoauR.png",
+  "kryvbas-kryvyi-rih": "https://upl.ua/uploads/2207/6mgkU1zsv7XhBZVByQiuThlgR_N9robF.png",
 };
 
 const EXTERNAL_CLUB_ASSETS = {
@@ -557,6 +595,7 @@ const EXTERNAL_CLUB_ASSETS = {
   "al-riyadh": "https://a.espncdn.com/i/teamlogos/soccer/500/21965.png",
   "tokyo-verdy": "https://a.espncdn.com/i/teamlogos/soccer/500/3393.png",
   goias: "https://static.goiasec.com.br/upload/editor/2021/04/ESCUDO-OFICIAL-PANTONE-3537C-1-1024x1024.png",
+  ...RUSSIA_UKRAINE_CLUB_ASSETS,
 };
 
 const TEAM_QUERY_OVERRIDES = {
@@ -729,7 +768,12 @@ const STOP_WORDS = new Set([
   "el",
 ]);
 
-const source = (await Promise.all([readFile(DATA_FILE, "utf8"), readFile(path.join(ROOT, "app", "brazil-2026-clubs.ts"), "utf8"), readFile(path.join(ROOT, "app", "english-2026-clubs.ts"), "utf8")])).join("\n");
+const source = (await Promise.all([
+  readFile(DATA_FILE, "utf8"),
+  readFile(path.join(ROOT, "app", "brazil-2026-clubs.ts"), "utf8"),
+  readFile(path.join(ROOT, "app", "english-2026-clubs.ts"), "utf8"),
+  readFile(path.join(ROOT, "app", "russia-ukraine-2026-clubs.ts"), "utf8"),
+])).join("\n");
 const clubs = [...source.matchAll(/\{ id: "([^"]+)", name: "([^"]+)", shortName: "([^"]+)", abbr: "([^"]+)", city: "[^"]+"[^}]*countryId: "([^"]+)", leagueId: "([^"]+)"/g)]
   .map((match) => ({
     id: match[1],
@@ -938,7 +982,10 @@ async function downloadImage({ url, destination }) {
   if (!contentType.startsWith("image/")) return "failed";
   const bytes = Buffer.from(await response.arrayBuffer());
   if (bytes.length < 100) return "failed";
-  await writeFile(destination, bytes);
+  const image = contentType.startsWith("image/svg+xml") && destination.endsWith(".png")
+    ? await sharp(bytes).resize(192, 192, { fit: "inside" }).png().toBuffer()
+    : bytes;
+  await writeFile(destination, image);
   return "downloaded";
 }
 
@@ -1163,8 +1210,9 @@ if (missingOnly || repairOnly) {
 
 const matched = new Map();
 const leagueTeams = new Map();
+const lookupClubs = clubs.filter((club) => !RUSSIA_UKRAINE_CLUB_ASSETS[club.id]);
 
-for (const club of clubs.filter((item) => TEAM_ID_OVERRIDES[item.id])) {
+for (const club of lookupClubs.filter((item) => TEAM_ID_OVERRIDES[item.id])) {
   const payload = await apiJson(`lookupteam.php?id=${TEAM_ID_OVERRIDES[club.id]}`);
   const choice = chooseTeam(club, payload.teams ?? [], true);
   if (choice?.team) matched.set(club.id, choice.team);
@@ -1177,7 +1225,7 @@ for (const league of leagues) {
   const payload = await apiJson(`search_all_teams.php?l=${encodeURIComponent(searchName.replaceAll(" ", "_"))}`);
   const teams = (payload.teams ?? []).filter((team) => team.strSport === "Soccer");
   leagueTeams.set(league.id, teams);
-  const leagueClubs = clubs.filter((club) => club.leagueId === league.id);
+  const leagueClubs = lookupClubs.filter((club) => club.leagueId === league.id);
   for (const club of leagueClubs) {
     if (matched.has(club.id)) continue;
     const choice = chooseTeam(club, teams);
@@ -1186,7 +1234,7 @@ for (const league of leagues) {
   console.log(`${matched.size}/${clubs.length} escudos identificados`);
 }
 
-const unmatched = clubs.filter((club) => !matched.has(club.id));
+const unmatched = lookupClubs.filter((club) => !matched.has(club.id));
 for (let index = 0; index < unmatched.length; index += 1) {
   const club = unmatched[index];
   const query = TEAM_QUERY_OVERRIDES[club.id] ?? club.name;
