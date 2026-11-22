@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T02:50:19.798Z",
+  "generatedAt": "2026-11-22T14:26:45.823Z",
   "providers": {
     "clubsAndCompetitions": "TheSportsDB",
     "flags": "FlagCDN"
@@ -4332,6 +4332,166 @@
     "west-ham": {
       "providerName": "West Ham",
       "externalSource": "https://assets.football-logos.cc/logos/england/700x700/west-ham.f5e80dff.png"
+    },
+    "zenit-spb": {
+      "providerName": "FC Zenit Saint Petersburg",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/3_new_1.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/3_new_1.svg"
+    },
+    "krasnodar-ru": {
+      "providerName": "FC Krasnodar",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/584_1.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/584_1.svg"
+    },
+    "spartak-moscow": {
+      "providerName": "FC Spartak Moscow",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/1.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/1.svg"
+    },
+    "cska-moscow": {
+      "providerName": "PFC CSKA Moscow",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/2.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/2.svg"
+    },
+    "dynamo-moscow": {
+      "providerName": "FC Dynamo Moscow",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/dynamo_big_0.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/dynamo_big_0.svg"
+    },
+    "lokomotiv-moscow": {
+      "providerName": "FC Lokomotiv Moscow",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/5.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/5.svg"
+    },
+    "baltika-kaliningrad": {
+      "providerName": "FC Baltika Kaliningrad",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/logo.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/logo.svg"
+    },
+    "rubin-kazan": {
+      "providerName": "FC Rubin Kazan",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/4.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/4.svg"
+    },
+    "rodina-moscow": {
+      "providerName": "FC Rodina Moscow",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/club_rod_color_main_1_.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/club_rod_color_main_1_.svg"
+    },
+    "akhmat-grozny": {
+      "providerName": "FC Akhmat Grozny",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/702.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/702.svg"
+    },
+    "rostov-ru": {
+      "providerName": "FC Rostov",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/11.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/11.svg"
+    },
+    "krylya-sovetov": {
+      "providerName": "PFC Krylia Sovetov Samara",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/10.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/10.svg"
+    },
+    "akron-tolyatti": {
+      "providerName": "FC Akron Tolyatti",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/90/64/807_0.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/90/64/807_0.svg"
+    },
+    "orenburg-ru": {
+      "providerName": "FC Orenburg",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/504_new_1.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/504_new_1.svg"
+    },
+    "dynamo-makhachkala": {
+      "providerName": "FC Dynamo Makhachkala",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/125_1.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/125_1.svg"
+    },
+    "fakel-voronezh": {
+      "providerName": "FC Fakel Voronezh",
+      "externalSource": "https://heritage.premierliga.ru/netcat_files/6/6/Fakel_Logo_RGB_0.svg",
+      "source": "https://heritage.premierliga.ru/netcat_files/6/6/Fakel_Logo_RGB_0.svg"
+    },
+    "shakhtar-donetsk": {
+      "providerName": "FC Shakhtar Donetsk",
+      "externalSource": "https://upl.ua/uploads/1611/fMDO1b8zb6sMeeGDfV1bAKdJ2aQOgU1C.png",
+      "source": "https://upl.ua/uploads/1611/fMDO1b8zb6sMeeGDfV1bAKdJ2aQOgU1C.png"
+    },
+    "polissya-zhytomyr": {
+      "providerName": "FC Polissya Zhytomyr",
+      "externalSource": "https://upl.ua/uploads/2407/JHwLLcfZdR8tIV1IreDQR9ZFbHgkkLqk.png",
+      "source": "https://upl.ua/uploads/2407/JHwLLcfZdR8tIV1IreDQR9ZFbHgkkLqk.png"
+    },
+    "dynamo-kyiv": {
+      "providerName": "FC Dynamo Kyiv",
+      "externalSource": "https://upl.ua/uploads/2507/M2UkQxtEVWCT7XYedPmC7Gay7EJo7dG5.png",
+      "source": "https://upl.ua/uploads/2507/M2UkQxtEVWCT7XYedPmC7Gay7EJo7dG5.png"
+    },
+    "kharkiv-ua": {
+      "providerName": "FC Kharkiv",
+      "externalSource": "https://upl.ua/uploads/2606/meGPAp1fX8JS2W9XM_T66tNoZ1JvvIpO.png",
+      "source": "https://upl.ua/uploads/2606/meGPAp1fX8JS2W9XM_T66tNoZ1JvvIpO.png"
+    },
+    "karpaty-lviv": {
+      "providerName": "FC Karpaty Lviv",
+      "externalSource": "https://upl.ua/uploads/2306/mpbOyupJlai6xwtN3kYTCNLwWs9-D1aV.png",
+      "source": "https://upl.ua/uploads/2306/mpbOyupJlai6xwtN3kYTCNLwWs9-D1aV.png"
+    },
+    "lnz-cherkasy": {
+      "providerName": "FC LNZ Cherkasy",
+      "externalSource": "https://upl.ua/uploads/2306/nRhjQV77UW6NOGfGDv97PKgjn-Y-idb_.png",
+      "source": "https://upl.ua/uploads/2306/nRhjQV77UW6NOGfGDv97PKgjn-Y-idb_.png"
+    },
+    "zorya-luhansk": {
+      "providerName": "FC Zorya Luhansk",
+      "externalSource": "https://upl.ua/uploads/2302/33o6ntOLp_iVUKYHr2DigOuTjeXp34iH.png",
+      "source": "https://upl.ua/uploads/2302/33o6ntOLp_iVUKYHr2DigOuTjeXp34iH.png"
+    },
+    "bukovyna-chernivtsi": {
+      "providerName": "FC Bukovyna Chernivtsi",
+      "externalSource": "https://upl.ua/uploads/2506/Ah-h_mEc57-oD7wr0hJHZOzeuTC3FFLD.png",
+      "source": "https://upl.ua/uploads/2506/Ah-h_mEc57-oD7wr0hJHZOzeuTC3FFLD.png"
+    },
+    "kolos-kovalivka": {
+      "providerName": "FC Kolos Kovalivka",
+      "externalSource": "https://upl.ua/uploads/2008/PYYClJ2ba6Rwe4YAQ3d767GNeZBj1fHu.png",
+      "source": "https://upl.ua/uploads/2008/PYYClJ2ba6Rwe4YAQ3d767GNeZBj1fHu.png"
+    },
+    "epicentr-kamianets": {
+      "providerName": "FC Epicentr",
+      "externalSource": "https://upl.ua/uploads/2507/eKUMtne7woyuc_U_fYw1qVltNLApToLJ.png",
+      "source": "https://upl.ua/uploads/2507/eKUMtne7woyuc_U_fYw1qVltNLApToLJ.png"
+    },
+    "chornomorets-odesa": {
+      "providerName": "FC Chornomorets Odesa",
+      "externalSource": "https://upl.ua/uploads/1611/2gohsLQhqNZedAdq9hAcU6mPV2uqmQ9K.png",
+      "source": "https://upl.ua/uploads/1611/2gohsLQhqNZedAdq9hAcU6mPV2uqmQ9K.png"
+    },
+    "livyi-bereh-kyiv": {
+      "providerName": "FC Livyi Bereh Kyiv",
+      "externalSource": "https://upl.ua/uploads/2408/vvNsJkwoYH9dLIY1-dLRD0Dqpd3X4EmM.png",
+      "source": "https://upl.ua/uploads/2408/vvNsJkwoYH9dLIY1-dLRD0Dqpd3X4EmM.png"
+    },
+    "veres-rivne": {
+      "providerName": "NK Veres Rivne",
+      "externalSource": "https://upl.ua/uploads/2107/8vALRF-nW80WW9IpEQ-orW6uTxShQVzM.png",
+      "source": "https://upl.ua/uploads/2107/8vALRF-nW80WW9IpEQ-orW6uTxShQVzM.png"
+    },
+    "obolon-kyiv": {
+      "providerName": "FC Obolon Kyiv",
+      "externalSource": "https://upl.ua/uploads/2307/jp9YtQumoBmnBr-CyS9qG84Z2T0uJDBM.png",
+      "source": "https://upl.ua/uploads/2307/jp9YtQumoBmnBr-CyS9qG84Z2T0uJDBM.png"
+    },
+    "kudrivka": {
+      "providerName": "FC Kudrivka",
+      "externalSource": "https://upl.ua/uploads/2408/5-MgyAUluq3Td6cz8tto9XKAJd1VoauR.png",
+      "source": "https://upl.ua/uploads/2408/5-MgyAUluq3Td6cz8tto9XKAJd1VoauR.png"
+    },
+    "kryvbas-kryvyi-rih": {
+      "providerName": "FC Kryvbas Kryvyi Rih",
+      "externalSource": "https://upl.ua/uploads/2207/6mgkU1zsv7XhBZVByQiuThlgR_N9robF.png",
+      "source": "https://upl.ua/uploads/2207/6mgkU1zsv7XhBZVByQiuThlgR_N9robF.png"
     }
   },
   "flags": {
@@ -5239,6 +5399,14 @@
     "league:league-two": {
       "providerName": "EFL League Two",
       "source": "https://assets.football-logos.cc/logos/england/700x700/efl-league-two.e37d5ec5.png"
+    },
+    "league:russian-premier-league": {
+      "providerName": "Russian Premier League",
+      "source": "https://heritage.premierliga.ru/favicon/android-chrome-192x192.png"
+    },
+    "league:ukrainian-premier-league": {
+      "providerName": "Ukrainian Premier League",
+      "source": "https://upl.ua/images/upl_logo.png"
     }
   }
 }
