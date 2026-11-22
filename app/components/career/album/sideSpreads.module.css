@@ -45,8 +45,8 @@
   background: #fff;
   text-align: left;
   rotate: var(--r, 0deg);
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .18)) drop-shadow(0 6px 10px rgba(30, 30, 20, .14));
-  transition: translate .18s var(--ease-out), rotate .18s var(--ease-out), filter .18s var(--ease-out);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .18), 0 6px 10px rgba(30, 30, 20, .14);
+  transition: translate .18s var(--ease-out), rotate .18s var(--ease-out), box-shadow .18s var(--ease-out);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
@@ -140,7 +140,7 @@
   .offerSticker:not(:disabled):hover {
     translate: 0 -3px;
     rotate: 0deg;
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .18)) drop-shadow(0 12px 16px rgba(30, 30, 20, .18));
+    box-shadow: 0 2px 2px rgba(0, 0, 0, .18), 0 12px 16px rgba(30, 30, 20, .18);
   }
 }
 .offerSticker:not(:disabled):active { translate: 0 1px; }

@@ -2174,9 +2174,11 @@ button:active:not(:disabled) { transform: scale(.98); }
 
 /* ——— Modals and sheets ——— */
 
+/* Sem blur de fundo: em tela cheia ele refaz o desfoque a cada quadro (caro em celular antigo)
+   e quase não aparece atrás de um fundo 86% opaco. */
 .modal-backdrop {
-  background: rgba(2,7,4,.82);
-  backdrop-filter: blur(8px);
+  background: rgba(2,7,4,.86);
+  backdrop-filter: none;
 }
 
 .settings-sheet,

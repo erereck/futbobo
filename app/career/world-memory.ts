@@ -4,6 +4,7 @@ import { clubById, seeded } from "./shared";
 import { worldPlayerNewsForState } from "./world-player-world";
 import { buildLivingClubCompetitions } from "./world-club-competitions";
 import { buildLivingNationalCompetitions } from "./world-national-competitions";
+import { memoizeByState } from "./world-memo";
 
 export type WorldNewsPriority = "major" | "normal";
 export type WorldNewsCategory = "world-cup" | "career" | "transfer" | "award" | "rival" | "record";
@@ -379,7 +380,7 @@ function rankedWorldCupTable(titles: Record<string, number>, playerCountryId: st
     });
 }
 
-export function buildWorldSnapshot(state: GameState): WorldSnapshot {
+function buildWorldSnapshotUncached(state: GameState): WorldSnapshot {
   const titles = { ...HISTORIC_WORLD_CUP_TITLES };
   const champions: WorldCompetitionChampion[] = [HISTORIC_RECENT_WORLD_CUP];
   const worldCupNews: WorldNewsItem[] = [];
@@ -473,6 +474,13 @@ export function buildWorldSnapshot(state: GameState): WorldSnapshot {
     transferRecords: [],
   };
 }
+
+/**
+ * Retrato do mundo da carreira. Lê o save inteiro (notícias de transferências, rivais, marcos),
+ * então o cache é pelo próprio objeto do save: voltar para a aba Carreira ou Mundo não refaz nada.
+ * As partes caras (competições do universo) têm cache próprio por temporada.
+ */
+export const buildWorldSnapshot = memoizeByState(buildWorldSnapshotUncached);
 
 export function worldPulseForState(state: GameState) {
   const snapshot = buildWorldSnapshot(state);

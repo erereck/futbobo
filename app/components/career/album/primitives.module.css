@@ -79,8 +79,9 @@
   position: relative;
   margin: 0;
   rotate: var(--tilt, 0deg);
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .18)) drop-shadow(0 6px 10px rgba(30, 30, 20, .16));
 }
+/* Sombra no próprio papel (mesmo desenho do drop-shadow de antes): sem filtro, a figurinha não
+   precisa de uma camada própria na GPU, o que pesava em celular antigo com várias na tela. */
 .face {
   position: relative;
   display: flex;
@@ -89,13 +90,13 @@
   padding: 5px;
   border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .18), 0 6px 10px rgba(30, 30, 20, .16);
 }
 .gloss {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .38) 42%, rgba(255, 255, 255, 0) 56%);
-  mix-blend-mode: soft-light;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .2) 42%, rgba(255, 255, 255, 0) 56%);
 }
 .peel {
   position: absolute;

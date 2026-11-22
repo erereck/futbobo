@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { installExpandedPlayerNames } from "../../career/player-name-expansion";
 import { installSecondDivisions } from "../../career/second-divisions";
 import { installLargeStorageBridge } from "../../career/indexed-storage";
 import FutboboShell from "./FutboboShell";
 
+// Os clubes da segunda divisão entram antes do primeiro render (a figurinha de um save pode ser de um deles).
+// Os nomes extras de jogadores entram com o pacote da carreira (CareerGame), que é o único que sorteia nomes.
+installSecondDivisions();
+
 export default function FutboboShellWithNames() {
   const [storageReady, setStorageReady] = useState(false);
-
-  installExpandedPlayerNames();
-  installSecondDivisions();
 
   useEffect(() => {
     let mounted = true;

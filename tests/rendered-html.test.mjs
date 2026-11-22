@@ -46,6 +46,7 @@ const careerSourceFiles = [
   "../app/career/shared.ts",
   "../app/career/sponsors.ts",
   "../app/career/state.ts",
+  "../app/career/storage-keys.ts",
   "../app/career/academy.ts",
   "../app/career/performance.ts",
   "../app/career/transfer-market.ts",

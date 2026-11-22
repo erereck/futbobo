@@ -2,6 +2,8 @@ import { COUNTRIES, countryById } from "../game-data";
 import type { Country } from "../game-data";
 import type { GameState } from "./model";
 import { seeded } from "./shared";
+import { memoByWorldPlayers, memoizeWorld } from "./world-memo";
+import { normalizedLabel, resolveCountryIdByLabel } from "./name-index";
 
 export type LivingNationalCompetitionId =
   | "euro"
@@ -145,23 +147,9 @@ const CONFIGS: NationalCompetitionConfig[] = [
   },
 ];
 
-function normalized(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("pt-BR")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function resolveCountryId(label: string) {
-  const target = normalized(label);
-  return COUNTRIES.find((country) =>
-    normalized(country.id) === target ||
-    normalized(country.name) === target ||
-    normalized(country.abbr) === target
-  )?.id ?? "";
-}
+// Normalização com cache e busca por índice (name-index): antes cada rótulo normalizava todas as seleções.
+const normalized = normalizedLabel;
+const resolveCountryId = resolveCountryIdByLabel;
 
 function historicalTitles(config: NationalCompetitionConfig) {
   const titles: Record<string, number> = {};
@@ -173,6 +161,10 @@ function historicalTitles(config: NationalCompetitionConfig) {
 }
 
 function worldPlayerNationBoost(state: GameState, countryId: string, season: number) {
+  return memoByWorldPlayers(state.worldPlayers?.players, `nation|${countryId}|${season}`, () => computeWorldPlayerNationBoost(state, countryId, season));
+}
+
+function computeWorldPlayerNationBoost(state: GameState, countryId: string, season: number) {
   return Object.values(state.worldPlayers?.players ?? {})
     .filter((player) => player.generatedSeason <= season && player.nationality === countryId)
     .sort((a, b) => b.potential - a.potential || a.id.localeCompare(b.id))
@@ -231,7 +223,7 @@ function rankedTitles(titles: Record<string, number>) {
     });
 }
 
-export function buildLivingNationalCompetitions(state: GameState): LivingNationalCompetition[] {
+function buildLivingNationalCompetitionsUncached(state: GameState): LivingNationalCompetition[] {
   const latestCompletedSeason = Math.max(2026, ...state.history.map((record) => record.season));
 
   return CONFIGS.map((config) => {
@@ -277,3 +269,6 @@ export function buildLivingNationalCompetitions(state: GameState): LivingNationa
     };
   });
 }
+
+/** Torneios de seleções do universo: só mudam no fim da temporada, então ficam em cache (veja world-memo). */
+export const buildLivingNationalCompetitions = memoizeWorld(buildLivingNationalCompetitionsUncached);

@@ -15,6 +15,7 @@ import { isScoreboboTrackLevel } from "./scorebobo-track";
 import { competitiveStrength } from "./performance";
 import { clamp, clubById, pick, seeded } from "./shared";
 import { emptyWorldPlayerUniverse, normalizeWorldPlayerUniverse } from "./world-players";
+import { bumpWorldClubRevision } from "./world-memo";
 import { applyNationalBotaoProduction } from "./botao-production";
 import { EMPTY_ATTENTION, normalizeAttention } from "./attention";
 
@@ -48,17 +49,7 @@ declare global {
   }
 }
 
-export const SAVE_KEY = "futbobo:career:v1";
-
-export const CHALLENGE_SAVE_KEY = "futbobo:challenge-save:v1";
-
-export const CHALLENGE_RESULTS_KEY = "futbobo:challenge-results:v1";
-
-export const HALL_OF_FAME_KEY = "futbobo:hall-of-fame:v1";
-
-export const SETTINGS_KEY = "futbobo:settings:v1";
-
-export const BOTAO_IN_PROGRESS_KEY = "futbobo:botao-in-progress:v1";
+export { BOTAO_IN_PROGRESS_KEY, CHALLENGE_RESULTS_KEY, CHALLENGE_SAVE_KEY, HALL_OF_FAME_KEY, SAVE_KEY, SETTINGS_KEY } from "./storage-keys";
 
 export const BALLON_DOR_EXCLUDED_TROPHIES = new Set<CompetitionId>([
   "domesticCup",
@@ -126,6 +117,8 @@ export const ORIGINAL_CLUB_PRESENTATION = new Map(
 );
 
 export function applyCustomClubDefinitions(definitions: CustomClubDefinition[]) {
+  // Nomes e cores dos clubes vão mudar: o universo montado com os antigos sai do cache.
+  bumpWorldClubRevision();
   CLUBS.forEach((club) => {
     const original = ORIGINAL_CLUB_PRESENTATION.get(club.id);
     if (original) Object.assign(club, original);

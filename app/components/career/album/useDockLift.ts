@@ -15,13 +15,19 @@ export function useDockLift() {
     if (!viewport) return;
     const root = document.documentElement;
     let frame = 0;
+    // A barra de endereço do Android some e volta durante a rolagem e dispara resize sem parar:
+    // só escreve no <html> quando o valor muda (cada escrita recalcula o estilo da página inteira).
+    let current = "";
     const update = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         // Com zoom de pinça a área visível encolhe de propósito: aí o rodapé fica onde está.
         const hidden = viewport.scale > 1.01 ? 0 : window.innerHeight - viewport.height - viewport.offsetTop;
         const lift = Math.round(Math.max(0, Math.min(hidden, window.innerHeight * .6)));
-        root.style.setProperty("--dock-lift", `${lift}px`);
+        const next = `${lift}px`;
+        if (next === current) return;
+        current = next;
+        root.style.setProperty("--dock-lift", next);
       });
     };
     update();

@@ -5,7 +5,7 @@ import { CLUBS } from "../../../../game-data";
 import type { CareerHallEntry } from "../../../../career/model";
 import type { GlobalAchievementUnlock } from "../../../../career/save-system";
 import type { HallLegacySummary } from "../../../../career/legacy-prestige";
-import { ACHIEVEMENTS } from "../../../../mega-expansion";
+import { ACHIEVEMENTS } from "../../../../achievements";
 import FutboboIcon from "../../../FutboboIcon";
 import { ClubBadge } from "../../CareerPrimitives";
 import AlbumShell, { AlbumPage, albumStyles } from "../AlbumShell";
@@ -236,6 +236,7 @@ export function OtherGames() {
     { href: "https://erereck.github.io/boboforces", title: "Boboforces", tag: "FPS", text: "FPS de arena em desenvolvimento, com bots e partidas rápidas." },
     { href: "https://bobobox-eta.vercel.app", title: "Bobobox", tag: "Party game", text: "Abra na TV e reúna a galera para jogar minigames usando os celulares." },
     { href: "https://hardship-game.vercel.app", title: "Hardship", tag: "Cooperativo", text: "Monte uma nave com a tripulação e sobreviva a uma viagem espacial usando os celulares." },
+    { href: "https://erereck.github.io/tycoonbobo/", title: "Tycoonbobo", tag: "Tycoon", text: "Monte sua base na floresta, colete o dinheiro dos droppers e defenda tudo dos goblins." },
   ];
   return (
     <section className={pageStyles.other}>

@@ -1,7 +1,7 @@
 import type { GameState } from "./model";
 import type { ManagerState } from "./manager-model";
 import type { PlayerAppearance } from "../player-appearance";
-import { SAVE_KEY } from "./state";
+import { SAVE_KEY } from "./storage-keys";
 
 export type CareerMode = "player" | "manager";
 export type CareerState = GameState | ManagerState;

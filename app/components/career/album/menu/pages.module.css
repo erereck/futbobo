@@ -124,7 +124,7 @@
   background: #fff;
   color: var(--ink);
   rotate: var(--r, 0deg);
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .16)) drop-shadow(0 5px 9px rgba(30, 30, 20, .14));
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .16), 0 5px 9px rgba(30, 30, 20, .14);
 }
 .ach[data-on] .achArt { color: #fff; background: var(--dots-light), var(--rarity); }
 .ach[data-on][data-rarity="lendário"] .achArt { background: var(--foil); color: var(--ink); }
