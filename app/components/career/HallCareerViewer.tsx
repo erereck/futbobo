@@ -16,6 +16,10 @@ import HistoryTab from "./album/tabs/HistoryTab";
 import StatsTab from "./album/tabs/StatsTab";
 import WorldTab from "./album/tabs/WorldTab";
 import styles from "./album/summary.module.css";
+import { installExpandedPlayerNames } from "../../career/player-name-expansion";
+
+// Mesmo que a carreira: os nomes extras entram com este pacote, não com o menu.
+installExpandedPlayerNames();
 
 type HallCareerViewerProps = {
   entry: CareerHallEntry;

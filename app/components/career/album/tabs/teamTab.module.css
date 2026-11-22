@@ -100,9 +100,8 @@
   position: relative;
   margin: 0;
   rotate: var(--tilt, 0deg);
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .2)) drop-shadow(0 6px 9px rgba(20, 30, 20, .2));
 }
-.face { position: relative; display: flex; flex-direction: column; padding: 4px; border-radius: 7px; overflow: hidden; background: #fff; }
+.face { position: relative; display: flex; flex-direction: column; padding: 4px; border-radius: 7px; overflow: hidden; background: #fff; box-shadow: 0 1px 1px rgba(0, 0, 0, .2), 0 6px 9px rgba(20, 30, 20, .2); }
 .sticker[data-you] .face { background: var(--foil); padding: 4px; }
 .art {
   position: relative;
@@ -181,8 +180,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .38) 42%, rgba(255, 255, 255, 0) 56%);
-  mix-blend-mode: soft-light;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .2) 42%, rgba(255, 255, 255, 0) 56%);
 }
 .youTag {
   position: absolute;

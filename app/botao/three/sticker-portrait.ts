@@ -12,6 +12,7 @@ import { useSyncExternalStore } from "react";
 import { drawPlayerBust, type PlayerAppearance } from "../../player-appearance";
 import { BOTAO3D_ENABLED_EVENT, BOTAO3D_PERFORMANCE_EVENT, readBotao3dPerformance, readBotao3dPreference, webglAvailable } from "../view-mode";
 import type { PortraitShot, PortraitStudio } from "./sticker-portrait-studio";
+import { readStoredPortrait, storePortrait } from "./sticker-portrait-store";
 
 export type BustLook = {
   appearance: PlayerAppearance;
@@ -104,9 +105,12 @@ type Job = {
   resolve: (portrait: HTMLCanvasElement | null) => void;
 };
 
-/** Retratos prontos, do mais antigo ao mais recente (LRU). 320² ≈ 400 KB cada. */
+/**
+ * Retratos prontos, do mais antigo ao mais recente (LRU). 320² ≈ 400 KB cada: o limite é baixo
+ * para caber em celular antigo, e quem sai daqui volta rápido do aparelho (sticker-portrait-store).
+ */
 const ready = new Map<string, HTMLCanvasElement>();
-const READY_LIMIT = 48;
+const READY_LIMIT = 24;
 const jobs = new Map<string, Job>();
 const queue: Job[] = [];
 /** Fatia de cada quadro para fotografar: o resto fica para a página respirar. */
@@ -188,8 +192,22 @@ function releaseStudioLater() {
 
 function settle(job: Job, portrait: HTMLCanvasElement | null) {
   jobs.delete(job.key);
-  if (portrait) remember(job.key, portrait);
+  if (portrait) {
+    remember(job.key, portrait);
+    // Fica guardado no aparelho: na próxima vez o menu não liga o estúdio para esta figurinha.
+    storePortrait(job.key, portrait);
+  }
   job.resolve(portrait);
+}
+
+/**
+ * O estúdio (baixar o three.js, compilar o shader, montar cada boneco) só trabalha com a página
+ * parada. Antes começava no quadro seguinte e cada foto travava o menu enquanto a pessoa tocava;
+ * agora o 2D aparece na hora e o 3D entra quando sobra tempo (uma foto por pausa).
+ */
+function whenIdle(callback: () => void) {
+  if (typeof requestIdleCallback === "function") requestIdleCallback(() => callback(), { timeout: 2500 });
+  else setTimeout(callback, 120);
 }
 
 function schedulePump() {
@@ -199,7 +217,7 @@ function schedulePump() {
     clearTimeout(idleTimer);
     idleTimer = null;
   }
-  requestAnimationFrame(() => void pump());
+  whenIdle(() => void pump());
 }
 
 async function pump() {
@@ -216,6 +234,7 @@ async function pump() {
     return;
   }
   const start = performance.now();
+  // Pelo menos uma foto por pausa; mais só se a primeira foi rápida (aparelho folgado).
   while (queue.length > 0 && performance.now() - start < FRAME_BUDGET_MS) {
     const job = queue.shift()!;
     if (job.waiters <= 0 && !job.keep) {
@@ -233,7 +252,7 @@ async function pump() {
     settle(job, portrait);
   }
   if (queue.length > 0) {
-    requestAnimationFrame(() => void pump());
+    whenIdle(() => void pump());
     return;
   }
   pumping = false;
@@ -322,16 +341,46 @@ export function paintStickerBust(canvas: HTMLCanvasElement, look: BustLook, use3
     return noop;
   }
   if (showing.get(canvas) !== "3d") drawFlat(context, canvas, look);
-  const job = request(look, canvas.width, false);
-  job.waiters += 1;
   let alive = true;
-  void job.promise.then((portrait) => {
+  let job: Job | null = null;
+  // Primeiro o retrato guardado no aparelho; só sem ele a figurinha entra na fila do estúdio.
+  void fromDisk(key).then((stored) => {
     if (!alive) return;
-    if (portrait) drawPortrait(context, canvas, portrait);
-    else if (showing.get(canvas) === "3d") drawFlat(context, canvas, look);
+    if (stored) {
+      drawPortrait(context, canvas, stored);
+      return;
+    }
+    const pending = request(look, canvas.width, false);
+    pending.waiters += 1;
+    job = pending;
+    void pending.promise.then((portrait) => {
+      if (!alive) return;
+      if (portrait) drawPortrait(context, canvas, portrait);
+      else if (showing.get(canvas) === "3d") drawFlat(context, canvas, look);
+    });
   });
   return () => {
     alive = false;
-    job.waiters -= 1;
+    if (job) job.waiters -= 1;
   };
+}
+
+/** Leituras do aparelho em andamento, uma por retrato (várias figurinhas iguais esperam a mesma). */
+const diskReads = new Map<string, Promise<HTMLCanvasElement | null>>();
+
+function fromDisk(key: string): Promise<HTMLCanvasElement | null> {
+  const memory = takeReady(key);
+  if (memory) return Promise.resolve(memory);
+  let pending = diskReads.get(key);
+  if (!pending) {
+    pending = readStoredPortrait(key)
+      .then((portrait) => {
+        if (portrait) remember(key, portrait);
+        return portrait;
+      })
+      .catch(() => null)
+      .finally(() => diskReads.delete(key));
+    diskReads.set(key, pending);
+  }
+  return pending;
 }

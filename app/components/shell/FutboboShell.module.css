@@ -194,3 +194,6 @@
 .offerToast.offerToast > b { width: 28px; height: 28px; place-items: center; font-size: 17px; color: #161616; background: #fbfbf7; border: 2px solid #161616; border-radius: 50%; }
 .offerToast.offerToast strong { font-size: 14px; font-weight: 750; }
 .offerToast.offerToast small { color: rgba(22, 22, 22, .72); font-size: 12px; }
+
+/* telas do menu (Configurações, Instalar, Novidades) enquanto o pacote delas baixa */
+.paperLoading { margin: 0; padding: 24px 0; color: #66665e; font-size: 14.5px; }

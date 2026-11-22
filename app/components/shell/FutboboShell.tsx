@@ -1,8 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CareerHallEntry } from "../../career/model";
-import { HALL_OF_FAME_KEY } from "../../career/state";
+import { HALL_OF_FAME_KEY } from "../../career/storage-keys";
 import {
   activateCareerSlot,
   bootstrapCareerStorage,
@@ -14,16 +15,48 @@ import {
   type CareerSaveMeta,
   type GlobalAchievementUnlock,
 } from "../../career/save-system";
-import { ACHIEVEMENTS } from "../../mega-expansion";
+import { ACHIEVEMENTS } from "../../achievements";
 import { legacySummaryForHallEntry } from "../../career/legacy-prestige";
-import CareerGame from "../career/CareerGame";
 import CareerAccessDialog from "./CareerAccessDialog";
-import HallCareerViewer from "../career/HallCareerViewer";
 import styles from "./FutboboShell.module.css";
-import { InstallScreen, NewsScreen, SettingsScreen } from "./ShellUtilityScreens";
 import FutboboIcon from "../FutboboIcon";
+import { albumStyles } from "../career/album/AlbumShell";
 import HomeSpread, { type MenuScreen } from "../career/album/menu/HomeSpread";
 import { AchievementsSpread, DeleteCareerSheet, HallSpread, OtherGames, PaperScreen } from "../career/album/menu/MenuSpreads";
+
+/*
+ * O menu inicial não carrega a carreira. Antes o pacote da home trazia o CareerGame inteiro
+ * (simulação, eventos, partida de botão, abas do álbum): ~2 MB de JavaScript para o celular
+ * analisar antes de mostrar o menu. Agora a carreira, a prévia do Hall e as telas de
+ * Configurações/Instalar/Novidades baixam quando abrem; tocar na área da carreira já começa a baixar.
+ */
+const loadCareerGame = () => import("../career/CareerGame");
+
+function CareerLoading() {
+  return (
+    <section className={`${albumStyles.tokens} ${albumStyles.waitPage} albumMounted`} aria-busy="true" data-career-loading="">
+      <div><p>Abrindo o álbum…</p></div>
+    </section>
+  );
+}
+
+function PaperLoading() {
+  return <p className={styles.paperLoading} aria-busy="true">Carregando…</p>;
+}
+
+const CareerGame = dynamic(loadCareerGame, { ssr: false, loading: CareerLoading });
+const HallCareerViewer = dynamic(() => import("../career/HallCareerViewer"), { ssr: false, loading: CareerLoading });
+const SettingsScreen = dynamic(() => import("./ShellUtilityScreens").then((screens) => screens.SettingsScreen), { ssr: false, loading: PaperLoading });
+const InstallScreen = dynamic(() => import("./ShellUtilityScreens").then((screens) => screens.InstallScreen), { ssr: false, loading: PaperLoading });
+const NewsScreen = dynamic(() => import("./ShellUtilityScreens").then((screens) => screens.NewsScreen), { ssr: false, loading: PaperLoading });
+
+let careerPreload: Promise<unknown> | null = null;
+/** Começa a baixar a carreira antes do toque terminar (o pacote fica em cache para o dynamic). */
+function preloadCareer() {
+  careerPreload ??= loadCareerGame().catch(() => {
+    careerPreload = null;
+  });
+}
 
 type ShellScreen = "home" | MenuScreen | "hall-career" | "hall-card" | "career" | "legacy-tool";
 type BootAction = "new" | "continue" | "settings" | "install" | "news" | null;
@@ -65,23 +98,45 @@ export default function FutboboShell() {
     queueMicrotask(refreshLibrary);
   }, []);
 
+  // Durante a carreira só copia o save para o slot. A biblioteca do menu (saves, conquistas, Hall)
+  // é relida ao sair: antes ela era relida e posta no estado a cada 850 ms, e cada vez o shell
+  // renderizava a carreira inteira de novo (o engasgo periódico com o álbum parado).
   useEffect(() => {
     if (screen !== "career") return;
-    const sync = () => {
-      syncActiveCareerSlot();
-      refreshLibrary();
-    };
+    const sync = () => syncActiveCareerSlot();
     const interval = window.setInterval(sync, 850);
     const onVisibility = () => { if (document.visibilityState === "hidden") sync(); };
     window.addEventListener("beforeunload", sync);
+    window.addEventListener("pagehide", sync);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("beforeunload", sync);
+      window.removeEventListener("pagehide", sync);
       document.removeEventListener("visibilitychange", onVisibility);
       sync();
+      refreshLibrary();
     };
   }, [screen]);
+
+  // Tocar na área da carreira (continuar, figurinha, nova carreira) já começa a baixar o álbum.
+  useEffect(() => {
+    if (screen !== "home") return;
+    const warm = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-career-intent]")) preloadCareer();
+    };
+    document.addEventListener("pointerdown", warm, { capture: true, passive: true });
+    document.addEventListener("keydown", warm, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener("pointerdown", warm, { capture: true });
+      document.removeEventListener("keydown", warm, { capture: true });
+    };
+  }, [screen]);
+
+  useEffect(() => {
+    if (accessDialog) preloadCareer();
+  }, [accessDialog]);
 
   // Carreiras aposentadas já estão no Hall da Fama: o menu só guarda as que seguem.
   useEffect(() => {
@@ -98,9 +153,11 @@ export default function FutboboShell() {
     if (!host) return;
 
     const inspect = () => {
+      // O pacote da carreira ainda está baixando: nada para olhar (e a ação pedida continua de pé).
+      if (host.querySelector("[data-career-loading]")) return;
       const welcome = host.querySelector<HTMLElement>(".welcome-screen");
       if (!welcome) {
-        if (screen === "career") setBootAction(null);
+        if (screen === "career" && bootAction !== null) setBootAction(null);
         return;
       }
 
@@ -141,8 +198,10 @@ export default function FutboboShell() {
       }
     };
 
+    // Só o que muda a resposta: nós entrando/saindo, a classe (tela de boas-vindas) e o "disabled"
+    // do botão de continuar. Antes qualquer atributo (estilos inline das animações) disparava a busca.
     const observer = new MutationObserver(inspect);
-    observer.observe(host, { childList: true, subtree: true, attributes: true });
+    observer.observe(host, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "disabled"] });
     inspect();
     return () => observer.disconnect();
   }, [bootAction, screen]);
@@ -154,6 +213,8 @@ export default function FutboboShell() {
     void import("../../bobonline/net/session-peek").then((peek) => setBobonlineRoom(peek.peekBobonlineSession()), () => undefined);
   }, [screen]);
 
+  // O mesmo elemento entre renders do shell: o React não re-renderiza a carreira por causa dele.
+  const careerElement = useMemo(() => <CareerGame />, []);
   const playableSaves = useMemo(() => saves.filter((meta) => meta.phase !== "summary"), [saves]);
   const achievementMap = useMemo(() => new Map(unlocks.map((item) => [item.achievementId, item])), [unlocks]);
   const unlockedCount = useMemo(() => ACHIEVEMENTS.filter((item) => achievementMap.has(item.id)).length, [achievementMap]);
@@ -188,7 +249,7 @@ export default function FutboboShell() {
   };
 
   if (screen === "career") {
-    return <div ref={hostRef} className={styles.careerHost}><CareerGame /></div>;
+    return <div ref={hostRef} className={styles.careerHost}>{careerElement}</div>;
   }
 
   if (screen === "hall-career" && selectedHallEntry) {

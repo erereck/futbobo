@@ -159,11 +159,18 @@ export const EXTRA_SECOND_DIVISION_CLUBS: Club[] = [
 ];
 
 export function installSecondDivisions() {
+  // Conjuntos de ids: antes eram ~250 buscas lineares em ~1.000 clubes a cada chamada.
+  const leagueIds = new Set(LEAGUES.map((league) => league.id));
   for (const league of EXTRA_SECOND_DIVISION_LEAGUES) {
-    if (!LEAGUES.some((candidate) => candidate.id === league.id)) LEAGUES.push(league);
+    if (leagueIds.has(league.id)) continue;
+    LEAGUES.push(league);
+    leagueIds.add(league.id);
   }
+  const clubIds = new Set(CLUBS.map((club) => club.id));
   for (const club of EXTRA_SECOND_DIVISION_CLUBS) {
-    if (!CLUBS.some((candidate) => candidate.id === club.id)) CLUBS.push(club);
+    if (clubIds.has(club.id)) continue;
+    CLUBS.push(club);
+    clubIds.add(club.id);
   }
 }
 

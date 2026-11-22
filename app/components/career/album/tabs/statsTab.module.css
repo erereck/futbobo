@@ -167,7 +167,7 @@
   background: linear-gradient(#fff, #fff) padding-box, var(--foil) border-box;
   overflow: hidden;
   rotate: -.8deg;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .16)) drop-shadow(0 7px 12px rgba(30, 30, 20, .16));
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .16), 0 7px 12px rgba(30, 30, 20, .16);
 }
 .bestBand {
   position: relative;
@@ -207,8 +207,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .38) 42%, rgba(255, 255, 255, 0) 56%);
-  mix-blend-mode: soft-light;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .2) 42%, rgba(255, 255, 255, 0) 56%);
 }
 
 /* ───────────── listas impressas ───────────── */
@@ -271,7 +270,7 @@
   background: linear-gradient(#fff, #fff) padding-box, var(--foil) border-box;
   flex: 1 1 200px;
   max-width: 100%;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .14)) drop-shadow(0 4px 7px rgba(30, 30, 20, .12));
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .14), 0 4px 7px rgba(30, 30, 20, .12);
 }
 .trophy:nth-child(odd) { rotate: -.6deg; }
 .trophy:nth-child(even) { rotate: .5deg; }

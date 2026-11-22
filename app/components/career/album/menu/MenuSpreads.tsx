@@ -5,7 +5,7 @@ import { CLUBS } from "../../../../game-data";
 import type { CareerHallEntry } from "../../../../career/model";
 import type { GlobalAchievementUnlock } from "../../../../career/save-system";
 import type { HallLegacySummary } from "../../../../career/legacy-prestige";
-import { ACHIEVEMENTS } from "../../../../mega-expansion";
+import { ACHIEVEMENTS } from "../../../../achievements";
 import FutboboIcon from "../../../FutboboIcon";
 import { ClubBadge } from "../../CareerPrimitives";
 import AlbumShell, { AlbumPage, albumStyles } from "../AlbumShell";

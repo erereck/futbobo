@@ -562,8 +562,8 @@ button:active:not(:disabled) { transform: scale(0.975); }
   padding: 18px;
   background:
     radial-gradient(circle at 50% 35%, rgba(47, 119, 77, .18), transparent 42%),
-    rgba(1, 12, 8, .9);
-  backdrop-filter: blur(18px) saturate(.85);
+    rgba(1, 12, 8, .92);
+  backdrop-filter: none;
 }
 
 .story-decision-modal {
@@ -1449,8 +1449,8 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .android-install-backdrop {
   z-index: 280;
   padding: 18px;
-  background: rgba(1, 12, 8, .9);
-  backdrop-filter: blur(18px);
+  background: rgba(1, 12, 8, .92);
+  backdrop-filter: none;
 }
 .android-install-dialog {
   position: relative;
@@ -1650,7 +1650,7 @@ button:active:not(:disabled) { transform: scale(0.975); }
 .hall-ranking > article > .hall-score small { color: var(--muted); font: 800 5px var(--sans); letter-spacing: .1em; }
 .summary-screen .summary-actions { width: 100%; margin-bottom: calc(env(safe-area-inset-bottom) + 10px); }
 
-.modal-backdrop { position: fixed; z-index: 200; inset: 0; display: grid; place-items: center; padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom)); overflow-y: auto; background: rgba(2,10,7,.84); backdrop-filter: blur(14px); }
+.modal-backdrop { position: fixed; z-index: 200; inset: 0; display: grid; place-items: center; padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom)); overflow-y: auto; background: rgba(2,10,7,.86); backdrop-filter: none; }
 .update-notice { width: min(460px, 100%); padding: 24px; border: 1px solid rgba(255,199,44,.32); border-radius: 28px; background: radial-gradient(circle at 80% 0, rgba(99,227,107,.14), transparent 35%), linear-gradient(150deg, #153b2b, #091c14 70%); box-shadow: 0 30px 90px rgba(0,0,0,.55); animation: pop-in 240ms ease-out; }
 .update-page-current { width: min(520px, 100%); max-height: calc(100dvh - max(36px, env(safe-area-inset-top) + env(safe-area-inset-bottom))); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .update-version { display: inline-flex; padding: 6px 9px; border: 1px solid rgba(255,199,44,.3); border-radius: 999px; color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .14em; }

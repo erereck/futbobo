@@ -1,6 +1,8 @@
 import { CLUBS, leagueById } from "../game-data";
 import type { GameState, SeasonRecord } from "./model";
 import { clubById, seeded } from "./shared";
+import { memoizeWorld } from "./world-memo";
+import { resolveClubIdByLabel } from "./name-index";
 import { BRAZIL_CUP_ARCHIVE_ONLY_CLUBS, BRAZIL_CUP_HISTORIC_CHAMPIONS } from "./brazil-cup-history";
 
 export type DomesticTitleLedger = {
@@ -282,23 +284,8 @@ const DOMESTIC_COMPETITIONS: DomesticCompetitionConfig[] = [
   },
 ];
 
-function normalized(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("pt-BR")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function resolveClubId(label: string) {
-  const target = normalized(label);
-  return CLUBS.find((club) =>
-    normalized(club.name) === target ||
-    normalized(club.shortName) === target ||
-    normalized(club.abbr) === target
-  )?.id ?? "";
-}
+// Rótulo histórico → id do clube: índice em name-index (era um find que normalizava cada clube).
+const resolveClubId = resolveClubIdByLabel;
 
 function historicalTitles(config: DomesticCompetitionConfig) {
   if (config.id === "domestic-copa-do-brasil") {
@@ -429,8 +416,11 @@ function buildDomesticCompetition(
   };
 }
 
-export function buildDomesticTitleArchive(state: GameState): DomesticTitleLedger[] {
+function buildDomesticTitleArchiveUncached(state: GameState): DomesticTitleLedger[] {
   const records = seasonRecords(state);
   const latestCompletedSeason = Math.max(2026, ...records.map((record) => record.season));
   return DOMESTIC_COMPETITIONS.map((config) => buildDomesticCompetition(state, config, records, latestCompletedSeason));
 }
+
+/** Arquivo das ligas e copas nacionais: só muda no fim da temporada, então fica em cache (veja world-memo). */
+export const buildDomesticTitleArchive = memoizeWorld(buildDomesticTitleArchiveUncached);

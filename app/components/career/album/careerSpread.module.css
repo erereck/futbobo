@@ -101,8 +101,7 @@
   background: none;
   text-align: left;
   rotate: var(--r, 0deg);
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .2)) drop-shadow(0 7px 12px rgba(30, 30, 20, .18));
-  transition: translate .2s var(--ease-out), rotate .2s var(--ease-out), filter .2s var(--ease-out), opacity .2s;
+  transition: translate .2s var(--ease-out), rotate .2s var(--ease-out), opacity .2s;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
@@ -118,13 +117,15 @@
   padding: 5px;
   border-radius: 8px;
   overflow: hidden;
+  /* sombra no papel, não um filtro no botão inteiro (camada própria na GPU a cada figurinha) */
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .2), 0 7px 12px rgba(30, 30, 20, .18);
+  transition: box-shadow .2s var(--ease-out);
 }
 .gloss {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .38) 42%, rgba(255, 255, 255, 0) 56%);
-  mix-blend-mode: soft-light;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, .2) 42%, rgba(255, 255, 255, 0) 56%);
 }
 .peel {
   position: absolute;
@@ -225,16 +226,17 @@
   .choice:not(:disabled):hover {
     translate: 0 -4px;
     rotate: calc(var(--r, 0deg) * .4);
-    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .18)) drop-shadow(0 14px 18px rgba(30, 30, 20, .2));
   }
+  .choice:not(:disabled):hover .face { box-shadow: 0 2px 2px rgba(0, 0, 0, .18), 0 14px 18px rgba(30, 30, 20, .2); }
   .choice:not(:disabled):hover .peel { transform: scale(1.5); }
 }
 .choice:not(:disabled):active { translate: 0 -1px; transition-duration: .1s; }
 .choice:disabled { cursor: default; }
-.choice[data-state="peeled"] { filter: none; rotate: 0deg; translate: 0; }
-.choice[data-state="peeled"] .face { opacity: 0; }
+.choice[data-state="peeled"] { rotate: 0deg; translate: 0; }
+.choice[data-state="peeled"] .face { opacity: 0; box-shadow: none; }
 .choice[data-state="peeled"] .liner { opacity: 1; }
-.choice[data-state="stuck"] { rotate: 0deg; filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .25)); }
+.choice[data-state="stuck"] { rotate: 0deg; }
+.choice[data-state="stuck"] .face { box-shadow: 0 1px 0 rgba(0, 0, 0, .25); }
 .choice[data-state="stuck"] .peel { transform: scale(0); }
 .choice[data-state="stuck"] .stuckStamp { opacity: 1; scale: 1; }
 .choice[data-state="dim"] { opacity: .5; }

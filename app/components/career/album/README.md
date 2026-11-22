@@ -36,7 +36,7 @@ Cada aba calcula o que precisa a partir de `game` (GameState); o `CareerGame` s�
 - Papel `--paper #fbfbf7`, `--paper-2`, `--paper-edge`; tinta `--ink #161616`, `--ink-2`, `--ink-3`; filetes `--rule`, `--rule-strong`.
 - Tintas do álbum: `--blue`, `--red`, `--yellow` (capa e ação), `--green`, `--mustard`, cada uma com `-deep`.
 - Clube atual: `--club`, `--club-deep`, `--club-soft`, `--club-2` (listra), `--club-ink` (texto sobre a faixa).
-- Texturas: `--grain` (papel), `--dots-light` / `--dots-ink` / `--dots-slot` (retícula), `--foil` (brilho).
+- Texturas: `--grain` (papel: PNG de 120 px já renderizado do antigo SVG com `feTurbulence`), `--dots-light` / `--dots-ink` / `--dots-slot` (retícula), `--foil` (brilho).
 - Tipo: `--font-display` (Bricolage Grotesque, `font-stretch` 75–85%, 700–800) e `--font-text` (Instrument Sans).
 - Movimento: `--ease-out cubic-bezier(.16,1,.3,1)`.
 
@@ -73,11 +73,18 @@ A faixa de cabeçalho de cada aba (`InkBand`) usa a cor dela.
   `--font-display`/`--font-text` lidos da página; escudo só do próprio site, para o canvas não ficar sujo.
 - Figurinhas em 3D: com o Modo 3D ligado e o modo desempenho desligado, `StickerBust` (e o `PlayerBust` do Bobonline)
   troca o busto 2D pelo boneco 3D da partida, feito num único renderizador fora da tela
-  (`app/botao/three/sticker-portrait.ts` + `sticker-portrait-studio.ts`, carregado sob demanda, cache de 48 retratos).
-  O 2D aparece na hora e o 3D entra no mesmo canvas, sem mexer o layout. O pôster usa `renderStickerPortrait`.
+  (`app/botao/three/sticker-portrait.ts` + `sticker-portrait-studio.ts`, carregado sob demanda, 24 retratos na memória).
+  O 2D aparece na hora e o 3D entra no mesmo canvas, sem mexer o layout, quando a página está parada. Cada retrato
+  fica guardado no aparelho (`sticker-portrait-store.ts`, IndexedDB, chave com a versão do jogo): ao reabrir o app
+  o menu desenha o 3D sem baixar o three.js. O pôster usa `renderStickerPortrait`.
 - A base da página (html/body em `globals.css`/`premium.css`), a cor da barra do navegador e a do app instalado são papel:
   nada pisca escuro antes do álbum montar. Esperas ("Abrindo a base…") usam `.waitPage`.
 - Celular: cada tela tenta caber inteira, sem rolar. Listas longas (conquistas, arquivo da carreira) podem rolar.
+- Desempenho (celular antigo): sombra de figurinha e de cartão é `box-shadow` no papel, não `filter: drop-shadow`;
+  brilho sem `mix-blend-mode`; nada de `backdrop-filter` em tela cheia; textura em imagem, não em filtro SVG.
+  O menu inicial não importa o `CareerGame` nem o `career/state.ts` (chaves do storage em `career/storage-keys.ts`,
+  conquistas em `app/achievements.ts`). Cálculos do universo (competições, arquivo, notícias) passam por
+  `career/world-memo.ts`: só refazem quando a temporada muda, então trocar de aba não recalcula a história.
   Na mesa de decisão, a meta do treinador vira uma faixa (`.metaStrip`) e Empréstimo, Transferência e Aposentar dividem
   uma linha; a ficha técnica, a temporada anterior e as notícias ficam nas abas. Cabe em 390×703.
 - O menu continua disparando a carreira pela tela antiga de boas-vindas do `CareerGame` (`.career-new-tile`, `.career-load-tile`);

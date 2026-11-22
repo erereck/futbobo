@@ -310,8 +310,8 @@
   background: #fff;
   text-align: left;
   rotate: var(--r, 0deg);
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .18)) drop-shadow(0 6px 10px rgba(30, 30, 20, .14));
-  transition: translate .18s var(--ease-out), rotate .18s var(--ease-out), filter .18s var(--ease-out);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .18), 0 6px 10px rgba(30, 30, 20, .14);
+  transition: translate .18s var(--ease-out), rotate .18s var(--ease-out), box-shadow .18s var(--ease-out);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
@@ -356,7 +356,7 @@
 }
 .clubSticker small { padding: 2px 4px 0; font-size: 12px; line-height: 1.25; color: var(--ink-3); }
 @media (hover: hover) {
-  .clubSticker:hover { translate: 0 -3px; rotate: 0deg; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .18)) drop-shadow(0 12px 16px rgba(30, 30, 20, .18)); }
+  .clubSticker:hover { translate: 0 -3px; rotate: 0deg; box-shadow: 0 2px 2px rgba(0, 0, 0, .18), 0 12px 16px rgba(30, 30, 20, .18); }
 }
 .clubSticker:active { translate: 0 1px; }
 
@@ -455,7 +455,7 @@
   background: #fff;
   text-align: left;
   rotate: -.5deg;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .18)) drop-shadow(0 6px 10px rgba(30, 30, 20, .14));
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .18), 0 6px 10px rgba(30, 30, 20, .14);
   transition: translate .18s var(--ease-out), rotate .18s var(--ease-out);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -502,7 +502,7 @@
   border-radius: 8px;
   background: #fff;
   rotate: var(--r, 0deg);
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .16)) drop-shadow(0 4px 8px rgba(30, 30, 20, .12));
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .16), 0 4px 8px rgba(30, 30, 20, .12);
   animation: paste .5s var(--ease-out) both;
 }
 .yearAge {
@@ -523,7 +523,7 @@
 .year em { font-style: normal; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
 .year em b { font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 22px; color: var(--green); }
 @keyframes paste {
-  from { opacity: 0; translate: 0 -14px; scale: 1.05; filter: drop-shadow(0 8px 14px rgba(30, 30, 20, .25)); }
+  from { opacity: 0; translate: 0 -14px; scale: 1.05; box-shadow: 0 1px 1px rgba(0, 0, 0, 0), 0 8px 14px rgba(30, 30, 20, .25); }
 }
 
 /* ════════════════ celular / tablet ════════════════ */

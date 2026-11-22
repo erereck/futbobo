@@ -4,6 +4,8 @@ import type { GameState, SeasonRecord } from "./model";
 import type { WorldPlayer } from "./world-player-model";
 import { clubConfederation } from "./academy";
 import { seeded } from "./shared";
+import { memoByWorldPlayers, memoizeWorld } from "./world-memo";
+import { resolveClubIdByLabel } from "./name-index";
 
 export type LivingClubCompetitionId =
   | "champions-league"
@@ -198,23 +200,8 @@ const CONFIGS: CompetitionConfig[] = [
   },
 ];
 
-function normalized(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("pt-BR")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function resolveClubId(label: string) {
-  const target = normalized(label);
-  return CLUBS.find((club) =>
-    normalized(club.name) === target ||
-    normalized(club.shortName) === target ||
-    normalized(club.abbr) === target
-  )?.id ?? "";
-}
+// Rótulo histórico → id do clube: índice em name-index (era um find que normalizava cada clube).
+const resolveClubId = resolveClubIdByLabel;
 
 function historicalTitles(config: CompetitionConfig) {
   const titles: Record<string, number> = {};
@@ -233,8 +220,36 @@ function worldPlayerWasAtClub(player: WorldPlayer, clubId: string, season: numbe
   );
 }
 
+// Chamado várias vezes para o mesmo clube e temporada (candidatos, notas, vencedor): uma conta por par.
 function worldPlayerSquadBoost(state: GameState, clubId: string, season: number) {
-  return Object.values(state.worldPlayers?.players ?? {})
+  return memoByWorldPlayers(state.worldPlayers?.players, `club|${clubId}|${season}`, () => computeWorldPlayerSquadBoost(state, clubId, season));
+}
+
+// Jogadores do mundo por clube em que já passaram (uma vez por mapa de jogadores). A ordenação abaixo
+// é total (potencial, depois id), então filtrar só os do clube dá exatamente a lista de antes.
+const playersByClubCache = new WeakMap<object, Map<string, WorldPlayer[]>>();
+
+function worldPlayersByClub(players: Record<string, WorldPlayer>) {
+  let index = playersByClubCache.get(players);
+  if (index) return index;
+  index = new Map();
+  for (const player of Object.values(players)) {
+    const seen = new Set<string>();
+    for (const spell of player.clubHistory) {
+      if (seen.has(spell.clubId)) continue;
+      seen.add(spell.clubId);
+      const list = index.get(spell.clubId);
+      if (list) list.push(player);
+      else index.set(spell.clubId, [player]);
+    }
+  }
+  playersByClubCache.set(players, index);
+  return index;
+}
+
+function computeWorldPlayerSquadBoost(state: GameState, clubId: string, season: number) {
+  const players = state.worldPlayers?.players;
+  return (players ? worldPlayersByClub(players).get(clubId) ?? [] : [])
     .filter((player) => player.generatedSeason <= season && worldPlayerWasAtClub(player, clubId, season))
     .sort((a, b) => b.potential - a.potential || a.id.localeCompare(b.id))
     .slice(0, 4)
@@ -567,7 +582,7 @@ function buildMundialCompetition(
   };
 }
 
-export function buildLivingClubCompetitions(state: GameState): LivingClubCompetition[] {
+function buildLivingClubCompetitionsUncached(state: GameState): LivingClubCompetition[] {
   const latestCompletedSeason = Math.max(2026, ...state.history.map((record) => record.season));
   const reservedWinners = new Map<number, Set<string>>();
   const continental = CONFIGS.map((config) => {
@@ -582,6 +597,9 @@ export function buildLivingClubCompetitions(state: GameState): LivingClubCompeti
   const mundial = buildMundialCompetition(state, latestCompletedSeason, continental);
   return [...continental, mundial];
 }
+
+/** Continentais e Mundial do universo: só mudam no fim da temporada, então ficam em cache (veja world-memo). */
+export const buildLivingClubCompetitions = memoizeWorld(buildLivingClubCompetitionsUncached);
 
 export function continentalChampionForWorldSeason(
   state: GameState,

@@ -53,6 +53,8 @@ function SaveSticker({ meta, size, tilt, className }: { meta: CareerSaveMeta; si
 
 type IndexEntry = { href: string; title: string; text: string; tag: string; icon: FutboboIconName; ink: string; locked?: boolean };
 
+// Sem prefetch: no export estático o pedido de pré-carga dessas rotas volta 404 e só gasta rede e
+// processamento do menu (num celular antigo, logo na abertura). O toque navega igual.
 const MODES: IndexEntry[] = [
   { href: "/copa", title: "Copa do Mundo", text: "Jogue uma Copa do Mundo rápida com qualquer seleção.", tag: "Partida rápida", icon: "globe", ink: "green" },
   { href: "/x1", title: "1x1 Local", text: "Jogue uma partida de futebol de botão contra o seu amigo.", tag: "Dois jogadores", icon: "ball", ink: "red" },
@@ -104,7 +106,7 @@ export default function HomeSpread({
           <h1>Futbobo</h1>
         </header>
 
-        <section className={styles.career} aria-labelledby="home-career-title">
+        <section className={styles.career} aria-labelledby="home-career-title" data-career-intent="">
           <h2 id="home-career-title" className={styles.sectionTitle}>Rumo ao Estrelato</h2>
           {current ? (
             <div className={styles.current}>
@@ -179,7 +181,7 @@ export default function HomeSpread({
       <AlbumPage side="right" label="Índice" className={styles.homeRight}>
         <h2 className={styles.indexTitle}>Índice</h2>
         {bobonlineRoom && (
-          <Link className={styles.resume} href="/bobonline/?voltar=1">
+          <Link className={styles.resume} href="/bobonline/?voltar=1" prefetch={false}>
             <FutboboIcon name="play" />
             <span><small>Bobonline</small><strong>Voltar para a sala {bobonlineRoom.code.slice(0, 3)}·{bobonlineRoom.code.slice(3)}</strong></span>
           </Link>
@@ -187,7 +189,7 @@ export default function HomeSpread({
         <ul className={styles.toc}>
           {MODES.map((mode) => (
             <li key={mode.href}>
-              <Link className={styles.tocRow} href={mode.href} data-ink={mode.ink}>
+              <Link className={styles.tocRow} href={mode.href} data-ink={mode.ink} prefetch={false}>
                 <TocChip icon={mode.icon} />
                 <span className={styles.tocMain}>
                   <span className={styles.tocLine}><strong>{mode.title}</strong><i aria-hidden="true" /><em>{mode.tag}</em></span>

@@ -68,6 +68,10 @@ import TeamTab from "./album/tabs/TeamTab";
 import HistoryTab from "./album/tabs/HistoryTab";
 import StatsTab from "./album/tabs/StatsTab";
 import WorldTab from "./album/tabs/WorldTab";
+import { installExpandedPlayerNames } from "../../career/player-name-expansion";
+
+// Nomes extras de jogadores: entram com o pacote da carreira (o menu inicial não sorteia nomes).
+installExpandedPlayerNames();
 
 /** Sem rede (ou um deploy novo trocou os arquivos): a base jogada não abre; o save guarda tudo para depois. */
 function YouthPlayUnavailable() {
@@ -87,6 +91,14 @@ function SpecialTrainingUnavailable({ onClose }: SpecialTrainingPanelProps) {
     onClose("O Treino especial não abriu. Recarregue a página para tentar de novo.");
   }, [onClose]);
   return null;
+}
+
+/**
+ * Volta ao topo na hora (sem animar). A rolagem suave repintava a página a cada quadro enquanto a
+ * aba nova montava, o que engasgava a troca de aba num celular antigo. Já no topo, nem chama.
+ */
+function scrollPageToTop() {
+  if (window.scrollY > 0 || document.documentElement.scrollTop > 0) window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 }
 
 // A lista dos anos e o treino (e, a partir deles, o Scorebobo e o three.js) só baixam quando abrem.
@@ -277,7 +289,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   }, [appSettings.characterButtonsEnabled, game.phase]);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollPageToTop();
   }, [game.phase, activeTab]);
 
 
@@ -647,7 +659,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
 
   function changeTab(tab: "event" | "history" | "profile" | "life" | "stats" | "team" | "world" | "legacy") {
     setActiveTab(tab);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollPageToTop();
     vibrate();
   }
 
@@ -762,7 +774,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     const archive = archivedCareerState(entry);
     setHallPreview(archive.state);
     setHallPreviewLegacy(archive.legacyArchive);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollPageToTop();
     vibrate();
   }
 
@@ -773,7 +785,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     }
     setHallPreview(null);
     setHallPreviewLegacy(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollPageToTop();
     vibrate();
   }
 
