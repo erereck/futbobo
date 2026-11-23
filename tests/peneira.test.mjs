@@ -7,6 +7,8 @@ const peneira = loadTs("app/career/peneira.ts");
 const { peneiraMatchSetup } = loadTs("app/career/peneira-match.ts");
 const { initialState, normalizeSave } = loadTs("app/career/state.ts");
 const { signProfessionalForSimulation } = loadTs("app/career/simulation.ts");
+const squadRole = loadTs("app/career/squad-role.ts");
+const { isEuropeanClub } = loadTs("app/career/academy.ts");
 const { CLUBS } = loadTs("app/game-data.ts");
 const { DEFAULT_PLAYER_APPEARANCE } = loadTs("app/player-appearance.ts");
 
@@ -54,7 +56,7 @@ test("nota do olheiro: gol e assistência do seu botão pesam; W.O. é 3; sempre
   assert.equal(peneira.peneiraOfferCount(23.5), 3);
 });
 
-test("três jogos grandes: três propostas, com um gigante de fora do país", () => {
+test("três jogos grandes: três propostas, com um gigante europeu de fora do país", () => {
   let state = peneira.createPeneira("brasil", 99);
   for (let index = 0; index < 3; index += 1) state = play(state, index, { playerGoals: 2, playerAssists: 1, manOfTheMatch: true });
   assert.equal(peneira.peneiraCurrentIndex(state), 3);
@@ -64,6 +66,9 @@ test("três jogos grandes: três propostas, com um gigante de fora do país", ()
   const giants = state.offers.filter((id) => peneira.peneiraOfferTag(state, id) === "giant");
   assert.equal(giants.length, 1);
   assert.ok(club(giants[0]).strength >= 86 && club(giants[0]).countryId !== "brasil");
+  assert.ok(isEuropeanClub(club(giants[0])), "o gigante é europeu");
+  // Flamengo e Palmeiras são fortes, mas não são o "gigante de fora" de ninguém.
+  for (const countryId of ["argentina", "uruguai", "japao"]) assert.ok(peneira.bigInternationalPool(countryId).every(isEuropeanClub));
   for (const id of state.offers.filter((item) => item !== giants[0])) assert.equal(club(id).countryId, "brasil");
 });
 
@@ -115,14 +120,52 @@ test("save: peneira volta igual; jogo começado e sem resultado vira W.O. ao rec
   assert.equal(normalizeSave({ ...initialState(1) }).peneiraClubId, "");
 });
 
-test("quem entra pela peneira chega com +25% de confiança do treinador no primeiro contrato", () => {
+test("quem entra pela peneira chega com +33% de confiança do treinador no primeiro contrato", () => {
   const base = { ...initialState(55), phase: "revelation", academyClubId: "palmeiras", academyCountryId: "brasil", overall: 66, age: 17 };
   const direct = signProfessionalForSimulation({ ...base, peneiraClubId: "" }, "palmeiras");
   const fromPeneira = signProfessionalForSimulation({ ...base, peneiraClubId: "palmeiras" }, "palmeiras");
   assert.equal(direct.managerTrust, 58);
-  assert.equal(fromPeneira.managerTrust, Math.round(58 * 1.25));
+  assert.equal(fromPeneira.managerTrust, Math.round(58 * 1.33));
   // Contrato com outro clube: o bônus é do clube da peneira, não da pessoa.
   const elsewhere = signProfessionalForSimulation({ ...base, peneiraClubId: "palmeiras" }, "flamengo");
   assert.equal(elsewhere.managerTrust, 44);
   assert.equal(peneira.peneiraTrustBonus(90), 100);
+});
+
+function giantPeneira() {
+  let state = peneira.createPeneira("brasil", 99);
+  for (let index = 0; index < 3; index += 1) state = play(state, index, { playerGoals: 2, playerAssists: 1, manOfTheMatch: true });
+  const giant = state.offers.find((id) => peneira.peneiraOfferTag(state, id) === "giant");
+  const other = state.offers.find((id) => id !== giant);
+  return { state, giant, other };
+}
+
+test("gigante europeu da peneira: contrato de 7 anos se você fica no clube ao sair da base", () => {
+  const { state, giant, other } = giantPeneira();
+  const base = { ...initialState(55), phase: "revelation", academyClubId: giant, academyCountryId: club(giant).countryId, overall: 70, age: 18 };
+  const fromGiant = { ...base, peneira: { ...state, chosenClubId: giant }, peneiraClubId: giant };
+  const stayed = signProfessionalForSimulation(fromGiant, giant);
+  assert.equal(peneira.PENEIRA_GIANT_CONTRACT_YEARS, 7);
+  assert.equal(stayed.contractYears, 7);
+  assert.equal(stayed.managerTrust, Math.round(58 * 1.33));
+  // Trocou de clube ao fim da base: contrato normal (2 a 5 anos).
+  const left = signProfessionalForSimulation(fromGiant, other);
+  assert.ok(left.contractYears >= 2 && left.contractYears <= 5, `anos: ${left.contractYears}`);
+  // Peneira que terminou num clube do país, não no gigante: sem os 7 anos.
+  const domestic = { ...base, academyClubId: other, peneira: { ...state, chosenClubId: other }, peneiraClubId: other };
+  assert.equal(peneira.peneiraGiantClubId(domestic), "");
+  assert.ok(signProfessionalForSimulation(domestic, other).contractYears <= 5);
+});
+
+test("gigante europeu da peneira: titular com até 3 de overall abaixo da média do time", () => {
+  const { state, giant, other } = giantPeneira();
+  const career = { ...initialState(55), phase: "career", currentClubId: giant, academyClubId: giant, peneira: { ...state, chosenClubId: giant }, peneiraClubId: giant };
+  const average = squadRole.clubStarterAverage(career, giant);
+  assert.ok(average >= 86, `média do time ${average}`);
+  assert.equal(squadRole.peneiraGiantRole(career, giant, average - 3, "rotacao"), "titular");
+  assert.equal(squadRole.peneiraGiantRole(career, giant, average - 4, "rotacao"), "rotacao");
+  assert.equal(squadRole.peneiraGiantRole(career, giant, average - 3, "estrela"), "estrela", "nunca rebaixa");
+  // Mesmo overall, sem ter vindo da peneira para o gigante: nada muda.
+  assert.equal(squadRole.peneiraGiantRole({ ...career, peneiraClubId: "" }, giant, average, "rotacao"), "rotacao");
+  assert.equal(squadRole.peneiraGiantRole(career, other, 99, "reserva"), "reserva");
 });

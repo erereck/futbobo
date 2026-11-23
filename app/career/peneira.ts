@@ -1,7 +1,7 @@
 // Peneira: o caminho alternativo para a base. Em vez de escolher o clube, o
 // jogador faz três jogos de botão (rua, quadra de futsal e campo) com a peneira
 // e os olheiros somam a nota de cada um. A soma decide quantos clubes chamam:
-// 1, 2 ou 3 — e com 3, um deles é um gigante de fora do país.
+// 1, 2 ou 3 — e com 3, um deles é um gigante europeu de fora do país.
 //
 // Tudo aqui é puro e determinístico (seed da peneira): a tela só despacha. Os
 // times inventados saem do mesmo sorteio de várzea do Bobonline no Brasil e de
@@ -11,7 +11,8 @@ import { randomBobTeam, TEAM_COLOR_PAIRS } from "../bobonline/teams/generator";
 import { deriveAbbr, deriveShortName } from "../bobonline/teams/model";
 import { createRng, hashSeed, type Rng } from "../botao/rng";
 import { CLUBS, COUNTRIES, type Club } from "../game-data";
-import type { Peneira, PeneiraMatch, PeneiraMatchResult, PeneiraOpponent, PeneiraStage } from "./model";
+import { isEuropeanClub } from "./academy";
+import type { GameState, Peneira, PeneiraMatch, PeneiraMatchResult, PeneiraOpponent, PeneiraStage } from "./model";
 
 export const PENEIRA_STAGES: readonly PeneiraStage[] = ["street", "futsal", "field"];
 
@@ -189,9 +190,13 @@ function pickFrom(rng: Rng, pool: Club[], taken: Set<string>): Club | null {
   return club;
 }
 
-/** Gigante de fora (força 86+), de outro país; quem já é de um país com gigantes vai para outro. */
+/** Gigante europeu (força 86+) de outro país; quem já é de um país com gigantes vai para outro. */
+function isPeneiraGiant(club: Club, countryId: string): boolean {
+  return club.strength >= 86 && club.countryId !== countryId && isEuropeanClub(club);
+}
+
 export function bigInternationalPool(countryId: string): Club[] {
-  return CLUBS.filter((club) => club.strength >= 86 && club.countryId !== countryId);
+  return CLUBS.filter((club) => isPeneiraGiant(club, countryId));
 }
 
 /**
@@ -246,7 +251,7 @@ export function peneiraOffers(peneira: Peneira): string[] {
 export function peneiraOfferTag(peneira: Peneira, clubId: string): "giant" | "rival" | null {
   const club = CLUBS.find((item) => item.id === clubId);
   if (!club) return null;
-  if (club.strength >= 86 && club.countryId !== peneira.countryId) return "giant";
+  if (isPeneiraGiant(club, peneira.countryId)) return "giant";
   if (peneira.matches[2]?.opponent.clubId === clubId) return "rival";
   return null;
 }
@@ -260,7 +265,39 @@ export function recordPeneiraResult(peneira: Peneira, index: number, result: Omi
   return matches.every((match) => match.result) ? { ...next, offers: peneiraOffers(next) } : next;
 }
 
-/** Bônus escondido: quem entra pela peneira já chega conhecido pelo treinador (+25% de confiança). */
+/** Bônus escondido: quem entra pela peneira já chega conhecido pelo treinador (+33% de confiança). */
+export const PENEIRA_TRUST_MULTIPLIER = 1.33;
+/** Primeiro contrato no gigante europeu da peneira, se você não trocar de clube ao sair da base. */
+export const PENEIRA_GIANT_CONTRACT_YEARS = 7;
+/** No gigante da peneira você vira titular com até 3 de overall abaixo da média do time. */
+export const PENEIRA_GIANT_STARTER_MARGIN = 3;
+
 export function peneiraTrustBonus(trust: number): number {
-  return Math.max(0, Math.min(100, Math.round(trust * 1.25)));
+  return Math.max(0, Math.min(100, Math.round(trust * PENEIRA_TRUST_MULTIPLIER)));
+}
+
+/** O gigante europeu que te tirou da peneira (e que você escolheu), ou "". */
+export function peneiraGiantClubId(state: Pick<GameState, "peneira" | "peneiraClubId">): string {
+  const { peneira, peneiraClubId } = state;
+  if (!peneira || !peneiraClubId || peneira.chosenClubId !== peneiraClubId) return "";
+  return peneiraOfferTag(peneira, peneiraClubId) === "giant" ? peneiraClubId : "";
+}
+
+/**
+ * Primeiro contrato profissional: o clube da peneira chega com +33% de
+ * confiança; se for o gigante europeu, o vínculo é sempre de 7 anos.
+ */
+export function peneiraSigningTerms(state: Pick<GameState, "peneira" | "peneiraClubId">, clubId: string, baseTrust: number, contractYears: number) {
+  const fromPeneira = Boolean(state.peneiraClubId) && clubId === state.peneiraClubId;
+  const giant = fromPeneira && clubId === peneiraGiantClubId(state);
+  return {
+    managerTrust: fromPeneira ? peneiraTrustBonus(baseTrust) : baseTrust,
+    contractYears: giant ? PENEIRA_GIANT_CONTRACT_YEARS : contractYears,
+    giant,
+  };
+}
+
+/** Duração mostrada na proposta do primeiro contrato (a mesma que vale ao assinar). */
+export function peneiraContractYears(state: Pick<GameState, "peneira" | "peneiraClubId">, clubId: string, contractYears: number): number {
+  return peneiraSigningTerms(state, clubId, 0, contractYears).contractYears;
 }

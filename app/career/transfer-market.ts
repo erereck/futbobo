@@ -15,6 +15,7 @@ import { ensureClubSquadPlayers } from "./world-players";
 import { seasonScouting } from "./attention";
 import type { ScoutingSpotlight } from "./attention";
 import { leagueDivision } from "./league-divisions";
+import { loanFits, loanSquadRole } from "./squad-role";
 
 export const SECOND_DIVISION_LEAGUES = new Set(["brasileirao-b", "championship"]);
 export type TransferTrigger = "season-end" | "requested" | "forced-exit" | "youth-development" | "contract-expired" | "free-agent-wait" | "event";
@@ -183,10 +184,13 @@ function candidateEligible(state: GameState, club: Club, context: MarketContext,
   const strengthGap = competitiveStrength(club) - competitiveStrength(context.sourceClub);
   if (context.mode === "loan") {
     if (state.contractYears < 1) return false;
+    // Nem a seu pedido: clube grande não pede emprestado quem não jogaria lá
+    // (e ninguém te manda para um clube muito abaixo do seu nível).
+    if (!loanFits(state.overall, competitiveStrength(club))) return false;
     if (context.trigger !== "requested") {
       if (state.age > 29 || role === "reserva") return false;
       if (!context.needsMinutes && !context.requestedExit && context.trigger !== "youth-development") return false;
-      if (strengthGap > 4 || strengthGap < -18) return false;
+      if (strengthGap > 4) return false;
     }
   }
   if (state.age >= 35 && isEuropeanClub(club) && strengthGap > 3) return false;
@@ -256,7 +260,8 @@ function actualTransferFee(state: GameState, buyer: Club, context: MarketContext
   return Math.round(Math.min(raw, buyerLimit) / 100_000) * 100_000;
 }
 function materializeOffer(state: GameState, club: Club, context: MarketContext, salt: number): TransferOffer {
-  const role = candidateRole(state, club);
+  // Empréstimo é para jogar: quem te pede emprestado te quer como titular.
+  const role = context.mode === "loan" ? loanSquadRole(candidateRole(state, club)) : candidateRole(state, club);
   const contract = createContract(state.overall, state.age, club, state.seed + state.season * 97 + salt + CLUBS.indexOf(club));
   const reason = offerReason(state, club, role, context);
   const parentShare = context.mode === "loan" ? clamp(Math.round((44 + (competitiveStrength(club) - competitiveStrength(context.sourceClub)) * 2) / 5) * 5, 20, 75) : 0;
@@ -370,7 +375,7 @@ export function generateTransferOffers(state: GameState, salt: number, options: 
   if (options.forceDomestic) selected = domestic.slice(0, wanted);
   let loanId = "";
   if (context.mode === "permanent" && state.contractYears >= 1 && state.age <= 25 && (context.needsMinutes || context.careerPhase === "promise") && !state.forcedClubExit) {
-    const loanCandidate = selected.findLast((club) => candidateRole(state, club) !== "reserva" && competitiveStrength(club) <= competitiveStrength(context.sourceClub) + 3);
+    const loanCandidate = selected.findLast((club) => candidateRole(state, club) !== "reserva" && competitiveStrength(club) <= competitiveStrength(context.sourceClub) + 3 && loanFits(state.overall, competitiveStrength(club)));
     loanId = loanCandidate?.id ?? "";
   }
   let alternativeId = "";
