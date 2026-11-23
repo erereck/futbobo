@@ -10,15 +10,18 @@ permissions:
   pages: write
   id-token: write
 
+# Um deploy por vez. Push novo espera o que está publicando terminar (e
+# substitui os que estiverem só na fila), em vez de matar a publicação no meio.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
+# Gerar e publicar ficam em jobs separados: se o "Publicar" falhar por soluço
+# do GitHub, "Re-run failed jobs" repete só a publicação com o mesmo artefato.
+# Num job só, o re-run gerava um segundo artefato "github-pages" e o
+# deploy-pages recusava ("Multiple artifacts named github-pages").
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Baixar o projeto
@@ -40,6 +43,14 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Publicar
         id: deployment
         uses: actions/deploy-pages@v4
