@@ -834,7 +834,9 @@ export function eventForState(state: GameState) {
 export function signProfessionalForSimulation(state: GameState, clubId: string): GameState {
   const club = clubById(clubId);
   const league = leagueById(club.leagueId);
-  const managerTrust = clubId === state.academyClubId ? 58 : 44;
+  const baseTrust = clubId === state.academyClubId ? 58 : 44;
+  // Mesmo bônus escondido da tela: quem veio da peneira chega com +25% de confiança.
+  const managerTrust = state.peneiraClubId && clubId === state.peneiraClubId ? Math.min(100, Math.round(baseTrust * 1.25)) : baseTrust;
   const squadRole = calculateSquadRole(state.overall, club, league.prestige, managerTrust, state.age);
   const contract = createContract(state.overall, state.age, club, state.seed);
   return { ...state, phase: "career", currentClubId: clubId, currentLeagueId: club.leagueId, currentEventId: FIRST_MATCH_EVENT.id, nextEventId: "", reputation: clubId === state.academyClubId ? 8 : 4, fanSupport: clubId === state.academyClubId ? 68 : 50, continentalSlot: initialContinentalSlot(club), money: 0, managerTrust, squadRole, contractYears: contract.years, annualSalary: contract.annualSalary, currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed), followers: 1_200 + club.reputation * 900, socialFeed: [{ id: `${state.seed}-${state.season}-first-contract`, season: state.season, source: "press", author: "Central do Futebol", text: `${state.name} assinou o primeiro contrato profissional com o ${club.shortName}.`, likes: 340 + club.reputation * 120, tone: "positive" }], newsFeed: [`${state.season}: primeiro contrato assinado com o ${club.shortName}.`] };

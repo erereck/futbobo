@@ -767,7 +767,7 @@ export type KitFace = "front" | "back" | "left" | "right";
  * As mesmas 12 estampas do busto 2D, agora em quatro faces. `left`/`right`
  * são os lados do próprio jogador (+x é a esquerda dele, porque ele olha para +z).
  */
-function paintKitPattern(
+export function paintKitPattern(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
@@ -950,6 +950,211 @@ function paintKitAtlas(args: { pattern: number; primary: string; secondary: stri
   bottomCtx.fillRect(0, 0, 8, 8);
 
   return atlasCanvas([left.canvas, right.canvas, topCanvas, bottomCanvas, front.canvas, back.canvas], width, height, false);
+}
+
+// ------------------------------------------------------ camisa nas mãos
+
+/**
+ * Camisa aberta, segura pelos ombros (apresentação do reforço), em frações do
+ * lado do quadrado pintado: onde ficam as mãos, a barra e as mangas. O palco
+ * usa as mesmas frações para prender as palmas no tecido.
+ */
+export const HELD_SHIRT = {
+  /** Ombros, onde as mãos seguram (x de cada lado e a altura). */
+  shoulderX: 0.22,
+  shoulderY: 0.135,
+  /** Barra da camisa. */
+  hemY: 0.9,
+  /** Ponta das mangas (o mais largo da camisa). */
+  sleeveX: 0.035,
+} as const;
+
+export type HeldShirtArgs = {
+  pattern: number;
+  primary: string;
+  secondary: string;
+  /** Nome nas costas (vai em maiúsculas). */
+  name: string;
+  number: number;
+  /** Sigla para o escudo desenhado quando não há imagem. */
+  abbr?: string;
+  /** Escudo já carregado (mesma origem, senão o canvas fica sujo). */
+  crest?: CanvasImageSource | null;
+  /** Família da fonte do nome e do número (já carregada). */
+  font?: string;
+  /** Lado do quadrado (px). */
+  size?: number;
+};
+
+const HELD_SHIRT_FONT = "\"Barlow Condensed\", \"Arial Narrow\", Impact, sans-serif";
+
+/** Contorno de camiseta (gola, mangas curtas, barra levemente curva) no quadrado `s`. */
+function heldShirtPath(ctx: CanvasRenderingContext2D, s: number, face: "front" | "back") {
+  const { shoulderX, shoulderY, hemY, sleeveX } = HELD_SHIRT;
+  const neck = face === "front" ? 0.185 : 0.135;
+  ctx.beginPath();
+  ctx.moveTo(0.385 * s, 0.1 * s);
+  ctx.lineTo(shoulderX * s, shoulderY * s);
+  ctx.lineTo(sleeveX * s, 0.3 * s);
+  ctx.lineTo(0.125 * s, 0.395 * s);
+  ctx.lineTo(0.235 * s, 0.32 * s);
+  ctx.quadraticCurveTo(0.225 * s, 0.62 * s, 0.24 * s, hemY * s);
+  ctx.quadraticCurveTo(0.5 * s, (hemY + 0.02) * s, 0.76 * s, hemY * s);
+  ctx.quadraticCurveTo(0.775 * s, 0.62 * s, 0.765 * s, 0.32 * s);
+  ctx.lineTo(0.875 * s, 0.395 * s);
+  ctx.lineTo((1 - sleeveX) * s, 0.3 * s);
+  ctx.lineTo((1 - shoulderX) * s, shoulderY * s);
+  ctx.lineTo(0.615 * s, 0.1 * s);
+  ctx.quadraticCurveTo(0.5 * s, neck * 2 * s - 0.1 * s, 0.385 * s, 0.1 * s);
+  ctx.closePath();
+}
+
+/** Texto centrado que encolhe até caber na largura. */
+function fitText(ctx: CanvasRenderingContext2D, text: string, weight: number, size: number, family: string, maxWidth: number) {
+  let px = size;
+  ctx.font = `${weight} ${px}px ${family}`;
+  const width = ctx.measureText(text).width;
+  if (width > maxWidth) {
+    px = Math.max(size * 0.45, (px * maxWidth) / width);
+    ctx.font = `${weight} ${px}px ${family}`;
+  }
+  return px;
+}
+
+/**
+ * Uma face da camisa aberta (frente com escudo, costas com nome e número),
+ * recortada no formato de camiseta sobre fundo transparente. A frente é
+ * pintada como vista de frente (escudo à direita da textura, no peito
+ * esquerdo de quem veste); as costas, como vistas de trás.
+ */
+export function paintHeldShirt(args: HeldShirtArgs, face: "front" | "back"): HTMLCanvasElement {
+  const s = args.size ?? 512;
+  const { pattern, primary, secondary } = args;
+  const family = args.font || HELD_SHIRT_FONT;
+  const canvas = makeCanvas(s, s);
+  const ctx = canvas.getContext("2d")!;
+  const trim = secondary === primary ? readableInk(primary) : secondary;
+  ctx.save();
+  heldShirtPath(ctx, s, face);
+  ctx.clip();
+  paintKitPattern(ctx, s, s, pattern, primary, secondary, face);
+  // Mangas de outra cor nas estampas "Ombros" e "Mangas contrastantes".
+  const sleeve = sleeveColor(pattern, primary, secondary);
+  if (sleeve !== primary) {
+    ctx.fillStyle = sleeve;
+    ctx.fillRect(0, 0, 0.235 * s, 0.42 * s);
+    ctx.fillRect(0.765 * s, 0, 0.235 * s, 0.42 * s);
+  }
+  // Punhos das mangas.
+  ctx.strokeStyle = trim;
+  ctx.lineWidth = 0.026 * s;
+  ctx.beginPath();
+  ctx.moveTo(HELD_SHIRT.sleeveX * s, 0.3 * s);
+  ctx.lineTo(0.125 * s, 0.395 * s);
+  ctx.moveTo((1 - HELD_SHIRT.sleeveX) * s, 0.3 * s);
+  ctx.lineTo(0.875 * s, 0.395 * s);
+  ctx.stroke();
+  // Volume do tecido: dobras verticais suaves, bordas e barra mais escuras.
+  const folds: Array<[number, number, number]> = [[0.31, 0.05, 0.12], [0.44, -0.05, 0.08], [0.57, 0.06, 0.1], [0.69, -0.06, 0.12]];
+  for (const [x, strength, width] of folds) {
+    const fold = ctx.createLinearGradient((x - width / 2) * s, 0, (x + width / 2) * s, 0);
+    const tone = strength > 0 ? "255,255,255" : "0,0,0";
+    fold.addColorStop(0, `rgba(${tone},0)`);
+    fold.addColorStop(0.5, `rgba(${tone},${Math.abs(strength)})`);
+    fold.addColorStop(1, `rgba(${tone},0)`);
+    ctx.fillStyle = fold;
+    ctx.fillRect((x - width / 2) * s, 0.3 * s, width * s, 0.62 * s);
+  }
+  const edge = ctx.createLinearGradient(0.22 * s, 0, 0.78 * s, 0);
+  edge.addColorStop(0, "rgba(0,0,0,.24)");
+  edge.addColorStop(0.18, "rgba(0,0,0,0)");
+  edge.addColorStop(0.82, "rgba(0,0,0,0)");
+  edge.addColorStop(1, "rgba(0,0,0,.24)");
+  ctx.fillStyle = edge;
+  ctx.fillRect(0, 0, s, s);
+  const hem = ctx.createLinearGradient(0, 0.8 * s, 0, 0.92 * s);
+  hem.addColorStop(0, "rgba(0,0,0,0)");
+  hem.addColorStop(1, "rgba(0,0,0,.22)");
+  ctx.fillStyle = hem;
+  ctx.fillRect(0, 0.8 * s, s, 0.14 * s);
+  // Trama fina do tecido de jogo.
+  ctx.fillStyle = "rgba(255,255,255,.035)";
+  for (let y = 0; y < s; y += Math.max(2, s / 128)) ctx.fillRect(0, y, s, Math.max(1, s / 512));
+  ctx.restore();
+
+  // Gola: ribana na cor de acabamento, com a sombra do decote.
+  const neck = face === "front" ? 0.185 : 0.135;
+  ctx.strokeStyle = trim;
+  ctx.lineWidth = 0.03 * s;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(0.39 * s, 0.103 * s);
+  ctx.quadraticCurveTo(0.5 * s, neck * 2 * s - 0.1 * s, 0.61 * s, 0.103 * s);
+  ctx.stroke();
+
+  const ink = readableInk(pattern === 0 ? secondary : primary);
+  // Listras, metades e xadrez passam por baixo do número: o contorno engrossa para ler nas duas cores.
+  const busy = pattern === 2 || pattern === 3 || pattern === 4 || pattern === 7 || pattern === 9;
+  const outline = ink === "#ffffff" ? `rgba(0,0,0,${busy ? 0.78 : 0.5})` : `rgba(255,255,255,${busy ? 0.85 : 0.55})`;
+  const stroke = busy ? 1.6 : 1;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  if (face === "front") {
+    // Escudo no peito esquerdo de quem veste (direita da textura).
+    const cx = 0.635 * s;
+    const cy = 0.3 * s;
+    const size = 0.12 * s;
+    if (args.crest) {
+      ctx.drawImage(args.crest, cx - size / 2, cy - size / 2, size, size);
+    } else {
+      ctx.fillStyle = trim;
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 0.006 * s;
+      ctx.beginPath();
+      ctx.moveTo(cx - size * 0.42, cy - size * 0.45);
+      ctx.lineTo(cx + size * 0.42, cy - size * 0.45);
+      ctx.lineTo(cx + size * 0.42, cy + size * 0.05);
+      ctx.quadraticCurveTo(cx + size * 0.4, cy + size * 0.38, cx, cy + size * 0.55);
+      ctx.quadraticCurveTo(cx - size * 0.4, cy + size * 0.38, cx - size * 0.42, cy + size * 0.05);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = readableInk(trim);
+      fitText(ctx, (args.abbr ?? "").slice(0, 4).toUpperCase(), 900, size * 0.34, family, size * 0.74);
+      ctx.fillText((args.abbr ?? "").slice(0, 4).toUpperCase(), cx, cy - size * 0.02);
+    }
+    // Patrocínio do peito: a marca do jogo.
+    ctx.fillStyle = ink;
+    ctx.globalAlpha = 0.9;
+    fitText(ctx, "FUTBOBO", 900, 0.075 * s, family, 0.36 * s);
+    ctx.fillText("FUTBOBO", 0.5 * s, 0.5 * s);
+    ctx.globalAlpha = 1;
+  } else {
+    // Nome em cima do número, os dois com contorno: lê em qualquer estampa.
+    const name = args.name.trim().toUpperCase();
+    if (name) {
+      fitText(ctx, name, 900, 0.085 * s, family, 0.44 * s);
+      ctx.lineWidth = 0.012 * s * stroke;
+      ctx.strokeStyle = outline;
+      ctx.strokeText(name, 0.5 * s, 0.25 * s);
+      ctx.fillStyle = ink;
+      ctx.fillText(name, 0.5 * s, 0.25 * s);
+    }
+    const number = String(Math.max(0, Math.round(args.number)));
+    fitText(ctx, number, 900, 0.36 * s, family, 0.46 * s);
+    ctx.lineWidth = 0.022 * s * stroke;
+    ctx.strokeStyle = outline;
+    ctx.strokeText(number, 0.5 * s, 0.53 * s);
+    ctx.fillStyle = ink;
+    ctx.fillText(number, 0.5 * s, 0.53 * s);
+  }
+  return canvas;
+}
+
+/** As duas faces da camisa aberta como texturas (filtro linear: nome e número legíveis de longe). */
+export function createHeldShirtTextures(args: HeldShirtArgs): { front: THREE.Texture; back: THREE.Texture } {
+  return { front: canvasTexture(paintHeldShirt(args, "front")), back: canvasTexture(paintHeldShirt(args, "back")) };
 }
 
 // ----------------------------------------------------------------- terno

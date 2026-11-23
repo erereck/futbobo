@@ -19,7 +19,8 @@ import * as THREE from "three";
 import { FIELD } from "../engine";
 
 export type EffectsOptions = {
-  surface: "grass" | "futsal";
+  /** Piso: grama solta tufos, quadra solta riscos claros, rua solta pedrisco e poeira cinza-terra. */
+  surface: "grass" | "futsal" | "street";
   reducedMotion?: boolean;
   /** Tela pequena: pools menores e sem o cone do holofote. */
   lowPower?: boolean;
@@ -1200,6 +1201,8 @@ export class Effects {
   private readonly spot: Spotlight;
   private readonly spec = new Spawn();
   private readonly futsal: boolean;
+  /** Campo de rua (asfalto, terra ou concreto): pedrisco no lugar da grama. */
+  private readonly street: boolean;
   private readonly reduced: boolean;
   private readonly low: boolean;
   /** Modo desempenho 3D: sem halos grandes, sem lascas no carrinho, festa mais espaçada. */
@@ -1225,6 +1228,8 @@ export class Effects {
   private readonly marks = new Float32Array(MAX_MARKS * M_STRIDE);
 
   private readonly grass: THREE.Color[];
+  /** Pedrisco da rua: cinza de asfalto, terra e areia. */
+  private readonly gravel: THREE.Color[];
   private readonly dustColor: THREE.Color;
   private readonly lightStreak = new THREE.Color("#dfe8f2");
   private readonly markColor: THREE.Color;
@@ -1258,6 +1263,7 @@ export class Effects {
 
   constructor(options: EffectsOptions) {
     this.futsal = options.surface === "futsal";
+    this.street = options.surface === "street";
     this.reduced = Boolean(options.reducedMotion);
     this.lite = Boolean(options.performance);
     // Modo desempenho pesa como o celular fraco: pools menores e metade de tudo.
@@ -1268,9 +1274,10 @@ export class Effects {
     this.tokens = this.burst;
 
     this.grass = ["#3d7a35", "#5c9a45", "#2e5e2a"].map((hex) => new THREE.Color(hex));
-    this.dustColor = new THREE.Color(this.futsal ? "#dfe8f2" : "#d9e4c0");
-    this.markColor = new THREE.Color(this.futsal ? "#dfe8f2" : "#24401f");
-    this.markAlpha = this.futsal ? 0.2 : 0.4;
+    this.gravel = ["#6f6a63", "#8d7b66", "#4d4944", "#a89880"].map((hex) => new THREE.Color(hex));
+    this.dustColor = new THREE.Color(this.futsal ? "#dfe8f2" : this.street ? "#b9ab98" : "#d9e4c0");
+    this.markColor = new THREE.Color(this.futsal ? "#dfe8f2" : this.street ? "#2b2622" : "#24401f");
+    this.markAlpha = this.futsal ? 0.2 : this.street ? 0.3 : 0.4;
 
     this.atlas = createAtlas();
     const maxBillboard = this.lite ? MAX_BILLBOARD_LITE : MAX_BILLBOARD;
@@ -1395,7 +1402,31 @@ export class Effects {
     if (this.reduced) return;
 
     const base = Math.atan2(dz, dx);
-    if (this.futsal) {
+    if (this.street) {
+      // Rua não solta grama: pedrisco pulando e quicando no chão duro.
+      const n = this.take(this.count(directed ? 3 + 6 * s : 2 + 4 * s));
+      for (let index = 0; index < n; index += 1) {
+        const angle = directed ? base + this.random(-0.6, 0.6) : Math.random() * Math.PI * 2;
+        const speed = this.random(30, 85) * (0.55 + 0.6 * s);
+        const p = this.spec.reset();
+        p.cell = CELL_CHIP;
+        p.x = x + Math.cos(angle) * 2;
+        p.z = z + Math.sin(angle) * 2;
+        p.y = 1;
+        p.vx = Math.cos(angle) * speed;
+        p.vz = Math.sin(angle) * speed;
+        p.vy = this.random(25, 60) + 20 * s;
+        p.gravity = 300;
+        p.drag = 0.4;
+        p.bounce = 0.35;
+        p.life = this.random(0.4, 0.65);
+        p.size0 = p.size1 = this.random(1.1, 1.9);
+        p.spin = this.random(-9, 9);
+        p.color(this.gravel[index % this.gravel.length], LIT);
+        p.fadeOut = 3;
+        this.soft.spawn(p);
+      }
+    } else if (this.futsal) {
       // Quadra não solta grama: riscos claros rentes ao piso.
       const n = this.take(this.count(3 + 3 * s));
       for (let index = 0; index < n; index += 1) {
@@ -1486,7 +1517,7 @@ export class Effects {
     // Modo desempenho: só poeira e a marca no gramado, sem o spray de lascas.
     if (this.reduced || this.lite) return;
 
-    this.slideChips += (this.futsal ? 14 : 36) * this.amount * dt;
+    this.slideChips += (this.futsal ? 14 : this.street ? 22 : 36) * this.amount * dt;
     const wanted = Math.floor(this.slideChips);
     if (wanted <= 0) return;
     this.slideChips -= wanted;
@@ -1498,7 +1529,21 @@ export class Effects {
       p.x = x + dx * 7 + this.random(-3, 3);
       p.z = z + dz * 7 + this.random(-3, 3);
       p.y = 1;
-      if (this.futsal) {
+      if (this.street) {
+        const speed = this.random(40, 90);
+        p.cell = CELL_CHIP;
+        p.vx = Math.cos(angle) * speed;
+        p.vz = Math.sin(angle) * speed;
+        p.vy = this.random(20, 50);
+        p.gravity = 300;
+        p.drag = 0.4;
+        p.bounce = 0.35;
+        p.life = this.random(0.35, 0.6);
+        p.size0 = p.size1 = this.random(1, 1.8);
+        p.spin = this.random(-9, 9);
+        p.color(this.gravel[index % this.gravel.length], LIT);
+        p.fadeOut = 3;
+      } else if (this.futsal) {
         const speed = this.random(60, 110);
         p.cell = CELL_CHIP;
         p.streak = 1;

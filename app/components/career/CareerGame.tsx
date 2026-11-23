@@ -106,6 +106,11 @@ const YouthPlayPanel = dynamic(() => import("./YouthPlayPanel").catch(() => ({ d
   ssr: false,
   loading: () => <section className={`${albumStyles.tokens} ${albumStyles.waitPage} albumMounted`} aria-busy="true"><div><p>Abrindo a base…</p></div></section>,
 });
+// A peneira (jogos de botão, propostas e a apresentação no clube) só baixa quando o jogador escolhe fazer.
+const PeneiraSpread = dynamic(() => import("./album/intro/PeneiraSpread"), {
+  ssr: false,
+  loading: () => <section className={`${albumStyles.tokens} ${albumStyles.waitPage} albumMounted`} aria-busy="true"><div><p>Abrindo a peneira…</p></div></section>,
+});
 const SpecialTrainingPanel = dynamic(() => import("./SpecialTrainingPanel").catch(() => ({ default: SpecialTrainingUnavailable })), { ssr: false });
 
 type CareerGameProps = {
@@ -124,7 +129,7 @@ function isFormerClubOpponent(state: GameState, clubId: string) {
 // Fases da carreira que vivem no álbum.
 const ALBUM_PHASES = new Set<Phase>(["career", "consequence", "season-result", "transfer", "transfer-denied", "retirement-confirm", "botao-final", "botao-result"]);
 // A introdução da carreira no álbum: ficha do atleta, base e primeiro contrato.
-const INTRO_PHASES = new Set<Phase>(["identity", "appearance", "nationality", "academy", "formation", "story", "youth", "revelation"]);
+const INTRO_PHASES = new Set<Phase>(["identity", "appearance", "nationality", "academy", "formation", "peneira", "story", "youth", "revelation"]);
 
 export default function CareerGame({ initialHallEntry = null, onCloseHallPreview }: CareerGameProps = {}) {
   const [game, setGame] = useState<GameState>(() => initialState());
@@ -445,6 +450,13 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   const todayChallengeBest = todayChallengeResults[0] ?? null;
   const currentClub = useMemo(() => clubById(displayGame.currentClubId || displayGame.academyClubId), [displayGame.currentClubId, displayGame.academyClubId]);
   const currentBotaoMatch = game.pendingBotaoMatches[0] ?? null;
+  // Os jogos da peneira seguem as regras de botão das Configurações, como as finais.
+  const peneiraRules = useMemo(() => ({
+    goalLimit: appSettings.botaoGoalLimit ?? 3,
+    halfSeconds: appSettings.botaoHalfSeconds ?? 120,
+    extraSeconds: appSettings.botaoExtraSeconds ?? 45,
+    penaltyRounds: appSettings.botaoPenaltyRounds ?? 5,
+  }), [appSettings.botaoGoalLimit, appSettings.botaoHalfSeconds, appSettings.botaoExtraSeconds, appSettings.botaoPenaltyRounds]);
   function setupForPendingBotaoMatch(state: GameState, match: PendingBotaoMatch): BotaoMatchSetup {
     const ratings = ratingsFromAttributes(state.attributes, state.overall);
     const rules = {
@@ -1048,7 +1060,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     setGame((current) => {
       const club = clubById(clubId);
       const league = leagueById(club.leagueId);
-      const managerTrust = clubId === current.academyClubId ? 58 : 44;
+      // Quem entrou pela peneira chega conhecido pelo treinador (+25%, sem aviso na tela).
+      const baseTrust = clubId === current.academyClubId ? 58 : 44;
+      const managerTrust = current.peneiraClubId && clubId === current.peneiraClubId ? Math.min(100, Math.round(baseTrust * 1.25)) : baseTrust;
       const squadRole = calculateSquadRole(current.overall, club, league.prestige, managerTrust, current.age);
       const contract = createContract(current.overall, current.age, club, current.seed);
       return {
@@ -2930,6 +2944,15 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             <div className="welcome-version"><span>FUTBOBO</span><b>{FUTBOBO_VERSION} · {FUTBOBO_VERSION_NAME}</b></div>
           </footer>
         </section>
+      )}
+
+      {game.phase === "peneira" && (
+        <PeneiraSpread
+          game={game}
+          setGame={setGame}
+          rules={peneiraRules}
+          visualsEnabled={appSettings.characterButtonsEnabled !== false}
+        />
       )}
 
       {(["identity", "appearance", "nationality", "academy", "formation", "story"] as Phase[]).includes(game.phase) && (

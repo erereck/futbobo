@@ -148,6 +148,10 @@ export type BotaoMatchSetup = {
   squads?: BotaoSquads;
   /** Bobonline: os botões não cansam (fôlego fixo em 100). Ausente nos modos offline. */
   noStamina?: boolean;
+  /** Campo pedido pela partida (rua da peneira, laboratório). Ausente: sorteio normal de `fieldThemeForMatch`. */
+  fieldTheme?: BotaoFieldTheme;
+  /** Só no campo de rua (3D): 0 rua do bairro, 1 terrão, 2 quadra da praça. Ausente: sai da semente. */
+  streetVariant?: 0 | 1 | 2;
 };
 
 /** Elencos completos por lado (sempre 5). Ids precisam ser únicos nos DOIS lados. */
@@ -234,3 +238,4 @@ export type BotaoShot = {
   vy: number;
 };
 import type { BotaoVisualRoster } from "../player-appearance";
+import type { BotaoFieldTheme } from "./field-themes";

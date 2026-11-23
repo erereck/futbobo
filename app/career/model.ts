@@ -12,6 +12,7 @@ export type Phase =
   | "nationality"
   | "academy"
   | "formation"
+  | "peneira"
   | "story"
   | "youth"
   | "youth-complete"
@@ -419,6 +420,64 @@ export type YouthPlay = {
   bonus: number | null;
 };
 
+/** Os três jogos da peneira, sempre nesta ordem: rua, quadra de futsal e campo. */
+export type PeneiraStage = "street" | "futsal" | "field";
+
+/** Adversário de um jogo da peneira: inventado (rua, quadra) ou um clube de verdade (campo, `clubId`). */
+export type PeneiraOpponent = {
+  id: string;
+  name: string;
+  shortName: string;
+  abbr: string;
+  primary: string;
+  secondary: string;
+  /** 60..92, a escala dos botões. */
+  strength: number;
+  /** Clube de verdade do jogo 3. */
+  clubId?: string;
+  /** Escudo desenhado dos times inventados (formato 0..3 do Bobonline). */
+  crest?: 0 | 1 | 2 | 3;
+};
+
+export type PeneiraMatchResult = {
+  outcome: "win" | "draw" | "loss";
+  goalsFor: number;
+  goalsAgainst: number;
+  playerGoals: number;
+  playerAssists: number;
+  manOfTheMatch: boolean;
+  /** Nota do olheiro (3..10), o que soma para as propostas. */
+  rating: number;
+  simulated: boolean;
+  /** Fechou ou recarregou a página no meio do jogo. */
+  walkover?: boolean;
+};
+
+export type PeneiraMatch = {
+  stage: PeneiraStage;
+  opponent: PeneiraOpponent;
+  /** Campo do jogo (tema da mesa de botão) e, na rua, qual das três ruas. */
+  fieldTheme: string;
+  streetVariant?: 0 | 1 | 2;
+  /** O jogo começou de verdade: sem resultado ao carregar o save, vira W.O. */
+  started: boolean;
+  result: PeneiraMatchResult | null;
+};
+
+/**
+ * Peneira: três jogos contra times do país da base; a soma das notas decide quantos
+ * clubes (1 a 3) chamam o jogador. Com 3, um deles é um gigante de fora.
+ */
+export type Peneira = {
+  countryId: string;
+  seed: number;
+  matches: PeneiraMatch[];
+  /** Clubes que chamaram (ids); null enquanto os jogos não acabaram. */
+  offers: string[] | null;
+  /** Clube escolhido: falta só a apresentação antes da história. */
+  chosenClubId: string | null;
+};
+
 /** Treino especial da QUADRA: duas fases do Scorebobo sorteadas, 3 jogadas em cada, vale a melhor. */
 export type SpecialTraining = {
   season: number;
@@ -502,6 +561,10 @@ export type GameState = {
   youthYears: YouthYear[];
   /** Escolha Simular × Jogar a base e o andamento dos minigames; null = ainda não escolheu (ou save antigo). */
   youthPlay: YouthPlay | null;
+  /** Peneira em andamento (ou a que trouxe o jogador); null = escolheu o clube direto. */
+  peneira: Peneira | null;
+  /** Clube da base que veio da peneira ("" = não veio): o treinador de lá já conhece o jogador. */
+  peneiraClubId: string;
   proOffers: string[];
   currentClubId: string;
   currentLeagueId: string;

@@ -24,6 +24,7 @@ import {
   pickFinalOpponent,
 } from "./adapter";
 import { simulateBotaoMatch } from "./simulate";
+import { STREET_VARIANTS, type BotaoFieldTheme, type BotaoStreetVariant } from "./field-themes";
 import {
   DEFAULT_BOTAO_RULES,
   type BotaoMatchResult,
@@ -77,6 +78,22 @@ const RULE_PRESETS = [
   },
 ];
 
+/**
+ * Campo do laboratório (dev): "Automático" deixa o sorteio de sempre; o resto
+ * força `fieldTheme` (e `streetVariant` nas três ruas, que só mudam no 3D: o
+ * 2D desenha sempre a rua do bairro).
+ */
+const FIELD_CHOICES: Array<{ id: string; label: string; theme?: BotaoFieldTheme; variant?: BotaoStreetVariant }> = [
+  { id: "auto", label: "Automático" },
+  ...STREET_VARIANTS.map((variant) => ({ id: `street-${variant.id}`, label: variant.label, theme: "street" as const, variant: variant.id })),
+  { id: "futsal-blue", label: "Futsal azul", theme: "futsal-blue" },
+  { id: "futsal-orange", label: "Futsal laranja", theme: "futsal-orange" },
+  { id: "classic", label: "Gramado clássico", theme: "classic" },
+  { id: "vertical", label: "Gramado listrado em pé", theme: "vertical" },
+  { id: "checker", label: "Gramado xadrez", theme: "checker" },
+  { id: "diagonal", label: "Gramado diagonal", theme: "diagonal" },
+];
+
 function characterPlayersEnabled() {
   if (typeof window === "undefined") return true;
   try {
@@ -114,6 +131,9 @@ export default function BotaoStandalonePage() {
   const [simulating, setSimulating] = useState(false);
   const [penaltiesOnly, setPenaltiesOnly] = useState(false);
   const [activeReplay, setActiveReplay] = useState<number | null>(null);
+  const [fieldChoiceId, setFieldChoiceId] = useState("auto");
+  const fieldChoice =
+    FIELD_CHOICES.find((choice) => choice.id === fieldChoiceId) ?? FIELD_CHOICES[0];
 
   const club =
     clubs.find((candidate) => candidate.id === clubId) ?? defaultClub;
@@ -129,8 +149,8 @@ export default function BotaoStandalonePage() {
       competitionId: competition.id,
     });
 
-  const makeSetup = (): BotaoMatchSetup =>
-    buildFinalSetup({
+  const makeSetup = (): BotaoMatchSetup => ({
+    ...buildFinalSetup({
       seed,
       season: 1,
       competitionId: competition.id,
@@ -150,7 +170,10 @@ export default function BotaoStandalonePage() {
         cpuTeamId: opponent.id,
         player: randomPlayerAppearance(seed),
       }),
-    });
+    }),
+    ...(fieldChoice.theme ? { fieldTheme: fieldChoice.theme } : {}),
+    ...(fieldChoice.variant !== undefined ? { streetVariant: fieldChoice.variant } : {}),
+  });
 
   const play = (penaltiesOnly = false) => {
     setSetup(makeSetup());
@@ -439,6 +462,22 @@ export default function BotaoStandalonePage() {
               <small>{entry.hint}</small>
             </button>
           ))}
+        </div>
+        <div className="botao-field-row">
+          <label htmlFor="botao-field-theme">
+            Campo (dev){fieldChoice.theme === "street" ? " · 2D é sempre a rua do bairro" : ""}
+          </label>
+          <select
+            id="botao-field-theme"
+            value={fieldChoice.id}
+            onChange={(event) => setFieldChoiceId(event.target.value)}
+          >
+            {FIELD_CHOICES.map((choice) => (
+              <option key={choice.id} value={choice.id}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="botao-formation-row">
           <span className="botao-chip">

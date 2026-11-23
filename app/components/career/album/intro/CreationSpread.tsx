@@ -134,8 +134,17 @@ export default function CreationSpread({ game, setGame, shirtNumberInput, setShi
       academyCountryId: club.countryId,
       formationId: formation.id,
       archetype: formation.archetype,
+      // Escolher direto apaga uma peneira abandonada (o bônus é só de quem passou nela).
+      peneira: null,
+      peneiraClubId: "",
       phase: "story",
     }));
+    setPicker(null);
+  };
+  /** Peneira no país da base que está na tela: os jogos e os clubes saem de lá. */
+  const startPeneira = () => {
+    setActiveCareerAchievementsEligible(true);
+    setGame((current) => ({ ...current, academyCountryId: academyCountry.id, academyClubId: "", peneira: null, peneiraClubId: "", phase: "peneira" }));
     setPicker(null);
   };
   const randomClub = () => {
@@ -277,6 +286,21 @@ export default function CreationSpread({ game, setGame, shirtNumberInput, setShi
   } else if (game.phase === "formation") {
     content = (
       <>
+        {/* A peneira em destaque: em vez de escolher, prova em três jogos e os clubes escolhem você. */}
+        <button type="button" className={styles.peneiraCard} onClick={startPeneira}>
+          <span className={styles.peneiraTag}>Novo</span>
+          <span className={styles.peneiraArt} aria-hidden="true">
+            <i data-venue="street" />
+            <i data-venue="futsal" />
+            <i data-venue="field" />
+          </span>
+          <span className={styles.peneiraBody}>
+            <small>Ou faça a peneira</small>
+            <strong>Peneira</strong>
+            <span>Rua, quadra e campo: três jogos com os olheiros na beira. Jogue bem e até três clubes chamam você, um deles pode ser um gigante de fora.</span>
+          </span>
+          <span className={styles.peneiraGo} aria-hidden="true"><FutboboIcon name="arrow-right" /></span>
+        </button>
         <div className={styles.baseTools}>
           <button type="button" className={styles.choice} onClick={() => setPicker("base-country")}>
             <span className={styles.choiceArt}><NationBadge country={academyCountry} size="sm" /></span>
