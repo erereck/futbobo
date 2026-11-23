@@ -926,13 +926,15 @@ export class ScoreboboGame implements ScoreboboGameApi {
       const hd = hypot(ball.pos.x - a.pos.x, ball.pos.z - a.pos.z);
       const y = ball.pos.y;
       const isReceiver = live?.receiver === a.id || m.receive !== null;
+      // Cruzamento (chega na altura da cabeça) vira cabeceio; lançamento que
+      // chega baixo espera descer: voleio perto da área, domínio no resto.
+      const forHead = !live || live.endY >= 1.4;
+      const nearBox = Math.abs(a.pos.x) <= PITCH.boxHalfWidth + 2 && a.pos.z >= GOAL_Z - PITCH.boxDepth - 3;
+      // Na área, quem espera o cruzamento ataca a bola: o alcance da testada é maior que o do domínio.
+      const headReach = forHead && nearBox && isReceiver ? 1.45 : 1.15;
       if (y <= 0.62) {
         if (hd <= (isReceiver ? 1.0 : 0.82)) return this.control(m, null);
-      } else if (y <= 2.75 + (a.jump ?? 0) * 0.5 && hd <= 1.15) {
-        // Cruzamento (chega na altura da cabeça) vira cabeceio; lançamento que
-        // chega baixo espera descer: voleio perto da área, domínio no resto.
-        const forHead = !live || live.endY >= 1.4;
-        const nearBox = Math.abs(a.pos.x) <= PITCH.boxHalfWidth + 2 && a.pos.z >= GOAL_Z - PITCH.boxDepth - 3;
+      } else if (y <= 2.75 + (a.jump ?? 0) * 0.5 && hd <= (y >= 1.3 ? headReach : 1.15)) {
         if (y >= 1.3) {
           if (forHead && nearBox) return this.control(m, "header");
           if (!nearBox && y < 1.9) return this.control(m, null);
@@ -951,12 +953,14 @@ export class ScoreboboGame implements ScoreboboGameApi {
     const a = m.actor;
     const time = this.simTime;
     // Dividida: zagueiro mais perto da bola (e alcançando) ganha antes do domínio.
+    // No alto, quem ataca a bola (o cabeceio) leva vantagem: o zagueiro precisa estar claramente mais perto.
     const mine = hypot(ball.pos.x - a.pos.x, ball.pos.z - a.pos.z);
+    const edge = aerial === "header" ? 0.3 : 0;
     for (const d of this.defenders) {
       if (d.behavior === "wall" || time < d.reactAt) continue;
       const dd = hypot(ball.pos.x - d.actor.pos.x, ball.pos.z - d.actor.pos.z);
       const canHead = ball.pos.y <= HEAD_Y + 0.55 + R;
-      if (dd < 0.6 && dd < mine && canHead) {
+      if (dd < 0.6 - edge * 0.5 && dd < mine - edge && canHead) {
         this.intercept(d, dd);
         return;
       }

@@ -30,22 +30,23 @@ const careerBase = (extra = {}) => ({
 const playYouthChance = (state, stars) => youth.recordYouthStars(youth.startYouthChance(state), stars);
 const playTrainingChance = (state, stars) => training.recordTrainingStars(training.startTrainingChance(state), stars);
 
-test("SCOREBOBO_TRACK espelha as 12 fases do Scorebobo, na mesma ordem", () => {
+test("SCOREBOBO_TRACK espelha as 24 fases do Scorebobo, na mesma ordem", () => {
   assert.deepEqual(
     youth.SCOREBOBO_TRACK.map(({ id, name }) => ({ id, name })),
     SCORE_LEVELS.map(({ id, name }) => ({ id, name })),
   );
-  assert.equal(youth.SCOREBOBO_TRACK.length, 12);
+  assert.equal(youth.SCOREBOBO_TRACK.length, 24);
   assert.equal(youth.scoreboboTrackName("de-voleio"), "De voleio");
+  assert.equal(youth.scoreboboTrackName("segundo-pau"), "Segundo pau");
 });
 
 test("fases da base vão em ordem de dificuldade, espalhadas, e a revelação é a Final da Copa", () => {
   assert.deepEqual(youth.youthLevelIds(0), []);
   assert.deepEqual(youth.youthLevelIds(1), ["final-da-copa"]);
   assert.deepEqual(youth.youthLevelIds(2), ["primeiro-toque", "final-da-copa"]);
-  assert.deepEqual(youth.youthLevelIds(5).map(trackIndex), [0, 3, 6, 8, 11]);
-  assert.deepEqual(youth.youthLevelIds(6).map(trackIndex), [0, 2, 4, 7, 9, 11]);
-  assert.deepEqual(youth.youthLevelIds(7).map(trackIndex), [0, 2, 4, 6, 7, 9, 11]);
+  assert.deepEqual(youth.youthLevelIds(5).map(trackIndex), [0, 6, 12, 17, 23]);
+  assert.deepEqual(youth.youthLevelIds(6).map(trackIndex), [0, 5, 9, 14, 18, 23]);
+  assert.deepEqual(youth.youthLevelIds(7).map(trackIndex), [0, 4, 8, 12, 15, 19, 23]);
   for (let count = 1; count <= 7; count += 1) {
     const ids = youth.youthLevelIds(count);
     assert.equal(ids.length, count);
@@ -174,7 +175,7 @@ test("treino especial sorteia o mesmo par para a mesma seed e temporada", () => 
       pair.forEach((id) => seen.add(id));
     }
   }
-  assert.equal(seen.size, 12, "todas as fases podem sair");
+  assert.equal(seen.size, youth.SCOREBOBO_TRACK.length, "todas as fases podem sair");
   const pairs = new Set([2027, 2031, 2035, 2039, 2043].map((season) => training.specialTrainingLevelIds(777, season).join("+")));
   assert.ok(pairs.size > 1, "temporadas diferentes mudam o par");
 });

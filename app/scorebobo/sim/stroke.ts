@@ -521,8 +521,8 @@ function planShot(ctx: StrokeContext, rawTarget: Vec3, rawCurve: number, power: 
   const from = { ...ctx.ball };
   const fromXZ = { x: from.x, z: from.z };
   const D = Math.max(1, dist2(fromXZ, rawTarget));
-  // Cabeça quase não dá efeito; de voleio, um pouco.
-  const maxCurve = Math.min(ctx.aerial === "header" ? 0.8 : ctx.aerial === "volley" ? 2 : 6, 0.24 * D);
+  // Cabeça dá pouco efeito (o bastante para tirar do goleiro); de voleio, um pouco mais.
+  const maxCurve = Math.min(ctx.aerial === "header" ? 1.2 : ctx.aerial === "volley" ? 2 : 6, 0.24 * D);
   const curve = clamp(rawCurve, -maxCurve, maxCurve);
   const p = Math.min(power, 1);
   const over = Math.max(0, power - 1);
@@ -530,8 +530,10 @@ function planShot(ctx: StrokeContext, rawTarget: Vec3, rawCurve: number, power: 
   let speed: number;
   let target = { ...rawTarget };
   let apex: number | undefined;
-  // Cabeçada firme: mais lenta que o chute, mas sem fazer laçada até o gol.
-  if (kind === "header") speed = lerp(13.5, 23, p);
+  // Cabeçada firme: mais lenta que o chute, mas sem fazer laçada até o gol. O
+  // traço da cabeçada é curto (a bola já está perto do gol): mesmo o toque
+  // calmo sai com força de testada, e o peteleco vira cabeçada seca.
+  if (kind === "header") speed = lerp(16.5, 25, p) + over * 3;
   else if (kind === "volley") speed = lerp(17, 30, p) + over * 6;
   else speed = Math.min(34, lerp(16, 31.5, p) + over * 10);
 
@@ -557,7 +559,8 @@ function planShot(ctx: StrokeContext, rawTarget: Vec3, rawCurve: number, power: 
   // Curva custa: pouco até 2 m, bem mais na banana enorme (que senão vencia qualquer goleiro).
   acc -= Math.max(0, Math.min(c, 2) - 1.2) * 0.05 + Math.max(0, c - 2) * 0.09;
   if (kind === "volley") acc -= 0.12;
-  if (kind === "header") acc += 0.04;
+  // Cabeceio é direção: perto do gol, o traço manda quase sozinho (a pancada exagerada ainda custa).
+  if (kind === "header") acc += 0.08;
   if (kind === "chip") acc -= 0.06;
   const accuracy = clamp(acc, 0.3, 0.97);
   return finishPlan(ctx, { kind, shot: true, receiver: null, from, target, curve, speed, accuracy, apex }, { receiver: null, end: { x: target.x, z: target.z }, skipEnd: false });
@@ -637,7 +640,11 @@ function planPass(ctx: StrokeContext, endG: Vec2, rawCurve: number, power: numbe
       const t3 = { x: target.x, y: 0.4, z: target.z };
       return finishPlan(ctx, { kind, shot: false, receiver: recId, from, target: t3, curve, speed, accuracy: clamp(acc, 0.3, 0.97) }, extra);
     }
-    const cross = Math.abs(fromXZ.x) > 13 && inBox(target) && target.z > fromXZ.z - 2;
+    // Cruzamento (chega na cabeça): da ponta para a área; ou de mais perto do meio, da faixa
+    // lateral do terço final, desde que a bola venha para dentro (a falta lateral levantada, o
+    // cruzamento da linha de fundo que volta). O lançamento do campo de defesa segue lançamento.
+    const inward = Math.abs(fromXZ.x) > 10 && Math.abs(fromXZ.x) - Math.abs(target.x) > 4 && fromXZ.z > GOAL_Z - 34;
+    const cross = inBox(target) && ((Math.abs(fromXZ.x) > 13 && target.z > fromXZ.z - 2) || inward);
     const long = D > 30;
 
     // Rasteiro: chega com mais ou menos força; traço lento demais fica curto.

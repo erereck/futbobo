@@ -22,7 +22,7 @@ export const SPECIAL_TRAINING_CHANCES = 3;
 const LEVEL_DRAW_SALT = 3083;
 const ATTRIBUTE_SALT = 3089;
 
-/** As 2 fases do treino (distintas, das 12), na ordem da trilha de dificuldade. */
+/** As 2 fases do treino (distintas, das 24), na ordem da trilha de dificuldade. */
 export function specialTrainingLevelIds(seed: number, season: number): [string, string] {
   const count = SCOREBOBO_TRACK.length;
   const first = Math.floor(seeded(seed, season * LEVEL_DRAW_SALT + 1) * count) % count;
