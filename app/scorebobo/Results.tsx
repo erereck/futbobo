@@ -79,18 +79,28 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
     if (performance.now() - shownAt.current >= ARM_MS) action();
   };
 
+  const won = stars > 0;
+  const rules = [level.objective, describeRule(level.stars[0]), describeRule(level.stars[1])];
+  // Cada estrela é a da sua regra: gol na 2ª bola no ângulo acende a 1ª e a 3ª, não a da "primeira bola".
+  const lit = (index: number) => (met ? won && met[index] : index < stars);
+  const litKey = [0, 1, 2].map((index) => (lit(index) ? "1" : "0")).join("");
+
   useEffect(() => {
-    const timers = Array.from({ length: stars }, (_, index) => window.setTimeout(() => playStarSound(index), STAR_START_MS + index * STAR_DELAY_MS));
+    // O sino sobe um tom por estrela acesa, no tempo da estrela dela.
+    const timers: number[] = [];
+    let tone = 0;
+    for (let index = 0; index < 3; index += 1) {
+      if (litKey[index] !== "1") continue;
+      const step = tone;
+      timers.push(window.setTimeout(() => playStarSound(step), STAR_START_MS + index * STAR_DELAY_MS));
+      tone += 1;
+    }
     const focus = window.setTimeout(() => primaryRef.current?.focus({ preventScroll: true }), STAR_START_MS);
     return () => {
       for (const timer of timers) window.clearTimeout(timer);
       window.clearTimeout(focus);
     };
-  }, [stars]);
-
-  const won = stars > 0;
-  const rules = [level.objective, describeRule(level.stars[0]), describeRule(level.stars[1])];
-  const lit = (index: number) => (met ? won && met[index] : index < stars);
+  }, [litKey]);
   // A última fase é a final: quem marca levanta a taça.
   const champion = won && (career ? level.id === "final-da-copa" : !hasNext);
   const careerRetry = career ? career.retriesLeft > 0 && stars < 3 : false;
@@ -129,8 +139,8 @@ export function Results({ level, levelIndex, stars, record, notes, met, hasNext,
                 style={{ "--delay": `${STAR_START_MS + index * STAR_DELAY_MS}ms`, "--tilt": `${(index - 1) * 9}deg` } as CSSProperties}
               >
                 <StarIcon lit={false} className={styles.resultsStarBase} />
-                {index < stars && <StarIcon lit className={styles.resultsStarGold} />}
-                {index < stars && <i className={styles.resultsBurst} aria-hidden="true" />}
+                {lit(index) && <StarIcon lit className={styles.resultsStarGold} />}
+                {lit(index) && <i className={styles.resultsBurst} aria-hidden="true" />}
               </span>
             ))}
           </div>

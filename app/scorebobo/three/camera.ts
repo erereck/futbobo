@@ -272,11 +272,16 @@ export class CameraDirector {
     // Celular deitado (tela baixa): a bola sobe um pouco, longe da dica no pé da tela.
     const heroY = portrait ? -0.52 : this.aspect > 1.9 ? -0.47 : -0.58;
     const goalY = portrait ? 0.6 : 0.64;
-    const heroAngle = THREE.MathUtils.degToRad(portrait ? (tight ? 40 : 47) : tight ? 32 : 39);
+    // Bola no ar (cabeceio, voleio): o quadro ancora na BOLA, na altura dela, e a
+    // câmera fica mais alta. Ancorada no pé, a bola na altura da cabeça subia na
+    // tela até cair em cima da boca do gol: o traço da cabeçada virava um risco
+    // de poucos pixels, sem como escolher o canto.
+    const anchorY = aerial ? Math.max(0, ball.y) : 0;
+    const heroAngle = THREE.MathUtils.degToRad(aerial ? (portrait ? 54 : 46) : portrait ? (tight ? 40 : 47) : tight ? 32 : 39);
     const rise = Math.tan(heroAngle);
     const need = Math.atan(-heroY * t) + Math.atan(goalY * t);
     const top = PITCH.goalHeight + 0.25;
-    const separation = (back: number) => heroAngle - Math.atan2(back * rise - top, back + distance);
+    const separation = (back: number) => heroAngle - Math.atan2(anchorY + back * rise - top, back + distance);
     let lo = 4.5;
     let hi = 40;
     if (separation(lo) <= need) hi = lo;
@@ -306,7 +311,7 @@ export class CameraDirector {
     cam.aspect = this.aspect;
     cam.updateProjectionMatrix();
     const place = (back: number) => {
-      const height = back * rise;
+      const height = anchorY + back * rise;
       cam.position.set(hx, 0, hz).addScaledVector(toGoal, -back).addScaledVector(lateral, sideShift);
       cam.position.y = height;
       // Inclinação que põe o pé do herói em `heroY`. A câmera deslocada para o
@@ -345,8 +350,10 @@ export class CameraDirector {
     fit();
     // Bola livre: se o corpo do herói (pé → cabeça) ainda cobre a bola na tela
     // (câmera alta e longe, olhar puxado pelos companheiros), ela anda mais para
-    // o lado até abrir espaço.
-    if (hero) {
+    // o lado até abrir espaço. Bola no ar não precisa: ela está na frente da
+    // cabeça dele e a câmera alta da cabeçada olha por cima (andar de lado ali
+    // só tirava o gol do quadro).
+    if (hero && !aerial) {
       const feet = new THREE.Vector3();
       const head = new THREE.Vector3();
       const orb = new THREE.Vector3();

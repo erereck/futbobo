@@ -126,6 +126,9 @@ const OUTCOME_MIN_MS = 800;
 const AIM_HINT = "Desenhe a partir da bola: até um companheiro ou até o gol";
 /** Fase sem passe (pênalti, falta direta): a dica não convida a rolar para o lado. */
 const AIM_HINT_DIRECT = "Desenhe a partir da bola até o gol";
+/** Bola no ar: o traço sai da bola e termina no canto do gol (a altura do fim é a altura do chute). */
+const AIM_HINT_HEADER = "Cabeceie: arraste da bola até o canto do gol, longe do goleiro";
+const AIM_HINT_VOLLEY = "De voleio: arraste da bola até o gol, rápido e decidido";
 /** Segunda linha da dica até o jogador girar a câmera a primeira vez (depois some de vez). */
 const TURN_HINT_TOUCH = "Arraste fora da bola para girar a câmera";
 const TURN_HINT_KEYS = "Arraste fora da bola ou use ← → para girar a câmera";
@@ -207,6 +210,8 @@ type HudSnapshot = {
   goals: number;
   slow: boolean;
   heroId: string;
+  /** Bola parada no ar para o herói na mira: a dica fala da cabeçada ou do voleio. */
+  aerial: "header" | "volley" | null;
   /** Muda a cada resultado novo (a faixa anima uma vez por resultado, não a cada segundo do relógio). */
   outcomeKey: string;
 };
@@ -585,10 +590,15 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
     // Câmera lenta de verdade (gol, defesa); o "aim" tem o próprio visual de tempo congelado.
     const slow = state.timeScale < 0.75 && state.phase !== "aim";
     const outcomeId = outcome ? `${outcome.result}:${outcome.stars}:${outcome.label}:${state.attempt}` : "-";
-    const key = `${state.phase}|${state.attemptsLeft}|${state.passes}|${clock}|${outcomeId}|${goals}|${slow}|${state.heroId}`;
+    let aerial: HudSnapshot["aerial"] = null;
+    if (state.phase === "aim" && !state.ball.owner && state.ball.pos.y > 0.4) {
+      const pose = state.actors.find((actor) => actor.id === state.heroId)?.pose;
+      aerial = pose === "header" || pose === "volley" ? pose : null;
+    }
+    const key = `${state.phase}|${state.attemptsLeft}|${state.passes}|${clock}|${outcomeId}|${goals}|${slow}|${state.heroId}|${aerial}`;
     if (key === hudKeyRef.current) return;
     hudKeyRef.current = key;
-    setHud({ phase: state.phase, attemptsLeft: state.attemptsLeft, passes: state.passes, clock, outcome, goals, slow, heroId: state.heroId, outcomeKey: outcomeId });
+    setHud({ phase: state.phase, attemptsLeft: state.attemptsLeft, passes: state.passes, clock, outcome, goals, slow, heroId: state.heroId, aerial, outcomeKey: outcomeId });
   }, [level.clock]);
 
   const finish = useCallback((stars: StarCount, notes: string[], met?: [boolean, boolean, boolean]) => {
@@ -1575,7 +1585,11 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
   const outcome = hud?.outcome ?? null;
   const showAim = status === "ready" && phase === "aim" && !paused && !results;
   const letterbox = status === "ready" && (phase === "intro" || phase === "replay");
-  const infoHint = level.tutorial && !tutorialDone ? level.tutorial.hint : goalOnly ? AIM_HINT_DIRECT : AIM_HINT;
+  // Da 2ª bola em diante a estrela da primeira bola já foi (só "Recomeçar" a devolve).
+  const firstBallGone = (hud?.attemptsLeft ?? level.attempts) < level.attempts;
+  const infoHint = level.tutorial && !tutorialDone
+    ? level.tutorial.hint
+    : hud?.aerial === "header" ? AIM_HINT_HEADER : hud?.aerial === "volley" ? AIM_HINT_VOLLEY : goalOnly ? AIM_HINT_DIRECT : AIM_HINT;
   // Como girar a câmera: depois do tutorial, até o primeiro giro.
   const turnHint = !turnLearned && !(level.tutorial && !tutorialDone) ? (touchUi ? TURN_HINT_TOUCH : TURN_HINT_KEYS) : undefined;
 
@@ -1668,6 +1682,7 @@ export default function LevelPlayer({ level, levelIndex, teams, home, away, perf
               situation={level.situation}
               objective={level.objective}
               rules={[describeRule(level.stars[0]), describeRule(level.stars[1])]}
+              lost={firstBallGone ? [level.stars[0].kind === "firstAttempt", level.stars[1].kind === "firstAttempt"] : undefined}
               onSkip={skip}
               kicker={career?.kicker}
             />

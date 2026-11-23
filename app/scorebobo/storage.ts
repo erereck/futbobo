@@ -28,10 +28,11 @@ export type ScoreboboProgress = {
 
 /**
  * Versão da trilha (a ordem do SCORE_LEVELS, que é a ordem de desbloqueio).
- * 2 = a reordenação por dificuldade. Mudou a ordem de novo: sobe a versão e a
- * ordem que sai entra na migração de `openedBefore`.
+ * 2 = a reordenação por dificuldade; 3 = as 12 fases novas intercaladas (24).
+ * Mudou a ordem de novo: sobe a versão e a ordem que sai entra na migração de
+ * `openedBefore`.
  */
-const TRACK_VERSION = 2;
+const TRACK_VERSION = 3;
 
 const EMPTY_PROGRESS: ScoreboboProgress = { stars: {}, opened: [], track: TRACK_VERSION, unlockAll: false, performance: null };
 
@@ -59,21 +60,41 @@ const SECOND_ORDER = [
   "final-da-copa",
 ];
 
+/** A trilha 2 (12 fases, por dificuldade), antes de as 12 novas entrarem entre elas. */
+const THIRD_ORDER = [
+  "primeiro-toque",
+  "na-marca-da-cal",
+  "tabela-na-area",
+  "cara-a-cara",
+  "triangulacao",
+  "de-voleio",
+  "pela-ponta",
+  "falta-frontal",
+  "contra-ataque",
+  "area-lotada",
+  "curva-no-angulo",
+  "final-da-copa",
+];
+
 /** O que "ao menos 1 estrela na anterior" abria em `order`. */
 function openedByOrder(order: readonly string[], stars: Record<string, StarCount>) {
   return order.filter((_, index) => index > 0 && (stars[order[index - 1]] ?? 0) >= 1);
 }
 
 /**
- * Save sem `track` é de antes da trilha 2: tudo o que a ordem de 12 mostrava
- * aberto continua aberto (quem chegou na final não volta a ver cadeado nela).
- * É a lista `opened` dele (ou, se ele nunca gravou, o que a primeira leva
- * abria) mais a anterior com estrela na ordem de 12, contada com as estrelas
- * de agora (as que vierem depois já abrem só pela ordem nova). A versão e a
- * lista vão juntas na próxima gravação; saves novos nascem com ela vazia.
+ * Save de uma trilha antiga: tudo o que a ordem dele mostrava aberto continua
+ * aberto (quem chegou na final não volta a ver cadeado nela). Sem `track` é de
+ * antes da trilha 2: a lista `opened` dele (ou, se ele nunca gravou, o que a
+ * primeira leva abria) mais a anterior com estrela na ordem de 12. Da trilha 2
+ * (e de antes dela) vem também o que a ordem de 12 por dificuldade abria: com
+ * as fases novas no meio, a fase velha logo depois de uma nova não tranca. As
+ * estrelas contadas são as de agora (as que vierem depois já abrem só pela
+ * ordem nova). A versão e a lista vão juntas na próxima gravação; saves novos
+ * nascem com ela vazia.
  */
-function openedBefore(opened: string[] | null, stars: Record<string, StarCount>) {
-  return [...new Set([...(opened ?? openedByOrder(FIRST_ORDER, stars)), ...openedByOrder(SECOND_ORDER, stars)])];
+export function openedBefore(track: number | null, opened: string[] | null, stars: Record<string, StarCount>) {
+  const legacy = track === null ? [...(opened ?? openedByOrder(FIRST_ORDER, stars)), ...openedByOrder(SECOND_ORDER, stars)] : opened ?? [];
+  return [...new Set([...legacy, ...openedByOrder(THIRD_ORDER, stars)])];
 }
 
 function readProgressNow(): ScoreboboProgress {
@@ -88,10 +109,11 @@ function readProgressNow(): ScoreboboProgress {
     }
     const rawOpened: unknown = parsed?.opened;
     const opened = Array.isArray(rawOpened) ? rawOpened.filter((id): id is string => typeof id === "string") : null;
-    const current = typeof parsed?.track === "number" && parsed.track >= TRACK_VERSION;
+    const track = typeof parsed?.track === "number" ? parsed.track : null;
+    const current = track !== null && track >= TRACK_VERSION;
     return {
       stars,
-      opened: current ? opened ?? [] : openedBefore(opened, stars),
+      opened: current ? opened ?? [] : openedBefore(track, opened, stars),
       track: TRACK_VERSION,
       unlockAll: parsed?.unlockAll === true,
       performance: typeof parsed?.performance === "boolean" ? parsed.performance : null,

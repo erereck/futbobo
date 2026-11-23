@@ -363,8 +363,9 @@ export const OutcomeBanner = memo(function OutcomeBanner({ outcome }: { outcome:
       )}
       {outcome.result === "goal" && outcome.stars > 0 && (
         <div className={styles.bannerStars} aria-label={`${outcome.stars} estrelas`}>
+          {/* A estrela da regra cumprida (gol na 2ª bola não acende a da "primeira bola"). */}
           {[0, 1, 2].map((index) => (
-            <StarIcon key={index} lit={index < outcome.stars} className={styles.bannerStar} style={{ "--i": index } as CSSProperties} />
+            <StarIcon key={index} lit={outcome.met ? outcome.met[index] : index < outcome.stars} className={styles.bannerStar} style={{ "--i": index } as CSSProperties} />
           ))}
         </div>
       )}
@@ -382,13 +383,15 @@ export function ReplayTag({ onSkip, stats }: { onSkip: () => void; stats?: strin
   );
 }
 
-export function IntroCard({ index, name, situation, objective, rules, onSkip, kicker }: {
+export function IntroCard({ index, name, situation, objective, rules, lost = [false, false], onSkip, kicker }: {
   index: number;
   name: string;
   situation: string;
   objective: string;
   /** Regras da 2ª e da 3ª estrela. */
   rules: [string, string];
+  /** Estrela que já não dá nesta tentativa (a da primeira bola, da 2ª bola em diante): riscada. */
+  lost?: [boolean, boolean];
   onSkip: () => void;
   /** No lugar de "FASE 0X" (a carreira: "BASE · 13 ANOS"). */
   kicker?: string;
@@ -405,8 +408,13 @@ export function IntroCard({ index, name, situation, objective, rules, onSkip, ki
           {/* O objetivo e as estrelas antes da primeira bola (só apareciam no fim). */}
           <ul className={styles.introRules}>
             <li><StarIcon lit className={styles.introStar} />{objective}</li>
-            <li><StarIcon lit={false} className={styles.introStar} />{rules[0]}</li>
-            <li><StarIcon lit={false} className={styles.introStar} />{rules[1]}</li>
+            {rules.map((rule, at) => (
+              <li key={at} className={lost[at] ? styles.introRuleLost : undefined}>
+                <StarIcon lit={false} className={styles.introStar} />
+                {lost[at] ? <s>{rule}</s> : rule}
+                {lost[at] && <span className={styles.vh}> (não dá mais nesta tentativa)</span>}
+              </li>
+            ))}
           </ul>
         </div>
       </div>

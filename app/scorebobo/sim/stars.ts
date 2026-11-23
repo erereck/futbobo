@@ -26,7 +26,7 @@ export function ruleMet(rule: StarRule, g: GoalFacts) {
 /** Texto da regra para o HUD ("Gol de cabeça", "Curva de 2 m"...). */
 export function ruleLabel(rule: StarRule) {
   switch (rule.kind) {
-    case "firstAttempt": return "Gol na primeira tentativa";
+    case "firstAttempt": return "Gol na primeira bola";
     case "curve": return `Gol com curva de ${fmt(rule.min)} m`;
     case "topCorner": return "Gol no ângulo";
     case "header": return "Gol de cabeça";
