@@ -22,22 +22,19 @@ import { playSignatureSound } from "../signature-audio";
 import { goalCelebrationExtensionMs } from "../celebration-timing";
 import { botaoTraceEnabled } from "../dev-trace";
 import { celebrationIdOf, teamKitPattern, randomPlayerAppearance, type PlayerAppearance } from "../../player-appearance";
-import { bodyAppearance, type BotaoRenderView } from "../render";
+import { bodyAppearance, pitchFloorColor, type BotaoRenderView } from "../render";
 import type { BotaoMatchSetup, BotaoSide } from "../types";
 import { BallView } from "./ball";
 import { FIGURE_HEIGHT, PlayerFigure, angleDelta, idleIntent, type FigureAction, type FigureIntent } from "./character";
 import { Choreographer, goalCelebrationOf, squadCelebrationFor, type Actor, type CameraShot, type Directive } from "./choreography";
 import { CelebrationFx } from "./celebration-fx";
 import { Effects } from "./effects";
-import { GOAL_HEIGHT, HALF_H, HALF_W, Stadium } from "./stadium";
-import { fieldThemeForMatch } from "../field-themes";
+import { GOAL_HEIGHT, HALF_H, HALF_W, Stadium, sceneMoodForMatch, type SceneMood } from "./stadium";
+import { fieldThemeForMatch, isFutsalTheme } from "../field-themes";
 import { kitDistance, readableInk } from "../kits";
 import { labelTexture, mixHex } from "./textures";
 
 const DEFAULT_PITCH = 0.5;
-const SUN_INTENSITY = 2.35;
-const HEMISPHERE_INTENSITY = 1.05;
-const HEMISPHERE_SKY = "#d6ecff";
 const MIN_PITCH = 0.08;
 const MAX_PITCH = 1.05;
 const PICK_HEIGHT = 12;
@@ -693,7 +690,9 @@ export class Botao3DView {
    */
   private glow = 0;
   private readonly glowColor = new THREE.Color();
-  private readonly skyColor = new THREE.Color(HEMISPHERE_SKY);
+  private readonly skyColor = new THREE.Color();
+  /** Céu, neblina e luzes: o estádio de sempre ou a hora do dia do campo de rua. */
+  private readonly mood: SceneMood;
   private dim = 0;
   private readonly cleanup: Array<() => void> = [];
   private readonly projected = new THREE.Vector3();
@@ -827,21 +826,27 @@ export class Botao3DView {
     // Conferir cada shader compilado custa uma ida e volta síncrona à GPU; só em desenvolvimento.
     this.renderer.debug.checkShaderErrors = process.env.NODE_ENV !== "production";
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // Clima da partida: no estádio são os valores de sempre; no campo de rua,
+    // a hora do dia da variação (tarde, pôr do sol ou noite).
+    const mood = sceneMoodForMatch(setup);
+    this.mood = mood;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.08;
+    this.renderer.toneMappingExposure = mood.exposure;
     const small = Math.min(window.innerWidth, window.innerHeight) < 600;
     this.renderer.shadowMap.enabled = !lite;
     // PCF direto: o r186 tirou o PCFSoft e trocava por PCF no primeiro quadro de
     // sombra, mudando a chave de todo shader (o compileAsync compilava à toa).
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
-    this.scene.background = new THREE.Color("#0a1219");
-    this.scene.fog = new THREE.Fog("#0a1219", 900, 2400);
+    this.scene.background = new THREE.Color(mood.background);
+    this.scene.fog = new THREE.Fog(mood.fog, 900, 2400);
 
-    this.hemisphere = new THREE.HemisphereLight(HEMISPHERE_SKY, "#1d3322", HEMISPHERE_INTENSITY);
+    this.skyColor.set(mood.hemisphereSky);
+    this.hemisphere = new THREE.HemisphereLight(mood.hemisphereSky, mood.hemisphereGround, mood.hemisphereIntensity);
     this.scene.add(this.hemisphere);
-    this.sun = new THREE.DirectionalLight("#fff3df", SUN_INTENSITY);
-    this.sun.position.set(-170, 430, 210);
+    this.sun = new THREE.DirectionalLight(mood.sun, mood.sunIntensity);
+    this.sunOffset.set(mood.sunOffset[0], mood.sunOffset[1], mood.sunOffset[2]);
+    this.sun.position.copy(this.sunOffset);
     this.sun.castShadow = !lite;
     // O mapa de sombra é refeito sob demanda (ver render): parado, não refaz.
     this.sun.shadow.autoUpdate = false;
@@ -856,8 +861,8 @@ export class Botao3DView {
     this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.5;
     this.scene.add(this.sun, this.sun.target);
-    const fill = new THREE.DirectionalLight("#9cc3ff", 0.55);
-    fill.position.set(220, 260, -260);
+    const fill = new THREE.DirectionalLight(mood.fill, mood.fillIntensity);
+    fill.position.set(mood.fillPosition[0], mood.fillPosition[1], mood.fillPosition[2]);
     this.scene.add(fill);
 
     this.stadium = new Stadium(setup, this.renderer.capabilities.getMaxAnisotropy(), { reducedMotion: options.reducedMotion, performance: lite });
@@ -868,8 +873,9 @@ export class Botao3DView {
     this.scene.add(this.ball.root, this.aim.group, this.trail.mesh);
     this.confetti = new Confetti(options.reducedMotion ? 80 : lite ? 110 : 240);
     this.scene.add(this.confetti.mesh);
+    const theme = fieldThemeForMatch(setup);
     this.effects = new Effects({
-      surface: fieldThemeForMatch(setup) === "futsal-blue" ? "futsal" : "grass",
+      surface: isFutsalTheme(theme) ? "futsal" : theme === "street" ? "street" : "grass",
       reducedMotion: options.reducedMotion,
       lowPower: small,
       performance: lite,
@@ -1491,9 +1497,9 @@ export class Botao3DView {
     if (!material) {
       const team = side === "user" ? this.setup.userTeam : this.setup.cpuTeam;
       const glossy = side === "user" && !this.options.hideUserMarker;
-      // Camisa da cor do piso (verde na grama, azul no futsal) sumiria na base:
-      // clareia só o disco, o uniforme continua o mesmo.
-      const floor = fieldThemeForMatch(this.setup) === "futsal-blue" ? "#126795" : "#145c3a";
+      // Camisa da cor do piso (verde na grama, azul ou laranja no futsal, asfalto,
+      // terra ou concreto na rua) sumiria na base: clareia só o disco, o uniforme continua o mesmo.
+      const floor = pitchFloorColor(this.setup);
       const body = kitDistance(team.primary, floor) < 90 ? mixHex(team.primary, "#ffffff", 0.38) : team.primary;
       material = new THREE.MeshBasicMaterial({ map: plateTexture(body, team.secondary, glossy), transparent: true, depthWrite: false });
       this.plateMaterials[side] = material;
@@ -2072,8 +2078,8 @@ export class Botao3DView {
     const windupDim = windup && !shot && !this.options.reducedMotion ? 0.5 : 0;
     const wantDim = shot && !this.options.reducedMotion && this.choreo.kind !== "final" ? 1 : windupDim;
     this.dim += (wantDim - this.dim) * (1 - Math.exp(-cameraStep * (wantDim ? 2.6 : 3.5)));
-    this.sun.intensity = SUN_INTENSITY * (1 - 0.3 * this.dim);
-    this.hemisphere.intensity = HEMISPHERE_INTENSITY * (1 - 0.24 * this.dim) + 0.5 * this.glow;
+    this.sun.intensity = this.mood.sunIntensity * (1 - 0.3 * this.dim);
+    this.hemisphere.intensity = this.mood.hemisphereIntensity * (1 - 0.24 * this.dim) + 0.5 * this.glow;
     this.hemisphere.color.copy(this.skyColor).lerp(this.glowColor, 0.32 * this.glow);
     this.effects.setSpotlight(shot && wantDim ? { x: shot.x, z: shot.z } : windupDim ? { x: this.ballDisplayX, z: this.ballDisplayZ } : null);
     this.frameMoment(state, shot);

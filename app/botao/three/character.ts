@@ -886,6 +886,13 @@ const ARM_ENVELOPE_PULL: Arm = [-0.75, -0.39, 0.22, -1.51];
 const ARM_ENVELOPE_LOW: Arm = [-0.07, -0.49, 0.17, -1.27];
 /** Braço estendido para o lado, apresentando o vencedor. */
 const ARM_PRESENT: Arm = [-0.09, -0.28, 1.35, -0.48];
+// Apresentação do reforço: palmas nos ombros da camisa (±5,5 px um do outro), na frente do corpo.
+/** Camisa segura na frente da barriga (mãos a 6 px de altura e 6,5 à frente no tronco). */
+const ARM_SHIRT_HOLD: Arm = [-0.09, -0.3, 0.21, -1.35];
+/** Camisa mostrada: mãos na altura do ombro, 7,5 à frente (a gola fica abaixo do queixo). */
+const ARM_SHIRT_UP: Arm = [-0.61, -0.32, 0.32, -1.63];
+/** Um palmo acima, no pulo da festa. */
+const ARM_SHIRT_HIGH: Arm = [-0.82, -0.35, 0.31, -1.48];
 // Bobonline (mesmo cálculo: palma no alvo, braço fora do corpo e da cabeça).
 /** Kamehameha: palmas em concha na frente da barriga; o giro do tronco leva as mãos para o lado do quadril. */
 const ARM_KAME_CUP: Arm = [-0.84, -1.9, 0, -1.08];
@@ -1070,6 +1077,10 @@ export type FigureAction =
   | "presenterEnvelope"
   | "presenterGesture"
   | "sadClap"
+  // Apresentação do reforço: a camisa nova presa pelas duas mãos (o palco guia as palmas com `reach`).
+  | "shirtHold"
+  | "shirtPresent"
+  | "shirtCheer"
   // Bobonline: comemorações de assinatura (mesmos ids do criador) e o drama do pênalti no 3D.
   | "kamehameha"
   | "superSaiyan"
@@ -1285,6 +1296,13 @@ const ENVELOPE_LOOP = 3.4;
 const ENVELOPE_READ: Track = [0, 0.36, 0.95, 0.36, 1.6, 0.28, 1.9, -0.04, 2.9, -0.04, 3.2, 0.36, 3.4, 0.36];
 const ENVELOPE_GLANCE: Track = [0, 0, 1.75, 0, 2, 0.42, 2.6, 0.42, 2.85, 0, 3.4, 0];
 const ENVELOPE_OPEN: Track = [0, 0, 0.8, 0, 1.05, 1, 1.35, 1, 1.6, 0, 3.4, 0];
+
+// --- camisa nova nas mãos (laço de 4 s): olha para ela, sobe os olhos.
+const SHIRT_LOOP = 4;
+const SHIRT_ADMIRE: Track = [0, 0, 0.5, 0.26, 1.6, 0.26, 2.1, 0, 4, 0];
+// --- camisa mostrada aos fotógrafos (laço de 5 s): o olhar corre de um lado ao outro.
+const SHIRT_SHOW_LOOP = 5;
+const SHIRT_SCAN: Track = [0, 0, 0.6, 0.32, 1.7, 0.32, 2.4, -0.3, 3.6, -0.3, 4.3, 0, 5, 0];
 
 /**
  * Tempos do Kamehameha (s desde o começo da ação): base, carga (a esfera
@@ -2205,6 +2223,85 @@ const ACTIONS: Record<ActionId, ActionDef> = {
       const up = smooth((t - 1.2) / 0.6);
       o.neckX = mix(0.38, 0.04, up);
       o.torsoX = mix(0.08, 0.02, up);
+    },
+  },
+  // ------------------------------------------- apresentação do reforço
+  // Os braços daqui são a base: o palco prende as palmas nos ombros da camisa
+  // com `reach` (a camisa é dele, não do boneco). Sem `reach`, as mãos ficam
+  // perto dos mesmos pontos.
+  shirtHold: {
+    duration: 0,
+    body: "full",
+    mood: null,
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      const k = smooth(t / 0.35);
+      putL(o, ARM_REST, ARM_SHIRT_HOLD, k);
+      putR(o, ARM_REST, ARM_SHIRT_HOLD, k);
+      // De vez em quando baixa os olhos para a camisa e volta.
+      const loop = (t + c.variant * 1.3) % SHIRT_LOOP;
+      o.neckX = 0.06 * k + sampleTrack(SHIRT_ADMIRE, loop) * k;
+      o.neckY = 0.05 * Math.sin(TAU * 0.21 * t + c.variant * 5);
+      o.torsoX = 0.03 * k;
+      // O peso troca de perna devagar (sem tirar o pé do chão).
+      const shift = Math.sin(TAU * 0.24 * t + c.variant * 3);
+      o.hipLZ = 0.04;
+      o.hipRZ = -0.04;
+      shiftHips(o, 0.3 * shift);
+      o.kneeL = 0.05 + 0.08 * Math.max(0, -shift);
+      o.kneeR = 0.05 + 0.08 * Math.max(0, shift);
+    },
+  },
+  shirtPresent: {
+    duration: 0,
+    body: "full",
+    // Grita de alegria quando ergue; depois, o rosto de sempre (orgulho tranquilo).
+    mood: (t) => (t > 0.3 && t < 1.5 ? "shout" : null),
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      // Sai da camisa na barriga (a cena entrega antes) e sobe de uma vez.
+      const up = smooth(t / 0.45);
+      putL(o, ARM_SHIRT_HOLD, ARM_SHIRT_UP, up);
+      putR(o, ARM_SHIRT_HOLD, ARM_SHIRT_UP, up);
+      // Peito para fora, queixo para cima.
+      o.torsoX = -0.06 * up;
+      o.neckX = -0.12 * up;
+      // Encaixe do peso na subida: os joelhos cedem e voltam.
+      const dip = Math.sin(Math.PI * clamp01(t / 0.5)) * (t < 0.5 ? 1 : 0);
+      o.kneeL = o.kneeR = 0.04 + 0.3 * dip;
+      o.hipLX = o.hipRX = -0.15 * dip;
+      o.bodyY += -0.28 * dip;
+      o.hipLZ = 0.07 * up;
+      o.hipRZ = -0.07 * up;
+      // Depois, o olhar corre pelos fotógrafos, de um lado ao outro.
+      const scan = sampleTrack(SHIRT_SCAN, Math.max(0, t - 0.9) % SHIRT_SHOW_LOOP) * smooth((t - 0.9) / 0.4);
+      o.neckY = scan * (c.variant > 0.5 ? 1 : -1);
+      o.torsoY = 0.25 * o.neckY;
+    },
+  },
+  shirtCheer: {
+    duration: 0,
+    body: "full",
+    mood: "shout",
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      const k = smooth(t / 0.3);
+      // Pula nos joelhos com a camisa no alto (a camisa sobe junto no topo do pulo).
+      const pump = t > 0.15 ? 0.5 - 0.5 * Math.cos(TAU * 1.5 * (t - 0.15)) : 0;
+      putL(o, ARM_SHIRT_UP, ARM_SHIRT_HIGH, k * (1 - 0.6 * pump));
+      putR(o, ARM_SHIRT_UP, ARM_SHIRT_HIGH, k * (1 - 0.6 * pump));
+      o.neckX = -0.16 * k;
+      o.neckY = 0.12 * Math.sin(TAU * 0.4 * t + c.variant * 4) * k;
+      o.torsoX = -0.05 * k + 0.04 * pump;
+      o.bodyY = 0.1 * Math.sin(t * 2.3) - 0.55 * pump;
+      // O quanto o corpo desce bate com o dobrar das pernas (pé no chão), como na taça.
+      o.kneeL = o.kneeR = 0.6 * pump;
+      o.hipLX = o.hipRX = -0.3 * pump;
+      o.hipLZ = 0.06;
+      o.hipRZ = -0.06;
     },
   },
   // ----------------------------------------------------------- lamentos

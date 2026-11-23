@@ -295,6 +295,100 @@
 .editor :global(.appearance-preview:has(.appearance-3d)) > :not(:has(.appearance-3d)):not(.appearance-3d) { display: none; }
 
 /* ───────────── 5 · clube da base ───────────── */
+/* Peneira: a figurinha especial (tinta, foil e as três miniaturas de campo) antes dos clubes. */
+.peneiraCard {
+  position: relative;
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) 44px;
+  align-items: stretch;
+  width: 100%;
+  margin: 2px 0 16px;
+  padding: 6px;
+  border: 0;
+  border-radius: 11px;
+  color: #fff;
+  text-align: left;
+  background: var(--dots-light), linear-gradient(115deg, #161616 0%, #1f2a24 55%, #14321f 100%);
+  rotate: -.6deg;
+  box-shadow: 0 0 0 2.5px var(--yellow), 0 2px 2px rgba(0, 0, 0, .22), 0 12px 22px rgba(30, 30, 20, .22);
+  overflow: hidden;
+  transition: translate .18s var(--ease-out), rotate .18s var(--ease-out), box-shadow .18s var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  isolation: isolate;
+}
+/* Brilho de figurinha rara passando devagar. */
+.peneiraCard::after {
+  content: "";
+  position: absolute;
+  inset: -40% -60%;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 42%, rgba(255, 236, 160, .16) 49%, rgba(255, 255, 255, .28) 50%, rgba(255, 236, 160, .16) 51%, transparent 58%);
+  animation: peneiraShine 5.5s var(--ease-out) infinite;
+  pointer-events: none;
+}
+@keyframes peneiraShine { 0%, 40% { translate: -55% 0; } 100% { translate: 55% 0; } }
+.peneiraTag {
+  position: absolute;
+  top: 9px;
+  right: -30px;
+  z-index: 2;
+  width: 112px;
+  padding: 3px 0;
+  rotate: 35deg;
+  font-family: var(--font-display);
+  font-stretch: 80%;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--foil), var(--yellow);
+}
+.peneiraArt { display: grid; grid-template-rows: repeat(3, 1fr); gap: 4px; min-height: 112px; }
+.peneiraArt i {
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .55);
+}
+/* Rua: asfalto com a faixa amarela; quadra: piso laranja com a área redonda; campo: listras de grama. */
+.peneiraArt i[data-venue="street"] {
+  background:
+    repeating-linear-gradient(90deg, rgba(246, 196, 49, .9) 0 9px, transparent 9px 16px) center / 100% 3px no-repeat,
+    radial-gradient(circle at 30% 40%, rgba(255, 255, 255, .08) 0 1px, transparent 1.5px) 0 0 / 7px 7px,
+    #3b3f45;
+}
+.peneiraArt i[data-venue="futsal"] {
+  background:
+    radial-gradient(circle at 50% 100%, transparent 38%, rgba(255, 255, 255, .8) 39% 43%, transparent 44%),
+    linear-gradient(90deg, transparent 49.3%, rgba(255, 255, 255, .8) 49.3% 50.7%, transparent 50.7%),
+    linear-gradient(135deg, #e07a3c, #c4561f);
+}
+.peneiraArt i[data-venue="field"] {
+  background:
+    linear-gradient(90deg, transparent 49.3%, rgba(255, 255, 255, .7) 49.3% 50.7%, transparent 50.7%),
+    repeating-linear-gradient(90deg, #1d7a46 0 12px, #186b3d 12px 24px);
+}
+.peneiraBody { display: grid; align-content: center; gap: 4px; padding: 10px 6px 10px 16px; }
+.peneiraBody small { font-size: 12.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--yellow); }
+.peneiraBody strong {
+  font-family: var(--font-display);
+  font-stretch: 76%;
+  font-weight: 800;
+  font-size: clamp(30px, 4.2vw, 40px);
+  line-height: .95;
+  letter-spacing: -.01em;
+}
+.peneiraBody > span { font-size: 14px; line-height: 1.35; color: rgba(255, 255, 255, .86); text-wrap: pretty; }
+.peneiraGo { display: grid; place-items: center; color: var(--yellow); }
+.peneiraGo svg { width: 28px; height: 28px; transition: translate .18s var(--ease-out); }
+@media (hover: hover) {
+  .peneiraCard:hover { translate: 0 -3px; rotate: 0deg; box-shadow: 0 0 0 3px var(--yellow), 0 4px 4px rgba(0, 0, 0, .2), 0 18px 28px rgba(30, 30, 20, .26); }
+  .peneiraCard:hover .peneiraGo svg { translate: 4px 0; }
+}
+.peneiraCard:active { translate: 0 1px; }
+.peneiraCard:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+
 .baseTools { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: stretch; }
 .baseTools > button:not(.choice) { min-height: 58px; padding: 6px 14px; }
 .clubGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 14px; }
@@ -528,6 +622,11 @@
 
 /* ════════════════ celular / tablet ════════════════ */
 @media (max-width: 1023px) {
+  .peneiraCard { grid-template-columns: 78px minmax(0, 1fr) 28px; margin-bottom: 12px; }
+  .peneiraArt { min-height: 96px; }
+  .peneiraBody { padding: 8px 4px 8px 12px; }
+  .peneiraBody > span { font-size: 13px; }
+  .peneiraGo svg { width: 22px; height: 22px; }
   .fichaPage { display: none; }
   .stepPage { gap: 14px; }
   .centerBlock { margin: 0; }
@@ -641,7 +740,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .year { animation: none; }
-  .spot b, .clubSticker, .modeSticker, .choice, .dice { transition: none; }
+  .spot b, .clubSticker, .modeSticker, .choice, .dice, .peneiraCard { transition: none; }
+  .peneiraCard::after { animation: none; opacity: 0; }
 }
 
 @media (min-width: 1024px) {

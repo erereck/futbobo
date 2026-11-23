@@ -9,7 +9,7 @@ import { DEFAULT_PLAYER_APPEARANCE, normalizePlayerAppearance, randomPlayerAppea
 import { GOALKEEPER_EVENTS } from "../goalkeeper-events";
 import { CLUB_SPECIFIC_EVENTS } from "./club-specific-events";
 import { NEW_CAREER_EVENTS } from "../new-career-events";
-import type { AttributeKey, AwardPresentation, CareerHallEntry, CareerRival, CompetitionId, CustomCharacter, CustomClubDefinition, GameState, MonteCarloReport, PendingBotaoMatch, PlayerAttributes, PlayerStats, SeasonRecord, SpecialTraining, SpecialTraitId, StoredBotaoResult, YouthPlay, YouthPlayYear } from "./model";
+import type { AttributeKey, AwardPresentation, CareerHallEntry, CareerRival, CompetitionId, CustomCharacter, CustomClubDefinition, GameState, MonteCarloReport, PendingBotaoMatch, Peneira, PeneiraMatch, PeneiraMatchResult, PeneiraOpponent, PeneiraStage, PlayerAttributes, PlayerStats, SeasonRecord, SpecialTraining, SpecialTraitId, StoredBotaoResult, YouthPlay, YouthPlayYear } from "./model";
 import { positionByKey } from "./academy";
 import { isScoreboboTrackLevel } from "./scorebobo-track";
 import { competitiveStrength } from "./performance";
@@ -382,6 +382,8 @@ export function initialState(seedOverride?: number): GameState {
     youthScore: 0,
     youthYears: [],
     youthPlay: null,
+    peneira: null,
+    peneiraClubId: "",
     proOffers: [],
     currentClubId: "",
     currentLeagueId: "",
@@ -543,6 +545,54 @@ function normalizeYouthPlay(value: unknown): YouthPlay | null {
   return { mode: "play", years, current: boundedInteger(play.current, 0, years.length - 1), bonus: null };
 }
 
+/**
+ * Peneira no save: formato errado vira null (o jogador volta à escolha do clube).
+ * Jogo começado e sem resultado é página fechada no meio da partida: vale W.O.,
+ * como na final de botão (senão recarregar apagava o jogo ruim).
+ */
+function normalizePeneira(value: unknown): Peneira | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Partial<Record<keyof Peneira, unknown>>;
+  if (typeof raw.countryId !== "string" || !Array.isArray(raw.matches) || raw.matches.length !== 3) return null;
+  const stages: PeneiraStage[] = ["street", "futsal", "field"];
+  const matches: PeneiraMatch[] = [];
+  for (const [index, item] of (raw.matches as unknown[]).entries()) {
+    if (!item || typeof item !== "object") return null;
+    const match = item as Partial<PeneiraMatch>;
+    const opponent = match.opponent as Partial<PeneiraOpponent> | undefined;
+    if (match.stage !== stages[index] || !opponent || typeof opponent.id !== "string" || typeof opponent.name !== "string") return null;
+    const result = match.result && typeof match.result === "object" ? match.result as PeneiraMatchResult : null;
+    const walkover: PeneiraMatchResult = { outcome: "loss", goalsFor: 0, goalsAgainst: 3, playerGoals: 0, playerAssists: 0, manOfTheMatch: false, rating: 3, simulated: false, walkover: true };
+    matches.push({
+      stage: stages[index],
+      opponent: {
+        id: opponent.id,
+        name: opponent.name,
+        shortName: typeof opponent.shortName === "string" ? opponent.shortName : opponent.name,
+        abbr: typeof opponent.abbr === "string" ? opponent.abbr : opponent.name.slice(0, 3).toUpperCase(),
+        primary: typeof opponent.primary === "string" ? opponent.primary : "#2a3038",
+        secondary: typeof opponent.secondary === "string" ? opponent.secondary : "#ffffff",
+        strength: boundedInteger(opponent.strength, 55, 92),
+        ...(typeof opponent.clubId === "string" ? { clubId: opponent.clubId } : {}),
+        ...(opponent.crest === 0 || opponent.crest === 1 || opponent.crest === 2 || opponent.crest === 3 ? { crest: opponent.crest } : {}),
+      },
+      fieldTheme: typeof match.fieldTheme === "string" ? match.fieldTheme : "classic",
+      ...(match.streetVariant === 0 || match.streetVariant === 1 || match.streetVariant === 2 ? { streetVariant: match.streetVariant } : {}),
+      started: match.started === true,
+      result: result ? { ...result, rating: Math.max(3, Math.min(10, Number(result.rating) || 3)) } : match.started === true ? walkover : null,
+    });
+  }
+  const offers = Array.isArray(raw.offers) ? raw.offers.filter((id): id is string => typeof id === "string" && CLUBS.some((club) => club.id === id)).slice(0, 3) : null;
+  const chosen = typeof raw.chosenClubId === "string" && offers?.includes(raw.chosenClubId) ? raw.chosenClubId : null;
+  return {
+    countryId: raw.countryId,
+    seed: Number.isFinite(Number(raw.seed)) ? Math.floor(Number(raw.seed)) : 0,
+    matches,
+    offers: offers && offers.length ? offers : null,
+    chosenClubId: chosen,
+  };
+}
+
 /** Treino especial no save: formato errado vira null; chances e estrelas de 0 a 3. */
 function normalizeSpecialTraining(value: unknown): SpecialTraining | null {
   if (!value || typeof value !== "object") return null;
@@ -685,6 +735,8 @@ export function normalizeSave(value: unknown): GameState {
     corruptionGuaranteedSeason: saved.corruptionGuaranteedSeason ?? 0,
     lastCycleShopSeason: saved.lastCycleShopSeason ?? 0,
     youthPlay: normalizeYouthPlay(saved.youthPlay),
+    peneira: normalizePeneira(saved.peneira),
+    peneiraClubId: typeof saved.peneiraClubId === "string" ? saved.peneiraClubId : "",
     specialTraining: normalizeSpecialTraining(saved.specialTraining),
     agentCountryFocus: typeof saved.agentCountryFocus === "string" ? saved.agentCountryFocus : "",
     nextContractYearsAdjustment: saved.nextContractYearsAdjustment === -1 || saved.nextContractYearsAdjustment === 1 ? saved.nextContractYearsAdjustment : 0,
