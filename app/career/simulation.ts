@@ -20,6 +20,8 @@ import { evaluateBallonDor } from "./ballon-dor";
 import { clubWithPlayerImpact } from "./player-club-impact";
 import { resolveExtraSecondDivisionPromotion } from "./second-divisions";
 import { starPromotionRankBoost } from "./promotion";
+import { peneiraSigningTerms } from "./peneira";
+import { LOAN_MINUTES_BONUS, adjustedSquadRole, isOnLoan, loanSquadRole, peneiraGiantRole } from "./squad-role";
 
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
@@ -76,9 +78,11 @@ export function simulateSeason(
   const adaptationPenalty = awayFromAcademyHome ? Math.max(0, (72 - affected.adaptation) / 8) : 0;
   const leaguePressure = inEurope ? league.prestige * 3 : Math.max(0, league.prestige - 3) * 2;
   const requirement = 55 + club.reputation * 5 + leaguePressure;
-  const seasonRole = calculateSquadRole(affected.overall, club, league.prestige, affected.managerTrust, affected.age);
+  const seasonRole = adjustedSquadRole(affected, club.id, affected.overall, calculateSquadRole(affected.overall, club, league.prestige, affected.managerTrust, affected.age));
   const reducedOpportunity = affected.reducedOpportunitySeason === affected.season;
-  const roleScore = affected.overall - requirement + (primaryAttributeRating - affected.overall) * 0.18 + (effect.minutes ?? 0) - adaptationPenalty + roleAppearanceModifier(seasonRole);
+  // Emprestado, o clube te pediu para jogar: além do piso de titular, mais sequência.
+  const loanMinutes = isOnLoan(affected) ? LOAN_MINUTES_BONUS : 0;
+  const roleScore = affected.overall - requirement + (primaryAttributeRating - affected.overall) * 0.18 + (effect.minutes ?? 0) - adaptationPenalty + roleAppearanceModifier(seasonRole) + loanMinutes;
   const baseApps = roleScore >= 5 ? 33 : roleScore >= 0 ? 26 : roleScore >= -5 ? 19 : 11;
   const provisionalCards = Math.floor(seeded(state.seed, state.season * 211) * 5);
   const suspensionPenalty = affected.suspensionMatches + (affected.discipline < 35 ? 3 : affected.discipline < 55 ? 1 : 0);
@@ -605,7 +609,7 @@ export function simulateSeason(
   const trustDelta = (objectiveResult.completed ? seasonObjective.reward : -seasonObjective.penalty) + (appearances >= 28 ? 4 : appearances < 12 ? -5 : 0) + titleCount * 3 + (hasTrait("leader") ? 3 : 0) + breakoutBonus * 2 - redCards * 5;
   const nextTrust = clamp(affected.managerTrust + trustDelta);
   const nextDiscipline = clamp(affected.discipline + (yellowCards <= 4 ? 2 : -2) - redCards * 8);
-  const nextRole = calculateSquadRole(nextOverall, club, league.prestige, nextTrust, nextAge);
+  const nextRole = adjustedSquadRole(affected, club.id, nextOverall, calculateSquadRole(nextOverall, club, league.prestige, nextTrust, nextAge));
   const contractExpiring = affected.contractYears - 1 <= 0;
   const nonRenewalRiskFactors = [performanceScore < 42 || !objectiveResult.completed, nextRole === "reserva" || nextRole === "promessa", nextTrust < 42, appearances < 12].filter(Boolean).length;
   const nonRenewalChance = contractExpiring && nonRenewalRiskFactors >= 2 ? nonRenewalRiskFactors >= 3 ? 100 : clamp(62 - Math.max(0, affected.reputation - 45) * 0.25, 48, 72) : 0;
@@ -835,10 +839,13 @@ export function signProfessionalForSimulation(state: GameState, clubId: string):
   const club = clubById(clubId);
   const league = leagueById(club.leagueId);
   const baseTrust = clubId === state.academyClubId ? 58 : 44;
-  // Mesmo bônus escondido da tela: quem veio da peneira chega com +25% de confiança.
-  const managerTrust = state.peneiraClubId && clubId === state.peneiraClubId ? Math.min(100, Math.round(baseTrust * 1.25)) : baseTrust;
-  const squadRole = calculateSquadRole(state.overall, club, league.prestige, managerTrust, state.age);
-  const contract = createContract(state.overall, state.age, club, state.seed);
+  // Mesmo bônus escondido da tela: quem veio da peneira chega com +33% de
+  // confiança; no gigante europeu, 7 anos de contrato e vaga de titular facilitada.
+  const generated = createContract(state.overall, state.age, club, state.seed);
+  const terms = peneiraSigningTerms(state, clubId, baseTrust, generated.years);
+  const managerTrust = terms.managerTrust;
+  const squadRole = peneiraGiantRole(state, clubId, state.overall, calculateSquadRole(state.overall, club, league.prestige, managerTrust, state.age));
+  const contract = { ...generated, years: terms.contractYears };
   return { ...state, phase: "career", currentClubId: clubId, currentLeagueId: club.leagueId, currentEventId: FIRST_MATCH_EVENT.id, nextEventId: "", reputation: clubId === state.academyClubId ? 8 : 4, fanSupport: clubId === state.academyClubId ? 68 : 50, continentalSlot: initialContinentalSlot(club), money: 0, managerTrust, squadRole, contractYears: contract.years, annualSalary: contract.annualSalary, currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed), followers: 1_200 + club.reputation * 900, socialFeed: [{ id: `${state.seed}-${state.season}-first-contract`, season: state.season, source: "press", author: "Central do Futebol", text: `${state.name} assinou o primeiro contrato profissional com o ${club.shortName}.`, likes: 340 + club.reputation * 120, tone: "positive" }], newsFeed: [`${state.season}: primeiro contrato assinado com o ${club.shortName}.`] };
 }
 
@@ -860,7 +867,8 @@ export function completeSimulationTransfer(state: GameState, clubId: string | nu
   const contract = signingContract ? { ...generatedContract, years: Math.max(1, generatedContract.years + state.nextContractYearsAdjustment) } : { years: state.contractYears, annualSalary: state.annualSalary };
   const changingCountry = Boolean(newClub && newClub.countryId !== oldClub.countryId);
   const managerTrust = newClub ? 50 : clamp(state.managerTrust + 5);
-  const squadRole = calculateSquadRole(state.overall, targetClub, targetLeague.prestige, managerTrust, state.age);
+  const baseRole = calculateSquadRole(state.overall, targetClub, targetLeague.prestige, managerTrust, state.age);
+  const squadRole = isLoan ? loanSquadRole(baseRole) : peneiraGiantRole(state, targetClub.id, state.overall, baseRole);
   const transferred: GameState = { ...state, phase: "career", currentClubId: clubId ?? state.currentClubId, currentLeagueId: newClub ? newClub.leagueId : state.currentLeagueId, currentEventId: "", nextEventId: "", lastResult: null, lastConsequence: null, transferOffers: [], transferMarketOffers: [], morale: clamp(state.morale + (clubId ? 5 : 2)), fanSupport: clubId ? 52 : clamp(state.fanSupport + 3), continentalSlot: newClub ? initialContinentalSlot(newClub) : state.continentalSlot, adaptation: newClub ? (changingCountry ? initialAdaptation(oldClub.countryId, newClub.countryId) : state.adaptation) : state.adaptation, abroadSeasons: changingCountry ? 0 : state.abroadSeasons, transferStatus: null, transferRequested: false, renewalDenied: false, forcedAlternativeTransfer: false, pendingTransferMode: "permanent", loanParentClubId: isLoan ? oldClub.id : "", loanParentLeagueId: isLoan ? (state.currentLeagueId || oldClub.leagueId) : "", loanEndSeason: isLoan ? state.season + 1 : 0, isFreeAgent: false, freeAgentSinceSeason: 0, managerTrust, squadRole, contractYears: contract.years, annualSalary: contract.annualSalary, clubCaptain: newClub ? false : state.clubCaptain, currentObjective: createSeasonObjective(positionByKey(state.position), squadRole, state.season, state.seed + state.season) };
   return { ...transferred, nextContractYearsAdjustment: signingContract ? 0 : state.nextContractYearsAdjustment, currentEventId: state.nextEventId || selectNextEvent(transferred, state.season * 47) };
 }

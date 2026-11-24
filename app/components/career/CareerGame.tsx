@@ -29,6 +29,8 @@ import type { AppSettings, AwardNomination, CareerHallEntry, ChallengeResult, Co
 import { BALLON_DOR_EXCLUDED_TROPHIES, BOTAO_IN_PROGRESS_KEY, CHALLENGE_RESULTS_KEY, CHALLENGE_SAVE_KEY, HALL_OF_FAME_KEY, ORIGINAL_CLUB_PRESENTATION, SAVE_KEY, SETTINGS_KEY, applyCustomClubDefinitions, archivedCareerState, awardFinalists, awardTierWeight, careerHallEntry, createCareerRivals, createPlayerAttributes, dailyChallenge, fictionalAwardWinner, initialState, normalizeSave, randomPlayerName, selectCareerTraits, shiftPlayerAttributes } from "../../career/state";
 import { clamp, clubById, pick, seeded } from "../../career/shared";
 import { eventForState, runMonteCarloCareers, simulateSeason } from "../../career/simulation";
+import { peneiraSigningTerms } from "../../career/peneira";
+import { adjustedSquadRole, peneiraGiantRole } from "../../career/squad-role";
 import { PLAYABLE_ACADEMY_COUNTRIES, academyRouteCopy, continentalNationalTournament, continentalSlotAfterSeason, defaultAcademyCountry, hasLocalAcademyRoute, initialContinentalSlot, isEuropeanClub, positionByKey, randomAcademyClubs, sortedCountries } from "../../career/academy";
 import { POSITION_FIELD_SPOTS, fanMood, formatFollowers, mergeEffects, publicImageProfile, simulatedWorldCupStats, worldCupStatsForSeason } from "../../career/performance";
 import { BrandMark, ClubBadge, Metric, NationBadge, TROPHY_PRESENTATIONS } from "./CareerPrimitives";
@@ -1060,11 +1062,14 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     setGame((current) => {
       const club = clubById(clubId);
       const league = leagueById(club.leagueId);
-      // Quem entrou pela peneira chega conhecido pelo treinador (+25%, sem aviso na tela).
+      // Quem entrou pela peneira chega conhecido pelo treinador (+33%, sem aviso
+      // na tela). No gigante europeu da peneira: 7 anos e titularidade facilitada.
       const baseTrust = clubId === current.academyClubId ? 58 : 44;
-      const managerTrust = current.peneiraClubId && clubId === current.peneiraClubId ? Math.min(100, Math.round(baseTrust * 1.25)) : baseTrust;
-      const squadRole = calculateSquadRole(current.overall, club, league.prestige, managerTrust, current.age);
-      const contract = createContract(current.overall, current.age, club, current.seed);
+      const generated = createContract(current.overall, current.age, club, current.seed);
+      const terms = peneiraSigningTerms(current, clubId, baseTrust, generated.years);
+      const managerTrust = terms.managerTrust;
+      const squadRole = peneiraGiantRole(current, clubId, current.overall, calculateSquadRole(current.overall, club, league.prestige, managerTrust, current.age));
+      const contract = { ...generated, years: terms.contractYears };
       return {
         ...current,
         phase: "career",
@@ -1087,11 +1092,15 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           season: current.season,
           source: "press",
           author: "Central do Futebol",
-          text: `${current.name} assinou o primeiro contrato profissional com o ${club.shortName}.`,
+          text: terms.giant
+            ? `${current.name} assinou o primeiro contrato profissional com o ${club.shortName}: ${terms.contractYears} anos de vínculo para a aposta da peneira.`
+            : `${current.name} assinou o primeiro contrato profissional com o ${club.shortName}.`,
           likes: 340 + club.reputation * 120,
           tone: "positive",
         }],
-        newsFeed: [`${current.season}: primeiro contrato assinado com o ${club.shortName}.`],
+        newsFeed: [terms.giant
+          ? `${current.season}: primeiro contrato assinado com o ${club.shortName}, por ${terms.contractYears} anos. O clube confia em você.`
+          : `${current.season}: primeiro contrato assinado com o ${club.shortName}.`],
       };
     });
     setActiveTab("event");
@@ -1258,13 +1267,13 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
           : 0;
         const boostedManagerTrust = clamp(current.managerTrust + finalManagerTrustBoost);
         const boostedSquadRole = finalManagerTrustBoost > 0
-          ? calculateSquadRole(
+          ? adjustedSquadRole(current, qualificationClub.id, current.overall, calculateSquadRole(
               current.overall,
               qualificationClub,
               qualificationLeague.prestige,
               boostedManagerTrust,
               current.age,
-            )
+            ))
           : current.squadRole;
         const resolvedLeagueResult = updatedLastCompetitions.find((competition) => competition.id === "domesticLeague");
         const resolvedLeaguePosition = resolvedLeagueResult?.champion
@@ -1741,7 +1750,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         const loanClub = loanBuyout ? clubById(loanBuyout.offer.clubId) : null;
         const league = leagueById(parentClub.leagueId);
         const managerTrust = 48;
-        const squadRole = calculateSquadRole(returned.overall, parentClub, league.prestige, managerTrust, returned.age);
+        const squadRole = peneiraGiantRole(returned, parentClub.id, returned.overall, calculateSquadRole(returned.overall, parentClub, league.prestige, managerTrust, returned.age));
         const transferMarketOffers = loanBuyout
           ? [
               loanBuyout.offer,
@@ -1847,7 +1856,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
         : genericTransferNews;
       const moved = acceptedOffer ? applyAcceptedTransfer(current, acceptedOffer) : current;
       const managerTrust = acceptedOffer ? moved.managerTrust : clamp(current.managerTrust + 5);
-      const squadRole = acceptedOffer ? moved.squadRole : calculateSquadRole(current.overall, targetClub, targetLeague.prestige, managerTrust, current.age);
+      const squadRole = acceptedOffer ? moved.squadRole : peneiraGiantRole(current, targetClub.id, current.overall, calculateSquadRole(current.overall, targetClub, targetLeague.prestige, managerTrust, current.age));
       const transferred: GameState = {
         ...moved,
         phase: "career",

@@ -4,6 +4,7 @@ import { useState, type CSSProperties, type ReactNode } from "react";
 import { leagueById } from "../../../../game-data";
 import type { GameState } from "../../../../career/model";
 import { createContract } from "../../../../career-systems";
+import { peneiraContractYears } from "../../../../career/peneira";
 import { clubById } from "../../../../career/shared";
 import { webglAvailable } from "../../../../botao/view-mode";
 import FutboboIcon from "../../../FutboboIcon";
@@ -114,6 +115,8 @@ export function YouthSimSpread({ game, youthStep, finished, onContinue }: { game
 }
 
 const OFFER_LINES = ["O caminho conhecido continua aberto.", "Uma porta diferente para buscar minutos.", "Outro projeto quer apostar no seu começo."];
+/** O gigante europeu que te tirou da peneira: contrato longo, o clube confia em você. */
+const GIANT_LINE = "O gigante que te tirou da peneira confia em você: contrato longo e espaço para brigar pela vaga.";
 
 /** Primeiro contrato profissional: as propostas como figurinhas de clube, iguais às da janela de transferências. */
 export function FirstContractSpread({ game, onBack, onSign }: { game: GameState; onBack: () => void; onSign: (clubId: string) => void }) {
@@ -133,7 +136,9 @@ export function FirstContractSpread({ game, onBack, onSign }: { game: GameState;
       <div className={sideStyles.offers}>
         {offers.map((clubId, index) => {
           const club = clubById(clubId);
-          const { years } = createContract(game.overall, game.age, club, game.seed);
+          const generated = createContract(game.overall, game.age, club, game.seed).years;
+          const years = peneiraContractYears(game, clubId, generated);
+          const giantBet = years !== generated;
           return (
             <article className={sideStyles.offer} key={clubId} data-stay={index === 0 ? "" : undefined}>
               <button type="button" className={sideStyles.offerSticker} style={offerInks(club)} onClick={() => onSign(clubId)}>
@@ -147,7 +152,7 @@ export function FirstContractSpread({ game, onBack, onSign }: { game: GameState;
                   <span><b>{years}</b> {years === 1 ? "ano" : "anos"}<span className={sideStyles.wide}> de contrato</span></span>
                 </span>
               </button>
-              <p className={sideStyles.reason}>{OFFER_LINES[index] ?? OFFER_LINES[2]}</p>
+              <p className={sideStyles.reason}>{giantBet ? GIANT_LINE : OFFER_LINES[index] ?? OFFER_LINES[2]}</p>
             </article>
           );
         })}
