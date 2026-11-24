@@ -197,9 +197,14 @@ function plain(text: string) {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }
 
+/** Artigo do clube: "o Flamengo", "a Chapecoense". */
+export function clubArticle(clubShortName: string): "o" | "a" {
+  return FEMININE_CLUBS.has(plain(clubShortName)) ? "a" : "o";
+}
+
 /** "Bem-vindo ao Flamengo" / "Bem-vindo à Chapecoense". */
 export function welcomePhrase(clubShortName: string) {
-  return `Bem-vindo ${FEMININE_CLUBS.has(plain(clubShortName)) ? "à" : "ao"} ${clubShortName}`;
+  return `Bem-vindo ${clubArticle(clubShortName) === "a" ? "à" : "ao"} ${clubShortName}`;
 }
 
 // -------------------------------------------------------------- elenco

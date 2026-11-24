@@ -10,6 +10,11 @@ import { bodyAppearance } from "./render";
 import type { BotaoMatchSetup } from "./types";
 import { celebrationIdOf, type CelebrationId } from "../player-appearance";
 
+/**
+ * Só as longas esticam a pausa. A leva nova (engraxate, remada, continência,
+ * arqueiro, fotógrafo, estrela) cabe na pausa normal de propósito: por isso
+ * também entra no sorteio "Variada" dos modos de sempre.
+ */
 export const CELEBRATION_EXTENSION_MS: Readonly<Partial<Record<CelebrationId, number>>> = { kamehameha: 1000, superSaiyan: 400 };
 
 type GoalInfo = { scorerId: string | null; ownGoal: boolean };

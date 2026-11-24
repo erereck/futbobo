@@ -3,20 +3,39 @@
 // mostram as animações que ele vai ter em campo.
 
 import * as THREE from "three";
-import { celebrationIdOf, type CelebrationId, type PlayerAppearance } from "../../player-appearance";
+import { celebrationIdOf, randomPlayerAppearance, type CelebrationId, type PlayerAppearance } from "../../player-appearance";
 import { CelebrationFx } from "./celebration-fx";
-import { FIGURE_HEIGHT, PlayerFigure, angleDelta, idleIntent, type FigureAction, type FigureIntent } from "./character";
+import {
+  FIGURE_HEIGHT,
+  PHOTO,
+  PlayerFigure,
+  ROW_SEAT,
+  SHOE_SHINE_SPOT,
+  angleDelta,
+  idleIntent,
+  type FigureAction,
+  type FigureIntent,
+} from "./character";
 import { Effects } from "./effects";
 
 export type StagePose = "idle" | "run" | "kick" | "celebrate" | "signature";
 
 /**
+ * Companheiro das comemorações em grupo no palco: o que faz, onde fica no
+ * referencial de quem marcou (x à esquerda, z à frente, unidades de campo) e
+ * para onde olha (somado ao lado de quem marcou). Os mesmos números da
+ * coreografia: o par fica centrado no pedestal.
+ */
+type StageHelper = { action: FigureAction; x: number; z: number; face: number };
+
+/**
  * Um trecho da vitrine. `face` é o lado para onde o boneco olha (0 = câmera;
  * o siuuu sai de costas e cai de frente). `speed` > 0 corre no lugar
  * (aviãozinho). Sem ação, fica parado um instante: é o que faz uma
- * comemoração de uma vez só recomeçar do zero no laço.
+ * comemoração de uma vez só recomeçar do zero no laço. `helper` põe um
+ * companheiro no palco (engraxate, remada, fotógrafo).
  */
-type ShowcaseItem = { action: FigureAction | null; duration: number; face: number; speed?: number };
+type ShowcaseItem = { action: FigureAction | null; duration: number; face: number; speed?: number; helper?: StageHelper };
 
 /** Vitrine de comemorações do "Gol!": cada uma por alguns segundos, em ciclo. */
 const SHOWCASE: readonly ShowcaseItem[] = [
@@ -36,11 +55,31 @@ const SHOWCASE: readonly ShowcaseItem[] = [
   { action: "crestKiss", duration: 2.6, face: 0 },
   { action: "armsCrossed", duration: 2.4, face: 0 },
   { action: "dance", duration: 2.75, face: 0 },
+  { action: "salute", duration: 2.4, face: 0 },
+  { action: "archer", duration: 2.6, face: 0 },
+  { action: "cartwheel", duration: 2.2, face: 0 },
 ];
 
 const PAUSE: ShowcaseItem = { action: null, duration: 0.6, face: 0 };
 /** Kamehameha no palco: virado ~55° para o lado, o raio passa na diagonal pela frente. */
 const KAME_FACE = 0.95;
+/** Engraxate (o mesmo par da coreografia): o ajudante ajoelhado à direita e à frente, de lado para a chuteira. */
+const SHINE_HELPER: StageHelper = { action: "shoeShine", x: SHOE_SHINE_SPOT.x, z: SHOE_SHINE_SPOT.z, face: SHOE_SHINE_SPOT.face };
+/** Remada: um remador sentado atrás, o barco de três quartos para a câmera. */
+const ROW_HELPER: StageHelper = { action: "rowing", x: 0, z: -ROW_SEAT, face: 0 };
+/**
+ * Fotógrafo ajoelhado para a direita da câmera, mirando quem posa; quem posa vira para ele (o
+ * fotógrafo fica à esquerda dele, olhando de volta).
+ */
+const PHOTO_SIDE = PHOTO.ANGLE - PHOTO.TURN;
+const PHOTO_HELPER: StageHelper = {
+  action: "photoSnap",
+  x: PHOTO.DISTANCE * Math.sin(PHOTO_SIDE),
+  z: PHOTO.DISTANCE * Math.cos(PHOTO_SIDE),
+  face: Math.PI + PHOTO_SIDE,
+};
+/** Rosto fixo do companheiro do palco (mesmo uniforme de quem está sendo criado). */
+const STAGE_MATE_SEED = 4242;
 
 /** "Minha comemoração": a escolhida no criador, em laço (as de uma vez só recomeçam). */
 const SIGNATURES: Readonly<Record<Exclude<CelebrationId, "auto">, readonly ShowcaseItem[]>> = {
@@ -63,10 +102,17 @@ const SIGNATURES: Readonly<Record<Exclude<CelebrationId, "auto">, readonly Showc
   meditate: [{ action: "meditate", duration: 5, face: 0 }, PAUSE],
   cupEar: [{ action: "cupEar", duration: 4, face: 0 }],
   fingerGuns: [{ action: "fingerGuns", duration: 2.8, face: 0 }, PAUSE],
+  // Em grupo: o companheiro entra no palco (o par fica centrado no pedestal).
+  shoeShine: [{ action: "bootShow", duration: 5, face: -0.35, helper: SHINE_HELPER }],
+  rowing: [{ action: "rowing", duration: 5, face: 1, helper: ROW_HELPER }],
+  photoShoot: [{ action: "photoPose", duration: 5.4, face: PHOTO.TURN, helper: PHOTO_HELPER }],
+  salute: [{ action: "salute", duration: 3.6, face: 0 }, PAUSE],
+  archer: [{ action: "archer", duration: 2.9, face: 0 }, PAUSE],
+  cartwheel: [{ action: "handsOnHips", duration: 0.5, face: 0 }, { action: "cartwheel", duration: 2.1, face: 0 }],
 };
 
-/** Assinaturas com efeito (esfera, raio, aura, brilhos): só elas criam os efeitos do palco. */
-const FX_SIGNATURES: ReadonlySet<CelebrationId> = new Set<CelebrationId>(["kamehameha", "superSaiyan", "meditate", "fingerGuns"]);
+/** Assinaturas com efeito (esfera, raio, aura, brilhos, flecha, flash): só elas criam os efeitos do palco. */
+const FX_SIGNATURES: ReadonlySet<CelebrationId> = new Set<CelebrationId>(["kamehameha", "superSaiyan", "meditate", "fingerGuns", "archer", "shoeShine", "photoShoot"]);
 
 function showcaseLength(list: readonly ShowcaseItem[]) {
   return list.reduce((sum, item) => sum + item.duration, 0);
@@ -93,9 +139,17 @@ export class CharacterStage {
   private readonly rim: THREE.Mesh;
   private readonly ground: THREE.Mesh;
   private figure: PlayerFigure | null = null;
+  /** Companheiro das comemorações em grupo (criado na primeira vez, escondido nas outras). */
+  private helper: PlayerFigure | null = null;
+  /** O lugar em que ele está agora (troca de comemoração = entra de novo). */
+  private helperPair: StageHelper | null = null;
+  /** Uniforme do companheiro: o mesmo de quem está sendo criado. */
+  private kit = { primary: "#2b6b45", secondary: "#ffffff", kitPattern: 1 };
   private signature: CelebrationId = "auto";
   private pose: StagePose = "idle";
   private poseTime = 0;
+  /** Quanto do trecho atual da vitrine já passou (s): relógio comum da comemoração em grupo. */
+  private itemTime = 0;
   private spin = -0.5;
   private spinVelocity = 0;
   private drag: { x: number; spin: number; time: number } | null = null;
@@ -208,6 +262,12 @@ export class CharacterStage {
     this.turntable.add(this.figure.root);
     this.pedestalMaterial.color.set(primary);
     this.rimMaterial.color.set(secondary === primary ? "#ffc72c" : secondary);
+    const kitPattern = appearance.kitPattern;
+    if (primary !== this.kit.primary || secondary !== this.kit.secondary || kitPattern !== this.kit.kitPattern) {
+      this.kit = { primary, secondary, kitPattern };
+      // Uniforme mudou: o companheiro nasce de novo na próxima vez que aparecer.
+      this.dropHelper();
+    }
     const signature = celebrationIdOf(appearance);
     // Trocou a comemoração com a prévia nela: a nova começa do início.
     if (signature !== this.signature && this.pose === "signature") this.poseTime = 0;
@@ -242,6 +302,7 @@ export class CharacterStage {
           heading: item.face,
           faceYaw: item.face,
           action: item.action,
+          clock: item.helper ? this.itemTime : null,
         });
       }
       default:
@@ -254,10 +315,63 @@ export class CharacterStage {
     const list = this.pose === "signature" && this.signature !== "auto" ? SIGNATURES[this.signature] : SHOWCASE;
     let time = this.poseTime % showcaseLength(list);
     for (const item of list) {
-      if (time < item.duration) return item;
+      if (time < item.duration) {
+        this.itemTime = time;
+        return item;
+      }
       time -= item.duration;
     }
+    this.itemTime = 0;
     return list[0];
+  }
+
+  /**
+   * Comemoração em grupo: o companheiro aparece no lugar da coreografia e os
+   * dois ficam centrados no pedestal; nas outras poses ele some e quem está
+   * sendo criado volta ao meio.
+   */
+  private updateHelper(dt: number, figure: PlayerFigure) {
+    const item = this.pose === "celebrate" || this.pose === "signature" ? this.showcaseItem() : null;
+    const pair = item?.helper ?? null;
+    if (!item || !pair) {
+      figure.root.position.set(0, 0, 0);
+      if (this.helper) this.helper.root.visible = false;
+      return null;
+    }
+    const helper = this.ensureHelper();
+    const cos = Math.cos(item.face);
+    const sin = Math.sin(item.face);
+    const x = pair.x * cos + pair.z * sin;
+    const z = -pair.x * sin + pair.z * cos;
+    figure.root.position.set(-x / 2, 0, -z / 2);
+    helper.root.position.set(x / 2, 0, z / 2);
+    if (!helper.root.visible || pair !== this.helperPair) {
+      // Entrou agora (ou trocou de comemoração): já no lugar, virado para onde a pose pede.
+      helper.root.visible = true;
+      helper.snapYaw(item.face + pair.face);
+      this.helperPair = pair;
+    }
+    helper.update(dt, idleIntent({ state: "celebrate", faceYaw: item.face + pair.face, action: pair.action, clock: this.itemTime }));
+    return helper;
+  }
+
+  private ensureHelper() {
+    if (this.helper) return this.helper;
+    const appearance = { ...randomPlayerAppearance(STAGE_MATE_SEED), kitPattern: this.kit.kitPattern };
+    const helper = new PlayerFigure({ appearance, primary: this.kit.primary, secondary: this.kit.secondary, number: 8, seed: 11 });
+    helper.setHighlight(STAGE_HIGHLIGHT);
+    helper.root.visible = false;
+    this.turntable.add(helper.root);
+    this.helper = helper;
+    return helper;
+  }
+
+  private dropHelper() {
+    if (!this.helper) return;
+    this.turntable.remove(this.helper.root);
+    this.helper.dispose();
+    this.helper = null;
+    this.helperPair = null;
   }
 
   private frameCamera() {
@@ -293,19 +407,21 @@ export class CharacterStage {
         this.figure.triggerKick(1, "strike");
       }
       this.figure.update(dt, this.intent());
-      this.updateFx(dt, this.figure);
+      const helper = this.updateHelper(dt, this.figure);
+      this.updateFx(dt, this.figure, helper);
     }
     this.renderer.render(this.scene, this.camera);
   }
 
-  /** Esfera, raio, aura e brilhos das assinaturas novas, com o tremor e a luz que eles pedem. */
-  private updateFx(dt: number, figure: PlayerFigure) {
+  /** Esfera, raio, aura, brilhos, flecha e flash das assinaturas, com o tremor e a luz que eles pedem. */
+  private updateFx(dt: number, figure: PlayerFigure, helper: PlayerFigure | null) {
     const kind = this.pose === "signature" && FX_SIGNATURES.has(this.signature) ? this.signature : null;
     if (!kind && !this.fx) return;
     const fx = this.ensureFx();
     const result = fx.celebration.update(dt, {
       kind,
       focus: { figure, x: 0, z: 0, yaw: this.spin + figure.yaw },
+      partner: helper,
       side: null,
       teamColor: STAGE_SKY,
       stadium: null,
@@ -356,6 +472,7 @@ export class CharacterStage {
     for (const release of this.cleanup) release();
     this.fx?.celebration.dispose();
     this.fx?.effects.dispose();
+    this.dropHelper();
     this.figure?.dispose();
     this.pedestal.geometry.dispose();
     this.pedestalMaterial.dispose();

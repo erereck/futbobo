@@ -9,6 +9,7 @@ import { DEFAULT_PLAYER_APPEARANCE, normalizePlayerAppearance, randomPlayerAppea
 import { GOALKEEPER_EVENTS } from "../goalkeeper-events";
 import { CLUB_SPECIFIC_EVENTS } from "./club-specific-events";
 import { NEW_CAREER_EVENTS } from "../new-career-events";
+import { LEGACY_EVENTS } from "../career-drama-legacy";
 import type { AttributeKey, AwardPresentation, CareerHallEntry, CareerRival, CompetitionId, CustomCharacter, CustomClubDefinition, GameState, MonteCarloReport, PendingBotaoMatch, Peneira, PeneiraMatch, PeneiraMatchResult, PeneiraOpponent, PeneiraStage, PlayerAttributes, PlayerStats, SeasonRecord, SpecialTraining, SpecialTraitId, StoredBotaoResult, YouthPlay, YouthPlayYear } from "./model";
 import { positionByKey } from "./academy";
 import { isScoreboboTrackLevel } from "./scorebobo-track";
@@ -154,7 +155,7 @@ export const RANDOM_NAME_LAST_PART = [
   "Oliveirinha", "Puskás Filho", "Reis de Tóquio", "Santoro", "Torres do Norte", "Uribe", "van Helsing", "Wakabayashi", "Xavierson", "Yıldız", "Zé Europa", "Africano", "Baggio Filho", "Cruyff da Gama", "Drácula", "Eto'o Mineiro", "Futebolino", "Garrinchinha", "Honda Civic", "Inzaghi dos Santos",
 ];
 
-export const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS, ...GOALKEEPER_EVENTS, ...CLUB_SPECIFIC_EVENTS, ...NEW_CAREER_EVENTS];
+export const ALL_PRO_EVENTS = [...PRO_EVENTS, ...MEGA_EVENTS, ...CAREER_DRAMA_EVENTS, ...BACKSTAGE_EVENTS, ...FUTBOBO_MOMENTS, ...GOALKEEPER_EVENTS, ...CLUB_SPECIFIC_EVENTS, ...NEW_CAREER_EVENTS, ...LEGACY_EVENTS];
 
 function eventIdCompatibleWithClub(eventId: string, clubId: string, fallback: string) {
   const event = ALL_PRO_EVENTS.find((candidate) => candidate.id === eventId);

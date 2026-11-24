@@ -3418,6 +3418,22 @@ export class Stadium {
     if (mode === "fim") this.crowd?.celebrate(side, 6, true);
   }
 
+  /**
+   * Placas com um texto livre (homenagem, despedida) no fundo `color`: entram
+   * piscando como a vitória e ficam na placa até outra mensagem. Chamar de novo
+   * com o mesmo texto só reacende (a textura é a mesma).
+   */
+  tribute(text: string, color: string) {
+    if (!this.ledMaterial) return;
+    const key = `tribute|${text}|${color}`;
+    let texture = this.boards.get(key);
+    if (!texture) {
+      texture = ledMessageTexture(text.toLocaleUpperCase("pt-BR"), color, luminance(color) > 0.58 ? "#0b0f14" : "#ffffff", this.anisotropy);
+      this.boards.set(key, texture);
+    }
+    this.showBoard("fim", texture);
+  }
+
   /** Chuva de flashes na torcida de `side` e nas lentes dos fotógrafos, decaindo em `seconds`. */
   cameraFlashes(side: BotaoSide, seconds: number) {
     this.flashes?.trigger(side, seconds);

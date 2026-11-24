@@ -223,8 +223,33 @@ test("teamHash: 8 hex, estável com a ordem das chaves, muda com o conteúdo", (
   shuffled.players = shuffled.players.map((player) => Object.fromEntries(Object.entries(player).reverse()));
   assert.equal(model.teamHash(shuffled), hash);
   assert.notEqual(model.teamHash({ ...base, name: `${base.name}!` }), hash);
-  // Fixado: o mesmo time tem o mesmo hash em qualquer versão (é a chave em RoomTeams).
-  assert.equal(model.teamHash(team(12345, "bob-fixo234567", 1)), "969e6852");
+  // Fixado: o mesmo time tem o mesmo hash em qualquer versão (é a chave em RoomTeams). A leva nova de
+  // comemorações (18..23) mudou só a comemoração do camisa 10 deste time sorteado (17 → 22); com a de
+  // antes de volta, o hash é o de sempre: a conta do hash não mudou.
+  const fixed = team(12345, "bob-fixo234567", 1);
+  assert.deepEqual(fixed.players.map((player) => player.appearance.celebration), [22, 5, 12, 16, 12]);
+  assert.equal(model.teamHash(fixed), "92c1177e");
+  const before = { ...fixed, players: fixed.players.map((player, index) => (index === 0 ? { ...player, appearance: { ...player.appearance, celebration: 17 } } : player)) };
+  assert.equal(model.teamHash(before), "969e6852");
+});
+
+test("leva nova de comemorações (18..23): o time aceita, o código leva e traz, o sorteio espalha sem mexer nas de antes", async () => {
+  assert.equal(CELEBRATION_OPTIONS.length, 24);
+  const base = team(77);
+  for (let id = 18; id < CELEBRATION_OPTIONS.length; id += 1) {
+    const edited = plain({ ...base, players: base.players.map((player, index) => (index === 1 ? { ...player, appearance: { ...player.appearance, celebration: id } } : player)) });
+    const clean = model.sanitizeTeam(edited);
+    assert.equal(clean.players[1].appearance.celebration, id, `sanitizeTeam guarda ${id}`);
+    const back = await codes.importTeamCode(await codes.exportTeamCode(clean));
+    assert.equal(back.ok, true);
+    assert.equal(back.team.players[1].appearance.celebration, id, `código leva ${id}`);
+  }
+  // Fora da lista: a última que existe (como sempre foi).
+  assert.equal(normalizePlayerAppearance({ version: 2, celebration: 24 }).celebration, 23);
+  // Sorteio: as 6 novas com a mesma chance das outras (2.500 jogadores; ~104 cada), num sorteio à parte.
+  const counts = new Array(CELEBRATION_OPTIONS.length).fill(0);
+  for (let seed = 1; seed <= 500; seed += 1) for (const player of generator.randomBobTeam(seed).players) counts[player.appearance.celebration] += 1;
+  for (let id = 0; id < counts.length; id += 1) assert.ok(counts[id] > 45 && counts[id] < 175, `comemoração ${id}: ${counts[id]}`);
 });
 
 test("sorteio: determinístico, 5 jogadores, números únicos, nomes que cabem e sem repetição no nome do time", () => {
@@ -252,7 +277,7 @@ test("sorteio: determinístico, 5 jogadores, números únicos, nomes que cabem e
     assert.ok(generator.isGoodTeamName(prefix, result.name.slice(prefix.length + 1)), result.name);
   }
   assert.ok(fun >= 20 && fun <= 110, `nomes divertidos: ${fun}`);
-  assert.equal(celebrations.size, CELEBRATION_OPTIONS.length, "todas as comemorações (inclusive as novas 13..17) saem no sorteio");
+  assert.equal(celebrations.size, CELEBRATION_OPTIONS.length, "todas as comemorações (inclusive as levas 13..17 e 18..23) saem no sorteio");
   assert.notDeepEqual(generator.randomBobTeam(1), generator.randomBobTeam(2));
 
   // As regras de rejeição (§2.5).

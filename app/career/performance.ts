@@ -4,6 +4,7 @@ import type { GameState, MedicalRecord, PlayerStats, SeasonRecord, TournamentSta
 import { clamp, clubById, seeded } from "./shared";
 import { SPONSOR_BRANDS } from "./sponsors";
 import { isEuropeanClub, positionByKey } from "./academy";
+import { BETTING_PAY_MULTIPLIER } from "./football-ban";
 
 export const POSITION_FIELD_SPOTS: Record<PositionKey, { gridColumn: number; gridRow: number }> = {
   PE: { gridColumn: 1, gridRow: 1 },
@@ -261,7 +262,9 @@ export function sponsorOfferPool(state: GameState, salt: number) {
       const years = 2 + Math.floor(seeded(state.seed, salt + 401 + index * 13) * 3);
       const reachMultiplier = 0.72 + Math.min(1.8, Math.log10(Math.max(1_000, state.followers)) / 5);
       const reputationMultiplier = 0.65 + state.reputation / 120;
-      const annualValue = Math.round(brand.baseValue * reachMultiplier * reputationMultiplier / 10_000) * 10_000;
+      // Casa de apostas paga bem mais, e cobra em risco (ver buildSponsorEvent).
+      const bettingMultiplier = "controversial" in brand && brand.controversial ? BETTING_PAY_MULTIPLIER : 1;
+      const annualValue = Math.round(brand.baseValue * reachMultiplier * reputationMultiplier * bettingMultiplier / 10_000) * 10_000;
       return { ...brand, years, annualValue };
     });
   return eligible.length ? eligible : [{ ...SPONSOR_BRANDS.at(-1)!, years: 2, annualValue: 100_000 }];
@@ -303,7 +306,8 @@ export function describeEffects(effect: Effect) {
   add("relação com a imprensa", effect.mediaRelation);
   add("equilíbrio pessoal", effect.lifeBalance);
   add("impacto social", effect.charity);
-  if (effect.followers) changes.push(`${effect.followers > 0 ? "+" : ""}${formatFollowers(effect.followers)} seguidores`);
+  // Perda de seguidores com sinal (o formatador só conta para cima: -160 mil virava "0").
+  if (effect.followers) changes.push(`${effect.followers > 0 ? "+" : "-"}${formatFollowers(Math.abs(effect.followers))} seguidores`);
   if (effect.sponsorBrand) changes.push(`Contrato com ${effect.sponsorBrand}`);
   if (effect.money) changes.push(`${effect.money > 0 ? "+" : ""}${formatMoney(effect.money * 10_000)} patrimônio`);
   if (effect.contractYears) changes.push(`Contrato +${effect.contractYears} anos`);
@@ -318,6 +322,7 @@ export function describeEffects(effect: Effect) {
   if (effect.forcedAlternativeTransfer) changes.push("Saída obrigatória para uma liga alternativa");
   if (effect.injuryRisk) changes.push(`+${effect.injuryRisk} risco físico`);
   if (effect.retire) changes.push("Despedida anunciada");
+  if (effect.banSeasons) changes.push(`Banido do futebol por ${effect.banSeasons} ${effect.banSeasons === 1 ? "ano" : "anos"}`);
   return changes.length ? changes : ["Sua escolha mudou o rumo da temporada"];
 }
 
@@ -357,6 +362,7 @@ export function mergeEffects(base: Effect, extra: Effect): Effect {
     salaryBoost: (base.salaryBoost ?? 0) + (extra.salaryBoost ?? 0),
     clubCaptain: Boolean(base.clubCaptain || extra.clubCaptain),
     forcedAlternativeTransfer: Boolean(base.forcedAlternativeTransfer || extra.forcedAlternativeTransfer),
+    banSeasons: Math.max(base.banSeasons ?? 0, extra.banSeasons ?? 0) || undefined,
   };
 }
 

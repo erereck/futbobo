@@ -1,7 +1,8 @@
 // Efeitos das comemorações de assinatura (Kamehameha, Super Saiyajin,
-// meditação, "não tô ouvindo" e pistoleiro). Quem manda no tempo é o boneco:
-// a ação solta marcas (`cues`, lidas no takeCues) e daqui sai o resto — esfera
-// de energia, raio, aura, brilhos, som — pelos pedidos por quadro dos efeitos.
+// meditação, "não tô ouvindo", pistoleiro, continência, arqueiro, engraxate e
+// fotógrafo). Quem manda no tempo é o boneco: a ação solta marcas (`cues`,
+// lidas no takeCues) e daqui sai o resto — esfera de energia, raio, aura,
+// brilhos, flecha, flash, som — pelos pedidos por quadro dos efeitos.
 //
 // Só desenho e som: não lê nem escreve o motor. Nenhuma luz nova: o tremor e o
 // brilho da cena voltam no update para a visão aplicar (com Math.max).
@@ -19,6 +20,8 @@ export type CelebrationFxContext = {
   kind: string | null;
   /** Quem comemora: o boneco, a posição dele (pés) e para onde olha. */
   focus: { figure: PlayerFigure; x: number; z: number; yaw: number } | null;
+  /** Quem ajuda na festa em grupo (`Choreographer.partner`): o flash do fotógrafo e o brilho do engraxate saem das mãos dele. */
+  partner?: PlayerFigure | null;
   /** Time que comemora: a torcida dele grita no "não tô ouvindo". */
   side: BotaoSide | null;
   teamColor: string;
@@ -45,6 +48,18 @@ const SSJ_COLOR = "#ffd84a";
 const SSJ_HAIR = "#ffb52e";
 const ZEN_COLOR = "#cfe8ff";
 const BANG_COLOR = "#ffe08a";
+const ARROW_COLOR = "#fff1b8";
+const FLASH_COLOR = "#ffffff";
+const SHINE_COLOR = "#fff6cf";
+/** A flecha: quanto voa (s) e até onde (unidades de campo), subindo pelo braço do arco. */
+const ARROW_TIME = 0.5;
+const ARROW_LENGTH = 70;
+/** O rastro da flecha vem este tanto atrás da ponta. */
+const ARROW_TRAIL = 7;
+/** Quanto dura o brilho da biqueira (s). */
+const SHINE_TIME = 0.22;
+/** Quanto dura o clarão do flash (s). */
+const FLASH_TIME = 0.14;
 /** O raio cresce até o comprimento todo nisto (s). */
 const BEAM_GROW = 0.12;
 /** Do fim do raio ao fim do apagar (s): o mesmo que a ação. */
@@ -82,6 +97,7 @@ export class CelebrationFx {
   private readonly result: CelebrationFxResult = { shake: 0, glow: 0, glowColor: null };
   private kind: string | null = null;
   private figure: PlayerFigure | null = null;
+  private partner: PlayerFigure | null = null;
   // Segundos desde cada marca (-1 = ainda não veio).
   private charge = -1;
   private fire = -1;
@@ -89,6 +105,11 @@ export class CelebrationFx {
   private ssjStart = -1;
   private ssjBurst = -1;
   private zen = -1;
+  /** Segundos de voo da flecha (-1 = nenhuma no ar). */
+  private arrow = -1;
+  /** Segundos do brilho da biqueira e do flash (-1 = apagado). */
+  private shine = -1;
+  private flash = -1;
   private bangs = 0;
   private nextTip = BEAM_GROW;
   private sparkleIn = 0;
@@ -101,6 +122,9 @@ export class CelebrationFx {
   private readonly dir = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
   private readonly head = new THREE.Vector3();
+  private readonly arrowFrom = new THREE.Vector3();
+  private readonly arrowDir = new THREE.Vector3();
+  private readonly flashAt = new THREE.Vector3();
 
   constructor(private readonly effects: Effects, private readonly options: CelebrationFxOptions) {}
 
@@ -114,6 +138,7 @@ export class CelebrationFx {
     this.reset();
     this.kind = null;
     this.figure = null;
+    this.partner = null;
   }
 
   dispose() {
@@ -141,6 +166,12 @@ export class CelebrationFx {
       figure?.takeCues();
     }
     this.beamVisible = false;
+    const partner = figure ? ctx.partner ?? null : null;
+    if (partner !== this.partner) {
+      this.partner = partner;
+      // O ajudante pode trazer marcas de antes (outra festa): só valem as de agora.
+      partner?.takeCues();
+    }
     if (!figure || !ctx.focus) return out;
     // Os relógios andam antes das marcas novas: a marca deste quadro começa em 0.
     if (this.charge >= 0) this.charge += step;
@@ -149,11 +180,21 @@ export class CelebrationFx {
     if (this.ssjStart >= 0) this.ssjStart += step;
     if (this.ssjBurst >= 0) this.ssjBurst += step;
     if (this.zen >= 0) this.zen += step;
+    if (this.arrow >= 0) this.arrow += step;
+    if (this.shine >= 0) this.shine += step;
+    if (this.flash >= 0) this.flash += step;
     const cues = figure.takeCues();
     for (let index = 0; index < cues.length; index += 1) this.onCue(cues[index], ctx, out);
+    if (partner) {
+      const helped = partner.takeCues();
+      for (let index = 0; index < helped.length; index += 1) this.onPartnerCue(helped[index], partner, out);
+    }
     this.kamehameha(ctx, out);
     this.superSaiyan(ctx, out);
     this.meditate(ctx, step);
+    this.flyArrow();
+    this.shineBoot(partner);
+    this.popFlash();
     if (this.options.reducedMotion) out.shake = 0;
     return out;
   }
@@ -162,6 +203,9 @@ export class CelebrationFx {
     this.charge = this.fire = this.end = -1;
     this.ssjStart = this.ssjBurst = -1;
     this.zen = -1;
+    this.arrow = -1;
+    this.shine = -1;
+    this.flash = -1;
     this.bangs = 0;
     this.nextTip = BEAM_GROW;
     this.sparkleIn = 0;
@@ -218,12 +262,95 @@ export class CelebrationFx {
         this.sparkleIn = 0;
         break;
       case "ear":
+      case "salute":
         if (ctx.side) ctx.stadium?.crowdReact("cheer", ctx.side, null);
         break;
       case "bang":
         this.bang(focus);
         break;
+      case "arrow":
+        this.loose(focus);
+        break;
     }
+  }
+
+  /** Marcas do ajudante: o clique do fotógrafo (flash) e a passada do engraxate (brilho na chuteira). */
+  private onPartnerCue(cue: string, partner: PlayerFigure, out: CelebrationFxResult) {
+    if (cue === "click") {
+      this.sound("shutter", 0.5);
+      // Flash pisca a tela: com movimento reduzido fica só o som.
+      if (this.options.reducedMotion) return;
+      // Na frente da "câmera" (entre as mãos do fotógrafo).
+      partner.handAnchor("left").getWorldPosition(this.handL);
+      partner.handAnchor("right").getWorldPosition(this.handR);
+      const e = partner.root.matrixWorld.elements;
+      this.flashAt.addVectors(this.handL, this.handR).multiplyScalar(0.5);
+      this.dir.set(e[8], 0, e[10]);
+      if (this.dir.lengthSq() > 1e-8) this.flashAt.addScaledVector(this.dir.normalize(), 2.5);
+      this.flash = 0;
+      out.glow = Math.max(out.glow, 0.3);
+      out.glowColor = FLASH_COLOR;
+    } else if (cue === "shine" && !this.options.reducedMotion) {
+      // A biqueira brilha onde a mão acabou de passar.
+      this.shine = 0;
+    }
+  }
+
+  /** Flash do fotógrafo: clarão branco que estoura e some em FLASH_TIME. */
+  private popFlash() {
+    if (this.flash < 0) return;
+    if (this.flash >= FLASH_TIME) {
+      this.flash = -1;
+      return;
+    }
+    const k = this.flash / FLASH_TIME;
+    this.effects.orb(this.flashAt.x, this.flashAt.y, this.flashAt.z, 5 + 5 * k, FLASH_COLOR, 2.6 * (1 - k) * (1 - k));
+  }
+
+  /** Brilho curto na biqueira (embaixo da mão do engraxate), aceso e apagando em SHINE_TIME. */
+  private shineBoot(partner: PlayerFigure | null) {
+    if (this.shine < 0) return;
+    if (!partner || this.shine >= SHINE_TIME) {
+      this.shine = -1;
+      return;
+    }
+    partner.handAnchor("right").getWorldPosition(this.hand);
+    const k = this.shine / SHINE_TIME;
+    this.effects.orb(this.hand.x, this.hand.y - 1.5, this.hand.z, 3 + 2 * k, SHINE_COLOR, 1.4 * Math.sin(Math.PI * k));
+  }
+
+  /** Solta a flecha: sai da mão do arco e sobe na direção da cabeça para a mão (pelo braço esticado). */
+  private loose(focus: NonNullable<CelebrationFxContext["focus"]>) {
+    this.sound("twang", 0.5);
+    if (this.options.reducedMotion) return;
+    const figure = focus.figure;
+    figure.handAnchor(figure.handedness > 0 ? "left" : "right").getWorldPosition(this.arrowFrom);
+    figure.headAnchor().getWorldPosition(this.head);
+    this.arrowDir.subVectors(this.arrowFrom, this.head);
+    // Mira acima do braço: a flecha sobe para o céu.
+    this.arrowDir.y = Math.max(this.arrowDir.y, 0) + this.arrowDir.length() * 0.6;
+    if (this.arrowDir.lengthSq() < 1e-8) this.arrowDir.set(0, 1, 0);
+    this.arrowDir.normalize();
+    this.arrow = 0;
+  }
+
+  /** Ponta de luz da flecha subindo, com um rastro logo atrás; estrelinha quando some no céu. */
+  private flyArrow() {
+    if (this.arrow < 0) return;
+    const t = this.arrow / ARROW_TIME;
+    if (t >= 1) {
+      this.arrow = -1;
+      this.tip.copy(this.arrowFrom).addScaledVector(this.arrowDir, ARROW_LENGTH);
+      this.effects.impact(this.tip.x, this.tip.y, this.tip.z, 0.4, ARROW_COLOR);
+      return;
+    }
+    const along = ARROW_LENGTH * (1 - (1 - t) * (1 - t));
+    this.tip.copy(this.arrowFrom).addScaledVector(this.arrowDir, along);
+    this.effects.orb(this.tip.x, this.tip.y, this.tip.z, 3.4, ARROW_COLOR, 1.3 * (1 - 0.4 * t));
+    // Rastro: um brilho mais fraco logo atrás da ponta (fora no modo desempenho).
+    if (this.options.lite || along < ARROW_TRAIL) return;
+    this.mid.copy(this.tip).addScaledVector(this.arrowDir, -ARROW_TRAIL);
+    this.effects.orb(this.mid.x, this.mid.y, this.mid.z, 2.4, ARROW_COLOR, 0.55 * (1 - t));
   }
 
   /** Palmas (meio delas) e frente do boneco no mundo, do quadro atual da pose. */

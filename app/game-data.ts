@@ -121,6 +121,8 @@ export type Effect = {
   clubCaptain?: boolean;
   switchNationalityTo?: string;
   forcedAlternativeTransfer?: boolean;
+  /** Banimento do futebol: no fim da temporada o jogador fica N temporadas sem poder ser registrado. */
+  banSeasons?: number;
 };
 
 export type GameEvent = {
@@ -153,6 +155,8 @@ export type GameEvent = {
   needsPositionZone?: Position["zone"];
   needsSquadRoles?: Array<"promessa" | "reserva" | "rotacao" | "titular" | "estrela">;
   needsCaptainRole?: "club" | "national" | "any";
+  /** Mínimo de temporadas seguidas, já concluídas, no clube atual (contadas do fim de `history`). */
+  minClubSeasons?: number;
   choices: Array<{
     label: string;
     hint: string;
@@ -1396,10 +1400,10 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Confiar no coletivo", hint: "Título ↑ · grupo ↑", result: "O time joga leve e todo mundo entrega um pouco mais.", effect: { titleBoost: 10, morale: 10, leadership: 5 } },
     { label: "Tirar o peso do discurso", hint: "Condição ↑ · pressão ↓", result: "Você transforma a ansiedade em rotina.", effect: { titleBoost: 5, fitness: 8, morale: 6 } },
   ]},
-  { id: "coach-fired", icon: "×", tag: "BASTIDORES", title: "O técnico caiu", description: "A demissão chega antes do treino. O novo comandante já está a caminho.", choices: [
-    { label: "Agradecer publicamente", hint: "Respeito ↑", result: "A mensagem é curta e elegante.", effect: { reputation: 4, leadership: 3 } },
-    { label: "Ficar em silêncio", hint: "Neutro", result: "Você espera o próximo capítulo sem alimentar manchetes.", effect: { morale: 1 } },
-    { label: "Conversar com o novo técnico", hint: "Minutos ↑", result: "Você sai da sala sabendo o que precisa entregar.", effect: { minutes: 7, potential: 1 } },
+  { id: "coach-fired", icon: "×", tag: "BASTIDORES", title: "O técnico caiu", description: "A demissão sai às sete da manhã, num comunicado de três linhas. Ele confiava em você. O substituto chega amanhã e já pediu à diretoria a lista de quem manda no vestiário.", choices: [
+    { label: "Agradecer publicamente", hint: "Reputação ↑ · liderança ↑ · minutos ↓", result: "Você posta uma foto dos dois no vestiário com uma frase curta. O novo técnico lê antes de chegar e começa a semana sem pressa de te escalar.", effect: { reputation: 4, leadership: 4, minutes: -3 } },
+    { label: "Ir se despedir dele pessoalmente", hint: "Moral ↑ · liderança ↑", result: "Você leva café ao apartamento dele. Ele fala meia hora sobre o time e nenhum minuto sobre a demissão. Ninguém fica sabendo da visita.", effect: { morale: 5, leadership: 2 } },
+    { label: "Ser o primeiro a se apresentar ao novo técnico", hint: "Minutos ↑ · liderança ↓", result: "Você chega ao CT antes dele e sai da sala sabendo o que precisa entregar. No vestiário, alguém resmunga 'rei morto, rei posto' alto o bastante para você ouvir.", effect: { minutes: 7, potential: 1, leadership: -3 } },
   ]},
   { id: "big-club", icon: "↑", tag: "MERCADO", title: "Um gigante quer você", description: "O projeto oferece títulos, salário e uma disputa pesada por posição.", minOvr: 76, choices: [
     { label: "Aceitar o desafio", hint: "Transferência · pressão ↑", result: "A carreira ganha uma nova camisa e outro peso.", effect: { transfer: true, money: 12, reputation: 6, minutes: -5 } },
@@ -1454,9 +1458,10 @@ export const PRO_EVENTS: GameEvent[] = [
     { label: "Esperar o goleiro", hint: "67% · ganho menor", result: "Um segundo parece durar uma temporada inteira.", effect: {}, luck: { chance: 67, successText: "Você espera até o limite e desloca o goleiro com frieza.", failureText: "A hesitação entrega o canto e o goleiro alcança.", successEffect: { leadership: 6, reputation: 7, titleBoost: 9, morale: 6 }, failureEffect: { morale: -9, reputation: -3, titleBoost: -4 } } },
     { label: "Entregar ao capitão", hint: "Coletivo · seguro", result: "A responsabilidade muda de pé, não de peso.", effect: { morale: 4, leadership: 2, titleBoost: 3 } },
   ]},
-  { id: "mysterious", icon: "?", tag: "RISCO", title: "O suplemento sem rótulo", description: "Alguém garante que todo mundo usa. Ninguém quer colocar o nome na embalagem.", minAge: 20, maxAge: 32, oneTime: true, choices: [
-    { label: "Recusar na hora", hint: "Profissionalismo ↑", result: "Você perde um atalho e preserva a carreira.", effect: { reputation: 5, leadership: 3 } },
-    { label: "Pedir análise do clube", hint: "Seguro · relação médica ↑", result: "O produto some antes do resultado chegar.", effect: { morale: 3, fitness: 3 } },
+  { id: "mysterious", icon: "?", tag: "RISCO", title: "O suplemento sem rótulo", description: "Um preparador particular circula pelo vestiário com um pote branco, sem rótulo e sem nota fiscal. Jura que o antidoping não pega. Você sabe que dois companheiros já estão tomando.", minAge: 20, maxAge: 32, oneTime: true, choices: [
+    { label: "Recusar e não perguntar mais nada", hint: "Disciplina ↑ · moral ↑", result: "Você devolve o pote sem abrir. O preparador dá de ombros e guarda na mochila, ao lado de outros iguais.", effect: { discipline: 3, morale: 2 } },
+    { label: "Levar o pote ao médico do clube", hint: "Disciplina ↑↑ · reputação ↑ · grupo ↓", result: "O laboratório encontra um estimulante proibido. O clube testa o elenco inteiro na semana seguinte, os dois companheiros são afastados e todo mundo sabe de onde veio o pote.", effect: { discipline: 8, reputation: 5, morale: -6, leadership: -2 } },
+    { label: "Avisar os dois companheiros em particular", hint: "Liderança ↑ · disciplina ↓", result: "Você conta o que sabe sobre a substância e promete não falar com mais ninguém. Eles jogam o pote fora naquela noite. O preparador continua circulando.", effect: { leadership: 6, morale: 3, discipline: -3 } },
   ]},
   { id: "shirt-number", icon: "10", tag: "IDENTIDADE", title: "A camisa que você sempre quis", description: "O número ficou livre e o roupeiro pergunta se você quer assumir o peso.", minOvr: 77, oneTime: true, choices: [
     { label: "Assumir a camisa", hint: "Reputação ↑ · pressão ↑", result: "O número parece maior quando aparece nas suas costas.", effect: { reputation: 8, morale: -2 } },

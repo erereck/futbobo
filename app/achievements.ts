@@ -23,7 +23,9 @@ export type MetricField =
   | "nationalCaptain"
   | "yellowCards"
   | "redCards"
-  | "retired";
+  | "retired"
+  /** Virou lenda de um clube: 7 temporadas seguidas, 3 títulos e a torcida aos pés. */
+  | "clubLegend";
 
 export type ComparisonOperator = "gte" | "lte" | "gt" | "lt" | "eq";
 
@@ -104,6 +106,11 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   { id: "carreira-de-quinze-temporadas", icon: "⏳", title: "Quinze Temporadas de Carreira", description: "Completou 15 temporadas como profissional.", rarity: "épico", match: "all", conditions: [{ field: "seasons", operator: "gte", value: 15 }] },
   { id: "carreira-de-vinte-temporadas", icon: "⏳", title: "Vinte Temporadas de Carreira", description: "Completou 20 temporadas como profissional.", rarity: "lendário", match: "all", conditions: [{ field: "seasons", operator: "gte", value: 20 }] },
   { id: "eterno-do-futebol", icon: "⏳", title: "Eterno do Futebol", description: "Seguiu jogando profissionalmente aos 38 anos.", rarity: "lendário", match: "all", conditions: [{ field: "age", operator: "gte", value: 38 }] },
+  { id: "imortal", icon: "∞", title: "Imortal", description: "Passou dos 42 anos ainda em campo, com nível para continuar.", rarity: "lendário", match: "all", conditions: [
+    { field: "age", operator: "gte", value: 42 },
+    { field: "retired", operator: "eq", value: false },
+  ]},
+  { id: "lenda-do-clube", icon: "★", title: "Lenda do Clube", description: "Sete temporadas seguidas no mesmo clube, três títulos por ele e a torcida aos pés.", rarity: "épico", match: "all", conditions: [{ field: "clubLegend", operator: "eq", value: true }] },
   // ---- BASTIDORES DA CARREIRA ----
   { id: "referencia-completa", icon: "✦", title: "Referência Completa", description: "Somou 100 gols e 100 assistências na carreira.", rarity: "raro", match: "all", conditions: [
     { field: "goals", operator: "gte", value: 100 },
@@ -127,7 +134,7 @@ export const ACHIEVEMENTS: AchievementDefinition[] = [
   ]},
 ];
 
-const BOOLEAN_METRIC_FIELDS = new Set<MetricField>(["wasCaptain", "nationalCaptain", "retired"]);
+const BOOLEAN_METRIC_FIELDS = new Set<MetricField>(["wasCaptain", "nationalCaptain", "retired", "clubLegend"]);
 
 function readMetric(metrics: AchievementMetrics, field: MetricField): number | boolean {
   const value = metrics[field];

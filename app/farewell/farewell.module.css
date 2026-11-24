@@ -1,0 +1,95 @@
+/* Despedida da lenda: o que é só dela por cima da camada de TV da
+   apresentação (presentation.module.css), e a cena 2D num canvas só. */
+
+.canvas2d {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Números da carreira pelo clube: um de cada vez, à direita, como gráfico de TV. */
+.statZone {
+  position: absolute;
+  right: max(16px, 5vw);
+  bottom: calc(var(--bar) + 2.4vh);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.stat {
+  display: grid;
+  justify-items: end;
+  min-width: 180px;
+  padding: 12px 18px 12px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-right: 6px solid var(--club-a);
+  border-radius: 14px 0 0 14px;
+  background: linear-gradient(270deg, rgba(8, 8, 11, 0.94), rgba(8, 8, 11, 0.7));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  text-align: right;
+  animation: statIn 0.7s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.stat b {
+  font: 800 clamp(40px, 6.4vw, 76px)/0.9 var(--font-display);
+  font-stretch: 78%;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  animation: statCount 0.9s 0.1s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.stat span {
+  margin-top: 4px;
+  font: 800 clamp(13px, 1.4vw, 17px)/1.1 var(--font-condensed);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.stat small {
+  margin-top: 2px;
+  color: var(--ink-muted);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@keyframes statIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes statCount {
+  from { opacity: 0; transform: translateY(14px) scale(0.92); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+/* Cartão final: quatro números e a lista de títulos. */
+.endSheet { width: min(600px, 100%); }
+.facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.titles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.titles li {
+  padding: 3px 8px;
+  border: 1.5px solid var(--paper-ink);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--paper-ink);
+  font: 700 12px/1.2 var(--font-text);
+}
+
+@media (max-width: 440px) {
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat { min-width: 140px; padding: 10px 14px 10px 16px; }
+}
+
+/* Em pé: o número sobe para não brigar com a tarja do nome e o título. */
+@media (max-aspect-ratio: 3/4) {
+  .statZone { right: 16px; bottom: auto; top: calc(var(--bar) + 64px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat,
+  .stat b { animation-duration: 0.01ms; }
+}

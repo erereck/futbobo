@@ -108,6 +108,12 @@ export const CELEBRATION_OPTIONS = [
   { id: "meditate", name: "Meditação" },         // 15
   { id: "cupEar", name: "Não tô ouvindo" },      // 16
   { id: "fingerGuns", name: "Pistoleiro" },      // 17
+  { id: "shoeShine", name: "Engraxate" },        // 18
+  { id: "rowing", name: "Remada" },              // 19
+  { id: "salute", name: "Continência" },         // 20
+  { id: "archer", name: "Arqueiro" },            // 21
+  { id: "photoShoot", name: "Fotógrafo" },       // 22
+  { id: "cartwheel", name: "Estrela" },          // 23
 ] as const;
 export type CelebrationId = (typeof CELEBRATION_OPTIONS)[number]["id"];
 

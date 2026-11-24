@@ -22,10 +22,13 @@ import { resolveExtraSecondDivisionPromotion } from "./second-divisions";
 import { starPromotionRankBoost } from "./promotion";
 import { peneiraSigningTerms } from "./peneira";
 import { LOAN_MINUTES_BONUS, adjustedSquadRole, isOnLoan, loanSquadRole, peneiraGiantRole } from "./squad-role";
+import { applyFootballBan, isBannedFromFootball } from "./football-ban";
+import { forcedRetirement } from "./veteran";
+import { clubLegendStatus } from "./farewell";
 
 export function isNegativeConsequence(change: string) {
   const normalized = change.toLocaleLowerCase("pt-BR");
-  return change.startsWith("-") || normalized.includes("piorou") || normalized.includes("risco") || normalized.includes("despedida");
+  return change.startsWith("-") || normalized.includes("piorou") || normalized.includes("risco") || normalized.includes("despedida") || normalized.includes("banido");
 }
 
 /** Metade estatística para evolução inteira: resultados ímpares alternam de forma determinística. */
@@ -763,7 +766,8 @@ export function simulateSeason(
     pendingBotaoMatches,
     lastBotaoResult: null,
     pendingStoryDecision,
-    retireAfterSeason: Boolean(effect.retire || nextAge >= 40),
+    // Depois dos 40 a carreira só acaba sozinha se o overall cair abaixo de 78.
+    retireAfterSeason: Boolean(effect.retire || forcedRetirement(nextAge, nextOverall)),
     seenEvents,
     nextEventId: "",
     renewalDenied,
@@ -806,7 +810,7 @@ export function simulateSeason(
   }
   const transferMarketOffers = materializeTransferOffers(nextBase, transferOffers, affected.season * 43, { includeForeign: !wantsDomesticReturn, forceDomestic: wantsDomesticReturn, forceForeign: effect.transferAbroad, domesticCountryId: domesticReturnCountryId, sourceLeagueId: league.id, mode: effect.loan || youthLoanDecision ? "loan" : renewalDenied ? "free-agent" : "permanent", trigger: youthLoanDecision ? "youth-development" : permanentForcedExit ? "forced-exit" : renewalDenied ? "contract-expired" : "season-end" });
   const legacyPoints = calculateLegacyScore({ appearances: nextBase.stats.appearances, goals: nextBase.stats.goals, assists: nextBase.stats.assists, cleanSheets: nextBase.stats.cleanSheets, trophies: nextBase.trophies, nationalTrophies: nextBase.nationalTrophies, awards: nextBase.awards, ballonDor: nextBase.awardCabinet["Bola de Ouro"] ?? 0, nationalCaps: nextBase.nationalCaps, peakOverall: Math.max(nextBase.overall, ...nextBase.history.map((item) => item.overall)), setbacks: nextBase.setbacks }) + Math.round(Math.log10(Math.max(1, nextBase.followers)) * 4 + nextBase.charityReputation * 0.22);
-  const achievementCandidates = getUnlockedAchievements({ appearances: nextBase.stats.appearances, goals: nextBase.stats.goals, assists: nextBase.stats.assists, cleanSheets: nextBase.stats.cleanSheets, trophies: nextBase.trophies + nextBase.nationalTrophies, continentalTitles: nextBase.trophyCabinet.libertadores + nextBase.trophyCabinet.recopaSudamericana + nextBase.trophyCabinet.championsLeague + nextBase.trophyCabinet.uefaSuperCup + nextBase.trophyCabinet.europaLeague + nextBase.trophyCabinet.conferenceLeague + nextBase.trophyCabinet.concacafChampions + nextBase.trophyCabinet.afcChampions + nextBase.trophyCabinet.cafChampions + nextBase.trophyCabinet.campeonesCup, worldTitles: nextBase.trophyCabinet.mundial, nationalCaps: nextBase.nationalCaps, nationalTrophies: nextBase.nationalTrophies, ballonDor: nextBase.awardCabinet["Bola de Ouro"] ?? 0, clubsPlayed: new Set(nextBase.history.map((item) => item.clubId)).size, seasonsAbroad: nextBase.history.filter((item) => isOutsideCountry(clubById(item.clubId), nextBase.academyCountryId)).length, seasons: nextBase.history.length, age: nextBase.age, wasCaptain: nextBase.clubCaptain, nationalCaptain: nextBase.nationalCaptain, yellowCards: nextBase.stats.yellowCards, redCards: nextBase.stats.redCards, retired: nextBase.retireAfterSeason }, nextBase.unlockedAchievements);
+  const achievementCandidates = getUnlockedAchievements({ appearances: nextBase.stats.appearances, goals: nextBase.stats.goals, assists: nextBase.stats.assists, cleanSheets: nextBase.stats.cleanSheets, trophies: nextBase.trophies + nextBase.nationalTrophies, continentalTitles: nextBase.trophyCabinet.libertadores + nextBase.trophyCabinet.recopaSudamericana + nextBase.trophyCabinet.championsLeague + nextBase.trophyCabinet.uefaSuperCup + nextBase.trophyCabinet.europaLeague + nextBase.trophyCabinet.conferenceLeague + nextBase.trophyCabinet.concacafChampions + nextBase.trophyCabinet.afcChampions + nextBase.trophyCabinet.cafChampions + nextBase.trophyCabinet.campeonesCup, worldTitles: nextBase.trophyCabinet.mundial, nationalCaps: nextBase.nationalCaps, nationalTrophies: nextBase.nationalTrophies, ballonDor: nextBase.awardCabinet["Bola de Ouro"] ?? 0, clubsPlayed: new Set(nextBase.history.map((item) => item.clubId)).size, seasonsAbroad: nextBase.history.filter((item) => isOutsideCountry(clubById(item.clubId), nextBase.academyCountryId)).length, seasons: nextBase.history.length, age: nextBase.age, wasCaptain: nextBase.clubCaptain, nationalCaptain: nextBase.nationalCaptain, yellowCards: nextBase.stats.yellowCards, redCards: nextBase.stats.redCards, retired: nextBase.retireAfterSeason, clubLegend: clubLegendStatus(nextBase, club.id).legend }, nextBase.unlockedAchievements);
   const newlyUnlocked = achievementCandidates.filter((achievement) => nextBase.disciplineHistoryReliable || (achievement.id !== "ficha-limpa" && achievement.id !== "disciplinado-em-campo"));
   const newsCategory = breakoutBonus > 0 ? "milestone" : titleCount > 0 ? "title" : luckyDelta > 0 ? "milestone" : nationalCalled && nationalNote ? "national" : twist || nationalNote ? "setback" : "season";
   const newsPool = NEWS_TEMPLATES.filter((item) => item.category === newsCategory);
@@ -817,7 +821,9 @@ export function simulateSeason(
   const nationalitySwitchTarget = maybeOfferNationalitySwitch(nextBase, affected.season * 71);
   const squadWorld = ensureClubSquadPlayers(nextBase.worldPlayers, nextBase.currentClubId, affected.season, 14);
   const worldPlayers = advanceWorldPlayerUniverse(squadWorld, { season: nextBase.season, rivals: nextBase.rivals, awardNominations: result.awardNominations, protagonistName: nextBase.name, focusClubId: nextBase.currentClubId });
-  return settleSeasonScouting({ ...nextBase, nextEventId: nationalitySwitchTarget ? NATIONALITY_SWITCH_EVENT_ID : selectNextEvent(nextBase, affected.season * 37), pendingNationalitySwitchTarget: nationalitySwitchTarget ?? "", nationalitySwitchInviteUsed: nextBase.nationalitySwitchInviteUsed || Boolean(nationalitySwitchTarget), transferOffers, transferMarketOffers, worldPlayers, legacyPoints, unlockedAchievements: [...nextBase.unlockedAchievements, ...newlyUnlocked.map((achievement) => achievement.id)], newsFeed: [...achievementNews, ...offFieldNews, seasonHeadline, ...nextBase.newsFeed].slice(0, 16) });
+  const settled = settleSeasonScouting({ ...nextBase, nextEventId: nationalitySwitchTarget ? NATIONALITY_SWITCH_EVENT_ID : selectNextEvent(nextBase, affected.season * 37), pendingNationalitySwitchTarget: nationalitySwitchTarget ?? "", nationalitySwitchInviteUsed: nextBase.nationalitySwitchInviteUsed || Boolean(nationalitySwitchTarget), transferOffers, transferMarketOffers, worldPlayers, legacyPoints, unlockedAchievements: [...nextBase.unlockedAchievements, ...newlyUnlocked.map((achievement) => achievement.id)], newsFeed: [...achievementNews, ...offFieldNews, seasonHeadline, ...nextBase.newsFeed].slice(0, 16) });
+  // Esquema descoberto: a temporada conta, mas o mercado fecha (quem já ia se aposentar só se aposenta).
+  return effect.banSeasons && !settled.retireAfterSeason ? applyFootballBan(settled, effect.banSeasons) : settled;
 }
 
 export function eventForState(state: GameState) {
@@ -885,7 +891,8 @@ export function simulateMonteCarloCareer(seed: number, careerIndex: number): Mon
   const firstClubId = pick(journey.offers, seed, 733 + careerIndex);
   state = signProfessionalForSimulation(state, firstClubId);
   let seasons = 0;
-  while (state.age < 40 && seasons < 30) {
+  // Sem teto de idade: a carreira acaba pelo retireAfterSeason (aos 40+, overall abaixo de 78).
+  while (seasons < 30) {
     if ((state.activeLoan || state.loanParentClubId) && state.season >= (state.activeLoan?.endSeason ?? state.loanEndSeason)) state = completeLoanReturn(state);
     const event = eventForState(state);
     const choiceIndex = Math.floor(seeded(seed, state.season * 401 + seasons * 17) * event.choices.length);
@@ -902,6 +909,16 @@ export function simulateMonteCarloCareer(seed: number, careerIndex: number): Mon
     state = simulateSeason(state, event, effect, choice.label, resultText, luckOutcome, "simulate");
     seasons += 1;
     if (state.retireAfterSeason) break;
+    if (isBannedFromFootball(state)) {
+      // Cumpre a pena de uma vez e volta como agente livre.
+      const missed = state.forcedFreeAgentUntilSeason - state.season;
+      state = { ...state, age: state.age + missed, season: state.forcedFreeAgentUntilSeason, forcedFreeAgentUntilSeason: 0 };
+      if (forcedRetirement(state.age, state.overall)) break;
+      const comeback = selectTransferOffers(state, state.season * 43, { includeForeign: true });
+      if (!comeback.length) break;
+      state = completeSimulationTransfer({ ...state, transferOffers: comeback, transferMarketOffers: [] }, pick(comeback, seed, state.season * 431 + seasons));
+      continue;
+    }
     if (state.transferOffers.length) {
       const mustMove = state.renewalDenied || state.transferRequested || state.pendingTransferMode === "loan" || state.isFreeAgent;
       const movesClub = mustMove || seeded(seed, state.season * 419 + seasons) < 0.55;

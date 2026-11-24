@@ -927,6 +927,32 @@ const ARM_FOCUS_READY: Arm = [-0.25, 0, 0.18, -0.35];
  * entre o peito e o ombro, à frente e por fora do tronco (mão em ~8,8; 11,3; 5,9 no tronco).
  */
 const ARM_RESPECT: Arm = [-0.48, 0.29, 0.41, -1.87];
+// Leva nova do criador (mesmo cálculo: palma no alvo, braço fora do corpo e da cabeça).
+/** Continência: mão na têmpora (sempre a direita), cotovelo aberto na altura do ombro. */
+const ARM_SALUTE: Arm = [-1.19, -0.57, 1.47, -1.93];
+/** Em sentido: braço colado ao corpo, esticado. */
+const ARM_ATTENTION: Arm = [0, 0, 0.05, -0.05];
+/** Arqueiro: o braço do arco esticado para fora e para cima (45°). */
+const ARM_BOW: Arm = [-1.08, -0.57, 1.67, -0.5];
+/** A mão que puxa a corda, na frente do ombro, com o cotovelo aberto na altura dele. */
+const ARM_DRAW: Arm = [0.1, -0.52, 1.71, -2.18];
+/** Soltou a flecha: a mão abre para fora e o cotovelo vai para trás (longe da cabeça virada). */
+const ARM_LOOSE: Arm = [0.83, 0.9, 1.12, -2.23];
+/** Remada: braços esticados para a frente, mãos na largura do ombro (o "pegar" da água). */
+const ARM_ROW_REACH: Arm = [-1.06, -1.1, 0, -0.49];
+/** Fim da puxada: mãos na barriga, cotovelos para os lados. */
+const ARM_ROW_PULL: Arm = [0.27, -0.65, 0.45, -1.71];
+/** Fotógrafo: as mãos dos lados da "câmera", na frente do rosto. */
+const ARM_CAMERA: Arm = [-1.64, -0.91, 0.17, -1.16];
+/** Pose de galã: mão embaixo do queixo. */
+const ARM_CHIN: Arm = [-0.74, -0.94, 0.17, -1.61];
+/**
+ * Engraxate ajoelhado e debruçado (tronco 0,87 à frente, 0,17 de lado, 0,15 de giro): a mão direita
+ * na biqueira da chuteira de quem marcou, com os dois no lugar de SHOE_SHINE_SPOT.
+ */
+const ARM_SHINE: Arm = [-1, 0.05, -0.26, -0.26];
+/** No caminho até a chuteira: braço à frente, por cima do joelho levantado. */
+const ARM_REACH_OVER: Arm = [-1.35, 0, 0.2, -0.5];
 
 function putL(out: Pose, a: Arm, b: Arm = a, k = 0) {
   out.shLX = mix(a[0], b[0], k);
@@ -1090,7 +1116,17 @@ export type FigureAction =
   | "penaltyFocus"
   | "keeperTaunt"
   // Lei do Ex: gol no ex-clube sem comemorar (fora das comemorações do criador).
-  | "respect";
+  | "respect"
+  // Leva nova do criador. Continência e remada valem para quem marcou e para os
+  // companheiros; engraxate e fotógrafo têm a parte de quem marcou e a do ajudante.
+  | "salute"
+  | "archer"
+  | "cartwheel"
+  | "rowing"
+  | "bootShow"
+  | "shoeShine"
+  | "photoPose"
+  | "photoSnap";
 
 /** Tiques de quem está parado esperando a vez (internos). */
 type FidgetId = "lookAround" | "stretch" | "legSwing" | "fixSock" | "bounceToes" | "tapBoot" | "neckRoll";
@@ -1107,6 +1143,11 @@ type ActionContext = {
   variant: number;
   /** 1 destro, -1 canhoto: lado da mão/perna boa. */
   side: number;
+  /**
+   * Relógio comum da coreografia em grupo (`intent.clock`, s): a remada e o
+   * clique do fotógrafo batem por ele. Sem relógio pedido, é o `t` da ação.
+   */
+  clock: number;
 };
 
 type ActionBody = "full" | "upper" | "overlay";
@@ -1130,6 +1171,11 @@ type ActionDef = {
   impacts?: ReadonlyArray<readonly [number, number]>;
   /** Marcas de tempo (instante, nome) que os efeitos leem no takeCues (esfera, raio, aura...). */
   cues?: ReadonlyArray<readonly [number, string]>;
+  /**
+   * Marca que se repete no relógio da ação (`ctx.clock`): a cada `period` s, em
+   * `at` dentro do período, depois de `settle` s de ação (o clique, o brilho).
+   */
+  beat?: { readonly period: number; readonly at: number; readonly settle: number; readonly cue: string };
   sample: (t: number, out: Pose, ctx: ActionContext) => void;
 };
 
@@ -1319,6 +1365,75 @@ const GUN_SECOND = 0.78;
 
 // --- Super Saiyajin: agacha, treme gritando, explode num pulinho e fica no bíceps duplo.
 const SSJ_BURST = 0.9;
+
+// --- leva nova do criador.
+/** Continência: a mão sobe num estalo logo depois da batida de calcanhar. */
+const SALUTE_SNAP = 0.2;
+/** Arqueiro: arma o arco, mira tremendo e solta a flecha neste instante (s). */
+const ARCHER_RELEASE = 0.8;
+/**
+ * Estrela (s desde o começo da ação): o giro de 360° vai de START a END; a
+ * coreografia desliza o boneco de lado nesse trecho (o palco gira no lugar).
+ */
+export const CARTWHEEL = { START: 0.22, END: 0.92, DURATION: 1.15 } as const;
+/** Estrela: quanto o corpo sobe (px) pelo progresso do giro, para mãos e pés pisarem no gramado sem afundar. */
+const CARTWHEEL_LIFT: Track = [
+  0, 0, 0.075, -0.85, 0.125, -0.2, 0.2, 1.65, 0.25, 1.5, 0.3, -0.5, 0.35, 5.4, 0.4, 10, 0.45, 10.8,
+  0.5, 9, 0.55, 10.7, 0.6, 9, 0.65, 3.4, 0.7, -0.5, 0.775, 1.75, 0.85, 0.55, 0.9, -0.35, 1, 0,
+];
+/** Remada: uma puxada a cada ROW_PERIOD s (no relógio comum: o barco rema junto). */
+export const ROW_PERIOD = 0.8;
+/** Remada: distância (unidades de campo) de um remador sentado ao da frente; as pernas esticadas não chegam nele. */
+export const ROW_SEAT = 20;
+/** Remada: senta no gramado nisto (s), pernas para a frente. */
+const ROW_SIT_TRACKS: readonly KeyTrack[] = [
+  ["bodyY", [0, 0, 0.1, -1.1, 0.2, -3.6, 0.27, -4.3, 0.33, -7.8, 0.38, -10.2]],
+  ...both("hipLX", "hipRX", [0, 0, 0.2, -1.1, 0.38, -1.75]),
+  ...both("kneeL", "kneeR", [0, 0, 0.2, 1.6, 0.38, 0.15]),
+  ...both("hipLZ", "hipRZ", [0, 0, 0.38, 0.16], true),
+];
+/**
+ * Fotógrafo: quem marcou troca de pose a cada PERIOD s; o clique sai em CLICK
+ * dentro dela. O fotógrafo se ajoelha a DISTANCE (unidades de campo), ANGLE
+ * para o lado da câmera, e quem posa vira TURN para ele.
+ */
+export const PHOTO = { PERIOD: 0.6, CLICK: 0.3, DISTANCE: 30, ANGLE: 0.8, TURN: 0.4 } as const;
+/** Quanto dura a troca de uma pose para a outra (s), passando pela pose aberta. */
+const PHOTO_SNAP = 0.18;
+/** No meio da troca: mãos à frente e um pouco abertas (sem alcançar o fotógrafo ajoelhado ali do lado). */
+const ARM_PHOTO_MID: Arm = [-0.45, -0.3, 0.6, -1.3];
+/** [braço esquerdo, braço direito, tronco X, tronco Y, pescoço X, Y, Z] das poses para a foto. */
+type PhotoKey = readonly [Arm, Arm, number, number, number, number, number];
+const PHOTO_KEYS: readonly PhotoKey[] = [
+  // Galã: mão no queixo, a outra na cintura, cabeça de lado.
+  [ARM_HIPS, ARM_CHIN, -0.02, 0.18, 0.02, 0.12, 0.14],
+  // Bíceps duplo.
+  [ARM_SSJ_FLEX, ARM_SSJ_FLEX, -0.06, 0, -0.14, 0, 0],
+  // Braços cruzados, queixo para cima.
+  [ARM_CROSS_LOW, ARM_CROSS_HIGH, -0.07, -0.12, -0.26, -0.1, 0],
+];
+/** Engraxate: uma passada de pano a cada SHINE_PERIOD s (o brilho sai no fim de cada uma). */
+const SHINE_PERIOD = 0.42;
+/**
+ * Engraxate: onde o ajudante se ajoelha no referencial de quem marcou (x à
+ * esquerda dele, z à frente, unidades de campo) e para onde olha (`face`,
+ * somado ao lado de quem marcou): à direita e à frente, de lado para a
+ * chuteira direita (bootShow). Só nesse lugar a mão de ARM_SHINE cai na
+ * biqueira sem a cabeça dele bater na perna de quem marcou.
+ */
+export const SHOE_SHINE_SPOT = { x: -17.4, z: 13.8, face: 2.09 } as const;
+/** Ajoelha num joelho só (o esquerdo no chão), a coxa direita na horizontal: engraxate e fotógrafo. */
+const KNEEL_LEG_TRACKS: readonly KeyTrack[] = [
+  ["bodyY", [0, 0, 0.1, -0.4, 0.2, -0.8, 0.25, -1, 0.3, -3.9, 0.35, -5.05]],
+  ["hipRX", [0, 0, 0.18, -0.9, 0.35, -1.45]],
+  ["kneeR", [0, 0, 0.35, 1.45]],
+  ["hipLX", [0, 0, 0.14, -0.3, 0.35, 0.25]],
+  ["kneeL", [0, 0, 0.14, 0.6, 0.35, 1.6]],
+];
+/** Engraxate, quem marcou: chuteira direita à frente (calcanhar no chão), o peso na de trás. */
+const BOOT_FRONT_HIP = -0.62;
+const BOOT_BACK_HIP = 0.16;
+const BOOT_BACK_KNEE = 0.5;
 
 const ACTIONS: Record<ActionId, ActionDef> = {
   // ----------------------------------------------------- comemorações
@@ -2490,6 +2605,250 @@ const ACTIONS: Record<ActionId, ActionDef> = {
       o.kneeL = o.kneeR = 0.05;
     },
   },
+  // ------------------------------------------- leva nova do criador
+  salute: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t < 0.4 ? "shout" : null),
+    look: 0,
+    impacts: [[0.15, 0.12]],
+    cues: [[SALUTE_SNAP + 0.06, "salute"]],
+    sample(t, o) {
+      stand(o, t);
+      // Bate os calcanhares num pulinho e fica em sentido: pés juntos, corpo esticado.
+      const hop = t < 0.15 ? Math.sin((Math.PI * t) / 0.15) : 0;
+      o.bodyY += 0.8 * hop;
+      o.kneeL = o.kneeR = 0.1 * hop;
+      o.hipLZ = 0.01;
+      o.hipRZ = -0.01;
+      // Continência é sempre com a direita, num estalo; a esquerda colada na perna.
+      putL(o, ARM_REST, ARM_ATTENTION, smooth(t / 0.15));
+      putR(o, ARM_REST, ARM_SALUTE, smooth((t - SALUTE_SNAP + 0.1) / 0.12));
+      // Peito para fora e queixo para cima; depois corre os olhos pela arquibancada (o tronco leva a mão junto).
+      const proud = smooth((t - 0.2) / 0.3);
+      const pan = Math.sin(TAU * 0.3 * Math.max(0, t - 0.7)) * smooth((t - 0.7) / 0.5);
+      o.torsoX = -0.06 * proud;
+      o.torsoY = 0.16 * pan;
+      o.hipsY = -0.05 * pan;
+      o.neckX = -0.14 * proud;
+    },
+  },
+  archer: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t < ARCHER_RELEASE ? "grit" : "shout"),
+    look: 0,
+    // O destro segura o arco na esquerda e puxa com a direita; o canhoto, espelhado.
+    mirror: true,
+    cues: [[ARCHER_RELEASE, "arrow"]],
+    sample(t, o) {
+      stand(o, t);
+      const raise = smooth(t / 0.3);
+      const draw = smooth(seg(t, 0.1, 0.45));
+      const aim = smooth(seg(t, 0.35, ARCHER_RELEASE));
+      const loose = smooth(seg(t, ARCHER_RELEASE, ARCHER_RELEASE + 0.1));
+      const follow = smooth(seg(t, ARCHER_RELEASE, ARCHER_RELEASE + 0.6));
+      // Base aberta de lado, joelhos soltos.
+      o.hipLZ = 0.17 * raise;
+      o.hipRZ = -0.17 * raise;
+      o.kneeL = o.kneeR = 0.08 * raise;
+      o.bodyY -= legDrop(0, 0.17, 0.08) * raise;
+      putL(o, ARM_REST, ARM_BOW, raise);
+      putR(o, ARM_REST, ARM_DRAW, draw);
+      if (loose > 0) putR(o, ARM_DRAW, ARM_LOOSE, loose);
+      // Mirando: o tronco deita para longe do alvo (a flecha sobe) e o braço do arco treme de leve.
+      const tremble = aim * (1 - loose);
+      o.torsoZ = 0.12 * raise + 0.05 * aim;
+      o.torsoX = -0.05 * raise;
+      o.shLX += 0.02 * Math.sin(t * 43) * tremble;
+      o.shLZ += 0.015 * Math.sin(t * 37) * tremble;
+      // Coice do arco ao soltar.
+      const kick = t >= ARCHER_RELEASE ? Math.exp(-(t - ARCHER_RELEASE) * 10) : 0;
+      o.shLZ -= 0.08 * kick;
+      o.bodyY -= 0.25 * kick;
+      // Olha pela flecha e acompanha ela subindo.
+      o.neckY = 0.95 * raise;
+      o.neckX = -0.12 * raise - 0.3 * follow;
+      o.neckZ = 0.12 * follow;
+    },
+  },
+  cartwheel: {
+    duration: CARTWHEEL.DURATION,
+    body: "full",
+    mood: (t) => (t < CARTWHEEL.START ? "grit" : "shout"),
+    look: 0,
+    impacts: [[CARTWHEEL.END + 0.02, 0.4]],
+    sample(t, o) {
+      stand(o, t);
+      const up = smooth(t / CARTWHEEL.START);
+      const turn = seg(t, CARTWHEEL.START, CARTWHEEL.END);
+      const open = smooth(turn / 0.12) * (1 - smooth((turn - 0.86) / 0.14));
+      const land = smooth(seg(t, CARTWHEEL.END - 0.04, CARTWHEEL.END + 0.18));
+      // Braços em V acima da cabeça desde o preparo; na chegada continuam lá ("tcharam!").
+      o.shLZ = mix(0.09, 2.6, up);
+      o.shRZ = -o.shLZ;
+      o.shLX = o.shRX = -0.12 * up;
+      o.elL = o.elR = mix(-0.14, -0.04, up);
+      // Preparo: inclina para o lado da estrela (+x) e abre a perna da frente; no giro, as duas bem abertas.
+      o.torsoZ = -0.12 * up * (1 - turn);
+      o.hipLZ = 0.28 * up * (1 - open) + 0.72 * open;
+      o.hipRZ = -(0.06 * up * (1 - open) + 0.72 * open);
+      o.hipLZ = mix(o.hipLZ, 0.05, land);
+      o.hipRZ = mix(o.hipRZ, -0.05, land);
+      // Giro de 360° em volta do quadril, descendo primeiro a mão e o pé da frente.
+      o.pivZ = wrapAngle(-TAU * smooth(turn));
+      o.bodyY += sampleTrack(CARTWHEEL_LIFT, turn);
+      // Chegada: os joelhos cedem e voltam; depois, pulinhos de "tcharam".
+      const dip = Math.sin(Math.PI * seg(t, CARTWHEEL.END, CARTWHEEL.END + 0.22));
+      const bounce = t > CARTWHEEL.DURATION ? Math.abs(Math.sin(TAU * 0.9 * (t - CARTWHEEL.DURATION))) : 0;
+      o.kneeL = o.kneeR = 0.05 + 0.4 * dip;
+      o.hipLX = o.hipRX = -0.2 * dip;
+      o.bodyY -= legDrop(-0.2 * dip, 0.05, 0.05 + 0.4 * dip) - legDrop(0, 0.05, 0.05);
+      o.bodyY += 0.5 * bounce;
+      o.neckX = -0.15 * land;
+    },
+  },
+  rowing: {
+    duration: 0,
+    body: "full",
+    mood: "shout",
+    look: 0,
+    impacts: [[0.38, 0.2]],
+    sample(t, o, c) {
+      stand(o, t);
+      // Senta no gramado de pernas para a frente; a puxada bate no relógio comum (o barco rema junto).
+      applyTracks(o, ROW_SIT_TRACKS, t);
+      // Os braços só vão à frente depois de sentado: agachando, não alcançam quem está na frente do barco.
+      const sit = smooth((t - 0.36) / 0.18);
+      const stroke = smooth((t - 0.45) / 0.3);
+      const phase = (((c.clock % ROW_PERIOD) + ROW_PERIOD) % ROW_PERIOD) / ROW_PERIOD;
+      // Puxada rápida (até 0,45) e volta macia: 1 com as mãos na barriga.
+      const pull = (phase < 0.45 ? smooth(phase / 0.45) : 1 - smooth((phase - 0.45) / 0.55)) * stroke;
+      putL(o, ARM_REST, ARM_ROW_REACH, sit);
+      putR(o, ARM_REST, ARM_ROW_REACH, sit);
+      if (pull > 0) {
+        putL(o, ARM_ROW_REACH, ARM_ROW_PULL, pull);
+        putR(o, ARM_ROW_REACH, ARM_ROW_PULL, pull);
+      }
+      // Tronco à frente no "pegar", para trás no fim da puxada; os joelhos acompanham um pouco.
+      o.torsoX = sit * (0.34 - 0.58 * pull);
+      o.kneeL += 0.18 * stroke * (1 - pull);
+      o.kneeR += 0.18 * stroke * (1 - pull);
+      o.neckX = -0.6 * o.torsoX - 0.05;
+    },
+  },
+  bootShow: {
+    duration: 0,
+    body: "full",
+    mood: (t) => (t < 0.6 ? "shout" : null),
+    look: 0,
+    sample(t, o) {
+      stand(o, t);
+      const k = smooth(t / 0.3);
+      putL(o, ARM_REST, ARM_HIPS, k);
+      putR(o, ARM_REST, ARM_HIPS, k);
+      // A chuteira direita à frente, para o engraxate; o peso fica na de trás.
+      o.hipRX = BOOT_FRONT_HIP * k;
+      o.kneeR = 0.03 * k;
+      o.hipLX = BOOT_BACK_HIP * k;
+      o.kneeL = BOOT_BACK_KNEE * k;
+      o.hipLZ = 0.05 * k;
+      o.hipRZ = -0.03 * k;
+      o.bodyY -= legDrop(BOOT_BACK_HIP, 0.05, BOOT_BACK_KNEE) * k;
+      // Peito estufado, queixo para cima; de tempos em tempos baixa os olhos para conferir o brilho
+      // (só a cabeça: o tronco curvado bateria no engraxate).
+      const check = Math.pow(Math.max(0, Math.sin(TAU * 0.42 * Math.max(0, t - 0.9))), 3);
+      o.torsoX = -0.08 * k;
+      o.neckX = -0.22 * k + 0.6 * check;
+      o.neckY = -0.3 * check;
+    },
+  },
+  shoeShine: {
+    duration: 0,
+    body: "full",
+    mood: "shout",
+    look: 0,
+    impacts: [[0.35, 0.2]],
+    beat: { period: SHINE_PERIOD, at: SHINE_PERIOD * 0.5, settle: 0.45, cue: "shine" },
+    sample(t, o, c) {
+      // Ajoelha e debruça sobre a chuteira: a direita lustra a biqueira em roda, a esquerda na cintura.
+      applyTracks(o, KNEEL_LEG_TRACKS, t);
+      const lean = smooth((t - 0.08) / 0.32);
+      // A mão vai à chuteira depois do joelho subir, por cima dele (senão passa por dentro da coxa).
+      const k = smooth((t - 0.3) / 0.25);
+      putL(o, ARM_REST, ARM_HIPS, smooth((t - 0.15) / 0.3));
+      putR(o, ARM_REST, ARM_REACH_OVER, smooth((t - 0.22) / 0.16));
+      if (k > 0) putR(o, ARM_REACH_OVER, ARM_SHINE, k);
+      const turn = (TAU * c.clock) / SHINE_PERIOD;
+      const rub = smooth((t - 0.4) / 0.2);
+      o.shRX += 0.07 * Math.sin(turn) * rub;
+      o.shRZ += 0.05 * Math.cos(turn) * rub;
+      // O corpo acompanha a mão de leve.
+      o.torsoX = 0.87 * lean + 0.015 * Math.sin(turn) * rub;
+      o.torsoZ = 0.17 * lean;
+      o.torsoY = 0.15 * lean;
+      o.neckX = 0.1 * lean;
+    },
+  },
+  photoPose: {
+    duration: 0,
+    body: "full",
+    mood: (_t, c) => (Math.floor(Math.max(0, c.clock) / PHOTO.PERIOD) % PHOTO_KEYS.length === 1 ? "shout" : null),
+    look: 0,
+    sample(t, o, c) {
+      stand(o, t);
+      // Uma pose por foto, no relógio do fotógrafo: troca num estalo e segura até o clique.
+      const clock = Math.max(0, c.clock);
+      const shot = Math.floor(clock / PHOTO.PERIOD);
+      const key = PHOTO_KEYS[shot % PHOTO_KEYS.length];
+      const from = shot === 0 ? key : PHOTO_KEYS[(shot - 1) % PHOTO_KEYS.length];
+      const into = (clock - shot * PHOTO.PERIOD) / PHOTO_SNAP;
+      const snap = smooth(into);
+      // Os braços passam por uma pose aberta no meio da troca: um não atravessa o outro nem o corpo.
+      const open = shot === 0 ? 1 : smooth(into * 2);
+      const close = shot === 0 ? 1 : smooth(into * 2 - 1);
+      putL(o, from[0], ARM_PHOTO_MID, open);
+      putR(o, from[1], ARM_PHOTO_MID, open);
+      if (close > 0) {
+        putL(o, ARM_PHOTO_MID, key[0], close);
+        putR(o, ARM_PHOTO_MID, key[1], close);
+      }
+      o.torsoX = mix(from[2], key[2], snap);
+      o.torsoY = mix(from[3], key[3], snap);
+      o.neckX = mix(from[4], key[4], snap);
+      o.neckY = mix(from[5], key[5], snap);
+      o.neckZ = mix(from[6], key[6], snap);
+      armsFromRest(o, smooth(t / 0.25));
+      o.hipLZ = 0.07;
+      o.hipRZ = -0.07;
+      shiftHips(o, 0.5 * Math.sin(TAU * 0.5 * t));
+    },
+  },
+  photoSnap: {
+    duration: 0,
+    body: "full",
+    mood: null,
+    look: 0,
+    impacts: [[0.35, 0.15]],
+    beat: { period: PHOTO.PERIOD, at: PHOTO.CLICK, settle: 0.35, cue: "click" },
+    sample(t, o, c) {
+      applyTracks(o, KNEEL_LEG_TRACKS, t);
+      const k = smooth((t - 0.1) / 0.3);
+      putL(o, ARM_REST, ARM_CAMERA, k);
+      putR(o, ARM_REST, ARM_CAMERA, k);
+      // Clique: o dedo aperta (o ombro direito dá um tranco) e a cabeça acompanha.
+      const since = (((c.clock - PHOTO.CLICK) % PHOTO.PERIOD) + PHOTO.PERIOD) % PHOTO.PERIOD;
+      const press = t > 0.35 && since < 0.12 ? Math.sin((Math.PI * since) / 0.12) : 0;
+      o.shRX += 0.07 * press;
+      o.elR -= 0.08 * press;
+      // Entre um clique e outro muda o ângulo, como paparazzo.
+      const angle = Math.sin((TAU * c.clock) / (2 * PHOTO.PERIOD)) * k;
+      o.torsoZ = 0.08 * angle;
+      o.torsoX = 0.06 * k;
+      o.neckX = -0.1 * k + 0.04 * press;
+      o.neckZ = -0.06 * angle;
+    },
+  },
   // -------------------------------------------------------------- tiques
   lookAround: {
     duration: 1.8,
@@ -2647,9 +3006,11 @@ type Layer = {
    * tinha: trocar o estado no meio da mistura não muda a pose dela de repente.
    */
   sad: boolean;
+  /** Relógio do quadro anterior: a marca repetida (`beat`) sai quando ele vira o período. NaN no começo. */
+  beatClock: number;
 };
 
-const newLayer = (): Layer => ({ id: null, t: 0, w: 0, dir: 0, until: 0, spinBaked: false, spin: 0, sad: false });
+const newLayer = (): Layer => ({ id: null, t: 0, w: 0, dir: 0, until: 0, spinBaked: false, spin: 0, sad: false, beatClock: Number.NaN });
 
 // ---------------------------------------------------------------- figura
 
@@ -2692,6 +3053,12 @@ export type FigureIntent = {
   reach?: FigureReach | null;
   /** Rosto forçado (null/ausente = o de sempre). */
   mood?: FaceMood | null;
+  /**
+   * Relógio comum (s) de uma coreografia em grupo: a remada e o clique do
+   * fotógrafo batem por ele, e quem chega depois entra no mesmo ritmo. Sem
+   * ele, cada ação conta o próprio tempo.
+   */
+  clock?: number | null;
 };
 
 /** Pose do boneco: ângulos (rad) e deslocamentos (px de boneco), o mesmo formato das camadas internas. */
@@ -3019,6 +3386,8 @@ export class PlayerFigure {
   private readonly cueOut: string[] = [];
   /** Ponto no centro da cabeça (criado no primeiro headAnchor). */
   private headPoint: THREE.Object3D | null = null;
+  /** `intent.clock` do último `update` (null = cada ação no próprio tempo). */
+  private sharedClock: number | null = null;
 
   constructor(options: FigureOptions) {
     const seed = options.seed ?? options.number * 7919;
@@ -3030,7 +3399,7 @@ export class PlayerFigure {
     this.fidgetIn = 2 + this.random() * 6;
     this.celebration = CELEBRATIONS[seed % CELEBRATIONS.length];
     this.sadness = SADNESS[(seed >> 3) % SADNESS.length];
-    this.context = { base: this.pose, moving: 0, sad: false, variant: this.variant, side: this.side };
+    this.context = { base: this.pose, moving: 0, sad: false, variant: this.variant, side: this.side, clock: 0 };
     const look = resolveLook(options.appearance);
     const pattern = look.kitPattern;
     const shirtPrimary = options.keeper ? options.keeperColor ?? "#c6ff3d" : options.primary;
@@ -3442,6 +3811,7 @@ export class PlayerFigure {
 
     // Tiques e ações declarativas.
     this.context.moving = w.run;
+    this.sharedClock = typeof intent.clock === "number" && Number.isFinite(intent.clock) ? intent.clock : null;
     this.updateFidget(dt, state, action);
     this.updateActions(dt, action);
     let lookWeight = 1 - Math.min(1, w.celebrate + w.scorer + w.sad + w.aim * 0.8);
@@ -3858,6 +4228,7 @@ export class PlayerFigure {
       incoming.dir = action ? 1 : 0;
       incoming.spin = 0;
       incoming.spinBaked = false;
+      incoming.beatClock = Number.NaN;
     }
     const current = this.current;
     if (current.id) {
@@ -3877,11 +4248,16 @@ export class PlayerFigure {
       if (cues) {
         for (let index = 0; index < cues.length; index += 1) {
           const cue = cues[index];
-          if (before < cue[0] && current.t >= cue[0]) {
-            // Ninguém lendo (boneco fora da festa): guarda só as últimas.
-            if (this.cueQueue.length >= CUE_LIMIT) this.cueQueue.shift();
-            this.cueQueue.push(cue[1]);
-          }
+          if (before < cue[0] && current.t >= cue[0]) this.pushCue(cue[1]);
+        }
+      }
+      const beat = def.beat;
+      if (beat) {
+        const clock = this.sharedClock ?? current.t;
+        const last = current.beatClock;
+        current.beatClock = clock;
+        if (current.t >= beat.settle && Math.floor((clock - beat.at) / beat.period) > Math.floor((last - beat.at) / beat.period)) {
+          this.pushCue(beat.cue);
         }
       }
     }
@@ -3894,6 +4270,12 @@ export class PlayerFigure {
         previous.w = 0;
       }
     }
+  }
+
+  /** Marca para o takeCues. Ninguém lendo (boneco fora da festa): guarda só as últimas. */
+  private pushCue(name: string) {
+    if (this.cueQueue.length >= CUE_LIMIT) this.cueQueue.shift();
+    this.cueQueue.push(name);
   }
 
   private updateFidget(dt: number, state: FigureState, action: FigureAction | null) {
@@ -3943,6 +4325,7 @@ export class PlayerFigure {
     const out = this.layer;
     const ctx = this.context;
     ctx.sad = layer.sad;
+    ctx.clock = this.sharedClock ?? layer.t;
     if (def.body === "full") clearPose(out);
     else if (def.body === "overlay") copyPose(out, pose);
     else {
