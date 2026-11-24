@@ -62,8 +62,20 @@ const SIGNATURE_ACTION: Record<string, string> = {
   cradle: "cradle",
   robot: "robot",
   dance: "dance",
+  // Leva nova: aqui só quem marcou faz a parte dele (os companheiros abraçam como sempre):
+  // engraxate é a chuteira à frente, remada ele rema sozinho, fotógrafo ele posa para o replay.
+  shoeShine: "bootShow",
+  rowing: "rowing",
+  salute: "salute",
+  archer: "archer",
+  photoShoot: "photoPose",
+  cartwheel: "cartwheel",
 };
-const AUTO_CELEBRATIONS = Object.values(SIGNATURE_ACTION);
+/** "Variada" do Scorebobo: as 12 de antes, na mesma ordem (o sorteio de cada gol não muda). */
+const AUTO_CELEBRATIONS = [
+  "kneeSlide", "siuu", "flagDance", "backflip", "airplane", "crestKiss",
+  "heart", "shush", "armsCrossed", "cradle", "robot", "dance",
+];
 const MATE_CHEERS = ["jumpCheer", "fistPump", "hug", "highFive", "jumpCheer", "clap"];
 const SAD_ACTIONS = ["handsOnHead", "handsOnHips", "kneelSad", "kickGround", "disbelief"];
 

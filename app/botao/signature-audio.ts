@@ -4,7 +4,7 @@
 
 import { botaoAudioOutput, tone } from "./audio";
 
-type SignatureSoundName = "kameCharge" | "kameBeam" | "aura" | "bang" | "drumroll" | "tick";
+type SignatureSoundName = "kameCharge" | "kameBeam" | "aura" | "bang" | "drumroll" | "tick" | "shutter" | "twang";
 
 /** Um segundo de ruído branco, criado uma vez por contexto (os sons daqui reaproveitam). */
 let noiseBuffer: AudioBuffer | null = null;
@@ -138,5 +138,19 @@ export function playSignatureSound(name: SignatureSoundName, intensity = 0.5) {
     case "tick":
       tone({ frequency: 1650, duration: 0.04, type: "sine", gain: 0.03 + 0.08 * unit(intensity) });
       break;
+    case "shutter": {
+      // Clique de câmera: a cortina abre e fecha ("tchic-tchic").
+      const level = 0.05 + 0.2 * unit(intensity);
+      noise({ duration: 0.03, gain: level, filter: "bandpass", frequency: 3400, q: 1.2 });
+      noise({ duration: 0.04, gain: level * 0.8, filter: "bandpass", frequency: 2600, q: 1.2, delay: 0.06 });
+      break;
+    }
+    case "twang": {
+      // A corda do arco solta (tom que cai) e a flecha sopra subindo.
+      const level = 0.4 + unit(intensity);
+      tone({ frequency: 220, endFrequency: 150, duration: 0.22, type: "triangle", gain: 0.12 * level });
+      noise({ duration: 0.32, gain: 0.08 * level, filter: "bandpass", frequency: 900, endFrequency: 2400, q: 1.1, attack: 0.05, delay: 0.02 });
+      break;
+    }
   }
 }

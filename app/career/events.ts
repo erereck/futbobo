@@ -12,6 +12,7 @@ import { clamp, clubById, pick, seeded } from "./shared";
 import { clubConfederation, isEuropeanClub, positionByKey, randomClubSelection, revelationOfferPool } from "./academy";
 import { formatFollowers, formatMoney, sponsorOfferPool } from "./performance";
 import { attentionAtOverall } from "./attention";
+import { BETTING_BAN_SEASONS, BETTING_SCANDAL_CHANCE, BETTING_SIGNING_BONUS } from "./football-ban";
 
 export function eligibleEvents(state: GameState) {
   const club = clubById(state.currentClubId || state.academyClubId);
@@ -54,6 +55,12 @@ export function eligibleEvents(state: GameState) {
     if (event.needsCaptainRole === "club" && !state.clubCaptain) return false;
     if (event.needsCaptainRole === "national" && !state.nationalCaptain) return false;
     if (event.needsCaptainRole === "any" && !(state.clubCaptain || state.nationalCaptain)) return false;
+    if (event.minClubSeasons !== undefined) {
+      // Temporadas seguidas no clube atual, contando do fim do histórico.
+      let tenure = 0;
+      for (let index = state.history.length - 1; index >= 0 && state.history[index].clubId === state.currentClubId; index -= 1) tenure += 1;
+      if (tenure < event.minClubSeasons) return false;
+    }
     if (event.oneTime && state.seenEvents.includes(event.id)) return false;
     if (event.rareChance !== undefined) {
       const eventSalt = [...event.id].reduce((total, character) => total + character.charCodeAt(0), 0);
@@ -143,21 +150,62 @@ export function buildSponsorEvent(state: GameState): GameEvent {
     tag: "PATROCÍNIO",
     title: "As marcas querem colocar seu nome em uma chuteira",
     description: `${formatFollowers(state.followers)} seguidores e seu momento em campo chamaram atenção. Cada contrato paga por ano e acompanha você mesmo se trocar de clube.`,
-    choices: offers.map((offer, index) => ({
-      label: `Assinar com ${offer.name}`,
-      hint: `${offer.years} anos · ${formatMoney(offer.annualValue)}/ano${("controversial" in offer && offer.controversial) ? " · muito dinheiro, imagem sensível" : index === 0 ? " · maior projeto" : ""}`,
-      result: `${offer.name} anuncia você como novo atleta da marca. A parceria agora faz parte da sua carreira.`,
-      effect: {
+    choices: offers.map((offer, index) => ("controversial" in offer && offer.controversial)
+      ? bettingSponsorChoice(offer, club)
+      : {
+          label: `Assinar com ${offer.name}`,
+          hint: `${offer.years} anos · ${formatMoney(offer.annualValue)}/ano${index === 0 ? " · maior projeto" : ""}`,
+          result: `${offer.name} anuncia você como novo atleta da marca. A parceria agora faz parte da sua carreira.`,
+          effect: {
+            sponsorBrand: offer.name,
+            sponsorYears: offer.years,
+            sponsorValue: offer.annualValue,
+            reputation: offer.tier,
+            followers: 8_000 * offer.tier,
+            socialSentiment: 2,
+            mediaRelation: 1,
+          },
+        }),
+  };
+}
+
+/**
+ * Casa de apostas: o contrato mais gordo da mesa, com luvas na assinatura, e
+ * 25% de a assinatura terminar num esquema descoberto (2 anos banido).
+ * O texto nunca acusa a marca: quem cai no esquema é o jogador.
+ */
+function bettingSponsorChoice(offer: { name: string; tier: number; years: number; annualValue: number }, club: Club): GameEvent["choices"][number] {
+  const signingBonus = Math.round(offer.annualValue * BETTING_SIGNING_BONUS / 10_000);
+  return {
+    label: `Assinar com ${offer.name}`,
+    hint: `${offer.years} anos · ${formatMoney(offer.annualValue)}/ano + ${formatMoney(signingBonus * 10_000)} de luvas · ${BETTING_SCANDAL_CHANCE}% de cair num esquema: ${BETTING_BAN_SEASONS} anos banido`,
+    result: `${offer.name} anuncia você como novo atleta da marca.`,
+    effect: { minutes: club.reputation >= 5 ? -10 : 0 },
+    luck: {
+      chance: 100 - BETTING_SCANDAL_CHANCE,
+      successText: `As luvas caem na conta no dia da assinatura e seu rosto abre a campanha da ${offer.name}. Ninguém na mesa pagou tanto, e parte da torcida não esconde o incômodo.`,
+      failureText: `A investigação sobre manipulação de apostas chega até você: mensagens com um aliciador aparecem no inquérito, a ${offer.name} rompe o contrato no mesmo dia e o tribunal te afasta do futebol por ${BETTING_BAN_SEASONS} anos.`,
+      successEffect: {
         sponsorBrand: offer.name,
         sponsorYears: offer.years,
         sponsorValue: offer.annualValue,
-        reputation: ("controversial" in offer && offer.controversial) ? Math.max(1, offer.tier - 1) : offer.tier,
-        followers: (("controversial" in offer && offer.controversial) ? 12_000 : 8_000) * offer.tier,
-        socialSentiment: ("controversial" in offer && offer.controversial) ? -4 : 2,
-        mediaRelation: ("controversial" in offer && offer.controversial) ? -3 : 1,
-        minutes: ("controversial" in offer && offer.controversial) && club.reputation >= 5 ? -10 : 0,
+        money: signingBonus,
+        reputation: Math.max(1, offer.tier - 1),
+        followers: 12_000 * offer.tier,
+        socialSentiment: -4,
+        mediaRelation: -3,
       },
-    })),
+      failureEffect: {
+        banSeasons: BETTING_BAN_SEASONS,
+        reputation: -18,
+        fans: -20,
+        morale: -14,
+        discipline: -25,
+        socialSentiment: -22,
+        mediaRelation: -14,
+        followers: -40_000 * offer.tier,
+      },
+    },
   };
 }
 

@@ -71,6 +71,10 @@ import HistoryTab from "./album/tabs/HistoryTab";
 import StatsTab from "./album/tabs/StatsTab";
 import WorldTab from "./album/tabs/WorldTab";
 import { installExpandedPlayerNames } from "../../career/player-name-expansion";
+import { buildFarewellInput, clubLegendStatus, farewellDue } from "../../career/farewell";
+import { isBannedFromFootball } from "../../career/football-ban";
+import { presentationViewMode } from "../../presentation/presentation-mode";
+import type { FarewellCutsceneProps, FarewellInput } from "../../farewell/FarewellCutscene";
 
 // Nomes extras de jogadores: entram com o pacote da carreira (o menu inicial não sorteia nomes).
 installExpandedPlayerNames();
@@ -115,6 +119,16 @@ const PeneiraSpread = dynamic(() => import("./album/intro/PeneiraSpread"), {
 });
 const SpecialTrainingPanel = dynamic(() => import("./SpecialTrainingPanel").catch(() => ({ default: SpecialTrainingUnavailable })), { ssr: false });
 
+/** Sem rede para baixar a despedida: segue direto (o avião ou o resumo da carreira). */
+function FarewellUnavailable({ onFinish }: FarewellCutsceneProps) {
+  useEffect(() => {
+    onFinish();
+  }, [onFinish]);
+  return null;
+}
+// A despedida da lenda (estádio, som e o palco 3D) só baixa quando acontece.
+const FarewellCutscene = dynamic(() => import("../../farewell/FarewellCutscene").catch(() => ({ default: FarewellUnavailable as ComponentType<FarewellCutsceneProps> })), { ssr: false });
+
 type CareerGameProps = {
   initialHallEntry?: CareerHallEntry | null;
   onCloseHallPreview?: () => void;
@@ -145,6 +159,8 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   const [activeTab, setActiveTab] = useState<"event" | "history" | "profile" | "life" | "stats" | "team" | "world" | "legacy">("event");
   const [toast, setToast] = useState("");
   const [luckSpin, setLuckSpin] = useState<{ event: GameEvent; choiceIndex: number; succeeded: boolean } | null>(null);
+  /** Despedida da lenda em tela cheia; `then` segue o fluxo (avião ou resumo) quando ela fecha. */
+  const [farewell, setFarewell] = useState<{ input: FarewellInput; mode: "3d" | "2d"; performance: boolean; then: () => void } | null>(null);
   const [positionChangeOpen, setPositionChangeOpen] = useState(false);
   const [appearanceEditorOpen, setAppearanceEditorOpen] = useState(false);
   const [positionChangeTarget, setPositionChangeTarget] = useState<PositionKey | null>(null);
@@ -543,7 +559,9 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   }, [nationalitySearch]);
   const nationCountry = useMemo(() => countryById(displayGame.nationality), [displayGame.nationality]);
   const position = useMemo(() => positionByKey(displayGame.position), [displayGame.position]);
-  const supporterMood = useMemo(() => fanMood(game.fanSupport), [game.fanSupport]);
+  // Lenda do clube (7 temporadas seguidas, 3 títulos, torcida que ama): o termômetro diz isso.
+  const clubLegend = useMemo(() => clubLegendStatus(game, game.currentClubId).legend, [game]);
+  const supporterMood = useMemo(() => (clubLegend ? { label: "Lenda do clube", color: "#ffc72c" } : fanMood(game.fanSupport)), [clubLegend, game.fanSupport]);
   const publicImage = useMemo(() => publicImageProfile(displayGame), [displayGame]);
   const legacyStanding = useMemo(() => legacyTierV2(displayGame.legacyPoints), [displayGame.legacyPoints]);
   const marketOffers = useMemo(() => {
@@ -1734,10 +1752,33 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
     vibrate();
   }
 
+  /**
+   * A lenda saindo do clube (transferência ou aposentadoria) ganha a despedida no
+   * estádio antes do resto. Devolve true se a cena abriu (`then` roda quando ela fecha).
+   */
+  function playFarewellIfDue(offer: TransferOffer | null, kind: FarewellInput["kind"], then: () => void) {
+    const clubId = game.currentClubId;
+    if (farewell || !clubId || !farewellDue(game, clubId, offer)) return false;
+    const destination = offer ? clubById(offer.clubId) : null;
+    const viewMode = presentationViewMode();
+    setFarewell({ input: buildFarewellInput(game, clubById(clubId), destination, kind), mode: viewMode.mode, performance: viewMode.performance, then });
+    return true;
+  }
+
   function continueAfterResult() {
     if (game.pendingStoryDecision) return;
     if (game.retireAfterSeason) {
-      setGame((current) => ({ ...current, phase: "summary", lastConsequence: null }));
+      const retire = () => {
+        setGame((current) => ({ ...current, phase: "summary", lastConsequence: null }));
+        setActiveTab("event");
+      };
+      if (!playFarewellIfDue(null, "retirement", retire)) retire();
+      vibrate();
+      return;
+    }
+    // Banido: a temporada acabou, e a próxima tela é a de cumprir a pena.
+    if (isBannedFromFootball(game)) {
+      setGame((current) => ({ ...current, phase: "transfer", lastConsequence: null }));
       setActiveTab("event");
       vibrate();
       return;
@@ -2055,12 +2096,13 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
   }
 
   function confirmRetirement() {
-    setGame((current) => ({
+    const retire = () => setGame((current) => ({
       ...current,
       phase: "summary",
       retireAfterSeason: true,
       newsFeed: [`${current.season}: ${current.name} anunciou a aposentadoria aos ${current.age} anos.`, ...current.newsFeed].slice(0, 16),
     }));
+    if (!playFarewellIfDue(null, "retirement", retire)) retire();
     vibrate();
   }
 
@@ -2565,6 +2607,18 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
       {toast && <div className="toast" role="status">{toast}</div>}
       {(pressConferenceOpen || presentationOpen) && game.pendingPressConference && <PressConferenceDialog conference={game.pendingPressConference} club={currentClub} onAnswer={answerPressConference} />}
       {cycleShopOpen && <CycleShopDialog game={game} club={currentClub} feedback={cycleShopFeedback} onBuy={buyCycleShopItem} onClose={closeCycleShop} />}
+      {farewell && (
+        <FarewellCutscene
+          input={farewell.input}
+          mode={farewell.mode}
+          performance={farewell.performance}
+          onFinish={() => {
+            const then = farewell.then;
+            setFarewell(null);
+            then();
+          }}
+        />
+      )}
       {cycleShopOpen && specialTrainingOpen && <SpecialTrainingPanel game={game} setGame={setGame} club={game.isFreeAgent || !game.currentClubId ? null : clubById(game.currentClubId)} performance={appSettings.botao3dPerformance === true} onClose={closeSpecialTraining} />}
       {androidInstallOpen && (
         <AndroidInstallDialog
@@ -3274,7 +3328,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
             <SeasonResultSpread
               game={game}
               club={currentClub}
-              continueLabel={game.retireAfterSeason ? "Concluir carreira" : game.transferMarketOffers.some((offer) => offer.reason === "scouted") ? "Ver propostas recebidas" : game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"}
+              continueLabel={game.retireAfterSeason ? "Concluir carreira" : isBannedFromFootball(game) ? "Cumprir a pena" : game.transferMarketOffers.some((offer) => offer.reason === "scouted") ? "Ver propostas recebidas" : game.transferOffers.length ? "Abrir janela de transferências" : "Próxima temporada"}
               onContinue={continueAfterResult}
             />
           )}
@@ -3290,6 +3344,7 @@ export default function CareerGame({ initialHallEntry = null, onCloseHallPreview
               onStay={() => chooseTransfer(null)}
               onBecomeFreeAgent={becomeFreeAgent}
               onWait={waitAsFreeAgent}
+              farewellBefore={(offer, done) => playFarewellIfDue(offer, "transfer", done)}
             />
           )}
 

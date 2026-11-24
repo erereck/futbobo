@@ -26,6 +26,12 @@ export const TEAM_COLOR_PAIRS: ReadonlyArray<readonly [string, string]> = [
 export const SQUAD_NUMBERS = [1, 9, 7, 11, 8, 5, 4, 3, 2, 6, 13, 14, 17, 19, 20, 21, 23, 77, 88, 99] as const;
 
 const PREPOSITIONS = new Set<string>(NAME_PREPOSITIONS);
+/**
+ * Comemorações que existiam quando o sorteio do elenco nasceu (0..17): o
+ * sorteio base continua nelas, e a leva nova entra num sorteio à parte, depois.
+ * Assim um jogador gerado só troca de comemoração se cair na leva nova.
+ */
+const LEGACY_CELEBRATION_COUNT = 18;
 const MAX_NAME_DRAWS = 20;
 const FUN_NAME_CHANCE = 0.1;
 const MAX_PLAYER_NAME_DRAWS = 5;
@@ -95,7 +101,10 @@ export function randomBobPlayer(seed: number, index: number, taken: number[], ki
   const rng = createRng(hashSeed(seed, "jogador", index));
   const name = drawPlayerName(rng);
   const number = drawNumber(rng, index, taken);
-  const celebration = rng.int(0, CELEBRATION_OPTIONS.length - 1);
+  let celebration = rng.int(0, LEGACY_CELEBRATION_COUNT - 1);
+  // Leva nova (engraxate, remada...): cada uma com a mesma chance das outras.
+  const fresh = CELEBRATION_OPTIONS.length - LEGACY_CELEBRATION_COUNT;
+  if (fresh > 0 && rng.chance(fresh / CELEBRATION_OPTIONS.length)) celebration = LEGACY_CELEBRATION_COUNT + rng.int(0, fresh - 1);
   const face = randomPlayerAppearance(hashSeed(seed, "face", index));
   return {
     id: `p${index}`,

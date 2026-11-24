@@ -2059,10 +2059,12 @@ export class Botao3DView {
     // Comemorações de assinatura: lê as marcas que o boneco do foco soltou neste quadro.
     const fxKind = this.goalShowStarted ? this.choreo.kind : null;
     const fxFocus = fxKind && this.choreo.focus ? this.entries.get(this.choreo.focus) ?? null : null;
+    const fxPartner = fxKind && this.choreo.partner ? this.entries.get(this.choreo.partner) ?? null : null;
     const fxSide = this.choreo.side;
     const fxOut = this.fx.update(sceneDt, {
       kind: fxKind,
       focus: fxFocus ? { figure: fxFocus.figure, x: fxFocus.x, z: fxFocus.z, yaw: fxFocus.figure.yaw } : null,
+      partner: fxPartner?.figure ?? null,
       side: fxSide,
       teamColor: fxSide === "cpu" ? this.setup.cpuTeam.primary : this.setup.userTeam.primary,
       stadium: this.stadium,

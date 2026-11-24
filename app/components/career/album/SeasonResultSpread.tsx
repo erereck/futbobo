@@ -10,6 +10,7 @@ import { clubById } from "../../../career/shared";
 import { positionByKey } from "../../../career/academy";
 import { formatMoney, seasonAverageRating } from "../../../career/performance";
 import { seasonResultStory } from "../../../career/season-narrative";
+import { playingPastForty } from "../../../career/veteran";
 import BallonDorGalaCard from "../../../ceremony/BallonDorGalaCard";
 import ParadeLaunchCard from "../../../parade/ParadeLaunchCard";
 import { careerWorldCupTitles, paradeStars } from "../../../parade/parade-stars";
@@ -117,6 +118,20 @@ export default function SeasonResultSpread({ game, club, continueLabel, onContin
                 <p>Você poderá buscar mais minutos em outro projeto ou continuar disputando espaço no elenco atual.</p>
               </div>
             )}
+            {game.forcedFreeAgentUntilSeason > game.season && !game.retireAfterSeason && (
+              <div className={styles.notice} data-tone="red">
+                <span className={styles.noticeStamp}>Banimento</span>
+                <strong>Fora do futebol até {game.forcedFreeAgentUntilSeason}</strong>
+                <p>O esquema foi descoberto. Contrato, salário e patrocínio acabaram, e nenhum clube pode registrar você até a pena terminar. Na próxima tela você cumpre a pena, um ano de cada vez.</p>
+              </div>
+            )}
+            {playingPastForty(game.age, game.overall) && !game.retireAfterSeason && (
+              <div className={styles.notice} data-tone="green">
+                <span className={styles.noticeStamp}>Aos {game.age}</span>
+                <strong>A carreira continua</strong>
+                <p>Com {game.overall} de overall, ninguém manda você para casa. A carreira só acaba sozinha quando o overall cair abaixo de 78.</p>
+              </div>
+            )}
             {game.forcedClubExit && (
               <div className={styles.notice} data-tone="red">
                 <span className={styles.noticeStamp}>Venda obrigatória</span>
@@ -124,7 +139,7 @@ export default function SeasonResultSpread({ game, club, continueLabel, onContin
                 <p>Seu overall e seu rendimento ficaram muito abaixo da exigência do elenco. Sem status de ídolo, você terá de escolher outro destino.</p>
               </div>
             )}
-            {game.contractYears === 0 && (
+            {game.contractYears === 0 && game.forcedFreeAgentUntilSeason <= game.season && (
               <div className={styles.notice} data-tone="ink">
                 <span className={styles.noticeStamp}>Contrato encerrado</span>
                 <strong>{game.renewalDenied ? "O clube optou por não renovar" : "Seu futuro está aberto"}</strong>

@@ -9,7 +9,18 @@
 import type { CelebrationId } from "../../player-appearance";
 import type { BotaoSide } from "../types";
 import { beamRoom } from "./celebration-fx";
-import { KAME, angleDelta, idleIntent, type FigureAction, type FigureIntent, type FigureState } from "./character";
+import {
+  CARTWHEEL,
+  KAME,
+  PHOTO,
+  ROW_SEAT,
+  SHOE_SHINE_SPOT,
+  angleDelta,
+  idleIntent,
+  type FigureAction,
+  type FigureIntent,
+  type FigureState,
+} from "./character";
 import { HALF_H, HALF_W } from "./stadium";
 
 export type Actor = {
@@ -39,6 +50,8 @@ type Step =
   | { kind: "wait"; duration: number; state?: FigureState; action?: FigureAction | null; face?: Facing }
   | { kind: "run"; to: Point; speed: number; action?: FigureAction | null; state?: FigureState }
   | { kind: "slide"; dir: Point; distance: number; duration: number; action: FigureAction }
+  /** De lado sem passada (a estrela): o corpo anda com a ação, de frente para `face`, sem rastro no gramado. */
+  | { kind: "glide"; dir: Point; distance: number; duration: number; action: FigureAction; face: Facing; state?: FigureState }
   | { kind: "hold"; state?: FigureState; action?: FigureAction | null; face?: Facing };
 
 type Track = {
@@ -52,6 +65,8 @@ type Track = {
   slideFrom: Point | null;
   /** Relógio da coreografia quando a pose final ("hold") começou; -1 antes disso. */
   heldAt: number;
+  /** Festa em grupo (remada, fotógrafo): instante da coreografia que vira o zero do relógio comum. */
+  clockFrom: number | null;
 };
 
 /** Os mesmos ids de CELEBRATION_OPTIONS (player-appearance.ts), menos o "auto". */
@@ -59,20 +74,35 @@ export type GoalCelebration =
   | "kneeSlide" | "cornerFlag" | "airplane" | "siuu" | "backflip" | "crest"
   | "heart" | "shush" | "armsCrossed" | "cradle" | "robot" | "dance"
   // Bobonline. Ficam FORA de GOAL_CELEBRATIONS (o sorteio "Variada" de sempre não muda).
-  | "kamehameha" | "superSaiyan" | "meditate" | "cupEar" | "fingerGuns";
+  | "kamehameha" | "superSaiyan" | "meditate" | "cupEar" | "fingerGuns"
+  // Leva nova: engraxate, remada e fotógrafo trazem companheiros para a coreografia.
+  | "shoeShine" | "rowing" | "salute" | "archer" | "photoShoot" | "cartwheel";
+/**
+ * Sorteio "Variada" dos modos de sempre (sem elenco nomeado). A leva nova entra
+ * no fim: todas cabem na pausa normal do gol (nenhuma estica a pausa), e o
+ * sorteio só é desenho, cada aparelho no seu (a partida online não usa esta lista).
+ */
 const GOAL_CELEBRATIONS: GoalCelebration[] = [
   "kneeSlide", "siuu", "cornerFlag", "backflip", "airplane", "crest",
   "heart", "shush", "armsCrossed", "cradle", "robot", "dance",
+  "shoeShine", "rowing", "salute", "archer", "photoShoot", "cartwheel",
 ];
 
 /** Só aparecem quando escolhidas no criador (fora do sorteio "Variada" dos modos de sempre). */
 export const SIGNATURE_ONLY: GoalCelebration[] = ["kamehameha", "superSaiyan", "meditate", "cupEar", "fingerGuns"];
 /**
- * "Variada" das partidas com elenco nomeado (Bobonline): as 12 de sempre mais
- * as três novas que não esticam a pausa do gol. Kamehameha e Super Saiyajin só
- * quando escolhidas: a extensão da pausa continua função só do id escolhido.
+ * "Variada" das partidas com elenco nomeado (Bobonline): as 12 de antes mais
+ * as três que não esticam a pausa do gol, escritas por extenso. Os dois
+ * aparelhos sorteiam desta lista com a mesma conta: conteúdo e ordem não
+ * mudam nunca (a leva nova só aparece online quando escolhida no criador).
+ * Kamehameha e Super Saiyajin só quando escolhidas: a extensão da pausa
+ * continua função só do id escolhido.
  */
-export const BOBONLINE_VARIADA: GoalCelebration[] = [...GOAL_CELEBRATIONS, "meditate", "cupEar", "fingerGuns"];
+export const BOBONLINE_VARIADA: readonly GoalCelebration[] = [
+  "kneeSlide", "siuu", "cornerFlag", "backflip", "airplane", "crest",
+  "heart", "shush", "armsCrossed", "cradle", "robot", "dance",
+  "meditate", "cupEar", "fingerGuns",
+];
 
 const GOAL_SHOT_KINDS = new Set<string>([...GOAL_CELEBRATIONS, ...SIGNATURE_ONLY]);
 
@@ -119,6 +149,45 @@ export const RESPECT_KIND = "respect";
 const RESPECT_WALK = 68;
 /** Quanto cada companheiro anda, no máximo, até a roda contida. */
 const RESPECT_REACH = 110;
+/** Ajudante da coreografia em grupo (engraxate, fotógrafo, remadores): chega correndo forte. */
+const HELPER_SPEED = 230;
+/** O par do engraxate (SHOE_SHINE_SPOT) gira um pouco para o lado do ajudante: os dois ficam de três quartos para a câmera. */
+const SHINE_TURN = -0.35;
+/** Remada: ângulo do barco com a câmera (três quartos); os remadores ficam a ROW_SEAT um do outro. */
+const ROW_ANGLE = 1;
+/** Remada: até três companheiros no barco; os que não chegam até aqui (s) ficam na roda. */
+const ROW_CREW = 3;
+const ROW_DEADLINE = 1.15;
+/** Estrela: quanto ela anda de lado (o mesmo trecho do giro da ação). */
+const CARTWHEEL_TRAVEL = 34;
+
+/** Ponto `offset` (x à esquerda, z à frente) de quem está em `anchor` olhando para `yaw`. */
+function localPoint(anchor: Point, yaw: number, offset: Point): Point {
+  const cos = Math.cos(yaw);
+  const sin = Math.sin(yaw);
+  return { x: anchor.x + offset.x * cos + offset.z * sin, z: anchor.z - offset.x * sin + offset.z * cos };
+}
+
+/** Desloca `anchor` (e o grupo preso a ele) o necessário para `points` caberem no campo. */
+function fitInField(anchor: Point, points: Point[]): Point {
+  let minX = anchor.x;
+  let maxX = anchor.x;
+  let minZ = anchor.z;
+  let maxZ = anchor.z;
+  for (const point of points) {
+    minX = Math.min(minX, point.x);
+    maxX = Math.max(maxX, point.x);
+    minZ = Math.min(minZ, point.z);
+    maxZ = Math.max(maxZ, point.z);
+  }
+  const loX = -HALF_W + MARGIN;
+  const hiX = HALF_W - MARGIN;
+  const loZ = -HALF_H + MARGIN;
+  const hiZ = HALF_H - MARGIN;
+  const dx = minX < loX ? loX - minX : maxX > hiX ? hiX - maxX : 0;
+  const dz = minZ < loZ ? loZ - minZ : maxZ > hiZ ? hiZ - maxZ : 0;
+  return { x: anchor.x + dx, z: anchor.z + dz };
+}
 
 /** Ponto a no máximo `limit` de `from`, na direção de `to`. */
 function limitFrom(from: Point, to: Point, limit: number): Point {
@@ -198,6 +267,13 @@ export class Choreographer {
   private beamSide = 1;
   /** Última largura ÷ altura que a câmera recebeu (o gol pode chegar sem ela). */
   private lastAspect = 16 / 9;
+  /** Ajudante principal da festa em grupo (o engraxate, o fotógrafo): os efeitos saem das mãos dele. */
+  private partnerId: string | null = null;
+  /** Ajudantes da festa em grupo: na pose final ninguém os empurra (o engraxate tem que ficar na chuteira). */
+  private readonly anchored = new Set<string>();
+  /** A câmera da festa mira este tanto além de quem marcou (o meio do barco da remada). */
+  private focusShiftX = 0;
+  private focusShiftZ = 0;
 
   get active() {
     return this.tracks.size > 0;
@@ -218,6 +294,11 @@ export class Choreographer {
     return this.sideValue;
   }
 
+  /** Quem ajuda quem marcou (engraxate, fotógrafo); null nas outras festas. */
+  get partner() {
+    return this.partnerId;
+  }
+
   stop() {
     this.tracks.clear();
     this.focusId = null;
@@ -227,6 +308,10 @@ export class Choreographer {
     this.rampFrom = 1;
     this.elapsed = 0;
     this.beamSide = 1;
+    this.partnerId = null;
+    this.anchored.clear();
+    this.focusShiftX = 0;
+    this.focusShiftZ = 0;
   }
 
   has(id: string) {
@@ -238,10 +323,11 @@ export class Choreographer {
   /**
    * Gol: quem marcou dispara para a festa (carrinho de joelho, bandeirinha,
    * aviãozinho, "siuuu", mortal, beijo no escudo, coração, silêncio, braços
-   * cruzados, embala neném, robô ou dancinha; escolhidas no criador, também
-   * Kamehameha, Super Saiyajin, meditação, "não tô ouvindo" e pistoleiro), os companheiros chegam
-   * correndo por trás dele (longe da câmera, para não taparem) e o outro time
-   * desaba aos poucos.
+   * cruzados, embala neném, robô, dancinha, continência, arqueiro, estrela e,
+   * com companheiros, engraxate, remada e fotógrafo; escolhidas no criador,
+   * também Kamehameha, Super Saiyajin, meditação, "não tô ouvindo" e
+   * pistoleiro), os companheiros chegam correndo por trás dele (longe da
+   * câmera, para não taparem) e o outro time desaba aos poucos.
    */
   startGoal(args: {
     side: BotaoSide;
@@ -297,6 +383,40 @@ export class Choreographer {
     let finish: Point;
     const portrait = (args.aspect ?? this.lastAspect) < PORTRAIT_ASPECT;
     let beamYaw = args.cameraYaw;
+    // Direita da tela (o +x de quem olha para a câmera).
+    const beside = { x: Math.cos(args.cameraYaw), z: -Math.sin(args.cameraYaw) };
+    // Festa em grupo: quem ajuda fica fora da roda, com os passos dele; o relógio comum
+    // acerta o ritmo; a roda e a folga dos rivais podem girar em volta de outro ponto.
+    const helpers = new Map<string, Step[]>();
+    let clockFrom: number | null = null;
+    let ringCenter: Point | null = null;
+    let ringRoom = 0;
+    let clearCenter: Point | null = null;
+    let clearExtra = 0;
+    let zoom = 2.75;
+    let mateHold: FigureAction | null = null;
+    const others = team.filter((actor) => actor.id !== scorer.id);
+    // Quem senta, ajoelha ou estica a perna primeiro termina de virar parado (o boneco gira 5 rad/s;
+    // sem saber de onde ele vem, um quarto de segundo).
+    const turnFirst = (from: Point, to: Point, yaw: number, action: FigureAction = "fistPump"): Step => ({
+      kind: "wait",
+      duration: Math.hypot(to.x - from.x, to.z - from.z) < 2 ? 0.25 : Math.abs(angleDelta(yawTo(from, to), yaw)) / 5,
+      state: "celebrate",
+      action,
+      face: { yaw },
+    });
+    const nearest = (point: Point) => {
+      let best: Actor | null = null;
+      let bestDistance = Infinity;
+      for (const actor of others) {
+        const distance = Math.hypot(actor.x - point.x, actor.z - point.z);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = actor;
+        }
+      }
+      return best;
+    };
     switch (kind) {
       case "kneeSlide": {
         // O plano clássico de TV: ele vem correndo NA DIREÇÃO da câmera e desliza de joelhos até ela.
@@ -396,6 +516,154 @@ export class Choreographer {
         steps.push({ kind: "hold", state: "celebrate", action: "kamehameha", face: { yaw: beamYaw } });
         break;
       }
+      case "salute": {
+        // Vai para a arquibancada mais perto e bate continência de três quartos para a câmera;
+        // a roda responde batendo continência para ele.
+        finish = reach({ x: sx * (HALF_W - 34), z: start.z + inward * 24 }, RUN_LIMIT);
+        steps.push({ kind: "run", to: finish, speed: SCORER_SPEED, action: null });
+        const standYaw = yawTo(finish, { x: sx * (HALF_W + 90), z: finish.z });
+        steps.push({ kind: "hold", state: "celebrate", action: "salute", face: { yaw: args.cameraYaw + angleDelta(args.cameraYaw, standYaw) * 0.45 } });
+        mateHold = "salute";
+        break;
+      }
+      case "archer": {
+        // Corrida curta e para de frente: o arco abre para o lado e a flecha sobe pela tela.
+        finish = reach({ x: start.x + toward.x * 60 + sx * 10, z: start.z + toward.z * 60 }, 70);
+        steps.push({ kind: "run", to: finish, speed: SCORER_SPEED - 30, action: null });
+        steps.push({ kind: "hold", state: "celebrate", action: "archer", face: { yaw: args.cameraYaw } });
+        break;
+      }
+      case "cartwheel": {
+        // Corrida curta, encara a câmera e dá a estrela para a direita da tela, deslizando junto com o giro.
+        let from = reach({ x: start.x + toward.x * 40 + sx * 8, z: start.z + toward.z * 40 }, 45);
+        from = fitInField(from, [{ x: from.x + beside.x * CARTWHEEL_TRAVEL, z: from.z + beside.z * CARTWHEEL_TRAVEL }]);
+        finish = { x: from.x + beside.x * CARTWHEEL_TRAVEL, z: from.z + beside.z * CARTWHEEL_TRAVEL };
+        const face = { yaw: args.cameraYaw };
+        steps.push({ kind: "run", to: from, speed: SCORER_SPEED - 30, action: null });
+        steps.push({ kind: "wait", duration: 0.18, state: "celebrate", action: "handsOnHips", face });
+        steps.push({ kind: "wait", duration: CARTWHEEL.START, state: "celebrate", action: "cartwheel", face });
+        steps.push({ kind: "glide", dir: beside, distance: CARTWHEEL_TRAVEL, duration: CARTWHEEL.END - CARTWHEEL.START, action: "cartwheel", face, state: "celebrate" });
+        steps.push({ kind: "hold", state: "celebrate", action: "cartwheel", face });
+        clearCenter = { x: (from.x + finish.x) / 2, z: (from.z + finish.z) / 2 };
+        clearExtra = CARTWHEEL_TRAVEL / 2;
+        break;
+      }
+      case "shoeShine": {
+        // Vai ao encontro do companheiro mais perto, que se ajoelha e engraxa a chuteira direita.
+        const near = nearest(start);
+        const meet = near
+          ? { x: start.x + (near.x - start.x) * 0.45, z: start.z + (near.z - start.z) * 0.45 }
+          : { x: start.x + toward.x * 60, z: start.z + toward.z * 60 };
+        const group = args.cameraYaw + SHINE_TURN;
+        const goal = reach(meet, RUN_LIMIT - 20);
+        finish = fitInField(goal, [localPoint(goal, group, SHOE_SHINE_SPOT)]);
+        steps.push({ kind: "run", to: finish, speed: SCORER_SPEED - 10, action: "fistPump" });
+        steps.push(turnFirst(start, finish, group, "handsOnHips"));
+        steps.push({ kind: "hold", state: "celebrate", action: "bootShow", face: { yaw: group } });
+        if (near) {
+          const spot = localPoint(finish, group, SHOE_SHINE_SPOT);
+          helpers.set(near.id, [
+            { kind: "wait", duration: 0.08, state: "celebrate", action: "fistPump", face: { actor: scorer.id } },
+            { kind: "run", to: spot, speed: HELPER_SPEED, action: null },
+            turnFirst(near, spot, group + SHOE_SHINE_SPOT.face),
+            { kind: "hold", state: "celebrate", action: "shoeShine", face: { yaw: group + SHOE_SHINE_SPOT.face } },
+          ]);
+          this.partnerId = near.id;
+        }
+        break;
+      }
+      case "photoShoot": {
+        // Para de frente para a câmera e posa; o companheiro mais perto vem na direção dele, para a
+        // uns passos (de lado para a câmera, sem tapar quem posa) e se ajoelha para fotografar.
+        const near = nearest(start);
+        const goal = reach({ x: start.x + toward.x * 50 + sx * 10, z: start.z + toward.z * 50 }, 60);
+        let angle = near ? angleDelta(args.cameraYaw, yawTo(goal, near)) : beside.x * start.x + beside.z * start.z > 0 ? -PHOTO.ANGLE : PHOTO.ANGLE;
+        const side = angle < 0 ? -1 : 1;
+        angle = side * Math.max(PHOTO.ANGLE * 0.7, Math.min(PHOTO.ANGLE * 1.55, Math.abs(angle)));
+        const shootYaw = args.cameraYaw + angle;
+        const offset = { x: Math.sin(shootYaw) * PHOTO.DISTANCE, z: Math.cos(shootYaw) * PHOTO.DISTANCE };
+        finish = fitInField(goal, [{ x: goal.x + offset.x, z: goal.z + offset.z }]);
+        steps.push({ kind: "run", to: finish, speed: SCORER_SPEED - 10, action: null });
+        steps.push({ kind: "hold", state: "celebrate", action: "photoPose", face: { yaw: args.cameraYaw + side * PHOTO.TURN } });
+        let ready = 0.08 + runTime(start, finish, SCORER_SPEED - 10);
+        if (near) {
+          const spot = { x: finish.x + offset.x, z: finish.z + offset.z };
+          // Ajoelha de frente para quem posa.
+          const turn = turnFirst(near, spot, yawTo(spot, finish));
+          helpers.set(near.id, [
+            { kind: "wait", duration: 0.08, state: "celebrate", action: "fistPump", face: { actor: scorer.id } },
+            { kind: "run", to: spot, speed: HELPER_SPEED, action: null },
+            turn,
+            { kind: "hold", state: "celebrate", action: "photoSnap", face: { actor: scorer.id } },
+          ]);
+          this.partnerId = near.id;
+          ready = Math.max(ready, 0.08 + runTime(near, spot, HELPER_SPEED) + (turn.kind === "wait" ? turn.duration : 0) + 0.1);
+        }
+        // O relógio comum zera com os dois no lugar: a primeira pose espera o fotógrafo.
+        clockFrom = ready;
+        clearCenter = { x: finish.x + offset.x / 2, z: finish.z + offset.z / 2 };
+        clearExtra = PHOTO.DISTANCE / 2;
+        break;
+      }
+      case "rowing": {
+        // Senta no gramado na frente do barco; até três companheiros sentam em fila atrás e remam juntos.
+        const near = nearest(start);
+        const meet = near
+          ? { x: start.x + (near.x - start.x) * 0.4, z: start.z + (near.z - start.z) * 0.4 }
+          : { x: start.x + toward.x * 40, z: start.z + toward.z * 40 };
+        const goal = reach(meet, RUN_LIMIT - 25);
+        const seatsFor = (anchor: Point, yaw: number) =>
+          [1, 2, 3].map((seat) => ({ x: anchor.x - Math.sin(yaw) * ROW_SEAT * seat, z: anchor.z - Math.cos(yaw) * ROW_SEAT * seat }));
+        const overflow = (points: Point[]) =>
+          points.reduce((sum, point) => sum + Math.max(0, Math.abs(point.x) - (HALF_W - MARGIN)) + Math.max(0, Math.abs(point.z) - (HALF_H - MARGIN)), 0);
+        // O barco de três quartos para a câmera, virado para o lado em que a fila cabe melhor.
+        const rightYaw = args.cameraYaw + ROW_ANGLE;
+        const leftYaw = args.cameraYaw - ROW_ANGLE;
+        const boatYaw = overflow(seatsFor(goal, rightYaw)) <= overflow(seatsFor(goal, leftYaw)) ? rightYaw : leftYaw;
+        finish = fitInField(goal, seatsFor(goal, boatYaw));
+        const seats = seatsFor(finish, boatYaw);
+        const face = { yaw: boatYaw };
+        const turn = turnFirst(start, finish, boatYaw);
+        steps.push({ kind: "run", to: finish, speed: SCORER_SPEED - 10, action: null });
+        steps.push(turn);
+        steps.push({ kind: "hold", state: "celebrate", action: "rowing", face });
+        // O relógio comum zera quando quem marcou senta: quem chega depois rema no mesmo tempo.
+        clockFrom = 0.08 + runTime(start, finish, SCORER_SPEED - 10) + (turn.kind === "wait" ? turn.duration : 0);
+        const pool = others.slice();
+        let crew = 0;
+        for (let seat = 0; seat < ROW_CREW && pool.length > 0; seat += 1) {
+          const delay = 0.06 + seat * 0.04;
+          let pick = 0;
+          let arrival = Infinity;
+          pool.forEach((mate, index) => {
+            const time = delay + runTime(mate, seats[seat], HELPER_SPEED);
+            if (time < arrival) {
+              arrival = time;
+              pick = index;
+            }
+          });
+          // O primeiro lugar sempre tem remador; os outros só para quem chega a tempo.
+          if (seat > 0 && arrival > ROW_DEADLINE) break;
+          const mate = pool.splice(pick, 1)[0];
+          helpers.set(mate.id, [
+            { kind: "wait", duration: delay, state: "celebrate", action: "fistPump", face: { actor: scorer.id } },
+            { kind: "run", to: seats[seat], speed: HELPER_SPEED, action: null },
+            turnFirst(mate, seats[seat], boatYaw),
+            { kind: "hold", state: "celebrate", action: "rowing", face },
+          ]);
+          crew += 1;
+        }
+        // A câmera abre um pouco e mira o meio do barco; a roda e a folga dos rivais giram em volta dele.
+        const middle = { x: finish.x - Math.sin(boatYaw) * ROW_SEAT * crew * 0.5, z: finish.z - Math.cos(boatYaw) * ROW_SEAT * crew * 0.5 };
+        this.focusShiftX = (middle.x - finish.x) * 0.8;
+        this.focusShiftZ = (middle.z - finish.z) * 0.8;
+        zoom = portrait ? 2.05 : 2.35;
+        ringCenter = middle;
+        ringRoom = 14 + ROW_SEAT * crew * 0.5;
+        clearCenter = middle;
+        clearExtra = ROW_SEAT * crew * 0.5 + 10;
+        break;
+      }
       default: {
         // Beijo no escudo vindo na direção da câmera.
         finish = reach({ x: start.x + toward.x * 90 + sx * 10, z: start.z + toward.z * 90 }, 90);
@@ -404,26 +672,26 @@ export class Choreographer {
         break;
       }
     }
-    this.add(scorer, steps);
+    this.add(scorer, steps, clockFrom);
     this.focusId = scorer.id;
     this.beamYaw = beamYaw;
     this.beamSide = kind === "kamehameha" ? sx : 1;
 
-    // Companheiros: atrás de quem marcou, do ponto de vista da câmera.
+    // Companheiros: atrás de quem marcou, do ponto de vista da câmera (os ajudantes da festa em grupo à parte).
     const away = args.cameraYaw + Math.PI;
-    const mates = team.filter((actor) => actor.id !== scorer.id)
+    const mates = team.filter((actor) => actor.id !== scorer.id && !helpers.has(actor.id))
       .sort((a, b) => Math.hypot(a.x - finish.x, a.z - finish.z) - Math.hypot(b.x - finish.x, b.z - finish.z));
     const huddleActions: FigureAction[] = ["jumpCheer", "hug", "highFive", "jumpCheer", "clap"];
     // Meditação: ninguém pula em volta de quem medita, aplaudem.
     const cheer = (action: FigureAction): FigureAction => (kind === "meditate" && action === "jumpCheer" ? "clap" : action);
     // Super Saiyajin: a aura precisa de espaço; a roda fica um pouco mais longe.
-    const roomy = kind === "superSaiyan" ? 10 : 0;
+    const roomy = (kind === "superSaiyan" ? 10 : 0) + ringRoom;
+    const center = ringCenter ?? finish;
     // Kamehameha: a roda fecha um pouco e escorrega para o lado contrário ao raio (ninguém fica na
     // boca do golpe nem ao lado dele, na frente da câmera).
     const lean = kind === "kamehameha" ? sx * 0.35 : 0;
     const squeeze = kind === "kamehameha" ? 0.75 : 1;
     // Embala neném: os dois mais perto entram ao lado dele, embalando junto (Brasil, 94).
-    const beside = { x: Math.cos(args.cameraYaw), z: -Math.sin(args.cameraYaw) };
     mates.forEach((mate, index) => {
       if (kind === "cradle" && index < 2) {
         const lateral = index === 0 ? 19 : -19;
@@ -441,13 +709,19 @@ export class Choreographer {
       const spread = (index - (mates.length - 1) / 2) * 0.62 * squeeze;
       const angle = away + spread + lean;
       const radius = 22 + (index % 2) * 7 + roomy;
-      const spot = clampToField({ x: finish.x + Math.sin(angle) * radius, z: finish.z + Math.cos(angle) * radius });
+      const spot = clampToField({ x: center.x + Math.sin(angle) * radius, z: center.z + Math.cos(angle) * radius });
       this.add(mate, [
         { kind: "wait", duration: 0.12 + index * 0.09, state: "celebrate", action: "fistPump", face: { actor: scorer.id } },
-        { kind: "run", to: spot, speed: TEAMMATE_SPEED - index * 6, action: index % 2 ? cheer("jumpCheer") : null },
-        { kind: "hold", state: "celebrate", action: cheer(huddleActions[index % huddleActions.length]), face: { actor: scorer.id } },
+        { kind: "run", to: spot, speed: TEAMMATE_SPEED - index * 6, action: mateHold ? null : index % 2 ? cheer("jumpCheer") : null },
+        { kind: "hold", state: "celebrate", action: mateHold ?? cheer(huddleActions[index % huddleActions.length]), face: { actor: scorer.id } },
       ]);
     });
+    for (const [id, list] of helpers) {
+      const helper = others.find((actor) => actor.id === id);
+      if (!helper) continue;
+      this.add(helper, list, clockFrom);
+      this.anchored.add(id);
+    }
 
     // Kamehameha: quem estiver no caminho do raio cai sentado logo depois do disparo.
     const beamX = Math.sin(beamYaw);
@@ -465,6 +739,8 @@ export class Choreographer {
 
     // Quem tomou: cada um do seu jeito, andando devagar para a própria área.
     const sadActions: FigureAction[] = ["handsOnHead", "handsOnHips", "kneelSad", "kickGround", "handsOnHips"];
+    const party = clearCenter ?? finish;
+    const clearance = PARTY_CLEARANCE + clearExtra;
     rivals.forEach((rival, index) => {
       if (rival.id === args.ownGoalId) {
         this.add(rival, [{ kind: "hold", state: "sad", action: "kneelSad", face: null }]);
@@ -480,13 +756,13 @@ export class Choreographer {
       }
       const action = sadActions[(hash(rival.id) + index) % sadActions.length];
       // Quem está onde a festa vai acontecer sai do caminho (senão vira "intruso" no abraço).
-      const fromParty = { x: rival.x - finish.x, z: rival.z - finish.z };
+      const fromParty = { x: rival.x - party.x, z: rival.z - party.z };
       const partyDistance = Math.hypot(fromParty.x, fromParty.z);
-      const inTheWay = partyDistance < PARTY_CLEARANCE;
+      const inTheWay = partyDistance < clearance;
       const escape = partyDistance > 0.001 ? fromParty : { x: -sx, z: -inward };
       const escapeLength = Math.hypot(escape.x, escape.z);
       const walk = inTheWay
-        ? clampToField({ x: finish.x + (escape.x / escapeLength) * (PARTY_CLEARANCE + 12), z: finish.z + (escape.z / escapeLength) * (PARTY_CLEARANCE + 12) })
+        ? clampToField({ x: party.x + (escape.x / escapeLength) * (clearance + 12), z: party.z + (escape.z / escapeLength) * (clearance + 12) })
         : clampToField({ x: rival.x * 0.94, z: rival.z - inward * (10 + (index % 3) * 6) });
       const steps: Step[] = [{ kind: "wait", duration: inTheWay ? 0.05 : 0.2 + index * 0.12, state: "sad", action: "handsOnHead", face: { point: { x: 0, z: goalZ } } }];
       if (inTheWay || action !== "kneelSad") steps.push({ kind: "run", to: walk, speed: inTheWay ? 120 : 34, action: "handsOnHips" });
@@ -494,7 +770,7 @@ export class Choreographer {
       this.add(rival, steps);
     });
 
-    this.zoom = 2.75;
+    this.zoom = zoom;
     this.pitch = 0.86;
   }
 
@@ -682,7 +958,7 @@ export class Choreographer {
 
   // ------------------------------------------------------------- execução
 
-  private add(actor: Actor, steps: Step[]) {
+  private add(actor: Actor, steps: Step[], clockFrom: number | null = null) {
     this.tracks.set(actor.id, {
       steps,
       index: 0,
@@ -693,6 +969,7 @@ export class Choreographer {
       speed: 0,
       slideFrom: null,
       heldAt: -1,
+      clockFrom,
     });
   }
 
@@ -703,6 +980,7 @@ export class Choreographer {
     const result = new Map<string, Directive>();
     for (const [id, track] of this.tracks) {
       const directive = this.advance(id, track, dt, look);
+      if (track.clockFrom !== null) directive.intent.clock = this.elapsed - track.clockFrom;
       result.set(id, directive);
     }
     this.separate(result);
@@ -762,6 +1040,22 @@ export class Choreographer {
         track.z += (dz / distance) * move;
         remaining = 0;
         break;
+      }
+      if (step.kind === "glide") {
+        // Estrela: anda de lado junto com o giro (entra e sai macio), sem passada.
+        if (!track.slideFrom) track.slideFrom = { x: track.x, z: track.z };
+        track.elapsed += remaining;
+        const progress = Math.min(1, track.elapsed / step.duration);
+        const along = step.distance * smoothstep(progress);
+        track.x = track.slideFrom.x + step.dir.x * along;
+        track.z = track.slideFrom.z + step.dir.z * along;
+        track.speed = 0;
+        if (progress < 1) { remaining = 0; break; }
+        remaining = track.elapsed - step.duration;
+        track.slideFrom = null;
+        track.index += 1;
+        track.elapsed = 0;
+        continue;
       }
       // Carrinho: desliza desacelerando na direção pedida.
       if (!track.slideFrom) {
@@ -825,6 +1119,13 @@ export class Choreographer {
     };
   }
 
+  /** Ajudante da festa em grupo que já chegou no lugar (virando para a pose ou nela). */
+  private settled(id: string) {
+    if (!this.anchored.has(id)) return false;
+    const track = this.tracks.get(id);
+    return !!track && track.index > 0 && track.steps[track.index]?.kind !== "run";
+  }
+
   /** Ninguém atravessa ninguém na roda da comemoração. */
   private separate(directives: Map<string, Directive>) {
     const list = [...directives.entries()];
@@ -838,9 +1139,9 @@ export class Choreographer {
           const distance = Math.hypot(dx, dz);
           const minimum = 15;
           if (distance >= minimum || distance < 0.001) continue;
-          // Quem marcou e quem desliza não é empurrado: os outros abrem espaço.
-          const aMoves = !a.sliding && this.focusId !== list[i][0];
-          const bMoves = !b.sliding && this.focusId !== list[j][0];
+          // Quem marcou, quem desliza e o ajudante já no lugar não são empurrados: os outros abrem espaço.
+          const aMoves = !a.sliding && this.focusId !== list[i][0] && !this.settled(list[i][0]);
+          const bMoves = !b.sliding && this.focusId !== list[j][0] && !this.settled(list[j][0]);
           if (!aMoves && !bMoves) continue;
           const overlap = minimum - distance;
           const aShare = aMoves ? (bMoves ? 0.5 : 1) : 0;
@@ -883,8 +1184,8 @@ export class Choreographer {
     const point = focus ? { x: focus.x + Math.sin(focus.heading) * focus.speed * 0.06, z: focus.z + Math.cos(focus.heading) * focus.speed * 0.06 } : this.focusPoint;
     if (!point) return null;
     const shot = {
-      x: point.x,
-      z: point.z,
+      x: point.x + this.focusShiftX,
+      z: point.z + this.focusShiftZ,
       zoom: this.rampFrom + (this.zoom - this.rampFrom) * ramp,
       pitch: this.pitch,
       orbit: this.beamSide * Math.min(0.42, this.elapsed * 0.16),

@@ -275,6 +275,9 @@ function isAction(id: string): id is FigureAction {
 export function celebrationAction(id: string | undefined, seed: number): FigureAction {
   if (id === "cornerFlag") return "flagDance";
   if (id === "crest") return "crestKiss";
+  // Em grupo no 3D; aqui fica só a parte de quem marcou.
+  if (id === "shoeShine") return "bootShow";
+  if (id === "photoShoot") return "photoPose";
   if (id && id !== "auto" && isAction(id)) return id;
   const pool: FigureAction[] = ["kneeSlide", "siuu", "airplane", "pointSky", "fistPump", "backflip", "heart", "dance"];
   return pool[seed % pool.length];

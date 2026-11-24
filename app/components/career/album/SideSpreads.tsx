@@ -10,6 +10,7 @@ import { ROLE_LABELS } from "../../../career-systems";
 import { positionByKey } from "../../../career/academy";
 import { fanMood, formatMoney } from "../../../career/performance";
 import { clubById } from "../../../career/shared";
+import { clubLegendStatus } from "../../../career/farewell";
 import { TransferJourneyOverlay, moveLabel, windowCopy } from "../TransferMarketScreen";
 import type { TransferJourney } from "../TransferMarketScreen";
 import { ClubBadge } from "../CareerPrimitives";
@@ -33,7 +34,7 @@ export function offerInks(club: Club): CSSProperties {
 /** Página esquerda das telas laterais: o jogador como está agora. */
 function PlayerPage({ game, club, appearance, label }: { game: GameState; club: Club; appearance: PlayerAppearance | null; label: string }) {
   const position = positionByKey(game.position);
-  const supporter = fanMood(game.fanSupport);
+  const supporter = clubLegendStatus(game, club.id).legend ? { label: "Lenda do clube" } : fanMood(game.fanSupport);
   // Clubes da carreira na ordem em que apareceram, com as temporadas de cada um.
   const clubs = [...game.history.reduce((map, record) => {
     const entry = map.get(record.clubId) ?? { club: clubById(record.clubId), seasons: 0, from: record.season, to: record.season };
@@ -89,7 +90,7 @@ function PlayerPage({ game, club, appearance, label }: { game: GameState; club: 
 }
 
 /** Janela de transferências: propostas como figurinhas de clube, ficar como a figurinha da camisa atual. */
-export function TransferSpread({ game, club, appearance, offers, renewalOffer, onChoose, onStay, onBecomeFreeAgent, onWait }: {
+export function TransferSpread({ game, club, appearance, offers, renewalOffer, onChoose, onStay, onBecomeFreeAgent, onWait, farewellBefore }: {
   game: GameState;
   club: Club;
   appearance: PlayerAppearance | null;
@@ -99,6 +100,8 @@ export function TransferSpread({ game, club, appearance, offers, renewalOffer, o
   onStay: () => void;
   onBecomeFreeAgent: () => void;
   onWait: () => void;
+  /** Lenda saindo do clube: abre a despedida no estádio e devolve true; `done` segue para a viagem. */
+  farewellBefore?: (offer: TransferOffer, done: () => void) => boolean;
 }) {
   const state = game;
   const copy = windowCopy(state, club, offers.length);
@@ -138,15 +141,21 @@ export function TransferSpread({ game, club, appearance, offers, renewalOffer, o
     };
   }, [journey]);
 
+  function startJourney(offer: TransferOffer) {
+    const destination = clubById(offer.clubId);
+    setJourneyLeaving(false);
+    setJourney({ offer, destination, mode: destination.countryId === club.countryId ? "bus" : "plane" });
+  }
+
   function chooseWithJourney(offer: TransferOffer) {
     if (journey) return;
     if (offer.type === "renewal" || offer.clubId === club.id) {
       onChoose(offer);
       return;
     }
-    const destination = clubById(offer.clubId);
-    setJourneyLeaving(false);
-    setJourney({ offer, destination, mode: destination.countryId === club.countryId ? "bus" : "plane" });
+    // A lenda se despede do estádio antes de embarcar.
+    if (farewellBefore?.(offer, () => startJourney(offer))) return;
+    startJourney(offer);
   }
 
   const waitDisabled = Boolean(journey) || (state.age >= 42 && state.forcedFreeAgentUntilSeason <= state.season);

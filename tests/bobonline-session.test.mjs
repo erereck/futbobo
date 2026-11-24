@@ -1168,6 +1168,9 @@ describe("net.json e configuração", () => {
     const file = JSON.parse(readFileSync(join(ROOT, "public/bobonline/net.json"), "utf8"));
     assert.equal(file.version, 1);
     assert.deepEqual(file.current, { protocol: protocol.BOB_PROTOCOL, engineRev: BOTAO_ENGINE_REV, celebrations: CELEBRATION_OPTIONS.length });
+    // Leva nova (engraxate..estrela): 24 no hello; um aparelho de antes (18) cai em "versão diferente" (sameInfo).
+    assert.equal(file.current.celebrations, 24);
+    assert.equal(HELLO.celebrations, 24);
     assert.equal(file.notice, undefined, "o arquivo publicado não leva notice");
     assert.deepEqual(netConfig.DEFAULT_NET_CONFIG, file);
     assert.deepEqual(netConfig.sanitizeNetConfig(file), file, "o arquivo passa limpo pela validação");

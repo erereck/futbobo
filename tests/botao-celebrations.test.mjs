@@ -39,8 +39,17 @@ const OLD_IDS = ["auto", "kneeSlide", "siuu", "cornerFlag", "backflip", "airplan
 const OLD_NAMES = ["Variada", "Carrinho de joelho", "Siuuu", "Bandeirinha", "Mortal", "Aviãozinho", "Beijo no escudo", "Coração", "Silêncio", "Braços cruzados", "Embala neném", "Robô", "Dancinha"];
 const NEW_IDS = ["kamehameha", "superSaiyan", "meditate", "cupEar", "fingerGuns"];
 const NEW_NAMES = ["Kamehameha", "Super Saiyajin", "Meditação", "Não tô ouvindo", "Pistoleiro"];
+/** Leva nova (18..23): três em grupo (engraxate, remada, fotógrafo) e três sozinhas. */
+const LEVA_IDS = ["shoeShine", "rowing", "salute", "archer", "photoShoot", "cartwheel"];
+const LEVA_NAMES = ["Engraxate", "Remada", "Continência", "Arqueiro", "Fotógrafo", "Estrela"];
+/** Ação de quem marcou na pose final de cada uma da leva nova. */
+const LEVA_ACTION = { shoeShine: "bootShow", rowing: "rowing", salute: "salute", archer: "archer", photoShoot: "photoPose", cartwheel: "cartwheel" };
 /** O sorteio "Variada" de todos os modos de antes, na ordem (mudar a ordem ou o tamanho trocaria a festa de cada gol). */
 const OLD_POOL = ["kneeSlide", "siuu", "cornerFlag", "backflip", "airplane", "crest", "heart", "shush", "armsCrossed", "cradle", "robot", "dance"];
+/** "Variada" dos modos de sempre hoje: as 12 de antes e a leva nova no fim (nenhuma estica a pausa). */
+const SOLO_POOL = [...OLD_POOL, ...LEVA_IDS];
+/** "Variada" online (Bobonline): congelada, igual em qualquer versão. */
+const ONLINE_POOL = [...OLD_POOL, "meditate", "cupEar", "fingerGuns"];
 const DT = 1 / 60;
 const KAME_COLOR = "#8fd8ff";
 const SSJ_COLOR = "#ffd84a";
@@ -61,18 +70,22 @@ const assertFiniteArgs = (call) => {
 
 // ------------------------------------------------------------------ opções e sorteio
 
-test("CELEBRATION_OPTIONS: 0-12 como sempre, 13-17 acrescentadas no fim", () => {
-  assert.equal(CELEBRATION_OPTIONS.length, 18);
+test("CELEBRATION_OPTIONS: 0-12 como sempre, 13-17 e 18-23 acrescentadas no fim", () => {
+  assert.equal(CELEBRATION_OPTIONS.length, 24);
   assert.deepEqual(CELEBRATION_OPTIONS.slice(0, 13).map((option) => option.id), OLD_IDS);
   assert.deepEqual(CELEBRATION_OPTIONS.slice(0, 13).map((option) => option.name), OLD_NAMES);
-  assert.deepEqual(CELEBRATION_OPTIONS.slice(13).map((option) => option.id), NEW_IDS);
-  assert.deepEqual(CELEBRATION_OPTIONS.slice(13).map((option) => option.name), NEW_NAMES);
+  assert.deepEqual(CELEBRATION_OPTIONS.slice(13, 18).map((option) => option.id), NEW_IDS);
+  assert.deepEqual(CELEBRATION_OPTIONS.slice(13, 18).map((option) => option.name), NEW_NAMES);
+  assert.deepEqual(CELEBRATION_OPTIONS.slice(18).map((option) => option.id), LEVA_IDS);
+  assert.deepEqual(CELEBRATION_OPTIONS.slice(18).map((option) => option.name), LEVA_NAMES);
   NEW_IDS.forEach((id, index) => assert.equal(celebrationIdOf({ celebration: 13 + index }), id));
-  assert.equal(celebrationIdOf({ celebration: 18 }), "auto", "índice fora da lista volta a ser Variada");
+  LEVA_IDS.forEach((id, index) => assert.equal(celebrationIdOf({ celebration: 18 + index }), id));
+  assert.equal(celebrationIdOf({ celebration: 24 }), "auto", "índice fora da lista volta a ser Variada");
   assert.equal(celebrationIdOf(null), "auto");
-  // O save guarda o índice: o 17 sobrevive à normalização e nada passa do fim.
+  // O save guarda o índice: o 23 sobrevive à normalização e nada passa do fim.
   assert.equal(normalizePlayerAppearance({ version: 2, celebration: 17 }).celebration, 17);
-  assert.ok(normalizePlayerAppearance({ version: 2, celebration: 99 }).celebration < 18);
+  assert.equal(normalizePlayerAppearance({ version: 2, celebration: 23 }).celebration, 23);
+  assert.ok(normalizePlayerAppearance({ version: 2, celebration: 99 }).celebration < 24);
 });
 
 test("goalCelebrationOf aceita todo id do criador menos o auto", () => {
@@ -84,17 +97,24 @@ test("goalCelebrationOf aceita todo id do criador menos o auto", () => {
   assert.equal(goalCelebrationOf("crestKiss"), null);
 });
 
-test("fonte: GOAL_CELEBRATIONS continua com as 12 na mesma ordem; pool do Bobonline = 12 + 3 curtas", () => {
-  const match = source("app/botao/three/choreography.ts").match(/const GOAL_CELEBRATIONS: GoalCelebration\[\] = \[([^\]]*)\]/);
+test("fonte: GOAL_CELEBRATIONS = as 12 na mesma ordem + a leva nova no fim; pool do Bobonline = 12 + 3 curtas, por extenso", () => {
+  const text = source("app/botao/three/choreography.ts");
+  const match = text.match(/const GOAL_CELEBRATIONS: GoalCelebration\[\] = \[([^\]]*)\]/);
   assert.ok(match, "GOAL_CELEBRATIONS sumiu");
   const ids = [...match[1].matchAll(/"([A-Za-z]+)"/g)].map((item) => item[1]);
-  assert.deepEqual(ids, OLD_POOL);
-  assert.deepEqual(BOBONLINE_VARIADA, [...OLD_POOL, "meditate", "cupEar", "fingerGuns"]);
+  assert.deepEqual(ids, SOLO_POOL);
+  // A Variada online fica congelada: os dois aparelhos sorteiam da mesma lista em qualquer versão.
+  assert.deepEqual([...BOBONLINE_VARIADA], ONLINE_POOL);
+  const online = text.match(/export const BOBONLINE_VARIADA: readonly GoalCelebration\[\] = \[([^\]]*)\]/);
+  assert.ok(online, "BOBONLINE_VARIADA tem que estar escrita por extenso");
+  assert.ok(!online[1].includes("..."), "nada de derivar de GOAL_CELEBRATIONS");
+  assert.deepEqual([...online[1].matchAll(/"([A-Za-z]+)"/g)].map((item) => item[1]), ONLINE_POOL);
   assert.deepEqual(SIGNATURE_ONLY, NEW_IDS);
+  for (const id of LEVA_IDS) assert.ok(!BOBONLINE_VARIADA.includes(id), `${id} não entra na Variada online`);
 });
 
 test("squadCelebrationFor: a escolhida vale; Variada sorteia do pool do Bobonline, igual nos dois aparelhos", () => {
-  for (const id of [...OLD_IDS.slice(1), ...NEW_IDS]) assert.equal(squadCelebrationFor(id, "user-3", 77), id);
+  for (const id of [...OLD_IDS.slice(1), ...NEW_IDS, ...LEVA_IDS]) assert.equal(squadCelebrationFor(id, "user-3", 77), id);
   const seen = new Set();
   for (let seed = 0; seed < 120; seed += 1) {
     for (const scorer of ["user-0", "user-1", "user-2", "cpu-3", "cpu-4"]) {
@@ -112,10 +132,16 @@ test("fonte: SIGNATURES do palco tem todas as comemorações, e as novas usam as
   const text = source("app/botao/three/character-stage.ts");
   const block = text.slice(text.indexOf("const SIGNATURES"), text.indexOf("};", text.indexOf("const SIGNATURES")));
   const keys = [...block.matchAll(/^\s{2}([A-Za-z]+): \[/gm)].map((item) => item[1]);
-  assert.deepEqual([...keys].sort(), [...OLD_IDS.slice(1), ...NEW_IDS].sort());
+  assert.deepEqual([...keys].sort(), [...OLD_IDS.slice(1), ...NEW_IDS, ...LEVA_IDS].sort());
   for (const id of NEW_IDS) {
     const line = block.split("\n").find((row) => row.trimStart().startsWith(`${id}: [`));
     assert.match(line, new RegExp(`action: "${id}"`), `${id} ainda é a vitrine provisória`);
+  }
+  // Leva nova: a ação de quem marcou; as em grupo trazem o companheiro para o palco.
+  for (const id of LEVA_IDS) {
+    const line = block.split("\n").find((row) => row.trimStart().startsWith(`${id}: [`));
+    assert.match(line, new RegExp(`action: "${LEVA_ACTION[id]}"`), id);
+    assert.equal(/helper: /.test(line), ["shoeShine", "rowing", "photoShoot"].includes(id), `${id}: companheiro no palco`);
   }
 });
 
@@ -211,6 +237,7 @@ function digestRun(args, aspect) {
   }
   return fnv(JSON.stringify(rows)).toString(16);
 }
+const randomArgs = (seed) => ({ side: "cpu", scorerId: "cpu-3", ownGoalId: null, ball: { x: -8, z: 228 }, actors: actors(2), cameraYaw: Math.PI, seed, signature: null });
 function digests(aspect) {
   const out = {};
   for (const kind of OLD_POOL) {
@@ -218,9 +245,8 @@ function digests(aspect) {
       out[`${kind}|${yaw.toFixed(2)}`] = digestRun({ side: "user", scorerId: "user-2", ownGoalId: null, ball: { x: 6, z: -228 }, actors: actors(1), cameraYaw: yaw, seed: 12345, signature: kind }, aspect);
     }
   }
-  for (const seed of [1, 7, 99, 4242]) {
-    out[`random|${seed}`] = digestRun({ side: "cpu", scorerId: "cpu-3", ownGoalId: null, ball: { x: -8, z: 228 }, actors: actors(2), cameraYaw: Math.PI, seed, signature: null }, aspect);
-  }
+  // Sorteios que continuam caindo numa das 12 de antes com a leva nova no fim da lista.
+  for (const seed of [1, 7]) out[`random|${seed}`] = digestRun(randomArgs(seed), aspect);
   out.own = digestRun({ side: "user", scorerId: null, ownGoalId: "cpu-1", ball: { x: 0, z: -228 }, actors: actors(0), cameraYaw: 0.3, seed: 5 }, aspect);
   return out;
 }
@@ -232,13 +258,26 @@ const HEAD_DIGESTS = {
   "heart|0.00": "5eb83f4b", "heart|1.57": "36507c02", "shush|0.00": "c2bdc40c", "shush|1.57": "79f09c35",
   "armsCrossed|0.00": "55ef256c", "armsCrossed|1.57": "fb5b5bc6", "cradle|0.00": "4603ce48", "cradle|1.57": "9cfd5a65",
   "robot|0.00": "8b0ad474", "robot|1.57": "e2f92006", "dance|0.00": "32b4562d", "dance|1.57": "1ea35e2a",
-  "random|1": "f5faf4d", "random|7": "74be2687", "random|99": "c70678d8", "random|4242": "7525be78", own: "5455d150",
+  "random|1": "f5faf4d", "random|7": "74be2687", own: "5455d150",
 };
 
 test("Choreographer: as 12 de sempre (câmera e bonecos) iguais ao HEAD, com e sem aspect", () => {
   assert.deepEqual(digests(undefined), HEAD_DIGESTS, "camera() sem aspect");
   assert.deepEqual(digests(16 / 9), HEAD_DIGESTS, "aspect deitado");
   assert.deepEqual(digests(0.46), HEAD_DIGESTS, "aspect em pé só muda o Kamehameha");
+});
+
+test("Variada dos modos de sempre: sorteia das 18 (12 de antes + leva nova), determinística; quem cai nas de antes segue igual", () => {
+  const seen = new Set();
+  for (let seed = 0; seed < 200; seed += 1) {
+    for (const scorer of ["cpu-0", "cpu-3"]) {
+      const c = new Choreographer();
+      c.startGoal({ ...randomArgs(seed), scorerId: scorer });
+      assert.equal(c.kind, SOLO_POOL[fnv(`${seed}|${scorer}`) % SOLO_POOL.length], `${seed}|${scorer}`);
+      seen.add(c.kind);
+    }
+  }
+  assert.deepEqual([...seen].sort(), [...SOLO_POOL].sort(), "todas aparecem no sorteio");
 });
 
 const KIND_ACTION = { kamehameha: "kamehameha", superSaiyan: "superSaiyan", meditate: "meditate", cupEar: "cupEar", fingerGuns: "fingerGuns" };
@@ -444,6 +483,15 @@ const EXPECTED_CUES = {
   fingerGuns: [["bang", 0.35], ["bang", 0.78]],
   penaltyFocus: [],
   keeperTaunt: [],
+  // Leva nova. Sem relógio comum, a marca repetida bate no tempo da própria ação.
+  salute: [["salute", 0.26]],
+  archer: [["arrow", 0.8]],
+  cartwheel: [],
+  rowing: [],
+  bootShow: [],
+  shoeShine: [0.63, 1.05, 1.47, 1.89, 2.31, 2.73, 3.15].map((at) => ["shine", at]),
+  photoPose: [],
+  photoSnap: [0.9, 1.5, 2.1, 2.7, 3.3].map((at) => ["click", at]),
 };
 
 function checkFigureFinite(figure, label) {
@@ -1120,7 +1168,7 @@ test("sons novos: rampas válidas, durações certas, mudo não toca", () => {
       assert.deepEqual(log.errors, [], `${name} (${intensity})`);
       return { nodes: log.nodes, end: Math.max(...log.ends), starts: [...log.starts] };
     };
-    const limits = { kameCharge: [0.8, 1], kameBeam: [0.9, 1.1], aura: [0.6, 0.8], bang: [0.08, 0.15], drumroll: [1.6, 2], tick: [0.03, 0.07] };
+    const limits = { kameCharge: [0.8, 1], kameBeam: [0.9, 1.1], aura: [0.6, 0.8], bang: [0.08, 0.15], drumroll: [1.6, 2], tick: [0.03, 0.07], shutter: [0.08, 0.15], twang: [0.3, 0.4] };
     for (const [name, [min, max]] of Object.entries(limits)) {
       for (const intensity of [0.35, 0, 1, -2, Number.NaN, 5]) {
         const sound = play(name, intensity);
@@ -1246,4 +1294,374 @@ test("Lei do Ex: mãos abertas na altura do ombro, à frente e afastadas; cabeç
     }
     assert.ok(samples > 60);
   }
+});
+
+// ------------------------------------------------------------------ leva nova (18..23)
+
+const { angleDelta, CARTWHEEL, ROW_PERIOD, ROW_SEAT, PHOTO, SHOE_SHINE_SPOT } = character;
+/** Posição de um ponto do mundo no referencial de quem está em `at` olhando para `yaw` (x à esquerda, z à frente). */
+const toLocal = (at, yaw, point) => {
+  const dx = point.x - at.x;
+  const dz = point.z - at.z;
+  return { x: dx * Math.cos(yaw) - dz * Math.sin(yaw), z: dx * Math.sin(yaw) + dz * Math.cos(yaw) };
+};
+const worldOf = (object) => object.getWorldPosition(new THREE.Vector3());
+
+test("leva nova: cada uma tem o próprio case, a pose final dela, começa a tempo do close e não estica a pausa", () => {
+  for (const kind of LEVA_IDS) {
+    for (const cameraYaw of [0, Math.PI / 2, Math.PI]) {
+      const { c, frames } = playGoal(goalArgs({ signature: kind, cameraYaw }));
+      assert.equal(c.kind, kind);
+      const actions = frames.map((frame) => frame.directives.get("user-2").intent.action);
+      assert.equal(actions.at(-1), LEVA_ACTION[kind], `${kind}: pose final`);
+      assert.ok(!actions.includes("crestKiss"), `${kind} caiu no default`);
+      // A pausa normal mostra ~1,7 s de festa: a pose principal começa antes de 1 s.
+      const startAt = frames.find((frame) => frame.directives.get("user-2").intent.action === LEVA_ACTION[kind]).t;
+      assert.ok(startAt < 1, `${kind}: começou em ${startAt}`);
+      assert.equal(c.partner !== null, kind === "shoeShine" || kind === "photoShoot", `${kind}: ajudante dos efeitos`);
+      for (const frame of frames) {
+        for (const [, directive] of frame.directives) {
+          assert.ok(finite(directive.x) && finite(directive.z) && !directive.sliding, `${kind}: posição/rastro`);
+          assert.ok(directive.intent.faceYaw === null || finite(directive.intent.faceYaw));
+        }
+      }
+    }
+  }
+  // Escolhidas no criador, nenhuma estica a pausa do gol (o 2D online espera o mesmo tanto).
+  for (const id of LEVA_IDS) assert.equal(timing.CELEBRATION_EXTENSION_MS[id], undefined, id);
+  const setup = squadSetup([18, 19, 20, 21, 22], [23, 0, 0, 0, 0]);
+  const state = { bodies: [0, 1, 2, 3, 4].flatMap((slot) => [discBody(`user-${slot}`, "user"), discBody(`cpu-${slot}`, "cpu")]) };
+  for (const scorer of ["user-0", "user-1", "user-2", "user-3", "user-4", "cpu-0"]) {
+    assert.equal(timing.goalCelebrationExtensionMs(setup, state, { scorerId: scorer, ownGoal: false }), 0, scorer);
+    assert.equal(timing.goalSignatureOf(setup, state, { scorerId: scorer, ownGoal: false }), null, scorer);
+  }
+});
+
+test("leva nova: as 8 ações no catálogo, todas de corpo inteiro", () => {
+  for (const id of ["salute", "archer", "cartwheel", "rowing", "bootShow", "shoeShine", "photoPose", "photoSnap"]) {
+    assert.ok(FIGURE_ACTION_INFO[id], id);
+    assert.equal(FIGURE_ACTION_INFO[id].body, "full", id);
+  }
+  assert.equal(FIGURE_ACTION_INFO.cartwheel.duration, CARTWHEEL.DURATION);
+});
+
+test("engraxate: o mais perto ajoelha à direita e à frente de quem marcou, de lado para a chuteira, e fica no lugar", () => {
+  for (const cameraYaw of [0, Math.PI / 2, Math.PI, -0.8]) {
+    const args = goalArgs({ signature: "shoeShine", cameraYaw });
+    const { c, frames } = playGoal(args, { seconds: 2.6 });
+    const start = args.actors.find((actor) => actor.id === "user-2");
+    const mates = args.actors.filter((actor) => actor.side === "user" && actor.id !== "user-2");
+    const nearest = mates.reduce((best, actor) => (Math.hypot(actor.x - start.x, actor.z - start.z) < Math.hypot(best.x - start.x, best.z - start.z) ? actor : best));
+    assert.equal(c.partner, nearest.id);
+    const last = frames.at(-1).directives;
+    const scorer = last.get("user-2");
+    const helper = last.get(c.partner);
+    assert.equal(helper.intent.action, "shoeShine");
+    const group = cameraYaw - 0.35;
+    assert.ok(Math.abs(angleDelta(scorer.intent.faceYaw, group)) < 1e-9);
+    assert.ok(Math.abs(angleDelta(helper.intent.faceYaw, group + SHOE_SHINE_SPOT.face)) < 1e-9);
+    const local = toLocal(scorer, group, helper);
+    assert.ok(Math.abs(local.x - SHOE_SHINE_SPOT.x) < 1e-6 && Math.abs(local.z - SHOE_SHINE_SPOT.z) < 1e-6, `${cameraYaw}: ajudante em ${local.x}, ${local.z}`);
+    // Chegou, ninguém empurra: a posição não muda mais até o fim.
+    const settledAt = frames.findIndex((frame) => frame.directives.get(c.partner).intent.action === "shoeShine");
+    for (const frame of frames.slice(settledAt)) {
+      const d = frame.directives.get(c.partner);
+      assert.ok(Math.hypot(d.x - helper.x, d.z - helper.z) < 1e-9, "empurraram o engraxate");
+    }
+  }
+});
+
+/** Quem marcou e o ajudante como bonecos de verdade, guiados pela coreografia. */
+function playPair(kind, cameraYaw, seconds = 2.6) {
+  const c = new Choreographer();
+  c.startGoal(goalArgs({ signature: kind, cameraYaw }));
+  const scorer = makeFigure();
+  const helper = makeFigure(7);
+  for (let frame = 0; frame < Math.round(seconds / DT); frame += 1) {
+    const directives = c.update(DT, { x: 6, z: -228 });
+    for (const [id, figure] of [["user-2", scorer], [c.partner, helper]]) {
+      const directive = directives.get(id);
+      figure.root.position.set(directive.x, 0, directive.z);
+      figure.update(DT, directive.intent);
+    }
+  }
+  scorer.root.updateMatrixWorld(true);
+  helper.root.updateMatrixWorld(true);
+  return { c, scorer, helper };
+}
+
+test("engraxate em campo: a mão direita do ajudante fica na biqueira da chuteira direita de quem marcou", () => {
+  for (const cameraYaw of [0, Math.PI]) {
+    const { scorer, helper } = playPair("shoeShine", cameraYaw);
+    // Biqueira: frente da chuteira, em cima (osso do tornozelo direito).
+    const toe = new THREE.Vector3(0, 0.2, 2.4).applyMatrix4(scorer.skinnedMesh.skeleton.bones[11].matrixWorld);
+    const hand = worldOf(helper.handAnchor("right"));
+    assert.ok(hand.distanceTo(toe) < 2.5, `${cameraYaw}: mão a ${hand.distanceTo(toe).toFixed(2)} da biqueira`);
+    // A cabeça do engraxate longe do tronco de quem marcou.
+    const head = worldOf(helper.headAnchor());
+    const chest = new THREE.Vector3(0, 6, 0).applyMatrix4(scorer.skinnedMesh.skeleton.bones[0].matrixWorld);
+    assert.ok(head.distanceTo(chest) > 9, `cabeça a ${head.distanceTo(chest).toFixed(2)} do peito`);
+  }
+});
+
+test("remada: até três remadores sentam em fila atrás de quem marcou, no mesmo relógio; a câmera abre e mira o barco", () => {
+  for (const cameraYaw of [0, Math.PI / 2]) {
+    const { frames } = playGoal(goalArgs({ signature: "rowing", cameraYaw }), { seconds: 2.6 });
+    const last = frames.at(-1).directives;
+    const rowers = [...last].filter(([, d]) => d.intent.action === "rowing").map(([id]) => id);
+    assert.ok(rowers.includes("user-2") && rowers.length >= 2 && rowers.length <= 4, rowers.join());
+    const clocks = rowers.map((id) => last.get(id).intent.clock);
+    assert.ok(clocks.every((clock) => finite(clock) && Math.abs(clock - clocks[0]) < 1e-9), "o barco rema no mesmo relógio");
+    const scorer = last.get("user-2");
+    const yaw = scorer.intent.faceYaw;
+    assert.ok(Math.abs(Math.abs(angleDelta(cameraYaw, yaw)) - 1) < 1e-9, "barco de três quartos");
+    const back = { x: -Math.sin(yaw), z: -Math.cos(yaw) };
+    const seats = rowers.filter((id) => id !== "user-2").map((id) => {
+      const d = last.get(id);
+      assert.equal(d.intent.faceYaw, yaw);
+      const along = (d.x - scorer.x) * back.x + (d.z - scorer.z) * back.z;
+      const across = (d.x - scorer.x) * back.z - (d.z - scorer.z) * back.x;
+      assert.ok(Math.abs(across) < 1e-6, `fora da fila: ${across}`);
+      return along;
+    }).sort((a, b) => a - b);
+    seats.forEach((along, index) => assert.ok(Math.abs(along - ROW_SEAT * (index + 1)) < 1e-6, `lugar ${index + 1}: ${along}`));
+    const shot = frames.at(-1).shot;
+    assert.ok(Math.abs(shot.zoom - 2.35) < 1e-6, `zoom ${shot.zoom}`);
+    const shift = (shot.x - scorer.x) * back.x + (shot.z - scorer.z) * back.z;
+    assert.ok(Math.abs(shift - 0.8 * (ROW_SEAT / 2) * (rowers.length - 1)) < 1e-6, `câmera ${shift}`);
+  }
+});
+
+test("relógio comum: dois remadores que sentaram em tempos diferentes remam juntos", () => {
+  const a = makeFigure();
+  const b = makeFigure(7);
+  const torso = (figure) => figure.skinnedMesh.skeleton.bones[0].quaternion;
+  let moved = 0;
+  let previous = null;
+  for (let frame = 0; frame < 160; frame += 1) {
+    const clock = frame * DT;
+    a.update(DT, idleIntent({ state: "celebrate", action: "rowing", faceYaw: 0, clock }));
+    b.update(DT, idleIntent({ state: "celebrate", action: frame < 40 ? null : "rowing", faceYaw: 0, clock }));
+    if (frame > 110) {
+      assert.ok(torso(a).angleTo(torso(b)) < 0.02, `fora do ritmo no quadro ${frame}`);
+      if (previous) moved = Math.max(moved, torso(a).angleTo(previous));
+      previous = torso(a).clone();
+    }
+  }
+  assert.ok(moved > 0.005, "o tronco vai e volta na puxada");
+  assert.ok(ROW_PERIOD > 0.5 && ROW_PERIOD < 1.2);
+});
+
+test("fotógrafo: o mais perto ajoelha de lado, de frente para quem posa; os dois no mesmo relógio", () => {
+  for (const cameraYaw of [0, Math.PI / 2, Math.PI]) {
+    const { c, frames } = playGoal(goalArgs({ signature: "photoShoot", cameraYaw }), { seconds: 2.6 });
+    const last = frames.at(-1).directives;
+    const scorer = last.get("user-2");
+    const helper = last.get(c.partner);
+    assert.equal(scorer.intent.action, "photoPose");
+    assert.equal(helper.intent.action, "photoSnap");
+    assert.ok(Math.abs(scorer.intent.clock - helper.intent.clock) < 1e-9);
+    assert.ok(Math.abs(Math.hypot(helper.x - scorer.x, helper.z - scorer.z) - PHOTO.DISTANCE) < 1e-6);
+    // De lado para a câmera: nunca na frente de quem posa nem atrás dele.
+    const angle = angleDelta(cameraYaw, Math.atan2(helper.x - scorer.x, helper.z - scorer.z));
+    assert.ok(Math.abs(angle) >= 0.55 && Math.abs(angle) <= 1.25, `ângulo ${angle}`);
+    assert.ok(Math.abs(angleDelta(helper.intent.faceYaw, Math.atan2(scorer.x - helper.x, scorer.z - helper.z))) < 1e-6, "mira quem posa");
+    // Quem posa vira um tanto para o lado do fotógrafo, sem dar as costas para a câmera.
+    const turn = angleDelta(cameraYaw, scorer.intent.faceYaw);
+    assert.ok(Math.abs(Math.abs(turn) - PHOTO.TURN) < 1e-9 && Math.sign(turn) === Math.sign(angle), `vira ${turn}`);
+    // O relógio zera com os dois no lugar: a primeira foto sai antes do fim do close.
+    const zeroAt = frames.find((frame) => frame.directives.get("user-2").intent.clock >= 0).t;
+    assert.ok(zeroAt + PHOTO.CLICK < 1.75, `primeiro clique em ${zeroAt + PHOTO.CLICK}`);
+  }
+});
+
+test("continência: vai para a arquibancada e bate continência; a roda responde com continência", () => {
+  const { frames } = playGoal(goalArgs({ signature: "salute" }), { seconds: 2.6 });
+  const last = frames.at(-1).directives;
+  assert.equal(last.get("user-2").intent.action, "salute");
+  for (const id of ["user-0", "user-1", "user-3", "user-4"]) assert.equal(last.get(id).intent.action, "salute", id);
+  assert.ok(!frames.some((frame) => ["user-0", "user-1", "user-3", "user-4"].some((id) => frame.directives.get(id).intent.action === "jumpCheer")));
+});
+
+test("estrela: encara a câmera e anda de lado só durante o giro, sem rastro de carrinho", () => {
+  for (const cameraYaw of [0, Math.PI / 2]) {
+    const { frames } = playGoal(goalArgs({ signature: "cartwheel", cameraYaw }), { seconds: 2.6 });
+    const scorer = frames.map((frame) => ({ t: frame.t, d: frame.directives.get("user-2") }));
+    const startAt = scorer.find((row) => row.d.intent.action === "cartwheel").t;
+    const at = (time) => scorer.find((row) => row.t >= time - 1e-9).d;
+    const from = at(startAt);
+    const to = scorer.at(-1).d;
+    const beside = { x: Math.cos(cameraYaw), z: -Math.sin(cameraYaw) };
+    const along = (to.x - from.x) * beside.x + (to.z - from.z) * beside.z;
+    assert.ok(Math.abs(along - 34) < 1e-6, `andou ${along}`);
+    assert.ok(Math.hypot(to.x - from.x - beside.x * along, to.z - from.z - beside.z * along) < 1e-6, "só de lado");
+    // Parado no preparo; o deslize termina com o giro.
+    const before = at(startAt + CARTWHEEL.START - 2 * DT);
+    assert.ok(Math.hypot(before.x - from.x, before.z - from.z) < 1e-9, "andou antes do giro");
+    const end = at(startAt + CARTWHEEL.END + 2 * DT);
+    assert.ok(Math.hypot(end.x - to.x, end.z - to.z) < 1e-6, "andou depois do giro");
+    assert.ok(scorer.every((row) => !row.d.sliding));
+    assert.ok(scorer.filter((row) => row.t >= startAt).every((row) => Math.abs(angleDelta(row.d.intent.faceYaw, cameraYaw)) < 1e-9));
+  }
+});
+
+/** Uma ação no boneco parado, olhando para +z (0); devolve o boneco depois de `seconds`. */
+function poseAt(action, seconds, seed = figureSeedRight, clock = false) {
+  const figure = makeFigure(seed);
+  for (let t = 0; t < seconds - 1e-9; t += DT) figure.update(DT, idleIntent({ state: "celebrate", action, faceYaw: 0, clock: clock ? t : null }));
+  figure.root.updateMatrixWorld(true);
+  return figure;
+}
+const boneAt = (figure, index) => new THREE.Vector3().setFromMatrixPosition(figure.skinnedMesh.skeleton.bones[index].matrixWorld);
+
+test("leva nova, poses: continência na têmpora, arco aberto para o lado, chuteira à frente, sentado, ajoelhado", () => {
+  const restAnkle = boneAt(poseAt(null, 0.5), 10).y;
+  for (const seed of [figureSeedRight, 7]) {
+    // Continência: sempre a direita (-x), do lado da cabeça, na altura dos olhos; a esquerda colada na perna.
+    let figure = poseAt("salute", 1.2, seed);
+    let head = worldOf(figure.headAnchor());
+    const right = worldOf(figure.handAnchor("right"));
+    assert.ok(right.x < head.x - 4.5 && right.x > head.x - 10 && Math.abs(right.y - head.y) < 3.5, `continência: ${right.x - head.x}, ${right.y - head.y}`);
+    const left = worldOf(figure.handAnchor("left"));
+    assert.ok(left.y < 17.5 && left.x > 7 && left.x < 10, `a esquerda colada na perna: ${left.x}, ${left.y}`);
+    for (const index of [10, 11]) assert.ok(Math.abs(boneAt(figure, index).y - restAnkle) < 1, "em sentido, pés no chão");
+
+    // Arqueiro: a mão do arco (a de fora; a esquerda no destro) longe para o lado e acima do ombro; a da corda perto do peito.
+    figure = poseAt("archer", 0.7, seed);
+    const side = figure.handedness;
+    head = worldOf(figure.headAnchor());
+    const bow = worldOf(figure.handAnchor(side > 0 ? "left" : "right"));
+    const string = worldOf(figure.handAnchor(side > 0 ? "right" : "left"));
+    assert.ok(bow.x * side > 11 && bow.y > head.y - 2, `arco em ${bow.x}, ${bow.y}`);
+    assert.ok(Math.abs(string.x) < 9 && string.z > 3 && string.y < head.y, `corda em ${string.x}, ${string.y}, ${string.z}`);
+
+    // Engraxate (quem marcou): chuteira direita à frente da esquerda, as duas no chão.
+    figure = poseAt("bootShow", 1, seed);
+    assert.ok(boneAt(figure, 11).z > boneAt(figure, 10).z + 5, "chuteira direita à frente");
+    for (const index of [10, 11]) assert.ok(Math.abs(boneAt(figure, index).y - restAnkle) < 1.6, `pé ${index} a ${boneAt(figure, index).y - restAnkle}`);
+
+    // Remada: sentado (quadril perto do chão) com as pernas para a frente.
+    figure = poseAt("rowing", 1, seed, true);
+    const hips = boneAt(figure, 0);
+    assert.ok(hips.y < 4, `quadril a ${hips.y}`);
+    assert.ok(boneAt(figure, 10).z > hips.z + 8 && boneAt(figure, 10).y > 0.5, "pernas à frente, no chão");
+
+    // Fotógrafo: ajoelhado, as duas mãos na frente do rosto.
+    figure = poseAt("photoSnap", 1, seed, true);
+    head = worldOf(figure.headAnchor());
+    for (const hand of ["left", "right"]) {
+      const at = worldOf(figure.handAnchor(hand));
+      assert.ok(at.z > head.z + 4 && Math.abs(at.y - head.y) < 4 && Math.abs(at.x - head.x) < 5, `${hand}: ${at.x - head.x}, ${at.y - head.y}, ${at.z - head.z}`);
+    }
+    assert.ok(head.y < 30, `ajoelhado: cabeça a ${head.y}`);
+  }
+});
+
+test("estrela: o corpo vira de cabeça para baixo e mãos e pés não afundam no gramado", () => {
+  const figure = makeFigure();
+  let upsideDown = false;
+  let lowest = Infinity;
+  for (let t = 0; t < CARTWHEEL.DURATION + 0.3; t += DT) {
+    figure.update(DT, idleIntent({ state: "celebrate", action: "cartwheel", faceYaw: 0 }));
+    figure.root.updateMatrixWorld(true);
+    const head = worldOf(figure.headAnchor());
+    if (head.y < boneAt(figure, 0).y) upsideDown = true;
+    for (const hand of ["left", "right"]) lowest = Math.min(lowest, worldOf(figure.handAnchor(hand)).y);
+    lowest = Math.min(lowest, boneAt(figure, 10).y, boneAt(figure, 11).y);
+  }
+  assert.ok(upsideDown, "não virou");
+  assert.ok(lowest > 0, `afundou: ${lowest}`);
+  // Termina de pé (o giro de 360° volta a zero sem girar de volta).
+  assert.ok(worldOf(figure.headAnchor()).y > boneAt(figure, 0).y + 15);
+});
+
+/** Ajudante com a ação dele, no mesmo relógio, e os efeitos gravados. */
+function playPartnerFx(scorerAction, partnerAction, { seconds = 2, options = {} } = {}) {
+  const scorer = makeFigure();
+  const partner = makeFigure(7);
+  partner.root.position.set(20, 0, 10);
+  const rec = recorder();
+  const fx = new CelebrationFx(rec.effects, { lite: false, reducedMotion: false, ...options });
+  fx.prepare();
+  const frames = [];
+  let t = 0;
+  for (let frame = 0; frame < Math.round(seconds / DT); frame += 1) {
+    t += DT;
+    scorer.update(DT, idleIntent({ state: "celebrate", action: scorerAction, faceYaw: 0, clock: t }));
+    partner.update(DT, idleIntent({ state: "celebrate", action: partnerAction, faceYaw: -1, clock: t }));
+    rec.calls.length = 0;
+    const result = { ...fx.update(DT, { kind: "x", focus: { figure: scorer, x: 0, z: 0, yaw: 0 }, partner, side: "user", teamColor: "#cc3333", stadium: null }) };
+    frames.push({ t, calls: [...rec.calls], result });
+  }
+  return { frames, partner };
+}
+/** Começo de cada clarão (pedidos seguidos de esfera contam como um). */
+const bursts = (orbs) => orbs.filter((call, index) => index === 0 || call.t - orbs[index - 1].t > 0.1).map((call) => call.t);
+
+test("CelebrationFx fotógrafo: flash na frente da câmera do ajudante a cada clique, com luz; movimento reduzido sem flash", () => {
+  const { frames, partner } = playPartnerFx("photoPose", "photoSnap");
+  const orbs = callsOf(frames, "orb");
+  assert.ok(orbs.length > 0 && orbs.every((call) => call.args[4] === "#ffffff"));
+  orbs.forEach(assertFiniteArgs);
+  // Um clarão por clique (0,3 + 0,6k depois de ajoelhar): 0,9 e 1,5 em 2 s.
+  const starts = bursts(orbs);
+  assert.equal(starts.length, 2);
+  starts.forEach((at, index) => assert.ok(Math.abs(at - (0.9 + 0.6 * index)) <= DT + 1e-9, `clique em ${at}`));
+  // Na frente das mãos do fotógrafo, na altura do rosto ajoelhado.
+  const hands = worldOf(partner.handAnchor("left")).add(worldOf(partner.handAnchor("right"))).multiplyScalar(0.5);
+  assert.ok(Math.hypot(orbs.at(-1).args[0] - hands.x, orbs.at(-1).args[2] - hands.z) < 6);
+  assert.ok(frames.some((frame) => frame.result.glow >= 0.3 && frame.result.glowColor === "#ffffff"));
+  const calm = playPartnerFx("photoPose", "photoSnap", { options: { reducedMotion: true } });
+  assert.equal(callsOf(calm.frames, "orb").length, 0);
+  assert.ok(calm.frames.every((frame) => frame.result.glow === 0));
+});
+
+test("CelebrationFx engraxate: brilho na biqueira (embaixo da mão direita do ajudante) a cada passada", () => {
+  const { frames, partner } = playPartnerFx("bootShow", "shoeShine");
+  const orbs = callsOf(frames, "orb");
+  assert.ok(orbs.length > 0 && orbs.every((call) => call.args[4] === "#fff6cf"));
+  const starts = bursts(orbs);
+  assert.ok(starts.length >= 3 && Math.abs(starts[0] - 0.63) <= DT + 1e-9, starts.join());
+  const hand = worldOf(partner.handAnchor("right"));
+  assert.ok(Math.hypot(orbs.at(-1).args[0] - hand.x, orbs.at(-1).args[2] - hand.z) < 3);
+  assert.equal(callsOf(playPartnerFx("bootShow", "shoeShine", { options: { reducedMotion: true } }).frames, "orb").length, 0);
+});
+
+test("CelebrationFx arqueiro: a flecha sai da mão do arco e sobe com rastro; estrela no céu; modo desempenho só a ponta", () => {
+  for (const seed of [figureSeedRight, 7]) {
+    const { frames, figure } = playFx("archer", { seconds: 1.6, seed });
+    const orbs = callsOf(frames, "orb");
+    orbs.forEach(assertFiniteArgs);
+    assert.ok(Math.abs(orbs[0].t - 0.8) <= DT + 1e-9, `soltou em ${orbs[0].t}`);
+    // Sai para o lado do arco (+x no destro, -x no canhoto) e sobe.
+    const tips = orbs.filter((call) => call.args[3] === 3.4);
+    assert.ok(tips.at(-1).args[1] > tips[0].args[1] + 25, "a flecha sobe");
+    assert.equal(Math.sign(tips.at(-1).args[0] - tips[0].args[0]), figure.handedness, "para o lado do arco");
+    assert.ok(orbs.some((call) => call.args[3] === 2.4), "rastro");
+    const stars = callsOf(frames, "impact");
+    assert.equal(stars.length, 1);
+    assert.ok(Math.abs(stars[0].t - 1.3) <= 2 * DT + 1e-9 && stars[0].args[1] > 40, `estrela em ${stars[0].t}`);
+  }
+  const lite = playFx("archer", { seconds: 1.6, options: { lite: true } });
+  assert.ok(callsOf(lite.frames, "orb").every((call) => call.args[3] === 3.4), "sem rastro no modo desempenho");
+  const calm = playFx("archer", { seconds: 1.6, options: { reducedMotion: true } });
+  assert.equal(callsOf(calm.frames, "orb").length + callsOf(calm.frames, "impact").length, 0);
+});
+
+test("CelebrationFx continência: a torcida do time grita no estalo da mão", () => {
+  const reactions = [];
+  const stadium = { crowdReact: (...args) => reactions.push(args) };
+  playFx("salute", { seconds: 0.6, stadium, side: "user" });
+  assert.deepEqual(reactions, [["cheer", "user", null]]);
+});
+
+test("fonte: Scorebobo mapeia a leva nova para a parte de quem marcou; a Variada dele não muda", () => {
+  const text = source("app/scorebobo/sim/game.ts");
+  for (const [id, action] of Object.entries({ shoeShine: "bootShow", rowing: "rowing", salute: "salute", archer: "archer", photoShoot: "photoPose", cartwheel: "cartwheel" })) {
+    assert.match(text, new RegExp(`\\b${id}: "${action}"`), id);
+    assert.ok(FIGURE_ACTION_INFO[action], action);
+  }
+  const auto = text.match(/const AUTO_CELEBRATIONS = \[([^\]]*)\]/);
+  assert.ok(auto, "AUTO_CELEBRATIONS por extenso");
+  assert.deepEqual([...auto[1].matchAll(/"([A-Za-z]+)"/g)].map((item) => item[1]), ["kneeSlide", "siuu", "flagDance", "backflip", "airplane", "crestKiss", "heart", "shush", "armsCrossed", "cradle", "robot", "dance"]);
 });

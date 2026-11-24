@@ -22,9 +22,10 @@ export const CAREER_DRAMA_EVENTS: GameEvent[] = [
     { label: "Assinar por menos tempo e mais minutos", hint: "Minutos ↑ · segurança ↓", result: "Você troca estabilidade por protagonismo enquanto ainda dá tempo.", effect: { minutes: 8, contractYears: 1, morale: 4 } },
     { label: "Buscar um contrato longo e estável", hint: "Segurança ↑ · minutos ↓", result: "Você prioriza previsibilidade para a reta final da carreira.", effect: { contractYears: 3, salaryBoost: 6, minutes: -4 } },
   ]},
-  { id: "drama-mid-thirties-body-check", icon: "+", tag: "IDADE", title: "O exame físico anual pesa diferente", description: "Os números do departamento médico não mentem: a recuperação não é mais a mesma de cinco anos atrás.", minAge: 33, choices: [
-    { label: "Redesenhar a rotina de treino", hint: "Fitness ↑ · OVR estável", result: "Você troca volume por qualidade nos treinos.", effect: { fitness: 12, potential: -1 } },
-    { label: "Ignorar os números e seguir igual", hint: "OVR ↑ · risco de lesão", result: "Você aposta que a experiência compensa o desgaste.", effect: { ovr: 1, injuryRisk: 8, fitness: -6 } },
+  { id: "drama-mid-thirties-body-check", icon: "+", tag: "IDADE", title: "O exame físico anual pesa diferente", description: "O fisiologista coloca dois gráficos lado a lado: seu pico de velocidade de cinco anos atrás e o de agora. A diferença é pequena. A do tempo de recuperação entre jogos, não.", minAge: 33, choices: [
+    { label: "Redesenhar a rotina de treino", hint: "Físico ↑↑ · minutos ↓", result: "Menos tiros na semana, mais recuperação e um dia inteiro sem bola depois de cada jogo. Você joga um pouco menos e chega inteiro a quase todos.", effect: { fitness: 12, minutes: -3 } },
+    { label: "Contratar um preparador particular", hint: "Físico ↑ · dinheiro ↓ · equilíbrio ↓", result: "Ele chega à sua casa às seis da manhã, três vezes por semana. A conta é alta, o sono encurta e o corpo responde.", effect: { fitness: 8, money: -4, lifeBalance: -2 } },
+    { label: "Ignorar os números e seguir igual", hint: "OVR ↑ · físico ↓ · lesão ↑", result: "Você aposta que a experiência compensa o desgaste e não muda nada na semana.", effect: { ovr: 1, injuryRisk: 8, fitness: -6 } },
   ]},
   // ---- POSIÇÃO ----
   { id: "drama-keeper-shootout-nerves", icon: "🧤", tag: "POSIÇÃO", title: "A disputa de pênaltis é só sua", description: "O jogo empatado termina nas penalidades e todos os olhos do estádio se voltam para o seu gol.", needsPositionZone: "gol", minOvr: 66, choices: [
@@ -35,9 +36,10 @@ export const CAREER_DRAMA_EVENTS: GameEvent[] = [
     { label: "Aceitar o novo estilo", hint: "Potencial ↑ · risco de erro", result: "Você aprende a jogar mais perto do adversário do que gostaria.", effect: { potential: 2, injuryRisk: 2, adaptation: 4 } },
     { label: "Insistir no jogo tradicional", hint: "Segurança ↑ · minutos ↓", result: "Você prefere afastar a bola a arriscar um erro bobo.", effect: { minutes: -4, morale: 3 } },
   ]},
-  { id: "drama-back-line-communication", icon: "◆", tag: "POSIÇÃO", title: "A zaga precisa de uma voz de comando", description: "Sem um líder claro na defesa, os erros de posicionamento se repetem toda rodada.", needsPositionZone: "defesa", minAge: 23, choices: [
-    { label: "Assumir a organização da linha", hint: "Liderança ↑↑ · pressão", result: "Você passa a gritar instruções antes mesmo da bola chegar perto.", effect: { leadership: 10, reputation: 5, morale: -2 } },
-    { label: "Deixar o capitão resolver", hint: "Seguro", result: "Você prefere manter o foco só na sua marcação.", effect: { morale: 2 } },
+  { id: "drama-back-line-communication", icon: "◆", tag: "POSIÇÃO", title: "A zaga precisa de uma voz de comando", description: "Três gols de bola parada em quatro rodadas. No vídeo, a cena se repete: ninguém fala, todo mundo olha para a bola e o atacante entra sozinho entre dois defensores.", needsPositionZone: "defesa", minAge: 23, choices: [
+    { label: "Assumir a organização da linha", hint: "Liderança ↑↑ · reputação ↑ · moral ↓", result: "Você passa a gritar nomes antes de cada escanteio. Quando a bola entra mesmo assim, a culpa também passa a ter um nome.", effect: { leadership: 10, reputation: 4, morale: -3 } },
+    { label: "Montar uma reunião só dos defensores", hint: "Liderança ↑ · título ↑ · equilíbrio ↓", result: "Toda quinta, depois do treino, quarenta minutos de vídeo na sala de análise. Os gols de bola parada param. O jantar em casa passa a esfriar.", effect: { leadership: 6, titleBoost: 4, lifeBalance: -3 } },
+    { label: "Deixar o capitão resolver", hint: "Moral ↑ · liderança ↓", result: "Você se concentra só no seu homem. No vídeo da semana seguinte, a câmera mostra o capitão gritando por dois e você em silêncio no meio da confusão.", effect: { morale: 2, leadership: -3 } },
   ]},
   { id: "drama-fullback-overlap-gamble", icon: "↗", tag: "POSIÇÃO", title: "Subir ao ataque pode custar caro na volta", description: "Seu treinador libera as sobreposições, mas isso deixa buracos enormes nas suas costas.", needsPositionZone: "defesa", choices: [
     { label: "Atacar sem medo do contra-ataque", hint: "40% · assistência de ouro ou vacilo", result: "Você decide viver no campo de ataque também.", effect: {}, luck: { chance: 40, successText: "Sua subida vira assistência decisiva e a torcida aprende seu nome pelo ataque.", failureText: "O espaço nas suas costas vira gol do adversário e a cobrança recai sobre você.", successEffect: { reputation: 10, titleBoost: 8, fans: 8 }, failureEffect: { reputation: -8, titleBoost: -8, morale: -10 } } },
@@ -125,7 +127,7 @@ export const CAREER_DRAMA_EVENTS: GameEvent[] = [
   // ---- SELEÇÃO ----
   { id: "drama-national-team-snub-shock", icon: "×", tag: "SELEÇÃO", title: "Seu nome sumiu da lista sem aviso", description: "Depois de temporadas relevantes, a convocação mais recente simplesmente não trouxe seu nome.", needsNational: true, minAge: 24, choices: [
     { label: "Cobrar explicações através da imprensa", hint: "Exposição ↑ · risco", result: "Você decide não deixar o corte passar em silêncio.", effect: { reputation: 3, nationalBoost: -4, morale: -3 } },
-    { label: "Responder só dentro de campo", hint: "OVR ↑ · Seleção ↓", result: "Você acredita que atuações grandes falam mais alto que qualquer reclamação.", effect: { ovr: 1, nationalBoost: 3 } },
+    { label: "Responder só dentro de campo", hint: "OVR ↑ · Seleção ↑", result: "Você acredita que atuações grandes falam mais alto que qualquer reclamação.", effect: { ovr: 1, nationalBoost: 3 } },
   ]},
   { id: "drama-friendly-match-doubt", icon: "?", tag: "SELEÇÃO", title: "Um amistoso sem nenhuma pressão real", description: "A convocação veio, mas o jogo sem nada em jogo deixa todo mundo com o pé um pouco atrás.", needsNational: true, choices: [
     { label: "Tratar como se fosse decisivo", hint: "Seleção ↑ · físico ↓", result: "Você decide jogar sério mesmo sem nada valendo oficialmente.", effect: { nationalBoost: 8, fitness: -5, reputation: 3 } },
