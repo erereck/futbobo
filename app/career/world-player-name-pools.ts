@@ -21,6 +21,7 @@ type NameStyle =
   | "caucasus"
   | "hebrew"
   | "arabic"
+  | "persian"
   | "african"
   | "japanese"
   | "korean"
@@ -252,6 +253,21 @@ const POOLS: Record<NameStyle, NamePool> = {
       "Al Rashid", "Al Shammari", "Al Sulaiti", "Al Dawsari", "Al Nuaimi", "Al Kuwari", "Al Busaidi", "Al Khaldi", "Darwish", "Faraj",
     ],
   },
+  // Irã: nomes e sobrenomes persas (a liga iraniana tem elenco próprio desde a v98).
+  persian: {
+    first: [
+      "Abolfazl", "Ali", "Alireza", "Amir", "Amirhossein", "Arash", "Aria", "Babak", "Behnam", "Danial",
+      "Ehsan", "Farshad", "Hamed", "Hossein", "Kaveh", "Kian", "Majid", "Masoud", "Mehdi", "Mehrdad",
+      "Milad", "Mohammad", "Morteza", "Omid", "Payam", "Pouya", "Ramin", "Reza", "Saeid", "Saman",
+      "Sasan", "Shahab", "Sina", "Vahid", "Yasin",
+    ],
+    last: [
+      "Ahmadi", "Akbari", "Amiri", "Bagheri", "Ebrahimi", "Ghasemi", "Ghorbani", "Hashemi", "Hosseini", "Jafari",
+      "Karimi", "Kazemi", "Khalili", "Mahmoudi", "Mohammadi", "Moradi", "Mousavi", "Najafi", "Nazari", "Rahimi",
+      "Rezaei", "Rostami", "Sadeghi", "Salehi", "Shariati", "Sharifi", "Shirazi", "Soltani", "Tabrizi", "Tehrani",
+      "Yazdani", "Zare", "Zarei", "Esfahani", "Kermani",
+    ],
+  },
   african: {
     first: [
       "Abdoulaye", "Adama", "Amadou", "Boubacar", "Cheick", "Demba", "Ibrahima", "Idrissa", "Mahamadou", "Mamadou",
@@ -438,7 +454,7 @@ const COUNTRY_STYLE: Record<string, NameStyle> = {
   siria: "arabic",
   libano: "arabic",
   palestina: "arabic",
-  ira: "arabic",
+  ira: "persian",
 
   // África
   senegal: "african",

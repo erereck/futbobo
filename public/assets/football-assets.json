@@ -4492,6 +4492,501 @@
       "providerName": "FC Kryvbas Kryvyi Rih",
       "externalSource": "https://upl.ua/uploads/2207/6mgkU1zsv7XhBZVByQiuThlgR_N9robF.png",
       "source": "https://upl.ua/uploads/2207/6mgkU1zsv7XhBZVByQiuThlgR_N9robF.png"
+    },
+    "al-ain-uae": {
+      "providerId": "137832",
+      "providerName": "Al Ain",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0w2bk51747334688.png"
+    },
+    "al-wasl": {
+      "providerId": "137835",
+      "providerName": "Al Wasl",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/s3o3ew1578859398.png"
+    },
+    "al-jazira-uae": {
+      "providerId": "137830",
+      "providerName": "Al Jazira",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/uknsoq1642708421.png"
+    },
+    "al-wahda-uae": {
+      "providerId": "137836",
+      "providerName": "Al Wahda",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/99xc7w1578858847.png"
+    },
+    "al-nasr-dubai": {
+      "providerId": "137831",
+      "providerName": "Al Nasr",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/oy1zwv1753982526.png"
+    },
+    "ajman-club": {
+      "providerId": "137838",
+      "providerName": "Ajman",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zohyna1677576452.png"
+    },
+    "baniyas-club": {
+      "providerId": "137839",
+      "providerName": "Baniyas",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ps3a4d1578859691.png"
+    },
+    "kalba-fc": {
+      "providerId": "137837",
+      "providerName": "Ittihad Kalba",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/lwjc661718210928.png"
+    },
+    "al-dhafra": {
+      "providerId": "137834",
+      "providerName": "Al Dhafra",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/613mvk1753982733.png"
+    },
+    "hatta-club": {
+      "providerId": "137841",
+      "providerName": "Hatta",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/lyeqae1613546070.png"
+    },
+    "al-sadd": {
+      "providerId": "137648",
+      "providerName": "Al-Sadd",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/908a011774579337.png"
+    },
+    "al-duhail": {
+      "providerId": "137679",
+      "providerName": "Al-Duhail",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/n1vtjm1577985347.png"
+    },
+    "al-rayyan-qatar": {
+      "providerId": "138050",
+      "providerName": "Al-Rayyan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/hvb3r41653090047.png"
+    },
+    "al-gharafa": {
+      "providerId": "138029",
+      "providerName": "Al-Gharafa",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/yan4hx1617909550.png"
+    },
+    "al-arabi-qatar": {
+      "providerId": "135946",
+      "providerName": "Al-Arabi",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9tudph1693026180.png"
+    },
+    "al-shamal": {
+      "providerId": "141174",
+      "providerName": "Al-Shamal",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qghkxn1720532526.png"
+    },
+    "al-ahli-qatar": {
+      "providerId": "138049",
+      "providerName": "Al-Ahli Doha",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/k9f8x71787934388.png"
+    },
+    "al-wakrah": {
+      "providerId": "137994",
+      "providerName": "Al-Wakrah",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gymffo1784570237.png"
+    },
+    "al-sailiya": {
+      "providerId": "138035",
+      "providerName": "Al-Sailiya",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0h7hsd1784570223.png"
+    },
+    "al-shahaniya": {
+      "providerId": "138030",
+      "providerName": "Al-Shahaniya",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/k70rdq1787934947.png"
+    },
+    "esteghlal": {
+      "providerId": "139012",
+      "providerName": "Esteghlal",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tu1o951756536150.png"
+    },
+    "foolad-khuzestan": {
+      "providerId": "139165",
+      "providerName": "Foolad Khuzestan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ijxpe21582291802.png"
+    },
+    "gol-gohar": {
+      "providerId": "139157",
+      "providerName": "Gol Gohar Sirjan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/chkgy61582375294.png"
+    },
+    "chadormalou": {
+      "providerId": "149162",
+      "providerName": "Chadormalou Ardakan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/z1pfwg1725934684.png"
+    },
+    "fajr-sepasi": {
+      "providerId": "139173",
+      "providerName": "Fajr Sepasi Shiraz",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/qhhqci1725938957.png"
+    },
+    "malavan": {
+      "providerId": "139183",
+      "providerName": "Malavan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/8z64f91725935515.png"
+    },
+    "kheybar-khorramabad": {
+      "providerId": "141318",
+      "providerName": "Kheybar Khorramabad",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/7lap4f1725937149.png"
+    },
+    "aluminium-arak": {
+      "providerId": "139172",
+      "providerName": "Aluminium Arak",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vdfhw81725934990.png"
+    },
+    "esteghlal-khuzestan": {
+      "providerId": "139184",
+      "providerName": "Esteghlal Khuzestan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9w5bnu1673939452.png"
+    },
+    "mes-shahr-e-babak": {
+      "providerId": "144140",
+      "providerName": "Mes Shahr-e Babak",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/8s7tnh1725939085.png"
+    },
+    "esperance-tunis": {
+      "providerId": "137650",
+      "providerName": "Espérance de Tunis",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/csvbqw1753934121.png"
+    },
+    "club-africain": {
+      "providerId": "139862",
+      "providerName": "Club Africain",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/2gijg71753933998.png"
+    },
+    "cs-sfaxien": {
+      "providerId": "139866",
+      "providerName": "CS Sfaxien",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/d89tpa1589898020.png"
+    },
+    "etoile-sahel": {
+      "providerId": "138999",
+      "providerName": "Étoile du Sahel",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zyy5p81753933927.png"
+    },
+    "ca-bizertin": {
+      "providerId": "139863",
+      "providerName": "CA Bizertin",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wlof3v1589897978.png"
+    },
+    "es-zarzis": {
+      "providerId": "144134",
+      "providerName": "ES Zarzis",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/xorutz1753933741.png"
+    },
+    "es-metlaoui": {
+      "providerId": "139867",
+      "providerName": "ES Métlaoui",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tpfo8k1753933830.png"
+    },
+    "as-marsa": {
+      "providerId": "147677",
+      "providerName": "AS Marsa",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/479oun1691565385.png"
+    },
+    "cs-hammam-lif": {
+      "providerId": "139865",
+      "providerName": "CS Hammam-Lif",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/gj23q71589898013.png"
+    },
+    "es-hammam-sousse": {
+      "providerId": "144135",
+      "providerName": "Hammam-Sousse",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/wf634m1785432763.png"
+    },
+    "godoy-cruz": {
+      "providerId": "espn:6756",
+      "providerName": "Godoy Cruz Antonio Tomba",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/6756.png"
+    },
+    "ferro-carril-oeste": {
+      "providerId": "espn:9743",
+      "providerName": "Ferro Carril Oeste",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/9743.png"
+    },
+    "deportivo-madryn": {
+      "providerId": "espn:18260",
+      "providerName": "Deportivo Madryn",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/18260.png"
+    },
+    "deportivo-moron": {
+      "providerId": "espn:10154",
+      "providerName": "Deportivo Morón",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10154.png"
+    },
+    "all-boys": {
+      "providerId": "137781",
+      "providerName": "All Boys",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zo4vm01578824142.png"
+    },
+    "almirante-brown": {
+      "providerId": "141011",
+      "providerName": "Almirante Brown",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/81i8mf1615822788.png"
+    },
+    "estudiantes-caseros": {
+      "providerId": "espn:17352",
+      "providerName": "Estudiantes (Buenos Aires)",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/17352.png"
+    },
+    "ciudad-de-bolivar": {
+      "providerId": "espn:21799",
+      "providerName": "Ciudad de Bolívar",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/21799.png"
+    },
+    "racing-cordoba": {
+      "providerId": "espn:19145",
+      "providerName": "Racing (Córdoba)",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/19145.png"
+    },
+    "mitre-santiago": {
+      "providerId": "espn:11990",
+      "providerName": "Mitre (Santiago del Estero)",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/11990.png"
+    },
+    "chaco-for-ever": {
+      "providerId": "140526",
+      "providerName": "Chaco For Ever",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9wxhp31678848859.png"
+    },
+    "los-andes-ar": {
+      "providerId": "espn:13",
+      "providerName": "Los Andes",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/13.png"
+    },
+    "defensores-de-belgrano": {
+      "providerId": "espn:10151",
+      "providerName": "Defensores de Belgrano",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10151.png"
+    },
+    "san-telmo": {
+      "providerId": "espn:10157",
+      "providerName": "San Telmo",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10157.png"
+    },
+    "central-norte-salta": {
+      "providerId": "142489",
+      "providerName": "Central Norte",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/b0uo2b1678853683.png"
+    },
+    "acassuso": {
+      "providerId": "143091",
+      "providerName": "Acassuso",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/81kew41677993637.png"
+    },
+    "san-miguel-ar": {
+      "providerId": "espn:10058",
+      "providerName": "San Miguel",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10058.png"
+    },
+    "san-martin-tucuman": {
+      "providerId": "espn:17814",
+      "providerName": "San Martín (Tucumán)",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/17814.png"
+    },
+    "quilmes": {
+      "providerId": "espn:2741",
+      "providerName": "Quilmes",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/2741.png"
+    },
+    "chacarita-juniors": {
+      "providerId": "135899",
+      "providerName": "Chacarita Juniors",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/pjam301511624231.png"
+    },
+    "san-martin-san-juan": {
+      "providerId": "espn:7845",
+      "providerName": "San Martín (San Juan)",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/7845.png"
+    },
+    "tristan-suarez": {
+      "providerId": "espn:10163",
+      "providerName": "Tristán Suárez",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10163.png"
+    },
+    "atlanta-ar": {
+      "providerId": "137776",
+      "providerName": "Atlanta",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ey0i4o1775792685.png"
+    },
+    "patronato": {
+      "providerId": "espn:10374",
+      "providerName": "Patronato",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10374.png"
+    },
+    "gimnasia-jujuy": {
+      "providerId": "espn:5263",
+      "providerName": "Gimnasia y Esgrima (Jujuy)",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/5263.png"
+    },
+    "temperley": {
+      "providerId": "espn:10162",
+      "providerName": "Temperley",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10162.png"
+    },
+    "atletico-rafaela": {
+      "providerId": "135153",
+      "providerName": "Atlético de Rafaela",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/v9b3yf1677638367.png"
+    },
+    "gimnasia-y-tiro": {
+      "providerId": "espn:10743",
+      "providerName": "Gimnasia y Tiro (Salta)",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10743.png"
+    },
+    "nueva-chicago": {
+      "providerId": "espn:236",
+      "providerName": "Nueva Chicago",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/236.png"
+    },
+    "deportivo-maipu": {
+      "providerId": "espn:11978",
+      "providerName": "Deportivo Maipú",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/11978.png"
+    },
+    "agropecuario": {
+      "providerId": "137769",
+      "providerName": "Agropecuario",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/jt027i1766678890.png"
+    },
+    "almagro-ar": {
+      "providerId": "137787",
+      "providerName": "Almagro",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zv7sju1578825975.png"
+    },
+    "colegiales-ar": {
+      "providerId": "espn:10149",
+      "providerName": "Colegiales",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10149.png"
+    },
+    "guemes-santiago": {
+      "providerId": "espn:18284",
+      "providerName": "Güemes",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/18284.png"
+    },
+    "ferrocarril-midland": {
+      "providerId": "espn:10109",
+      "providerName": "Midland",
+      "provider": "ESPN",
+      "source": "https://a.espncdn.com/i/teamlogos/soccer/500/10109.png"
+    },
+    "shabab-al-ahli": {
+      "providerId": "137828",
+      "providerName": "Shabab Al-Ahli Dubai",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/k21gkm1617893374.png"
+    },
+    "sharjah-fc": {
+      "providerId": "137829",
+      "providerName": "Sharjah",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/kccfg11753982654.png"
+    },
+    "united-fc-dubai": {
+      "providerId": "156157",
+      "providerName": "United FC Dubai",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ko3xtx1783529180.png"
+    },
+    "khor-fakkan": {
+      "providerId": "137842",
+      "providerName": "Khorfakkan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/kah4n11578860369.png"
+    },
+    "qatar-sc": {
+      "providerId": "137995",
+      "providerName": "Qatar SC",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/3c07ob1774579037.png"
+    },
+    "lusail-sc": {
+      "providerId": "155255",
+      "providerName": "Lusail",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/3w9syb1787934376.png"
+    },
+    "persepolis": {
+      "providerId": "139013",
+      "providerName": "Persepolis",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/tzqvmg1725936631.png"
+    },
+    "sepahan": {
+      "providerId": "139014",
+      "providerName": "Sepahan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ehx9kf1580934615.png"
+    },
+    "tractor-tabriz": {
+      "providerId": "139162",
+      "providerName": "Tractor",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/url13x1722468959.png"
+    },
+    "paykan": {
+      "providerId": "139164",
+      "providerName": "Paykan",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/bgb7ch1786293559.png"
+    },
+    "nassaji": {
+      "providerId": "139158",
+      "providerName": "Nassaji Mazandaran",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/9ofr2a1725935607.png"
+    },
+    "sanat-naft": {
+      "providerId": "139166",
+      "providerName": "Sanat Naft",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/k15k411582374879.png"
+    },
+    "us-monastir": {
+      "providerId": "139871",
+      "providerName": "US Monastir",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/l0og3b1793659071.png"
+    },
+    "stade-tunisien": {
+      "providerId": "139869",
+      "providerName": "Stade Tunisien",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/ig19641753933662.png"
+    },
+    "us-ben-guerdane": {
+      "providerId": "139870",
+      "providerName": "US Ben Guerdane",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/vrk6l01589898068.png"
+    },
+    "olympique-beja": {
+      "providerId": "140430",
+      "providerName": "Olympique Béja",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/zhofzo1607356608.png"
+    },
+    "ps-sakiet-eddaier": {
+      "providerId": "156381",
+      "providerName": "Sakiet Eddaïer",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/r0o21i1791695547.png"
+    },
+    "js-omrane": {
+      "providerId": "152591",
+      "providerName": "JS El Omrane",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/0sgi751753933510.png"
+    },
+    "colon-santa-fe": {
+      "providerId": "135157",
+      "providerName": "Colón",
+      "source": "https://r2.thesportsdb.com/images/media/team/badge/88icw21794091587.png"
     }
   },
   "flags": {

@@ -57,6 +57,11 @@ const LEAGUE_SEARCH_NAMES = {
   "liga-boliviana": "Bolivian Primera Division",
   "liga-futve": "Venezuelan Primera Division",
   "chance-liga": "Czech First League",
+  "qatar-stars-league": "Qatar Stars League",
+  "uae-pro-league": "UAE Pro League",
+  "persian-gulf-pro-league": "Iranian Persian Gulf Pro League",
+  "tunisia-ligue-1": "Tunisian Ligue 1",
+  "primera-nacional": "Argentinian Primera B Nacional",
 };
 
 const COUNTRY_NAMES = {
@@ -280,6 +285,9 @@ const ESPN_LEAGUE_IDS = {
   ekstraklasa: "pol.1",
   hnl: "cro.1",
   "serbian-superliga": "srb.1",
+  "primera-nacional": "arg.2",
+  "uae-pro-league": "uae.1",
+  "qatar-stars-league": "qat.1",
 };
 
 const SUPER_CUP_SEARCH_NAMES = {
@@ -702,6 +710,26 @@ const TEAM_QUERY_OVERRIDES = {
 };
 
 const TEAM_ID_OVERRIDES = {
+  // Golfo, Irã, Tunísia e Primera Nacional: a busca em lote da conta gratuita não traz todos.
+  "shabab-al-ahli": "137828",
+  "sharjah-fc": "137829",
+  "united-fc-dubai": "156157",
+  "khor-fakkan": "137842",
+  "qatar-sc": "137995",
+  "lusail-sc": "155255",
+  persepolis: "139013",
+  sepahan: "139014",
+  "tractor-tabriz": "139162",
+  paykan: "139164",
+  nassaji: "139158",
+  "sanat-naft": "139166",
+  "us-monastir": "139871",
+  "stade-tunisien": "139869",
+  "us-ben-guerdane": "139870",
+  "olympique-beja": "140430",
+  "ps-sakiet-eddaier": "156381",
+  "js-omrane": "152591",
+  "colon-santa-fe": "135157",
   // Evita que a busca por nome confunda o Liverpool FC com AFC Liverpool.
   liverpool: "133602",
   "man-city": "133613",
@@ -773,6 +801,9 @@ const source = (await Promise.all([
   readFile(path.join(ROOT, "app", "brazil-2026-clubs.ts"), "utf8"),
   readFile(path.join(ROOT, "app", "english-2026-clubs.ts"), "utf8"),
   readFile(path.join(ROOT, "app", "russia-ukraine-2026-clubs.ts"), "utf8"),
+  readFile(path.join(ROOT, "app", "middle-east-2026-clubs.ts"), "utf8"),
+  readFile(path.join(ROOT, "app", "tunisia-2026-clubs.ts"), "utf8"),
+  readFile(path.join(ROOT, "app", "argentina-b-2026-clubs.ts"), "utf8"),
 ])).join("\n");
 const clubs = [...source.matchAll(/\{ id: "([^"]+)", name: "([^"]+)", shortName: "([^"]+)", abbr: "([^"]+)", city: "[^"]+"[^}]*countryId: "([^"]+)", leagueId: "([^"]+)"/g)]
   .map((match) => ({

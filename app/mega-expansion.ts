@@ -169,6 +169,47 @@ export const RIVALRIES: Rivalry[] = [
     "Ajax e Feyenoord disputam o clássico que resume o futebol holandês",
     "De Klassieker promete Johan Cruyff Arena tomada por tensão",
   ]},
+  // Ligas novas: Irã, Tunísia, Catar, Emirados e a Primera Nacional argentina.
+  { id: "per-est", clubIds: ["persepolis", "esteghlal"], name: "Persepolis x Esteghlal", nickname: "Dérbi de Teerã", intensity: 5, headlines: [
+    "Dérbi de Teerã: o Azadi lotado, metade vermelha e metade azul",
+    "Persepolis e Esteghlal param o Irã inteiro por noventa minutos",
+    "No Dérbi de Teerã, um empate já parece derrota para os dois lados",
+  ]},
+  { id: "sep-zob", clubIds: ["sepahan", "zob-ahan"], name: "Sepahan x Zob Ahan", nickname: "Dérbi de Isfahan", intensity: 3, headlines: [
+    "Dérbi de Isfahan decide quem manda na cidade do aço",
+    "Sepahan e Zob Ahan se encaram com a torcida colada no gramado",
+    "Isfahan acorda dividida no dia do clássico",
+  ]},
+  { id: "est-ca", clubIds: ["esperance-tunis", "club-africain"], name: "Espérance x Club Africain", nickname: "Dérbi de Túnis", intensity: 5, headlines: [
+    "Dérbi de Túnis: Radès vira um mar de vermelho, amarelo e branco",
+    "Espérance e Club Africain disputam a cidade e a liga no mesmo jogo",
+    "No Dérbi de Túnis, as arquibancadas começam a cantar horas antes do apito",
+  ]},
+  { id: "ess-usm", clubIds: ["etoile-sahel", "us-monastir"], name: "Étoile du Sahel x US Monastir", nickname: "Dérbi do Sahel", intensity: 3, headlines: [
+    "Dérbi do Sahel coloca Sousse e Monastir frente a frente",
+    "Étoile e Monastir brigam pela supremacia do litoral tunisiano",
+    "O Dérbi do Sahel costuma decidir vaga continental",
+  ]},
+  { id: "sad-ray", clubIds: ["al-sadd", "al-rayyan-qatar"], name: "Al Sadd x Al Rayyan", nickname: "Clássico do Catar", intensity: 4, headlines: [
+    "Clássico do Catar: Al Sadd e Al Rayyan repetem a rivalidade mais antiga de Doha",
+    "Al Rayyan tenta quebrar a hegemonia do Al Sadd no clássico",
+    "O Clássico do Catar costuma levar a maior torcida da temporada ao estádio",
+  ]},
+  { id: "ain-wasl", clubIds: ["al-ain-uae", "al-wasl"], name: "Al Ain x Al Wasl", nickname: "Clássico dos Emirados", intensity: 4, headlines: [
+    "Clássico dos Emirados opõe o gigante de Al Ain à força de Dubai",
+    "Al Ain e Al Wasl fazem o jogo mais esperado da temporada emiradense",
+    "No Clássico dos Emirados, a torcida do Al Wasl promete casa cheia",
+  ]},
+  { id: "wasl-nasr", clubIds: ["al-wasl", "al-nasr-dubai"], name: "Al Wasl x Al Nasr", nickname: "Dérbi de Dubai", intensity: 3, headlines: [
+    "Dérbi de Dubai: Al Wasl e Al Nasr dividem Bur Dubai",
+    "O clássico mais antigo de Dubai volta a valer mais do que pontos",
+    "Al Nasr quer estragar a festa do vizinho no Dérbi de Dubai",
+  ]},
+  { id: "atl-cha", clubIds: ["atlanta-ar", "chacarita-juniors"], name: "Atlanta x Chacarita", nickname: "Clássico do Ascenso", intensity: 3, headlines: [
+    "Atlanta e Chacarita reacendem o clássico mais quente do ascenso",
+    "Na Primera Nacional, Atlanta x Chacarita lota o estádio como jogo de primeira",
+    "O clássico do ascenso portenho promete arquibancada fervendo",
+  ]},
 ];
 
 export function findRivalry(clubIdA: string, clubIdB: string): Rivalry | undefined {

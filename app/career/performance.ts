@@ -59,6 +59,12 @@ export const LEAGUE_MARKET_MULTIPLIER: Record<string, number> = {
   "chance-liga": 0.55,
   "brasileirao-b": 0.2,
   championship: 0.66,
+  // Catar e Emirados pagam acima do nível esportivo (abaixo da Arábia); Irã e Tunísia, mercado local.
+  "qatar-stars-league": 0.7,
+  "uae-pro-league": 0.62,
+  "persian-gulf-pro-league": 0.3,
+  "tunisia-ligue-1": 0.3,
+  "primera-nacional": 0.16,
 };
 
 export function marketValue(overall: number, age: number, club: Club, reputation = 0, form?: Partial<PlayerStats>) {

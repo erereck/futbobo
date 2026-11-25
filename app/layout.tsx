@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     template: "%s | Futbobo",
   },
   description:
-    "Crie seu jogador aos 12 anos, dispute 51 ligas e 139 seleções, jogue finais no futebol de botão e cole a carreira inteira num álbum de figurinhas. Grátis no navegador.",
+    "Crie seu jogador aos 12 anos, dispute 58 ligas e 140 seleções, jogue finais no futebol de botão e cole a carreira inteira num álbum de figurinhas. Grátis no navegador.",
   applicationName: "Futbobo",
   authors: [{ name: "EriLab", url: "https://futbobo.top/" }],
   creator: "EriLab",
@@ -93,7 +93,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Futbobo: simulador de carreira de jogador de futebol",
     description:
-      "Do primeiro contrato à última figurinha: 984 clubes, 51 ligas, 139 seleções, decisões, transferências e finais no futebol de botão.",
+      "Do primeiro contrato à última figurinha: 1.112 clubes, 58 ligas, 140 seleções, decisões, transferências e finais no futebol de botão.",
     type: "website",
     url: "https://futbobo.top/",
     siteName: "Futbobo",
@@ -116,7 +116,7 @@ const structuredData = {
   url: "https://futbobo.top/",
   image: "https://futbobo.top/og-v7.png",
   description:
-    "Simulador brasileiro de carreira de jogador de futebol, dos 12 anos à aposentadoria, com 984 clubes, 51 ligas, 139 seleções e partidas jogáveis de futebol de botão.",
+    "Simulador brasileiro de carreira de jogador de futebol, dos 12 anos à aposentadoria, com 1.112 clubes, 58 ligas, 140 seleções e partidas jogáveis de futebol de botão.",
   genre: ["Esporte", "Simulação", "RPG"],
   gamePlatform: ["Navegador", "Android", "Windows"],
   operatingSystem: ["Web", "Android", "Windows"],
