@@ -75,11 +75,11 @@ export const REGIONAL_ACADEMY_ROUTES: Record<string, string[]> = {
   haiti: ["eua", "mexico"],
   "trinidad-e-tobago": ["eua", "mexico"],
   curacao: ["holanda", "eua"],
-  "emirados-arabes": ["arabia-saudita"],
-  jordania: ["arabia-saudita"],
-  oma: ["arabia-saudita"],
-  bahrein: ["arabia-saudita"],
-  kuwait: ["arabia-saudita"],
+  // Golfo: Catar e Emirados agora têm liga e recebem os vizinhos antes da Arábia.
+  jordania: ["catar", "emirados-arabes", "arabia-saudita"],
+  oma: ["emirados-arabes", "catar", "arabia-saudita"],
+  bahrein: ["catar", "emirados-arabes", "arabia-saudita"],
+  kuwait: ["catar", "emirados-arabes", "arabia-saudita"],
   tailandia: ["japao", "coreia-do-sul"],
   vietna: ["japao", "coreia-do-sul"],
   indonesia: ["japao", "coreia-do-sul"],
@@ -128,6 +128,9 @@ export const REGIONAL_ACADEMY_ROUTES: Record<string, string[]> = {
   estonia: ["alemanha"],
   letonia: ["alemanha"],
   lituania: ["alemanha"],
+  // Iraque e Argélia ganham base nos vizinhos que agora têm liga: Catar, Emirados e Irã; Tunísia.
+  iraque: ["catar", "emirados-arabes", "ira"],
+  argelia: ["tunisia", "marrocos", "franca"],
   nepal: ["japao", "india"],
   butao: ["japao", "india"],
   mongolia: ["china", "japao"],
@@ -140,8 +143,8 @@ export const CONFEDERATION_ACADEMY_ROUTES: Record<Country["confederation"], stri
   SOUTH_AMERICA: ["argentina", "brasil", "colombia", "uruguai", "chile"],
   NORTH_AMERICA: ["eua", "mexico"],
   EUROPE: ["franca", "alemanha", "portugal", "italia", "inglaterra", "grecia", "republica-tcheca"],
-  ASIA: ["japao", "coreia-do-sul", "arabia-saudita", "china", "australia"],
-  AFRICA: ["egito", "africa-do-sul", "marrocos", "franca", "portugal"],
+  ASIA: ["japao", "coreia-do-sul", "arabia-saudita", "catar", "emirados-arabes", "china", "australia"],
+  AFRICA: ["egito", "africa-do-sul", "marrocos", "tunisia", "franca", "portugal"],
   OCEANIA: ["australia", "japao", "eua"],
 };
 
@@ -260,6 +263,10 @@ export const DOMESTIC_SUPER_CUP_NAMES: Record<string, string> = {
   csl: "Supercopa da China",
   "egypt-premier": "Supercopa do Egito",
   "botola-pro": "Supercopa do Marrocos",
+  "tunisia-ligue-1": "Supercopa da Tunísia",
+  "qatar-stars-league": "Copa Sheikh Jassim",
+  "uae-pro-league": "Supercopa dos Emirados",
+  "persian-gulf-pro-league": "Supercopa do Irã",
   "super-league-greece": "Supercopa da Grécia",
   "liga-boliviana": "Supercopa da Bolívia",
   "liga-futve": "Supercopa da Venezuela",
@@ -273,7 +280,7 @@ export function isEuropeanClub(club: Club) {
 export function initialContinentalSlot(club: Club): ContinentalSlot | null {
   // Suspensão de clubes russos nas competições da UEFA em 2026/27.
   if (club.countryId === "russia") return null;
-  if (club.leagueId === "brasileirao-b" || club.leagueId === "championship" || club.leagueId === "brasileirao-c" || club.leagueId === "brasileirao-d" || club.leagueId === "league-one" || club.leagueId === "league-two") return null;
+  if (club.leagueId === "brasileirao-b" || club.leagueId === "championship" || club.leagueId === "brasileirao-c" || club.leagueId === "brasileirao-d" || club.leagueId === "league-one" || club.leagueId === "league-two" || club.leagueId === "primera-nacional") return null;
   const confederation = clubConfederation(club);
   if (confederation === "SOUTH_AMERICA") return club.reputation >= 4 ? "libertadores" : club.reputation >= 3 ? "sudamericana" : null;
   if (confederation === "NORTH_AMERICA") return club.reputation >= 4 ? "concacaf" : null;
@@ -297,10 +304,11 @@ export function continentalSlotAfterSeason(
   if (club.countryId === "russia") return null;
   if (league.id === "brasileirao-c" || league.id === "brasileirao-d") return cupChampion ? "libertadores" : null;
   if (league.id === "league-one" || league.id === "league-two") return cupChampion ? "europa" : null;
-  const isSecondDivision = league.id === "brasileirao-b" || league.id === "championship";
+  const isSecondDivision = league.id === "brasileirao-b" || league.id === "championship" || league.id === "primera-nacional";
   if (isSecondDivision) {
+    // Segunda divisão só vai ao continente ganhando a copa nacional (Copa do Brasil, FA Cup, Copa Argentina).
     if (!cupChampion) return null;
-    return league.id === "brasileirao-b" ? "libertadores" : "europa";
+    return league.id === "championship" ? "europa" : "libertadores";
   }
   const confederation = clubConfederation(club);
   if (confederation === "SOUTH_AMERICA") {

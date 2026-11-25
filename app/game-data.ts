@@ -1,6 +1,9 @@
 import { ENGLISH_LOWER_CLUBS } from "./english-2026-clubs";
 import { BRAZIL_LOWER_CLUBS } from "./brazil-2026-clubs";
 import { RUSSIA_UKRAINE_CLUBS } from "./russia-ukraine-2026-clubs";
+import { MIDDLE_EAST_CLUBS } from "./middle-east-2026-clubs";
+import { TUNISIA_CLUBS } from "./tunisia-2026-clubs";
+import { ARGENTINA_B_CLUBS } from "./argentina-b-2026-clubs";
 
 export type PositionKey =
   | "GOL"
@@ -375,6 +378,10 @@ export const LEAGUES: League[] = [
   { id: "j1-league", countryId: "japao", name: "J1 League", cupName: "Copa do Imperador", prestige: 3, championsPlaces: 3, europaPlaces: 0, conferencePlaces: 0 },
   { id: "k-league", countryId: "coreia-do-sul", name: "K League 1", cupName: "Copa da Coreia", prestige: 2, championsPlaces: 3, europaPlaces: 0, conferencePlaces: 0 },
   { id: "csl", countryId: "china", name: "Chinese Super League", cupName: "Copa da China", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
+  // Golfo e Irã (2026/27): salários altos no Catar e nos Emirados, torcida gigante em Teerã.
+  { id: "qatar-stars-league", countryId: "catar", name: "Qatar Stars League", cupName: "Copa do Emir", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "uae-pro-league", countryId: "emirados-arabes", name: "UAE Pro League", cupName: "Copa do Presidente", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "persian-gulf-pro-league", countryId: "ira", name: "Persian Gulf Pro League", cupName: "Copa Hazfi", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
   // Segundas divisões: sem vaga continental pela liga, mas a copa nacional ainda
   // vale — time da Série B que ganha a Copa do Brasil vai à Libertadores.
   { id: "brasileirao-b", countryId: "brasil", name: "Brasileirão Série B", cupName: "Copa do Brasil", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
@@ -383,12 +390,15 @@ export const LEAGUES: League[] = [
   { id: "league-one", countryId: "inglaterra", name: "EFL League One", cupName: "FA Cup", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   { id: "league-two", countryId: "inglaterra", name: "EFL League Two", cupName: "FA Cup", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   { id: "championship", countryId: "inglaterra", name: "EFL Championship", cupName: "FA Cup", prestige: 2, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
+  // Primera Nacional (2026): a segunda divisão argentina, com duas zonas e acesso à Liga Profesional.
+  { id: "primera-nacional", countryId: "argentina", name: "Primera Nacional", cupName: "Copa Argentina", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   // Novas rotas fora do eixo tradicional. Na África e na Austrália,
   // `championsPlaces` representa vagas na competição continental local.
   { id: "egypt-premier", countryId: "egito", name: "Egyptian Premier League", cupName: "Copa do Egito", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
   { id: "south-africa-premiership", countryId: "africa-do-sul", name: "Betway Premiership", cupName: "Nedbank Cup", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
   { id: "a-league", countryId: "australia", name: "A-League Men", cupName: "Australia Cup", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
   { id: "botola-pro", countryId: "marrocos", name: "Botola Pro", cupName: "Copa do Trono", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
+  { id: "tunisia-ligue-1", countryId: "tunisia", name: "Ligue Professionnelle 1", cupName: "Copa da Tunísia", prestige: 2, championsPlaces: 2, europaPlaces: 0, conferencePlaces: 0 },
   { id: "super-league-greece", countryId: "grecia", name: "Super League Greece", cupName: "Copa da Grécia", prestige: 2, championsPlaces: 1, europaPlaces: 3, conferencePlaces: 5 },
   { id: "liga-boliviana", countryId: "bolivia", name: "División Profesional", cupName: "Copa Bolivia", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
   { id: "liga-futve", countryId: "venezuela", name: "Liga FUTVE", cupName: "Copa Venezuela", prestige: 1, championsPlaces: 0, europaPlaces: 0, conferencePlaces: 0 },
@@ -1272,6 +1282,9 @@ export const CLUBS: Club[] = [
   ...CHINA_CLUBS,
   ...EUROPE_CLUBS,
   ...RUSSIA_UKRAINE_CLUBS,
+  ...MIDDLE_EAST_CLUBS,
+  ...TUNISIA_CLUBS,
+  ...ARGENTINA_B_CLUBS,
   ...ARGENTINA_CLUBS,
   ...URUGUAY_CLUBS,
   ...CHILE_CLUBS,

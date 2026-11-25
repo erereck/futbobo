@@ -6,6 +6,7 @@ const PROMOTION_LEAGUES = new Set([
   "league-one",
   "league-two",
   "championship",
+  "primera-nacional",
   "segunda-division",
   "serie-b-italia",
   "2-bundesliga",

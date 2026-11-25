@@ -47,6 +47,8 @@ const NAME_STYLES = {
   fr: { prefixes: ["Étoile de", "Union Sportive", "Racing Club", "Olympique", "Stade", "Jeunesse de"] },
   de: { prefixes: ["SV", "FC", "SpVgg", "Rot-Weiß", "Eintracht", "TSV"] },
   nl: { prefixes: ["VV", "SC", "Sparta", "Quick", "RKVV"] },
+  ar: { prefixes: ["Al Nasr", "Al Ittihad", "Al Shabab", "Al Ahli", "Al Wahda", "Al Najma"] },
+  fa: { prefixes: ["Esteghlal", "Shahrdari", "Sanat Naft", "Mes", "Paykan", "Foolad"] },
   generic: { prefixes: ["Dínamo", "Lokomotiv", "Estrela", "Juventude"], suffixes: ["FC", "Academy", "Juniors", "City"] },
 } satisfies Record<string, NameStyle>;
 
@@ -56,7 +58,9 @@ const COUNTRY_STYLE: Record<string, keyof typeof NAME_STYLES> = {
   peru: "es", mexico: "es", bolivia: "es", venezuela: "es",
   inglaterra: "en", eua: "en", escocia: "en", australia: "en", "nova-zelandia": "en", "africa-do-sul": "en",
   italia: "it",
-  franca: "fr", belgica: "fr", suica: "fr", marrocos: "fr",
+  franca: "fr", belgica: "fr", suica: "fr", marrocos: "fr", tunisia: "fr",
+  catar: "ar", "emirados-arabes": "ar",
+  ira: "fa",
   alemanha: "de", austria: "de",
   holanda: "nl",
 };

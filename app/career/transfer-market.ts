@@ -17,7 +17,7 @@ import type { ScoutingSpotlight } from "./attention";
 import { leagueDivision } from "./league-divisions";
 import { loanFits, loanSquadRole } from "./squad-role";
 
-export const SECOND_DIVISION_LEAGUES = new Set(["brasileirao-b", "championship"]);
+export const SECOND_DIVISION_LEAGUES = new Set(["brasileirao-b", "championship", "primera-nacional"]);
 export type TransferTrigger = "season-end" | "requested" | "forced-exit" | "youth-development" | "contract-expired" | "free-agent-wait" | "event";
 export type TransferOfferOptions = {
   includeForeign?: boolean; forceDomestic?: boolean; forceForeign?: boolean;
@@ -721,6 +721,7 @@ export const ALTERNATIVE_EXILE_LEAGUES = new Set([
   "eredivisie", "primeira", "proleague", "superlig", "swiss-super-league", "austria-bundesliga", "premiership-sco",
   "saudi-pro-league", "j1-league", "k-league", "csl", "brasileirao-b", "championship", "botola-pro",
   "super-league-greece", "liga-boliviana", "liga-futve", "chance-liga",
+  "qatar-stars-league", "uae-pro-league", "persian-gulf-pro-league", "tunisia-ligue-1",
 ]);
 export function selectAlternativeExileOffers(state: GameState, salt: number) {
   if (state.agentCountryFocus && state.contractYears <= 0) {

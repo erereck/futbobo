@@ -911,6 +911,9 @@ test("expande o mercado para ligas e clubes das Américas", async () => {
     "../app/brazil-2026-clubs.ts",
     "../app/english-2026-clubs.ts",
     "../app/russia-ukraine-2026-clubs.ts",
+    "../app/middle-east-2026-clubs.ts",
+    "../app/tunisia-2026-clubs.ts",
+    "../app/argentina-b-2026-clubs.ts",
   ].map((path) => readFile(new URL(path, import.meta.url), "utf8")))).join("\n");
 
   for (const leagueId of [
@@ -1740,7 +1743,7 @@ test("fecha o patch de mercado, economia, personalização e futebol de botão",
 
   assert.match(
     page,
-    /const SECOND_DIVISION_LEAGUES = new Set\(\["brasileirao-b", "championship"\]\)/,
+    /const SECOND_DIVISION_LEAGUES = new Set\(\["brasileirao-b", "championship", "primera-nacional"\]\)/,
   );
   assert.match(page, /sourceLeagueId: league\.id/);
   assert.match(
@@ -2490,7 +2493,7 @@ test("vencer uma copa nacional jogavel recalcula a vaga continental", async () =
   assert.match(page, /function continentalSlotAfterSeason/);
   assert.match(
     page,
-    /league\.id === "brasileirao-b" \? "libertadores" : "europa"/,
+    /league\.id === "championship" \? "europa" : "libertadores"/,
   );
   assert.match(
     page,
@@ -2694,7 +2697,7 @@ test("publica metadados completos para buscadores no dominio oficial", async () 
   assert.match(layout, /simulador de carreira de jogador de futebol/);
   assert.match(layout, /"@type": "VideoGame"/);
   assert.match(layout, /alternates:[\s\S]*canonical: "\/"/);
-  assert.match(layout, /984 clubes, 51 ligas, 139 seleções/);
+  assert.match(layout, /1\.112 clubes, 58 ligas, 140 seleções/);
   assert.match(robots, /https:\/\/futbobo\.top\/sitemap\.xml/);
   assert.match(sitemap, /https:\/\/futbobo\.top\/copa\//);
   assert.match(sitemap, /https:\/\/futbobo\.top\/botao\//);
